@@ -1,0 +1,1 @@
+cmd_Release/hello_world.node := c++ -bundle -undefined dynamic_lookup -Wl,-search_paths_first -mmacosx-version-min=10.13 -arch arm64 -L./Release -stdlib=libc++  -o Release/hello_world.node Release/obj.target/hello_world/hello_world.o ../awesome.so
