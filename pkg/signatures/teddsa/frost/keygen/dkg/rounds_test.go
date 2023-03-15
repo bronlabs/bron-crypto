@@ -2,8 +2,8 @@ package dkg_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha512"
 	"encoding/json"
+	"hash"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -13,18 +13,20 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
 
 type identityKey struct {
-	curve *curves.Curve
-	key   *schnorr.PrivateKey
+	curve  *curves.Curve
+	signer *schnorr.Signer
+	h      func() hash.Hash
 }
 
 func (k *identityKey) PublicKey() curves.Point {
-	return k.key.PublicKey.Y
+	return k.signer.PublicKey.Y
 }
 func (k *identityKey) Sign(message []byte) []byte {
-	signature, err := k.key.Sign(crand.Reader, message, nil)
+	signature, err := k.signer.Sign(message)
 	if err != nil {
 		panic(err)
 	}
@@ -38,27 +40,38 @@ func (k *identityKey) Sign(message []byte) []byte {
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	curve := curves.ED25519()
+	h := sha3.New256
 
-	aliceIdentityPrivateKey := schnorr.Keygen(curve, nil, crand.Reader)
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+
+	aliceSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	require.NoError(t, err)
 	aliceIdentityKey := &identityKey{
-		curve: curve,
-		key:   aliceIdentityPrivateKey,
+		curve:  curve,
+		signer: aliceSigner,
+		h:      h,
 	}
-	bobIdentityPrivateKey := schnorr.Keygen(curve, nil, crand.Reader)
+	bobSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	require.NoError(t, err)
 	bobIdentityKey := &identityKey{
-		curve: curve,
-		key:   bobIdentityPrivateKey,
+		curve:  curve,
+		signer: bobSigner,
+		h:      h,
 	}
-	charlieIdentityPrivateKey := schnorr.Keygen(curve, nil, crand.Reader)
+	charlieSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	require.NoError(t, err)
 	charlieIdentityKey := &identityKey{
-		curve: curve,
-		key:   charlieIdentityPrivateKey,
+		curve:  curve,
+		signer: charlieSigner,
+		h:      h,
 	}
 
 	cohortConfig := &integration.CohortConfig{
-		Curve:                curve,
+		CipherSuite:          cipherSuite,
 		Protocol:             protocol.FROST,
-		Hash:                 sha512.New512_256,
 		Threshold:            2,
 		TotalParties:         3,
 		Participants:         []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},

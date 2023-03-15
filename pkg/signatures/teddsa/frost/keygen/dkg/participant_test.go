@@ -40,10 +40,14 @@ func Test_CanInitialize(t *testing.T) {
 
 	identityKeys := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
 
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  sha512.New512_256,
+	}
+
 	cohortConfig := &integration.CohortConfig{
-		Curve:                curve,
+		CipherSuite:          cipherSuite,
 		Protocol:             protocol.FROST,
-		Hash:                 sha512.New512_256,
 		Threshold:            2,
 		TotalParties:         2,
 		Participants:         identityKeys,

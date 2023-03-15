@@ -1,14 +1,12 @@
 package aggregation
 
 import (
-	"fmt"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/sha3"
 )
 
 type SignatureAggregator struct {
@@ -22,12 +20,17 @@ type SignatureAggregator struct {
 	parameters *SignatureAggregatorParameters
 }
 
+func (sa *SignatureAggregator) HasIdentifiableAbort() bool {
+	return sa.PublicKeyShares != nil
+}
+
 type SignatureAggregatorParameters struct {
 	Message []byte
 	Z_i     curves.Scalar
 	R       curves.Point
-	D_alpha []curves.Point
-	E_alpha []curves.Point
+	R_js    map[integration.IdentityKey]curves.Point
+	D_alpha map[integration.IdentityKey]curves.Point
+	E_alpha map[integration.IdentityKey]curves.Point
 }
 
 func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, publicKey curves.Point, publicKeyShares *frost.PublicKeyShares, presentParties []int, shamirIdToIdentityKey map[int]integration.IdentityKey, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
@@ -48,7 +51,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	}
 	for _, shamirId := range presentParties {
 		if !(0 < shamirId || shamirId <= cohortConfig.TotalParties) {
-			return nil, errors.Errorf("present party shamir id %d is invalid")
+			return nil, errors.Errorf("present party shamir id %d is invalid", shamirId)
 		}
 	}
 	if len(shamirIdToIdentityKey) != cohortConfig.TotalParties {
@@ -60,13 +63,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if !publicKey.IsOnCurve() {
 		return nil, errors.New("public key is not on curve")
 	}
-	if publicKeyShares == nil {
-		return nil, errors.New("publicKeyShares is nil")
-	}
-	if !publicKey.Equal(publicKeyShares.PublicKey) {
-		return nil, errors.New("provided public key is not a match with the one provided in the public key shares")
-	}
-	return &SignatureAggregator{
+	aggregator := &SignatureAggregator{
 		CohortConfig:          cohortConfig,
 		PublicKey:             publicKey,
 		PublicKeyShares:       publicKeyShares,
@@ -74,79 +71,66 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		PresentParties:        presentParties,
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
 		parameters:            parameters,
-	}, nil
+	}
+	if aggregator.HasIdentifiableAbort() {
+		if len(aggregator.parameters.R_js) != len(presentParties) {
+			return nil, errors.New("identifiable abort is enabled and the size of Rjs and S is not equal")
+		}
+	}
+	return aggregator, nil
 }
 
-func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature, message []byte, R curves.Point, D_alpha, E_alpha map[integration.IdentityKey]curves.Point) (*frost.Signature, error) {
-	if len(D_alpha) != len(sa.PresentParties) {
+// TODO: condense/simplify
+func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+	if len(sa.parameters.D_alpha) != len(sa.PresentParties) {
 		return nil, errors.New("length of D_alpha is not equal to S")
 	}
-	if len(E_alpha) != len(sa.PresentParties) {
-		return nil, errors.New("length of D_alpha is not equal to S")
-	}
-	if R == nil {
-		R = sa.CohortConfig.Curve.Point.Identity()
+	if len(sa.parameters.E_alpha) != len(sa.PresentParties) {
+		return nil, errors.New("length of E_alpha is not equal to S")
 	}
 	// This is for TS-SUF-4 in case aggregator was the one computing the R
-	if R.IsIdentity() {
+	// for identifiable abort, you need R_js
+	recomputedR_js := map[integration.IdentityKey]curves.Point{}
+	if sa.parameters.R == nil {
+		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point.Identity()
+		combinedDsAndEs := []byte{}
+		for _, presentPartyShamirID := range sa.PresentParties {
+			currentParticipant := sa.ShamirIdToIdentityKey[presentPartyShamirID]
+			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[currentParticipant].ToAffineCompressed()...)
+		}
+		for _, presentPartyShamirID := range sa.PresentParties {
+			currentParticipant := sa.ShamirIdToIdentityKey[presentPartyShamirID]
+			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.E_alpha[currentParticipant].ToAffineCompressed()...)
+		}
+
 		for _, j := range sa.PresentParties {
-			currentPartyIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
+			r_jHashComponents := []byte{byte(j)}
+			r_jHashComponents = append(r_jHashComponents, sa.parameters.Message...)
+			r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
+
+			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
+			jIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
 			if !exists {
-				return nil, errors.New("could not find the identity key of current party")
+				return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
 			}
-			hasher := sha3.New256()
-			if _, err := hasher.Write([]byte(fmt.Sprintf("%d", j))); err != nil {
-				return nil, errors.Wrap(err, "could not write present participant into hasher")
+			D_j, exists := sa.parameters.D_alpha[jIdentityKey]
+			if !exists {
+				return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
 			}
-			if _, err := hasher.Write(message); err != nil {
-				return nil, errors.Wrap(err, "could not write message into hasher")
-			}
-			for _, D := range D_alpha {
-				if _, err := hasher.Write(D.ToAffineCompressed()); err != nil {
-					return nil, errors.Wrap(err, "could not write an element of D_alpha into hasher")
-				}
-			}
-			for _, E := range D_alpha {
-				if _, err := hasher.Write(E.ToAffineCompressed()); err != nil {
-					return nil, errors.Wrap(err, "could not write an element of E_alpha into hasher")
-				}
+			E_j, exists := sa.parameters.E_alpha[jIdentityKey]
+			if !exists {
+				return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", j)
 			}
 
-			r_j := sa.CohortConfig.Curve.Scalar.Zero()
-			var err error
-			if sa.CohortConfig.Curve.Name == curves.ED25519().Name {
-				scalar := &curves.ScalarEd25519{}
-				r_j, err = scalar.SetBytesClamping(hasher.Sum(nil))
-				if err != nil {
-					return nil, errors.Wrap(err, "converting hash to r_j failed")
-				}
-			} else {
-				r_j, err = sa.CohortConfig.Curve.Scalar.SetBytes(hasher.Sum(nil))
-				if err != nil {
-					return nil, errors.Wrap(err, "converting hash to r_j failed")
-				}
-			}
-
-			D_j, exists := D_alpha[currentPartyIdentityKey]
-			if !exists {
-				return nil, errors.Errorf("could not find D_j for j=%d")
-			}
-			E_j, exists := E_alpha[currentPartyIdentityKey]
-			if !exists {
-				return nil, errors.Errorf("could not find E_j for j=%d")
-			}
-
-			R_j := D_j.Add(E_j.Mul(r_j))
-			R = R.Add(R_j)
+			recomputedR_js[jIdentityKey] = D_j.Add(E_j.Mul(r_j))
+			sa.parameters.R = sa.parameters.R.Add(recomputedR_js[jIdentityKey])
 		}
-		if R.IsIdentity() {
-			return nil, errors.New("R is at infinity")
-		}
+		sa.parameters.R_js = recomputedR_js
 	}
 
-	// Identifiable Abort is possible
+	// identifiable abort is possible
 	if sa.PublicKeyShares != nil {
-		shamirConfig, err := sharing.NewShamir(uint32(sa.CohortConfig.Threshold), uint32(sa.CohortConfig.TotalParties), sa.CohortConfig.Curve)
+		shamirConfig, err := sharing.NewShamir(uint32(sa.CohortConfig.Threshold), uint32(sa.CohortConfig.TotalParties), sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize shamir config")
 		}
@@ -158,22 +142,20 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute lagrange coefficients")
 		}
+
+		c, err := schnorr.ComputeFiatShamirChallege(sa.CohortConfig.CipherSuite, [][]byte{
+			sa.parameters.R.ToAffineCompressed(), sa.PublicKey.ToAffineCompressed(), sa.parameters.Message,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "converting hash to c failed")
+		}
+
 		for _, j := range sa.PresentParties {
-			currentPartyIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
+			jIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
 			if !exists {
-				return nil, errors.New("could not find the identity key of current party")
+				return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
 			}
-			challengeHasher := sa.CohortConfig.Hash()
-			if _, err := challengeHasher.Write(R.ToAffineCompressed()); err != nil {
-				return nil, errors.Wrap(err, "could not write R to challenge hasher")
-			}
-			if _, err := challengeHasher.Write(sa.PublicKey.ToAffineCompressed()); err != nil {
-				return nil, errors.Wrap(err, "could not write public key to challenge hasher")
-			}
-			if _, err := challengeHasher.Write(message); err != nil {
-				return nil, errors.Wrap(err, "could not write the message to challenge hasher")
-			}
-			Y_j, exists := sa.PublicKeyShares.SharesMap[currentPartyIdentityKey]
+			Y_j, exists := sa.PublicKeyShares.SharesMap[jIdentityKey]
 			if !exists {
 				return nil, errors.Errorf("could not find public key share of shamir id %d", j)
 			}
@@ -182,12 +164,35 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 				return nil, errors.Errorf("could not find lagrange coefficient of shamir id %d", j)
 			}
 
-			z_j, exists := partialSignatures[currentPartyIdentityKey]
+			partialSignature, exists := partialSignatures[jIdentityKey]
 			if !exists {
 				return nil, errors.Errorf("could not find partial signature from shamir id %d", j)
 			}
 
+			R_j, exists := sa.parameters.R_js[jIdentityKey]
+			if !exists {
+				return nil, errors.Errorf("could not find R_j for j=%d", j)
+			}
+
+			z_jG := sa.CohortConfig.CipherSuite.Curve.ScalarBaseMult(partialSignature.Zi)
+			cLambda_jY_j := Y_j.Mul(c.Mul(lambda_j))
+			rhs := R_j.Add(cLambda_jY_j)
+
+			if !z_jG.Equal(rhs) {
+				return nil, errors.Errorf("Abort: participant with shamir id %d is misbehaving", j)
+			}
 		}
 	}
 
+	z := sa.CohortConfig.CipherSuite.Curve.Scalar.Zero()
+	for _, partialSignature := range partialSignatures {
+		z = z.Add(partialSignature.Zi)
+	}
+
+	sigma := &frost.Signature{R: sa.parameters.R, Z: z}
+
+	if err := frost.Verify(sa.CohortConfig.CipherSuite.Curve, sa.CohortConfig.CipherSuite.Hash, sigma, sa.PublicKey, sa.parameters.Message); err != nil {
+		return nil, errors.Wrap(err, "could not verify frost signature")
+	}
+	return sigma, nil
 }

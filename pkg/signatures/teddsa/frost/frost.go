@@ -1,0 +1,202 @@
+package frost
+
+import (
+	"crypto/ed25519"
+	"hash"
+	"sort"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/pkg/errors"
+)
+
+const SignatureSize = 64
+
+type SigningKeyShare struct {
+	Share     curves.Scalar
+	PublicKey curves.Point
+}
+
+func (s *SigningKeyShare) Validate() error {
+	if s == nil {
+		return errors.New("signing key share is nil")
+	}
+	if s.Share.IsZero() {
+		return errors.New("share can't be zero")
+	}
+	if s.PublicKey.IsIdentity() {
+		return errors.New("public key can't be at infinity")
+	}
+	if !s.PublicKey.IsOnCurve() {
+		return errors.New("public key is not on curve")
+	}
+	return nil
+}
+
+type PublicKeyShares struct {
+	Curve     *curves.Curve
+	PublicKey curves.Point
+	SharesMap map[integration.IdentityKey]curves.Point
+}
+
+// TODO: write down validation (lambda trick)
+// func (p *PublicKeyShares) Validate() error {
+// 	derivedPublicKey := p.Curve.Point.Identity()
+// 	for _, share := range p.SharesMap {
+// 		derivedPublicKey = derivedPublicKey.Add(share)
+// 	}
+// 	if !derivedPublicKey.Equal(p.PublicKey) {
+// 		return errors.New("public key shares can't be combined to the entire public key")
+// 	}
+// 	return nil
+// }
+
+type PartialSignature struct {
+	Zi curves.Scalar
+}
+
+type Signature struct {
+	R curves.Point
+	Z curves.Scalar
+}
+
+// This is only to communicate with ed25519. We should have serialization methods that embed curve inside.
+func (s *Signature) MarshalBinary() ([]byte, error) {
+	serializedSignature := [SignatureSize]byte{}
+	RSerialized := s.R.ToAffineCompressed()
+	zSerialized := s.Z.Bytes()
+	if len(RSerialized)+len(zSerialized) != SignatureSize {
+		return serializedSignature[:], errors.New("serialized signature is too large")
+	}
+	if SignatureSize%2 != 0 {
+		return serializedSignature[:], errors.New("signature size is set such that it's not divisible by 2")
+	}
+	for i := 0; i < (SignatureSize / 2); i++ {
+		serializedSignature[i] = RSerialized[i]
+		serializedSignature[i+(SignatureSize/2)] = zSerialized[i]
+	}
+	return serializedSignature[:], nil
+}
+
+// TODO: curve+hashFunction -> ciphersuite
+func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signature, publicKey curves.Point, message []byte) error {
+	switch curve {
+	case curves.ED25519():
+		serializedSignature, err := signature.MarshalBinary()
+		if err != nil {
+			return errors.Wrap(err, "could not serialize signature to binary")
+		}
+		if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
+			return errors.New("could not verify frost signature using ed25519 verifier")
+		}
+		return nil
+	default:
+		challengeHasher := hashFunction()
+		if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
+			return errors.Wrap(err, "could not write R to challenge hasher")
+		}
+		if _, err := challengeHasher.Write(publicKey.ToAffineCompressed()); err != nil {
+			return errors.Wrap(err, "could not write public key to challenge hasher")
+		}
+		if _, err := challengeHasher.Write(message); err != nil {
+			return errors.Wrap(err, "could not write the message to challenge hasher")
+		}
+		challengeDigest := challengeHasher.Sum(nil)
+		var setBytesFunc func([]byte) (curves.Scalar, error)
+		switch len(challengeDigest) {
+		case native.WideFieldBytes:
+			setBytesFunc = curve.Scalar.SetBytesWide
+		case native.FieldBytes:
+			setBytesFunc = curve.Scalar.SetBytes
+		default:
+			return errors.Errorf("challenge digest is %d which is neither 64 nor 32", len(challengeDigest))
+		}
+		c, err := setBytesFunc(challengeDigest)
+		if err != nil {
+			return errors.Wrap(err, "converting hash to c failed")
+		}
+
+		zG := curve.ScalarBaseMult(signature.Z)
+		negCY := publicKey.Mul(c.Neg())
+		RPrime := zG.Add(negCY)
+		if ok := signature.R.Equal(RPrime); !ok {
+			return errors.New("failed to verify")
+		}
+
+		// schnorrPublicKey := &schnorr.PublicKey{
+		// 	Curve: curve,
+		// 	Y:     publicKey,
+		// }
+		// challengeHasher := hashFunction()
+		// if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
+		// 	return errors.Wrap(err, "could not write R to challenge hasher")
+		// }
+		// if _, err := challengeHasher.Write(publicKey.ToAffineCompressed()); err != nil {
+		// 	return errors.Wrap(err, "could not write public key to challenge hasher")
+		// }
+		// if _, err := challengeHasher.Write(message); err != nil {
+		// 	return errors.Wrap(err, "could not write the message to challenge hasher")
+		// }
+		// var err error
+		// c := curve.Scalar.Zero()
+		// if curve.Name == curves.ED25519().Name {
+		// 	scalar := &curves.ScalarEd25519{}
+		// 	c, err = scalar.SetBytes(challengeHasher.Sum(nil))
+		// 	if err != nil {
+		// 		return errors.Wrap(err, "converting hash to challenge scalar failed")
+		// 	}
+		// } else {
+		// 	c, err = curve.Scalar.SetBytes(challengeHasher.Sum(nil))
+		// 	if err != nil {
+		// 		return errors.Wrap(err, "converting hash to challenge scalar failed")
+		// 	}
+		// }
+
+		// schnorrSignature := &schnorr.Signature{
+		// 	C: c, S: signature.Z,
+		// }
+
+		// if err := schnorr.Verify(schnorrPublicKey, message, schnorrSignature, hashFunction, nil); err != nil {
+		// 	return errors.Wrap(err, "could not verify frost signature by using schnorr verify function")
+		// }
+		return nil
+	}
+}
+
+func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (map[int]integration.IdentityKey, int, error) {
+	result := map[int]integration.IdentityKey{}
+	myShamirId := -1
+
+	mySerializedIdentityKey, err := integration.SerializePublicKey(myIdentityKey.PublicKey())
+	if err != nil {
+		return nil, myShamirId, errors.Wrap(err, "couldn't serialize my identity public key")
+	}
+
+	serializedIdentityKeyToIdentityKey := map[string]integration.IdentityKey{}
+	serializedIdentityKeys := make([]string, len(identityKeys))
+
+	for i, identityKey := range identityKeys {
+		serialized, err := integration.SerializePublicKey(identityKey.PublicKey())
+		if err != nil {
+			return nil, myShamirId, errors.Wrap(err, "couldn't serialize public key")
+		}
+		serializedIdentityKeyToIdentityKey[serialized] = identityKey
+		serializedIdentityKeys[i] = serialized
+	}
+	sort.Strings(serializedIdentityKeys)
+	for shamirIdMinusOne, serializedIdentityKey := range serializedIdentityKeys {
+		identityKey, exists := serializedIdentityKeyToIdentityKey[serializedIdentityKey]
+		if !exists {
+			return nil, myShamirId, errors.Errorf("identity key %s does not exist", serializedIdentityKey)
+		}
+		result[shamirIdMinusOne+1] = identityKey
+		if serializedIdentityKey == mySerializedIdentityKey {
+			myShamirId = shamirIdMinusOne + 1
+		}
+	}
+	if myShamirId == -1 {
+		return nil, myShamirId, errors.New("couldn't find my shamir Id")
+	}
+	return result, myShamirId, nil
+}

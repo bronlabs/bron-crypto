@@ -11,19 +11,18 @@ import (
 )
 
 type DKGParticipant struct {
-	CohortConfig *integration.CohortConfig
-
 	reader io.Reader
 
-	MyIdentityKey integration.IdentityKey
+	MyIdentityKey      integration.IdentityKey
+	MyShamirId         int
+	myPartialPublicKey curves.Point
+	secretKeyShare     curves.Scalar
 
-	round                 int
-	MyShamirId            int
+	CohortConfig          *integration.CohortConfig
 	shamirIdToIdentityKey map[int]integration.IdentityKey
-	secretKeyShare        curves.Scalar
-	myPartialPublicKey    curves.Point
 	publicKey             curves.Point
 
+	round int
 	state *State
 }
 

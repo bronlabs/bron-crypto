@@ -31,11 +31,10 @@ func (p *DKGParticipant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
 		return nil, errors.New("round mismatch")
 	}
-	r_i := p.CohortConfig.Curve.Scalar.Random(p.reader)
-	p.state.r_i = r_i
+	p.state.r_i = p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
 	p.round++
 	return &Round1Broadcast{
-		Ri: r_i,
+		Ri: p.state.r_i,
 	}, nil
 }
 
@@ -61,8 +60,9 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	}
 	p.state.phi = phi
 
-	a_i0 := p.CohortConfig.Curve.Scalar.Random(p.reader)
-	dealer, err := sharing.NewFeldman(uint32(p.CohortConfig.Threshold), uint32(p.CohortConfig.TotalParties), p.CohortConfig.Curve)
+	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
+
+	dealer, err := sharing.NewFeldman(uint32(p.CohortConfig.Threshold), uint32(p.CohortConfig.TotalParties), p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't construct feldman dealer")
 	}
@@ -73,8 +73,13 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	p.state.shareVector = shares
 	p.state.commitmentVector = commitmentVector
 
-	ai0AsSchnorrPrivateKey := schnorr.Keygen(p.CohortConfig.Curve, a_i0, p.reader)
-	sigma_i, err := ai0AsSchnorrPrivateKey.Sign(p.reader, []byte(fmt.Sprintf("%d", p.MyShamirId)), [][]byte{phi})
+	schnorrSigner, err := schnorr.NewSigner(p.CohortConfig.CipherSuite, a_i0, p.reader, &schnorr.Options{
+		TranscriptSuffixes: [][]byte{phi},
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not construct a schnorr signer")
+	}
+	sigma_i, err := schnorrSigner.Sign([]byte(fmt.Sprintf("%d", p.MyShamirId)))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't sign")
 	}
@@ -84,7 +89,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	for shamirId, identityKey := range p.shamirIdToIdentityKey {
 		if shamirId != p.MyShamirId {
 			shamirIndex := shamirId - 1
-			xij, err := p.CohortConfig.Curve.Scalar.SetBytes(shares[shamirIndex].Value)
+			xij, err := p.CohortConfig.CipherSuite.Curve.Scalar.SetBytes(shares[shamirIndex].Value)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "couldn't convert shamir share to scalar")
 			}
@@ -112,7 +117,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 	if myShamirShare == nil {
 		return nil, nil, errors.New("could not find my shamir share from the state")
 	}
-	secretKeyShare, err := p.CohortConfig.Curve.Scalar.SetBytes(myShamirShare.Value)
+	secretKeyShare, err := p.CohortConfig.CipherSuite.Curve.Scalar.SetBytes(myShamirShare.Value)
 	if err != nil {
 		return nil, nil, errors.New("could not convert my shamir share to scalar")
 	}
@@ -135,10 +140,13 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			senderCommitmentVector := broadcastedMessageFromSender.Ci
 			senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 			senderCommitmentToTheirLocalSecretAsSchnorrPublicKey := &schnorr.PublicKey{
-				Curve: p.CohortConfig.Curve,
+				Curve: p.CohortConfig.CipherSuite.Curve,
 				Y:     senderCommitmentToTheirLocalSecret,
 			}
-			if err := schnorr.Verify(senderCommitmentToTheirLocalSecretAsSchnorrPublicKey, []byte(fmt.Sprintf("%d", senderShamirId)), broadcastedMessageFromSender.SigmaI, [][]byte{p.state.phi}); err != nil {
+			plaintext := []byte(fmt.Sprintf("%d", senderShamirId))
+			if err := schnorr.Verify(p.CohortConfig.CipherSuite, senderCommitmentToTheirLocalSecretAsSchnorrPublicKey, plaintext, broadcastedMessageFromSender.SigmaI, &schnorr.Options{
+				TranscriptSuffixes: [][]byte{p.state.phi},
+			}); err != nil {
 				return nil, nil, errors.New("Abort from schnorr")
 			}
 			feldmanVerifier := &sharing.FeldmanVerifier{
@@ -157,13 +165,13 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				return nil, nil, errors.New("Abort from feldman")
 			}
 
-			partialPublicKeyShare := p.CohortConfig.Curve.ScalarBaseMult(receivedSecretKeyShare)
-			derivedPartialPublicKeyShare := p.CohortConfig.Curve.Point.Identity()
+			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
+			derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
 			for k := 0; k < p.CohortConfig.Threshold; k++ {
-				iToK := p.CohortConfig.Curve.Scalar.One()
+				iToK := p.CohortConfig.CipherSuite.Curve.Scalar.One()
 				// perform exponentiation
 				for iteration := 0; iteration < k; iteration++ {
-					iToK = iToK.Mul(p.CohortConfig.Curve.Scalar.New(p.MyShamirId))
+					iToK = iToK.Mul(p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId))
 				}
 				C_lk := senderCommitmentVector[k]
 				ikC_lk := C_lk.Mul(iToK)
@@ -181,18 +189,18 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 		}
 	}
 
-	publicKeySharesMap, err := constructPublicKeySharesMap(p.CohortConfig, commitmentVectors, p.shamirIdToIdentityKey)
+	publicKeySharesMap, err := ConstructPublicKeySharesMap(p.CohortConfig, commitmentVectors, p.shamirIdToIdentityKey)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't derive public key shares")
 	}
 	myPresumedPublicKeyShare := publicKeySharesMap[p.MyIdentityKey]
-	myPublicKeyShare := p.CohortConfig.Curve.ScalarBaseMult(secretKeyShare)
+	myPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(secretKeyShare)
 	if !myPublicKeyShare.Equal(myPresumedPublicKeyShare) {
 		return nil, nil, errors.New("did not calculate my public key share correctly")
 	}
 
 	publicKeyShares := &frost.PublicKeyShares{
-		Curve:     p.CohortConfig.Curve,
+		Curve:     p.CohortConfig.CipherSuite.Curve,
 		PublicKey: publicKey,
 		SharesMap: publicKeySharesMap,
 	}
@@ -207,17 +215,17 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 	}, publicKeyShares, nil
 }
 
-func constructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, shamirIdToIdentityKey map[int]integration.IdentityKey) (map[integration.IdentityKey]curves.Point, error) {
+func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, shamirIdToIdentityKey map[int]integration.IdentityKey) (map[integration.IdentityKey]curves.Point, error) {
 	shares := map[integration.IdentityKey]curves.Point{}
 	for j, identityKey := range shamirIdToIdentityKey {
-		Y_j := cohort.Curve.Point.Identity()
+		Y_j := cohort.CipherSuite.Curve.Point.Identity()
 		for _, C_l := range commitmentVectors {
 			for k := 0; k < cohort.Threshold; k++ {
 
-				jToK := cohort.Curve.Scalar.One()
+				jToK := cohort.CipherSuite.Curve.Scalar.One()
 				// perform exponentiation
 				for iteration := 0; iteration < k; iteration++ {
-					jToK = jToK.Mul(cohort.Curve.Scalar.New(j))
+					jToK = jToK.Mul(cohort.CipherSuite.Curve.Scalar.New(j))
 				}
 
 				jkC_lk := C_l[k].Mul(jToK)

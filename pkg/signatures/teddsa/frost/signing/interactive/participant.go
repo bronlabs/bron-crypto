@@ -17,6 +17,7 @@ type InteractiveCosigner struct {
 	MyIdentityKey         integration.IdentityKey
 	round                 int
 	MyShamirId            int
+	PublicKeyShares       *frost.PublicKeyShares
 	shamirIdToIdentityKey map[int]integration.IdentityKey
 	identityKeyToShamirId map[integration.IdentityKey]int
 	SigningKeyShare       *frost.SigningKeyShare
@@ -42,7 +43,7 @@ type State struct {
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
 	var err error
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
@@ -60,6 +61,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 		MyIdentityKey:   identityKey,
 		CohortConfig:    cohortConfig,
 		SigningKeyShare: signingKeyShare,
+		PublicKeyShares: publicKeyShare,
 		reader:          reader,
 		state:           &State{},
 	}

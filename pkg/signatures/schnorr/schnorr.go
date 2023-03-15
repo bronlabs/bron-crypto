@@ -4,13 +4,13 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
 )
 
 type PrivateKey struct {
-	Curve *curves.Curve
-	a     curves.Scalar
+	a curves.Scalar
 	PublicKey
 }
 
@@ -24,24 +24,45 @@ type Signature struct {
 	S curves.Scalar
 }
 
-func Keygen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *PrivateKey {
-	if secret == nil {
-		secret = curve.Scalar.Random(reader)
-	}
-	publicKey := curve.ScalarBaseMult(secret)
-	return &PrivateKey{
-		Curve: curve,
-		a:     secret,
-		PublicKey: PublicKey{
-			Curve: curve,
-			Y:     publicKey,
-		},
-	}
+type Signer struct {
+	CipherSuite *integration.CipherSuite
+	PublicKey   *PublicKey
+	privateKey  *PrivateKey
+	reader      io.Reader
+	options     *Options
 }
 
-func (k *PrivateKey) Sign(reader io.Reader, message []byte, parameters [][]byte) (*Signature, error) {
-	prover := schnorr.NewProver(k.Curve, nil, message, parameters)
-	proof, err := prover.Prove(k.a)
+type Options struct {
+	TranscriptPrefixes [][]byte
+	TranscriptSuffixes [][]byte
+}
+
+func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reader io.Reader, options *Options) (*Signer, error) {
+	if err := cipherSuite.Validate(); err != nil {
+		return nil, errors.Wrap(err, "ciphersuite is invalid")
+	}
+	privateKey := KeyGen(cipherSuite.Curve, secret, reader)
+
+	return &Signer{
+		CipherSuite: cipherSuite,
+		PublicKey:   &privateKey.PublicKey,
+		privateKey:  privateKey,
+		reader:      reader,
+		options:     options,
+	}, nil
+}
+
+func (s *Signer) Sign(message []byte) (*Signature, error) {
+	proverOptions := &dlog.Options{}
+	if s.options != nil {
+		proverOptions.TranscriptPrefixes = s.options.TranscriptPrefixes
+		proverOptions.TranscriptSuffixes = s.options.TranscriptSuffixes
+	}
+	prover, err := dlog.NewProver(s.CipherSuite, nil, message, proverOptions)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not consturct an internal prover")
+	}
+	proof, err := prover.Prove(s.privateKey.a)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make proof of knowledge of discrete log of public key bound with the message")
 	}
@@ -51,7 +72,24 @@ func (k *PrivateKey) Sign(reader io.Reader, message []byte, parameters [][]byte)
 	}, nil
 }
 
-func Verify(publicKey *PublicKey, message []byte, signature *Signature, parameters [][]byte) error {
+func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *PrivateKey {
+	if secret == nil {
+		secret = curve.Scalar.Random(reader)
+	}
+	publicKey := curve.ScalarBaseMult(secret)
+	return &PrivateKey{
+		a: secret,
+		PublicKey: PublicKey{
+			Curve: curve,
+			Y:     publicKey,
+		},
+	}
+}
+
+func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature, options *Options) error {
+	if err := cipherSuite.Validate(); err != nil {
+		return errors.Wrap(err, "ciphersuite is invalid")
+	}
 	if publicKey == nil {
 		return errors.New("public key is not provided")
 	}
@@ -67,12 +105,19 @@ func Verify(publicKey *PublicKey, message []byte, signature *Signature, paramete
 	if signature.S.IsZero() {
 		return errors.New("response can't be zero")
 	}
-	proof := &schnorr.Proof{
+	proof := &dlog.Proof{
 		C:         signature.C,
 		S:         signature.S,
 		Statement: publicKey.Y,
 	}
-	if err := schnorr.Verify(proof, publicKey.Curve, nil, message, parameters); err != nil {
+
+	verifierOptions := &dlog.Options{}
+	if options != nil {
+		verifierOptions.TranscriptPrefixes = options.TranscriptPrefixes
+		verifierOptions.TranscriptSuffixes = options.TranscriptSuffixes
+	}
+
+	if err := dlog.Verify(cipherSuite, proof, nil, message, verifierOptions); err != nil {
 		return errors.Wrap(err, "couldn't verify underlying schnor proof")
 	}
 	return nil

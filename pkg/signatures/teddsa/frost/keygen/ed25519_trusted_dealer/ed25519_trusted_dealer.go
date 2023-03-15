@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: trusted dealer does not currently support identifiable abort
 func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integration.IdentityKey]*frost.SigningKeyShare, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "could not validate cohort config")
@@ -54,7 +55,6 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 		results[identityKey] = &frost.SigningKeyShare{
 			Share:     share,
 			PublicKey: publicKey,
-			//TODO: Commitment vectors
 		}
 	}
 	return results, nil
