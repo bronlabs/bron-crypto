@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
+	"errors"
 	"hash"
 	"testing"
 
@@ -34,6 +35,9 @@ func (k *identityKey) Sign(message []byte) []byte {
 		panic(err)
 	}
 	return result
+}
+func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+	return errors.New("not implemented")
 }
 
 func Test_happyPath(t *testing.T) {

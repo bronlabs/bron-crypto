@@ -2,7 +2,6 @@ package dkg
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -241,26 +240,16 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 }
 
 func deriveSortedRVector(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([]curves.Scalar, error) {
-	serializedIdentityKeys := make([]string, len(allIdentityKeysToRi))
-	serializedIdentityKeyToIdentityKey := map[string]integration.IdentityKey{}
+	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
-		serializedIdentityKey, err := integration.SerializePublicKey(identityKey.PublicKey())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not serialize identity key of sender")
-		}
-		serializedIdentityKeys[i] = serializedIdentityKey
-		serializedIdentityKeyToIdentityKey[serializedIdentityKey] = identityKey
+		identityKeys[i] = identityKey
 		i++
 	}
-	sort.Strings(serializedIdentityKeys)
+	integration.SortIdentityKeysInPlace(identityKeys)
 
 	sortedRVector := make([]curves.Scalar, len(allIdentityKeysToRi))
-	for i, serializedIdentityKey := range serializedIdentityKeys {
-		identityKey, exists := serializedIdentityKeyToIdentityKey[serializedIdentityKey]
-		if !exists {
-			return nil, errors.New("identity key can't be found")
-		}
+	for i, identityKey := range identityKeys {
 		message, exists := allIdentityKeysToRi[identityKey]
 		if !exists {
 			return nil, errors.New("message coun't be found")

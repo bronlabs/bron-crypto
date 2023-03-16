@@ -3,13 +3,20 @@ package frost
 import (
 	"crypto/ed25519"
 	"hash"
-	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/pkg/errors"
 )
+
+type Participant interface {
+	GetIdentityKey() integration.IdentityKey
+	GetShamirId() int
+	GetCohortConfig() *integration.CohortConfig
+
+	IsSignatureAggregator() bool
+}
 
 const SignatureSize = 64
 
@@ -168,35 +175,13 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 	result := map[int]integration.IdentityKey{}
 	myShamirId := -1
 
-	mySerializedIdentityKey, err := integration.SerializePublicKey(myIdentityKey.PublicKey())
-	if err != nil {
-		return nil, myShamirId, errors.Wrap(err, "couldn't serialize my identity public key")
-	}
-
-	serializedIdentityKeyToIdentityKey := map[string]integration.IdentityKey{}
-	serializedIdentityKeys := make([]string, len(identityKeys))
-
-	for i, identityKey := range identityKeys {
-		serialized, err := integration.SerializePublicKey(identityKey.PublicKey())
-		if err != nil {
-			return nil, myShamirId, errors.Wrap(err, "couldn't serialize public key")
-		}
-		serializedIdentityKeyToIdentityKey[serialized] = identityKey
-		serializedIdentityKeys[i] = serialized
-	}
-	sort.Strings(serializedIdentityKeys)
-	for shamirIdMinusOne, serializedIdentityKey := range serializedIdentityKeys {
-		identityKey, exists := serializedIdentityKeyToIdentityKey[serializedIdentityKey]
-		if !exists {
-			return nil, myShamirId, errors.Errorf("identity key %s does not exist", serializedIdentityKey)
-		}
+	integration.SortIdentityKeysInPlace(identityKeys)
+	for shamirIdMinusOne, identityKey := range identityKeys {
 		result[shamirIdMinusOne+1] = identityKey
-		if serializedIdentityKey == mySerializedIdentityKey {
+		if identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
 			myShamirId = shamirIdMinusOne + 1
 		}
 	}
-	if myShamirId == -1 {
-		return nil, myShamirId, errors.New("couldn't find my shamir Id")
-	}
+
 	return result, myShamirId, nil
 }

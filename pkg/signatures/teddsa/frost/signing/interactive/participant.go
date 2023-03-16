@@ -1,8 +1,7 @@
-package interactive_signing
+package interactive
 
 import (
 	"io"
-	"time"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -11,17 +10,34 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ frost.Participant = (*InteractiveCosigner)(nil)
+
 type InteractiveCosigner struct {
+	reader io.Reader
+
+	MyIdentityKey   integration.IdentityKey
+	MyShamirId      int
+	SigningKeyShare *frost.SigningKeyShare
+
 	CohortConfig          *integration.CohortConfig
-	reader                io.Reader
-	MyIdentityKey         integration.IdentityKey
-	round                 int
-	MyShamirId            int
 	PublicKeyShares       *frost.PublicKeyShares
-	shamirIdToIdentityKey map[int]integration.IdentityKey
-	identityKeyToShamirId map[integration.IdentityKey]int
-	SigningKeyShare       *frost.SigningKeyShare
-	state                 *State
+	ShamirIdToIdentityKey map[int]integration.IdentityKey
+	IdentityKeyToShamirId map[integration.IdentityKey]int
+
+	round int
+	state *State
+}
+
+func (ic *InteractiveCosigner) GetIdentityKey() integration.IdentityKey {
+	return ic.MyIdentityKey
+}
+
+func (ic *InteractiveCosigner) GetShamirId() int {
+	return ic.MyShamirId
+}
+
+func (ic *InteractiveCosigner) GetCohortConfig() *integration.CohortConfig {
+	return ic.CohortConfig
 }
 
 func (ic *InteractiveCosigner) IsSignatureAggregator() bool {
@@ -48,8 +64,6 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
-	time.Sleep(2 * time.Second)
-
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errors.New("can't set presignature composer if cosigner is interactive")
 	}
@@ -66,13 +80,13 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 		state:           &State{},
 	}
 
-	result.shamirIdToIdentityKey, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result.ShamirIdToIdentityKey, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}
-	result.identityKeyToShamirId = map[integration.IdentityKey]int{}
-	for shamirId, identityKey := range result.shamirIdToIdentityKey {
-		result.identityKeyToShamirId[identityKey] = shamirId
+	result.IdentityKeyToShamirId = map[integration.IdentityKey]int{}
+	for shamirId, identityKey := range result.ShamirIdToIdentityKey {
+		result.IdentityKeyToShamirId[identityKey] = shamirId
 	}
 	result.round = 1
 	return result, nil

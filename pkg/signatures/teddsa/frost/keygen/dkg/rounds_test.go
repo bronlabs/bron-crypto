@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -35,6 +36,9 @@ func (k *identityKey) Sign(message []byte) []byte {
 		panic(err)
 	}
 	return result
+}
+func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+	return errors.New("not implemented")
 }
 
 func Test_HappyPath(t *testing.T) {

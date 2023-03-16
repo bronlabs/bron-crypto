@@ -129,7 +129,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	}
 
 	// identifiable abort is possible
-	if sa.PublicKeyShares != nil {
+	if sa.HasIdentifiableAbort() {
 		shamirConfig, err := sharing.NewShamir(uint32(sa.CohortConfig.Threshold), uint32(sa.CohortConfig.TotalParties), sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize shamir config")

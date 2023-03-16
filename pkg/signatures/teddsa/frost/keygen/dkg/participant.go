@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ frost.Participant = (*DKGParticipant)(nil)
+
 type DKGParticipant struct {
 	reader io.Reader
 
@@ -24,6 +26,27 @@ type DKGParticipant struct {
 
 	round int
 	state *State
+}
+
+func (p *DKGParticipant) GetIdentityKey() integration.IdentityKey {
+	return p.MyIdentityKey
+}
+
+func (p *DKGParticipant) GetShamirId() int {
+	return p.MyShamirId
+}
+
+func (p *DKGParticipant) GetCohortConfig() *integration.CohortConfig {
+	return p.CohortConfig
+}
+
+func (p *DKGParticipant) IsSignatureAggregator() bool {
+	for _, signatureAggregator := range p.CohortConfig.SignatureAggregators {
+		if signatureAggregator.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+			return true
+		}
+	}
+	return false
 }
 
 type State struct {

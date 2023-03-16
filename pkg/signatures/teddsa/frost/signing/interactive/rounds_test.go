@@ -1,4 +1,4 @@
-package interactive_signing_test
+package interactive_test
 
 import (
 	crand "crypto/rand"
@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
 	interactive_signing "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,6 +37,9 @@ func (k *identityKey) Sign(message []byte) []byte {
 		panic(err)
 	}
 	return result
+}
+func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+	return errors.New("not implemented")
 }
 
 func Test_HappyPath(t *testing.T) {

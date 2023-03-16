@@ -2,8 +2,10 @@ package integration
 
 import (
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"hash"
+	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -12,6 +14,7 @@ import (
 
 type IdentityKey interface {
 	Sign(message []byte) []byte
+	Verify(signature []byte, publicKey curves.Point, message []byte) error
 	PublicKey() curves.Point
 }
 
@@ -42,6 +45,8 @@ type CohortConfig struct {
 
 	SignatureAggregators []IdentityKey
 	PreSignatureComposer IdentityKey
+
+	participantHashSet map[IdentityKey]bool
 }
 
 func (c *CohortConfig) Validate() error {
@@ -67,16 +72,12 @@ func (c *CohortConfig) Validate() error {
 		return errors.New("number of provided participants is not equal to total parties")
 	}
 
-	participantHashSet := map[string]bool{}
+	c.participantHashSet = map[IdentityKey]bool{}
 	for _, identityKey := range c.Participants {
-		serializedIdentityKey, err := SerializePublicKey(identityKey.PublicKey())
-		if err != nil {
-			return errors.Wrap(err, "identity key is not serializable")
-		}
-		if participantHashSet[serializedIdentityKey] {
+		if c.participantHashSet[identityKey] {
 			return errors.New("found duplicate identity key")
 		}
-		participantHashSet[serializedIdentityKey] = true
+		c.participantHashSet[identityKey] = true
 	}
 
 	if c.SignatureAggregators == nil || len(c.SignatureAggregators) == 0 {
@@ -84,6 +85,20 @@ func (c *CohortConfig) Validate() error {
 	}
 
 	return nil
+}
+
+func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
+	c.cacheParticipantHashSet()
+	return c.participantHashSet[identityKey]
+}
+
+func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
+	for _, aggregator := range c.SignatureAggregators {
+		if aggregator.PublicKey().Equal(identityKey.PublicKey()) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *CohortConfig) UnmarshalJSON(data []byte) error {
@@ -97,6 +112,30 @@ func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	*c = result
 	return nil
 
+}
+
+func (c *CohortConfig) cacheParticipantHashSet() {
+	if c.participantHashSet == nil || len(c.participantHashSet) == 0 {
+		c.participantHashSet = map[IdentityKey]bool{}
+		for _, identityKey := range c.Participants {
+			c.participantHashSet[identityKey] = true
+		}
+	}
+}
+
+func SortIdentityKeysInPlace(identityKeys []IdentityKey) {
+	sort.Slice(identityKeys, func(i, j int) bool {
+		switch identityKeys[i].PublicKey().CurveName() {
+		case curves.ED25519Name:
+			iKey := binary.LittleEndian.Uint64(identityKeys[i].PublicKey().ToAffineCompressed())
+			jKey := binary.LittleEndian.Uint64(identityKeys[j].PublicKey().ToAffineCompressed())
+			return iKey < jKey
+		default:
+			iKey := binary.BigEndian.Uint64(identityKeys[i].PublicKey().ToAffineCompressed())
+			jKey := binary.BigEndian.Uint64(identityKeys[j].PublicKey().ToAffineCompressed())
+			return iKey < jKey
+		}
+	})
 }
 
 func SerializePublicKey(publicKey curves.Point) (string, error) {

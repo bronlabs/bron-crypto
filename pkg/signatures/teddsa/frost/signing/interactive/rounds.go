@@ -1,7 +1,6 @@
-package interactive_signing
+package interactive
 
 import (
-	"crypto/sha512"
 	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -12,8 +11,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
 )
-
-var H = sha512.New512_256()
 
 type Round1Broadcast struct {
 	Di curves.Point
@@ -55,7 +52,7 @@ func (ic *InteractiveCosigner) Aggregate(partialSignatures map[integration.Ident
 	if ic.round != 3 {
 		return nil, errors.New("round mismatch")
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.state.S, ic.shamirIdToIdentityKey, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.state.S, ic.ShamirIdToIdentityKey, ic.state.aggregation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}
@@ -75,7 +72,7 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 	ic.state.S = make([]int, len(round1output))
 	i := 0
 	for identityKey := range round1output {
-		ic.state.S[i] = ic.identityKeyToShamirId[identityKey]
+		ic.state.S[i] = ic.IdentityKeyToShamirId[identityKey]
 		i++
 	}
 	sort.Ints(ic.state.S)
@@ -84,7 +81,7 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 	E_alpha = map[integration.IdentityKey]curves.Point{}
 
 	for _, shamirId := range ic.state.S {
-		senderIdentityKey, exists := ic.shamirIdToIdentityKey[shamirId]
+		senderIdentityKey, exists := ic.ShamirIdToIdentityKey[shamirId]
 		if !exists {
 			return nil, nil, errors.New("sender identity key is not found")
 		}
@@ -119,11 +116,11 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 
 	combinedDsAndEs := []byte{}
 	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.shamirIdToIdentityKey[presentPartyShamirID]
+		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
 		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
 	}
 	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.shamirIdToIdentityKey[presentPartyShamirID]
+		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
 		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
 	}
 
@@ -137,7 +134,7 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 		if j == ic.MyShamirId {
 			r_i = r_j
 		}
-		jIdentityKey, exists := ic.shamirIdToIdentityKey[j]
+		jIdentityKey, exists := ic.ShamirIdToIdentityKey[j]
 		if !exists {
 			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
 		}

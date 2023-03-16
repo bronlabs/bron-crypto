@@ -24,6 +24,14 @@ type Signature struct {
 	S curves.Scalar
 }
 
+// func (s *Signature) UnmarshalJSON(data []byte) error {
+// 	var unmarshaled Signature
+// 	if err := json.Unmarshal(data, &unmarshaled); err != nil {
+// 		return errors.Wrap(err, "could not unmarshal schnorr signature")
+// 	}
+// 	return nil
+// }
+
 type Signer struct {
 	CipherSuite *integration.CipherSuite
 	PublicKey   *PublicKey

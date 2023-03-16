@@ -1,4 +1,4 @@
-package interactive_signing
+package interactive
 
 import (
 	crand "crypto/rand"
@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	trusted_dealer "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/ed25519_trusted_dealer"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,6 +23,9 @@ func (k *mockedIdentityKey) PublicKey() curves.Point {
 }
 func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")
+}
+func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+	return errors.New("not implemented")
 }
 
 func Test_CanInitialize(t *testing.T) {
@@ -70,7 +74,7 @@ func Test_CanInitialize(t *testing.T) {
 	for _, party := range []*InteractiveCosigner{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
-		require.Len(t, party.shamirIdToIdentityKey, 2)
+		require.Len(t, party.ShamirIdToIdentityKey, 2)
 		require.NotNil(t, party.SigningKeyShare)
 	}
 	require.NotEqual(t, alice.MyShamirId, bob.MyShamirId)
