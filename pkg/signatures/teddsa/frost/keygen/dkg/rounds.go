@@ -88,7 +88,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	for shamirId, identityKey := range p.shamirIdToIdentityKey {
 		if shamirId != p.MyShamirId {
 			shamirIndex := shamirId - 1
-			xij, err := p.CohortConfig.CipherSuite.Curve.Scalar.SetBytes(shares[shamirIndex].Value)
+			xij := shares[shamirIndex].Value
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "couldn't convert shamir share to scalar")
 			}
@@ -116,10 +116,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 	if myShamirShare == nil {
 		return nil, nil, errors.New("could not find my shamir share from the state")
 	}
-	secretKeyShare, err := p.CohortConfig.CipherSuite.Curve.Scalar.SetBytes(myShamirShare.Value)
-	if err != nil {
-		return nil, nil, errors.New("could not convert my shamir share to scalar")
-	}
+	secretKeyShare := myShamirShare.Value
 
 	publicKey := p.state.commitments[0]
 	commitmentVectors := map[int][]curves.Point{
@@ -154,8 +151,8 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			}
 			receivedSecretKeyShare := p2pMessageFromSender.Xij
 			receivedShare := &sharing.ShamirShare{
-				Id:    uint32(p.MyShamirId),
-				Value: receivedSecretKeyShare.Bytes(),
+				Id:    p.MyShamirId,
+				Value: receivedSecretKeyShare,
 			}
 			if err := sharing.FeldmanVerify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
 				return nil, nil, errors.New("Abort from feldman")

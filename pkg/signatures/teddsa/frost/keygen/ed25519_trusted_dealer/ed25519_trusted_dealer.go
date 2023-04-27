@@ -48,10 +48,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 	results := map[integration.IdentityKey]*frost.SigningKeyShare{}
 
 	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share, err := curve.Scalar.SetBytes(shamirShares[shamirId-1].Value)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not convert shamir share to signing key share")
-		}
+		share := shamirShares[shamirId-1].Value
 		results[identityKey] = &frost.SigningKeyShare{
 			Share:     share,
 			PublicKey: publicKey,

@@ -20,19 +20,18 @@ import (
 )
 
 type ShamirShare struct {
-	Id    uint32 `json:"identifier"`
-	Value []byte `json:"value"`
+	Id    int           `json:"identifier"`
+	Value curves.Scalar `json:"value"`
 }
 
 func (ss ShamirShare) Validate(curve *curves.Curve) error {
 	if ss.Id == 0 {
 		return fmt.Errorf("invalid identifier")
 	}
-	sc, err := curve.Scalar.SetBytes(ss.Value)
-	if err != nil {
-		return err
+	if shareCurveName := ss.Value.Point().CurveName(); shareCurveName != curve.Name {
+		return fmt.Errorf("curve mismatch %s != %s", shareCurveName, curve.Name)
 	}
-	if sc.IsZero() {
+	if ss.Value.IsZero() {
 		return fmt.Errorf("invalid share")
 	}
 	return nil
@@ -40,8 +39,8 @@ func (ss ShamirShare) Validate(curve *curves.Curve) error {
 
 func (ss ShamirShare) Bytes() []byte {
 	var id [4]byte
-	binary.BigEndian.PutUint32(id[:], ss.Id)
-	return append(id[:], ss.Value...)
+	binary.BigEndian.PutUint32(id[:], uint32(ss.Id))
+	return append(id[:], ss.Value.Bytes()...)
 }
 
 type Shamir struct {
@@ -79,20 +78,20 @@ func (s Shamir) getPolyAndShares(secret curves.Scalar, reader io.Reader) ([]*Sha
 	for i := range shares {
 		x := s.curve.Scalar.New(i + 1)
 		shares[i] = &ShamirShare{
-			Id:    uint32(i + 1),
-			Value: poly.Evaluate(x).Bytes(),
+			Id:    i + 1,
+			Value: poly.Evaluate(x),
 		}
 	}
 	return shares, poly
 }
 
-func (s Shamir) LagrangeCoeffs(identities []uint32) (map[uint32]curves.Scalar, error) {
-	xs := make(map[uint32]curves.Scalar, len(identities))
+func (s Shamir) LagrangeCoeffs(identities []int) (map[int]curves.Scalar, error) {
+	xs := make(map[int]curves.Scalar, len(identities))
 	for _, xi := range identities {
-		xs[xi] = s.curve.Scalar.New(int(xi))
+		xs[xi] = s.curve.Scalar.New(xi)
 	}
 
-	result := make(map[uint32]curves.Scalar, len(identities))
+	result := make(map[int]curves.Scalar, len(identities))
 	for i, xi := range xs {
 		num := s.curve.Scalar.One()
 		den := s.curve.Scalar.One()
@@ -116,7 +115,7 @@ func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
 	if len(shares) < int(s.threshold) {
 		return nil, fmt.Errorf("invalid number of shares")
 	}
-	dups := make(map[uint32]bool, len(shares))
+	dups := make(map[int]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
 	ys := make([]curves.Scalar, len(shares))
 
@@ -125,15 +124,15 @@ func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
 		if err != nil {
 			return nil, err
 		}
-		if share.Id > s.limit {
+		if uint32(share.Id) > s.limit {
 			return nil, fmt.Errorf("invalid share identifier")
 		}
 		if _, in := dups[share.Id]; in {
 			return nil, fmt.Errorf("duplicate share")
 		}
 		dups[share.Id] = true
-		ys[i], _ = s.curve.Scalar.SetBytes(share.Value)
-		xs[i] = s.curve.Scalar.New(int(share.Id))
+		ys[i] = share.Value
+		xs[i] = s.curve.Scalar.New(share.Id)
 	}
 	return s.interpolate(xs, ys)
 }
@@ -142,7 +141,7 @@ func (s Shamir) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
 	if len(shares) < int(s.threshold) {
 		return nil, fmt.Errorf("invalid number of shares")
 	}
-	dups := make(map[uint32]bool, len(shares))
+	dups := make(map[int]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
 	ys := make([]curves.Point, len(shares))
 
@@ -151,16 +150,15 @@ func (s Shamir) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
 		if err != nil {
 			return nil, err
 		}
-		if share.Id > s.limit {
+		if uint32(share.Id) > s.limit {
 			return nil, fmt.Errorf("invalid share identifier")
 		}
 		if _, in := dups[share.Id]; in {
 			return nil, fmt.Errorf("duplicate share")
 		}
 		dups[share.Id] = true
-		sc, _ := s.curve.Scalar.SetBytes(share.Value)
-		ys[i] = s.curve.ScalarBaseMult(sc)
-		xs[i] = s.curve.Scalar.New(int(share.Id))
+		ys[i] = s.curve.ScalarBaseMult(share.Value)
+		xs[i] = s.curve.Scalar.New(share.Id)
 	}
 	return s.interpolatePoint(xs, ys)
 }

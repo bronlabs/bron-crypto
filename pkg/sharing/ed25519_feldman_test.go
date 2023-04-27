@@ -46,11 +46,11 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 	_, err = scheme.Combine([]*ShamirShare{
 		{
 			Id:    1,
-			Value: testCurve.Scalar.New(3).Bytes(),
+			Value: testCurve.Scalar.New(3),
 		},
 		{
 			Id:    1,
-			Value: testCurve.Scalar.New(3).Bytes(),
+			Value: testCurve.Scalar.New(3),
 		},
 	}...)
 	require.NotNil(t, err)
@@ -63,18 +63,18 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 	shares := []*ShamirShare{
 		{
 			Id:    0,
-			Value: testCurve.Scalar.New(3).Bytes(),
+			Value: testCurve.Scalar.New(3),
 		},
 		{
 			Id:    2,
-			Value: testCurve.Scalar.New(3).Bytes(),
+			Value: testCurve.Scalar.New(3),
 		},
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 	shares[0] = &ShamirShare{
 		Id:    4,
-		Value: testCurve.Scalar.New(3).Bytes(),
+		Value: testCurve.Scalar.New(3),
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)

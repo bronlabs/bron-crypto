@@ -29,7 +29,7 @@ func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, 
 		return err
 	}
 
-	x := curve.Scalar.New(int(share.Id))
+	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
 	rhs := commitments[0]
 
@@ -38,10 +38,8 @@ func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, 
 		rhs = rhs.Add(commitments[j].Mul(i))
 	}
 
-	sc, _ := curve.Scalar.SetBytes(share.Value)
-	bsc, _ := curve.Scalar.SetBytes(blindShare.Value)
-	g := commitments[0].Generator().Mul(sc)
-	h := generator.Mul(bsc)
+	g := commitments[0].Generator().Mul(share.Value)
+	h := generator.Mul(blindShare.Value)
 	lhs := g.Add(h)
 
 	if lhs.Equal(rhs) {
@@ -113,13 +111,13 @@ func (pd Pedersen) Split(secret curves.Scalar, reader io.Reader) (*PedersenResul
 	}, nil
 }
 
-func (pd Pedersen) LagrangeCoeffs(shares map[uint32]*ShamirShare) (map[uint32]curves.Scalar, error) {
+func (pd Pedersen) LagrangeCoeffs(shares map[int]*ShamirShare) (map[int]curves.Scalar, error) {
 	shamir := &Shamir{
 		threshold: pd.threshold,
 		limit:     pd.limit,
 		curve:     pd.curve,
 	}
-	identities := make([]uint32, 0)
+	identities := make([]int, 0)
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
