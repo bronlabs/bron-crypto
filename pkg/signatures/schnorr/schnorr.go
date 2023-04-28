@@ -61,12 +61,7 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reade
 }
 
 func (s *Signer) Sign(message []byte) (*Signature, error) {
-	proverOptions := &dlog.Options{}
-	if s.options != nil {
-		proverOptions.TranscriptPrefixes = s.options.TranscriptPrefixes
-		proverOptions.TranscriptSuffixes = s.options.TranscriptSuffixes
-	}
-	prover, err := dlog.NewProver(s.CipherSuite, nil, message, proverOptions)
+	prover, err := dlog.NewProver(s.CipherSuite.Curve.Point.Generator(), message, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not consturct an internal prover")
 	}
@@ -119,13 +114,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		Statement: publicKey.Y,
 	}
 
-	verifierOptions := &dlog.Options{}
-	if options != nil {
-		verifierOptions.TranscriptPrefixes = options.TranscriptPrefixes
-		verifierOptions.TranscriptSuffixes = options.TranscriptSuffixes
-	}
-
-	if err := dlog.Verify(cipherSuite, proof, nil, message, verifierOptions); err != nil {
+	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), proof, message, nil); err != nil {
 		return errors.Wrap(err, "couldn't verify underlying schnor proof")
 	}
 	return nil
