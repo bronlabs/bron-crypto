@@ -12,7 +12,6 @@
 package sharing
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -35,12 +34,6 @@ func (ss ShamirShare) Validate(curve *curves.Curve) error {
 		return fmt.Errorf("invalid share")
 	}
 	return nil
-}
-
-func (ss ShamirShare) Bytes() []byte {
-	var id [4]byte
-	binary.BigEndian.PutUint32(id[:], uint32(ss.Id))
-	return append(id[:], ss.Value.Bytes()...)
 }
 
 type Shamir struct {
