@@ -65,12 +65,12 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't construct feldman dealer")
 	}
-	commitmentVector, shares, err := dealer.Split(a_i0, p.reader)
+	commitments, shares, err := dealer.Split(a_i0, p.reader)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't split the secret via feldman dealer")
 	}
 	p.state.shareVector = shares
-	p.state.commitmentVector = commitmentVector
+	p.state.commitments = commitments
 
 	schnorrSigner, err := schnorr.NewSigner(p.CohortConfig.CipherSuite, a_i0, p.reader, &schnorr.Options{
 		TranscriptSuffixes: [][]byte{phi},
@@ -103,7 +103,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	p.round++
 
 	return &Round2Broadcast{
-		Ci:     commitmentVector.Commitments,
+		Ci:     commitments,
 		SigmaI: sigma_i,
 	}, outboundP2PMessages, nil
 }
@@ -121,9 +121,9 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 		return nil, nil, errors.New("could not convert my shamir share to scalar")
 	}
 
-	publicKey := p.state.commitmentVector.Commitments[0]
+	publicKey := p.state.commitments[0]
 	commitmentVectors := map[int][]curves.Point{
-		p.MyShamirId: p.state.commitmentVector.Commitments,
+		p.MyShamirId: p.state.commitments,
 	}
 
 	for senderShamirId := 1; senderShamirId <= p.CohortConfig.TotalParties; senderShamirId++ {
@@ -148,9 +148,6 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			}); err != nil {
 				return nil, nil, errors.New("Abort from schnorr")
 			}
-			feldmanVerifier := &sharing.FeldmanVerifier{
-				Commitments: broadcastedMessageFromSender.Ci,
-			}
 			p2pMessageFromSender, exists := round2outputP2P[senderIdentityKey]
 			if !exists {
 				return nil, nil, errors.Errorf("did not get a p2p message from sender with shamir id %d", senderShamirId)
@@ -160,7 +157,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				Id:    uint32(p.MyShamirId),
 				Value: receivedSecretKeyShare.Bytes(),
 			}
-			if err := feldmanVerifier.Verify(receivedShare); err != nil {
+			if err := sharing.FeldmanVerify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
 				return nil, nil, errors.New("Abort from feldman")
 			}
 

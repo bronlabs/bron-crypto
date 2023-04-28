@@ -50,10 +50,10 @@ func (p *DKGParticipant) IsSignatureAggregator() bool {
 }
 
 type State struct {
-	r_i              curves.Scalar
-	phi              []byte
-	shareVector      []*sharing.ShamirShare
-	commitmentVector *sharing.FeldmanVerifier
+	r_i         curves.Scalar
+	phi         []byte
+	shareVector []*sharing.ShamirShare
+	commitments []curves.Point
 }
 
 func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader) (*DKGParticipant, error) {

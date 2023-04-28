@@ -20,13 +20,8 @@ type Pedersen struct {
 	generator        curves.Point
 }
 
-type PedersenVerifier struct {
-	Generator   curves.Point
-	Commitments []curves.Point
-}
-
-func (pv PedersenVerifier) Verify(share, blindShare *ShamirShare) error {
-	curve := curves.GetCurveByName(pv.Generator.CurveName())
+func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, generator curves.Point) (err error) {
+	curve := curves.GetCurveByName(generator.CurveName())
 	if err := share.Validate(curve); err != nil {
 		return err
 	}
@@ -36,17 +31,17 @@ func (pv PedersenVerifier) Verify(share, blindShare *ShamirShare) error {
 
 	x := curve.Scalar.New(int(share.Id))
 	i := curve.Scalar.One()
-	rhs := pv.Commitments[0]
+	rhs := commitments[0]
 
-	for j := 1; j < len(pv.Commitments); j++ {
+	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
-		rhs = rhs.Add(pv.Commitments[j].Mul(i))
+		rhs = rhs.Add(commitments[j].Mul(i))
 	}
 
 	sc, _ := curve.Scalar.SetBytes(share.Value)
 	bsc, _ := curve.Scalar.SetBytes(blindShare.Value)
-	g := pv.Commitments[0].Generator().Mul(sc)
-	h := pv.Generator.Mul(bsc)
+	g := commitments[0].Generator().Mul(sc)
+	h := generator.Mul(bsc)
 	lhs := g.Add(h)
 
 	if lhs.Equal(rhs) {
@@ -58,10 +53,10 @@ func (pv PedersenVerifier) Verify(share, blindShare *ShamirShare) error {
 
 // PedersenResult contains all the data from calling Split
 type PedersenResult struct {
-	Blinding                     curves.Scalar
-	BlindingShares, SecretShares []*ShamirShare
-	FeldmanVerifier              *FeldmanVerifier
-	PedersenVerifier             *PedersenVerifier
+	Blinding                         curves.Scalar
+	BlindingShares, SecretShares     []*ShamirShare
+	Commitments, BlindingCommitments []curves.Point
+	Generator                        curves.Point
 }
 
 // NewPedersen creates a new pedersen VSS
@@ -101,22 +96,20 @@ func (pd Pedersen) Split(secret curves.Scalar, reader io.Reader) (*PedersenResul
 	blindingShares, polyBlinding := shamir.getPolyAndShares(blinding, reader)
 
 	// Generate the verifiable commitments to the polynomial for the shares
-	blindedverifiers := make([]curves.Point, pd.threshold)
-	verifiers := make([]curves.Point, pd.threshold)
+	blindedCommitments := make([]curves.Point, pd.threshold)
+	commitments := make([]curves.Point, pd.threshold)
 
 	// ({p0 * G + b0 * H}, ...,{pt * G + bt * H})
 	for i, c := range poly.Coefficients {
 		s := pd.curve.ScalarBaseMult(c)
 		b := pd.generator.Mul(polyBlinding.Coefficients[i])
 		bv := s.Add(b)
-		blindedverifiers[i] = bv
-		verifiers[i] = s
+		blindedCommitments[i] = bv
+		commitments[i] = s
 	}
-	verifier1 := &FeldmanVerifier{Commitments: verifiers}
-	verifier2 := &PedersenVerifier{Commitments: blindedverifiers, Generator: pd.generator}
 
 	return &PedersenResult{
-		blinding, blindingShares, shares, verifier1, verifier2,
+		blinding, blindingShares, shares, commitments, blindedCommitments, pd.generator,
 	}, nil
 }
 

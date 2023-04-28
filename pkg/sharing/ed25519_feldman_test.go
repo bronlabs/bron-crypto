@@ -86,11 +86,11 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	require.NotNil(t, scheme)
 
 	secret := testCurve.Scalar.Hash([]byte("test"))
-	verifiers, shares, err := scheme.Split(secret, crand.Reader)
+	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
 	for _, s := range shares {
-		err = verifiers.Verify(s)
+		err = FeldmanVerify(s, commitments)
 		require.Nil(t, err)
 	}
 	secret2, err := scheme.Combine(shares...)
@@ -104,9 +104,9 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 	require.NotNil(t, scheme)
 
 	secret := testCurve.Scalar.Hash([]byte("test"))
-	verifiers, shares, err := scheme.Split(secret, crand.Reader)
+	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	for _, s := range shares {
-		err = verifiers.Verify(s)
+		err = FeldmanVerify(s, commitments)
 		require.Nil(t, err)
 	}
 	require.Nil(t, err)

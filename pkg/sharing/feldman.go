@@ -13,26 +13,22 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 )
 
-type FeldmanVerifier struct {
-	Commitments []curves.Point
-}
-
-func (v FeldmanVerifier) Verify(share *ShamirShare) error {
-	curve := curves.GetCurveByName(v.Commitments[0].CurveName())
-	err := share.Validate(curve)
+func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
+	curve := curves.GetCurveByName(commitments[0].CurveName())
+	err = share.Validate(curve)
 	if err != nil {
 		return err
 	}
 	x := curve.Scalar.New(int(share.Id))
 	i := curve.Scalar.One()
-	rhs := v.Commitments[0]
+	rhs := commitments[0]
 
-	for j := 1; j < len(v.Commitments); j++ {
+	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
-		rhs = rhs.Add(v.Commitments[j].Mul(i))
+		rhs = rhs.Add(commitments[j].Mul(i))
 	}
 	sc, _ := curve.Scalar.SetBytes(share.Value)
-	lhs := v.Commitments[0].Generator().Mul(sc)
+	lhs := commitments[0].Generator().Mul(sc)
 
 	if lhs.Equal(rhs) {
 		return nil
@@ -62,7 +58,7 @@ func NewFeldman(threshold, limit uint32, curve *curves.Curve) (*Feldman, error) 
 	return &Feldman{threshold, limit, curve}, nil
 }
 
-func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (*FeldmanVerifier, []*ShamirShare, error) {
+func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
 	if secret.IsZero() {
 		return nil, nil, fmt.Errorf("invalid secret")
 	}
@@ -72,12 +68,11 @@ func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (*FeldmanVerifier
 		curve:     f.Curve,
 	}
 	shares, poly := shamir.getPolyAndShares(secret, reader)
-	verifier := new(FeldmanVerifier)
-	verifier.Commitments = make([]curves.Point, f.Threshold)
-	for i := range verifier.Commitments {
-		verifier.Commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
+	commitments = make([]curves.Point, f.Threshold)
+	for i := range commitments {
+		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
 	}
-	return verifier, shares, nil
+	return commitments, shares, nil
 }
 
 func (f Feldman) LagrangeCoeffs(shares map[uint32]*ShamirShare) (map[uint32]curves.Scalar, error) {
