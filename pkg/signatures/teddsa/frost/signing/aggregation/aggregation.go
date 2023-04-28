@@ -130,15 +130,11 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 
 	// identifiable abort is possible
 	if sa.HasIdentifiableAbort() {
-		shamirConfig, err := sharing.NewShamir(uint32(sa.CohortConfig.Threshold), uint32(sa.CohortConfig.TotalParties), sa.CohortConfig.CipherSuite.Curve)
+		shamirConfig, err := sharing.NewShamir(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize shamir config")
 		}
-		sUint32 := make([]uint32, len(sa.PresentParties))
-		for i, presentPartyShamirId := range sa.PresentParties {
-			sUint32[i] = uint32(presentPartyShamirId)
-		}
-		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(sUint32)
+		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(sa.PresentParties)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute lagrange coefficients")
 		}
@@ -159,7 +155,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			if !exists {
 				return nil, errors.Errorf("could not find public key share of shamir id %d", j)
 			}
-			lambda_j, exists := lagrangeCoefficients[uint32(j)]
+			lambda_j, exists := lagrangeCoefficients[j]
 			if !exists {
 				return nil, errors.Errorf("could not find lagrange coefficient of shamir id %d", j)
 			}

@@ -174,16 +174,16 @@ func Test_HappyPath(t *testing.T) {
 	require.NotNil(t, shamirDealer)
 
 	aliceShamirShare := &sharing.ShamirShare{
-		Id:    uint32(alice.MyShamirId),
-		Value: aliceSigningKeyShare.Share.Bytes(),
+		Id:    alice.MyShamirId,
+		Value: aliceSigningKeyShare.Share,
 	}
 	bobShamirShare := &sharing.ShamirShare{
-		Id:    uint32(bob.MyShamirId),
-		Value: bobSigningKeyShare.Share.Bytes(),
+		Id:    bob.MyShamirId,
+		Value: bobSigningKeyShare.Share,
 	}
 	charlieShamirShare := &sharing.ShamirShare{
-		Id:    uint32(charlie.MyShamirId),
-		Value: charlieSigningKeyShare.Share.Bytes(),
+		Id:    charlie.MyShamirId,
+		Value: charlieSigningKeyShare.Share,
 	}
 
 	reconstructedPrivateKey, err := shamirDealer.Combine(aliceShamirShare, bobShamirShare, charlieShamirShare)

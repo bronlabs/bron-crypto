@@ -7,7 +7,6 @@
 package sharing
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"encoding/json"
 	"testing"
@@ -49,11 +48,11 @@ func TestShamirCombineDuplicateShare(t *testing.T) {
 	_, err = scheme.Combine([]*ShamirShare{
 		{
 			Id:    1,
-			Value: curve.NewScalar().New(3).Bytes(),
+			Value: curve.NewScalar().New(3),
 		},
 		{
 			Id:    1,
-			Value: curve.NewScalar().New(3).Bytes(),
+			Value: curve.NewScalar().New(3),
 		},
 	}...)
 	require.NotNil(t, err)
@@ -67,18 +66,18 @@ func TestShamirCombineBadIdentifier(t *testing.T) {
 	shares := []*ShamirShare{
 		{
 			Id:    0,
-			Value: curve.NewScalar().New(3).Bytes(),
+			Value: curve.NewScalar().New(3),
 		},
 		{
 			Id:    2,
-			Value: curve.NewScalar().New(3).Bytes(),
+			Value: curve.NewScalar().New(3),
 		},
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 	shares[0] = &ShamirShare{
 		Id:    4,
-		Value: curve.NewScalar().New(3).Bytes(),
+		Value: curve.NewScalar().New(3),
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
@@ -108,7 +107,7 @@ func TestShamirComputeL(t *testing.T) {
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
-	identities := make([]uint32, 0)
+	identities := make([]int, 0)
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
@@ -119,8 +118,7 @@ func TestShamirComputeL(t *testing.T) {
 	// Checking we can reconstruct the same secret using Lagrange coefficients.
 	result := curve.NewScalar()
 	for _, r := range shares {
-		rc, _ := curve.Scalar.SetBytes(r.Value)
-		result = result.Add(rc.Mul(lCoeffs[r.Id]))
+		result = result.Add(r.Value.Mul(lCoeffs[r.Id]))
 	}
 	require.Equal(t, result.Bytes(), secret.Bytes())
 }
@@ -159,15 +157,15 @@ func TestShamirAllCombinations(t *testing.T) {
 func TestMarshalJsonRoundTrip(t *testing.T) {
 	curve := curves.ED25519()
 	shares := []ShamirShare{
-		{0, curve.Scalar.New(300).Bytes()},
-		{2, curve.Scalar.New(300000).Bytes()},
-		{20, curve.Scalar.New(12812798).Bytes()},
-		{31, curve.Scalar.New(17).Bytes()},
-		{57, curve.Scalar.New(5066680).Bytes()},
-		{128, curve.Scalar.New(3005).Bytes()},
-		{19, curve.Scalar.New(317).Bytes()},
-		{7, curve.Scalar.New(323).Bytes()},
-		{222, curve.NewScalar().New(-1).Bytes()},
+		{0, curve.Scalar.New(300)},
+		{2, curve.Scalar.New(300000)},
+		{20, curve.Scalar.New(12812798)},
+		{31, curve.Scalar.New(17)},
+		{57, curve.Scalar.New(5066680)},
+		{128, curve.Scalar.New(3005)},
+		{19, curve.Scalar.New(317)},
+		{7, curve.Scalar.New(323)},
+		{222, curve.NewScalar().New(-1)},
 	}
 	// Run all the tests!
 	for _, in := range shares {
@@ -176,11 +174,11 @@ func TestMarshalJsonRoundTrip(t *testing.T) {
 		require.NotNil(t, input)
 
 		// Unmarshal and test
-		out := &ShamirShare{}
-		//out.Value = curve.NewScalar()
+		var out ShamirShare
+		out.Value = curve.NewScalar()
 		err = json.Unmarshal(input, &out)
 		require.NoError(t, err)
 		require.Equal(t, in.Id, out.Id)
-		require.Equal(t, bytes.Compare(in.Value, out.Value), 0)
+		require.Equal(t, in.Value, out.Value)
 	}
 }

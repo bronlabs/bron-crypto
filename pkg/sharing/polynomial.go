@@ -16,10 +16,10 @@ type Polynomial struct {
 	Coefficients []curves.Scalar
 }
 
-func (p *Polynomial) Init(intercept curves.Scalar, degree uint32, reader io.Reader) *Polynomial {
+func (p *Polynomial) Init(intercept curves.Scalar, degree int, reader io.Reader) *Polynomial {
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
-	for i := 1; i < int(degree); i++ {
+	for i := 1; i < degree; i++ {
 		p.Coefficients[i] = intercept.Random(reader)
 	}
 	return p

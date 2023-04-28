@@ -19,7 +19,7 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	if err != nil {
 		return err
 	}
-	x := curve.Scalar.New(int(share.Id))
+	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
 	rhs := commitments[0]
 
@@ -27,9 +27,8 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 		i = i.Mul(x)
 		rhs = rhs.Add(commitments[j].Mul(i))
 	}
-	sc, _ := curve.Scalar.SetBytes(share.Value)
-	lhs := commitments[0].Generator().Mul(sc)
 
+	lhs := commitments[0].Generator().Mul(share.Value)
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
@@ -38,23 +37,21 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 }
 
 type Feldman struct {
-	Threshold, Limit uint32
+	Threshold, Limit int
 	Curve            *curves.Curve
 }
 
-func NewFeldman(threshold, limit uint32, curve *curves.Curve) (*Feldman, error) {
+func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
 	}
 	if threshold < 2 {
 		return nil, fmt.Errorf("threshold cannot be less than 2")
 	}
-	if limit > 255 {
-		return nil, fmt.Errorf("cannot exceed 255 shares")
-	}
 	if curve == nil {
 		return nil, fmt.Errorf("invalid curve")
 	}
+
 	return &Feldman{threshold, limit, curve}, nil
 }
 
@@ -75,13 +72,13 @@ func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (commitments []cu
 	return commitments, shares, nil
 }
 
-func (f Feldman) LagrangeCoeffs(shares map[uint32]*ShamirShare) (map[uint32]curves.Scalar, error) {
+func (f Feldman) LagrangeCoeffs(shares map[int]*ShamirShare) (map[int]curves.Scalar, error) {
 	shamir := &Shamir{
 		threshold: f.Threshold,
 		limit:     f.Limit,
 		curve:     f.Curve,
 	}
-	identities := make([]uint32, 0)
+	identities := make([]int, 0)
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}

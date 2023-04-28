@@ -165,20 +165,16 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 		return nil, errors.Wrap(err, "converting hash to c failed")
 	}
 
-	shamir, err := sharing.NewShamir(uint32(ic.CohortConfig.Threshold), uint32(ic.CohortConfig.TotalParties), ic.CohortConfig.CipherSuite.Curve)
+	shamir, err := sharing.NewShamir(ic.CohortConfig.Threshold, ic.CohortConfig.TotalParties, ic.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}
-	shamirIdsUint32 := make([]uint32, len(ic.state.S))
-	for i, shamirId := range ic.state.S {
-		shamirIdsUint32[i] = uint32(shamirId)
-	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(shamirIdsUint32)
+	lagrangeCoefficients, err := shamir.LagrangeCoeffs(ic.state.S)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
 	}
 
-	lambda_i, exists := lagrangeCoefficients[uint32(ic.MyShamirId)]
+	lambda_i, exists := lagrangeCoefficients[ic.MyShamirId]
 	if !exists {
 		return nil, errors.New("could not find my lagrange coefficient")
 	}

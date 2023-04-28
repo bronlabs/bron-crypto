@@ -31,7 +31,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 		return nil, errors.Wrap(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
-	feldmanDealer, err := sharing.NewFeldman(uint32(cohortConfig.Threshold), uint32(cohortConfig.TotalParties), curve)
+	feldmanDealer, err := sharing.NewFeldman(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not construct feldman dealer")
 	}
@@ -48,10 +48,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 	results := map[integration.IdentityKey]*frost.SigningKeyShare{}
 
 	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share, err := curve.Scalar.SetBytes(shamirShares[shamirId-1].Value)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not convert shamir share to signing key share")
-		}
+		share := shamirShares[shamirId-1].Value
 		results[identityKey] = &frost.SigningKeyShare{
 			Share:     share,
 			PublicKey: publicKey,
