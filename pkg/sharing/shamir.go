@@ -44,19 +44,16 @@ func (ss ShamirShare) Bytes() []byte {
 }
 
 type Shamir struct {
-	threshold, limit uint32
+	threshold, limit int
 	curve            *curves.Curve
 }
 
-func NewShamir(threshold, limit uint32, curve *curves.Curve) (*Shamir, error) {
+func NewShamir(threshold, limit int, curve *curves.Curve) (*Shamir, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
 	}
 	if threshold < 2 {
 		return nil, fmt.Errorf("threshold cannot be less than 2")
-	}
-	if limit > 255 {
-		return nil, fmt.Errorf("cannot exceed 255 shares")
 	}
 	if curve == nil {
 		return nil, fmt.Errorf("invalid curve")
@@ -124,7 +121,7 @@ func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
 		if err != nil {
 			return nil, err
 		}
-		if uint32(share.Id) > s.limit {
+		if share.Id > s.limit {
 			return nil, fmt.Errorf("invalid share identifier")
 		}
 		if _, in := dups[share.Id]; in {
@@ -150,7 +147,7 @@ func (s Shamir) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
 		if err != nil {
 			return nil, err
 		}
-		if uint32(share.Id) > s.limit {
+		if share.Id > s.limit {
 			return nil, fmt.Errorf("invalid share identifier")
 		}
 		if _, in := dups[share.Id]; in {

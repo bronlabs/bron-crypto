@@ -31,7 +31,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 		return nil, errors.Wrap(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
-	feldmanDealer, err := sharing.NewFeldman(uint32(cohortConfig.Threshold), uint32(cohortConfig.TotalParties), curve)
+	feldmanDealer, err := sharing.NewFeldman(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not construct feldman dealer")
 	}

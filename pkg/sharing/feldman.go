@@ -37,23 +37,21 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 }
 
 type Feldman struct {
-	Threshold, Limit uint32
+	Threshold, Limit int
 	Curve            *curves.Curve
 }
 
-func NewFeldman(threshold, limit uint32, curve *curves.Curve) (*Feldman, error) {
+func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
 	}
 	if threshold < 2 {
 		return nil, fmt.Errorf("threshold cannot be less than 2")
 	}
-	if limit > 255 {
-		return nil, fmt.Errorf("cannot exceed 255 shares")
-	}
 	if curve == nil {
 		return nil, fmt.Errorf("invalid curve")
 	}
+
 	return &Feldman{threshold, limit, curve}, nil
 }
 

@@ -15,7 +15,7 @@ import (
 
 // Pedersen Verifiable Secret Sharing Scheme
 type Pedersen struct {
-	threshold, limit uint32
+	threshold, limit int
 	curve            *curves.Curve
 	generator        curves.Point
 }
@@ -58,22 +58,19 @@ type PedersenResult struct {
 }
 
 // NewPedersen creates a new pedersen VSS
-func NewPedersen(threshold, limit uint32, generator curves.Point) (*Pedersen, error) {
+func NewPedersen(threshold, limit int, generator curves.Point) (*Pedersen, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
 	}
 	if threshold < 2 {
 		return nil, fmt.Errorf("threshold cannot be less than 2")
 	}
-	if limit > 255 {
-		return nil, fmt.Errorf("cannot exceed 255 shares")
+	if generator == nil {
+		return nil, fmt.Errorf("invalid generator")
 	}
 	curve := curves.GetCurveByName(generator.CurveName())
 	if curve == nil {
 		return nil, fmt.Errorf("invalid curve")
-	}
-	if generator == nil {
-		return nil, fmt.Errorf("invalid generator")
 	}
 	if !generator.IsOnCurve() || generator.IsIdentity() {
 		return nil, fmt.Errorf("invalid generator")

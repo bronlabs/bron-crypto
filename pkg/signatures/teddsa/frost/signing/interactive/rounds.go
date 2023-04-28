@@ -165,7 +165,7 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 		return nil, errors.Wrap(err, "converting hash to c failed")
 	}
 
-	shamir, err := sharing.NewShamir(uint32(ic.CohortConfig.Threshold), uint32(ic.CohortConfig.TotalParties), ic.CohortConfig.CipherSuite.Curve)
+	shamir, err := sharing.NewShamir(ic.CohortConfig.Threshold, ic.CohortConfig.TotalParties, ic.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}

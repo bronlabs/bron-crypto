@@ -61,7 +61,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 
 	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
 
-	dealer, err := sharing.NewFeldman(uint32(p.CohortConfig.Threshold), uint32(p.CohortConfig.TotalParties), p.CohortConfig.CipherSuite.Curve)
+	dealer, err := sharing.NewFeldman(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't construct feldman dealer")
 	}
