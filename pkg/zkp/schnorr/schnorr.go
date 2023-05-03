@@ -2,26 +2,22 @@ package schnorr
 
 import (
 	"crypto/rand"
-	"crypto/subtle"
-	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+
+	"github.com/gtank/merlin"
 )
 
+const domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
+
 type Prover struct {
-	CipherSuite     *integration.CipherSuite
 	BasePoint       curves.Point
 	uniqueSessionId []byte
-	options         *Options
-}
-
-type Options struct {
-	TranscriptPrefixes [][]byte
-	TranscriptSuffixes [][]byte
+	transcript      *merlin.Transcript
 }
 
 // Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,
@@ -33,27 +29,20 @@ type Proof struct {
 }
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
-// We allow the option `basePoint == nil`, in which case `basePoint` is auto-assigned to be the "default" generator for the group.
-func NewProver(cipherSuite *integration.CipherSuite, basePoint curves.Point, uniqueSessionId []byte, options *Options) (*Prover, error) {
-	if err := cipherSuite.Validate(); err != nil {
-		return nil, errors.Wrap(err, "ciphersuite is invalid")
-	}
+func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merlin.Transcript) (*Prover, error) {
 	if basePoint == nil {
-		basePoint = cipherSuite.Curve.Point.Generator()
+		return nil, errors.New("basepoint can't be nil")
 	}
-	// In a schnorr proof, G is the first item of the transcript. We want to generate a schnorr proof, bind it to a message and have it be
-	// verifiable with an Ed25519 Verifier. So we check if options is nil, and then automatically we add G to the transcript prefixes
-	if options == nil {
-		options = &Options{
-			TranscriptPrefixes: [][]byte{basePoint.ToAffineCompressed()},
-		}
-
+	if basePoint.IsIdentity() {
+		return nil, errors.New("basepoint is identity")
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}
 	return &Prover{
-		CipherSuite:     cipherSuite,
 		BasePoint:       basePoint,
 		uniqueSessionId: uniqueSessionId,
-		options:         options,
+		transcript:      transcript,
 	}, nil
 }
 
@@ -61,73 +50,96 @@ func NewProver(cipherSuite *integration.CipherSuite, basePoint curves.Point, uni
 // in the process, it will actually also construct the statement (just one curve mult in this case)
 func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 	var err error
-	if p.options == nil {
-		return nil, errors.New("options can't be nil")
-	}
 	result := &Proof{}
+
+	curve := curves.GetCurveByName(p.BasePoint.CurveName())
+	if curve == nil {
+		return nil, errors.New("curve is nil")
+	}
+
 	result.Statement = p.BasePoint.Mul(x)
-	k := p.CipherSuite.Curve.Scalar.Random(rand.Reader)
+	k := curve.Scalar.Random(rand.Reader)
 	R := p.BasePoint.Mul(k)
 
-	// G will be added by default to the prefixes
-	transcriptItems := [][]byte{R.ToAffineCompressed(), result.Statement.ToAffineCompressed(), p.uniqueSessionId}
-	if len(p.options.TranscriptPrefixes) > 0 {
-		transcriptItems = append(p.options.TranscriptPrefixes, transcriptItems...)
-	}
-	if len(p.options.TranscriptSuffixes) > 0 {
-		transcriptItems = append(transcriptItems, p.options.TranscriptSuffixes...)
+	p.transcript.AppendMessage([]byte("basepoint"), p.BasePoint.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte("R"), R.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte("statement"), result.Statement.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte("unique session id"), p.uniqueSessionId)
+	digest := p.transcript.ExtractBytes([]byte("digest"), native.FieldBytes)
+
+	var setBytesFunc func([]byte) (curves.Scalar, error)
+	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
+	// we can't manually reduce it ourselves because it's not exported from the golang's std. So we will
+	// call clamping method which internally does the reduction.
+	if curve.Name == curves.ED25519().Name {
+		scalar := &curves.ScalarEd25519{}
+		setBytesFunc = scalar.SetBytesClamping
+	} else {
+		setBytesFunc = curve.Scalar.SetBytes
 	}
 
-	result.C, err = ComputeFiatShamirChallege(p.CipherSuite, transcriptItems)
+	result.C, err = setBytesFunc(digest)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce fiat shamir challenge scalar")
 	}
-
 	result.S = result.C.Mul(x).Add(k)
 	return result, nil
 }
 
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve`.
-// As for the prover, we allow `basePoint == nil`, in this case, it's auto-assigned to be the group's default generator.
-func Verify(cipherSuite *integration.CipherSuite, proof *Proof, basepoint curves.Point, uniqueSessionId []byte, options *Options) error {
-	if err := cipherSuite.Validate(); err != nil {
-		return errors.Wrap(err, "ciphersuite is invalid")
+func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transcript *merlin.Transcript) error {
+	if transcript == nil {
+		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}
+	if basePoint == nil {
+		return errors.New("basepoint is nil")
+	}
+	if basePoint.IsIdentity() {
+		return errors.New("basepoint is identity")
+	}
+
+	curve := curves.GetCurveByName(basePoint.CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+
 	if proof == nil {
 		return errors.New("proof is nil")
 	}
 
-	if basepoint == nil {
-		basepoint = cipherSuite.Curve.Point.Generator()
-	}
-
-	gs := basepoint.Mul(proof.S)
+	gs := basePoint.Mul(proof.S)
 	xc := proof.Statement.Mul(proof.C.Neg())
 	R := gs.Add(xc)
-	if options == nil {
-		options = &Options{
-			TranscriptPrefixes: [][]byte{basepoint.ToAffineCompressed()},
-		}
-	}
-	transcriptItems := [][]byte{R.ToAffineCompressed(), proof.Statement.ToAffineCompressed(), uniqueSessionId}
-	if len(options.TranscriptPrefixes) > 0 {
-		transcriptItems = append(options.TranscriptPrefixes, transcriptItems...)
-	}
-	if len(options.TranscriptSuffixes) > 0 {
-		transcriptItems = append(transcriptItems, options.TranscriptSuffixes...)
+
+	transcript.AppendMessage([]byte("basepoint"), basePoint.ToAffineCompressed())
+	transcript.AppendMessage([]byte("R"), R.ToAffineCompressed())
+	transcript.AppendMessage([]byte("statement"), proof.Statement.ToAffineCompressed())
+	transcript.AppendMessage([]byte("unique session id"), uniqueSessionId)
+	digest := transcript.ExtractBytes([]byte("digest"), native.FieldBytes)
+
+	var setBytesFunc func([]byte) (curves.Scalar, error)
+	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
+	// we can't manually reduce it ourselves because it's not exported from the golang's std. So we will
+	// call clamping method which internally does the reduction.
+	if curve.Name == curves.ED25519().Name {
+		scalar := &curves.ScalarEd25519{}
+		setBytesFunc = scalar.SetBytesClamping
+	} else {
+		setBytesFunc = curve.Scalar.SetBytes
 	}
 
-	computedChallenge, err := ComputeFiatShamirChallege(cipherSuite, transcriptItems)
+	computedChallenge, err := setBytesFunc(digest)
 	if err != nil {
-		return errors.Wrap(err, "could not compute challenge")
+		return errors.Wrap(err, "could not produce fiat shamir challenge scalar")
 	}
 
-	if subtle.ConstantTimeCompare(proof.C.Bytes(), computedChallenge.Bytes()) != 1 {
-		return fmt.Errorf("schnorr verification failed")
+	if computedChallenge.Cmp(proof.C) != 0 {
+		return errors.New("schnorr verification failed")
 	}
 	return nil
 }
 
+// TODO: Remove during KEY-51
 func ComputeFiatShamirChallege(cipherSuite *integration.CipherSuite, xs [][]byte) (curves.Scalar, error) {
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, errors.Wrap(err, "ciphersuite is invalid")
