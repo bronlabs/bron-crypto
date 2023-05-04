@@ -267,6 +267,16 @@ func (s *ScalarK256) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *ScalarK256) Exp(k Scalar) Scalar {
+	exponent, ok := k.(*ScalarK256)
+	if !ok {
+		return nil
+	}
+
+	value := fq.K256FqNew().Exp(s.value, exponent.value)
+	return &ScalarK256{value}
+}
+
 func (s *ScalarK256) Neg() Scalar {
 	return &ScalarK256{
 		value: fq.K256FqNew().Neg(s.value),

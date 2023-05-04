@@ -214,6 +214,19 @@ func (s *ScalarBls12381) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *ScalarBls12381) Exp(k Scalar) Scalar {
+	exp, ok := k.(*ScalarBls12381)
+	if !ok {
+		return nil
+	}
+
+	value := bls12381.Bls12381FqNew().Exp(s.Value, exp.Value)
+	return &ScalarBls12381{
+		Value: value,
+		point: s.point,
+	}
+}
+
 func (s *ScalarBls12381) Neg() Scalar {
 	return &ScalarBls12381{
 		Value: bls12381.Bls12381FqNew().Neg(s.Value),
@@ -1063,6 +1076,20 @@ func (s *ScalarBls12381Gt) Div(rhs Scalar) Scalar {
 	} else {
 		return nil
 	}
+}
+
+func (s *ScalarBls12381Gt) Exp(k Scalar) Scalar {
+	exp, ok := k.(*ScalarBls12381Gt)
+	if !ok {
+		return nil
+	}
+
+	res := s.One()
+	for i := s.Zero(); i.Cmp(exp) < 0; i = i.Add(s.One()) {
+		res = res.Mul(s)
+	}
+
+	return res
 }
 
 func (s *ScalarBls12381Gt) Neg() Scalar {

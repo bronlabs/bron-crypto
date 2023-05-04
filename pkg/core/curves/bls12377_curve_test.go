@@ -174,6 +174,23 @@ func TestScalarBls12377G1Div(t *testing.T) {
 	require.Equal(t, bls12377G1.Scalar.New(54).Div(nine).Cmp(bls12377G1.Scalar.New(6)), 0)
 }
 
+func TestScalarBls12377G1Exp(t *testing.T) {
+	bls12377g1 := BLS12377G1()
+	seventeen := bls12377g1.Scalar.New(17)
+
+	toZero := seventeen.Exp(bls12377g1.Scalar.Zero())
+	require.True(t, toZero.Cmp(bls12377g1.Scalar.One()) == 0)
+
+	toOne := seventeen.Exp(bls12377g1.Scalar.One())
+	require.True(t, toOne.Cmp(seventeen) == 0)
+
+	toTwo := seventeen.Exp(bls12377g1.Scalar.New(2))
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+
+	toThree := seventeen.Exp(bls12377g1.Scalar.New(3))
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+}
+
 func TestScalarBls12377G1Serialize(t *testing.T) {
 	bls12377G1 := BLS12377G1()
 	sc := bls12377G1.Scalar.New(255)

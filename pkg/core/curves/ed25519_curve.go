@@ -207,6 +207,19 @@ func (s *ScalarEd25519) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *ScalarEd25519) Exp(k Scalar) Scalar {
+	exp, ok := k.(*ScalarEd25519)
+	if !ok {
+		return nil
+	}
+
+	v := new(ScalarEd25519).One()
+	for i := new(ScalarEd25519).Zero(); i.Cmp(exp) < 0; i = i.Add(new(ScalarEd25519).One()) {
+		v = v.Mul(s)
+	}
+	return v
+}
+
 func (s *ScalarEd25519) Neg() Scalar {
 	return &ScalarEd25519{
 		value: edwards25519.NewScalar().Negate(s.value),

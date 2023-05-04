@@ -373,6 +373,16 @@ func (s *ScalarPallas) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *ScalarPallas) Exp(k Scalar) Scalar {
+	exponent, ok := k.(*ScalarPallas)
+	if !ok {
+		return nil
+	}
+
+	value := new(fq.Fq).Exp(s.value, exponent.value)
+	return &ScalarPallas{value}
+}
+
 func (s *ScalarPallas) Neg() Scalar {
 	return &ScalarPallas{
 		value: new(fq.Fq).Neg(s.value),

@@ -136,3 +136,31 @@ func TestPointPallasSumOfProducts(t *testing.T) {
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
 }
+
+func TestScalarPallasMul(t *testing.T) {
+	pallas := PALLAS()
+	nine := pallas.Scalar.New(9)
+	six := pallas.Scalar.New(6)
+	actual := nine.Mul(six)
+	require.Equal(t, actual.Cmp(pallas.Scalar.New(54)), 0)
+
+	upper := pallas.Scalar.New(-1)
+	require.Equal(t, upper.Mul(upper).Cmp(pallas.Scalar.New(1)), 0)
+}
+
+func TestScalarPallasExp(t *testing.T) {
+	pallas := PALLAS()
+	seventeen := pallas.Scalar.New(17)
+
+	toZero := seventeen.Exp(pallas.Scalar.Zero())
+	require.True(t, toZero.Cmp(pallas.Scalar.One()) == 0)
+
+	toOne := seventeen.Exp(pallas.Scalar.One())
+	require.True(t, toOne.Cmp(seventeen) == 0)
+
+	toTwo := seventeen.Exp(pallas.Scalar.New(2))
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+
+	toThree := seventeen.Exp(pallas.Scalar.New(3))
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+}

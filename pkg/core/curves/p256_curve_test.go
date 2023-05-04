@@ -174,6 +174,23 @@ func TestScalarP256Div(t *testing.T) {
 	require.Equal(t, p256.Scalar.New(54).Div(nine).Cmp(p256.Scalar.New(6)), 0)
 }
 
+func TestScalarP256Exp(t *testing.T) {
+	p256 := P256()
+	seventeen := p256.Scalar.New(17)
+
+	toZero := seventeen.Exp(p256.Scalar.Zero())
+	require.True(t, toZero.Cmp(p256.Scalar.One()) == 0)
+
+	toOne := seventeen.Exp(p256.Scalar.One())
+	require.True(t, toOne.Cmp(seventeen) == 0)
+
+	toTwo := seventeen.Exp(p256.Scalar.New(2))
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+
+	toThree := seventeen.Exp(p256.Scalar.New(3))
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+}
+
 func TestScalarP256Serialize(t *testing.T) {
 	p256 := P256()
 	sc := p256.Scalar.New(255)

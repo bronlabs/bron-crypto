@@ -208,6 +208,23 @@ func TestScalarK256Div(t *testing.T) {
 	require.Equal(t, k256.Scalar.New(54).Div(nine).Cmp(k256.Scalar.New(6)), 0)
 }
 
+func TestScalarK256Exp(t *testing.T) {
+	k256 := K256()
+	seventeen := k256.Scalar.New(17)
+
+	toZero := seventeen.Exp(k256.Scalar.Zero())
+	require.True(t, toZero.Cmp(k256.Scalar.One()) == 0)
+
+	toOne := seventeen.Exp(k256.Scalar.One())
+	require.True(t, toOne.Cmp(seventeen) == 0)
+
+	toTwo := seventeen.Exp(k256.Scalar.New(2))
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+
+	toThree := seventeen.Exp(k256.Scalar.New(3))
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+}
+
 func TestScalarK256Serialize(t *testing.T) {
 	k256 := K256()
 	sc := k256.Scalar.New(255)

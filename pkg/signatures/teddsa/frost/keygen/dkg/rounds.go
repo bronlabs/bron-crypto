@@ -161,11 +161,8 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
 			derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
 			for k := 0; k < p.CohortConfig.Threshold; k++ {
-				iToK := p.CohortConfig.CipherSuite.Curve.Scalar.One()
-				// perform exponentiation
-				for iteration := 0; iteration < k; iteration++ {
-					iToK = iToK.Mul(p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId))
-				}
+				exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
+				iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId).Exp(exp)
 				C_lk := senderCommitmentVector[k]
 				ikC_lk := C_lk.Mul(iToK)
 				derivedPartialPublicKeyShare = derivedPartialPublicKeyShare.Add(ikC_lk)
@@ -214,13 +211,8 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 		Y_j := cohort.CipherSuite.Curve.Point.Identity()
 		for _, C_l := range commitmentVectors {
 			for k := 0; k < cohort.Threshold; k++ {
-
-				jToK := cohort.CipherSuite.Curve.Scalar.One()
-				// perform exponentiation
-				for iteration := 0; iteration < k; iteration++ {
-					jToK = jToK.Mul(cohort.CipherSuite.Curve.Scalar.New(j))
-				}
-
+				exp := cohort.CipherSuite.Curve.Scalar.New(k)
+				jToK := cohort.CipherSuite.Curve.Scalar.New(j).Exp(exp)
 				jkC_lk := C_l[k].Mul(jToK)
 				Y_j = Y_j.Add(jkC_lk)
 			}

@@ -329,6 +329,11 @@ func (s *BenchScalarP256) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *BenchScalarP256) Exp(k Scalar) Scalar {
+	value := new(big.Int).Exp(s.value, k.BigInt(), elliptic.P256().Params().N)
+	return &BenchScalarP256{value}
+}
+
 func (s *BenchScalarP256) Neg() Scalar {
 	z := new(big.Int).Neg(s.value)
 	return &BenchScalarP256{
@@ -744,7 +749,7 @@ func p256SswuParams() *sswuParams {
 	}
 }
 
-//rhs of the curve equation
+// rhs of the curve equation
 func rhsP256(x *big.Int, params *elliptic.CurveParams) *big.Int {
 	f := NewField(params.P)
 	r := f.NewElement(x)

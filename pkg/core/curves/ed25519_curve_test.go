@@ -167,6 +167,23 @@ func TestScalarEd25519Div(t *testing.T) {
 	require.Equal(t, ed25519.Scalar.New(54).Div(nine).Cmp(ed25519.Scalar.New(6)), 0)
 }
 
+func TestScalarEd25519Exp(t *testing.T) {
+	ed25519 := ED25519()
+	seventeen := ed25519.Scalar.New(17)
+
+	toZero := seventeen.Exp(ed25519.Scalar.Zero())
+	require.True(t, toZero.Cmp(ed25519.Scalar.One()) == 0)
+
+	toOne := seventeen.Exp(ed25519.Scalar.One())
+	require.True(t, toOne.Cmp(seventeen) == 0)
+
+	toTwo := seventeen.Exp(ed25519.Scalar.New(2))
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+
+	toThree := seventeen.Exp(ed25519.Scalar.New(3))
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+}
+
 func TestScalarEd25519Serialize(t *testing.T) {
 	ed25519 := ED25519()
 	sc := ed25519.Scalar.New(255)

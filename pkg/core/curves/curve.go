@@ -109,6 +109,8 @@ type Scalar interface {
 	MulAdd(y, z Scalar) Scalar
 	// Div returns element*rhs^-1 mod p
 	Div(rhs Scalar) Scalar
+	// Exp returns element^k mod p (i.e. element * element * ... * element) mod p
+	Exp(k Scalar) Scalar
 	// Neg returns -element mod p
 	Neg() Scalar
 	// SetBigInt returns this element set to the value of v

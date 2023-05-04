@@ -270,6 +270,11 @@ func (s *BenchScalar) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *BenchScalar) Exp(k Scalar) Scalar {
+	value := new(big.Int).Exp(s.value, k.BigInt(), btcec.S256().N)
+	return &BenchScalar{value}
+}
+
 func (s *BenchScalar) Neg() Scalar {
 	v, _ := mod.Neg(s.value, btcec.S256().N)
 	return &BenchScalar{

@@ -211,6 +211,19 @@ func (s *ScalarBls12377) Div(rhs Scalar) Scalar {
 	}
 }
 
+func (s *ScalarBls12377) Exp(k Scalar) Scalar {
+	exp, ok := k.(*ScalarBls12377)
+	if !ok {
+		return nil
+	}
+
+	value := new(big.Int).Exp(s.value, exp.value, bls12377modulus)
+	return &ScalarBls12377{
+		value: value,
+		point: s.point,
+	}
+}
+
 func (s *ScalarBls12377) Neg() Scalar {
 	z := new(big.Int).Neg(s.value)
 	return &ScalarBls12377{
@@ -1153,6 +1166,13 @@ func (s *ScalarBls12377Gt) Div(rhs Scalar) Scalar {
 		}
 	} else {
 		return nil
+	}
+}
+
+func (s *ScalarBls12377Gt) Exp(k Scalar) Scalar {
+	value := new(ScalarBls12377Gt).value.Exp(s.value, *k.BigInt())
+	return &ScalarBls12377Gt{
+		value,
 	}
 }
 
