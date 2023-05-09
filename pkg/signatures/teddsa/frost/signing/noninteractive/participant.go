@@ -15,8 +15,8 @@ var _ frost.Participant = (*NonInteractiveCosigner)(nil)
 type NonInteractiveCosigner struct {
 	reader io.Reader
 
-	PreSignatures     []*PreSignature
-	UsedPreSignatures map[*PreSignature]bool
+	PreSignatures             *PreSignatureBatch
+	LastUsedPreSignatureIndex int
 
 	MyIdentityKey   integration.IdentityKey
 	MyShamirId      int
@@ -24,11 +24,17 @@ type NonInteractiveCosigner struct {
 
 	CohortConfig          *integration.CohortConfig
 	PublicKeyShares       *frost.PublicKeyShares
+	PresentParties        []integration.IdentityKey
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
 
+	// a map from index of presignature to the corresponding Ds and Es
+	D_alphas            map[int]map[integration.IdentityKey]curves.Point
+	E_alphas            map[int]map[integration.IdentityKey]curves.Point
+	myPrivateNoncePairs []*PrivateNoncePair
+
 	round int
-	state *state
+	state *interactive.State
 }
 
 func (nic *NonInteractiveCosigner) GetIdentityKey() integration.IdentityKey {
@@ -52,21 +58,10 @@ func (nic *NonInteractiveCosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-type state struct {
-	// a map from index of presignature to the corresponding D_alpha
-	D_alphas map[int]map[integration.IdentityKey]curves.Point
-	// a map from index of presignature to the corresponding E_alpha
-	E_alphas map[int]map[integration.IdentityKey]curves.Point
-
-	myPrivateNoncePairs map[int]*PrivateNoncePair
-
-	signing *interactive.State
-}
-
 func NewNonInteractiveCosigner(
 	identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares,
-	preSignatures []*PreSignature, usedPreSignatures map[*PreSignature]bool, privateNoncePairs []*PrivateNoncePair,
-	cohortConfig *integration.CohortConfig, reader io.Reader,
+	preSignatureBatch *PreSignatureBatch, lastUsedPresignatureIndex int, privateNoncePairs []*PrivateNoncePair,
+	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader,
 ) (*NonInteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
@@ -77,16 +72,11 @@ func NewNonInteractiveCosigner(
 	if err := signingKeyShare.Validate(); err != nil {
 		return nil, errors.Wrap(err, "could not validate signing key share")
 	}
-	if len(usedPreSignatures) > len(preSignatures) {
-		return nil, errors.New("used presignatures cannot be more than total presignatures")
+	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
+		return nil, errors.Wrap(err, "presignature batch is invalid")
 	}
-
-	preSignatureHashSet := map[*PreSignature]bool{}
-	for _, preSignature := range preSignatures {
-		preSignatureHashSet[preSignature] = true
-	}
-	if len(preSignatureHashSet) != len(preSignatures) {
-		return nil, errors.New("found duplicate presignatures")
+	if lastUsedPresignatureIndex < 0 || lastUsedPresignatureIndex >= len(*preSignatureBatch) {
+		return nil, errors.New("last used presignature index is out of bound")
 	}
 
 	shamirIdToIdentityKey, myShamirId, err := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
@@ -98,73 +88,71 @@ func NewNonInteractiveCosigner(
 		identityKeyToShamirId[identityKey] = shamirId
 	}
 
+	presentPartiesHashSet := map[integration.IdentityKey]bool{}
+	for _, participant := range presentParties {
+		if presentPartiesHashSet[participant] {
+			return nil, errors.New("found duplicate present party")
+		}
+		presentPartiesHashSet[participant] = true
+
+		if !cohortConfig.IsInCohort(participant) {
+			return nil, errors.New("present party is not in cohort")
+		}
+	}
+	if len(presentPartiesHashSet) <= 0 {
+		return nil, errors.New("no party is present")
+	}
+
 	if privateNoncePairs == nil {
 		return nil, errors.New("private nonce pairs  is nil")
 	}
-	if len(privateNoncePairs) != len(preSignatures) {
-		return nil, errors.New("length of presignature private material is not equal to the length of presignatures")
+	if len(privateNoncePairs) != len(*preSignatureBatch) {
+		return nil, errors.New("number of provided private nonce pairs is not equal to total presignatures")
+	}
+	for i, privateNoncePair := range privateNoncePairs {
+		preSignature := (*preSignatureBatch)[i]
+		myAttestedCommitment := (*preSignature)[myShamirId]
+		curve := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
+		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
+			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment")
+		}
+		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.D) {
+			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment")
+		}
 	}
 
 	D_alphas := map[int]map[integration.IdentityKey]curves.Point{}
 	E_alphas := map[int]map[integration.IdentityKey]curves.Point{}
-	myPrivateNoncePairs := map[int]*PrivateNoncePair{}
-	for i, preSignature := range preSignatures {
-		privateNoncePair := privateNoncePairs[i]
-		if err := preSignature.Validate(cohortConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not validate presignature at index %d against the private material", i)
-		}
-		myContributionD := preSignature.DRowsAttested[myShamirId]
-		if !myContributionD.Attestor.PublicKey().Equal(identityKey.PublicKey()) {
-			return nil, errors.Errorf("my identity key was not found in the right location within presignature number %d", i)
-		}
-		if err := myContributionD.Validate(cohortConfig); err != nil {
-			return nil, errors.Wrapf(err, "presignature number %d is invalid", i)
-		}
-		if !myContributionD.Commitment.Equal(cohortConfig.CipherSuite.Curve.ScalarBaseMult(privateNoncePair.D)) {
-			return nil, errors.New("point D of the presignature does not match with my d nonce")
-		}
-		myContributionE := preSignature.ERowsAttested[myShamirId]
-		if !myContributionE.Attestor.PublicKey().Equal(identityKey.PublicKey()) {
-			return nil, errors.Errorf("my identity key was not found in the right location within presignature number %d", i)
-		}
-		if err := myContributionE.Validate(cohortConfig); err != nil {
-			return nil, errors.Wrapf(err, "presignature number %d is invalid", i)
-		}
-		if !myContributionE.Commitment.Equal(cohortConfig.CipherSuite.Curve.ScalarBaseMult(privateNoncePair.E)) {
-			return nil, errors.New("point D of the presignature does not match with my d nonce")
-		}
-
+	for i := lastUsedPresignatureIndex; i < len(*preSignatureBatch); i++ {
 		D_alpha := map[integration.IdentityKey]curves.Point{}
 		E_alpha := map[integration.IdentityKey]curves.Point{}
-		if !usedPreSignatures[preSignature] {
-			for _, attestedCommitment := range preSignature.DRowsAttested {
-				D_alpha[attestedCommitment.Attestor] = attestedCommitment.Commitment
+		preSignature := (*preSignatureBatch)[i]
+		for _, attestedCommitment := range *preSignature {
+			if !presentPartiesHashSet[attestedCommitment.Attestor] {
+				continue
 			}
-			for _, attestedCommitment := range preSignature.ERowsAttested {
-				E_alpha[attestedCommitment.Attestor] = attestedCommitment.Commitment
-			}
-			myPrivateNoncePairs[i] = privateNoncePair
-			D_alphas[i] = D_alpha
-			E_alphas[i] = E_alpha
+			D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
+			E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
 		}
+		D_alphas[i] = D_alpha
+		E_alphas[i] = E_alpha
 	}
 
 	return &NonInteractiveCosigner{
-		reader:                reader,
-		PreSignatures:         preSignatures,
-		UsedPreSignatures:     usedPreSignatures,
-		MyIdentityKey:         identityKey,
-		SigningKeyShare:       signingKeyShare,
-		CohortConfig:          cohortConfig,
-		PublicKeyShares:       publicKeyShare,
-		ShamirIdToIdentityKey: shamirIdToIdentityKey,
-		IdentityKeyToShamirId: identityKeyToShamirId,
-		round:                 1,
-		state: &state{
-			D_alphas:            D_alphas,
-			E_alphas:            E_alphas,
-			myPrivateNoncePairs: myPrivateNoncePairs,
-			signing:             &interactive.State{},
-		},
+		reader:                    reader,
+		PreSignatures:             preSignatureBatch,
+		LastUsedPreSignatureIndex: lastUsedPresignatureIndex,
+		MyIdentityKey:             identityKey,
+		SigningKeyShare:           signingKeyShare,
+		CohortConfig:              cohortConfig,
+		PublicKeyShares:           publicKeyShare,
+		ShamirIdToIdentityKey:     shamirIdToIdentityKey,
+		IdentityKeyToShamirId:     identityKeyToShamirId,
+		PresentParties:            presentParties,
+		D_alphas:                  D_alphas,
+		E_alphas:                  E_alphas,
+		myPrivateNoncePairs:       privateNoncePairs,
+		round:                     1,
+		state:                     &interactive.State{},
 	}, nil
 }

@@ -3,6 +3,7 @@ package schnorr_test
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"testing"
@@ -49,4 +50,30 @@ func Test_HappyPath(t *testing.T) {
 			})
 		}
 	}
+}
+
+func Test_CanJsonMarshalAndUnmarshal(t *testing.T) {
+	t.Parallel()
+	message := []byte("something")
+	cipherSuite := &integration.CipherSuite{
+		Curve: curves.K256(),
+		Hash:  sha512.New,
+	}
+	signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	require.NoError(t, err)
+	require.NotNil(t, signer)
+	require.NotNil(t, signer.PublicKey)
+
+	signature, err := signer.Sign(message)
+	require.NoError(t, err)
+
+	marshaled, err := json.Marshal(signature)
+	require.NoError(t, err)
+	require.Greater(t, len(marshaled), 0)
+
+	var unmarshaled schnorr.Signature
+	err = json.Unmarshal(marshaled, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.C)
+	require.Equal(t, unmarshaled, signature)
 }

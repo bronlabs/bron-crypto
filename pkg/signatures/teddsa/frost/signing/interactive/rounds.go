@@ -21,10 +21,10 @@ func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
 		return nil, errors.New("round mismatch")
 	}
-	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
-	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
-	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.d_i)
-	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.e_i)
+	ic.state.SmallD_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
+	ic.state.SmallE_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
+	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.SmallD_i)
+	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.SmallE_i)
 	ic.round++
 	return &Round1Broadcast{
 		Di: ic.state.D_i,
@@ -40,7 +40,20 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't not derive D alpha and E alpha")
 	}
-	partialSignature, err := ic.Helper_ProducePartialSignature(D_alpha, E_alpha, message)
+	presentParties := make([]integration.IdentityKey, len(ic.state.S))
+	for i, shamirId := range ic.state.S {
+		presentParties[i] = ic.ShamirIdToIdentityKey[shamirId]
+	}
+	partialSignature, err := Helper_ProducePartialSignature(
+		ic,
+		presentParties,
+		ic.SigningKeyShare,
+		D_alpha, E_alpha,
+		ic.ShamirIdToIdentityKey,
+		ic.IdentityKeyToShamirId,
+		ic.state,
+		message,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
@@ -110,46 +123,50 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 	return D_alpha, E_alpha, nil
 }
 
-func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha map[integration.IdentityKey]curves.Point, message []byte) (*frost.PartialSignature, error) {
-	R := ic.CohortConfig.CipherSuite.Curve.Point.Identity()
-	r_i := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
+func Helper_ProducePartialSignature(
+	participant frost.Participant,
+	presentParties []integration.IdentityKey,
+	signingKeyShare *frost.SigningKeyShare,
+	D_alpha, E_alpha map[integration.IdentityKey]curves.Point,
+	shamirIdToIdentityKey map[int]integration.IdentityKey,
+	identityKeyToShamirId map[integration.IdentityKey]int,
+	state *State,
+	message []byte,
+) (*frost.PartialSignature, error) {
+	cohortConfig := participant.GetCohortConfig()
+	myShamirId := participant.GetShamirId()
+	R := cohortConfig.CipherSuite.Curve.Point.Identity()
+	r_i := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 
 	combinedDsAndEs := []byte{}
-	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
-		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
-	}
-	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
-		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
+	for _, presentParty := range presentParties {
+		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty].ToAffineCompressed()...)
+		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty].ToAffineCompressed()...)
 	}
 
 	R_js := map[integration.IdentityKey]curves.Point{}
-	for _, j := range ic.state.S {
-		r_jHashComponents := []byte{byte(j)}
+	for _, participant := range presentParties {
+		shamirId := identityKeyToShamirId[participant]
+		r_jHashComponents := []byte{byte(shamirId)}
 		r_jHashComponents = append(r_jHashComponents, message...)
 		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
 
-		r_j := ic.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
-		if j == ic.MyShamirId {
+		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
+		if shamirId == myShamirId {
 			r_i = r_j
 		}
-		jIdentityKey, exists := ic.ShamirIdToIdentityKey[j]
+		D_j, exists := D_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
+			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", shamirId)
 		}
-		D_j, exists := D_alpha[jIdentityKey]
+		E_j, exists := E_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
-		}
-		E_j, exists := E_alpha[jIdentityKey]
-		if !exists {
-			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", j)
+			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", shamirId)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
 		R = R.Add(R_j)
-		R_js[jIdentityKey] = R_j
+		R_js[participant] = R_j
 	}
 	if R.IsIdentity() {
 		return nil, errors.New("R is at infinity")
@@ -158,36 +175,37 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 		return nil, errors.New("could not find r_i")
 	}
 
-	c, err := schnorr.ComputeFiatShamirChallege(ic.CohortConfig.CipherSuite, [][]byte{
-		R.ToAffineCompressed(), ic.SigningKeyShare.PublicKey.ToAffineCompressed(), message,
+	c, err := schnorr.ComputeFiatShamirChallege(cohortConfig.CipherSuite, [][]byte{
+		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "converting hash to c failed")
 	}
 
-	shamir, err := sharing.NewShamir(ic.CohortConfig.Threshold, ic.CohortConfig.TotalParties, ic.CohortConfig.CipherSuite.Curve)
+	shamir, err := sharing.NewShamir(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(ic.state.S)
+	presentPartyShamirIds := make([]int, len(presentParties))
+	for i := 0; i < len(presentParties); i++ {
+		presentPartyShamirIds[i] = identityKeyToShamirId[presentParties[i]]
+	}
+	lagrangeCoefficients, err := shamir.LagrangeCoeffs(presentPartyShamirIds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
 	}
 
-	lambda_i, exists := lagrangeCoefficients[ic.MyShamirId]
+	lambda_i, exists := lagrangeCoefficients[myShamirId]
 	if !exists {
 		return nil, errors.New("could not find my lagrange coefficient")
 	}
 
-	eiri := ic.state.e_i.Mul(r_i)
-	lambda_isic := lambda_i.Mul(ic.SigningKeyShare.Share.Mul(c))
-	z_i := ic.state.d_i.Add(eiri.Add(lambda_isic))
+	eiri := state.SmallE_i.Mul(r_i)
+	lambda_isic := lambda_i.Mul(signingKeyShare.Share.Mul(c))
+	z_i := state.SmallD_i.Add(eiri.Add(lambda_isic))
 
-	ic.state.d_i = nil
-	ic.state.e_i = nil
-
-	if ic.IsSignatureAggregator() {
-		ic.state.aggregation = &aggregation.SignatureAggregatorParameters{
+	if participant.IsSignatureAggregator() {
+		state.aggregation = &aggregation.SignatureAggregatorParameters{
 			Message: message,
 			Z_i:     z_i,
 			R:       R,

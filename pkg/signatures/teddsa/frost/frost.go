@@ -178,7 +178,7 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 	integration.SortIdentityKeysInPlace(identityKeys)
 	for shamirIdMinusOne, identityKey := range identityKeys {
 		result[shamirIdMinusOne+1] = identityKey
-		if identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
 			myShamirId = shamirIdMinusOne + 1
 		}
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/noninteractive"
 	"github.com/pkg/errors"
 )
 
@@ -19,8 +20,9 @@ type PreGenParticipant struct {
 }
 
 type preGenState struct {
-	dColumns []curves.Scalar
-	eColumns []curves.Scalar
+	ds          []curves.Scalar
+	es          []curves.Scalar
+	Commitments []*noninteractive.AttestedCommitmentToNoncePair
 }
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, reader io.Reader) (*PreGenParticipant, error) {
