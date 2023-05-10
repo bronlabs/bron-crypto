@@ -13,6 +13,11 @@ import (
 )
 
 const domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
+const basepointLabel = "basepoint"
+const rLabel = "R"
+const statementLabel = "statement"
+const uniqueSessionIdLabel = "unique session id"
+const digestLabel = "digest"
 
 type Prover struct {
 	BasePoint       curves.Point
@@ -61,11 +66,11 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 	k := curve.Scalar.Random(rand.Reader)
 	R := p.BasePoint.Mul(k)
 
-	p.transcript.AppendMessage([]byte("basepoint"), p.BasePoint.ToAffineCompressed())
-	p.transcript.AppendMessage([]byte("R"), R.ToAffineCompressed())
-	p.transcript.AppendMessage([]byte("statement"), result.Statement.ToAffineCompressed())
-	p.transcript.AppendMessage([]byte("unique session id"), p.uniqueSessionId)
-	digest := p.transcript.ExtractBytes([]byte("digest"), native.FieldBytes)
+	p.transcript.AppendMessage([]byte(basepointLabel), p.BasePoint.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte(rLabel), R.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte(statementLabel), result.Statement.ToAffineCompressed())
+	p.transcript.AppendMessage([]byte(uniqueSessionIdLabel), p.uniqueSessionId)
+	digest := p.transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
@@ -111,11 +116,11 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 	xc := proof.Statement.Mul(proof.C.Neg())
 	R := gs.Add(xc)
 
-	transcript.AppendMessage([]byte("basepoint"), basePoint.ToAffineCompressed())
-	transcript.AppendMessage([]byte("R"), R.ToAffineCompressed())
-	transcript.AppendMessage([]byte("statement"), proof.Statement.ToAffineCompressed())
-	transcript.AppendMessage([]byte("unique session id"), uniqueSessionId)
-	digest := transcript.ExtractBytes([]byte("digest"), native.FieldBytes)
+	transcript.AppendMessage([]byte(basepointLabel), basePoint.ToAffineCompressed())
+	transcript.AppendMessage([]byte(rLabel), R.ToAffineCompressed())
+	transcript.AppendMessage([]byte(statementLabel), proof.Statement.ToAffineCompressed())
+	transcript.AppendMessage([]byte(uniqueSessionIdLabel), uniqueSessionId)
+	digest := transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
