@@ -72,18 +72,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 	p.transcript.AppendMessage([]byte(uniqueSessionIdLabel), p.uniqueSessionId)
 	digest := p.transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
 
-	var setBytesFunc func([]byte) (curves.Scalar, error)
-	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
-	// we can't manually reduce it ourselves because it's not exported from the golang's std. So we will
-	// call clamping method which internally does the reduction.
-	if curve.Name == curves.ED25519().Name {
-		scalar := &curves.ScalarEd25519{}
-		setBytesFunc = scalar.SetBytesClamping
-	} else {
-		setBytesFunc = curve.Scalar.SetBytes
-	}
-
-	result.C, err = setBytesFunc(digest)
+	result.C, err = curve.Scalar.SetBytes(digest)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce fiat shamir challenge scalar")
 	}
@@ -122,18 +111,7 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 	transcript.AppendMessage([]byte(uniqueSessionIdLabel), uniqueSessionId)
 	digest := transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
 
-	var setBytesFunc func([]byte) (curves.Scalar, error)
-	// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
-	// we can't manually reduce it ourselves because it's not exported from the golang's std. So we will
-	// call clamping method which internally does the reduction.
-	if curve.Name == curves.ED25519().Name {
-		scalar := &curves.ScalarEd25519{}
-		setBytesFunc = scalar.SetBytesClamping
-	} else {
-		setBytesFunc = curve.Scalar.SetBytes
-	}
-
-	computedChallenge, err := setBytesFunc(digest)
+	computedChallenge, err := curve.Scalar.SetBytes(digest)
 	if err != nil {
 		return errors.Wrap(err, "could not produce fiat shamir challenge scalar")
 	}
@@ -161,15 +139,7 @@ func ComputeFiatShamirChallege(cipherSuite *integration.CipherSuite, xs [][]byte
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	switch len(digest) {
 	case native.FieldBytes:
-		// if a 256-bit hash function is used with ED25519, then the setBytes function will not reduce it.
-		// we can't manually reduce it ourselves because it's not exported from the golang's std. So we will
-		// call clamping method which internally does the reduction.
-		if cipherSuite.Curve.Name == curves.ED25519().Name {
-			scalar := &curves.ScalarEd25519{}
-			setBytesFunc = scalar.SetBytesClamping
-		} else {
-			setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
-		}
+		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
 	case native.WideFieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
 	default:
