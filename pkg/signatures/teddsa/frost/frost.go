@@ -171,17 +171,20 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 	}
 }
 
-func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (map[int]integration.IdentityKey, int, error) {
-	result := map[int]integration.IdentityKey{}
-	myShamirId := -1
+func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (idToKey map[int]integration.IdentityKey, keyToId map[integration.IdentityKey]int, myShamirId int, err error) {
+	idToKey = make(map[int]integration.IdentityKey)
+	keyToId = make(map[integration.IdentityKey]int)
+	myShamirId = -1
 
 	integration.SortIdentityKeysInPlace(identityKeys)
 	for shamirIdMinusOne, identityKey := range identityKeys {
-		result[shamirIdMinusOne+1] = identityKey
+		shamirId := shamirIdMinusOne + 1
+		idToKey[shamirId] = identityKey
+		keyToId[identityKey] = shamirId
 		if identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
-			myShamirId = shamirIdMinusOne + 1
+			myShamirId = shamirId
 		}
 	}
 
-	return result, myShamirId, nil
+	return idToKey, keyToId, myShamirId, nil
 }
