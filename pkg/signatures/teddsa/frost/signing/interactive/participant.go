@@ -80,14 +80,11 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 		state:           &State{},
 	}
 
-	result.ShamirIdToIdentityKey, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result.ShamirIdToIdentityKey, result.IdentityKeyToShamirId, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}
-	result.IdentityKeyToShamirId = map[integration.IdentityKey]int{}
-	for shamirId, identityKey := range result.ShamirIdToIdentityKey {
-		result.IdentityKeyToShamirId[identityKey] = shamirId
-	}
+
 	result.round = 1
 	return result, nil
 }

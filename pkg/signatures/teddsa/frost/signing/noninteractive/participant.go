@@ -89,13 +89,9 @@ func NewNonInteractiveCosigner(
 		return nil, errors.New("found duplicate presignatures")
 	}
 
-	shamirIdToIdentityKey, myShamirId, err := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId, err := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
-	}
-	identityKeyToShamirId := map[integration.IdentityKey]int{}
-	for shamirId, identityKey := range shamirIdToIdentityKey {
-		identityKeyToShamirId[identityKey] = shamirId
 	}
 
 	if privateNoncePairs == nil {

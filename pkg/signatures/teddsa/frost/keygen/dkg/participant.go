@@ -68,7 +68,7 @@ func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integr
 		CohortConfig:  cohortConfig,
 	}
 
-	result.shamirIdToIdentityKey, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result.shamirIdToIdentityKey, _, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}
