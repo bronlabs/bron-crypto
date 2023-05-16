@@ -1,8 +1,6 @@
 package interactive
 
 import (
-	"sort"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
@@ -52,7 +50,7 @@ func (ic *InteractiveCosigner) Aggregate(partialSignatures map[integration.Ident
 	if ic.round != 3 {
 		return nil, errors.New("round mismatch")
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.state.S, ic.ShamirIdToIdentityKey, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, ic.state.aggregation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}
@@ -69,19 +67,12 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	}
-	ic.state.S = make([]int, len(round1output))
-	i := 0
-	for identityKey := range round1output {
-		ic.state.S[i] = ic.IdentityKeyToShamirId[identityKey]
-		i++
-	}
-	sort.Ints(ic.state.S)
 
 	D_alpha = map[integration.IdentityKey]curves.Point{}
 	E_alpha = map[integration.IdentityKey]curves.Point{}
 
-	for _, shamirId := range ic.state.S {
-		senderIdentityKey, exists := ic.ShamirIdToIdentityKey[shamirId]
+	for _, senderIdentityKey := range ic.SessionParticipants {
+		shamirId, exists := ic.IdentityKeyToShamirId[senderIdentityKey]
 		if !exists {
 			return nil, nil, errors.New("sender identity key is not found")
 		}
@@ -115,17 +106,20 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 	r_i := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
 
 	combinedDsAndEs := []byte{}
-	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
+	for _, currentParticipant := range ic.SessionParticipants {
 		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
 	}
-	for _, presentPartyShamirID := range ic.state.S {
-		currentParticipant := ic.ShamirIdToIdentityKey[presentPartyShamirID]
+	for _, currentParticipant := range ic.SessionParticipants {
 		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
 	}
 
 	R_js := map[integration.IdentityKey]curves.Point{}
-	for _, j := range ic.state.S {
+	for _, jIdentityKey := range ic.SessionParticipants {
+		j, exists := ic.IdentityKeyToShamirId[jIdentityKey]
+		if !exists {
+			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
+		}
+
 		r_jHashComponents := []byte{byte(j)}
 		r_jHashComponents = append(r_jHashComponents, message...)
 		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
@@ -134,10 +128,7 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 		if j == ic.MyShamirId {
 			r_i = r_j
 		}
-		jIdentityKey, exists := ic.ShamirIdToIdentityKey[j]
-		if !exists {
-			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
-		}
+
 		D_j, exists := D_alpha[jIdentityKey]
 		if !exists {
 			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
@@ -169,7 +160,16 @@ func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha m
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(ic.state.S)
+
+	identities := make([]int, len(ic.SessionParticipants))
+	for i, party := range ic.SessionParticipants {
+		var ok bool
+		identities[i], ok = ic.IdentityKeyToShamirId[party]
+		if !ok {
+			return nil, errors.New("could not find shamir id for the party")
+		}
+	}
+	lagrangeCoefficients, err := shamir.LagrangeCoeffs(identities)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
 	}

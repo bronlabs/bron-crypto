@@ -44,6 +44,8 @@ func Test_CanInitialize(t *testing.T) {
 	}
 
 	identityKeys := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+	aliceSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+	bobSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -69,8 +71,8 @@ func Test_CanInitialize(t *testing.T) {
 	require.True(t, exists)
 	require.NotNil(t, bobSigningKeyShare)
 
-	alice, err := NewInteractiveCosigner(aliceIdentityKey, aliceSigningKeyShare, nil, cohortConfig, crand.Reader)
-	bob, err := NewInteractiveCosigner(bobIdentityKey, bobSigningKeyShare, nil, cohortConfig, crand.Reader)
+	alice, err := NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, aliceSigningKeyShare, nil, cohortConfig, crand.Reader)
+	bob, err := NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, bobSigningKeyShare, nil, cohortConfig, crand.Reader)
 	for _, party := range []*InteractiveCosigner{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)

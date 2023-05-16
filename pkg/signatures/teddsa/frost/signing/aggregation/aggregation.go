@@ -13,8 +13,8 @@ type SignatureAggregator struct {
 	CohortConfig          *integration.CohortConfig
 	PublicKey             curves.Point
 	MyIdentityKey         integration.IdentityKey
-	PresentParties        []int
-	ShamirIdToIdentityKey map[int]integration.IdentityKey
+	PresentParties        []integration.IdentityKey
+	IdentityKeyToShamirId map[integration.IdentityKey]int
 	PublicKeyShares       *frost.PublicKeyShares
 
 	parameters *SignatureAggregatorParameters
@@ -33,7 +33,7 @@ type SignatureAggregatorParameters struct {
 	E_alpha map[integration.IdentityKey]curves.Point
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, publicKey curves.Point, publicKeyShares *frost.PublicKeyShares, presentParties []int, shamirIdToIdentityKey map[int]integration.IdentityKey, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, publicKey curves.Point, publicKeyShares *frost.PublicKeyShares, presentParties []integration.IdentityKey, identityKeyToShamirId map[integration.IdentityKey]int, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -49,12 +49,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if presentParties == nil || len(presentParties) == 0 {
 		return nil, errors.New("must provide the list of the shamir ids of present parties")
 	}
-	for _, shamirId := range presentParties {
-		if !(0 < shamirId || shamirId <= cohortConfig.TotalParties) {
-			return nil, errors.Errorf("present party shamir id %d is invalid", shamirId)
-		}
-	}
-	if len(shamirIdToIdentityKey) != cohortConfig.TotalParties {
+	if len(identityKeyToShamirId) != cohortConfig.TotalParties {
 		return nil, errors.New("don't have enough mapping for shamir to identity keys as we have parties")
 	}
 	if publicKey.IsIdentity() {
@@ -69,7 +64,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		PublicKeyShares:       publicKeyShares,
 		MyIdentityKey:         identityKey,
 		PresentParties:        presentParties,
-		ShamirIdToIdentityKey: shamirIdToIdentityKey,
+		IdentityKeyToShamirId: identityKeyToShamirId,
 		parameters:            parameters,
 	}
 	if aggregator.HasIdentifiableAbort() {
@@ -94,25 +89,20 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	if sa.parameters.R == nil {
 		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point.Identity()
 		combinedDsAndEs := []byte{}
-		for _, presentPartyShamirID := range sa.PresentParties {
-			currentParticipant := sa.ShamirIdToIdentityKey[presentPartyShamirID]
-			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[currentParticipant].ToAffineCompressed()...)
+		for _, presentParty := range sa.PresentParties {
+			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[presentParty].ToAffineCompressed()...)
 		}
-		for _, presentPartyShamirID := range sa.PresentParties {
-			currentParticipant := sa.ShamirIdToIdentityKey[presentPartyShamirID]
-			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.E_alpha[currentParticipant].ToAffineCompressed()...)
+		for _, presentParty := range sa.PresentParties {
+			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.E_alpha[presentParty].ToAffineCompressed()...)
 		}
 
-		for _, j := range sa.PresentParties {
+		for _, jIdentityKey := range sa.PresentParties {
+			j := sa.IdentityKeyToShamirId[jIdentityKey]
 			r_jHashComponents := []byte{byte(j)}
 			r_jHashComponents = append(r_jHashComponents, sa.parameters.Message...)
 			r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
 
 			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
-			jIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
-			if !exists {
-				return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
-			}
 			D_j, exists := sa.parameters.D_alpha[jIdentityKey]
 			if !exists {
 				return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
@@ -134,7 +124,16 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize shamir config")
 		}
-		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(sa.PresentParties)
+
+		identities := make([]int, len(sa.PresentParties))
+		for i, party := range sa.PresentParties {
+			var ok bool
+			identities[i], ok = sa.IdentityKeyToShamirId[party]
+			if !ok {
+				return nil, errors.New("could not find shamir id for the party")
+			}
+		}
+		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(identities)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute lagrange coefficients")
 		}
@@ -146,8 +145,8 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			return nil, errors.Wrap(err, "converting hash to c failed")
 		}
 
-		for _, j := range sa.PresentParties {
-			jIdentityKey, exists := sa.ShamirIdToIdentityKey[j]
+		for _, jIdentityKey := range sa.PresentParties {
+			j, exists := sa.IdentityKeyToShamirId[jIdentityKey]
 			if !exists {
 				return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
 			}

@@ -1,13 +1,12 @@
 package interactive
 
 import (
-	"io"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
 	"github.com/pkg/errors"
+	"io"
 )
 
 var _ frost.Participant = (*InteractiveCosigner)(nil)
@@ -23,6 +22,7 @@ type InteractiveCosigner struct {
 	PublicKeyShares       *frost.PublicKeyShares
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
+	SessionParticipants   []integration.IdentityKey
 
 	round int
 	state *State
@@ -54,12 +54,11 @@ type State struct {
 	D_i curves.Point
 	e_i curves.Scalar
 	E_i curves.Point
-	S   []int //present parties
 
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
 	var err error
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
@@ -71,13 +70,23 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 		return nil, errors.Wrap(err, "could not validate signing key share")
 	}
 
+	if sessionParticipants == nil || len(sessionParticipants) != cohortConfig.Threshold {
+		return nil, errors.New("invalid number of session participants")
+	}
+	for _, sessionParticipant := range sessionParticipants {
+		if !cohortConfig.IsInCohort(sessionParticipant) {
+			return nil, errors.New("invalid session participant")
+		}
+	}
+
 	result := &InteractiveCosigner{
-		MyIdentityKey:   identityKey,
-		CohortConfig:    cohortConfig,
-		SigningKeyShare: signingKeyShare,
-		PublicKeyShares: publicKeyShare,
-		reader:          reader,
-		state:           &State{},
+		MyIdentityKey:       identityKey,
+		CohortConfig:        cohortConfig,
+		SigningKeyShare:     signingKeyShare,
+		PublicKeyShares:     publicKeyShare,
+		SessionParticipants: sessionParticipants,
+		reader:              reader,
+		state:               &State{},
 	}
 
 	result.ShamirIdToIdentityKey, result.IdentityKeyToShamirId, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)

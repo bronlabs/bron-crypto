@@ -149,64 +149,51 @@ func Test_HappyPath(t *testing.T) {
 	bobSigningKeyShare, bobPublicKeyShares, err := bobDkg.Round3(bobDkgRound3InputFromBroadcast, bobDkgRound3InputFromP2P)
 	require.NoError(t, err)
 	require.NotNil(t, bobPublicKeyShares)
-	charlieSigningKeyShare, charliePublicKeyShares, err := charlieDkg.Round3(charlieDkgRound3InputFromBroadcast, charlieDkgRound3InputFromP2P)
+	_, charliePublicKeyShares, err := charlieDkg.Round3(charlieDkgRound3InputFromBroadcast, charlieDkgRound3InputFromP2P)
 	require.NoError(t, err)
 	require.NotNil(t, charliePublicKeyShares)
 
 	publicKey := aliceSigningKeyShare.PublicKey
 	message := []byte("something")
 
-	alice, err := interactive_signing.NewInteractiveCosigner(aliceIdentityKey, aliceSigningKeyShare, alicePublicKeyShares, cohortConfig, crand.Reader)
+	aliceSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+	bobSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+
+	alice, err := interactive_signing.NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, aliceSigningKeyShare, alicePublicKeyShares, cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := interactive_signing.NewInteractiveCosigner(bobIdentityKey, bobSigningKeyShare, bobPublicKeyShares, cohortConfig, crand.Reader)
+	bob, err := interactive_signing.NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, bobSigningKeyShare, bobPublicKeyShares, cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
-	charlie, err := interactive_signing.NewInteractiveCosigner(charlieIdentityKey, charlieSigningKeyShare, charliePublicKeyShares, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, charlie)
 
 	aliceRound1Output, err := alice.Round1()
 	require.NoError(t, err)
 	bobRound1Output, err := bob.Round1()
 	require.NoError(t, err)
-	charlieRound1Output, err := charlie.Round1()
-	require.NoError(t, err)
 
 	aliceRound2Input := map[integration.IdentityKey]*interactive_signing.Round1Broadcast{
-		bobIdentityKey:     bobRound1Output,
-		charlieIdentityKey: charlieRound1Output,
+		bobIdentityKey: bobRound1Output,
 	}
 	bobRound2Input := map[integration.IdentityKey]*interactive_signing.Round1Broadcast{
-		aliceIdentityKey:   aliceRound1Output,
-		charlieIdentityKey: charlieRound1Output,
-	}
-	charlieRound2Input := map[integration.IdentityKey]*interactive_signing.Round1Broadcast{
 		aliceIdentityKey: aliceRound1Output,
-		bobIdentityKey:   bobRound1Output,
 	}
 
 	alicePartialSignature, err := alice.Round2(aliceRound2Input, message)
 	require.NoError(t, err)
 	bobPartialSignature, err := bob.Round2(bobRound2Input, message)
 	require.NoError(t, err)
-	charliePartialSignature, err := charlie.Round2(charlieRound2Input, message)
-	require.NoError(t, err)
 
 	partialSignatures := map[integration.IdentityKey]*frost.PartialSignature{
-		aliceIdentityKey:   alicePartialSignature,
-		bobIdentityKey:     bobPartialSignature,
-		charlieIdentityKey: charliePartialSignature,
+		aliceIdentityKey: alicePartialSignature,
+		bobIdentityKey:   bobPartialSignature,
 	}
 
 	aliceSignature, err := alice.Aggregate(partialSignatures)
 	require.NoError(t, err)
 	bobSignature, err := bob.Aggregate(partialSignatures)
 	require.NoError(t, err)
-	charlieSignature, err := charlie.Aggregate(partialSignatures)
-	require.NoError(t, err)
 
-	for _, signature := range []*frost.Signature{aliceSignature, bobSignature, charlieSignature} {
+	for _, signature := range []*frost.Signature{aliceSignature, bobSignature} {
 		aliceVerificationResult := frost.Verify(curve, cohortConfig.CipherSuite.Hash, signature, publicKey, message)
 		require.NoError(t, aliceVerificationResult)
 		bobVerificationResult := frost.Verify(curve, cohortConfig.CipherSuite.Hash, signature, publicKey, message)
