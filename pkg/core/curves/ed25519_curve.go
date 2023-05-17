@@ -18,6 +18,7 @@ import (
 	"filippo.io/edwards25519/field"
 	"github.com/bwesterb/go-ristretto"
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
+	"github.com/pkg/errors"
 
 	"github.com/copperexchange/crypto-primitives-go/internal"
 )
@@ -376,13 +377,17 @@ func (s *ScalarEd25519) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarEd25519) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	curve := GetCurveByName(s.Point().CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarEd25519)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	s.value = S.value
 	return nil
@@ -718,13 +723,17 @@ func (p *PointEd25519) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointEd25519) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	curve := GetCurveByName(p.CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointEd25519)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	p.value = P.value
 	return nil
@@ -740,8 +749,8 @@ func (p *PointEd25519) SetEdwardsPoint(pt *edwards25519.Point) *PointEd25519 {
 
 // Attempt to convert to an `EdwardsPoint`, using the supplied
 // choice of sign for the `EdwardsPoint`.
-// * `sign`: a `u8` donating the desired sign of the resulting
-//   `EdwardsPoint`.  `0` denotes positive and `1` negative.
+//   - `sign`: a `u8` donating the desired sign of the resulting
+//     `EdwardsPoint`.  `0` denotes positive and `1` negative.
 func toEdwards(u *ed.FieldElement, sign byte) *PointEd25519 {
 	one := new(ed.FieldElement).SetOne()
 	// To decompress the Montgomery u coordinate to an

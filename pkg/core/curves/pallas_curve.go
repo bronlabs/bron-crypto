@@ -10,7 +10,6 @@ import (
 	"crypto/elliptic"
 	crand "crypto/rand"
 	"crypto/subtle"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fp"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fq"
+	"github.com/pkg/errors"
 )
 
 var b = new(fp.Fp).SetUint64(5)
@@ -488,13 +488,17 @@ func (s *ScalarPallas) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarPallas) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	curve := GetCurveByName(s.Point().CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarPallas)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	s.value = S.value
 	return nil
@@ -676,13 +680,17 @@ func (p *PointPallas) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointPallas) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	curve := GetCurveByName(p.CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointPallas)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	p.value = P.value
 	return nil

@@ -8,7 +8,6 @@ require (
 	filippo.io/edwards25519 v1.0.0-rc.1
 	github.com/btcsuite/btcd v0.21.0-beta.0.20201114000516-e9c7a5ac6401
 	github.com/bwesterb/go-ristretto v1.2.0
-	github.com/consensys/gnark-crypto v0.5.3
 	github.com/gtank/merlin v0.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0

@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
+	"github.com/pkg/errors"
 )
 
 var bls12381modulus = bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab")
@@ -342,13 +343,17 @@ func (s *ScalarBls12381) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	curve := GetCurveByName(s.Point().CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarBls12381)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	s.Value = S.Value
 	return nil
@@ -590,13 +595,17 @@ func (p *PointBls12381G1) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointBls12381G1) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	curve := GetCurveByName(p.CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointBls12381G1)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	p.Value = P.Value
 	return nil
@@ -840,13 +849,17 @@ func (p *PointBls12381G2) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointBls12381G2) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	curve := GetCurveByName(p.CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointBls12381G2)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	p.Value = P.Value
 	return nil
@@ -950,13 +963,17 @@ func (s *ScalarBls12381Gt) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381Gt) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	curve := GetCurveByName(s.Point().CurveName())
+	if curve == nil {
+		return errors.New("curve is nil")
+	}
+	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarBls12381Gt)
 	if !ok {
-		return fmt.Errorf("invalid type")
+		return errors.New("invalid type")
 	}
 	s.Value = S.Value
 	return nil
