@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -143,9 +144,9 @@ func unmarshalScalar(input []byte) (*Curve, []byte, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
 	}
 	return curve, input[i+1:], nil
 }
@@ -271,9 +272,9 @@ func pointUnmarshalBinary(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	return curve.Point.FromAffineCompressed(input[i+1:])
 }
@@ -304,12 +305,12 @@ func pointUnmarshalText(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	buffer := make([]byte, (len(input)-i)/2)
-	_, err := hex.Decode(buffer, input[i+1:])
+	_, err = hex.Decode(buffer, input[i+1:])
 	if err != nil {
 		return nil, err
 	}
@@ -349,9 +350,9 @@ func (c Curve) NewPointFromJSON(data []byte) (Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	p, err := hex.DecodeString(m["value"])
 	if err != nil {
@@ -375,9 +376,9 @@ func (c Curve) NewScalarFromJSON(data []byte) (Scalar, error) {
 	if err != nil {
 		return nil, err
 	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	s, err := hex.DecodeString(m["value"])
 	if err != nil {
@@ -458,24 +459,24 @@ func (c PairingCurve) NewScalar() PairingScalar {
 }
 
 // GetCurveByName returns the correct `Curve` given the name
-func GetCurveByName(name string) *Curve {
+func GetCurveByName(name string) (*Curve, error) {
 	switch name {
 	case K256Name:
-		return K256()
+		return K256(), nil
 	case BLS12381G1Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case BLS12381G2Name:
-		return BLS12381G2()
+		return BLS12381G2(), nil
 	case BLS12831Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case P256Name:
-		return P256()
+		return P256(), nil
 	case ED25519Name:
-		return ED25519()
+		return ED25519(), nil
 	case PallasName:
-		return PALLAS()
+		return PALLAS(), nil
 	default:
-		return nil
+		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
 }
 

@@ -377,9 +377,9 @@ func (s *ScalarEd25519) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarEd25519) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(s.Point().CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(s.Point().CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
@@ -723,9 +723,9 @@ func (p *PointEd25519) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointEd25519) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(p.CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(p.CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
