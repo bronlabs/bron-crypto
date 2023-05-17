@@ -31,6 +31,7 @@ type PointEd25519 struct {
 }
 
 var scOne, _ = edwards25519.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+var scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
 
 func (s *ScalarEd25519) Random(reader io.Reader) Scalar {
 	if reader == nil {
@@ -255,9 +256,9 @@ func (s *ScalarEd25519) Bytes() []byte {
 	return s.value.Bytes()
 }
 
-// SetBytes takes input a 32-byte long array and returns a ed25519 scalar.
+// SetBytesCanonical takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long and must be a reduced bytes.
-func (s *ScalarEd25519) SetBytes(input []byte) (Scalar, error) {
+func (s *ScalarEd25519) SetBytesCanonical(input []byte) (Scalar, error) {
 	if len(input) != 32 {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
@@ -279,25 +280,43 @@ func (s *ScalarEd25519) SetBytesWide(bytes []byte) (Scalar, error) {
 	return &ScalarEd25519{value}, nil
 }
 
-// SetBytesClamping uses SetBytesWithClamping of fillipo.io/edwards25519- https://github.com/FiloSottile/edwards25519/blob/v1.0.0-rc.1/scalar.go#L135
-// which applies the buffer pruning described in RFC 8032, Section 5.1.5 (also known as clamping)
-// and sets bytes to the result. The input must be 32-byte long, and it is not modified.
-// If bytes is not of the right length, SetBytesWithClamping returns nil and an error, and the receiver is unchanged.
-func (s *ScalarEd25519) SetBytesClamping(bytes []byte) (Scalar, error) {
-	value, err := edwards25519.NewScalar().SetBytesWithClamping(bytes)
-	if err != nil {
-		return nil, err
+func isReduced(bytes []byte) bool {
+	if len(bytes) != 32 {
+		return false
 	}
-	return &ScalarEd25519{value}, nil
+
+	for i := 32 - 1; i >= 0; i-- {
+		switch {
+		case bytes[i] > scMinusOne[i]:
+			return false
+		case bytes[i] < scMinusOne[i]:
+			return true
+		}
+	}
+	return true
 }
 
-// SetBytesCanonical uses SetCanonicalBytes of fillipo.io/edwards25519.
-// https://github.com/FiloSottile/edwards25519/blob/v1.0.0-rc.1/scalar.go#L98
-// This function takes an input x and sets s = x, where x is a 32-byte little-endian
-// encoding of s, then it returns the corresponding ed25519 scalar. If the input is
-// not a canonical encoding of s, it returns nil and an error.
-func (s *ScalarEd25519) SetBytesCanonical(bytes []byte) (Scalar, error) {
-	return s.SetBytes(bytes)
+// SetBytes takes input a 32-byte long array and returns a ed25519 scalar.
+// The input must be 32-byte long.
+func (s *ScalarEd25519) SetBytes(input []byte) (result Scalar, err error) {
+	if len(input) != 32 {
+		return nil, fmt.Errorf("invalid byte sequence")
+	}
+	value := new(edwards25519.Scalar)
+	if isReduced(input) {
+		value, err = edwards25519.NewScalar().SetCanonicalBytes(input)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var wideBytes [64]byte
+		copy(wideBytes[:], input[:])
+		value, err = edwards25519.NewScalar().SetUniformBytes(wideBytes[:])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ScalarEd25519{value}, nil
 }
 
 func (s *ScalarEd25519) Point() Point {

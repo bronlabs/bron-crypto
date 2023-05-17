@@ -40,7 +40,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 		return nil, errors.Wrap(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, err := frost.DeriveShamirIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	shamirIdsToIdentityKeys, _, _, err := frost.DeriveShamirIds(cohortConfig.Participants[0], cohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}

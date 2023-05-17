@@ -23,6 +23,7 @@ type InteractiveCosigner struct {
 	PublicKeyShares       *frost.PublicKeyShares
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
+	SessionParticipants   []integration.IdentityKey
 
 	round int
 	state *State
@@ -54,12 +55,11 @@ type State struct {
 	D_i      curves.Point
 	SmallE_i curves.Scalar
 	E_i      curves.Point
-	S        []int //present parties
 
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
 	var err error
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
@@ -71,23 +71,30 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, signingKeyShare
 		return nil, errors.Wrap(err, "could not validate signing key share")
 	}
 
-	result := &InteractiveCosigner{
-		MyIdentityKey:   identityKey,
-		CohortConfig:    cohortConfig,
-		SigningKeyShare: signingKeyShare,
-		PublicKeyShares: publicKeyShare,
-		reader:          reader,
-		state:           &State{},
+	if sessionParticipants == nil || len(sessionParticipants) != cohortConfig.Threshold {
+		return nil, errors.New("invalid number of session participants")
+	}
+	for _, sessionParticipant := range sessionParticipants {
+		if !cohortConfig.IsInCohort(sessionParticipant) {
+			return nil, errors.New("invalid session participant")
+		}
 	}
 
-	result.ShamirIdToIdentityKey, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result := &InteractiveCosigner{
+		MyIdentityKey:       identityKey,
+		CohortConfig:        cohortConfig,
+		SigningKeyShare:     signingKeyShare,
+		PublicKeyShares:     publicKeyShare,
+		SessionParticipants: sessionParticipants,
+		reader:              reader,
+		state:               &State{},
+	}
+
+	result.ShamirIdToIdentityKey, result.IdentityKeyToShamirId, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}
-	result.IdentityKeyToShamirId = map[integration.IdentityKey]int{}
-	for shamirId, identityKey := range result.ShamirIdToIdentityKey {
-		result.IdentityKeyToShamirId[identityKey] = shamirId
-	}
+
 	result.round = 1
 	return result, nil
 }

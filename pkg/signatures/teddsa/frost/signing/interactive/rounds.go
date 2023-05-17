@@ -1,8 +1,6 @@
 package interactive
 
 import (
-	"sort"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
@@ -65,7 +63,7 @@ func (ic *InteractiveCosigner) Aggregate(partialSignatures map[integration.Ident
 	if ic.round != 3 {
 		return nil, errors.New("round mismatch")
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.state.S, ic.ShamirIdToIdentityKey, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, ic.state.aggregation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}
@@ -82,19 +80,12 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	}
-	ic.state.S = make([]int, len(round1output))
-	i := 0
-	for identityKey := range round1output {
-		ic.state.S[i] = ic.IdentityKeyToShamirId[identityKey]
-		i++
-	}
-	sort.Ints(ic.state.S)
 
 	D_alpha = map[integration.IdentityKey]curves.Point{}
 	E_alpha = map[integration.IdentityKey]curves.Point{}
 
-	for _, shamirId := range ic.state.S {
-		senderIdentityKey, exists := ic.ShamirIdToIdentityKey[shamirId]
+	for _, senderIdentityKey := range ic.SessionParticipants {
+		shamirId, exists := ic.IdentityKeyToShamirId[senderIdentityKey]
 		if !exists {
 			return nil, nil, errors.New("sender identity key is not found")
 		}
@@ -139,15 +130,21 @@ func Helper_ProducePartialSignature(
 	r_i := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 
 	combinedDsAndEs := []byte{}
-	for _, presentParty := range presentParties {
-		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty].ToAffineCompressed()...)
-		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty].ToAffineCompressed()...)
+	for _, currentParticipant := range ic.SessionParticipants {
+		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
+	}
+	for _, currentParticipant := range ic.SessionParticipants {
+		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
 	}
 
 	R_js := map[integration.IdentityKey]curves.Point{}
-	for _, participant := range presentParties {
-		shamirId := identityKeyToShamirId[participant]
-		r_jHashComponents := []byte{byte(shamirId)}
+	for _, jIdentityKey := range ic.SessionParticipants {
+		j, exists := ic.IdentityKeyToShamirId[jIdentityKey]
+		if !exists {
+			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
+		}
+
+		r_jHashComponents := []byte{byte(j)}
 		r_jHashComponents = append(r_jHashComponents, message...)
 		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
 
@@ -155,13 +152,13 @@ func Helper_ProducePartialSignature(
 		if shamirId == myShamirId {
 			r_i = r_j
 		}
-		D_j, exists := D_alpha[participant]
+		D_j, exists := D_alpha[jIdentityKey]
 		if !exists {
-			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", shamirId)
+			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
 		}
-		E_j, exists := E_alpha[participant]
+		E_j, exists := E_alpha[jIdentityKey]
 		if !exists {
-			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", shamirId)
+			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", j)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
@@ -186,11 +183,16 @@ func Helper_ProducePartialSignature(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}
-	presentPartyShamirIds := make([]int, len(presentParties))
-	for i := 0; i < len(presentParties); i++ {
-		presentPartyShamirIds[i] = identityKeyToShamirId[presentParties[i]]
+
+	identities := make([]int, len(ic.SessionParticipants))
+	for i, party := range ic.SessionParticipants {
+		var ok bool
+		identities[i], ok = ic.IdentityKeyToShamirId[party]
+		if !ok {
+			return nil, errors.New("could not find shamir id for the party")
+		}
 	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(presentPartyShamirIds)
+	lagrangeCoefficients, err := shamir.LagrangeCoeffs(identities)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
 	}

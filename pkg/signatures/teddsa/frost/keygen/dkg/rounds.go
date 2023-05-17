@@ -2,13 +2,13 @@ package dkg
 
 import (
 	"fmt"
-
 	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
+	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/gtank/merlin"
 
 	"github.com/pkg/errors"
 )
@@ -18,8 +18,8 @@ type Round1Broadcast struct {
 }
 
 type Round2Broadcast struct {
-	Ci     []curves.Point
-	SigmaI *schnorr.Signature
+	Ci        []curves.Point
+	DlogProof *dlog.Proof
 }
 
 type Round2P2P struct {
@@ -36,6 +36,9 @@ func (p *DKGParticipant) Round1() (*Round1Broadcast, error) {
 		Ri: p.state.r_i,
 	}, nil
 }
+
+const frostDkgLabel = "COPPER_TSCHNORR_FROST_DKG_V1"
+const frostDkgShamirIdLabel = "FROST DKG shamir id parameter"
 
 func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
 	if p.round != 2 {
@@ -72,13 +75,13 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	p.state.shareVector = shares
 	p.state.commitments = commitments
 
-	schnorrSigner, err := schnorr.NewSigner(p.CohortConfig.CipherSuite, a_i0, p.reader, &schnorr.Options{
-		TranscriptSuffixes: [][]byte{phi},
-	})
+	transcript := merlin.NewTranscript(frostDkgLabel)
+	transcript.AppendMessage([]byte(frostDkgShamirIdLabel), []byte(fmt.Sprintf("%d", p.MyShamirId)))
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), phi, transcript)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not construct a schnorr signer")
+		return nil, nil, err
 	}
-	sigma_i, err := schnorrSigner.Sign([]byte(fmt.Sprintf("%d", p.MyShamirId)))
+	proof, err := prover.Prove(a_i0)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't sign")
 	}
@@ -103,8 +106,8 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	p.round++
 
 	return &Round2Broadcast{
-		Ci:     commitments,
-		SigmaI: sigma_i,
+		Ci:        commitments,
+		DlogProof: proof,
 	}, outboundP2PMessages, nil
 }
 
@@ -135,16 +138,13 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			}
 			senderCommitmentVector := broadcastedMessageFromSender.Ci
 			senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
-			senderCommitmentToTheirLocalSecretAsSchnorrPublicKey := &schnorr.PublicKey{
-				Curve: p.CohortConfig.CipherSuite.Curve,
-				Y:     senderCommitmentToTheirLocalSecret,
-			}
-			plaintext := []byte(fmt.Sprintf("%d", senderShamirId))
-			if err := schnorr.Verify(p.CohortConfig.CipherSuite, senderCommitmentToTheirLocalSecretAsSchnorrPublicKey, plaintext, broadcastedMessageFromSender.SigmaI, &schnorr.Options{
-				TranscriptSuffixes: [][]byte{p.state.phi},
-			}); err != nil {
+
+			transcript := merlin.NewTranscript(frostDkgLabel)
+			transcript.AppendMessage([]byte(frostDkgShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
+			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.state.phi, transcript); err != nil {
 				return nil, nil, errors.New("Abort from schnorr")
 			}
+
 			p2pMessageFromSender, exists := round2outputP2P[senderIdentityKey]
 			if !exists {
 				return nil, nil, errors.Errorf("did not get a p2p message from sender with shamir id %d", senderShamirId)
