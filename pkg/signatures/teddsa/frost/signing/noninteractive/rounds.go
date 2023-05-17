@@ -26,7 +26,7 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	nic.state.E_i = (*preSignature)[nic.MyShamirId].E
 	partialSignature, err := interactive.Helper_ProducePartialSignature(
 		nic,
-		nic.PresentParties,
+		nic.SessionParticipants,
 		nic.SigningKeyShare,
 		D_alpha, E_alpha,
 		nic.ShamirIdToIdentityKey,
@@ -57,17 +57,11 @@ func (nic *NonInteractiveCosigner) Aggregate(preSignatureIndex int, message []by
 		return nil, errors.Errorf("could not find E_alpha for index %d", preSignatureIndex)
 	}
 
-	presentPartyShamirIds := make([]int, len(nic.PresentParties))
-	for i := 0; i < len(nic.PresentParties); i++ {
-		presentPartyShamirIds[i] = nic.IdentityKeyToShamirId[nic.PresentParties[i]]
-	}
-
 	aggregationParameters := &aggregation.SignatureAggregatorParameters{
-		Message: message,
 		D_alpha: D_alpha,
 		E_alpha: E_alpha,
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, presentPartyShamirIds, nic.ShamirIdToIdentityKey, aggregationParameters)
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, aggregationParameters)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}

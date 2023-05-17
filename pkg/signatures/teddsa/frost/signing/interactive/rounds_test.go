@@ -188,9 +188,9 @@ func Test_HappyPath(t *testing.T) {
 		bobIdentityKey:   bobPartialSignature,
 	}
 
-	aliceSignature, err := alice.Aggregate(partialSignatures)
+	aliceSignature, err := alice.Aggregate(message, partialSignatures)
 	require.NoError(t, err)
-	bobSignature, err := bob.Aggregate(partialSignatures)
+	bobSignature, err := bob.Aggregate(message, partialSignatures)
 	require.NoError(t, err)
 
 	for _, signature := range []*frost.Signature{aliceSignature, bobSignature} {

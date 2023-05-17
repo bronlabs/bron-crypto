@@ -24,7 +24,7 @@ type NonInteractiveCosigner struct {
 
 	CohortConfig          *integration.CohortConfig
 	PublicKeyShares       *frost.PublicKeyShares
-	PresentParties        []integration.IdentityKey
+	SessionParticipants   []integration.IdentityKey
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
 
@@ -144,7 +144,7 @@ func NewNonInteractiveCosigner(
 		PublicKeyShares:           publicKeyShare,
 		ShamirIdToIdentityKey:     shamirIdToIdentityKey,
 		IdentityKeyToShamirId:     identityKeyToShamirId,
-		PresentParties:            presentParties,
+		SessionParticipants:       presentParties,
 		D_alphas:                  D_alphas,
 		E_alphas:                  E_alphas,
 		myPrivateNoncePairs:       privateNoncePairs,

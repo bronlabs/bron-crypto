@@ -38,13 +38,9 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't not derive D alpha and E alpha")
 	}
-	presentParties := make([]integration.IdentityKey, len(ic.state.S))
-	for i, shamirId := range ic.state.S {
-		presentParties[i] = ic.ShamirIdToIdentityKey[shamirId]
-	}
 	partialSignature, err := Helper_ProducePartialSignature(
 		ic,
-		presentParties,
+		ic.SessionParticipants,
 		ic.SigningKeyShare,
 		D_alpha, E_alpha,
 		ic.ShamirIdToIdentityKey,
@@ -59,11 +55,11 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	return partialSignature, nil
 }
 
-func (ic *InteractiveCosigner) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
 	if ic.round != 3 {
 		return nil, errors.New("round mismatch")
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}
@@ -116,7 +112,7 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 
 func Helper_ProducePartialSignature(
 	participant frost.Participant,
-	presentParties []integration.IdentityKey,
+	sessionParticipants []integration.IdentityKey,
 	signingKeyShare *frost.SigningKeyShare,
 	D_alpha, E_alpha map[integration.IdentityKey]curves.Point,
 	shamirIdToIdentityKey map[int]integration.IdentityKey,
@@ -130,21 +126,15 @@ func Helper_ProducePartialSignature(
 	r_i := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 
 	combinedDsAndEs := []byte{}
-	for _, currentParticipant := range ic.SessionParticipants {
-		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
-	}
-	for _, currentParticipant := range ic.SessionParticipants {
-		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
+	for _, presentParty := range sessionParticipants {
+		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty].ToAffineCompressed()...)
+		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty].ToAffineCompressed()...)
 	}
 
 	R_js := map[integration.IdentityKey]curves.Point{}
-	for _, jIdentityKey := range ic.SessionParticipants {
-		j, exists := ic.IdentityKeyToShamirId[jIdentityKey]
-		if !exists {
-			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
-		}
-
-		r_jHashComponents := []byte{byte(j)}
+	for _, participant := range sessionParticipants {
+		shamirId := identityKeyToShamirId[participant]
+		r_jHashComponents := []byte{byte(shamirId)}
 		r_jHashComponents = append(r_jHashComponents, message...)
 		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
 
@@ -152,13 +142,13 @@ func Helper_ProducePartialSignature(
 		if shamirId == myShamirId {
 			r_i = r_j
 		}
-		D_j, exists := D_alpha[jIdentityKey]
+		D_j, exists := D_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
+			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", shamirId)
 		}
-		E_j, exists := E_alpha[jIdentityKey]
+		E_j, exists := E_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", j)
+			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", shamirId)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
@@ -183,16 +173,11 @@ func Helper_ProducePartialSignature(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize shamir methods")
 	}
-
-	identities := make([]int, len(ic.SessionParticipants))
-	for i, party := range ic.SessionParticipants {
-		var ok bool
-		identities[i], ok = ic.IdentityKeyToShamirId[party]
-		if !ok {
-			return nil, errors.New("could not find shamir id for the party")
-		}
+	presentPartyShamirIds := make([]int, len(sessionParticipants))
+	for i := 0; i < len(sessionParticipants); i++ {
+		presentPartyShamirIds[i] = identityKeyToShamirId[sessionParticipants[i]]
 	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(identities)
+	lagrangeCoefficients, err := shamir.LagrangeCoeffs(presentPartyShamirIds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
 	}
@@ -208,7 +193,6 @@ func Helper_ProducePartialSignature(
 
 	if participant.IsSignatureAggregator() {
 		state.aggregation = &aggregation.SignatureAggregatorParameters{
-			Message: message,
 			Z_i:     z_i,
 			R:       R,
 			R_js:    R_js,
