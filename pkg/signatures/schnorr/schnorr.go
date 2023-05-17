@@ -24,6 +24,54 @@ type Signature struct {
 	S curves.Scalar
 }
 
+// func (s *Signature) MarshalJSON() ([]byte, error) {
+// 	wrapper := &struct {
+// 		Curve     string
+// 		Signature *Signature
+// 	}{
+// 		Curve:     s.C.Point().CurveName(),
+// 		Signature: s,
+// 	}
+// 	output, err := json.Marshal(wrapper)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "could not marshal signature")
+// 	}
+// 	return output, nil
+// }
+
+// func (s *Signature) UnmarshalJSON(data []byte) error {
+// 	curveName := struct{
+// 		Curve string
+// 	}{}
+// 	if err := json.Unmarshal(data, curveName); err != nil {
+// 		return errors.Wrap(err, "could not unmarshal the curve name")
+// 	}
+// 	if len(curveName.Curve) == 0 {
+// 		return errors.New("curve name is empty")
+// 	}
+// 	curve := curves.GetCurveByName(curveName.Curve)
+// 	if curve == nil {
+// 		return errors.Errorf("could not find curve with the specified name: %s", curveName.Curve)
+// 	}
+// 	// curve.
+// 	// unmarshaled := map[string]*curves.ScalarK256{}
+// 	// if err := json.Unmarshal(data, &unmarshaled); err != nil {
+// 	// 	return errors.Wrap(err, "could not unmarshal signature")
+// 	// }
+
+// 	unmarshaled, err := curves.ScalarUnmarshalJson(data)
+// 	if err != nil {
+// 		return errors.Wrap(err, "could not unmarshal into scalar")
+// 	}
+
+// 	s = &unmarshaled
+
+// 	// s.C = unmarshaled["C"]
+// 	// s.S = unmarshaled["S"]
+
+// 	return nil
+// }
+
 type Signer struct {
 	CipherSuite *integration.CipherSuite
 	PublicKey   *PublicKey
@@ -41,7 +89,10 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reade
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, errors.Wrap(err, "ciphersuite is invalid")
 	}
-	privateKey := KeyGen(cipherSuite.Curve, secret, reader)
+	privateKey, err := KeyGen(cipherSuite.Curve, secret, reader)
+	if err != nil {
+		return nil, errors.Wrap(err, "key generation failed")
+	}
 
 	return &Signer{
 		CipherSuite: cipherSuite,
@@ -67,7 +118,11 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	}, nil
 }
 
-func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *PrivateKey {
+func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) (*PrivateKey, error) {
+	if curve == nil {
+		return nil, errors.New("curve is nil")
+	}
+	// if curve.Name != curves.K256Name && curve.Name != P256
 	if secret == nil {
 		secret = curve.Scalar.Random(reader)
 	}
@@ -78,7 +133,7 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *Privat
 			Curve: curve,
 			Y:     publicKey,
 		},
-	}
+	}, nil
 }
 
 func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature, options *Options) error {

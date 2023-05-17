@@ -110,10 +110,10 @@ func NewNonInteractiveCosigner(
 		myAttestedCommitment := (*preSignature)[myShamirId]
 		curve := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
 		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
-			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment")
+			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment", i)
 		}
 		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.D) {
-			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment")
+			return nil, errors.Errorf("my d nonce at index %i is not equal to the corresponding commitment", i)
 		}
 	}
 

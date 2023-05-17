@@ -782,38 +782,40 @@ type sswuParams struct {
 // Let `n` be a number of point-scalar pairs.
 // Let `w` be a window of bits (6..8, chosen based on `n`, see cost factor).
 //
-// 1. Prepare `2^(w-1) - 1` buckets with indices `[1..2^(w-1))` initialized with identity points.
-//    Bucket 0 is not needed as it would contain points multiplied by 0.
-// 2. Convert scalars to a radix-`2^w` representation with signed digits in `[-2^w/2, 2^w/2]`.
-//    Note: only the last digit may equal `2^w/2`.
-// 3. Starting with the last window, for each point `i=[0..n)` add it to a a bucket indexed by
-//    the point's scalar's value in the window.
-// 4. Once all points in a window are sorted into buckets, add buckets by multiplying each
-//    by their index. Efficient way of doing it is to start with the last bucket and compute two sums:
-//    intermediate sum from the last to the first, and the full sum made of all intermediate sums.
-// 5. Shift the resulting sum of buckets by `w` bits by using `w` doublings.
-// 6. Add to the return value.
-// 7. Repeat the loop.
+//  1. Prepare `2^(w-1) - 1` buckets with indices `[1..2^(w-1))` initialized with identity points.
+//     Bucket 0 is not needed as it would contain points multiplied by 0.
+//  2. Convert scalars to a radix-`2^w` representation with signed digits in `[-2^w/2, 2^w/2]`.
+//     Note: only the last digit may equal `2^w/2`.
+//  3. Starting with the last window, for each point `i=[0..n)` add it to a a bucket indexed by
+//     the point's scalar's value in the window.
+//  4. Once all points in a window are sorted into buckets, add buckets by multiplying each
+//     by their index. Efficient way of doing it is to start with the last bucket and compute two sums:
+//     intermediate sum from the last to the first, and the full sum made of all intermediate sums.
+//  5. Shift the resulting sum of buckets by `w` bits by using `w` doublings.
+//  6. Add to the return value.
+//  7. Repeat the loop.
 //
 // Approximate cost w/o wNAF optimizations (A = addition, D = doubling):
 //
 // ```ascii
 // cost = (n*A + 2*(2^w/2)*A + w*D + A)*256/w
-//          |          |       |     |   |
-//          |          |       |     |   looping over 256/w windows
-//          |          |       |     adding to the result
-//    sorting points   |       shifting the sum by w bits (to the next window, starting from last window)
-//    one by one       |
-//    into buckets     adding/subtracting all buckets
-//                     multiplied by their indexes
-//                     using a sum of intermediate sums
+//
+//	      |          |       |     |   |
+//	      |          |       |     |   looping over 256/w windows
+//	      |          |       |     adding to the result
+//	sorting points   |       shifting the sum by w bits (to the next window, starting from last window)
+//	one by one       |
+//	into buckets     adding/subtracting all buckets
+//	                 multiplied by their indexes
+//	                 using a sum of intermediate sums
+//
 // ```
 //
 // For large `n`, dominant factor is (n*256/w) additions.
 // However, if `w` is too big and `n` is not too big, then `(2^w/2)*A` could dominate.
 // Therefore, the optimal choice of `w` grows slowly as `n` grows.
 //
-// For constant time we use a fixed window of 6
+// # For constant time we use a fixed window of 6
 //
 // This algorithm is adapted from section 4 of <https://eprint.iacr.org/2012/549.pdf>.
 // and https://cacr.uwaterloo.ca/techreports/2010/cacr2010-26.pdf
