@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/pkg/errors"
 )
 
 // Pedersen Verifiable Secret Sharing Scheme
@@ -21,7 +22,10 @@ type Pedersen struct {
 }
 
 func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, generator curves.Point) (err error) {
-	curve := curves.GetCurveByName(generator.CurveName())
+	curve, err := curves.GetCurveByName(generator.CurveName())
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	if err := share.Validate(curve); err != nil {
 		return err
 	}
@@ -68,9 +72,9 @@ func NewPedersen(threshold, limit int, generator curves.Point) (*Pedersen, error
 	if generator == nil {
 		return nil, fmt.Errorf("invalid generator")
 	}
-	curve := curves.GetCurveByName(generator.CurveName())
-	if curve == nil {
-		return nil, fmt.Errorf("invalid curve")
+	curve, err := curves.GetCurveByName(generator.CurveName())
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	if !generator.IsOnCurve() || generator.IsIdentity() {
 		return nil, fmt.Errorf("invalid generator")

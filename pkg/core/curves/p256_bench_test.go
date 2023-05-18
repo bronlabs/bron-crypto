@@ -434,7 +434,7 @@ func (s *BenchScalarP256) MarshalJSON() ([]byte, error) {
 }
 
 func (s *BenchScalarP256) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	sc, err := P256().NewScalarFromJSON(input)
 	if err != nil {
 		return err
 	}
@@ -711,7 +711,7 @@ func (p *BenchPointP256) MarshalJSON() ([]byte, error) {
 }
 
 func (p *BenchPointP256) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	pt, err := P256().NewPointFromJSON(input)
 	if err != nil {
 		return err
 	}

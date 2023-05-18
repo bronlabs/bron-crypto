@@ -57,9 +57,9 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 	var err error
 	result := &Proof{}
 
-	curve := curves.GetCurveByName(p.BasePoint.CurveName())
-	if curve == nil {
-		return nil, errors.New("curve is nil")
+	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	result.Statement = p.BasePoint.Mul(x)
@@ -92,9 +92,9 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 		return errors.New("basepoint is identity")
 	}
 
-	curve := curves.GetCurveByName(basePoint.CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := curves.GetCurveByName(basePoint.CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	if proof == nil {

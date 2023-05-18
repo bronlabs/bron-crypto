@@ -11,10 +11,14 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/pkg/errors"
 )
 
 func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
-	curve := curves.GetCurveByName(commitments[0].CurveName())
+	curve, err := curves.GetCurveByName(commitments[0].CurveName())
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	err = share.Validate(curve)
 	if err != nil {
 		return err

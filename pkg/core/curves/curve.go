@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -143,9 +144,9 @@ func unmarshalScalar(input []byte) (*Curve, []byte, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
 	}
 	return curve, input[i+1:], nil
 }
@@ -213,28 +214,6 @@ func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func scalarUnmarshalJson(input []byte) (Scalar, error) {
-	var m map[string]string
-
-	err := json.Unmarshal(input, &m)
-	if err != nil {
-		return nil, err
-	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
-	}
-	s, err := hex.DecodeString(m["value"])
-	if err != nil {
-		return nil, err
-	}
-	S, err := curve.Scalar.SetBytes(s)
-	if err != nil {
-		return nil, err
-	}
-	return S, nil
-}
-
 // Point represents an elliptic curve point
 type Point interface {
 	Random(reader io.Reader) Point
@@ -293,9 +272,9 @@ func pointUnmarshalBinary(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	return curve.Point.FromAffineCompressed(input[i+1:])
 }
@@ -326,12 +305,12 @@ func pointUnmarshalText(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	buffer := make([]byte, (len(input)-i)/2)
-	_, err := hex.Decode(buffer, input[i+1:])
+	_, err = hex.Decode(buffer, input[i+1:])
 	if err != nil {
 		return nil, err
 	}
@@ -343,28 +322,6 @@ func pointMarshalJson(point Point) ([]byte, error) {
 	m["type"] = point.CurveName()
 	m["value"] = hex.EncodeToString(point.ToAffineCompressed())
 	return json.Marshal(m)
-}
-
-func pointUnmarshalJson(input []byte) (Point, error) {
-	var m map[string]string
-
-	err := json.Unmarshal(input, &m)
-	if err != nil {
-		return nil, err
-	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
-	}
-	p, err := hex.DecodeString(m["value"])
-	if err != nil {
-		return nil, err
-	}
-	P, err := curve.Point.FromAffineCompressed(p)
-	if err != nil {
-		return nil, err
-	}
-	return P, nil
 }
 
 // Curve represents a named elliptic curve with a scalar field and point group
@@ -386,8 +343,52 @@ func (c Curve) NewIdentityPoint() Point {
 	return c.Point.Identity()
 }
 
+func (c Curve) NewPointFromJSON(data []byte) (Point, error) {
+	var m map[string]string
+
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	p, err := hex.DecodeString(m["value"])
+	if err != nil {
+		return nil, err
+	}
+	P, err := curve.Point.FromAffineCompressed(p)
+	if err != nil {
+		return nil, err
+	}
+	return P, nil
+}
+
 func (c Curve) NewScalar() Scalar {
 	return c.Scalar.Zero()
+}
+
+func (c Curve) NewScalarFromJSON(data []byte) (Scalar, error) {
+	var m map[string]string
+
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	s, err := hex.DecodeString(m["value"])
+	if err != nil {
+		return nil, err
+	}
+	S, err := curve.Scalar.SetBytes(s)
+	if err != nil {
+		return nil, err
+	}
+	return S, nil
 }
 
 // ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`
@@ -458,30 +459,24 @@ func (c PairingCurve) NewScalar() PairingScalar {
 }
 
 // GetCurveByName returns the correct `Curve` given the name
-func GetCurveByName(name string) *Curve {
+func GetCurveByName(name string) (*Curve, error) {
 	switch name {
 	case K256Name:
-		return K256()
+		return K256(), nil
 	case BLS12381G1Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case BLS12381G2Name:
-		return BLS12381G2()
+		return BLS12381G2(), nil
 	case BLS12831Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case P256Name:
-		return P256()
+		return P256(), nil
 	case ED25519Name:
-		return ED25519()
+		return ED25519(), nil
 	case PallasName:
-		return PALLAS()
-	case BLS12377G1Name:
-		return BLS12377G1()
-	case BLS12377G2Name:
-		return BLS12377G2()
-	case BLS12377Name:
-		return BLS12377G1()
+		return PALLAS(), nil
 	default:
-		return nil
+		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
 }
 
@@ -548,40 +543,6 @@ func BLS12381(preferredPoint Point) *PairingCurve {
 			Value: new(bls12381.Gt).SetOne(),
 		},
 		Name: BLS12831Name,
-	}
-}
-
-// BLS12377G1 returns the BLS12-377 curve with points in G1
-func BLS12377G1() *Curve {
-	bls12377g1Initonce.Do(bls12377g1Init)
-	return &bls12377g1
-}
-
-func bls12377g1Init() {
-	bls12377g1 = Curve{
-		Scalar: &ScalarBls12377{
-			value: new(big.Int),
-			point: new(PointBls12377G1),
-		},
-		Point: new(PointBls12377G1).Identity(),
-		Name:  BLS12377G1Name,
-	}
-}
-
-// BLS12377G2 returns the BLS12-377 curve with points in G2
-func BLS12377G2() *Curve {
-	bls12377g2Initonce.Do(bls12377g2Init)
-	return &bls12377g2
-}
-
-func bls12377g2Init() {
-	bls12377g2 = Curve{
-		Scalar: &ScalarBls12377{
-			value: new(big.Int),
-			point: new(PointBls12377G2),
-		},
-		Point: new(PointBls12377G2).Identity(),
-		Name:  BLS12377G2Name,
 	}
 }
 
