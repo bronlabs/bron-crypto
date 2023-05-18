@@ -343,9 +343,9 @@ func (s *ScalarBls12381) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(s.Point().CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(s.Point().CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
@@ -595,9 +595,9 @@ func (p *PointBls12381G1) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointBls12381G1) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(p.CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(p.CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
@@ -849,9 +849,9 @@ func (p *PointBls12381G2) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointBls12381G2) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(p.CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(p.CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
@@ -963,9 +963,9 @@ func (s *ScalarBls12381Gt) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381Gt) UnmarshalJSON(input []byte) error {
-	curve := GetCurveByName(s.Point().CurveName())
-	if curve == nil {
-		return errors.New("curve is nil")
+	curve, err := GetCurveByName(s.Point().CurveName())
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
