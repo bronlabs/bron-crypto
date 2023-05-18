@@ -93,7 +93,7 @@ func Test_HappyPath(t *testing.T) {
 				n int
 			}{
 				{t: 2, n: 3},
-				{t: 2, n: 3},
+				{t: 3, n: 3},
 			} {
 				boundedCurve := curve
 				boundedHash := h
