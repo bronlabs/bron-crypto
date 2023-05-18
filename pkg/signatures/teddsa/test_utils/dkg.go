@@ -1,80 +1,11 @@
-package dkg_test
+package test_utils
 
 import (
 	crand "crypto/rand"
-	"encoding/json"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
-	"github.com/pkg/errors"
-	"hash"
 )
-
-type TestIdentityKey struct {
-	curve  *curves.Curve
-	signer *schnorr.Signer
-	h      func() hash.Hash
-}
-
-func (k *TestIdentityKey) PublicKey() curves.Point {
-	return k.signer.PublicKey.Y
-}
-func (k *TestIdentityKey) Sign(message []byte) []byte {
-	signature, err := k.signer.Sign(message)
-	if err != nil {
-		panic(err)
-	}
-	result, err := json.Marshal(signature)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
-}
-
-func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol, t, n int) (cohortConfig *integration.CohortConfig, err error) {
-	if err = cipherSuite.Validate(); err != nil {
-		return nil, err
-	}
-
-	if n <= 0 || t > n {
-		return nil, errors.Errorf("invalid t=%d, n=%d", t, n)
-	}
-
-	identities := make([]integration.IdentityKey, n)
-	for i := 0; i < len(identities); i++ {
-		signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		identities[i] = &TestIdentityKey{
-			curve:  cipherSuite.Curve,
-			signer: signer,
-			h:      cipherSuite.Hash,
-		}
-	}
-
-	cohortConfig = &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocol,
-		Threshold:            t,
-		TotalParties:         n,
-		Participants:         identities,
-		SignatureAggregators: identities,
-	}
-
-	if err = cohortConfig.Validate(); err != nil {
-		return nil, err
-	}
-
-	return cohortConfig, nil
-}
 
 func MakeDkgParticipants(cohortConfig *integration.CohortConfig) (participants []*dkg.DKGParticipant, err error) {
 	// copy identities as they get sorted inplace when creating participant

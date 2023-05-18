@@ -1,7 +1,12 @@
 package dkg_test
 
 import (
+	"crypto/sha512"
+	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
+	"hash"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -10,37 +15,37 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func Test_HappyPath(t *testing.T) {
+func happyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Parallel()
 
-	curve := curves.ED25519()
-	h := sha3.New256
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  h,
 	}
 
-	cohortConfig, err := MakeCohort(cipherSuite, "FROST", 2, 3)
+	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold)
 	require.NoError(t, err)
 
-	participants, err := MakeDkgParticipants(cohortConfig)
+	participants, err := test_utils.MakeDkgParticipants(cohortConfig)
 	require.NoError(t, err)
 
-	r1Outs, err := DoDkgRound1(participants)
+	r1Outs, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1Outs {
 		require.NotNil(t, out)
 	}
 
-	r2Ins := MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
-	r2OutsB, r2OutsU, err := DoDkgRound2(participants, r2Ins)
+	r2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
+	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2Ins)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
-	r3InsB, r3InsU := MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	signingKeyShares, publicKeyShares, err := DoDkgRound3(participants, r3InsB, r3InsU)
+	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		require.NotNil(t, publicKeyShare)
@@ -76,4 +81,26 @@ func Test_HappyPath(t *testing.T) {
 
 	derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
 	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+}
+
+func Test_HappyPath(t *testing.T) {
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for i, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			for _, thresholdConfig := range []struct {
+				t int
+				n int
+			}{
+				{t: 2, n: 3},
+				{t: 2, n: 3},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedIndex := i
+				boundedThresholdConfig := thresholdConfig
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash index=%d and t=%d and n=%d", boundedCurve.Name, boundedIndex, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					happyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
+				})
+			}
+		}
+	}
 }
