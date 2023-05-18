@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -143,9 +144,9 @@ func unmarshalScalar(input []byte) (*Curve, []byte, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
 	}
 	return curve, input[i+1:], nil
 }
@@ -213,28 +214,6 @@ func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func scalarUnmarshalJson(input []byte) (Scalar, error) {
-	var m map[string]string
-
-	err := json.Unmarshal(input, &m)
-	if err != nil {
-		return nil, err
-	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
-	}
-	s, err := hex.DecodeString(m["value"])
-	if err != nil {
-		return nil, err
-	}
-	S, err := curve.Scalar.SetBytes(s)
-	if err != nil {
-		return nil, err
-	}
-	return S, nil
-}
-
 // Point represents an elliptic curve point
 type Point interface {
 	Random(reader io.Reader) Point
@@ -293,9 +272,9 @@ func pointUnmarshalBinary(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	return curve.Point.FromAffineCompressed(input[i+1:])
 }
@@ -326,12 +305,12 @@ func pointUnmarshalText(input []byte) (Point, error) {
 		}
 	}
 	name := string(input[:i])
-	curve := GetCurveByName(name)
-	if curve == nil {
-		return nil, fmt.Errorf("unrecognized curve")
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	buffer := make([]byte, (len(input)-i)/2)
-	_, err := hex.Decode(buffer, input[i+1:])
+	_, err = hex.Decode(buffer, input[i+1:])
 	if err != nil {
 		return nil, err
 	}
@@ -343,28 +322,6 @@ func pointMarshalJson(point Point) ([]byte, error) {
 	m["type"] = point.CurveName()
 	m["value"] = hex.EncodeToString(point.ToAffineCompressed())
 	return json.Marshal(m)
-}
-
-func pointUnmarshalJson(input []byte) (Point, error) {
-	var m map[string]string
-
-	err := json.Unmarshal(input, &m)
-	if err != nil {
-		return nil, err
-	}
-	curve := GetCurveByName(m["type"])
-	if curve == nil {
-		return nil, fmt.Errorf("invalid type")
-	}
-	p, err := hex.DecodeString(m["value"])
-	if err != nil {
-		return nil, err
-	}
-	P, err := curve.Point.FromAffineCompressed(p)
-	if err != nil {
-		return nil, err
-	}
-	return P, nil
 }
 
 // Curve represents a named elliptic curve with a scalar field and point group
@@ -386,8 +343,52 @@ func (c Curve) NewIdentityPoint() Point {
 	return c.Point.Identity()
 }
 
+func (c Curve) NewPointFromJSON(data []byte) (Point, error) {
+	var m map[string]string
+
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	p, err := hex.DecodeString(m["value"])
+	if err != nil {
+		return nil, err
+	}
+	P, err := curve.Point.FromAffineCompressed(p)
+	if err != nil {
+		return nil, err
+	}
+	return P, nil
+}
+
 func (c Curve) NewScalar() Scalar {
 	return c.Scalar.Zero()
+}
+
+func (c Curve) NewScalarFromJSON(data []byte) (Scalar, error) {
+	var m map[string]string
+
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+	curve, err := GetCurveByName(m["type"])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	s, err := hex.DecodeString(m["value"])
+	if err != nil {
+		return nil, err
+	}
+	S, err := curve.Scalar.SetBytes(s)
+	if err != nil {
+		return nil, err
+	}
+	return S, nil
 }
 
 // ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`
@@ -458,30 +459,24 @@ func (c PairingCurve) NewScalar() PairingScalar {
 }
 
 // GetCurveByName returns the correct `Curve` given the name
-func GetCurveByName(name string) *Curve {
+func GetCurveByName(name string) (*Curve, error) {
 	switch name {
 	case K256Name:
-		return K256()
+		return K256(), nil
 	case BLS12381G1Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case BLS12381G2Name:
-		return BLS12381G2()
+		return BLS12381G2(), nil
 	case BLS12831Name:
-		return BLS12381G1()
+		return BLS12381G1(), nil
 	case P256Name:
-		return P256()
+		return P256(), nil
 	case ED25519Name:
-		return ED25519()
+		return ED25519(), nil
 	case PallasName:
-		return PALLAS()
-	case BLS12377G1Name:
-		return BLS12377G1()
-	case BLS12377G2Name:
-		return BLS12377G2()
-	case BLS12377Name:
-		return BLS12377G1()
+		return PALLAS(), nil
 	default:
-		return nil
+		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
 }
 
@@ -548,40 +543,6 @@ func BLS12381(preferredPoint Point) *PairingCurve {
 			Value: new(bls12381.Gt).SetOne(),
 		},
 		Name: BLS12831Name,
-	}
-}
-
-// BLS12377G1 returns the BLS12-377 curve with points in G1
-func BLS12377G1() *Curve {
-	bls12377g1Initonce.Do(bls12377g1Init)
-	return &bls12377g1
-}
-
-func bls12377g1Init() {
-	bls12377g1 = Curve{
-		Scalar: &ScalarBls12377{
-			value: new(big.Int),
-			point: new(PointBls12377G1),
-		},
-		Point: new(PointBls12377G1).Identity(),
-		Name:  BLS12377G1Name,
-	}
-}
-
-// BLS12377G2 returns the BLS12-377 curve with points in G2
-func BLS12377G2() *Curve {
-	bls12377g2Initonce.Do(bls12377g2Init)
-	return &bls12377g2
-}
-
-func bls12377g2Init() {
-	bls12377g2 = Curve{
-		Scalar: &ScalarBls12377{
-			value: new(big.Int),
-			point: new(PointBls12377G2),
-		},
-		Point: new(PointBls12377G2).Identity(),
-		Name:  BLS12377G2Name,
 	}
 }
 
@@ -782,38 +743,40 @@ type sswuParams struct {
 // Let `n` be a number of point-scalar pairs.
 // Let `w` be a window of bits (6..8, chosen based on `n`, see cost factor).
 //
-// 1. Prepare `2^(w-1) - 1` buckets with indices `[1..2^(w-1))` initialized with identity points.
-//    Bucket 0 is not needed as it would contain points multiplied by 0.
-// 2. Convert scalars to a radix-`2^w` representation with signed digits in `[-2^w/2, 2^w/2]`.
-//    Note: only the last digit may equal `2^w/2`.
-// 3. Starting with the last window, for each point `i=[0..n)` add it to a a bucket indexed by
-//    the point's scalar's value in the window.
-// 4. Once all points in a window are sorted into buckets, add buckets by multiplying each
-//    by their index. Efficient way of doing it is to start with the last bucket and compute two sums:
-//    intermediate sum from the last to the first, and the full sum made of all intermediate sums.
-// 5. Shift the resulting sum of buckets by `w` bits by using `w` doublings.
-// 6. Add to the return value.
-// 7. Repeat the loop.
+//  1. Prepare `2^(w-1) - 1` buckets with indices `[1..2^(w-1))` initialized with identity points.
+//     Bucket 0 is not needed as it would contain points multiplied by 0.
+//  2. Convert scalars to a radix-`2^w` representation with signed digits in `[-2^w/2, 2^w/2]`.
+//     Note: only the last digit may equal `2^w/2`.
+//  3. Starting with the last window, for each point `i=[0..n)` add it to a a bucket indexed by
+//     the point's scalar's value in the window.
+//  4. Once all points in a window are sorted into buckets, add buckets by multiplying each
+//     by their index. Efficient way of doing it is to start with the last bucket and compute two sums:
+//     intermediate sum from the last to the first, and the full sum made of all intermediate sums.
+//  5. Shift the resulting sum of buckets by `w` bits by using `w` doublings.
+//  6. Add to the return value.
+//  7. Repeat the loop.
 //
 // Approximate cost w/o wNAF optimizations (A = addition, D = doubling):
 //
 // ```ascii
 // cost = (n*A + 2*(2^w/2)*A + w*D + A)*256/w
-//          |          |       |     |   |
-//          |          |       |     |   looping over 256/w windows
-//          |          |       |     adding to the result
-//    sorting points   |       shifting the sum by w bits (to the next window, starting from last window)
-//    one by one       |
-//    into buckets     adding/subtracting all buckets
-//                     multiplied by their indexes
-//                     using a sum of intermediate sums
+//
+//	      |          |       |     |   |
+//	      |          |       |     |   looping over 256/w windows
+//	      |          |       |     adding to the result
+//	sorting points   |       shifting the sum by w bits (to the next window, starting from last window)
+//	one by one       |
+//	into buckets     adding/subtracting all buckets
+//	                 multiplied by their indexes
+//	                 using a sum of intermediate sums
+//
 // ```
 //
 // For large `n`, dominant factor is (n*256/w) additions.
 // However, if `w` is too big and `n` is not too big, then `(2^w/2)*A` could dominate.
 // Therefore, the optimal choice of `w` grows slowly as `n` grows.
 //
-// For constant time we use a fixed window of 6
+// # For constant time we use a fixed window of 6
 //
 // This algorithm is adapted from section 4 of <https://eprint.iacr.org/2012/549.pdf>.
 // and https://cacr.uwaterloo.ca/techreports/2010/cacr2010-26.pdf
