@@ -16,7 +16,7 @@ import (
 )
 
 func happyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
-	t.Parallel()
+	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -84,6 +84,8 @@ func happyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold 
 }
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
 		for i, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
@@ -98,6 +100,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedIndex := i
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Happy path with curve=%s and hash index=%d and t=%d and n=%d", boundedCurve.Name, boundedIndex, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
 					happyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
