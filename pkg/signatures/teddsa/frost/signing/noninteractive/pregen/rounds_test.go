@@ -90,7 +90,7 @@ func Test_HappyPath(t *testing.T) {
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
 		Protocol:             protocol.FROST,
-		Threshold:            2,
+		Threshold:            3,
 		TotalParties:         3,
 		Participants:         []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},
 		SignatureAggregators: []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},

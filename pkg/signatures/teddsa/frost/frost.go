@@ -181,7 +181,7 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 		shamirId := shamirIdMinusOne + 1
 		idToKey[shamirId] = identityKey
 		keyToId[identityKey] = shamirId
-		if identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
 			myShamirId = shamirId
 		}
 	}

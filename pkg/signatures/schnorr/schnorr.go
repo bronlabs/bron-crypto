@@ -1,6 +1,7 @@
 package schnorr
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -24,53 +25,27 @@ type Signature struct {
 	S curves.Scalar
 }
 
-// func (s *Signature) MarshalJSON() ([]byte, error) {
-// 	wrapper := &struct {
-// 		Curve     string
-// 		Signature *Signature
-// 	}{
-// 		Curve:     s.C.Point().CurveName(),
-// 		Signature: s,
-// 	}
-// 	output, err := json.Marshal(wrapper)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "could not marshal signature")
-// 	}
-// 	return output, nil
-// }
+func (s *Signature) UnmarshalJSON(data []byte) error {
+	var err error
+	var parsed struct {
+		C json.RawMessage
+		S json.RawMessage
+	}
 
-// func (s *Signature) UnmarshalJSON(data []byte) error {
-// 	curveName := struct{
-// 		Curve string
-// 	}{}
-// 	if err := json.Unmarshal(data, curveName); err != nil {
-// 		return errors.Wrap(err, "could not unmarshal the curve name")
-// 	}
-// 	if len(curveName.Curve) == 0 {
-// 		return errors.New("curve name is empty")
-// 	}
-// 	curve := curves.GetCurveByName(curveName.Curve)
-// 	if curve == nil {
-// 		return errors.Errorf("could not find curve with the specified name: %s", curveName.Curve)
-// 	}
-// 	// curve.
-// 	// unmarshaled := map[string]*curves.ScalarK256{}
-// 	// if err := json.Unmarshal(data, &unmarshaled); err != nil {
-// 	// 	return errors.Wrap(err, "could not unmarshal signature")
-// 	// }
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return errors.Wrap(err, "couldn't extract C and S field from input")
+	}
 
-// 	unmarshaled, err := curves.ScalarUnmarshalJson(data)
-// 	if err != nil {
-// 		return errors.Wrap(err, "could not unmarshal into scalar")
-// 	}
-
-// 	s = &unmarshaled
-
-// 	// s.C = unmarshaled["C"]
-// 	// s.S = unmarshaled["S"]
-
-// 	return nil
-// }
+	s.C, err = curves.Curve{}.NewScalarFromJSON(parsed.C)
+	if err != nil {
+		return errors.Wrap(err, "couldn't deserialize C")
+	}
+	s.S, err = curves.Curve{}.NewScalarFromJSON(parsed.S)
+	if err != nil {
+		return errors.Wrap(err, "couldn't deserialize S")
+	}
+	return nil
+}
 
 type Signer struct {
 	CipherSuite *integration.CipherSuite
