@@ -78,18 +78,19 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 	return identities, nil
 }
 
-func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol, identities []integration.IdentityKey, threshold int) (cohortConfig *integration.CohortConfig, err error) {
+func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
 	if threshold > len(identities) {
 		return nil, errors.Errorf("invalid t=%d, n=%d", threshold, len(identities))
 	}
-
+	parties := append([]integration.IdentityKey{}, identities...)
+	aggregators := append([]integration.IdentityKey{}, signatureAggregators...)
 	cohortConfig = &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
 		Protocol:             protocol,
 		Threshold:            threshold,
-		TotalParties:         len(identities),
-		Participants:         identities,
-		SignatureAggregators: identities,
+		TotalParties:         len(parties),
+		Participants:         parties,
+		SignatureAggregators: aggregators,
 		PreSignatureComposer: identities[0],
 	}
 
