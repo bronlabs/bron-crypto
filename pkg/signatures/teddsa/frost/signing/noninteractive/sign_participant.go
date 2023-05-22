@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	interactive "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
 	"github.com/pkg/errors"
 )
 
@@ -66,9 +66,6 @@ func NewNonInteractiveCosigner(
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
-	if cohortConfig.PreSignatureComposer == nil {
-		return nil, errors.New("no presignature composer is set")
-	}
 	if err := signingKeyShare.Validate(); err != nil {
 		return nil, errors.Wrap(err, "could not validate signing key share")
 	}
@@ -107,7 +104,7 @@ func NewNonInteractiveCosigner(
 	}
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
-		myAttestedCommitment := (*preSignature)[myShamirId]
+		myAttestedCommitment := (*preSignature)[myShamirId-1]
 		curve, err := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -115,8 +112,8 @@ func NewNonInteractiveCosigner(
 		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
 			return nil, errors.Errorf("my d nonce at index %d is not equal to the corresponding commitment", i)
 		}
-		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.D) {
-			return nil, errors.Errorf("my d nonce at index %d is not equal to the corresponding commitment", i)
+		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.E) {
+			return nil, errors.Errorf("my e nonce at index %d is not equal to the corresponding commitment", i)
 		}
 	}
 
@@ -142,6 +139,7 @@ func NewNonInteractiveCosigner(
 		PreSignatures:             preSignatureBatch,
 		LastUsedPreSignatureIndex: lastUsedPresignatureIndex,
 		MyIdentityKey:             identityKey,
+		MyShamirId:                myShamirId,
 		SigningKeyShare:           signingKeyShare,
 		CohortConfig:              cohortConfig,
 		PublicKeyShares:           publicKeyShare,

@@ -1,15 +1,14 @@
-package pregen
+package noninteractive
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/noninteractive"
 	"github.com/pkg/errors"
 )
 
 type Round1Broadcast struct {
 	Tau         int
-	Commitments []*noninteractive.AttestedCommitmentToNoncePair
+	Commitments []*AttestedCommitmentToNoncePair
 }
 
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
@@ -19,7 +18,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	p.state = &preGenState{
 		ds:          make([]curves.Scalar, p.Tau),
 		es:          make([]curves.Scalar, p.Tau),
-		Commitments: make([]*noninteractive.AttestedCommitmentToNoncePair, p.Tau),
+		Commitments: make([]*AttestedCommitmentToNoncePair, p.Tau),
 	}
 	for j := 0; j < p.Tau; j++ {
 		dj := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
@@ -32,7 +31,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 
 		p.state.ds[j] = dj
 		p.state.es[j] = ej
-		p.state.Commitments[j] = &noninteractive.AttestedCommitmentToNoncePair{
+		p.state.Commitments[j] = &AttestedCommitmentToNoncePair{
 			D:           Dj,
 			E:           Ej,
 			Attestation: attestation,
@@ -45,7 +44,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*noninteractive.PreSignatureBatch, []*noninteractive.PrivateNoncePair, error) {
+func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
 	if p.round != 2 {
 		return nil, nil, errors.New("rounds mismatch")
 	}
@@ -60,11 +59,11 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 		return nil, nil, errors.New("the number of received messages is not equal to total parties")
 	}
 
-	batch := make(noninteractive.PreSignatureBatch, p.Tau)
-	privateNoncePairs := make([]*noninteractive.PrivateNoncePair, p.Tau)
+	batch := make(PreSignatureBatch, p.Tau)
+	privateNoncePairs := make([]*PrivateNoncePair, p.Tau)
 
 	for i := 0; i < p.Tau; i++ {
-		preSignature := make(noninteractive.PreSignature, len(p.CohortConfig.Participants))
+		preSignature := make(PreSignature, len(p.CohortConfig.Participants))
 		for j, participant := range p.CohortConfig.Participants {
 			senderShamirId := j + 1
 			message, exists := round1output[participant]
@@ -82,7 +81,7 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 			return nil, nil, errors.Wrap(err, "invalid presignature")
 		}
 		batch[i] = &preSignature
-		privateNoncePairs[i] = &noninteractive.PrivateNoncePair{
+		privateNoncePairs[i] = &PrivateNoncePair{
 			SmallD: p.state.ds[i],
 			SmallE: p.state.es[i],
 		}

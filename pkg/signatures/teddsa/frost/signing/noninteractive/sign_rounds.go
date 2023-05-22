@@ -22,8 +22,8 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	privateNoncePair := nic.myPrivateNoncePairs[preSignatureIndex]
 	nic.state.SmallD_i = privateNoncePair.SmallD
 	nic.state.SmallE_i = privateNoncePair.SmallE
-	nic.state.D_i = (*preSignature)[nic.MyShamirId].D
-	nic.state.E_i = (*preSignature)[nic.MyShamirId].E
+	nic.state.D_i = (*preSignature)[nic.MyShamirId-1].D
+	nic.state.E_i = (*preSignature)[nic.MyShamirId-1].E
 	partialSignature, err := interactive.Helper_ProducePartialSignature(
 		nic,
 		nic.SessionParticipants,
@@ -45,7 +45,7 @@ func (nic *NonInteractiveCosigner) Aggregate(preSignatureIndex int, message []by
 	if preSignatureIndex < 0 || preSignatureIndex >= len(*nic.PreSignatures) {
 		return nil, errors.New("pre signature index out of bound")
 	}
-	if preSignatureIndex <= nic.LastUsedPreSignatureIndex {
+	if (preSignatureIndex <= nic.LastUsedPreSignatureIndex) && !(nic.IsSignatureAggregator() && nic.LastUsedPreSignatureIndex == preSignatureIndex) {
 		return nil, errors.New("pre signature index is already used")
 	}
 	D_alpha, exists := nic.D_alphas[preSignatureIndex]
@@ -61,7 +61,7 @@ func (nic *NonInteractiveCosigner) Aggregate(preSignatureIndex int, message []by
 		D_alpha: D_alpha,
 		E_alpha: E_alpha,
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, aggregationParameters)
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nil, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, aggregationParameters)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}

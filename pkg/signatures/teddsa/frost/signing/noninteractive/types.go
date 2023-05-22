@@ -1,7 +1,6 @@
 package noninteractive
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -86,7 +85,6 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 			return errors.New("at least one party in the cohort does not have an attested commitment")
 		}
 	}
-	fmt.Println(ps)
 	if err := sortPreSignatureInPlace(cohortConfig, *ps); err != nil {
 		return errors.Wrap(err, "couldn't sort presignature elements by shamir id")
 	}
