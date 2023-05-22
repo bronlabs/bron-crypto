@@ -2,7 +2,9 @@ package frost
 
 import (
 	"crypto/ed25519"
+	"crypto/sha512"
 	"hash"
+	"reflect"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
@@ -88,8 +90,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 
 // TODO: curve+hashFunction -> ciphersuite
 func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signature, publicKey curves.Point, message []byte) error {
-	switch curve {
-	case curves.ED25519():
+	if curve == curves.ED25519() && reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
 		serializedSignature, err := signature.MarshalBinary()
 		if err != nil {
 			return errors.Wrap(err, "could not serialize signature to binary")
@@ -97,8 +98,9 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
 			return errors.New("could not verify frost signature using ed25519 verifier")
 		}
+
 		return nil
-	default:
+	} else {
 		challengeHasher := hashFunction()
 		if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
 			return errors.Wrap(err, "could not write R to challenge hasher")
@@ -131,42 +133,6 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 			return errors.New("failed to verify")
 		}
 
-		// schnorrPublicKey := &schnorr.PublicKey{
-		// 	Curve: curve,
-		// 	Y:     publicKey,
-		// }
-		// challengeHasher := hashFunction()
-		// if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
-		// 	return errors.Wrap(err, "could not write R to challenge hasher")
-		// }
-		// if _, err := challengeHasher.Write(publicKey.ToAffineCompressed()); err != nil {
-		// 	return errors.Wrap(err, "could not write public key to challenge hasher")
-		// }
-		// if _, err := challengeHasher.Write(message); err != nil {
-		// 	return errors.Wrap(err, "could not write the message to challenge hasher")
-		// }
-		// var err error
-		// c := curve.Scalar.Zero()
-		// if curve.Name == curves.ED25519().Name {
-		// 	scalar := &curves.ScalarEd25519{}
-		// 	c, err = scalar.SetBytes(challengeHasher.Sum(nil))
-		// 	if err != nil {
-		// 		return errors.Wrap(err, "converting hash to challenge scalar failed")
-		// 	}
-		// } else {
-		// 	c, err = curve.Scalar.SetBytes(challengeHasher.Sum(nil))
-		// 	if err != nil {
-		// 		return errors.Wrap(err, "converting hash to challenge scalar failed")
-		// 	}
-		// }
-
-		// schnorrSignature := &schnorr.Signature{
-		// 	C: c, S: signature.Z,
-		// }
-
-		// if err := schnorr.Verify(schnorrPublicKey, message, schnorrSignature, hashFunction, nil); err != nil {
-		// 	return errors.Wrap(err, "could not verify frost signature by using schnorr verify function")
-		// }
 		return nil
 	}
 }

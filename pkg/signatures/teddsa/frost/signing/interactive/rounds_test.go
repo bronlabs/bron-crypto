@@ -1,204 +1,140 @@
 package interactive_test
 
 import (
-	crand "crypto/rand"
 	"crypto/sha512"
-	"encoding/json"
-	"hash"
-	"testing"
-
+	"fmt"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
-	interactive_signing "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
-	"github.com/pkg/errors"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
+	"gonum.org/v1/gonum/stat/combin"
+	"hash"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
 )
 
-type identityKey struct {
-	curve  *curves.Curve
-	signer *schnorr.Signer
-	h      func() hash.Hash
+func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r1Out, err := test_utils.DoDkgRound1(dkgParticipants)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r2In := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r1Out)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants, r2In)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r3InB, r3InU := test_utils.MapDkgRound2OutputsToRound3Inputs(dkgParticipants, r2OutB, r2OutU)
+	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound3(dkgParticipants, r3InB, r3InU)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signingKeyShares, publicKeyShares, nil
 }
 
-func (k *identityKey) PublicKey() curves.Point {
-	return k.signer.PublicKey.Y
-}
-func (k *identityKey) Sign(message []byte) []byte {
-	signature, err := k.signer.Sign(message)
-	if err != nil {
-		panic(err)
+func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) {
+	t.Helper()
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, signingKeyShares, publicKeyShares)
+	require.NoError(t, err)
+	for _, participant := range participants {
+		require.NotNil(t, participant)
 	}
-	result, err := json.Marshal(signature)
-	if err != nil {
-		panic(err)
+
+	r1Out, err := test_utils.DoInteractiveSignRound1(participants)
+	require.NoError(t, err)
+
+	r2In := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1Out)
+	partialSignatures, err := test_utils.DoInteractiveSignRound2(participants, r2In, message)
+	require.NoError(t, err)
+
+	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
+	var signatures []*frost.Signature
+	for i, participant := range participants {
+		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
+			signature, err := participant.Aggregate(mappedPartialSignatures)
+			signatures = append(signatures, signature)
+			require.NoError(t, err)
+			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
+			require.NoError(t, err)
+		}
 	}
-	return result
-}
-func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
+	require.NotEmpty(t, signatures)
+
+	// all signatures the same
+	for i := 0; i < len(signatures); i++ {
+		for j := i + 1; j < len(signatures); j++ {
+			require.True(t, signatures[i].R.Equal(signatures[j].R))
+			require.Zero(t, signatures[i].Z.Cmp(signatures[j].Z))
+		}
+	}
 }
 
-func Test_HappyPath(t *testing.T) {
-	t.Parallel()
-	curve := curves.ED25519()
-	h := sha512.New
+func happyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  h,
 	}
 
-	aliceSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	allIdentities, err := test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	aliceIdentityKey := &identityKey{
-		curve:  curve,
-		signer: aliceSigner,
-		h:      h,
+
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)
+	require.NoError(t, err)
+
+	combinations := combin.Combinations(n, threshold)
+	for _, combinationIndices := range combinations {
+		identities := make([]integration.IdentityKey, threshold)
+		signingKeyShares := make([]*frost.SigningKeyShare, threshold)
+		publicKeyShares := make([]*frost.PublicKeyShares, threshold)
+		for i, index := range combinationIndices {
+			identities[i] = allIdentities[index]
+			signingKeyShares[i] = allSigningKeyShares[index]
+			publicKeyShares[i] = allPublicKeyShares[index]
+		}
+
+		doInteractiveSign(t, cohortConfig, identities, signingKeyShares, publicKeyShares, message)
 	}
-	bobSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
-	require.NoError(t, err)
-	bobIdentityKey := &identityKey{
-		curve:  curve,
-		signer: bobSigner,
-		h:      h,
-	}
-	charlieSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
-	require.NoError(t, err)
-	charlieIdentityKey := &identityKey{
-		curve:  curve,
-		signer: charlieSigner,
-		h:      h,
-	}
+}
 
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocol.FROST,
-		Threshold:            2,
-		TotalParties:         3,
-		Participants:         []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},
-		SignatureAggregators: []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},
-	}
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 
-	aliceDkg, err := dkg.NewDKGParticipant(aliceIdentityKey, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-	bobDkg, err := dkg.NewDKGParticipant(bobIdentityKey, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-	charlieDkg, err := dkg.NewDKGParticipant(charlieIdentityKey, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-
-	aliceDkgRound1Output, err := aliceDkg.Round1()
-	require.NoError(t, err)
-	bobDkgRound1Output, err := bobDkg.Round1()
-	require.NoError(t, err)
-	charlieDkgRound1Output, err := charlieDkg.Round1()
-	require.NoError(t, err)
-
-	aliceDkgRound2Input := map[integration.IdentityKey]*dkg.Round1Broadcast{
-		bobIdentityKey:     bobDkgRound1Output,
-		charlieIdentityKey: charlieDkgRound1Output,
-	}
-	bobDkgRound2Input := map[integration.IdentityKey]*dkg.Round1Broadcast{
-		aliceIdentityKey:   aliceDkgRound1Output,
-		charlieIdentityKey: charlieDkgRound1Output,
-	}
-	charlieDkgRound2Input := map[integration.IdentityKey]*dkg.Round1Broadcast{
-		aliceIdentityKey: aliceDkgRound1Output,
-		bobIdentityKey:   bobDkgRound1Output,
-	}
-
-	aliceDkgRound2OutputBroadcast, aliceRound2OutputP2P, err := aliceDkg.Round2(aliceDkgRound2Input)
-	require.NoError(t, err)
-	bobDkgRound2OutputBroadcast, bobRound2OutputP2P, err := bobDkg.Round2(bobDkgRound2Input)
-	require.NoError(t, err)
-	charlieDkgRound2OutputBroadcast, charlieRound2OutputP2P, err := charlieDkg.Round2(charlieDkgRound2Input)
-	require.NoError(t, err)
-
-	aliceDkgRound3InputFromBroadcast := map[integration.IdentityKey]*dkg.Round2Broadcast{
-		bobIdentityKey:     bobDkgRound2OutputBroadcast,
-		charlieIdentityKey: charlieDkgRound2OutputBroadcast,
-	}
-	bobDkgRound3InputFromBroadcast := map[integration.IdentityKey]*dkg.Round2Broadcast{
-		aliceIdentityKey:   aliceDkgRound2OutputBroadcast,
-		charlieIdentityKey: charlieDkgRound2OutputBroadcast,
-	}
-	charlieDkgRound3InputFromBroadcast := map[integration.IdentityKey]*dkg.Round2Broadcast{
-		aliceIdentityKey: aliceDkgRound2OutputBroadcast,
-		bobIdentityKey:   bobDkgRound2OutputBroadcast,
-	}
-
-	aliceDkgRound3InputFromP2P := map[integration.IdentityKey]*dkg.Round2P2P{
-		bobIdentityKey:     bobRound2OutputP2P[aliceIdentityKey],
-		charlieIdentityKey: charlieRound2OutputP2P[aliceIdentityKey],
-	}
-	bobDkgRound3InputFromP2P := map[integration.IdentityKey]*dkg.Round2P2P{
-		aliceIdentityKey:   aliceRound2OutputP2P[bobIdentityKey],
-		charlieIdentityKey: charlieRound2OutputP2P[bobIdentityKey],
-	}
-	charlieDkgRound3InputFromP2P := map[integration.IdentityKey]*dkg.Round2P2P{
-		aliceIdentityKey: aliceRound2OutputP2P[charlieIdentityKey],
-		bobIdentityKey:   bobRound2OutputP2P[charlieIdentityKey],
-	}
-
-	aliceSigningKeyShare, alicePublicKeyShares, err := aliceDkg.Round3(aliceDkgRound3InputFromBroadcast, aliceDkgRound3InputFromP2P)
-	require.NoError(t, err)
-	require.NotNil(t, alicePublicKeyShares)
-	bobSigningKeyShare, bobPublicKeyShares, err := bobDkg.Round3(bobDkgRound3InputFromBroadcast, bobDkgRound3InputFromP2P)
-	require.NoError(t, err)
-	require.NotNil(t, bobPublicKeyShares)
-	_, charliePublicKeyShares, err := charlieDkg.Round3(charlieDkgRound3InputFromBroadcast, charlieDkgRound3InputFromP2P)
-	require.NoError(t, err)
-	require.NotNil(t, charliePublicKeyShares)
-
-	publicKey := aliceSigningKeyShare.PublicKey
-	message := []byte("something")
-
-	aliceSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-	bobSessionParticipants := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-
-	alice, err := interactive_signing.NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, aliceSigningKeyShare, alicePublicKeyShares, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, alice)
-	bob, err := interactive_signing.NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, bobSigningKeyShare, bobPublicKeyShares, cohortConfig, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, bob)
-
-	aliceRound1Output, err := alice.Round1()
-	require.NoError(t, err)
-	bobRound1Output, err := bob.Round1()
-	require.NoError(t, err)
-
-	aliceRound2Input := map[integration.IdentityKey]*interactive_signing.Round1Broadcast{
-		bobIdentityKey: bobRound1Output,
-	}
-	bobRound2Input := map[integration.IdentityKey]*interactive_signing.Round1Broadcast{
-		aliceIdentityKey: aliceRound1Output,
-	}
-
-	alicePartialSignature, err := alice.Round2(aliceRound2Input, message)
-	require.NoError(t, err)
-	bobPartialSignature, err := bob.Round2(bobRound2Input, message)
-	require.NoError(t, err)
-
-	partialSignatures := map[integration.IdentityKey]*frost.PartialSignature{
-		aliceIdentityKey: alicePartialSignature,
-		bobIdentityKey:   bobPartialSignature,
-	}
-
-	aliceSignature, err := alice.Aggregate(partialSignatures)
-	require.NoError(t, err)
-	bobSignature, err := bob.Aggregate(partialSignatures)
-	require.NoError(t, err)
-
-	for _, signature := range []*frost.Signature{aliceSignature, bobSignature} {
-		aliceVerificationResult := frost.Verify(curve, cohortConfig.CipherSuite.Hash, signature, publicKey, message)
-		require.NoError(t, aliceVerificationResult)
-		bobVerificationResult := frost.Verify(curve, cohortConfig.CipherSuite.Hash, signature, publicKey, message)
-		require.NoError(t, bobVerificationResult)
-		charlieVerificationResult := frost.Verify(curve, cohortConfig.CipherSuite.Hash, signature, publicKey, message)
-		require.NoError(t, charlieVerificationResult)
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			for _, thresholdConfig := range []struct {
+				t int
+				n int
+			}{
+				{t: 2, n: 3},
+				{t: 3, n: 3},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					happyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+				})
+			}
+		}
 	}
 }

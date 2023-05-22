@@ -7,6 +7,9 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
 	"hash"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -25,10 +28,10 @@ func happyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold 
 
 	identities, err := test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeDkgParticipants(cohortConfig)
+	participants, err := test_utils.MakeDkgParticipants(cohortConfig, identities)
 	require.NoError(t, err)
 
 	r1Outs, err := test_utils.DoDkgRound1(participants)
@@ -65,7 +68,7 @@ func happyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold 
 		}
 	}
 
-	shamirDealer, err := sharing.NewShamir(2, 3, curve)
+	shamirDealer, err := sharing.NewShamir(threshold, n, curve)
 	require.NoError(t, err)
 	require.NotNil(t, shamirDealer)
 	shamirShares := make([]*sharing.ShamirShare, len(participants))
@@ -87,7 +90,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
-		for i, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
 				n int
@@ -97,9 +100,9 @@ func Test_HappyPath(t *testing.T) {
 			} {
 				boundedCurve := curve
 				boundedHash := h
-				boundedIndex := i
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash index=%d and t=%d and n=%d", boundedCurve.Name, boundedIndex, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					happyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
