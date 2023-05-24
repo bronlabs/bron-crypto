@@ -1,6 +1,7 @@
 package interactive_test
 
 import (
+	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
 	"hash"
@@ -83,7 +84,7 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 	}
 }
 
-func happyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -115,6 +116,89 @@ func happyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h 
 	}
 }
 
+func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hash,
+	}
+
+	message := []byte("Hello World!")
+
+	maliciousParty := 0
+	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
+	require.NoError(t, err)
+
+	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	require.NoError(t, err)
+
+	// first execution
+	participantsAlpha, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	require.NoError(t, err)
+	r1OutAlpha, err := test_utils.DoInteractiveSignRound1(participantsAlpha)
+	require.NoError(t, err)
+	r2InAlpha := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsAlpha, r1OutAlpha)
+	partialSignaturesAlpha, err := test_utils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
+	require.NoError(t, err)
+	mappedPartialSignaturesAlpha := test_utils.MapPartialSignatures(participantsAlpha, partialSignaturesAlpha)
+	_, err = participantsAlpha[0].Aggregate(mappedPartialSignaturesAlpha)
+	require.NoError(t, err)
+
+	// second execution
+	participantsBeta, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	require.NoError(t, err)
+	r1OutBeta, err := test_utils.DoInteractiveSignRound1(participantsBeta)
+	require.NoError(t, err)
+	r2InBeta := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsBeta, r1OutBeta)
+	partialSignaturesBeta, err := test_utils.DoInteractiveSignRound2(participantsBeta, r2InBeta, message)
+
+	// smuggle previous round partial signature
+	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
+	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(participantsBeta, partialSignaturesBeta)
+	_, err = participantsBeta[0].Aggregate(mappedPartialSignaturesBeta)
+	require.Error(t, err)
+}
+
+// make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
+func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hash,
+	}
+
+	message := []byte("Hello World!")
+
+	maliciousParty := 0
+	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
+	require.NoError(t, err)
+
+	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	require.NoError(t, err)
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	require.NoError(t, err)
+	r1Out, err := test_utils.DoInteractiveSignRound1(participants)
+	require.NoError(t, err)
+	r2In := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1Out)
+	partialSignatures, err := test_utils.DoInteractiveSignRound2(participants, r2In, message)
+	require.NoError(t, err)
+
+	// use random scalar
+	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
+	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
+	_, err = participants[0].Aggregate(mappedPartialSignatures)
+	require.Error(t, err)
+}
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
@@ -133,7 +217,59 @@ func Test_HappyPath(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					happyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+					testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+				})
+			}
+		}
+	}
+}
+
+func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			for _, thresholdConfig := range []struct {
+				t int
+				n int
+			}{
+				{t: 2, n: 3},
+				{t: 3, n: 5},
+				{t: 2, n: 2},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				t.Run(fmt.Sprintf("Abort when Alice try to use random partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					testPreviousPartialSignatureReuse(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
+				})
+			}
+		}
+	}
+}
+
+func TestShouldAbortOnRandomPartialSignature(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			for _, thresholdConfig := range []struct {
+				t int
+				n int
+			}{
+				{t: 2, n: 3},
+				{t: 3, n: 5},
+				{t: 2, n: 2},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				t.Run(fmt.Sprintf("Abort when Alice try to resuse previous partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					testRandomPartialSignature(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}
