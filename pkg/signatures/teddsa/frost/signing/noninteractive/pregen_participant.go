@@ -1,10 +1,12 @@
 package noninteractive
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +36,11 @@ func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *int
 	if tau <= 0 {
 		return nil, errors.New("tau is nonpositive")
 	}
-	integration.SortIdentityKeysInPlace(cohortConfig.Participants)
+
+	_, _, myShamirId, _ := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
+
+	fmt.Printf("my shamir id: %d | identity key: %x \n", myShamirId, identityKey.PublicKey().ToAffineCompressed())
+
 	return &PreGenParticipant{
 		reader:        reader,
 		Tau:           tau,

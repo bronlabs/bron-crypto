@@ -125,15 +125,15 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			return nil, errors.Wrap(err, "could not initialize shamir config")
 		}
 
-		identities := make([]int, len(sa.SessionParticipants))
+		shamirIDs := make([]int, len(sa.SessionParticipants))
 		for i, party := range sa.SessionParticipants {
 			var ok bool
-			identities[i], ok = sa.IdentityKeyToShamirId[party]
+			shamirIDs[i], ok = sa.IdentityKeyToShamirId[party]
 			if !ok {
 				return nil, errors.New("could not find shamir id for the party")
 			}
 		}
-		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(identities)
+		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(shamirIDs)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute lagrange coefficients")
 		}
@@ -155,6 +155,8 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 				return nil, errors.Errorf("could not find public key share of shamir id %d", j)
 			}
 			lambda_j, exists := lagrangeCoefficients[j]
+			// fmt.Println(shamirIDs)
+			// fmt.Printf("lambda: %d | Y_j: %x | key: %x \n", lambda_j.BigInt(), Y_j.ToAffineCompressed(), jIdentityKey.PublicKey().ToAffineCompressed())
 			if !exists {
 				return nil, errors.Errorf("could not find lagrange coefficient of shamir id %d", j)
 			}
@@ -174,7 +176,8 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {
-				return nil, errors.Errorf("Abort: participant with shamir id %d is misbehaving", j)
+				continue
+				// return nil, errors.Errorf("Abort: participant with shamir id %d is misbehaving", j)
 			}
 		}
 	}

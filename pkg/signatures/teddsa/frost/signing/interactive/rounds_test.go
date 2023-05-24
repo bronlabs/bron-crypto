@@ -144,8 +144,8 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	r2InAlpha := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsAlpha, r1OutAlpha)
 	partialSignaturesAlpha, err := test_utils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
 	require.NoError(t, err)
-	mappedPartialSignaturesAlpha := test_utils.MapPartialSignatures(participantsAlpha, partialSignaturesAlpha)
-	_, err = participantsAlpha[0].Aggregate(mappedPartialSignaturesAlpha)
+	mappedPartialSignaturesAlpha := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesAlpha)
+	_, err = participantsAlpha[0].Aggregate(message, mappedPartialSignaturesAlpha)
 	require.NoError(t, err)
 
 	// second execution
@@ -158,8 +158,8 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 
 	// smuggle previous round partial signature
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
-	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(participantsBeta, partialSignaturesBeta)
-	_, err = participantsBeta[0].Aggregate(mappedPartialSignaturesBeta)
+	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
+	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
 	require.Error(t, err)
 }
 
@@ -194,8 +194,8 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 
 	// use random scalar
 	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
-	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
-	_, err = participants[0].Aggregate(mappedPartialSignatures)
+	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
+	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
 	require.Error(t, err)
 }
 

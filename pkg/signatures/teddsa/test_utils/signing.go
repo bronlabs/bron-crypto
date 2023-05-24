@@ -31,9 +31,8 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 
 func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, lastUsedPreSignatureIndices []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
 	// copy identities as they get sorted inplace when creating participant
-	identitiesCopy := make([]integration.IdentityKey, cohortConfig.TotalParties)
-	copy(identitiesCopy, cohortConfig.Participants)
-	// integration.SortIdentityKeysInPlace(identitiesCopy)
+	// identitiesCopy := make([]integration.IdentityKey, cohortConfig.TotalParties)
+	// copy(identitiesCopy, cohortConfig.Participants)
 
 	participants = make([]*noninteractive.NonInteractiveCosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {

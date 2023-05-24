@@ -75,6 +75,8 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 		}
 	}
 
+	integration.SortIdentityKeysInPlace(identities)
+
 	return identities, nil
 }
 

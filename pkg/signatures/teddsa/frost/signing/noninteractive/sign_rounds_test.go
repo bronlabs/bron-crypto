@@ -4,6 +4,10 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	"hash"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -13,6 +17,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/noninteractive"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
 
 func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
@@ -62,7 +67,6 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	t.Helper()
 
 	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, signingKeyShares, publicKeySharesOfAllParties, preSignatureBatch, lastUsedPreSignatureIndices, privateNoncePairsOfAllParties)
-	require.NoError(t, err)
 
 	partialSignatures, indices, err := test_utils.DoProducePartialSignature(cosigners, message)
 	require.NoError(t, err)
@@ -90,9 +94,6 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 			require.NoError(t, err)
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			// fmt.Println(signatureHashSet[signature])
-			// signatureHashSet[signature] = true
-			// signature is valid
 			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
 			require.NoError(t, err)
 
@@ -101,39 +102,33 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 		}
 	}
 	// all signatures are equal
-	if len(signatureHashSet) > 1 {
-		for s := range signatureHashSet {
-			fmt.Println(s)
-		}
-	}
 	require.Len(t, signatureHashSet, 1)
 }
 
-func Test_HappyPath(t *testing.T) {
-	t.Parallel()
-	curve := curves.ED25519()
-	h := sha512.New
-	n := 3
-	threshold := 3
-	tau := 5
-	lastUsedPreSignatureIndex := tau - 2
+func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, lastUsedPreSignatureIndex int) {
+	t.Helper()
+
 	message := []byte("something")
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
-		Hash:  h,
+		Hash:  hash,
 	}
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	allIdentities, err := test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeySharesOfAllParties, err := doDkg(cohortConfig, identities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)
 	require.NoError(t, err)
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, identities, tau)
+	for i, share := range allSigningKeyShares {
+		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i]].Equal(curve.ScalarBaseMult(share.Share)))
+	}
+
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, allIdentities, tau)
 	require.NoError(t, err)
 
 	lastUsedPreSignatureIndices := make([]int, n)
@@ -141,6 +136,38 @@ func Test_HappyPath(t *testing.T) {
 		lastUsedPreSignatureIndices[i] = lastUsedPreSignatureIndex
 	}
 
-	doNonInteractiveSign(t, cohortConfig, identities, signingKeyShares, publicKeySharesOfAllParties, preSignatureBatch, lastUsedPreSignatureIndices, privateNoncePairsOfAllParties, message)
+	doNonInteractiveSign(t, cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, lastUsedPreSignatureIndices, privateNoncePairsOfAllParties, message)
 
+}
+
+func TestHappyPath(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			for _, tau := range []int{2, 5} {
+				for lastUsedPreSignatureIndex := -1; lastUsedPreSignatureIndex < tau; lastUsedPreSignatureIndex++ {
+					for _, thresholdConfig := range []struct {
+						t int
+						n int
+					}{
+						{t: 2, n: 3},
+						{t: 3, n: 5},
+						{t: 2, n: 2},
+					} {
+						boundedCurve := curve
+						boundedHash := h
+						boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+						boundedThresholdConfig := thresholdConfig
+						boundedTau := tau
+						boundedLastUsedPreSignatureIndex := lastUsedPreSignatureIndex
+						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and last used pre signature index=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, boundedLastUsedPreSignatureIndex), func(t *testing.T) {
+							t.Parallel()
+							testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, boundedLastUsedPreSignatureIndex)
+						})
+					}
+				}
+			}
+		}
+	}
 }

@@ -72,7 +72,8 @@ func NewNonInteractiveCosigner(
 	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
 		return nil, errors.Wrap(err, "presignature batch is invalid")
 	}
-	if lastUsedPresignatureIndex < 0 || lastUsedPresignatureIndex >= len(*preSignatureBatch) {
+	// if no presignature is used, index is -1.
+	if lastUsedPresignatureIndex < -1 || lastUsedPresignatureIndex >= len(*preSignatureBatch) {
 		return nil, errors.New("last used presignature index is out of bound")
 	}
 
