@@ -97,7 +97,6 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) (*Priva
 	if curve == nil {
 		return nil, errors.New("curve is nil")
 	}
-	// if curve.Name != curves.K256Name && curve.Name != P256
 	if secret == nil {
 		secret = curve.Scalar.Random(reader)
 	}
