@@ -8,17 +8,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, int, error) {
-	preSignatureIndex := nic.LastUsedPreSignatureIndex + 1
-	D_alpha, exists := nic.D_alphas[preSignatureIndex]
+func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
+	D_alpha, exists := nic.D_alphas[nic.FirstUnusedPreSignatureIndex]
 	if !exists {
-		return nil, -1, errors.Errorf("could not find D_alpha for index %d", preSignatureIndex)
+		return nil, errors.Errorf("could not find D_alpha for index %d", nic.FirstUnusedPreSignatureIndex)
 	}
-	E_alpha, exists := nic.E_alphas[preSignatureIndex]
+	E_alpha, exists := nic.E_alphas[nic.FirstUnusedPreSignatureIndex]
 	if !exists {
-		return nil, -1, errors.Errorf("could not find E_alpha for index %d", preSignatureIndex)
+		return nil, errors.Errorf("could not find E_alpha for index %d", nic.FirstUnusedPreSignatureIndex)
 	}
-	privateNoncePair := nic.myPrivateNoncePairs[preSignatureIndex]
+	privateNoncePair := nic.myPrivateNoncePairs[nic.FirstUnusedPreSignatureIndex]
 	d_i := privateNoncePair.SmallD
 	e_i := privateNoncePair.SmallE
 
@@ -35,19 +34,18 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	)
 
 	if err != nil {
-		return nil, -1, errors.Wrap(err, "could not produce partial signature")
+		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
-	nic.LastUsedPreSignatureIndex++
-	return partialSignature, preSignatureIndex, nil
+	nic.FirstUnusedPreSignatureIndex++
+	nic.createdPartialSignature = true
+	return partialSignature, nil
 }
 
-func (nic *NonInteractiveCosigner) Aggregate(preSignatureIndex int, message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
-	if preSignatureIndex < 0 || preSignatureIndex >= len(*nic.PreSignatures) {
-		return nil, errors.New("pre signature index out of bound")
+func (nic *NonInteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+	if !nic.createdPartialSignature {
+		return nil, errors.New("non interactive cosigner has not yet created the partial signature")
 	}
-	if (preSignatureIndex <= nic.LastUsedPreSignatureIndex) && !(nic.IsSignatureAggregator() && nic.LastUsedPreSignatureIndex == preSignatureIndex) {
-		return nil, errors.New("pre signature index is already used")
-	}
+	preSignatureIndex := nic.FirstUnusedPreSignatureIndex - 1
 	D_alpha, exists := nic.D_alphas[preSignatureIndex]
 	if !exists {
 		return nil, errors.Errorf("could not find D_alpha for index %d", preSignatureIndex)

@@ -15,8 +15,8 @@ var _ frost.Participant = (*NonInteractiveCosigner)(nil)
 type NonInteractiveCosigner struct {
 	reader io.Reader
 
-	PreSignatures             *PreSignatureBatch
-	LastUsedPreSignatureIndex int
+	PreSignatures                *PreSignatureBatch
+	FirstUnusedPreSignatureIndex int
 
 	MyIdentityKey   integration.IdentityKey
 	MyShamirId      int
@@ -33,8 +33,8 @@ type NonInteractiveCosigner struct {
 	E_alphas            map[int]map[integration.IdentityKey]curves.Point
 	myPrivateNoncePairs []*PrivateNoncePair
 
-	round                int
-	aggregationParameter *aggregation.SignatureAggregatorParameters
+	aggregationParameter    *aggregation.SignatureAggregatorParameters
+	createdPartialSignature bool
 }
 
 func (nic *NonInteractiveCosigner) GetIdentityKey() integration.IdentityKey {
@@ -60,7 +60,7 @@ func (nic *NonInteractiveCosigner) IsSignatureAggregator() bool {
 
 func NewNonInteractiveCosigner(
 	identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares,
-	preSignatureBatch *PreSignatureBatch, lastUsedPresignatureIndex int, privateNoncePairs []*PrivateNoncePair,
+	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
 	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader,
 ) (*NonInteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
@@ -72,9 +72,8 @@ func NewNonInteractiveCosigner(
 	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
 		return nil, errors.Wrap(err, "presignature batch is invalid")
 	}
-	// if no presignature is used, index is -1.
-	if lastUsedPresignatureIndex < -1 || lastUsedPresignatureIndex >= len(*preSignatureBatch) {
-		return nil, errors.New("last used presignature index is out of bound")
+	if firstUnusedPreSignatureIndex < 0 || firstUnusedPreSignatureIndex >= len(*preSignatureBatch) {
+		return nil, errors.New("first unused pre signature index index is out of bound")
 	}
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId, err := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
@@ -120,7 +119,7 @@ func NewNonInteractiveCosigner(
 
 	D_alphas := map[int]map[integration.IdentityKey]curves.Point{}
 	E_alphas := map[int]map[integration.IdentityKey]curves.Point{}
-	for i := lastUsedPresignatureIndex; i < len(*preSignatureBatch); i++ {
+	for i := firstUnusedPreSignatureIndex; i < len(*preSignatureBatch); i++ {
 		D_alpha := map[integration.IdentityKey]curves.Point{}
 		E_alpha := map[integration.IdentityKey]curves.Point{}
 		preSignature := (*preSignatureBatch)[i]
@@ -136,21 +135,20 @@ func NewNonInteractiveCosigner(
 	}
 
 	return &NonInteractiveCosigner{
-		reader:                    reader,
-		PreSignatures:             preSignatureBatch,
-		LastUsedPreSignatureIndex: lastUsedPresignatureIndex,
-		MyIdentityKey:             identityKey,
-		MyShamirId:                myShamirId,
-		SigningKeyShare:           signingKeyShare,
-		CohortConfig:              cohortConfig,
-		PublicKeyShares:           publicKeyShare,
-		ShamirIdToIdentityKey:     shamirIdToIdentityKey,
-		IdentityKeyToShamirId:     identityKeyToShamirId,
-		SessionParticipants:       presentParties,
-		D_alphas:                  D_alphas,
-		E_alphas:                  E_alphas,
-		myPrivateNoncePairs:       privateNoncePairs,
-		round:                     1,
-		aggregationParameter:      &aggregation.SignatureAggregatorParameters{},
+		reader:                       reader,
+		PreSignatures:                preSignatureBatch,
+		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,
+		MyIdentityKey:                identityKey,
+		MyShamirId:                   myShamirId,
+		SigningKeyShare:              signingKeyShare,
+		CohortConfig:                 cohortConfig,
+		PublicKeyShares:              publicKeyShare,
+		ShamirIdToIdentityKey:        shamirIdToIdentityKey,
+		IdentityKeyToShamirId:        identityKeyToShamirId,
+		SessionParticipants:          presentParties,
+		D_alphas:                     D_alphas,
+		E_alphas:                     E_alphas,
+		myPrivateNoncePairs:          privateNoncePairs,
+		aggregationParameter:         &aggregation.SignatureAggregatorParameters{},
 	}, nil
 }

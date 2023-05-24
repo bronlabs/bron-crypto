@@ -29,14 +29,10 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 	return participants, nil
 }
 
-func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, lastUsedPreSignatureIndices []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
-	// copy identities as they get sorted inplace when creating participant
-	// identitiesCopy := make([]integration.IdentityKey, cohortConfig.TotalParties)
-	// copy(identitiesCopy, cohortConfig.Participants)
-
+func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
 	participants = make([]*noninteractive.NonInteractiveCosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
-		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, signingKeyShares[i], publicKeySharesOfAllParties[i], preSignatureBatch, lastUsedPreSignatureIndices[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
+		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, signingKeyShares[i], publicKeySharesOfAllParties[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err
 		}
@@ -91,15 +87,14 @@ func MapPartialSignatures(identities []integration.IdentityKey, partialSignature
 	return result
 }
 
-func DoProducePartialSignature(participants []*noninteractive.NonInteractiveCosigner, message []byte) (partialSignatures []*frost.PartialSignature, indices []int, err error) {
+func DoProducePartialSignature(participants []*noninteractive.NonInteractiveCosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
-	indices = make([]int, len(participants))
 	for i, participant := range participants {
-		partialSignatures[i], indices[i], err = participant.ProducePartialSignature(message)
+		partialSignatures[i], err = participant.ProducePartialSignature(message)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return partialSignatures, indices, nil
+	return partialSignatures, nil
 }

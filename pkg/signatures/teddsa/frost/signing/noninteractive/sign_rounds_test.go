@@ -63,22 +63,19 @@ func doPreGen(cohortConfig *integration.CohortConfig, identities []integration.I
 	return preSignatureBatches[0], privateNoncePairsOfAllParties, nil
 }
 
-func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, lastUsedPreSignatureIndices []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) {
+func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) {
 	t.Helper()
 
-	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, signingKeyShares, publicKeySharesOfAllParties, preSignatureBatch, lastUsedPreSignatureIndices, privateNoncePairsOfAllParties)
+	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, signingKeyShares, publicKeySharesOfAllParties, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
 
-	partialSignatures, indices, err := test_utils.DoProducePartialSignature(cosigners, message)
+	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
 	require.NoError(t, err)
-	require.Equal(t, len(indices), len(cosigners))
-	require.Equal(t, len(indices), len(partialSignatures))
 
-	// last used indices are correctly incremented and recorded
+	// first unused presignature index is correctly incremented
 	indicesHashSet := map[int]bool{}
 	for i, cosigner := range cosigners {
-		indicesHashSet[indices[i]] = true
-		require.Equal(t, lastUsedPreSignatureIndices[i]+1, indices[i])
-		require.Equal(t, lastUsedPreSignatureIndices[i]+1, cosigner.LastUsedPreSignatureIndex)
+		require.Equal(t, firstUnusedPreSignatureIndex[i]+1, cosigner.FirstUnusedPreSignatureIndex)
+		indicesHashSet[cosigner.FirstUnusedPreSignatureIndex] = true
 	}
 	require.Len(t, indicesHashSet, 1)
 
@@ -86,8 +83,7 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
-			preSignatureIndex := lastUsedPreSignatureIndices[i] + 1
-			signature, err := cosigner.Aggregate(preSignatureIndex, message, mappedPartialSignatures)
+			signature, err := cosigner.Aggregate(message, mappedPartialSignatures)
 			require.NoError(t, err)
 
 			s, err := signature.MarshalBinary()
@@ -98,14 +94,14 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 			require.NoError(t, err)
 
 			// aggregate should not be considered as a new round. We check if last presignature index remains the same
-			require.Equal(t, lastUsedPreSignatureIndices[i]+1, cosigner.LastUsedPreSignatureIndex)
+			require.Equal(t, firstUnusedPreSignatureIndex[i]+1, cosigner.FirstUnusedPreSignatureIndex)
 		}
 	}
 	// all signatures are equal
 	require.Len(t, signatureHashSet, 1)
 }
 
-func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, lastUsedPreSignatureIndex int) {
+func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
 	t.Helper()
 
 	message := []byte("something")
@@ -131,12 +127,12 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, allIdentities, tau)
 	require.NoError(t, err)
 
-	lastUsedPreSignatureIndices := make([]int, n)
+	firstUnusedPreSignatureIndices := make([]int, n)
 	for i := 0; i < n; i++ {
-		lastUsedPreSignatureIndices[i] = lastUsedPreSignatureIndex
+		firstUnusedPreSignatureIndices[i] = firstUnusedPreSignatureIndex
 	}
 
-	doNonInteractiveSign(t, cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, lastUsedPreSignatureIndices, privateNoncePairsOfAllParties, message)
+	doNonInteractiveSign(t, cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, message)
 
 }
 
@@ -146,7 +142,7 @@ func TestHappyPath(t *testing.T) {
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, tau := range []int{2, 5} {
-				for lastUsedPreSignatureIndex := -1; lastUsedPreSignatureIndex < tau; lastUsedPreSignatureIndex++ {
+				for firstUnusedPreSignatureIndex := 0; firstUnusedPreSignatureIndex < tau; firstUnusedPreSignatureIndex++ {
 					for _, thresholdConfig := range []struct {
 						t int
 						n int
@@ -160,10 +156,10 @@ func TestHappyPath(t *testing.T) {
 						boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 						boundedThresholdConfig := thresholdConfig
 						boundedTau := tau
-						boundedLastUsedPreSignatureIndex := lastUsedPreSignatureIndex
-						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and last used pre signature index=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, boundedLastUsedPreSignatureIndex), func(t *testing.T) {
+						firstUnusedPreSignatureIndex := firstUnusedPreSignatureIndex
+						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and first unused pre signature index=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex), func(t *testing.T) {
 							t.Parallel()
-							testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, boundedLastUsedPreSignatureIndex)
+							testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
 						})
 					}
 				}

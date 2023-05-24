@@ -155,8 +155,6 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 				return nil, errors.Errorf("could not find public key share of shamir id %d", j)
 			}
 			lambda_j, exists := lagrangeCoefficients[j]
-			// fmt.Println(shamirIDs)
-			// fmt.Printf("lambda: %d | Y_j: %x | key: %x \n", lambda_j.BigInt(), Y_j.ToAffineCompressed(), jIdentityKey.PublicKey().ToAffineCompressed())
 			if !exists {
 				return nil, errors.Errorf("could not find lagrange coefficient of shamir id %d", j)
 			}
