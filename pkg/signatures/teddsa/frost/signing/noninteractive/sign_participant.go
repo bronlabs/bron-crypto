@@ -33,7 +33,10 @@ type NonInteractiveCosigner struct {
 	E_alphas            map[int]map[integration.IdentityKey]curves.Point
 	myPrivateNoncePairs []*PrivateNoncePair
 
-	aggregationParameter    *aggregation.SignatureAggregatorParameters
+	aggregationParameter *aggregation.SignatureAggregatorParameters
+	// The flag below here exists so that we can internally decrement FirstUnusedPreSignatureIndex
+	// at the aggregation step and not have to pass an index as an argument to Aggregate method.
+	// It is not supposed to be "safe", as the constructor can just initialize with any FirstUnusedPreSignatureIndex
 	createdPartialSignature bool
 }
 
