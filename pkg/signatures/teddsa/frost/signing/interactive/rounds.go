@@ -42,10 +42,11 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 		ic,
 		ic.SessionParticipants,
 		ic.SigningKeyShare,
+		ic.state.SmallD_i, ic.state.SmallE_i,
 		D_alpha, E_alpha,
 		ic.ShamirIdToIdentityKey,
 		ic.IdentityKeyToShamirId,
-		ic.state,
+		ic.state.aggregation,
 		message,
 	)
 	if err != nil {
@@ -114,10 +115,11 @@ func Helper_ProducePartialSignature(
 	participant frost.Participant,
 	sessionParticipants []integration.IdentityKey,
 	signingKeyShare *frost.SigningKeyShare,
+	d_i, e_i curves.Scalar,
 	D_alpha, E_alpha map[integration.IdentityKey]curves.Point,
 	shamirIdToIdentityKey map[int]integration.IdentityKey,
 	identityKeyToShamirId map[integration.IdentityKey]int,
-	state *State,
+	aggregationParameter *aggregation.SignatureAggregatorParameters,
 	message []byte,
 ) (*frost.PartialSignature, error) {
 	cohortConfig := participant.GetCohortConfig()
@@ -187,18 +189,19 @@ func Helper_ProducePartialSignature(
 		return nil, errors.New("could not find my lagrange coefficient")
 	}
 
-	eiri := state.SmallE_i.Mul(r_i)
+	eiri := e_i.Mul(r_i)
 	lambda_isic := lambda_i.Mul(signingKeyShare.Share.Mul(c))
-	z_i := state.SmallD_i.Add(eiri.Add(lambda_isic))
+	z_i := d_i.Add(eiri.Add(lambda_isic))
 
 	if participant.IsSignatureAggregator() {
-		state.aggregation = &aggregation.SignatureAggregatorParameters{
-			Z_i:     z_i,
-			R:       R,
-			R_js:    R_js,
-			D_alpha: D_alpha,
-			E_alpha: E_alpha,
+		if aggregationParameter == nil {
+			return nil, errors.New("aggregation parameter is nil when the party is signature aggregator")
 		}
+		aggregationParameter.Z_i = z_i
+		aggregationParameter.R = R
+		aggregationParameter.R_js = R_js
+		aggregationParameter.D_alpha = D_alpha
+		aggregationParameter.E_alpha = E_alpha
 	}
 
 	return &frost.PartialSignature{

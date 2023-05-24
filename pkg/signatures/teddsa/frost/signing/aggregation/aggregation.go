@@ -55,6 +55,9 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if message == nil || len(message) == 0 {
 		return nil, errors.New("message is empty")
 	}
+	if parameters == nil {
+		return nil, errors.New("aggregation parameter is nil")
+	}
 	aggregator := &SignatureAggregator{
 		CohortConfig:          cohortConfig,
 		PublicKey:             publicKey,
@@ -67,7 +70,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	}
 	if aggregator.HasIdentifiableAbort() {
 		if len(aggregator.parameters.R_js) != len(sessionParticipants) {
-			return nil, errors.New("identifiable abort is enabled and the size of Rjs and S is not equal")
+			return nil, errors.New("identifiable abort is enabled and the size of Rjs and S is not equal.")
 		}
 	}
 	return aggregator, nil

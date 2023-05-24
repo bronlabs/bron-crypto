@@ -61,11 +61,11 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 	partialSignatures, err := test_utils.DoInteractiveSignRound2(participants, r2In, message)
 	require.NoError(t, err)
 
-	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
+	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
 	var signatures []*frost.Signature
 	for i, participant := range participants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
-			signature, err := participant.Aggregate(mappedPartialSignatures)
+			signature, err := participant.Aggregate(message, mappedPartialSignatures)
 			signatures = append(signatures, signature)
 			require.NoError(t, err)
 			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)

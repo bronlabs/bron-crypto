@@ -2,6 +2,8 @@ package noninteractive_test
 
 import (
 	"crypto/sha512"
+	"encoding/base64"
+	"fmt"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -14,7 +16,7 @@ import (
 )
 
 func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig)
+	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,18 +78,20 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	}
 	require.Len(t, indicesHashSet, 1)
 
-	mappedPartialSignatures := test_utils.MapPartialSignatures(cosigners, partialSignatures)
-	signatureHashSet := map[*frost.Signature]bool{}
+	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
+	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
 			preSignatureIndex := lastUsedPreSignatureIndices[i] + 1
 			signature, err := cosigner.Aggregate(preSignatureIndex, message, mappedPartialSignatures)
 			require.NoError(t, err)
 
-			// all signatures are equal
-			require.NotContains(t, signatureHashSet, signature)
-			signatureHashSet[signature] = true
+			s, err := signature.MarshalBinary()
+			require.NoError(t, err)
+			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
+			// fmt.Println(signatureHashSet[signature])
+			// signatureHashSet[signature] = true
 			// signature is valid
 			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
 			require.NoError(t, err)
@@ -96,6 +100,13 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 			require.Equal(t, lastUsedPreSignatureIndices[i]+1, cosigner.LastUsedPreSignatureIndex)
 		}
 	}
+	// all signatures are equal
+	if len(signatureHashSet) > 1 {
+		for s := range signatureHashSet {
+			fmt.Println(s)
+		}
+	}
+	require.Len(t, signatureHashSet, 1)
 }
 
 func Test_HappyPath(t *testing.T) {
@@ -116,7 +127,7 @@ func Test_HappyPath(t *testing.T) {
 	identities, err := test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
 	signingKeyShares, publicKeySharesOfAllParties, err := doDkg(cohortConfig, identities)

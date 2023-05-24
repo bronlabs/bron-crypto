@@ -91,7 +91,6 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol
 		TotalParties:         len(parties),
 		Participants:         parties,
 		SignatureAggregators: aggregators,
-		PreSignatureComposer: identities[0],
 	}
 
 	if err = cohortConfig.Validate(); err != nil {

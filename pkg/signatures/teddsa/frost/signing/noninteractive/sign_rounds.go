@@ -10,7 +10,6 @@ import (
 
 func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, int, error) {
 	preSignatureIndex := nic.LastUsedPreSignatureIndex + 1
-	preSignature := (*nic.PreSignatures)[preSignatureIndex]
 	D_alpha, exists := nic.D_alphas[preSignatureIndex]
 	if !exists {
 		return nil, -1, errors.Errorf("could not find D_alpha for index %d", preSignatureIndex)
@@ -20,20 +19,21 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 		return nil, -1, errors.Errorf("could not find E_alpha for index %d", preSignatureIndex)
 	}
 	privateNoncePair := nic.myPrivateNoncePairs[preSignatureIndex]
-	nic.state.SmallD_i = privateNoncePair.SmallD
-	nic.state.SmallE_i = privateNoncePair.SmallE
-	nic.state.D_i = (*preSignature)[nic.MyShamirId-1].D
-	nic.state.E_i = (*preSignature)[nic.MyShamirId-1].E
+	d_i := privateNoncePair.SmallD
+	e_i := privateNoncePair.SmallE
+
 	partialSignature, err := interactive.Helper_ProducePartialSignature(
 		nic,
 		nic.SessionParticipants,
 		nic.SigningKeyShare,
+		d_i, e_i,
 		D_alpha, E_alpha,
 		nic.ShamirIdToIdentityKey,
 		nic.IdentityKeyToShamirId,
-		nic.state,
+		nic.aggregationParameter,
 		message,
 	)
+
 	if err != nil {
 		return nil, -1, errors.Wrap(err, "could not produce partial signature")
 	}
@@ -57,11 +57,9 @@ func (nic *NonInteractiveCosigner) Aggregate(preSignatureIndex int, message []by
 		return nil, errors.Errorf("could not find E_alpha for index %d", preSignatureIndex)
 	}
 
-	aggregationParameters := &aggregation.SignatureAggregatorParameters{
-		D_alpha: D_alpha,
-		E_alpha: E_alpha,
-	}
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nil, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, aggregationParameters)
+	nic.aggregationParameter.D_alpha = D_alpha
+	nic.aggregationParameter.E_alpha = E_alpha
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}

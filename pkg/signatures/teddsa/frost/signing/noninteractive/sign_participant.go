@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
 	"github.com/pkg/errors"
 )
 
@@ -33,8 +33,8 @@ type NonInteractiveCosigner struct {
 	E_alphas            map[int]map[integration.IdentityKey]curves.Point
 	myPrivateNoncePairs []*PrivateNoncePair
 
-	round int
-	state *interactive.State
+	round                int
+	aggregationParameter *aggregation.SignatureAggregatorParameters
 }
 
 func (nic *NonInteractiveCosigner) GetIdentityKey() integration.IdentityKey {
@@ -150,6 +150,6 @@ func NewNonInteractiveCosigner(
 		E_alphas:                  E_alphas,
 		myPrivateNoncePairs:       privateNoncePairs,
 		round:                     1,
-		state:                     &interactive.State{},
+		aggregationParameter:      &aggregation.SignatureAggregatorParameters{},
 	}, nil
 }

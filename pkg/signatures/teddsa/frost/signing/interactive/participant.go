@@ -80,7 +80,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		}
 	}
 
-	result := &InteractiveCosigner{
+	cosigner := &InteractiveCosigner{
 		MyIdentityKey:       identityKey,
 		CohortConfig:        cohortConfig,
 		SigningKeyShare:     signingKeyShare,
@@ -90,11 +90,15 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		state:               &State{},
 	}
 
-	result.ShamirIdToIdentityKey, result.IdentityKeyToShamirId, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	if cosigner.IsSignatureAggregator() {
+		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
+	}
+
+	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId, err = frost.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't derive shamir ids")
 	}
 
-	result.round = 1
-	return result, nil
+	cosigner.round = 1
+	return cosigner, nil
 }
