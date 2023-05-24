@@ -174,8 +174,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {
-				continue
-				// return nil, errors.Errorf("Abort: participant with shamir id %d is misbehaving", j)
+				return nil, errors.Errorf("Abort: participant with shamir id %d is misbehaving", j)
 			}
 		}
 	}
