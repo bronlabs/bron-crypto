@@ -81,13 +81,6 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *Privat
 	}
 	publicKey := curve.ScalarBaseMult(secret)
 
-	if curve.Name == curves.ED25519Name {
-		for publicKey.(*curves.PointEd25519).IsSmallOrder() {
-			secret = curve.Scalar.Random(reader)
-			publicKey = curve.ScalarBaseMult(secret)
-		}
-	}
-
 	return &PrivateKey{
 		a: secret,
 		PublicKey: PublicKey{
