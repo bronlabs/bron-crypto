@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	ed "filippo.io/edwards25519"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/crypto-primitives-go/internal"
@@ -223,8 +224,9 @@ func TestPointEd25519Random(t *testing.T) {
 	sc := ed25519.Point.Random(testRng())
 	s, ok := sc.(*PointEd25519)
 	require.True(t, ok)
-	expected := toRPt("6011540c6231421a70ced5f577432531f198d318facfaad6e52cc42fba6e6fc5")
-	require.True(t, s.Equal(&PointEd25519{expected}))
+	expected, err := toRPt("6011540c6231421a70ced5f577432531f198d318facfaad6e52cc42fba6e6fc5")
+	require.NoError(t, err)
+	require.True(t, s.Equal(&PointEd25519{expected.value}))
 	// Try 25 random values
 	for i := 0; i < 25; i++ {
 		sc := ed25519.Point.Random(crand.Reader)
@@ -243,8 +245,9 @@ func TestPointEd25519Hash(t *testing.T) {
 	sc := ed25519.Point.Hash(b[:])
 	s, ok := sc.(*PointEd25519)
 	require.True(t, ok)
-	expected := toRPt("b4d75c3bb03ca644ab6c6d2a955c911003d8cfa719415de93a6b85eeb0c8dd97")
-	require.True(t, s.Equal(&PointEd25519{expected}))
+	expected, err := toRPt("b4d75c3bb03ca644ab6c6d2a955c911003d8cfa719415de93a6b85eeb0c8dd97")
+	require.NoError(t, err)
+	require.True(t, s.Equal(&PointEd25519{expected.value}))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -403,6 +406,29 @@ func TestPointEd25519VarTimeDoubleScalarBaseMult(t *testing.T) {
 	require.True(t, lhs.Equal(rhs))
 }
 
+func TestSmallOrderPoints(t *testing.T) {
+	t.Parallel()
+	// table 6(b) of https://eprint.iacr.org/2020/1244.pdf
+	for _, canonicalSerialization := range []string{
+		"0100000000000000000000000000000000000000000000000000000000000000",
+		"ECFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F",
+		"0000000000000000000000000000000000000000000000000000000000000080",
+		"0000000000000000000000000000000000000000000000000000000000000000",
+		"C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC037A",
+		"C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC03FA",
+		"26E8958FC2B227B045C3F489F2EF98F0D5DFAC05D3C63339B13802886D53FC05",
+		"26E8958FC2B227B045C3F489F2EF98F0D5DFAC05D3C63339B13802886D53FC85",
+	} {
+		point, err := toRPt(canonicalSerialization)
+		require.NoError(t, err)
+		require.True(t, point.IsSmallOrder())
+	}
+	random := "feaa6a9d6dda758da6145f7d411a3af9f8a120698e0093faa97085b384c3f00e"
+	point, err := toRPt(random)
+	require.NoError(t, err)
+	require.False(t, point.IsSmallOrder())
+}
+
 func toRSc(hx string) *ed.Scalar {
 	e, _ := hex.DecodeString(hx)
 	var data [32]byte
@@ -411,10 +437,20 @@ func toRSc(hx string) *ed.Scalar {
 	return value
 }
 
-func toRPt(hx string) *ed.Point {
-	e, _ := hex.DecodeString(hx)
+func toRPt(hx string) (*PointEd25519, error) {
+	e, err := hex.DecodeString(hx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode hex string")
+	}
 	var data [32]byte
 	copy(data[:], e)
-	pt, _ := new(PointEd25519).FromAffineCompressed(data[:])
-	return pt.(*PointEd25519).value
+	pt, err := new(PointEd25519).FromAffineCompressed(data[:])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	point, ok := pt.(*PointEd25519)
+	if !ok {
+		return nil, errors.New("type casting failure")
+	}
+	return point, nil
 }

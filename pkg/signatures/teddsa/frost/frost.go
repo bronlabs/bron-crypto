@@ -40,6 +40,18 @@ func (s *SigningKeyShare) Validate() error {
 	if !s.PublicKey.IsOnCurve() {
 		return errors.New("public key is not on curve")
 	}
+
+	if s.PublicKey.CurveName() == curves.ED25519Name {
+		edwardsPoint, ok := s.PublicKey.(*curves.PointEd25519)
+		if !ok {
+			return errors.New("curve is ed25519 but the public key could not be type casted to the correct point struct")
+		}
+		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
+		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
+		if edwardsPoint.IsSmallOrder() {
+			return errors.New("public key is small order")
+		}
+	}
 	return nil
 }
 
@@ -88,17 +100,27 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	return serializedSignature[:], nil
 }
 
-// TODO: curve+hashFunction -> ciphersuite
 func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signature, publicKey curves.Point, message []byte) error {
-	if curve == curves.ED25519() && reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
-		serializedSignature, err := signature.MarshalBinary()
-		if err != nil {
-			return errors.Wrap(err, "could not serialize signature to binary")
+	if curve == curves.ED25519() {
+		edwardsPoint, ok := publicKey.(*curves.PointEd25519)
+		if !ok {
+			return errors.New("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
-		if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
-			return errors.New("could not verify frost signature using ed25519 verifier")
+		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
+		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
+		if edwardsPoint.IsSmallOrder() {
+			return errors.New("public key is small order")
 		}
-
+		// is an eddsa compliant signature
+		if reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
+			serializedSignature, err := signature.MarshalBinary()
+			if err != nil {
+				return errors.Wrap(err, "could not serialize signature to binary")
+			}
+			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
+				return errors.New("could not verify frost signature using ed25519 verifier")
+			}
+		}
 		return nil
 	} else {
 		challengeHasher := hashFunction()
