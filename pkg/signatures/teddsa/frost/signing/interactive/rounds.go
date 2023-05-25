@@ -19,10 +19,10 @@ func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
 		return nil, errors.New("round mismatch")
 	}
-	ic.state.SmallD_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
-	ic.state.SmallE_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
-	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.SmallD_i)
-	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.SmallE_i)
+	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
+	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
+	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.d_i)
+	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.e_i)
 	ic.round++
 	return &Round1Broadcast{
 		Di: ic.state.D_i,
@@ -42,7 +42,7 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 		ic,
 		ic.SessionParticipants,
 		ic.SigningKeyShare,
-		ic.state.SmallD_i, ic.state.SmallE_i,
+		ic.state.d_i, ic.state.e_i,
 		D_alpha, E_alpha,
 		ic.ShamirIdToIdentityKey,
 		ic.IdentityKeyToShamirId,
@@ -52,6 +52,8 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
+	ic.state.d_i = nil
+	ic.state.e_i = nil
 	ic.round++
 	return partialSignature, nil
 }

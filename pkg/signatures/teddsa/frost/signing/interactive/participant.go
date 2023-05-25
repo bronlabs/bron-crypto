@@ -51,10 +51,10 @@ func (ic *InteractiveCosigner) IsSignatureAggregator() bool {
 }
 
 type State struct {
-	SmallD_i curves.Scalar
-	D_i      curves.Point
-	SmallE_i curves.Scalar
-	E_i      curves.Point
+	d_i curves.Scalar
+	D_i curves.Point
+	e_i curves.Scalar
+	E_i curves.Point
 
 	aggregation *aggregation.SignatureAggregatorParameters
 }
