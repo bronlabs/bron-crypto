@@ -204,18 +204,6 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 		return nil, nil, errors.New("did not calculate my public key share correctly")
 	}
 
-	if publicKey.CurveName() == curves.ED25519Name {
-		edwardsPoint, ok := publicKey.(*curves.PointEd25519)
-		if !ok {
-			return nil, nil, errors.New("curve is ed25519 but the public key could not be type casted to the correct point struct")
-		}
-		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
-		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
-		if edwardsPoint.IsSmallOrder() {
-			return nil, nil, errors.New("public key is small order")
-		}
-	}
-
 	publicKeyShares := &frost.PublicKeyShares{
 		Curve:     p.CohortConfig.CipherSuite.Curve,
 		PublicKey: publicKey,
