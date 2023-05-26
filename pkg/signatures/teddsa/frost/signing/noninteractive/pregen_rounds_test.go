@@ -67,7 +67,7 @@ func pregenHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thre
 func Test_PregenHappyPath(t *testing.T) {
 	t.Parallel()
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
-		for i, h := range [](func() hash.Hash){sha512.New, sha3.New256} {
+		for i, h := range []func() hash.Hash{sha512.New, sha3.New256} {
 			for _, thresholdConfig := range []struct {
 				t int
 				n int
