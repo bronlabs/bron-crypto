@@ -57,7 +57,6 @@ type State struct {
 }
 
 func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader) (*DKGParticipant, error) {
-	var err error
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -68,10 +67,7 @@ func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integr
 		CohortConfig:  cohortConfig,
 	}
 
-	result.shamirIdToIdentityKey, _, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't derive shamir ids")
-	}
+	result.shamirIdToIdentityKey, _, result.MyShamirId = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
 }

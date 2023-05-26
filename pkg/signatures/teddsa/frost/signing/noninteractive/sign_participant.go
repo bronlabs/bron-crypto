@@ -79,10 +79,7 @@ func NewNonInteractiveCosigner(
 		return nil, errors.New("first unused pre signature index index is out of bound")
 	}
 
-	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId, err := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't derive shamir ids")
-	}
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
 
 	presentPartiesHashSet := map[integration.IdentityKey]bool{}
 	for _, participant := range presentParties {

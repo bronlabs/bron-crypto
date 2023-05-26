@@ -60,7 +60,6 @@ type State struct {
 }
 
 func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
-	var err error
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -94,10 +93,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId, err = frost.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't derive shamir ids")
-	}
+	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = frost.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
 
 	cosigner.round = 1
 	return cosigner, nil

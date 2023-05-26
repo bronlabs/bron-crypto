@@ -138,7 +138,7 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 	}
 }
 
-func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (idToKey map[int]integration.IdentityKey, keyToId map[integration.IdentityKey]int, myShamirId int, err error) {
+func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (idToKey map[int]integration.IdentityKey, keyToId map[integration.IdentityKey]int, myShamirId int) {
 	idToKey = make(map[int]integration.IdentityKey)
 	keyToId = make(map[integration.IdentityKey]int)
 	myShamirId = -1
@@ -153,5 +153,5 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 		}
 	}
 
-	return idToKey, keyToId, myShamirId, nil
+	return idToKey, keyToId, myShamirId
 }
