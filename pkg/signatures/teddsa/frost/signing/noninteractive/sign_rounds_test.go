@@ -46,7 +46,7 @@ func doDkg(cohortConfig *integration.CohortConfig, identities []integration.Iden
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doPreGen(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int) (*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair, error) {
+func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair, error) {
 	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)
 	if err != nil {
 		return nil, nil, err
@@ -124,7 +124,7 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i]].Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, allIdentities, tau)
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, tau)
 	require.NoError(t, err)
 
 	firstUnusedPreSignatureIndices := make([]int, n)
