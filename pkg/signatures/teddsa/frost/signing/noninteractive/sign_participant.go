@@ -13,7 +13,7 @@ import (
 var _ frost.Participant = (*NonInteractiveCosigner)(nil)
 
 type NonInteractiveCosigner struct {
-	reader io.Reader
+	prng io.Reader
 
 	PreSignatures                *PreSignatureBatch
 	FirstUnusedPreSignatureIndex int
@@ -64,7 +64,7 @@ func (nic *NonInteractiveCosigner) IsSignatureAggregator() bool {
 func NewNonInteractiveCosigner(
 	identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares,
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
-	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader,
+	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*NonInteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
@@ -135,7 +135,7 @@ func NewNonInteractiveCosigner(
 	}
 
 	return &NonInteractiveCosigner{
-		reader:                       reader,
+		prng:                         prng,
 		PreSignatures:                preSignatureBatch,
 		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,
 		MyIdentityKey:                identityKey,

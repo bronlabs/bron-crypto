@@ -12,13 +12,13 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integration.IdentityKey]*frost.SigningKeyShare, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*frost.SigningKeyShare, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "could not validate cohort config")
 	}
 
 	curve := curves.ED25519()
-	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(reader)
+	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(prng)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate ed25519 compliant private key")
 	}
@@ -35,7 +35,7 @@ func Keygen(cohortConfig *integration.CohortConfig, reader io.Reader) (map[integ
 	if err != nil {
 		return nil, errors.Wrap(err, "could not construct feldman dealer")
 	}
-	_, shamirShares, err := feldmanDealer.Split(privateKey, reader)
+	_, shamirShares, err := feldmanDealer.Split(privateKey, prng)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deal the secret")
 	}

@@ -83,16 +83,16 @@ func NewPedersen(threshold, limit int, generator curves.Point) (*Pedersen, error
 }
 
 // Split creates the verifiers, blinding and shares
-func (pd Pedersen) Split(secret curves.Scalar, reader io.Reader) (*PedersenResult, error) {
+func (pd Pedersen) Split(secret curves.Scalar, prng io.Reader) (*PedersenResult, error) {
 	// generate a random blinding factor
-	blinding := pd.curve.Scalar.Random(reader)
+	blinding := pd.curve.Scalar.Random(prng)
 
 	shamir := Shamir{pd.threshold, pd.limit, pd.curve}
 	// split the secret into shares
-	shares, poly := shamir.getPolyAndShares(secret, reader)
+	shares, poly := shamir.getPolyAndShares(secret, prng)
 
 	// split the blinding into shares
-	blindingShares, polyBlinding := shamir.getPolyAndShares(blinding, reader)
+	blindingShares, polyBlinding := shamir.getPolyAndShares(blinding, prng)
 
 	// Generate the verifiable commitments to the polynomial for the shares
 	blindedCommitments := make([]curves.Point, pd.threshold)

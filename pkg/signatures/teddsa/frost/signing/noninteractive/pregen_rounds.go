@@ -21,8 +21,8 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Commitments: make([]*AttestedCommitmentToNoncePair, p.Tau),
 	}
 	for j := 0; j < p.Tau; j++ {
-		dj := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
-		ej := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
+		dj := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
+		ej := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 		Dj := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(dj)
 		Ej := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ej)
 		message := Dj.ToAffineCompressed()

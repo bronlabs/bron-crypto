@@ -51,7 +51,7 @@ type Signer struct {
 	CipherSuite *integration.CipherSuite
 	PublicKey   *PublicKey
 	privateKey  *PrivateKey
-	reader      io.Reader
+	prng        io.Reader
 	options     *Options
 }
 
@@ -60,11 +60,11 @@ type Options struct {
 	TranscriptSuffixes [][]byte
 }
 
-func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reader io.Reader, options *Options) (*Signer, error) {
+func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader, options *Options) (*Signer, error) {
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, errors.Wrap(err, "ciphersuite is invalid")
 	}
-	privateKey, err := KeyGen(cipherSuite.Curve, secret, reader)
+	privateKey, err := KeyGen(cipherSuite.Curve, secret, prng)
 	if err != nil {
 		return nil, errors.Wrap(err, "key generation failed")
 	}
@@ -73,7 +73,7 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reade
 		CipherSuite: cipherSuite,
 		PublicKey:   &privateKey.PublicKey,
 		privateKey:  privateKey,
-		reader:      reader,
+		prng:        prng,
 		options:     options,
 	}, nil
 }
@@ -93,12 +93,12 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	}, nil
 }
 
-func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) (*PrivateKey, error) {
+func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateKey, error) {
 	if curve == nil {
 		return nil, errors.New("curve is nil")
 	}
 	if secret == nil {
-		secret = curve.Scalar.Random(reader)
+		secret = curve.Scalar.Random(prng)
 	}
 	publicKey := curve.ScalarBaseMult(secret)
 	return &PrivateKey{

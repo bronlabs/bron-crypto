@@ -9,7 +9,7 @@ import (
 )
 
 type PreGenParticipant struct {
-	reader io.Reader
+	prng io.Reader
 
 	Tau           int
 	MyIdentityKey integration.IdentityKey
@@ -24,7 +24,7 @@ type preGenState struct {
 	Commitments []*AttestedCommitmentToNoncePair
 }
 
-func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, reader io.Reader) (*PreGenParticipant, error) {
+func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -36,7 +36,7 @@ func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *int
 	}
 
 	return &PreGenParticipant{
-		reader:        reader,
+		prng:          prng,
 		Tau:           tau,
 		MyIdentityKey: identityKey,
 		CohortConfig:  cohortConfig,

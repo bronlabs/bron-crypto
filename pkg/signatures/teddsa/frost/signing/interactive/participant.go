@@ -13,7 +13,7 @@ import (
 var _ frost.Participant = (*InteractiveCosigner)(nil)
 
 type InteractiveCosigner struct {
-	reader io.Reader
+	prng io.Reader
 
 	MyIdentityKey   integration.IdentityKey
 	MyShamirId      int
@@ -59,7 +59,7 @@ type State struct {
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -85,7 +85,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		SigningKeyShare:     signingKeyShare,
 		PublicKeyShares:     publicKeyShare,
 		SessionParticipants: sessionParticipants,
-		reader:              reader,
+		prng:                prng,
 		state:               &State{},
 	}
 
