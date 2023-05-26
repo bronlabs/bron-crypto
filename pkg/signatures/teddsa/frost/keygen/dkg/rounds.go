@@ -146,7 +146,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 					return nil, nil, errors.Errorf("curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", senderShamirId)
 				}
 				// Since the honest behavior is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
-				// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs ccofactor clearing.
+				// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
 				// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
 				// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
 				if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
