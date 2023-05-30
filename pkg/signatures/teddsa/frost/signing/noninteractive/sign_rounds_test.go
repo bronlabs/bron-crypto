@@ -21,7 +21,7 @@ import (
 )
 
 func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities)
+	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities, nil)
 	if err != nil {
 		return nil, nil, err
 	}
