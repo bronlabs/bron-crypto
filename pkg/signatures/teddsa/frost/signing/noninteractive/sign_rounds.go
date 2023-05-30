@@ -3,8 +3,8 @@ package noninteractive
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
+	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/interactive"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +21,7 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	d_i := privateNoncePair.SmallD
 	e_i := privateNoncePair.SmallE
 
-	partialSignature, err := interactive.Helper_ProducePartialSignature(
+	partialSignature, err := signing_helpers.ProducePartialSignature(
 		nic,
 		nic.SessionParticipants,
 		nic.SigningKeyShare,
