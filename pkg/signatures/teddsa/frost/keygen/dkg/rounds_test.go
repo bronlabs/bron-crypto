@@ -159,6 +159,35 @@ func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() h
 	require.NotEqual(t, alphaAliceDlogProof, betaAliceDlogProof)
 }
 
+func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() hash.Hash) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hash,
+	}
+
+	alice := 0
+	bob := 1
+	identities, err := test_utils.MakeIdentities(cipherSuite, 2)
+	require.NoError(t, err)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, 2, identities)
+	require.NoError(t, err)
+
+	participants, err := test_utils.MakeDkgParticipants(cohortConfig, identities, nil)
+	r1Outs, err := test_utils.DoDkgRound1(participants)
+	require.NoError(t, err)
+	r2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
+	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2Ins)
+	require.NoError(t, err)
+
+	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
+	r2OutsB[alice].Ci[0] = r2OutsB[alice].Ci[0].Sub(r2OutsB[bob].Ci[0])
+	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	_, _, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	require.Error(t, err, "aborts on calculating public key share")
+}
+
 func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha int, tBeta, nBeta int) {
 	t.Helper()
 
@@ -303,6 +332,22 @@ func TestAliceDlogProofIsUnique(t *testing.T) {
 					testAliceDlogProofIsUnique(t, boundedCurve, boundedHash, boundedThresholdConfig.threshold, boundedThresholdConfig.n)
 				})
 			}
+		}
+	}
+}
+
+func TestAbortOnRogueKeyAttack(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
+			boundedCurve := curve
+			boundedHash := h
+			boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+			t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
+				t.Parallel()
+				testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash)
+			})
 		}
 	}
 }
