@@ -28,7 +28,6 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
-	nic.FirstUnusedPreSignatureIndex++
 	return partialSignature, nil
 }
 

@@ -71,14 +71,6 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
 	require.NoError(t, err)
 
-	// first unused presignature index is correctly incremented
-	indicesHashSet := map[int]bool{}
-	for i, cosigner := range cosigners {
-		require.Equal(t, firstUnusedPreSignatureIndex[i]+1, cosigner.FirstUnusedPreSignatureIndex)
-		indicesHashSet[cosigner.FirstUnusedPreSignatureIndex] = true
-	}
-	require.Len(t, indicesHashSet, 1)
-
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
@@ -92,9 +84,6 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 
 			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
 			require.NoError(t, err)
-
-			// aggregate should not be considered as a new round. We check if last presignature index remains the same
-			require.Equal(t, firstUnusedPreSignatureIndex[i]+1, cosigner.FirstUnusedPreSignatureIndex)
 		}
 	}
 	// all signatures are equal
