@@ -28,9 +28,9 @@ type NonInteractiveCosigner struct {
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
 
-	// a map from index of presignature to the corresponding Ds and Es
-	D_alphas            map[int]map[integration.IdentityKey]curves.Point
-	E_alphas            map[int]map[integration.IdentityKey]curves.Point
+	// The following correspond to the right presignature index
+	D_alpha             map[integration.IdentityKey]curves.Point
+	E_alpha             map[integration.IdentityKey]curves.Point
 	myPrivateNoncePairs []*PrivateNoncePair
 
 	aggregationParameter *aggregation.SignatureAggregatorParameters
@@ -113,21 +113,15 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alphas := map[int]map[integration.IdentityKey]curves.Point{}
-	E_alphas := map[int]map[integration.IdentityKey]curves.Point{}
-	for i := firstUnusedPreSignatureIndex; i < len(*preSignatureBatch); i++ {
-		D_alpha := map[integration.IdentityKey]curves.Point{}
-		E_alpha := map[integration.IdentityKey]curves.Point{}
-		preSignature := (*preSignatureBatch)[i]
-		for _, attestedCommitment := range *preSignature {
-			if !presentPartiesHashSet[attestedCommitment.Attestor] {
-				continue
-			}
-			D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
-			E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
+	D_alpha := map[integration.IdentityKey]curves.Point{}
+	E_alpha := map[integration.IdentityKey]curves.Point{}
+	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
+	for _, attestedCommitment := range *preSignature {
+		if !presentPartiesHashSet[attestedCommitment.Attestor] {
+			continue
 		}
-		D_alphas[i] = D_alpha
-		E_alphas[i] = E_alpha
+		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
+		E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
 	}
 
 	return &NonInteractiveCosigner{
@@ -142,8 +136,8 @@ func NewNonInteractiveCosigner(
 		ShamirIdToIdentityKey:        shamirIdToIdentityKey,
 		IdentityKeyToShamirId:        identityKeyToShamirId,
 		SessionParticipants:          presentParties,
-		D_alphas:                     D_alphas,
-		E_alphas:                     E_alphas,
+		D_alpha:                      D_alpha,
+		E_alpha:                      E_alpha,
 		myPrivateNoncePairs:          privateNoncePairs,
 		aggregationParameter:         &aggregation.SignatureAggregatorParameters{},
 	}, nil
