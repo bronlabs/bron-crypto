@@ -7,19 +7,28 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"
 	"github.com/pkg/errors"
+	"io"
 )
 
-func MakeDkgParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (participants []*dkg.DKGParticipant, err error) {
+func MakeDkgParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.DKGParticipant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
 
 	participants = make([]*dkg.DKGParticipant, cohortConfig.TotalParties)
 	for i, identity := range identities {
+		var prng io.Reader
+		if prngs != nil && prngs[i] != nil {
+			prng = prngs[i]
+		} else {
+			prng = crand.Reader
+		}
+
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = dkg.NewDKGParticipant(identity, cohortConfig, crand.Reader)
+
+		participants[i], err = dkg.NewDKGParticipant(identity, cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}
