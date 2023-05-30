@@ -37,15 +37,10 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
 	nic.FirstUnusedPreSignatureIndex++
-	nic.createdPartialSignature = true
 	return partialSignature, nil
 }
 
-func (nic *NonInteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
-	if !nic.createdPartialSignature {
-		return nil, errors.New("non interactive cosigner has not yet created the partial signature")
-	}
-	preSignatureIndex := nic.FirstUnusedPreSignatureIndex - 1
+func (nic *NonInteractiveCosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
 	D_alpha, exists := nic.D_alphas[preSignatureIndex]
 	if !exists {
 		return nil, errors.Errorf("could not find D_alpha for index %d", preSignatureIndex)

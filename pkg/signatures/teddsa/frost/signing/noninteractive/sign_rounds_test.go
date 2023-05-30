@@ -83,7 +83,7 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
-			signature, err := cosigner.Aggregate(message, mappedPartialSignatures)
+			signature, err := cosigner.Aggregate(message, firstUnusedPreSignatureIndex[i], mappedPartialSignatures)
 			require.NoError(t, err)
 
 			s, err := signature.MarshalBinary()
