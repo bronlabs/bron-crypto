@@ -1,0 +1,9 @@
+info:
+  name: knox-primitives
+  version: "0.1"
+
+include:
+  - file: /etc/serve/include.d/library.yml
+
+build:
+  - docker-image: {}
