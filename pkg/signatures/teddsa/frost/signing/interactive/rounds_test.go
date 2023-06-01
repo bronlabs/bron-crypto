@@ -4,6 +4,12 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"hash"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -12,11 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
-	"hash"
-	"reflect"
-	"runtime"
-	"strings"
-	"testing"
 )
 
 func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
@@ -61,11 +62,11 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 	partialSignatures, err := test_utils.DoInteractiveSignRound2(participants, r2In, message)
 	require.NoError(t, err)
 
-	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
+	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
 	var signatures []*frost.Signature
 	for i, participant := range participants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
-			signature, err := participant.Aggregate(mappedPartialSignatures)
+			signature, err := participant.Aggregate(message, mappedPartialSignatures)
 			signatures = append(signatures, signature)
 			require.NoError(t, err)
 			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
@@ -143,8 +144,8 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	r2InAlpha := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsAlpha, r1OutAlpha)
 	partialSignaturesAlpha, err := test_utils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
 	require.NoError(t, err)
-	mappedPartialSignaturesAlpha := test_utils.MapPartialSignatures(participantsAlpha, partialSignaturesAlpha)
-	_, err = participantsAlpha[0].Aggregate(mappedPartialSignaturesAlpha)
+	mappedPartialSignaturesAlpha := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesAlpha)
+	_, err = participantsAlpha[0].Aggregate(message, mappedPartialSignaturesAlpha)
 	require.NoError(t, err)
 
 	// second execution
@@ -157,8 +158,8 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 
 	// smuggle previous round partial signature
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
-	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(participantsBeta, partialSignaturesBeta)
-	_, err = participantsBeta[0].Aggregate(mappedPartialSignaturesBeta)
+	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
+	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
 	require.Error(t, err)
 }
 
@@ -193,8 +194,8 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 
 	// use random scalar
 	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
-	mappedPartialSignatures := test_utils.MapPartialSignatures(participants, partialSignatures)
-	_, err = participants[0].Aggregate(mappedPartialSignatures)
+	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
+	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
 	require.Error(t, err)
 }
 

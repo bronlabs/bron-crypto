@@ -59,7 +59,7 @@ func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 	return &Feldman{threshold, limit, curve}, nil
 }
 
-func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
+func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
 	if secret.IsZero() {
 		return nil, nil, fmt.Errorf("invalid secret")
 	}
@@ -68,7 +68,7 @@ func (f Feldman) Split(secret curves.Scalar, reader io.Reader) (commitments []cu
 		limit:     f.Limit,
 		curve:     f.Curve,
 	}
-	shares, poly := shamir.getPolyAndShares(secret, reader)
+	shares, poly := shamir.getPolyAndShares(secret, prng)
 	commitments = make([]curves.Point, f.Threshold)
 	for i := range commitments {
 		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])

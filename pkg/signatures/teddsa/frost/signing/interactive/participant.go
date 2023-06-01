@@ -1,18 +1,19 @@
 package interactive
 
 import (
+	"io"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
 	"github.com/pkg/errors"
-	"io"
 )
 
 var _ frost.Participant = (*InteractiveCosigner)(nil)
 
 type InteractiveCosigner struct {
-	reader io.Reader
+	prng io.Reader
 
 	MyIdentityKey   integration.IdentityKey
 	MyShamirId      int
@@ -58,8 +59,7 @@ type State struct {
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, reader io.Reader) (*InteractiveCosigner, error) {
-	var err error
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
@@ -79,21 +79,22 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		}
 	}
 
-	result := &InteractiveCosigner{
+	cosigner := &InteractiveCosigner{
 		MyIdentityKey:       identityKey,
 		CohortConfig:        cohortConfig,
 		SigningKeyShare:     signingKeyShare,
 		PublicKeyShares:     publicKeyShare,
 		SessionParticipants: sessionParticipants,
-		reader:              reader,
+		prng:                prng,
 		state:               &State{},
 	}
 
-	result.ShamirIdToIdentityKey, result.IdentityKeyToShamirId, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't derive shamir ids")
+	if cosigner.IsSignatureAggregator() {
+		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	result.round = 1
-	return result, nil
+	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = frost.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
+
+	cosigner.round = 1
+	return cosigner, nil
 }

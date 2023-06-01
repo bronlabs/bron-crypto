@@ -2,6 +2,7 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/keygen/dkg"

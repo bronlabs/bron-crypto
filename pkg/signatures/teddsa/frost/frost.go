@@ -20,8 +20,6 @@ type Participant interface {
 	IsSignatureAggregator() bool
 }
 
-const SignatureSize = 64
-
 type SigningKeyShare struct {
 	Share     curves.Scalar
 	PublicKey curves.Point
@@ -70,22 +68,25 @@ type Signature struct {
 	Z curves.Scalar
 }
 
-// This is only to communicate with ed25519. We should have serialization methods that embed curve inside.
 func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := [SignatureSize]byte{}
+	curve, err := curves.GetCurveByName(s.R.CurveName())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get curve")
+	}
+	signatureSize := 64
+	if curve.Name == curves.K256Name || curve.Name == curves.P256Name {
+		// these two curves add a bit at the beginning to denote compressed or uncompressed
+		signatureSize = 65
+	}
+	serializedSignature := []byte{}
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
-	if len(RSerialized)+len(zSerialized) != SignatureSize {
-		return serializedSignature[:], errors.New("serialized signature is too large")
+	if len(RSerialized)+len(zSerialized) != signatureSize {
+		return serializedSignature[:], errors.Errorf("serialized signature is too large")
 	}
-	if SignatureSize%2 != 0 {
-		return serializedSignature[:], errors.New("signature size is set such that it's not divisible by 2")
-	}
-	for i := 0; i < (SignatureSize / 2); i++ {
-		serializedSignature[i] = RSerialized[i]
-		serializedSignature[i+(SignatureSize/2)] = zSerialized[i]
-	}
-	return serializedSignature[:], nil
+	serializedSignature = append(serializedSignature, RSerialized...)
+	serializedSignature = append(serializedSignature, zSerialized...)
+	return serializedSignature, nil
 }
 
 // TODO: curve+hashFunction -> ciphersuite
@@ -137,7 +138,7 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 	}
 }
 
-func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (idToKey map[int]integration.IdentityKey, keyToId map[integration.IdentityKey]int, myShamirId int, err error) {
+func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integration.IdentityKey) (idToKey map[int]integration.IdentityKey, keyToId map[integration.IdentityKey]int, myShamirId int) {
 	idToKey = make(map[int]integration.IdentityKey)
 	keyToId = make(map[integration.IdentityKey]int)
 	myShamirId = -1
@@ -147,10 +148,10 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 		shamirId := shamirIdMinusOne + 1
 		idToKey[shamirId] = identityKey
 		keyToId[identityKey] = shamirId
-		if identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
 			myShamirId = shamirId
 		}
 	}
 
-	return idToKey, keyToId, myShamirId, nil
+	return idToKey, keyToId, myShamirId
 }

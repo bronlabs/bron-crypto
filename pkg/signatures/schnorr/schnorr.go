@@ -1,6 +1,7 @@
 package schnorr
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -24,19 +25,33 @@ type Signature struct {
 	S curves.Scalar
 }
 
-// func (s *Signature) UnmarshalJSON(data []byte) error {
-// 	var unmarshaled Signature
-// 	if err := json.Unmarshal(data, &unmarshaled); err != nil {
-// 		return errors.Wrap(err, "could not unmarshal schnorr signature")
-// 	}
-// 	return nil
-// }
+func (s *Signature) UnmarshalJSON(data []byte) error {
+	var err error
+	var parsed struct {
+		C json.RawMessage
+		S json.RawMessage
+	}
+
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return errors.Wrap(err, "couldn't extract C and S field from input")
+	}
+
+	s.C, err = curves.Curve{}.NewScalarFromJSON(parsed.C)
+	if err != nil {
+		return errors.Wrap(err, "couldn't deserialize C")
+	}
+	s.S, err = curves.Curve{}.NewScalarFromJSON(parsed.S)
+	if err != nil {
+		return errors.Wrap(err, "couldn't deserialize S")
+	}
+	return nil
+}
 
 type Signer struct {
 	CipherSuite *integration.CipherSuite
 	PublicKey   *PublicKey
 	privateKey  *PrivateKey
-	reader      io.Reader
+	prng        io.Reader
 	options     *Options
 }
 
@@ -45,17 +60,20 @@ type Options struct {
 	TranscriptSuffixes [][]byte
 }
 
-func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, reader io.Reader, options *Options) (*Signer, error) {
+func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader, options *Options) (*Signer, error) {
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, errors.Wrap(err, "ciphersuite is invalid")
 	}
-	privateKey := KeyGen(cipherSuite.Curve, secret, reader)
+	privateKey, err := KeyGen(cipherSuite.Curve, secret, prng)
+	if err != nil {
+		return nil, errors.Wrap(err, "key generation failed")
+	}
 
 	return &Signer{
 		CipherSuite: cipherSuite,
 		PublicKey:   &privateKey.PublicKey,
 		privateKey:  privateKey,
-		reader:      reader,
+		prng:        prng,
 		options:     options,
 	}, nil
 }
@@ -75,9 +93,12 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	}, nil
 }
 
-func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *PrivateKey {
+func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateKey, error) {
+	if curve == nil {
+		return nil, errors.New("curve is nil")
+	}
 	if secret == nil {
-		secret = curve.Scalar.Random(reader)
+		secret = curve.Scalar.Random(prng)
 	}
 	publicKey := curve.ScalarBaseMult(secret)
 	return &PrivateKey{
@@ -86,7 +107,7 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, reader io.Reader) *Privat
 			Curve: curve,
 			Y:     publicKey,
 		},
-	}
+	}, nil
 }
 
 func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature, options *Options) error {

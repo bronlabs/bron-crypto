@@ -54,16 +54,16 @@ func NewShamir(threshold, limit int, curve *curves.Curve) (*Shamir, error) {
 	return &Shamir{threshold, limit, curve}, nil
 }
 
-func (s Shamir) Split(secret curves.Scalar, reader io.Reader) ([]*ShamirShare, error) {
+func (s Shamir) Split(secret curves.Scalar, prng io.Reader) ([]*ShamirShare, error) {
 	if secret.IsZero() {
 		return nil, fmt.Errorf("invalid secret")
 	}
-	shares, _ := s.getPolyAndShares(secret, reader)
+	shares, _ := s.getPolyAndShares(secret, prng)
 	return shares, nil
 }
 
-func (s Shamir) getPolyAndShares(secret curves.Scalar, reader io.Reader) ([]*ShamirShare, *Polynomial) {
-	poly := new(Polynomial).Init(secret, s.threshold, reader)
+func (s Shamir) getPolyAndShares(secret curves.Scalar, prng io.Reader) ([]*ShamirShare, *Polynomial) {
+	poly := new(Polynomial).Init(secret, s.threshold, prng)
 	shares := make([]*ShamirShare, s.limit)
 	for i := range shares {
 		x := s.curve.Scalar.New(i + 1)

@@ -3,10 +3,9 @@ package interactive
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
+	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
 )
 
@@ -19,8 +18,8 @@ func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
 		return nil, errors.New("round mismatch")
 	}
-	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
-	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.reader)
+	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
 	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.d_i)
 	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.e_i)
 	ic.round++
@@ -38,19 +37,31 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't not derive D alpha and E alpha")
 	}
-	partialSignature, err := ic.Helper_ProducePartialSignature(D_alpha, E_alpha, message)
+	partialSignature, err := signing_helpers.ProducePartialSignature(
+		ic,
+		ic.SessionParticipants,
+		ic.SigningKeyShare,
+		ic.state.d_i, ic.state.e_i,
+		D_alpha, E_alpha,
+		ic.ShamirIdToIdentityKey,
+		ic.IdentityKeyToShamirId,
+		ic.state.aggregation,
+		message,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce partial signature")
 	}
+	ic.state.d_i = nil
+	ic.state.e_i = nil
 	ic.round++
 	return partialSignature, nil
 }
 
-func (ic *InteractiveCosigner) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
 	if ic.round != 3 {
 		return nil, errors.New("round mismatch")
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize signature aggregator")
 	}
@@ -99,105 +110,4 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 		E_alpha[senderIdentityKey] = E_i
 	}
 	return D_alpha, E_alpha, nil
-}
-
-func (ic *InteractiveCosigner) Helper_ProducePartialSignature(D_alpha, E_alpha map[integration.IdentityKey]curves.Point, message []byte) (*frost.PartialSignature, error) {
-	R := ic.CohortConfig.CipherSuite.Curve.Point.Identity()
-	r_i := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
-
-	combinedDsAndEs := []byte{}
-	for _, currentParticipant := range ic.SessionParticipants {
-		combinedDsAndEs = append(combinedDsAndEs, D_alpha[currentParticipant].ToAffineCompressed()...)
-	}
-	for _, currentParticipant := range ic.SessionParticipants {
-		combinedDsAndEs = append(combinedDsAndEs, E_alpha[currentParticipant].ToAffineCompressed()...)
-	}
-
-	R_js := map[integration.IdentityKey]curves.Point{}
-	for _, jIdentityKey := range ic.SessionParticipants {
-		j, exists := ic.IdentityKeyToShamirId[jIdentityKey]
-		if !exists {
-			return nil, errors.Errorf("could not find the identity key of cosigner with shamir id %d", j)
-		}
-
-		r_jHashComponents := []byte{byte(j)}
-		r_jHashComponents = append(r_jHashComponents, message...)
-		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
-
-		r_j := ic.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
-		if j == ic.MyShamirId {
-			r_i = r_j
-		}
-
-		D_j, exists := D_alpha[jIdentityKey]
-		if !exists {
-			return nil, errors.Errorf("could not find D_j for j=%d in D_alpha", j)
-		}
-		E_j, exists := E_alpha[jIdentityKey]
-		if !exists {
-			return nil, errors.Errorf("could not find E_j for j=%d in E_alpha", j)
-		}
-
-		R_j := D_j.Add(E_j.Mul(r_j))
-		R = R.Add(R_j)
-		R_js[jIdentityKey] = R_j
-	}
-	if R.IsIdentity() {
-		return nil, errors.New("R is at infinity")
-	}
-	if r_i.IsZero() {
-		return nil, errors.New("could not find r_i")
-	}
-
-	c, err := schnorr.ComputeFiatShamirChallege(ic.CohortConfig.CipherSuite, [][]byte{
-		R.ToAffineCompressed(), ic.SigningKeyShare.PublicKey.ToAffineCompressed(), message,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "converting hash to c failed")
-	}
-
-	shamir, err := sharing.NewShamir(ic.CohortConfig.Threshold, ic.CohortConfig.TotalParties, ic.CohortConfig.CipherSuite.Curve)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize shamir methods")
-	}
-
-	identities := make([]int, len(ic.SessionParticipants))
-	for i, party := range ic.SessionParticipants {
-		var ok bool
-		identities[i], ok = ic.IdentityKeyToShamirId[party]
-		if !ok {
-			return nil, errors.New("could not find shamir id for the party")
-		}
-	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(identities)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not derive lagrange coefficients")
-	}
-
-	lambda_i, exists := lagrangeCoefficients[ic.MyShamirId]
-	if !exists {
-		return nil, errors.New("could not find my lagrange coefficient")
-	}
-
-	eiri := ic.state.e_i.Mul(r_i)
-	lambda_isic := lambda_i.Mul(ic.SigningKeyShare.Share.Mul(c))
-	z_i := ic.state.d_i.Add(eiri.Add(lambda_isic))
-
-	ic.state.d_i = nil
-	ic.state.e_i = nil
-
-	if ic.IsSignatureAggregator() {
-		ic.state.aggregation = &aggregation.SignatureAggregatorParameters{
-			Message: message,
-			Z_i:     z_i,
-			R:       R,
-			R_js:    R_js,
-			D_alpha: D_alpha,
-			E_alpha: E_alpha,
-		}
-	}
-
-	return &frost.PartialSignature{
-		Zi: z_i,
-	}, nil
 }

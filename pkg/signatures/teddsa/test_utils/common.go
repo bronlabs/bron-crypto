@@ -3,12 +3,13 @@ package test_utils
 import (
 	crand "crypto/rand"
 	"encoding/json"
+	"hash"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/pkg/errors"
-	"hash"
 )
 
 type TestIdentityKey struct {
@@ -16,6 +17,8 @@ type TestIdentityKey struct {
 	signer *schnorr.Signer
 	h      func() hash.Hash
 }
+
+var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
@@ -32,7 +35,22 @@ func (k *TestIdentityKey) Sign(message []byte) []byte {
 	return result
 }
 func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
+	cipherSuite := &integration.CipherSuite{
+		Curve: k.curve,
+		Hash:  k.h,
+	}
+	schnorrSignature := &schnorr.Signature{}
+	if err := json.Unmarshal(signature, &schnorrSignature); err != nil {
+		return errors.Wrap(err, "could not unmarshal signature")
+	}
+	schnorrPublicKey := &schnorr.PublicKey{
+		Curve: k.curve,
+		Y:     k.PublicKey(),
+	}
+	if err := schnorr.Verify(cipherSuite, schnorrPublicKey, message, schnorrSignature, nil); err != nil {
+		return errors.Wrap(err, "could not verify schnorr signature")
+	}
+	return nil
 }
 
 func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []integration.IdentityKey, err error) {
@@ -57,6 +75,8 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 		}
 	}
 
+	integration.SortIdentityKeysInPlace(identities)
+
 	return identities, nil
 }
 
@@ -64,7 +84,6 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol
 	if threshold > len(identities) {
 		return nil, errors.Errorf("invalid t=%d, n=%d", threshold, len(identities))
 	}
-
 	parties := append([]integration.IdentityKey{}, identities...)
 	aggregators := append([]integration.IdentityKey{}, signatureAggregators...)
 	cohortConfig = &integration.CohortConfig{

@@ -13,7 +13,7 @@ import (
 var _ frost.Participant = (*DKGParticipant)(nil)
 
 type DKGParticipant struct {
-	reader io.Reader
+	prng io.Reader
 
 	MyIdentityKey      integration.IdentityKey
 	MyShamirId         int
@@ -56,22 +56,18 @@ type State struct {
 	commitments []curves.Point
 }
 
-func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, reader io.Reader) (*DKGParticipant, error) {
-	var err error
+func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*DKGParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cohort config is invalid")
 	}
 	result := &DKGParticipant{
 		MyIdentityKey: identityKey,
 		state:         &State{},
-		reader:        reader,
+		prng:          prng,
 		CohortConfig:  cohortConfig,
 	}
 
-	result.shamirIdToIdentityKey, _, result.MyShamirId, err = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't derive shamir ids")
-	}
+	result.shamirIdToIdentityKey, _, result.MyShamirId = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
 }

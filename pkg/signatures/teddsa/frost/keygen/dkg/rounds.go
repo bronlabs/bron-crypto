@@ -30,7 +30,7 @@ func (p *DKGParticipant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
 		return nil, errors.New("round mismatch")
 	}
-	p.state.r_i = p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
+	p.state.r_i = p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 	p.round++
 	return &Round1Broadcast{
 		Ri: p.state.r_i,
@@ -62,13 +62,13 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	}
 	p.state.phi = phi
 
-	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.reader)
+	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 
 	dealer, err := sharing.NewFeldman(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't construct feldman dealer")
 	}
-	commitments, shares, err := dealer.Split(a_i0, p.reader)
+	commitments, shares, err := dealer.Split(a_i0, p.prng)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't split the secret via feldman dealer")
 	}
