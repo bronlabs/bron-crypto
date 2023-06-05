@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -58,7 +59,7 @@ type State struct {
 
 func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*DKGParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrap(err, "cohort config is invalid")
+		return nil, errors.Wrapf(err, "%s cohort config is invalid", error_types.EInvalidArgument)
 	}
 	result := &DKGParticipant{
 		MyIdentityKey: identityKey,

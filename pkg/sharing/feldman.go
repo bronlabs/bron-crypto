@@ -7,7 +7,7 @@
 package sharing
 
 import (
-	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -17,11 +17,11 @@ import (
 func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	curve, err := curves.GetCurveByName(commitments[0].CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "%s no such curve: %s", error_types.EInvalidCurve, commitments[0].CurveName())
 	}
 	err = share.Validate(curve)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "%s share validation failed", error_types.EVerificationFailed)
 	}
 	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
@@ -36,7 +36,7 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
-		return fmt.Errorf("not equal")
+		return errors.Errorf("%s not equal", error_types.EVerificationFailed)
 	}
 }
 
@@ -47,13 +47,13 @@ type Feldman struct {
 
 func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 	if limit < threshold {
-		return nil, fmt.Errorf("limit cannot be less than threshold")
+		return nil, errors.Errorf("%s limit cannot be less than threshold", error_types.EInvalidArgument)
 	}
 	if threshold < 2 {
-		return nil, fmt.Errorf("threshold cannot be less than 2")
+		return nil, errors.Errorf("%s threshold cannot be less than 2", error_types.EInvalidArgument)
 	}
 	if curve == nil {
-		return nil, fmt.Errorf("invalid curve")
+		return nil, errors.Errorf("%s curve is nil", error_types.EIsNil)
 	}
 
 	return &Feldman{threshold, limit, curve}, nil
@@ -61,7 +61,7 @@ func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 
 func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
 	if secret.IsZero() {
-		return nil, nil, fmt.Errorf("invalid secret")
+		return nil, nil, errors.Errorf("%s secret is nil", error_types.EIsNil)
 	}
 	shamir := &Shamir{
 		threshold: f.Threshold,

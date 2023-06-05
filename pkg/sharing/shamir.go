@@ -12,7 +12,8 @@
 package sharing
 
 import (
-	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
+	"github.com/pkg/errors"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -25,14 +26,15 @@ type ShamirShare struct {
 
 func (ss ShamirShare) Validate(curve *curves.Curve) error {
 	if ss.Id == 0 {
-		return fmt.Errorf("invalid identifier")
-	}
-	if shareCurveName := ss.Value.Point().CurveName(); shareCurveName != curve.Name {
-		return fmt.Errorf("curve mismatch %s != %s", shareCurveName, curve.Name)
+		return errors.Errorf("%s invalid identifier - id is zero", error_types.EInvalidArgument)
 	}
 	if ss.Value.IsZero() {
-		return fmt.Errorf("invalid share")
+		return errors.Errorf("%s invalid share - value is zero", error_types.EIsZero)
 	}
+	if shareCurveName := ss.Value.Point().CurveName(); shareCurveName != curve.Name {
+		return errors.Errorf("%s curve mismatch %s != %s", error_types.EInvalidCurve, shareCurveName, curve.Name)
+	}
+
 	return nil
 }
 
@@ -43,20 +45,20 @@ type Shamir struct {
 
 func NewShamir(threshold, limit int, curve *curves.Curve) (*Shamir, error) {
 	if limit < threshold {
-		return nil, fmt.Errorf("limit cannot be less than threshold")
+		return nil, errors.Errorf("%s limit cannot be less than threshold", error_types.EInvalidArgument)
 	}
 	if threshold < 2 {
-		return nil, fmt.Errorf("threshold cannot be less than 2")
+		return nil, errors.Errorf("%s threshold cannot be less than 2", error_types.EInvalidArgument)
 	}
 	if curve == nil {
-		return nil, fmt.Errorf("invalid curve")
+		return nil, errors.Errorf("%s invalid curve", error_types.EIsNil)
 	}
 	return &Shamir{threshold, limit, curve}, nil
 }
 
 func (s Shamir) Split(secret curves.Scalar, prng io.Reader) ([]*ShamirShare, error) {
 	if secret.IsZero() {
-		return nil, fmt.Errorf("invalid secret")
+		return nil, errors.Errorf("%s invalid secret", error_types.EIsZero)
 	}
 	shares, _ := s.getPolyAndShares(secret, prng)
 	return shares, nil
@@ -94,7 +96,7 @@ func (s Shamir) LagrangeCoeffs(identities []int) (map[int]curves.Scalar, error) 
 			den = den.Mul(xj.Sub(xi))
 		}
 		if den.IsZero() {
-			return nil, fmt.Errorf("divide by zero")
+			return nil, errors.Errorf("%s divide by zero", error_types.EDivisionByZero)
 		}
 		result[i] = num.Div(den)
 	}
@@ -102,8 +104,8 @@ func (s Shamir) LagrangeCoeffs(identities []int) (map[int]curves.Scalar, error) 
 }
 
 func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
-	if len(shares) < int(s.threshold) {
-		return nil, fmt.Errorf("invalid number of shares")
+	if len(shares) < s.threshold {
+		return nil, errors.Errorf("%s invalid number of shares", error_types.EIncorrectCount)
 	}
 	dups := make(map[int]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
@@ -112,13 +114,13 @@ func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
 	for i, share := range shares {
 		err := share.Validate(s.curve)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s invalid share", error_types.EInvalidArgument)
 		}
 		if share.Id > s.limit {
-			return nil, fmt.Errorf("invalid share identifier")
+			return nil, errors.Errorf("%s invalid share identifier id: %d must be greater than limit: %d", error_types.EInvalidArgument, share.Id, s.limit)
 		}
 		if _, in := dups[share.Id]; in {
-			return nil, fmt.Errorf("duplicate share")
+			return nil, errors.Errorf("%s duplicate share", error_types.EDuplicate)
 		}
 		dups[share.Id] = true
 		ys[i] = share.Value
@@ -128,8 +130,8 @@ func (s Shamir) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
 }
 
 func (s Shamir) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
-	if len(shares) < int(s.threshold) {
-		return nil, fmt.Errorf("invalid number of shares")
+	if len(shares) < s.threshold {
+		return nil, errors.Errorf("%s invalid number of shares (%d != %d)", error_types.EIncorrectCount, len(shares), s.threshold)
 	}
 	dups := make(map[int]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
@@ -138,13 +140,13 @@ func (s Shamir) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
 	for i, share := range shares {
 		err := share.Validate(s.curve)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s invalid share", error_types.EInvalidArgument)
 		}
 		if share.Id > s.limit {
-			return nil, fmt.Errorf("invalid share identifier")
+			return nil, errors.Errorf("%s invalid share id: %d must be greater than limit: %d", error_types.EInvalidArgument, share.Id, s.limit)
 		}
 		if _, in := dups[share.Id]; in {
-			return nil, fmt.Errorf("duplicate share")
+			return nil, errors.Errorf("%s duplicate share", error_types.EDuplicate)
 		}
 		dups[share.Id] = true
 		ys[i] = s.curve.ScalarBaseMult(share.Value)
@@ -166,7 +168,7 @@ func (s Shamir) interpolate(xs, ys []curves.Scalar) (curves.Scalar, error) {
 			den = den.Mul(xj.Sub(xi))
 		}
 		if den.IsZero() {
-			return nil, fmt.Errorf("divide by zero")
+			return nil, errors.Errorf("%s divide by zero", error_types.EDivisionByZero)
 		}
 		result = result.Add(ys[i].Mul(num.Div(den)))
 	}
@@ -186,7 +188,7 @@ func (s Shamir) interpolatePoint(xs []curves.Scalar, ys []curves.Point) (curves.
 			den = den.Mul(xj.Sub(xi))
 		}
 		if den.IsZero() {
-			return nil, fmt.Errorf("divide by zero")
+			return nil, errors.Errorf("%s divide by zero", error_types.EDivisionByZero)
 		}
 		result = result.Add(ys[i].Mul(num.Div(den)))
 	}

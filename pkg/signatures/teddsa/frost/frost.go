@@ -3,6 +3,7 @@ package frost
 import (
 	"crypto/ed25519"
 	"crypto/sha512"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
 	"hash"
 	"reflect"
 
@@ -27,16 +28,16 @@ type SigningKeyShare struct {
 
 func (s *SigningKeyShare) Validate() error {
 	if s == nil {
-		return errors.New("signing key share is nil")
+		return errors.Errorf("%s signing key share is nil", error_types.EIsNil)
 	}
 	if s.Share.IsZero() {
-		return errors.New("share can't be zero")
+		return errors.Errorf("%s share can't be zero", error_types.EIsZero)
 	}
 	if s.PublicKey.IsIdentity() {
-		return errors.New("public key can't be at infinity")
+		return errors.Errorf("%s public key can't be at infinity", error_types.EIsIdentity)
 	}
 	if !s.PublicKey.IsOnCurve() {
-		return errors.New("public key is not on curve")
+		return errors.Errorf("%s public key is not on curve", error_types.ENotOnCurve)
 	}
 
 	if s.PublicKey.CurveName() == curves.ED25519Name {
@@ -83,7 +84,7 @@ type Signature struct {
 func (s *Signature) MarshalBinary() ([]byte, error) {
 	curve, err := curves.GetCurveByName(s.R.CurveName())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get curve")
+		return nil, errors.Wrapf(err, "%s could not get curve %s", error_types.EInvalidCurve, s.R.CurveName())
 	}
 	signatureSize := 64
 	if curve.Name == curves.K256Name || curve.Name == curves.P256Name {
@@ -94,7 +95,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
 	if len(RSerialized)+len(zSerialized) != signatureSize {
-		return serializedSignature[:], errors.Errorf("serialized signature is too large")
+		return serializedSignature[:], errors.Errorf("%s serialized signature is too large", error_types.EIncorrectCount)
 	}
 	serializedSignature = append(serializedSignature, RSerialized...)
 	serializedSignature = append(serializedSignature, zSerialized...)
@@ -116,23 +117,23 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		if reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
 			serializedSignature, err := signature.MarshalBinary()
 			if err != nil {
-				return errors.Wrap(err, "could not serialize signature to binary")
+				return errors.Wrapf(err, "%s could not serialize signature to binary", error_types.EDeserializationFailed)
 			}
 			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
-				return errors.New("could not verify frost signature using ed25519 verifier")
+				return errors.Errorf("%s could not verify frost signature using ed25519 verifier", error_types.EVerificationFailed)
 			}
 		}
 		return nil
 	} else {
 		challengeHasher := hashFunction()
 		if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
-			return errors.Wrap(err, "could not write R to challenge hasher")
+			return errors.Wrapf(err, "could not write R to challenge hasher")
 		}
 		if _, err := challengeHasher.Write(publicKey.ToAffineCompressed()); err != nil {
-			return errors.Wrap(err, "could not write public key to challenge hasher")
+			return errors.Wrapf(err, "could not write public key to challenge hasher")
 		}
 		if _, err := challengeHasher.Write(message); err != nil {
-			return errors.Wrap(err, "could not write the message to challenge hasher")
+			return errors.Wrapf(err, "could not write the message to challenge hasher")
 		}
 		challengeDigest := challengeHasher.Sum(nil)
 		var setBytesFunc func([]byte) (curves.Scalar, error)
@@ -142,18 +143,18 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		case native.FieldBytes:
 			setBytesFunc = curve.Scalar.SetBytes
 		default:
-			return errors.Errorf("challenge digest is %d which is neither 64 nor 32", len(challengeDigest))
+			return errors.Errorf("%s challenge digest is %d which is neither 64 nor 32", error_types.EIncorrectCount, len(challengeDigest))
 		}
 		c, err := setBytesFunc(challengeDigest)
 		if err != nil {
-			return errors.Wrap(err, "converting hash to c failed")
+			return errors.Wrapf(err, "%s converting hash to c failed", error_types.EDeserializationFailed)
 		}
 
 		zG := curve.ScalarBaseMult(signature.Z)
 		negCY := publicKey.Mul(c.Neg())
 		RPrime := zG.Add(negCY)
 		if ok := signature.R.Equal(RPrime); !ok {
-			return errors.New("failed to verify")
+			return errors.Errorf("%s failed to verify", error_types.EVerificationFailed)
 		}
 
 		return nil

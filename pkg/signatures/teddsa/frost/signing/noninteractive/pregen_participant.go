@@ -1,6 +1,7 @@
 package noninteractive
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -26,13 +27,13 @@ type preGenState struct {
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrap(err, "cohort config is invalid")
+		return nil, errors.Wrapf(err, "%s cohort config is invalid", error_types.EVerificationFailed)
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
-		return nil, errors.New("identity key is not in cohort")
+		return nil, errors.Errorf("%s identity key is not in cohort", error_types.EInvalidArgument)
 	}
 	if tau <= 0 {
-		return nil, errors.New("tau is nonpositive")
+		return nil, errors.Errorf("%s tau is nonpositive", error_types.EInvalidArgument)
 	}
 
 	return &PreGenParticipant{

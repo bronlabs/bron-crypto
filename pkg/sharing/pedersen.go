@@ -7,7 +7,7 @@
 package sharing
 
 import (
-	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -24,13 +24,13 @@ type Pedersen struct {
 func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, generator curves.Point) (err error) {
 	curve, err := curves.GetCurveByName(generator.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "%s no such curve: %s", error_types.EInvalidCurve, generator.CurveName())
 	}
 	if err := share.Validate(curve); err != nil {
-		return err
+		return errors.Wrapf(err, "%s invalid share", error_types.EVerificationFailed)
 	}
 	if err := blindShare.Validate(curve); err != nil {
-		return err
+		return errors.Wrapf(err, "%s invalid blind share", error_types.EVerificationFailed)
 	}
 
 	x := curve.Scalar.New(share.Id)
@@ -49,7 +49,7 @@ func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, 
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
-		return fmt.Errorf("not equal")
+		return errors.Errorf("%s not equal", error_types.EVerificationFailed)
 	}
 }
 
@@ -64,26 +64,30 @@ type PedersenResult struct {
 // NewPedersen creates a new pedersen VSS
 func NewPedersen(threshold, limit int, generator curves.Point) (*Pedersen, error) {
 	if limit < threshold {
-		return nil, fmt.Errorf("limit cannot be less than threshold")
+		return nil, errors.Errorf("%s limit cannot be less than threshold", error_types.EInvalidArgument)
 	}
 	if threshold < 2 {
-		return nil, fmt.Errorf("threshold cannot be less than 2")
+		return nil, errors.Errorf("%s threshold cannot be less than 2", error_types.EInvalidArgument)
 	}
 	if generator == nil {
-		return nil, fmt.Errorf("invalid generator")
+		return nil, errors.Errorf("%s generator is nil", error_types.EIsNil)
 	}
 	curve, err := curves.GetCurveByName(generator.CurveName())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Errorf("%s no such curve: %s", error_types.EInvalidCurve, generator.CurveName())
 	}
-	if !generator.IsOnCurve() || generator.IsIdentity() {
-		return nil, fmt.Errorf("invalid generator")
+	if !generator.IsOnCurve() {
+		return nil, errors.Errorf("%s invalid generator", error_types.ENotOnCurve)
 	}
+	if generator.IsIdentity() {
+		return nil, errors.Errorf("%s invalid generator", error_types.EIsIdentity)
+	}
+
 	return &Pedersen{threshold, limit, curve, generator}, nil
 }
 
 // Split creates the verifiers, blinding and shares
-func (pd Pedersen) Split(secret curves.Scalar, prng io.Reader) (*PedersenResult, error) {
+func (pd Pedersen) Split(secret curves.Scalar, prng io.Reader) *PedersenResult {
 	// generate a random blinding factor
 	blinding := pd.curve.Scalar.Random(prng)
 
@@ -109,7 +113,7 @@ func (pd Pedersen) Split(secret curves.Scalar, prng io.Reader) (*PedersenResult,
 
 	return &PedersenResult{
 		blinding, blindingShares, shares, commitments, blindedCommitments, pd.generator,
-	}, nil
+	}
 }
 
 func (pd Pedersen) LagrangeCoeffs(shares map[int]*ShamirShare) (map[int]curves.Scalar, error) {
