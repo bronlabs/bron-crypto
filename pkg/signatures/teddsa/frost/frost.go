@@ -143,7 +143,6 @@ func DeriveShamirIds(myIdentityKey integration.IdentityKey, identityKeys []integ
 	keyToId = make(map[integration.IdentityKey]int)
 	myShamirId = -1
 
-	integration.SortIdentityKeysInPlace(identityKeys)
 	for shamirIdMinusOne, identityKey := range identityKeys {
 		shamirId := shamirIdMinusOne + 1
 		idToKey[shamirId] = identityKey

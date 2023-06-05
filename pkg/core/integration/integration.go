@@ -123,19 +123,21 @@ func (c *CohortConfig) cacheParticipantHashSet() {
 	}
 }
 
-func SortIdentityKeysInPlace(identityKeys []IdentityKey) {
-	sort.Slice(identityKeys, func(i, j int) bool {
-		switch identityKeys[i].PublicKey().CurveName() {
+func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
+	copied := append([]IdentityKey{}, identityKeys...)
+	sort.Slice(copied, func(i, j int) bool {
+		switch copied[i].PublicKey().CurveName() {
 		case curves.ED25519Name:
-			iKey := binary.LittleEndian.Uint64(identityKeys[i].PublicKey().ToAffineCompressed())
-			jKey := binary.LittleEndian.Uint64(identityKeys[j].PublicKey().ToAffineCompressed())
+			iKey := binary.LittleEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
+			jKey := binary.LittleEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
 			return iKey < jKey
 		default:
-			iKey := binary.BigEndian.Uint64(identityKeys[i].PublicKey().ToAffineCompressed())
-			jKey := binary.BigEndian.Uint64(identityKeys[j].PublicKey().ToAffineCompressed())
+			iKey := binary.BigEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
+			jKey := binary.BigEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
 			return iKey < jKey
 		}
 	})
+	return copied
 }
 
 func SerializePublicKey(publicKey curves.Point) (string, error) {

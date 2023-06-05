@@ -2,6 +2,7 @@ package dkg
 
 import (
 	"fmt"
+
 	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -232,8 +233,7 @@ func deriveSortedRVector(allIdentityKeysToRi map[integration.IdentityKey]*Round1
 		identityKeys[i] = identityKey
 		i++
 	}
-	integration.SortIdentityKeysInPlace(identityKeys)
-
+	identityKeys = integration.SortIdentityKeys(identityKeys)
 	sortedRVector := make([]curves.Scalar, len(allIdentityKeysToRi))
 	for i, identityKey := range identityKeys {
 		message, exists := allIdentityKeysToRi[identityKey]
