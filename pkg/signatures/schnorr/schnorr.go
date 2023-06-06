@@ -101,6 +101,7 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*Private
 		secret = curve.Scalar.Random(prng)
 	}
 	publicKey := curve.ScalarBaseMult(secret)
+
 	return &PrivateKey{
 		a: secret,
 		PublicKey: PublicKey{
@@ -123,6 +124,17 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	if publicKey.Y.IsIdentity() {
 		return errors.New("public key can't be at infinity")
 	}
+
+	if cipherSuite.Curve.Name == curves.ED25519Name {
+		edwardsPoint, ok := publicKey.Y.(*curves.PointEd25519)
+		if !ok {
+			return errors.New("curve is ed25519 but the public key could not be type casted to the correct point struct")
+		}
+		if edwardsPoint.IsSmallOrder() {
+			return errors.New("public key is small order")
+		}
+	}
+
 	if signature.C.IsZero() {
 		return errors.New("challenge can't be zero")
 	}

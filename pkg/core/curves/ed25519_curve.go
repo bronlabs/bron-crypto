@@ -747,6 +747,30 @@ func (p *PointEd25519) SetEdwardsPoint(pt *edwards25519.Point) *PointEd25519 {
 	return &PointEd25519{value: edwards25519.NewIdentityPoint().Set(pt)}
 }
 
+func (p *PointEd25519) IsSmallOrder() bool {
+	// pBytes := p.ToAffineCompressed()
+	// pHex := hex.EncodeToString(pBytes)
+
+	// for _, smallOrderAffinePoint := range []string{
+	// 	"0100000000000000000000000000000000000000000000000000000000000000",
+	// 	"ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+	// 	"0000000000000000000000000000000000000000000000000000000000000080",
+	// 	"0000000000000000000000000000000000000000000000000000000000000000",
+	// 	"c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+	// 	"c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+	// 	"26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+	// 	"26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+	// } {
+	// 	if pHex == smallOrderAffinePoint {
+	// 		return true
+	// 	}
+	// }
+	// return false
+
+	// performance difference is negligible
+	return p.Double().Double().Double().IsIdentity()
+}
+
 // Attempt to convert to an `EdwardsPoint`, using the supplied
 // choice of sign for the `EdwardsPoint`.
 //   - `sign`: a `u8` donating the desired sign of the resulting
