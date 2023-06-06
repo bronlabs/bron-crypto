@@ -2,7 +2,7 @@ package aggregation
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
@@ -36,34 +36,34 @@ type SignatureAggregatorParameters struct {
 
 func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, publicKey curves.Point, publicKeyShares *frost.PublicKeyShares, sessionParticipants []integration.IdentityKey, identityKeyToShamirId map[integration.IdentityKey]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s cohort config is invalid", error_types.EVerificationFailed)
+		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.VerificationFailed)
 	}
 	if !cohortConfig.IsSignatureAggregator(identityKey) {
-		return nil, errors.Errorf("%s provided identity key is not a signature aggregator of the given cohort config", error_types.EInvalidArgument)
+		return nil, errors.Errorf("%s provided identity key is not a signature aggregator of the given cohort config", errs.InvalidArgument)
 	}
 	if sessionParticipants == nil {
-		return nil, errors.Errorf("%s must provide the list of the shamir ids of session participants", error_types.EIsNil)
+		return nil, errors.Errorf("%s must provide the list of the shamir ids of session participants", errs.IsNil)
 	}
 	if len(sessionParticipants) == 0 {
-		return nil, errors.Errorf("%s must provide the list of the shamir ids of session participants", error_types.EIncorrectCount)
+		return nil, errors.Errorf("%s must provide the list of the shamir ids of session participants", errs.IncorrectCount)
 	}
 	if len(identityKeyToShamirId) != cohortConfig.TotalParties {
-		return nil, errors.Errorf("%s don't have enough mapping for shamir to identity keys as we have parties", error_types.EIncorrectCount)
+		return nil, errors.Errorf("%s don't have enough mapping for shamir to identity keys as we have parties", errs.IncorrectCount)
 	}
 	if publicKey.IsIdentity() {
-		return nil, errors.Errorf("%s public key can't be at infinity", error_types.EIsIdentity)
+		return nil, errors.Errorf("%s public key can't be at infinity", errs.IsIdentity)
 	}
 	if !publicKey.IsOnCurve() {
-		return nil, errors.Errorf("%s public key is not on curve", error_types.ENotOnCurve)
+		return nil, errors.Errorf("%s public key is not on curve", errs.NotOnCurve)
 	}
 	if message == nil {
-		return nil, errors.Errorf("%s message is empty", error_types.EIsNil)
+		return nil, errors.Errorf("%s message is empty", errs.IsNil)
 	}
 	if len(message) == 0 {
-		return nil, errors.Errorf("%s message is empty", error_types.EIsZero)
+		return nil, errors.Errorf("%s message is empty", errs.IsZero)
 	}
 	if parameters == nil {
-		return nil, errors.Errorf("%s aggregation parameter is nil", error_types.EIsNil)
+		return nil, errors.Errorf("%s aggregation parameter is nil", errs.IsNil)
 	}
 	aggregator := &SignatureAggregator{
 		CohortConfig:          cohortConfig,
@@ -77,7 +77,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	}
 	if aggregator.HasIdentifiableAbort() {
 		if len(aggregator.parameters.R_js) != len(sessionParticipants) {
-			return nil, errors.Errorf("%s identifiable abort is enabled and the size of Rjs and S is not equal.", error_types.EIncorrectCount)
+			return nil, errors.Errorf("%s identifiable abort is enabled and the size of Rjs and S is not equal.", errs.IncorrectCount)
 		}
 	}
 	return aggregator, nil
@@ -86,10 +86,10 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 // TODO: condense/simplify
 func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
 	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
-		return nil, errors.Errorf("%s length of D_alpha is not equal to S", error_types.EIncorrectCount)
+		return nil, errors.Errorf("%s length of D_alpha is not equal to S", errs.IncorrectCount)
 	}
 	if len(sa.parameters.E_alpha) != len(sa.SessionParticipants) {
-		return nil, errors.Errorf("%s length of E_alpha is not equal to S", error_types.EIncorrectCount)
+		return nil, errors.Errorf("%s length of E_alpha is not equal to S", errs.IncorrectCount)
 	}
 	// This is for TS-SUF-4 in case aggregator was the one computing the R
 	// for identifiable abort, you need R_js
@@ -113,11 +113,11 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
 			D_j, exists := sa.parameters.D_alpha[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find D_j for j=%d in D_alpha", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find D_j for j=%d in D_alpha", errs.Missing, j)
 			}
 			E_j, exists := sa.parameters.E_alpha[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find E_j for j=%d in E_alpha", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find E_j for j=%d in E_alpha", errs.Missing, j)
 			}
 
 			recomputedR_js[jIdentityKey] = D_j.Add(E_j.Mul(r_j))
@@ -129,7 +129,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	if sa.HasIdentifiableAbort() {
 		shamirConfig, err := sharing.NewShamir(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s could not initialize shamir config", error_types.EAbort)
+			return nil, errors.Wrapf(err, "%s could not initialize shamir config", errs.Failed)
 		}
 
 		shamirIDs := make([]int, len(sa.SessionParticipants))
@@ -137,43 +137,43 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			var ok bool
 			shamirIDs[i], ok = sa.IdentityKeyToShamirId[party]
 			if !ok {
-				return nil, errors.Errorf("%s could not find shamir id for the party", error_types.EMissing)
+				return nil, errors.Errorf("%s could not find shamir id for the party", errs.Missing)
 			}
 		}
 		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(shamirIDs)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s could not compute lagrange coefficients", error_types.EAbort)
+			return nil, errors.Wrapf(err, "%s could not compute lagrange coefficients", errs.Failed)
 		}
 
 		c, err := schnorr.ComputeFiatShamirChallege(sa.CohortConfig.CipherSuite, [][]byte{
 			sa.parameters.R.ToAffineCompressed(), sa.PublicKey.ToAffineCompressed(), sa.Message,
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s converting hash to c failed", error_types.EDeserializationFailed)
+			return nil, errors.Wrapf(err, "%s converting hash to c failed", errs.DeserializationFailed)
 		}
 
 		for _, jIdentityKey := range sa.SessionParticipants {
 			j, exists := sa.IdentityKeyToShamirId[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find the identity key of cosigner with shamir id %d", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find the identity key of cosigner with shamir id %d", errs.Missing, j)
 			}
 			Y_j, exists := sa.PublicKeyShares.SharesMap[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find public key share of shamir id %d", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find public key share of shamir id %d", errs.Missing, j)
 			}
 			lambda_j, exists := lagrangeCoefficients[j]
 			if !exists {
-				return nil, errors.Errorf("%s could not find lagrange coefficient of shamir id %d", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find lagrange coefficient of shamir id %d", errs.Missing, j)
 			}
 
 			partialSignature, exists := partialSignatures[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find partial signature from shamir id %d", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find partial signature from shamir id %d", errs.Missing, j)
 			}
 
 			R_j, exists := sa.parameters.R_js[jIdentityKey]
 			if !exists {
-				return nil, errors.Errorf("%s could not find R_j for j=%d", error_types.EMissing, j)
+				return nil, errors.Errorf("%s could not find R_j for j=%d", errs.Missing, j)
 			}
 
 			z_jG := sa.CohortConfig.CipherSuite.Curve.ScalarBaseMult(partialSignature.Zi)
@@ -181,7 +181,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {
-				return nil, errors.Errorf("%s participant with shamir id %d is misbehaving", error_types.EAbort, j)
+				return nil, errors.Errorf("%s participant with shamir id %d is misbehaving", errs.IdentifiableAbort, j)
 			}
 		}
 	}
@@ -194,7 +194,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	sigma := &frost.Signature{R: sa.parameters.R, Z: z}
 
 	if err := frost.Verify(sa.CohortConfig.CipherSuite.Curve, sa.CohortConfig.CipherSuite.Hash, sigma, sa.PublicKey, sa.Message); err != nil {
-		return nil, errors.Wrapf(err, "%s could not verify frost signature", error_types.EVerificationFailed)
+		return nil, errors.Wrapf(err, "%s could not verify frost signature", errs.VerificationFailed)
 	}
 	return sigma, nil
 }

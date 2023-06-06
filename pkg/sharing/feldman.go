@@ -7,7 +7,7 @@
 package sharing
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/error_types"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -17,11 +17,11 @@ import (
 func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	curve, err := curves.GetCurveByName(commitments[0].CurveName())
 	if err != nil {
-		return errors.Wrapf(err, "%s no such curve: %s", error_types.EInvalidCurve, commitments[0].CurveName())
+		return errors.Wrapf(err, "%s no such curve: %s", errs.InvalidCurve, commitments[0].CurveName())
 	}
 	err = share.Validate(curve)
 	if err != nil {
-		return errors.Wrapf(err, "%s share validation failed", error_types.EVerificationFailed)
+		return errors.Wrapf(err, "%s share validation failed", errs.VerificationFailed)
 	}
 	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
@@ -36,7 +36,7 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
-		return errors.Errorf("%s not equal", error_types.EVerificationFailed)
+		return errors.Errorf("%s not equal", errs.VerificationFailed)
 	}
 }
 
@@ -47,13 +47,13 @@ type Feldman struct {
 
 func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 	if limit < threshold {
-		return nil, errors.Errorf("%s limit cannot be less than threshold", error_types.EInvalidArgument)
+		return nil, errors.Errorf("%s limit cannot be less than threshold", errs.InvalidArgument)
 	}
 	if threshold < 2 {
-		return nil, errors.Errorf("%s threshold cannot be less than 2", error_types.EInvalidArgument)
+		return nil, errors.Errorf("%s threshold cannot be less than 2", errs.InvalidArgument)
 	}
 	if curve == nil {
-		return nil, errors.Errorf("%s curve is nil", error_types.EIsNil)
+		return nil, errors.Errorf("%s curve is nil", errs.IsNil)
 	}
 
 	return &Feldman{threshold, limit, curve}, nil
@@ -61,7 +61,7 @@ func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 
 func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
 	if secret.IsZero() {
-		return nil, nil, errors.Errorf("%s secret is nil", error_types.EIsNil)
+		return nil, nil, errors.Errorf("%s secret is nil", errs.IsNil)
 	}
 	shamir := &Shamir{
 		threshold: f.Threshold,
