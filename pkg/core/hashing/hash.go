@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-package core
+package hashing
 
 import (
 	"bytes"
@@ -16,11 +16,16 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
-
-	"github.com/copperexchange/crypto-primitives-go/internal"
 )
 
+// TODO:
+// 1. add curve profile and fix current mistakes
+// 2. add hash to curve method to the curve interface
 type HashField struct {
 	// F_p^k
 	Order           *big.Int // p^k
@@ -171,7 +176,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	return uniformBytes[:lenInBytes], nil
 }
 
-func hashToField(msg []byte, count int, curve elliptic.Curve) ([][]*big.Int, error) {
+func HashToField(msg []byte, count int, curve elliptic.Curve) ([][]*big.Int, error) {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.3
 
 	parameters, err := getParams(curve)
@@ -217,12 +222,42 @@ func hashToField(msg []byte, count int, curve elliptic.Curve) ([][]*big.Int, err
 	return u, nil
 }
 
-func Hash(msg []byte, curve elliptic.Curve) (*big.Int, error) {
-	u, err := hashToField(msg, 1, curve)
+func HashToCurve(msg []byte, curve elliptic.Curve) (*big.Int, error) {
+	u, err := HashToField(msg, 1, curve)
 	if err != nil {
 		return nil, err
 	}
 	return u[0][0], nil
+}
+
+func Hash(cipherSuite *integration.CipherSuite, xs [][]byte) (curves.Scalar, error) {
+	if err := cipherSuite.Validate(); err != nil {
+		return nil, errors.Wrap(err, "ciphersuite is invalid")
+	}
+
+	H := cipherSuite.Hash()
+	for _, x := range xs {
+		if _, err := H.Write(x); err != nil {
+			return nil, errors.Wrap(err, "could not write to H")
+		}
+	}
+
+	digest := H.Sum(nil)
+	var setBytesFunc func([]byte) (curves.Scalar, error)
+	switch len(digest) {
+	case native.FieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
+	case native.WideFieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
+	default:
+		return nil, errors.Errorf("digest length %d unsporrted", len(digest))
+	}
+
+	challenge, err := setBytesFunc(digest)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute challenge scalar")
+	}
+	return challenge, nil
 }
 
 // fiatShamir computes the HKDF over many values
@@ -244,19 +279,21 @@ func Hash(msg []byte, curve elliptic.Curve) (*big.Int, error) {
 // for more details.
 // This uses the KDF function similar to X3DH for each `value`
 // But changes the key just like XEdDSA where the prefix bytes change by a single bit
-func FiatShamir(values ...*big.Int) ([]byte, error) {
+func FiatShamirHKDF(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
 	// Don't accept any nil arguments
-	if AnyNil(values...) {
-		return nil, internal.ErrNilArguments
+	for _, x := range xs {
+		if x == nil {
+			return nil, errors.New("can't be nil")
+		}
 	}
 
-	info := []byte("Coinbase tECDSA 1.0")
+	info := []byte("KNOX_PRIMITIVES_FIAT_SHAMIR_WITH_HKDF")
 	salt := make([]byte, 32)
 	okm := make([]byte, 32)
 	f := bytes.Repeat([]byte{0xFF}, 32)
 
-	for _, b := range values {
-		ikm := append(f, b.Bytes()...)
+	for _, x := range xs {
+		ikm := append(f, x...)
 		ikm = append(ikm, okm...)
 		kdf := hkdf.New(sha256.New, ikm, salt, info)
 		n, err := kdf.Read(okm)
@@ -264,9 +301,48 @@ func FiatShamir(values ...*big.Int) ([]byte, error) {
 			return nil, err
 		}
 		if n != len(okm) {
-			return nil, fmt.Errorf("unable to read expected number of bytes want=%v got=%v", len(okm), n)
+			return nil, errors.Errorf("unable to read expected number of bytes want=%v got=%v", len(okm), n)
 		}
-		internal.ByteSub(f)
+		byteSub(f)
 	}
-	return okm, nil
+	var setBytesFunc func([]byte) (curves.Scalar, error)
+	switch len(okm) {
+	case native.FieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
+	case native.WideFieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
+	default:
+		return nil, errors.Errorf("digest length %d unsporrted", len(okm))
+	}
+
+	challenge, err := setBytesFunc(okm)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute challenge scalar")
+	}
+
+	return challenge, nil
+}
+
+// ByteSub is a constant time algorithm for subtracting
+// 1 from the array as if it were a big number.
+// 0 is considered a wrap which resets to 0xFF
+func byteSub(b []byte) {
+	m := byte(1)
+	for i := 0; i < len(b); i++ {
+		b[i] -= m
+
+		// If b[i] > 0, s == 0
+		// If b[i] == 0, s == 1
+		// Computing IsNonZero(b[i])
+		s1 := int8(b[i]) >> 7
+		s2 := -int8(b[i]) >> 7
+		s := byte((s1 | s2) + 1)
+
+		// If s == 0, don't subtract anymore
+		// s == 1, continue subtracting
+		m = s & m
+		// If s == 0 this does nothing
+		// If s == 1 reset this value to 0xFF
+		b[i] |= -s
+	}
 }

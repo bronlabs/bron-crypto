@@ -2,11 +2,11 @@ package signing_helpers
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +63,7 @@ func ProducePartialSignature(
 		return nil, errors.New("could not find r_i")
 	}
 
-	c, err := schnorr.ComputeFiatShamirChallege(cohortConfig.CipherSuite, [][]byte{
+	c, err := hashing.Hash(cohortConfig.CipherSuite, [][]byte{
 		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
 	})
 	if err != nil {
