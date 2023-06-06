@@ -66,7 +66,6 @@ func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integr
 		prng:          prng,
 		CohortConfig:  cohortConfig,
 	}
-
 	result.shamirIdToIdentityKey, _, result.MyShamirId = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
