@@ -63,9 +63,12 @@ func ProducePartialSignature(
 		return nil, errors.New("could not find r_i")
 	}
 
-	c, err := hashing.Hash(cohortConfig.CipherSuite, [][]byte{
-		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
-	})
+	c, err := hashing.FiatShamir(
+		cohortConfig.CipherSuite,
+		R.ToAffineCompressed(),
+		signingKeyShare.PublicKey.ToAffineCompressed(),
+		message,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting hash to c failed")
 	}

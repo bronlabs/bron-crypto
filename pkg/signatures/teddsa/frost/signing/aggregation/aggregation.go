@@ -138,9 +138,12 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			return nil, errors.Wrap(err, "could not compute lagrange coefficients")
 		}
 
-		c, err := hashing.Hash(sa.CohortConfig.CipherSuite, [][]byte{
-			sa.parameters.R.ToAffineCompressed(), sa.PublicKey.ToAffineCompressed(), sa.Message,
-		})
+		c, err := hashing.FiatShamir(
+			sa.CohortConfig.CipherSuite,
+			sa.parameters.R.ToAffineCompressed(),
+			sa.PublicKey.ToAffineCompressed(),
+			sa.Message,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "converting hash to c failed")
 		}
