@@ -94,9 +94,6 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 		if shamirId != p.MyShamirId {
 			shamirIndex := shamirId - 1
 			xij := shares[shamirIndex].Value
-			if err != nil {
-				return nil, nil, errors.Wrapf(err, "%s couldn't convert shamir share to scalar", errs.Failed)
-			}
 			outboundP2PMessages[identityKey] = &Round2P2P{
 				Xij: xij,
 			}
@@ -158,7 +155,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			transcript := merlin.NewTranscript(frostDkgLabel)
 			transcript.AppendMessage([]byte(frostDkgShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
 			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.state.phi, transcript); err != nil {
-				return nil, nil, errors.Errorf("%s abort from schnorr", errs.IdentifiableAbort)
+				return nil, nil, errors.Errorf("%s abort from schnorr (shamir id: %d)", errs.IdentifiableAbort, senderShamirId)
 			}
 
 			p2pMessageFromSender, exists := round2outputP2P[senderIdentityKey]
@@ -171,7 +168,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				Value: receivedSecretKeyShare,
 			}
 			if err := sharing.FeldmanVerify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
-				return nil, nil, errors.Errorf("%s abort from feldman", errs.IdentifiableAbort)
+				return nil, nil, errors.Errorf("%s abort from feldman (shamir id: %d)", errs.IdentifiableAbort, senderShamirId)
 			}
 
 			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)

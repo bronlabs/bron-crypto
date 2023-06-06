@@ -61,7 +61,7 @@ func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 
 func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
 	if secret.IsZero() {
-		return nil, nil, errors.Errorf("%s secret is nil", errs.IsNil)
+		return nil, nil, errors.Errorf("%s secret is nil", errs.IsZero)
 	}
 	shamir := &Shamir{
 		threshold: f.Threshold,

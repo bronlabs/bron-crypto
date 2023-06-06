@@ -61,7 +61,7 @@ func ProducePartialSignature(
 		return nil, errors.Errorf("%s R is at infinity", errs.IsIdentity)
 	}
 	if r_i.IsZero() {
-		return nil, errors.Errorf("%s could not find r_i", errs.IsZero)
+		return nil, errors.Errorf("%s could not find r_i", errs.Missing)
 	}
 
 	c, err := schnorr.ComputeFiatShamirChallege(cohortConfig.CipherSuite, [][]byte{

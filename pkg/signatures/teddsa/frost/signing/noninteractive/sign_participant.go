@@ -107,10 +107,10 @@ func NewNonInteractiveCosigner(
 			return nil, errors.Wrapf(err, "%s no such curve", errs.InvalidCurve)
 		}
 		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
-			return nil, errors.Errorf("%s my d nonce at index %d is not equal to the corresponding commitment", errs.IdentifiableAbort, i)
+			return nil, errors.Errorf("%s my d nonce at index %d is not equal to the corresponding commitment", errs.Failed, i)
 		}
 		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.E) {
-			return nil, errors.Errorf("%s my e nonce at index %d is not equal to the corresponding commitment", errs.IdentifiableAbort, i)
+			return nil, errors.Errorf("%s my e nonce at index %d is not equal to the corresponding commitment", errs.Failed, i)
 		}
 	}
 

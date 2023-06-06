@@ -79,7 +79,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 	}
 	for _, sessionParticipant := range sessionParticipants {
 		if !cohortConfig.IsInCohort(sessionParticipant) {
-			return nil, errors.Errorf("%s invalid session participant", errs.Missing)
+			return nil, errors.Errorf("%s invalid session participant", errs.InvalidArgument)
 		}
 	}
 
