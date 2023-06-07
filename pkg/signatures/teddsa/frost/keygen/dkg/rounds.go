@@ -148,7 +148,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
 				// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
 				if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
-					return nil, nil, errors.Errorf("%s shamir id %d tries to contribute a small group element to the public key", errs.Failed, senderShamirId)
+					return nil, nil, errors.Errorf("%s shamir id %d tries to contribute a small group element to the public key", errs.IdentifiableAbort, senderShamirId)
 				}
 			}
 
