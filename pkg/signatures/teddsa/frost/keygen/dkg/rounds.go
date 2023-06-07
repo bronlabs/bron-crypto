@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
@@ -29,7 +30,7 @@ type Round2P2P struct {
 
 func (p *DKGParticipant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
-		return nil, errors.New("round mismatch")
+		return nil, errors.Errorf("%s round mismatch %d != 1", errs.InvalidRound, p.round)
 	}
 	p.state.r_i = p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 	p.round++
@@ -43,7 +44,7 @@ const frostDkgShamirIdLabel = "FROST DKG shamir id parameter"
 
 func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
 	if p.round != 2 {
-		return nil, nil, errors.New("round mismatch")
+		return nil, nil, errors.Errorf("%s round mismatch %d != 2", errs.InvalidRound, p.round)
 	}
 	round1output[p.MyIdentityKey] = &Round1Broadcast{
 		Ri: p.state.r_i,
@@ -51,7 +52,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 
 	rVector, err := deriveSortedRVector(round1output)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't derive r vector")
+		return nil, nil, errors.Wrapf(err, "%s couldn't derive r vector", errs.Failed)
 	}
 	rVectorBytes := make([][]byte, len(rVector))
 	for i, r_i := range rVector {
@@ -59,7 +60,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	}
 	phi, err := internal.Hash([]byte("FROST DKG phi parameter"), rVectorBytes...)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't compute phi paramter")
+		return nil, nil, errors.Wrapf(err, "%s couldn't compute phi paramter", errs.Failed)
 	}
 	p.state.phi = phi
 
@@ -67,11 +68,11 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 
 	dealer, err := sharing.NewFeldman(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't construct feldman dealer")
+		return nil, nil, errors.Wrapf(err, "%s couldn't construct feldman dealer", errs.Failed)
 	}
 	commitments, shares, err := dealer.Split(a_i0, p.prng)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't split the secret via feldman dealer")
+		return nil, nil, errors.Wrapf(err, "%s couldn't split the secret via feldman dealer", errs.Failed)
 	}
 	p.state.shareVector = shares
 	p.state.commitments = commitments
@@ -80,11 +81,11 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	transcript.AppendMessage([]byte(frostDkgShamirIdLabel), []byte(fmt.Sprintf("%d", p.MyShamirId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), phi, transcript)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "%s couldn;t create DLOG proover", errs.Failed)
 	}
 	proof, err := prover.Prove(a_i0)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't sign")
+		return nil, nil, errors.Wrapf(err, "%s couldn't sign", errs.Failed)
 	}
 
 	outboundP2PMessages := map[integration.IdentityKey]*Round2P2P{}
@@ -93,9 +94,6 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 		if shamirId != p.MyShamirId {
 			shamirIndex := shamirId - 1
 			xij := shares[shamirIndex].Value
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "couldn't convert shamir share to scalar")
-			}
 			outboundP2PMessages[identityKey] = &Round2P2P{
 				Xij: xij,
 			}
@@ -114,11 +112,11 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 
 func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (*frost.SigningKeyShare, *frost.PublicKeyShares, error) {
 	if p.round != 3 {
-		return nil, nil, errors.New("round mismatch")
+		return nil, nil, errors.Errorf("%s round mismatch %d != 3", errs.InvalidRound, p.round)
 	}
 	myShamirShare := p.state.shareVector[p.MyShamirId-1]
 	if myShamirShare == nil {
-		return nil, nil, errors.New("could not find my shamir share from the state")
+		return nil, nil, errors.Errorf("%s could not find my shamir share from the state", errs.Missing)
 	}
 	secretKeyShare := myShamirShare.Value
 
@@ -131,11 +129,11 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 		if senderShamirId != p.MyShamirId {
 			senderIdentityKey, exists := p.shamirIdToIdentityKey[senderShamirId]
 			if !exists {
-				return nil, nil, errors.Errorf("can't find identity key of shamir id %d", senderShamirId)
+				return nil, nil, errors.Errorf("%s can't find identity key of shamir id %d", errs.Missing, senderShamirId)
 			}
 			broadcastedMessageFromSender, exists := round2outputBroadcast[senderIdentityKey]
 			if !exists {
-				return nil, nil, errors.Errorf("do not have broadcasted message of the sender with shamir id %d", senderShamirId)
+				return nil, nil, errors.Errorf("%s do not have broadcasted message of the sender with shamir id %d", errs.Missing, senderShamirId)
 			}
 			senderCommitmentVector := broadcastedMessageFromSender.Ci
 			senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
@@ -143,26 +141,26 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
 				edwardsPoint, ok := publicKey.(*curves.PointEd25519)
 				if !ok {
-					return nil, nil, errors.Errorf("curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", senderShamirId)
+					return nil, nil, errors.Errorf("%s curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", errs.IdentifiableAbort, senderShamirId)
 				}
 				// Since the honest behavior is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
 				// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
 				// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
 				// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
 				if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
-					return nil, nil, errors.Errorf("shamir id %d tries to contribute a small group element to the public key", senderShamirId)
+					return nil, nil, errors.Errorf("%s shamir id %d tries to contribute a small group element to the public key", errs.IdentifiableAbort, senderShamirId)
 				}
 			}
 
 			transcript := merlin.NewTranscript(frostDkgLabel)
 			transcript.AppendMessage([]byte(frostDkgShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
 			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.state.phi, transcript); err != nil {
-				return nil, nil, errors.New("Abort from schnorr")
+				return nil, nil, errors.Errorf("%s abort from schnorr (shamir id: %d)", errs.IdentifiableAbort, senderShamirId)
 			}
 
 			p2pMessageFromSender, exists := round2outputP2P[senderIdentityKey]
 			if !exists {
-				return nil, nil, errors.Errorf("did not get a p2p message from sender with shamir id %d", senderShamirId)
+				return nil, nil, errors.Errorf("%s did not get a p2p message from sender with shamir id %d", errs.Missing, senderShamirId)
 			}
 			receivedSecretKeyShare := p2pMessageFromSender.Xij
 			receivedShare := &sharing.ShamirShare{
@@ -170,7 +168,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				Value: receivedSecretKeyShare,
 			}
 			if err := sharing.FeldmanVerify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
-				return nil, nil, errors.New("Abort from feldman")
+				return nil, nil, errors.Errorf("%s abort from feldman (shamir id: %d)", errs.IdentifiableAbort, senderShamirId)
 			}
 
 			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
@@ -183,7 +181,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 				derivedPartialPublicKeyShare = derivedPartialPublicKeyShare.Add(ikC_lk)
 			}
 			if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
-				return nil, nil, errors.Errorf("shares received from shamir id %d is inconsistent", senderShamirId)
+				return nil, nil, errors.Errorf("%s shares received from shamir id %d is inconsistent", errs.Failed, senderShamirId)
 			}
 
 			secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.Xij)
@@ -196,12 +194,12 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 
 	publicKeySharesMap, err := ConstructPublicKeySharesMap(p.CohortConfig, commitmentVectors, p.shamirIdToIdentityKey)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't derive public key shares")
+		return nil, nil, errors.Wrapf(err, "%s couldn't derive public key shares", errs.Failed)
 	}
 	myPresumedPublicKeyShare := publicKeySharesMap[p.MyIdentityKey]
 	myPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(secretKeyShare)
 	if !myPublicKeyShare.Equal(myPresumedPublicKeyShare) {
-		return nil, nil, errors.New("did not calculate my public key share correctly")
+		return nil, nil, errors.Errorf("%s did not calculate my public key share correctly", errs.Failed)
 	}
 
 	publicKeyShares := &frost.PublicKeyShares{
@@ -233,7 +231,7 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 			}
 		}
 		if Y_j.IsIdentity() {
-			return nil, errors.Errorf("public key share of shamir id %d is at infinity", j)
+			return nil, errors.Errorf("%s public key share of shamir id %d is at infinity", errs.IsIdentity, j)
 		}
 		shares[identityKey] = Y_j
 	}
@@ -252,7 +250,7 @@ func deriveSortedRVector(allIdentityKeysToRi map[integration.IdentityKey]*Round1
 	for i, identityKey := range identityKeys {
 		message, exists := allIdentityKeysToRi[identityKey]
 		if !exists {
-			return nil, errors.New("message coun't be found")
+			return nil, errors.Errorf("%s message couldn't be found", errs.Missing)
 		}
 		sortedRVector[i] = message.Ri
 	}

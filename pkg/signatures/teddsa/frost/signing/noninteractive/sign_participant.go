@@ -1,6 +1,7 @@
 package noninteractive
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -63,16 +64,16 @@ func NewNonInteractiveCosigner(
 	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*NonInteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrap(err, "cohort config is invalid")
+		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.VerificationFailed)
 	}
 	if err := signingKeyShare.Validate(); err != nil {
-		return nil, errors.Wrap(err, "could not validate signing key share")
+		return nil, errors.Wrapf(err, "%s could not validate signing key share", errs.VerificationFailed)
 	}
 	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
-		return nil, errors.Wrap(err, "presignature batch is invalid")
+		return nil, errors.Wrapf(err, "%s presignature batch is invalid", errs.VerificationFailed)
 	}
 	if firstUnusedPreSignatureIndex < 0 || firstUnusedPreSignatureIndex >= len(*preSignatureBatch) {
-		return nil, errors.New("first unused pre signature index index is out of bound")
+		return nil, errors.Errorf("%s first unused pre signature index index is out of bound", errs.InvalidArgument)
 	}
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
@@ -80,36 +81,36 @@ func NewNonInteractiveCosigner(
 	presentPartiesHashSet := map[integration.IdentityKey]bool{}
 	for _, participant := range presentParties {
 		if presentPartiesHashSet[participant] {
-			return nil, errors.New("found duplicate present party")
+			return nil, errors.Errorf("%s found duplicate present party", errs.Duplicate)
 		}
 		presentPartiesHashSet[participant] = true
 
 		if !cohortConfig.IsInCohort(participant) {
-			return nil, errors.New("present party is not in cohort")
+			return nil, errors.Errorf("%s present party is not in cohort", errs.Missing)
 		}
 	}
 	if len(presentPartiesHashSet) <= 0 {
-		return nil, errors.New("no party is present")
+		return nil, errors.Errorf("%s no party is present", errs.InvalidArgument)
 	}
 
 	if privateNoncePairs == nil {
-		return nil, errors.New("private nonce pairs  is nil")
+		return nil, errors.Errorf("%s private nonce pairs is nil", errs.IsNil)
 	}
 	if len(privateNoncePairs) != len(*preSignatureBatch) {
-		return nil, errors.New("number of provided private nonce pairs is not equal to total presignatures")
+		return nil, errors.Errorf("%s number of provided private nonce pairs is not equal to total presignatures", errs.IncorrectCount)
 	}
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[myShamirId-1]
 		curve, err := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, errors.Wrapf(err, "%s no such curve", errs.InvalidCurve)
 		}
 		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
-			return nil, errors.Errorf("my d nonce at index %d is not equal to the corresponding commitment", i)
+			return nil, errors.Errorf("%s my d nonce at index %d is not equal to the corresponding commitment", errs.Failed, i)
 		}
 		if !curve.ScalarBaseMult(privateNoncePair.SmallE).Equal(myAttestedCommitment.E) {
-			return nil, errors.Errorf("my e nonce at index %d is not equal to the corresponding commitment", i)
+			return nil, errors.Errorf("%s my e nonce at index %d is not equal to the corresponding commitment", errs.Failed, i)
 		}
 	}
 
