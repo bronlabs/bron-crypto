@@ -141,7 +141,7 @@ func (p *DKGParticipant) Round3(round2outputBroadcast map[integration.IdentityKe
 			if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
 				edwardsPoint, ok := publicKey.(*curves.PointEd25519)
 				if !ok {
-					return nil, nil, errors.Errorf("%s curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", errs.DeserializationFailed, senderShamirId)
+					return nil, nil, errors.Errorf("%s curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", errs.IdentifiableAbort, senderShamirId)
 				}
 				// Since the honest behavior is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
 				// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
