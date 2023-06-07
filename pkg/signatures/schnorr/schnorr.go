@@ -129,10 +129,10 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	if cipherSuite.Curve.Name == curves.ED25519Name {
 		edwardsPoint, ok := publicKey.Y.(*curves.PointEd25519)
 		if !ok {
-			return errors.New("curve is ed25519 but the public key could not be type casted to the correct point struct")
+			return errors.Errorf("%s curve is ed25519 but the public key could not be type casted to the correct point struct", errs.DeserializationFailed)
 		}
 		if edwardsPoint.IsSmallOrder() {
-			return errors.New("public key is small order")
+			return errors.Errorf("%s public key is small order", errs.Failed)
 		}
 	}
 
