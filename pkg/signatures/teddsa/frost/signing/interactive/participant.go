@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -61,21 +62,24 @@ type State struct {
 
 func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrap(err, "cohort config is invalid")
+		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.VerificationFailed)
 	}
 	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errors.New("can't set presignature composer if cosigner is interactive")
+		return nil, errors.Errorf("%s can't set presignature composer if cosigner is interactive", errs.InvalidArgument)
 	}
 	if err := signingKeyShare.Validate(); err != nil {
-		return nil, errors.Wrap(err, "could not validate signing key share")
+		return nil, errors.Wrapf(err, "%s could not validate signing key share", errs.VerificationFailed)
 	}
 
-	if sessionParticipants == nil || len(sessionParticipants) != cohortConfig.Threshold {
-		return nil, errors.New("invalid number of session participants")
+	if sessionParticipants == nil {
+		return nil, errors.Errorf("%s invalid number of session participants", errs.IsNil)
+	}
+	if len(sessionParticipants) != cohortConfig.Threshold {
+		return nil, errors.Errorf("%s invalid number of session participants", errs.IncorrectCount)
 	}
 	for _, sessionParticipant := range sessionParticipants {
 		if !cohortConfig.IsInCohort(sessionParticipant) {
-			return nil, errors.New("invalid session participant")
+			return nil, errors.Errorf("%s invalid session participant", errs.InvalidArgument)
 		}
 	}
 

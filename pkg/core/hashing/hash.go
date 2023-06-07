@@ -2,13 +2,13 @@ package hashing
 
 import (
 	"bytes"
-	"fmt"
 	"hash"
 	"math"
 	"math/big"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
@@ -55,7 +55,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 
 	//step 2
 	if ell > 255 {
-		return nil, fmt.Errorf("ell > 255")
+		return nil, errors.Errorf("%s ell > 25", errs.InvalidArgument)
 	}
 
 	// step 3
@@ -74,13 +74,13 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// step 7
 	b[0], err = Hash(f, msgPrime)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, string(errs.Failed))
 	}
 
 	// step 8
 	b[1], err = Hash(f, concat(b[0], I2OSP(1, 1), dstPrime))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, string(errs.Failed))
 	}
 
 	// step 9
@@ -88,7 +88,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 		// step 10
 		b[i], err = Hash(f, concat(xor(b[0], b[i-1]), I2OSP(i, 1), dstPrime))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, string(errs.Failed))
 		}
 	}
 	// step 11
@@ -113,7 +113,7 @@ func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, cha
 	// step 2
 	uniformBytes, err := ExpandMessageXmd(h, message, DST, lenInBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, string(errs.Failed))
 	}
 
 	u := make([][]*big.Int, count)
@@ -150,7 +150,7 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	H := h()
 	for _, x := range xs {
 		if _, err := H.Write(x); err != nil {
-			return nil, errors.Wrap(err, "could not write to H")
+			return nil, errors.Wrapf(err, "%s could not write to H", string(errs.Failed))
 		}
 	}
 
@@ -162,7 +162,7 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
 	digest, err := Hash(cipherSuite.Hash, xs...)
 	if err != nil {
-		return nil, errors.New("could not compute fiat shamir digest")
+		return nil, errors.Wrapf(err, "%s could not compute fiat shamir digest", string(errs.Failed))
 	}
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
@@ -172,12 +172,12 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 	case native.WideFieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
 	default:
-		return nil, errors.Errorf("digest length %d unsporrted", len(digest))
+		return nil, errors.Wrapf(err, "%s digest length %d is not supported", string(errs.DeserializationFailed), len(digest))
 	}
 
 	challenge, err := setBytesFunc(digest)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute challenge")
+		return nil, errors.Wrapf(err, "%s could not compute fiat shamir challenge", string(errs.DeserializationFailed))
 	}
 	return challenge, nil
 }
@@ -205,7 +205,7 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	// Don't accept any nil arguments
 	for _, x := range xs {
 		if x == nil {
-			return nil, errors.New("can't be nil")
+			return nil, errors.Errorf("%s an input is nil", errs.IsNil)
 		}
 	}
 
@@ -220,10 +220,10 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		kdf := hkdf.New(h, ikm, salt, info)
 		n, err := kdf.Read(okm)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, string(errs.Failed))
 		}
 		if n != len(okm) {
-			return nil, errors.Errorf("unable to read expected number of bytes want=%v got=%v", len(okm), n)
+			return nil, errors.Errorf("%s unable to read expected number of bytes want=%v got=%v", errs.Failed, len(okm), n)
 		}
 		byteSub(f)
 	}
