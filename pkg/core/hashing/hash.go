@@ -160,6 +160,12 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 
 // FiatShamir computes the challenge scalar writing all inputs to the hash and creating a digest
 func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
+	for _, x := range xs {
+		if x == nil {
+			return nil, errors.Errorf("%s an input is nil", errs.IsNil)
+		}
+	}
+
 	digest, err := Hash(cipherSuite.Hash, xs...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s could not compute fiat shamir digest", string(errs.Failed))
