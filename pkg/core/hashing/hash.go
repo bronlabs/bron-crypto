@@ -5,6 +5,7 @@ import (
 	"hash"
 	"math"
 	"math/big"
+	"math/bits"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
@@ -102,10 +103,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, characteristic, extensionDegree, count int) ([][]*big.Int, error) {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.3
 
-	L := int(math.Ceil(
-		(math.Ceil(math.Log2(float64(characteristic))) + float64(securityParameter)) /
-			float64(8),
-	))
+	L := (bits.Len(uint(characteristic)) + securityParameter - 1) / 8
 
 	// step 1
 	lenInBytes := count * extensionDegree * L
