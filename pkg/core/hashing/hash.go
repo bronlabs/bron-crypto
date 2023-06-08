@@ -3,7 +3,6 @@ package hashing
 import (
 	"bytes"
 	"hash"
-	"math"
 	"math/big"
 	"math/bits"
 
@@ -52,7 +51,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
 
 	// step 1
-	ell := int(math.Ceil(float64(lenInBytes) / float64(f().Size())))
+	ell := lenInBytes / f().Size()
 
 	//step 2
 	if ell > 255 {
