@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/pkg/errors"
 )
 
 type Round1Broadcast struct {
@@ -14,7 +13,7 @@ type Round1Broadcast struct {
 
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
-		return nil, errors.Errorf("%s rounds mismatch %d != 1", errs.InvalidRound, p.round)
+		return nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}
 	p.state = &preGenState{
 		ds:          make([]curves.Scalar, p.Tau),
@@ -47,17 +46,17 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 
 func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
 	if p.round != 2 {
-		return nil, nil, errors.Errorf("%s rounds mismatch %d != 1", errs.InvalidRound, p.round)
+		return nil, nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}
 	if _, exists := round1output[p.MyIdentityKey]; exists {
-		return nil, nil, errors.Errorf("%s message found whose sender is me", errs.Failed)
+		return nil, nil, errs.NewFailed("message found whose sender is me")
 	}
 	round1output[p.MyIdentityKey] = &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	}
 	if len(round1output) != p.CohortConfig.TotalParties {
-		return nil, nil, errors.Errorf("%s the number of received messages is not equal to total parties", errs.IncorrectCount)
+		return nil, nil, errs.NewIncorrectCount("the number of received messages is not equal to total parties")
 	}
 
 	batch := make(PreSignatureBatch, p.Tau)
@@ -69,17 +68,17 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 			senderShamirId := j + 1
 			message, exists := round1output[participant]
 			if !exists {
-				return nil, nil, errors.Errorf("%s did not receive any message from shamir id %d", errs.Missing, senderShamirId)
+				return nil, nil, errs.NewMissing("did not receive any message from shamir id %d", senderShamirId)
 			}
 			participantAttestedCommitmentAtThisIndex := message.Commitments[i]
 			participantAttestedCommitmentAtThisIndex.Attestor = participant
 			if err := participantAttestedCommitmentAtThisIndex.Validate(p.CohortConfig); err != nil {
-				return nil, nil, errors.Wrapf(err, "invalid attestation for presignature index %d by party shamir id %d", i, senderShamirId)
+				return nil, nil, errs.WrapVerificationFailed(err, "invalid attestation for presignature index %d by party shamir id %d", i, senderShamirId)
 			}
 			preSignature[j] = message.Commitments[i]
 		}
 		if err := preSignature.Validate(p.CohortConfig); err != nil {
-			return nil, nil, errors.Wrapf(err, "%s invalid presignature", errs.VerificationFailed)
+			return nil, nil, errs.WrapVerificationFailed(err, "invalid presignature")
 		}
 		batch[i] = &preSignature
 		privateNoncePairs[i] = &PrivateNoncePair{
@@ -88,7 +87,7 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 		}
 	}
 	if err := batch.Validate(p.CohortConfig); err != nil {
-		return nil, nil, errors.Wrapf(err, "%s invalid pre signature batch", errs.VerificationFailed)
+		return nil, nil, errs.WrapVerificationFailed(err, "invalid pre signature batch")
 	}
 	p.round++
 	return &batch, privateNoncePairs, nil

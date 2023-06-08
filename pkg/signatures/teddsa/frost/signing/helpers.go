@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/pkg/errors"
 )
 
 func ProducePartialSignature(
@@ -46,11 +45,11 @@ func ProducePartialSignature(
 		}
 		D_j, exists := D_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("%s could not find D_j for j=%d in D_alpha", errs.Missing, shamirId)
+			return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", shamirId)
 		}
 		E_j, exists := E_alpha[participant]
 		if !exists {
-			return nil, errors.Errorf("%s could not find E_j for j=%d in E_alpha", errs.Missing, shamirId)
+			return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", shamirId)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
@@ -58,22 +57,22 @@ func ProducePartialSignature(
 		R_js[participant] = R_j
 	}
 	if R.IsIdentity() {
-		return nil, errors.Errorf("%s R is at infinity", errs.IsIdentity)
+		return nil, errs.NewIsIdentity("R is at infinity")
 	}
 	if r_i.IsZero() {
-		return nil, errors.Errorf("%s could not find r_i", errs.Missing)
+		return nil, errs.NewMissing("could not find r_i")
 	}
 
 	c, err := schnorr.ComputeFiatShamirChallege(cohortConfig.CipherSuite, [][]byte{
 		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s converting hash to c failed", errs.DeserializationFailed)
+		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 	}
 
 	shamir, err := sharing.NewShamir(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not initialize shamir methods", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not initialize shamir methods")
 	}
 	presentPartyShamirIds := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
@@ -81,12 +80,12 @@ func ProducePartialSignature(
 	}
 	lagrangeCoefficients, err := shamir.LagrangeCoeffs(presentPartyShamirIds)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not derive lagrange coefficients", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
 	}
 
 	lambda_i, exists := lagrangeCoefficients[myShamirId]
 	if !exists {
-		return nil, errors.Errorf("%s could not find my lagrange coefficient", errs.Missing)
+		return nil, errs.NewMissing("could not find my lagrange coefficient")
 	}
 
 	eiri := e_i.Mul(r_i)
@@ -95,7 +94,7 @@ func ProducePartialSignature(
 
 	if participant.IsSignatureAggregator() {
 		if aggregationParameter == nil {
-			return nil, errors.Errorf("%s aggregation parameter is nil when the party is signature aggregator", errs.IsNil)
+			return nil, errs.NewIsNil("aggregation parameter is nil when the party is signature aggregator")
 		}
 		aggregationParameter.Z_i = z_i
 		aggregationParameter.R = R

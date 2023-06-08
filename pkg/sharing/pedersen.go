@@ -11,7 +11,6 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/pkg/errors"
 )
 
 // Pedersen Verifiable Secret Sharing Scheme
@@ -24,13 +23,13 @@ type Pedersen struct {
 func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, generator curves.Point) (err error) {
 	curve, err := curves.GetCurveByName(generator.CurveName())
 	if err != nil {
-		return errors.Wrapf(err, "%s no such curve: %s", errs.InvalidCurve, generator.CurveName())
+		return errs.WrapInvalidCurve(err, "no such curve: %s", generator.CurveName())
 	}
 	if err := share.Validate(curve); err != nil {
-		return errors.Wrapf(err, "%s invalid share", errs.VerificationFailed)
+		return errs.WrapVerificationFailed(err, "invalid share")
 	}
 	if err := blindShare.Validate(curve); err != nil {
-		return errors.Wrapf(err, "%s invalid blind share", errs.VerificationFailed)
+		return errs.WrapVerificationFailed(err, "invalid blind share")
 	}
 
 	x := curve.Scalar.New(share.Id)
@@ -49,7 +48,7 @@ func PedersenVerify(share, blindShare *ShamirShare, commitments []curves.Point, 
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
-		return errors.Errorf("%s not equal", errs.VerificationFailed)
+		return errs.NewVerificationFailed("not equal")
 	}
 }
 
@@ -64,23 +63,23 @@ type PedersenResult struct {
 // NewPedersen creates a new pedersen VSS
 func NewPedersen(threshold, limit int, generator curves.Point) (*Pedersen, error) {
 	if limit < threshold {
-		return nil, errors.Errorf("%s limit cannot be less than threshold", errs.InvalidArgument)
+		return nil, errs.NewInvalidArgument("limit cannot be less than threshold")
 	}
 	if threshold < 2 {
-		return nil, errors.Errorf("%s threshold cannot be less than 2", errs.InvalidArgument)
+		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
 	}
 	if generator == nil {
-		return nil, errors.Errorf("%s generator is nil", errs.IsNil)
+		return nil, errs.NewIsNil("generator is nil")
 	}
 	curve, err := curves.GetCurveByName(generator.CurveName())
 	if err != nil {
-		return nil, errors.Errorf("%s no such curve: %s", errs.InvalidCurve, generator.CurveName())
+		return nil, errs.NewInvalidCurve("no such curve: %s", generator.CurveName())
 	}
 	if !generator.IsOnCurve() {
-		return nil, errors.Errorf("%s invalid generator", errs.NotOnCurve)
+		return nil, errs.NewNotOnCurve("invalid generator")
 	}
 	if generator.IsIdentity() {
-		return nil, errors.Errorf("%s invalid generator", errs.IsIdentity)
+		return nil, errs.NewIsIdentity("invalid generator")
 	}
 
 	return &Pedersen{threshold, limit, curve, generator}, nil

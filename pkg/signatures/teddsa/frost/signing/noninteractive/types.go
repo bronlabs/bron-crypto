@@ -24,28 +24,28 @@ type AttestedCommitmentToNoncePair struct {
 
 func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.CohortConfig) error {
 	if ac == nil {
-		return errors.Errorf("%s attested commitment to nonce is nil", errs.IsNil)
+		return errs.NewIsNil("attested commitment to nonce is nil")
 	}
 	if ac.Attestor == nil {
-		return errors.Errorf("%s attestor is nil", errs.IsNil)
+		return errs.NewIsNil("attestor is nil")
 	}
 	if !cohortConfig.IsInCohort(ac.Attestor) {
-		return errors.Errorf("%s attestor is not in cohort", errs.InvalidArgument)
+		return errs.NewInvalidArgument("attestor is not in cohort")
 	}
 	if ac.D.IsIdentity() {
-		return errors.Errorf("%s D is at infinity", errs.IsIdentity)
+		return errs.NewIsIdentity("D is at infinity")
 	}
 	if !ac.D.IsOnCurve() {
-		return errors.Errorf("%s D is not on the curve", errs.NotOnCurve)
+		return errs.NewNotOnCurve("D is not on the curve")
 	}
 	if ac.E.IsIdentity() {
-		return errors.Errorf("%s E is at infinity", errs.IsIdentity)
+		return errs.NewIsIdentity("E is at infinity")
 	}
 	if !ac.E.IsOnCurve() {
-		return errors.Errorf("%s E is not on the curve", errs.NotOnCurve)
+		return errs.NewNotOnCurve("E is not on the curve")
 	}
 	if ac.D.CurveName() != ac.E.CurveName() {
-		return errors.Errorf("%s D and E are not on the same curve %s != %s", errs.InvalidCurve, ac.D.CurveName(), ac.E.CurveName())
+		return errs.NewInvalidCurve("D and E are not on the same curve %s != %s", ac.D.CurveName(), ac.E.CurveName())
 	}
 	message := ac.D.ToAffineCompressed()
 	message = append(message, ac.E.ToAffineCompressed()...)
@@ -59,23 +59,23 @@ type PreSignature []*AttestedCommitmentToNoncePair
 
 func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	if ps == nil {
-		return errors.Errorf("%s presignature is nil", errs.IsNil)
+		return errs.NewIsNil("presignature is nil")
 	}
 	attestorsHashSet := map[integration.IdentityKey]bool{}
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
 	for _, thisPartyAttestedCommitment := range *ps {
 		if attestorsHashSet[thisPartyAttestedCommitment.Attestor] {
-			return errors.Errorf("%s found duplicate attestor in this presignature", errs.Duplicate)
+			return errs.NewDuplicate("found duplicate attestor in this presignature")
 		}
 		if DHashSet[thisPartyAttestedCommitment.D] {
-			return errors.Errorf("%s found duplicate D", errs.Duplicate)
+			return errs.NewDuplicate("found duplicate D")
 		}
 		if EHashSet[thisPartyAttestedCommitment.E] {
-			return errors.Errorf("%s found duplicate E", errs.Duplicate)
+			return errs.NewDuplicate("found duplicate E")
 		}
 		if err := thisPartyAttestedCommitment.Validate(cohortConfig); err != nil {
-			return errors.Wrapf(err, "%s invalid attested commitments", errs.VerificationFailed)
+			return errs.WrapVerificationFailed(err, "invalid attested commitments")
 		}
 		attestorsHashSet[thisPartyAttestedCommitment.Attestor] = true
 		DHashSet[thisPartyAttestedCommitment.D] = true
@@ -83,11 +83,11 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	}
 	for _, participant := range cohortConfig.Participants {
 		if !attestorsHashSet[participant] {
-			return errors.Errorf("%s at least one party in the cohort does not have an attested commitment", errs.Missing)
+			return errs.NewMissing("at least one party in the cohort does not have an attested commitment")
 		}
 	}
 	if err := sortPreSignatureInPlace(cohortConfig, *ps); err != nil {
-		return errors.Wrapf(err, "%s couldn't sort presignature elements by shamir id", errs.Failed)
+		return errs.WrapFailed(err, "couldn't sort presignature elements by shamir id")
 	}
 	return nil
 }
@@ -118,13 +118,13 @@ type preSignatureBatchJSON struct {
 
 func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) error {
 	if psb == nil {
-		return errors.Errorf("%s presignature is nil", errs.IsNil)
+		return errs.NewIsNil("presignature is nil")
 	}
 	if err := cohortConfig.Validate(); err != nil {
-		return errors.Wrapf(err, "%s could not validate cohort config", errs.VerificationFailed)
+		return errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 	if len(*psb) <= 0 {
-		return errors.Errorf("%s batch is empty", errs.IsZero)
+		return errs.NewIsZero("batch is empty")
 	}
 
 	// checking for duplicates across all presignatures.
@@ -132,17 +132,17 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 	EHashSet := map[curves.Point]bool{}
 	for i, preSignature := range *psb {
 		if err := preSignature.Validate(cohortConfig); err != nil {
-			return errors.Wrapf(err, "%s presignature with index %d is invalid", errs.VerificationFailed, i)
+			return errs.WrapVerificationFailed(err, "presignature with index %d is invalid", i)
 		}
 		for _, D := range preSignature.Ds() {
 			if DHashSet[D] {
-				return errors.Errorf("%s found duplicate D", errs.Duplicate)
+				return errs.NewDuplicate("found duplicate D")
 			}
 			DHashSet[D] = true
 		}
 		for _, E := range preSignature.Es() {
 			if EHashSet[E] {
-				return errors.Errorf("%s found duplicate E", errs.Duplicate)
+				return errs.NewDuplicate("found duplicate E")
 			}
 			EHashSet[E] = true
 		}

@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/pkg/errors"
 )
 
 type PrivateKey struct {
@@ -34,16 +33,16 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errors.Wrapf(err, "%s couldn't extract C and S field from input", errs.DeserializationFailed)
+		return errs.WrapDeserializationFailed(err, "couldn't extract C and S field from input")
 	}
 
 	s.C, err = curves.Curve{}.NewScalarFromJSON(parsed.C)
 	if err != nil {
-		return errors.Wrapf(err, "%s couldn't deserialize C", errs.DeserializationFailed)
+		return errs.WrapDeserializationFailed(err, "couldn't deserialize C")
 	}
 	s.S, err = curves.Curve{}.NewScalarFromJSON(parsed.S)
 	if err != nil {
-		return errors.Wrapf(err, "%s couldn't deserialize S", errs.DeserializationFailed)
+		return errs.WrapDeserializationFailed(err, "couldn't deserialize S")
 	}
 	return nil
 }
@@ -63,11 +62,11 @@ type Options struct {
 
 func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader, options *Options) (*Signer, error) {
 	if err := cipherSuite.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s ciphersuite is invalid", errs.InvalidArgument)
+		return nil, errs.WrapInvalidArgument(err, "ciphersuite is invalid")
 	}
 	privateKey, err := KeyGen(cipherSuite.Curve, secret, prng)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s key generation failed", errs.Failed)
+		return nil, errs.WrapFailed(err, "key generation failed")
 	}
 
 	return &Signer{
@@ -82,11 +81,11 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng 
 func (s *Signer) Sign(message []byte) (*Signature, error) {
 	prover, err := dlog.NewProver(s.CipherSuite.Curve.Point.Generator(), message, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not construct an internal prover", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not construct an internal prover")
 	}
 	proof, err := prover.Prove(s.privateKey.a)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s couldn't make proof of knowledge of discrete log of public key bound with the message", errs.Failed)
+		return nil, errs.WrapFailed(err, "couldn't make proof of knowledge of discrete log of public key bound with the message")
 	}
 	return &Signature{
 		C: proof.C,
@@ -96,7 +95,7 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 
 func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateKey, error) {
 	if curve == nil {
-		return nil, errors.Errorf("%s curve is nil", errs.IsNil)
+		return nil, errs.NewIsNil("curve is nil")
 	}
 	if secret == nil {
 		secret = curve.Scalar.Random(prng)
@@ -114,33 +113,33 @@ func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*Private
 
 func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature, options *Options) error {
 	if err := cipherSuite.Validate(); err != nil {
-		return errors.Wrapf(err, "%s ciphersuite is invalid", errs.InvalidArgument)
+		return errs.WrapInvalidArgument(err, "ciphersuite is invalid")
 	}
 	if publicKey == nil {
-		return errors.Errorf("%s public key is not provided", errs.IsNil)
+		return errs.NewIsNil("public key is not provided")
 	}
 	if !publicKey.Y.IsOnCurve() {
-		return errors.Errorf("%s public key is not on curve", errs.NotOnCurve)
+		return errs.NewNotOnCurve("public key is not on curve")
 	}
 	if publicKey.Y.IsIdentity() {
-		return errors.Errorf("%s public key can't be at infinity", errs.IsIdentity)
+		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 
 	if cipherSuite.Curve.Name == curves.ED25519Name {
 		edwardsPoint, ok := publicKey.Y.(*curves.PointEd25519)
 		if !ok {
-			return errors.Errorf("%s curve is ed25519 but the public key could not be type casted to the correct point struct", errs.DeserializationFailed)
+			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
 		if edwardsPoint.IsSmallOrder() {
-			return errors.Errorf("%s public key is small order", errs.Failed)
+			return errs.NewFailed("public key is small order")
 		}
 	}
 
 	if signature.C.IsZero() {
-		return errors.Errorf("%s challenge can't be zero", errs.IsZero)
+		return errs.NewIsZero("challenge can't be zero")
 	}
 	if signature.S.IsZero() {
-		return errors.Errorf("%s response can't be zero", errs.IsZero)
+		return errs.NewIsZero("response can't be zero")
 	}
 	proof := &dlog.Proof{
 		C:         signature.C,
@@ -149,7 +148,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	}
 
 	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), proof, message, nil); err != nil {
-		return errors.Wrapf(err, "%s couldn't verify underlying schnor proof", errs.VerificationFailed)
+		return errs.NewVerificationFailed("couldn't verify underlying schnor proof")
 	}
 	return nil
 }

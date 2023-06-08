@@ -6,7 +6,6 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/pkg/errors"
 )
 
 type PreGenParticipant struct {
@@ -27,13 +26,13 @@ type preGenState struct {
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.VerificationFailed)
+		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
-		return nil, errors.Errorf("%s identity key is not in cohort", errs.Missing)
+		return nil, errs.NewMissing("identity key is not in cohort")
 	}
 	if tau <= 0 {
-		return nil, errors.Errorf("%s tau is nonpositive", errs.InvalidArgument)
+		return nil, errs.NewInvalidArgument("tau is nonpositive")
 	}
 
 	return &PreGenParticipant{

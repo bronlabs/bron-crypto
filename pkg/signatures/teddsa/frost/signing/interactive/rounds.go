@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/pkg/errors"
 )
 
 type Round1Broadcast struct {
@@ -17,7 +16,7 @@ type Round1Broadcast struct {
 
 func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
-		return nil, errors.Errorf("%s round mismatch %d != 1", errs.InvalidRound, ic.round)
+		return nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
 	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
 	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
@@ -32,11 +31,11 @@ func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 
 func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*Round1Broadcast, message []byte) (*frost.PartialSignature, error) {
 	if ic.round != 2 {
-		return nil, errors.Errorf("%s round mismatch %d != 2", errs.InvalidRound, ic.round)
+		return nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
 	}
 	D_alpha, E_alpha, err := ic.processNonceCommitmentOnline(round1output)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s couldn't not derive D alpha and E alpha", errs.Failed)
+		return nil, errs.WrapFailed(err, "couldn't not derive D alpha and E alpha")
 	}
 	partialSignature, err := signing_helpers.ProducePartialSignature(
 		ic,
@@ -50,7 +49,7 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 		message,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not produce partial signature", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
 	ic.state.d_i = nil
 	ic.state.e_i = nil
@@ -60,15 +59,15 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 
 func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
 	if ic.round != 3 {
-		return nil, errors.Errorf("%s round mismatch %d != 3", errs.InvalidRound, ic.round)
+		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
 	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not initialize signature aggregator", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
 	}
 	signature, err := aggregator.Aggregate(partialSignatures)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not aggregate partial signatures", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not aggregate partial signatures")
 	}
 	ic.round++
 	return signature, err
@@ -86,25 +85,25 @@ func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[int
 	for _, senderIdentityKey := range ic.SessionParticipants {
 		shamirId, exists := ic.IdentityKeyToShamirId[senderIdentityKey]
 		if !exists {
-			return nil, nil, errors.Errorf("%s sender identity key is not found", errs.Missing)
+			return nil, nil, errs.NewMissing("sender identity key is not found")
 		}
 		receivedMessage, exists := round1output[senderIdentityKey]
 		if !exists {
-			return nil, nil, errors.Errorf("%s do not have a message from shamir id %d", errs.Missing, shamirId)
+			return nil, nil, errs.NewMissing("do not have a message from shamir id %d", shamirId)
 		}
 		D_i := receivedMessage.Di
 		if D_i.IsIdentity() {
-			return nil, nil, errors.Errorf("%s D_i of shamir id %d is at infinity", errs.Missing, shamirId)
+			return nil, nil, errs.NewMissing("D_i of shamir id %d is at infinity", shamirId)
 		}
 		if !D_i.IsOnCurve() {
-			return nil, nil, errors.Errorf("%s D_i of shamir id %d is not on curve", errs.Missing, shamirId)
+			return nil, nil, errs.NewMissing("D_i of shamir id %d is not on curve", shamirId)
 		}
 		E_i := receivedMessage.Ei
 		if E_i.IsIdentity() {
-			return nil, nil, errors.Errorf("%s E_i of shamir id %d is at infinity", errs.IsIdentity, shamirId)
+			return nil, nil, errs.NewIsIdentity("E_i of shamir id %d is at infinity", shamirId)
 		}
 		if !E_i.IsOnCurve() {
-			return nil, nil, errors.Errorf("%s E_i of shamir id %d is not on curve", errs.NotOnCurve, shamirId)
+			return nil, nil, errs.NewNotOnCurve("E_i of shamir id %d is not on curve", shamirId)
 		}
 
 		D_alpha[senderIdentityKey] = D_i

@@ -28,27 +28,27 @@ type SigningKeyShare struct {
 
 func (s *SigningKeyShare) Validate() error {
 	if s == nil {
-		return errors.Errorf("%s signing key share is nil", errs.IsNil)
+		return errs.NewIsNil("signing key share is nil")
 	}
 	if s.Share.IsZero() {
-		return errors.Errorf("%s share can't be zero", errs.IsZero)
+		return errs.NewIsZero("share can't be zero")
 	}
 	if s.PublicKey.IsIdentity() {
-		return errors.Errorf("%s public key can't be at infinity", errs.IsIdentity)
+		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !s.PublicKey.IsOnCurve() {
-		return errors.Errorf("%s public key is not on curve", errs.NotOnCurve)
+		return errs.NewNotOnCurve("public key is not on curve")
 	}
 
 	if s.PublicKey.CurveName() == curves.ED25519Name {
 		edwardsPoint, ok := s.PublicKey.(*curves.PointEd25519)
 		if !ok {
-			return errors.Errorf("%s curve is ed25519 but the public key could not be type casted to the correct point struct", errs.DeserializationFailed)
+			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
 		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
 		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
 		if edwardsPoint.IsSmallOrder() {
-			return errors.Errorf("%s public key is small order", errs.Failed)
+			return errs.NewFailed("public key is small order")
 		}
 	}
 	return nil
@@ -84,7 +84,7 @@ type Signature struct {
 func (s *Signature) MarshalBinary() ([]byte, error) {
 	curve, err := curves.GetCurveByName(s.R.CurveName())
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not get curve %s", errs.InvalidCurve, s.R.CurveName())
+		return nil, errs.WrapInvalidCurve(err, "could not get curve %s", s.R.CurveName())
 	}
 	signatureSize := 64
 	if curve.Name == curves.K256Name || curve.Name == curves.P256Name {
@@ -95,7 +95,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
 	if len(RSerialized)+len(zSerialized) != signatureSize {
-		return serializedSignature[:], errors.Errorf("%s serialized signature is too large", errs.DeserializationFailed)
+		return serializedSignature[:], errs.NewDeserializationFailed("serialized signature is too large")
 	}
 	serializedSignature = append(serializedSignature, RSerialized...)
 	serializedSignature = append(serializedSignature, zSerialized...)
@@ -106,21 +106,21 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 	if curve == curves.ED25519() {
 		edwardsPoint, ok := publicKey.(*curves.PointEd25519)
 		if !ok {
-			return errors.Errorf("%s curve is ed25519 but the public key could not be type casted to the correct point struct", errs.DeserializationFailed)
+			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
 		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
 		// to a key substitution attack (specifically, it won't be binded to a public key (SBS) and a signature cannot be binded to a unique message in presence of malicious keys (MBS)). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
 		if edwardsPoint.IsSmallOrder() {
-			return errors.Errorf("%s public key is small order", errs.Failed)
+			return errs.NewFailed("public key is small order")
 		}
 		// is an eddsa compliant signature
 		if reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
 			serializedSignature, err := signature.MarshalBinary()
 			if err != nil {
-				return errors.Wrapf(err, "%s could not serialize signature to binary", errs.DeserializationFailed)
+				return errs.WrapDeserializationFailed(err, "could not serialize signature to binary")
 			}
 			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
-				return errors.Errorf("%s could not verify frost signature using ed25519 verifier", errs.VerificationFailed)
+				return errs.NewVerificationFailed("could not verify frost signature using ed25519 verifier")
 			}
 		}
 		return nil
@@ -143,18 +143,18 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		case native.FieldBytes:
 			setBytesFunc = curve.Scalar.SetBytes
 		default:
-			return errors.Errorf("%s challenge digest is %d which is neither 64 nor 32", errs.DeserializationFailed, len(challengeDigest))
+			return errs.NewDeserializationFailed("challenge digest is %d which is neither 64 nor 32", len(challengeDigest))
 		}
 		c, err := setBytesFunc(challengeDigest)
 		if err != nil {
-			return errors.Wrapf(err, "%s converting hash to c failed", errs.DeserializationFailed)
+			return errs.WrapDeserializationFailed(err, "converting hash to c failed")
 		}
 
 		zG := curve.ScalarBaseMult(signature.Z)
 		negCY := publicKey.Mul(c.Neg())
 		RPrime := zG.Add(negCY)
 		if ok := signature.R.Equal(RPrime); !ok {
-			return errors.Errorf("%s failed to verify", errs.VerificationFailed)
+			return errs.NewVerificationFailed("failed to verify")
 		}
 
 		return nil
