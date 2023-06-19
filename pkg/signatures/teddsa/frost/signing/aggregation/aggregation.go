@@ -3,10 +3,10 @@ package aggregation
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/pkg/errors"
 )
 
@@ -145,9 +145,12 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			return nil, errors.Wrapf(err, "%s could not compute lagrange coefficients", errs.Failed)
 		}
 
-		c, err := schnorr.ComputeFiatShamirChallege(sa.CohortConfig.CipherSuite, [][]byte{
-			sa.parameters.R.ToAffineCompressed(), sa.PublicKey.ToAffineCompressed(), sa.Message,
-		})
+		c, err := hashing.FiatShamir(
+			sa.CohortConfig.CipherSuite,
+			sa.parameters.R.ToAffineCompressed(),
+			sa.PublicKey.ToAffineCompressed(),
+			sa.Message,
+		)
 		if err != nil {
 			return nil, errors.Wrapf(err, "%s converting hash to c failed", errs.DeserializationFailed)
 		}
