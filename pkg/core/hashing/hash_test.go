@@ -1,10 +1,4 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-
-package core
+package hashing_test
 
 import (
 	"crypto/sha256"
@@ -16,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,36 +52,40 @@ func TestExpandMessageXmd(t *testing.T) {
 			require.NoError(t, err)
 			expected, err := hex.DecodeString(test.expectedHex)
 			require.NoError(t, err)
-			actual, err := ExpandMessageXmd(test.f, test.msg, DST, int(lenInBytes))
+			actual, err := hashing.ExpandMessageXmd(test.f, test.msg, DST, int(lenInBytes))
 			require.NoError(t, err)
 			require.Equal(t, actual, expected)
 		})
 	}
 }
+
 func TestFiatShamirDeterministic(t *testing.T) {
 	a := big.NewInt(1)
-	hash, err := FiatShamir(a)
+	hash, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes())
 	require.Nil(t, err)
-	require.Equal(t, hash, []byte{0x3d, 0x95, 0xc0, 0x9f, 0x41, 0x33, 0x25, 0xbb, 0x10, 0x77, 0x2d, 0x83, 0x1d, 0x3e, 0x67, 0x98, 0xce, 0x7b, 0xde, 0xd5, 0x7f, 0x9, 0x7e, 0xfc, 0x77, 0x23, 0xfc, 0x49, 0x36, 0x82, 0xdd, 0x6a})
+	require.Equal(t, hash, []byte{0x98, 0x9b, 0x9f, 0xa3, 0x49, 0x73, 0xbe, 0x9f, 0xce, 0x97, 0x62, 0xf, 0x6d, 0xc9, 0xe, 0x22, 0x77, 0x47, 0x7c, 0xdb, 0x81, 0x29, 0x62, 0x6f, 0xf1, 0xbd, 0xf5, 0x84, 0x9e, 0xa4, 0xb8, 0x55})
 
 	a = big.NewInt(0xaaa)
-	hash, err = FiatShamir(a)
+	hash, err = hashing.FiatShamirHKDF(sha256.New, a.Bytes())
 	require.Nil(t, err)
-	require.Equal(t, hash, []byte{0x61, 0xa9, 0x7f, 0x6, 0x74, 0xec, 0x47, 0xf5, 0xac, 0x30, 0xa0, 0x4c, 0x34, 0xdb, 0x51, 0x97, 0x60, 0x7e, 0xb2, 0x4a, 0x97, 0x9, 0xa5, 0xb9, 0x1c, 0x89, 0x30, 0x39, 0xb7, 0x29, 0xe6, 0x30})
+	require.Equal(t, hash, []byte{0x33, 0x40, 0xfe, 0x30, 0x95, 0x6f, 0x5f, 0xa6, 0xc4, 0x19, 0x78, 0x9c, 0x28, 0x1e, 0x41, 0x41, 0x8c, 0x7d, 0xed, 0x8f, 0xff, 0x9f, 0x93, 0x19, 0x37, 0x40, 0x1, 0xf8, 0xc3, 0x7a, 0x1, 0x56})
 }
 
 func TestFiatShamirEqual(t *testing.T) {
-	pi, err := FiatShamir(One)
+	a := big.NewInt(1)
+	pi, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes())
 	require.Nil(t, err)
-	pi_, err := FiatShamir(One)
+	pi_, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes())
 	require.Nil(t, err)
 	require.Equal(t, pi, pi_)
 }
 
 func TestFiatShamirNotEqual(t *testing.T) {
-	pi, err := FiatShamir(One)
+	a := big.NewInt(1)
+	pi, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes())
 	require.Nil(t, err)
-	pi_, err := FiatShamir(Two)
+	b := big.NewInt(2)
+	pi_, err := hashing.FiatShamirHKDF(sha256.New, b.Bytes())
 	require.Nil(t, err)
 	require.NotEqual(t, pi, pi_)
 }
@@ -95,13 +94,13 @@ func TestFiatShamirOrderDependent(t *testing.T) {
 	a := big.NewInt(1)
 	b := big.NewInt(100)
 
-	pi, err := FiatShamir(a, b)
+	pi, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes(), b.Bytes())
 	require.Nil(t, err)
-	pi_, err := FiatShamir(a, b)
+	pi_, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes(), b.Bytes())
 	require.Nil(t, err)
 	require.Equal(t, pi, pi_)
 
-	q, _ := FiatShamir(b, a)
+	q, _ := hashing.FiatShamirHKDF(sha256.New, b.Bytes(), a.Bytes())
 	require.NotEqual(t, pi, q)
 }
 
@@ -112,9 +111,9 @@ func TestFiatShamirExtensionAttackResistance(t *testing.T) {
 	c := big.NewInt(0x00)
 	d := big.NewInt(0xFFFF00)
 
-	pi, err := FiatShamir(a, b)
+	pi, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes(), b.Bytes())
 	require.Nil(t, err)
-	pi_, err := FiatShamir(c, d)
+	pi_, err := hashing.FiatShamirHKDF(sha256.New, c.Bytes(), d.Bytes())
 	require.Nil(t, err)
 	require.NotEqual(t, pi, pi_)
 
@@ -124,9 +123,9 @@ func TestFiatShamirExtensionAttackResistance(t *testing.T) {
 	c = big.NewInt(0x0000F)
 	d = big.NewInt(0xFFF)
 
-	q, err := FiatShamir(a, b)
+	q, err := hashing.FiatShamirHKDF(sha256.New, a.Bytes(), b.Bytes())
 	require.Nil(t, err)
-	q_, err := FiatShamir(c, d)
+	q_, err := hashing.FiatShamirHKDF(sha256.New, c.Bytes(), d.Bytes())
 	require.Nil(t, err)
 	require.NotEqual(t, q, q_)
 }

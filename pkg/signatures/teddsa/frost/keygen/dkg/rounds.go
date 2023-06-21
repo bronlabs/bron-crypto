@@ -3,9 +3,9 @@ package dkg
 import (
 	"fmt"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
@@ -56,7 +56,7 @@ func (p *DKGParticipant) Round2(round1output map[integration.IdentityKey]*Round1
 	for i, r_i := range rVector {
 		rVectorBytes[i] = r_i.Bytes()
 	}
-	phi, err := internal.Hash([]byte("FROST DKG phi parameter"), rVectorBytes...)
+	phi, err := hashing.Hash(p.CohortConfig.CipherSuite.Hash, rVectorBytes...)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't compute phi paramter")
 	}

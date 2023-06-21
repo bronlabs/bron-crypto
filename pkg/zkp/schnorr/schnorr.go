@@ -7,7 +7,6 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 
 	"github.com/gtank/merlin"
 )
@@ -120,35 +119,4 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 		return errors.New("schnorr verification failed")
 	}
 	return nil
-}
-
-// TODO: Remove during KEY-51
-func ComputeFiatShamirChallege(cipherSuite *integration.CipherSuite, xs [][]byte) (curves.Scalar, error) {
-	if err := cipherSuite.Validate(); err != nil {
-		return nil, errors.Wrap(err, "ciphersuite is invalid")
-	}
-
-	H := cipherSuite.Hash()
-	for _, x := range xs {
-		if _, err := H.Write(x); err != nil {
-			return nil, errors.Wrap(err, "could not write to H")
-		}
-	}
-
-	digest := H.Sum(nil)
-	var setBytesFunc func([]byte) (curves.Scalar, error)
-	switch len(digest) {
-	case native.FieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
-	case native.WideFieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
-	default:
-		return nil, errors.Errorf("digest length %d unsporrted", len(digest))
-	}
-
-	challenge, err := setBytesFunc(digest)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute challenge scalar")
-	}
-	return challenge, nil
 }
