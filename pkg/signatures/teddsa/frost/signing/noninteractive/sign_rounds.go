@@ -6,7 +6,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/pkg/errors"
 )
 
 func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
@@ -27,7 +26,7 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 	)
 
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not produce partial signature", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
 	return partialSignature, nil
 }
@@ -37,11 +36,11 @@ func (nic *NonInteractiveCosigner) Aggregate(message []byte, preSignatureIndex i
 	nic.aggregationParameter.E_alpha = nic.E_alpha
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, nic.aggregationParameter)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not initialize signature aggregator", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
 	}
 	signature, err := aggregator.Aggregate(partialSignatures)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not aggregate partial signatures", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not aggregate partial signatures")
 	}
 	return signature, nil
 }

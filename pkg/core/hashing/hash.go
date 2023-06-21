@@ -55,7 +55,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 
 	//step 2
 	if ell > 255 {
-		return nil, errors.Errorf("%s ell > 25", errs.InvalidArgument)
+		return nil, errs.NewInvalidArgument("%s ell > 25")
 	}
 
 	// step 3
@@ -74,13 +74,13 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// step 7
 	b[0], err = Hash(f, msgPrime)
 	if err != nil {
-		return nil, errors.Wrap(err, string(errs.Failed))
+		return nil, errs.WrapFailed(err, "step 7")
 	}
 
 	// step 8
 	b[1], err = Hash(f, concat(b[0], I2OSP(1, 1), dstPrime))
 	if err != nil {
-		return nil, errors.Wrap(err, string(errs.Failed))
+		return nil, errs.WrapFailed(err, "step 8")
 	}
 
 	// step 9
@@ -88,7 +88,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 		// step 10
 		b[i], err = Hash(f, concat(xor(b[0], b[i-1]), I2OSP(i, 1), dstPrime))
 		if err != nil {
-			return nil, errors.Wrap(err, string(errs.Failed))
+			return nil, errs.WrapFailed(err, "step 10")
 		}
 	}
 	// step 11
@@ -110,7 +110,7 @@ func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, cha
 	// step 2
 	uniformBytes, err := ExpandMessageXmd(h, message, DST, lenInBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, string(errs.Failed))
+		return nil, errs.WrapFailed(err, "step 2")
 	}
 
 	u := make([][]*big.Int, count)
@@ -147,7 +147,7 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	H := h()
 	for _, x := range xs {
 		if _, err := H.Write(x); err != nil {
-			return nil, errors.Wrapf(err, "%s could not write to H", string(errs.Failed))
+			return nil, errs.WrapFailed(err, "could not write to H")
 		}
 	}
 
@@ -159,13 +159,13 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
 	for _, x := range xs {
 		if x == nil {
-			return nil, errors.Errorf("%s an input is nil", errs.IsNil)
+			return nil, errs.NewIsNil("an input is nil")
 		}
 	}
 
 	digest, err := Hash(cipherSuite.Hash, xs...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not compute fiat shamir digest", string(errs.Failed))
+		return nil, errs.WrapFailed(err, "could not compute fiat shamir digest")
 	}
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
@@ -175,12 +175,12 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 	case native.WideFieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
 	default:
-		return nil, errors.Wrapf(err, "%s digest length %d is not supported", string(errs.DeserializationFailed), len(digest))
+		return nil, errs.WrapDeserializationFailed(err, "digest length %d is not supported", len(digest))
 	}
 
 	challenge, err := setBytesFunc(digest)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not compute fiat shamir challenge", string(errs.DeserializationFailed))
+		return nil, errs.WrapDeserializationFailed(err, "could not compute fiat shamir challenge")
 	}
 	return challenge, nil
 }
@@ -208,7 +208,7 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	// Don't accept any nil arguments
 	for _, x := range xs {
 		if x == nil {
-			return nil, errors.Errorf("%s an input is nil", errs.IsNil)
+			return nil, errs.NewIsNil("an input is nil")
 		}
 	}
 
@@ -223,10 +223,10 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		kdf := hkdf.New(h, ikm, salt, info)
 		n, err := kdf.Read(okm)
 		if err != nil {
-			return nil, errors.Wrap(err, string(errs.Failed))
+			return nil, errs.WrapFailed(err, "write to kdf failed")
 		}
 		if n != len(okm) {
-			return nil, errors.Errorf("%s unable to read expected number of bytes want=%v got=%v", errs.Failed, len(okm), n)
+			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)
 		}
 		byteSub(f)
 	}

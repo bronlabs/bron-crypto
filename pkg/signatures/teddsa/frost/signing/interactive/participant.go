@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
-	"github.com/pkg/errors"
 )
 
 var _ frost.Participant = (*InteractiveCosigner)(nil)
@@ -62,24 +61,24 @@ type State struct {
 
 func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.VerificationFailed)
+		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errors.Errorf("%s can't set presignature composer if cosigner is interactive", errs.InvalidArgument)
+		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
 	if err := signingKeyShare.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s could not validate signing key share", errs.VerificationFailed)
+		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
 	}
 
 	if sessionParticipants == nil {
-		return nil, errors.Errorf("%s invalid number of session participants", errs.IsNil)
+		return nil, errs.NewIsNil("invalid number of session participants")
 	}
 	if len(sessionParticipants) != cohortConfig.Threshold {
-		return nil, errors.Errorf("%s invalid number of session participants", errs.IncorrectCount)
+		return nil, errs.NewIncorrectCount("invalid number of session participants")
 	}
 	for _, sessionParticipant := range sessionParticipants {
 		if !cohortConfig.IsInCohort(sessionParticipant) {
-			return nil, errors.Errorf("%s invalid session participant", errs.InvalidArgument)
+			return nil, errs.NewInvalidArgument("invalid session participant")
 		}
 	}
 

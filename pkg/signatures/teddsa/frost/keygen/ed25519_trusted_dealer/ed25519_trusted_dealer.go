@@ -9,36 +9,35 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	"github.com/pkg/errors"
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
 func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*frost.SigningKeyShare, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s could not validate cohort config", errs.VerificationFailed)
+		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
 	curve := curves.ED25519()
 	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(prng)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not generate ed25519 compliant private key", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not generate ed25519 compliant private key")
 	}
 	privateKey, err := curve.Scalar.SetBytesWide(privateKeyBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not convert ed25519 private key bytes to an ed25519 scalar", errs.DeserializationFailed)
+		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
 	}
 	publicKey, err := curve.Point.FromAffineCompressed(publicKeyBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not convert ed25519 public key bytes to an ed25519 point", errs.DeserializationFailed)
+		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
 	feldmanDealer, err := sharing.NewFeldman(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s could not construct feldman dealer", errs.Failed)
+		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
 	_, shamirShares, err := feldmanDealer.Split(privateKey, prng)
 	if err != nil {
-		return nil, errors.Wrapf(err, "%s failed to deal the secret", errs.Failed)
+		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
 	shamirIdsToIdentityKeys, _, _ := frost.DeriveShamirIds(cohortConfig.Participants[0], cohortConfig.Participants)

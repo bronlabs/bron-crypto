@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
-	"github.com/pkg/errors"
 )
 
 var _ frost.Participant = (*DKGParticipant)(nil)
@@ -59,7 +58,7 @@ type State struct {
 
 func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*DKGParticipant, error) {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "%s cohort config is invalid", errs.InvalidArgument)
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	result := &DKGParticipant{
 		MyIdentityKey: identityKey,
