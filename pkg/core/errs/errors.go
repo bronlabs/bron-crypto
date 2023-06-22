@@ -2,28 +2,29 @@ package errs
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 )
 
 type ErrorType string
 
 const (
-	isNil                 ErrorType = "[IS_NIL]"
-	invalidArgument       ErrorType = "[INVALID_ARGUMENT]"
-	notOnCurve            ErrorType = "[NOT_ON_CURVE]"
-	invalidCurve          ErrorType = "[INVALID_CURVE]"
-	isZero                ErrorType = "[IS_ZERO]"
-	isIdentity            ErrorType = "[IS_IDENTITY]"
-	invalidRound          ErrorType = "[INVALID_ROUND]"
-	incorrectCount        ErrorType = "[INCORRECT_COUNT]"
-	verificationFailed    ErrorType = "[VERIFICATION_FAILED]"
-	divisionByZero        ErrorType = "[DIVISION_BY_ZERO]"
-	invalidIdentifier     ErrorType = "[INVALID_IDENTIFIER]"
 	deserializationFailed ErrorType = "[DESERIALIZATION_FAILED]"
-	missing               ErrorType = "[MISSING]"
+	divisionByZero        ErrorType = "[DIVISION_BY_ZERO]"
 	duplicate             ErrorType = "[DUPLICATE]"
-	identifiableAbort     ErrorType = "[ABORT]"
 	failed                ErrorType = "[FAILED]"
+	identifiableAbort     ErrorType = "[ABORT]"
+	incorrectCount        ErrorType = "[INCORRECT_COUNT]"
+	invalidArgument       ErrorType = "[INVALID_ARGUMENT]"
+	invalidCurve          ErrorType = "[INVALID_CURVE]"
+	invalidIdentifier     ErrorType = "[INVALID_IDENTIFIER]"
+	invalidRound          ErrorType = "[INVALID_ROUND]"
+	isIdentity            ErrorType = "[IS_IDENTITY]"
+	isNil                 ErrorType = "[IS_NIL]"
+	isZero                ErrorType = "[IS_ZERO]"
+	missing               ErrorType = "[MISSING]"
+	notOnCurve            ErrorType = "[NOT_ON_CURVE]"
+	verificationFailed    ErrorType = "[VERIFICATION_FAILED]"
 )
 
 func NewIsNil(format string, args ...interface{}) error {
