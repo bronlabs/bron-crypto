@@ -2,7 +2,7 @@ package dkg
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/shamir/pedersen"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 )
 

@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/shamir/pedersen/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"

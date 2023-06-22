@@ -1,7 +1,7 @@
 package test_utils
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/shamir/pedersen/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen/test_utils"
 )
 
 var MakeDkgParticipants = test_utils.MakeParticipants
