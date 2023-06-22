@@ -1,4 +1,4 @@
-package dkg
+package pedersen
 
 import (
 	crand "crypto/rand"
@@ -57,11 +57,15 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	alice, err := NewDKGParticipant(aliceIdentityKey, cohortConfig, crand.Reader)
-	bob, err := NewDKGParticipant(bobIdentityKey, cohortConfig, crand.Reader)
-	for _, party := range []*DKGParticipant{alice, bob} {
+	alice, err := NewParticipant(aliceIdentityKey, cohortConfig, crand.Reader)
+	bob, err := NewParticipant(bobIdentityKey, cohortConfig, crand.Reader)
+	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
-		require.NotNil(t, party)
+		require.Equal(t, party.round, 1)
+		require.Len(t, party.shamirIdToIdentityKey, 2)
+		require.Nil(t, party.secretKeyShare)
+		require.Nil(t, party.myPartialPublicKey)
+		require.Nil(t, party.publicKey)
 	}
-	require.NotEqual(t, alice.GetShamirId(), bob.GetShamirId())
+	require.NotEqual(t, alice.MyShamirId, bob.MyShamirId)
 }

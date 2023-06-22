@@ -1,16 +1,21 @@
 package integration
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"hash"
 	"sort"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/pkg/errors"
 )
+
+type Participant interface {
+	GetIdentityKey() IdentityKey
+	GetShamirId() int
+	GetCohortConfig() *CohortConfig
+}
 
 type IdentityKey interface {
 	Sign(message []byte) []byte
@@ -25,16 +30,67 @@ type CipherSuite struct {
 
 func (cs *CipherSuite) Validate() error {
 	if cs == nil {
-		return errors.New("ciphersuite is nil")
+		return errs.NewIsNil("ciphersuite is nil")
 	}
 	if cs.Curve == nil {
-		return errors.New("curve is nil")
+		return errs.NewIsNil("curve is nil")
 	}
 	if cs.Hash == nil {
-		return errors.New("hash is nil")
+		return errs.NewIsNil("hash is nil")
 	}
 	return nil
 }
+
+type SigningKeyShare struct {
+	Share     curves.Scalar
+	PublicKey curves.Point
+}
+
+func (s *SigningKeyShare) Validate() error {
+	if s == nil {
+		return errs.NewIsNil("signing key share is nil")
+	}
+	if s.Share.IsZero() {
+		return errs.NewIsZero("share can't be zero")
+	}
+	if s.PublicKey.IsIdentity() {
+		return errs.NewIsIdentity("public key can't be at infinity")
+	}
+	if !s.PublicKey.IsOnCurve() {
+		return errs.NewNotOnCurve("public key is not on curve")
+	}
+
+	if s.PublicKey.CurveName() == curves.ED25519Name {
+		edwardsPoint, ok := s.PublicKey.(*curves.PointEd25519)
+		if !ok {
+			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
+		}
+		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
+		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
+		if edwardsPoint.IsSmallOrder() {
+			return errs.NewFailed("public key is small order")
+		}
+	}
+	return nil
+}
+
+type PublicKeyShares struct {
+	Curve     *curves.Curve
+	PublicKey curves.Point
+	SharesMap map[IdentityKey]curves.Point
+}
+
+// TODO: write down validation (lambda trick)
+// func (p *PublicKeyShares) Validate() error {
+// 	derivedPublicKey := p.Curve.Point.Identity()
+// 	for _, share := range p.SharesMap {
+// 		derivedPublicKey = derivedPublicKey.Add(share)
+// 	}
+// 	if !derivedPublicKey.Equal(p.PublicKey) {
+// 		return errors.New("public key shares can't be combined to the entire public key")
+// 	}
+// 	return nil
+// }
 
 type CohortConfig struct {
 	CipherSuite  *CipherSuite
@@ -51,37 +107,37 @@ type CohortConfig struct {
 
 func (c *CohortConfig) Validate() error {
 	if c == nil {
-		return errors.New("cohort config is nil")
+		return errs.NewIsNil("cohort config is nil")
 	}
 
 	if err := c.CipherSuite.Validate(); err != nil {
-		return errors.Wrap(err, "ciphersuite is invalid")
+		return errs.WrapVerificationFailed(err, "ciphersuite is invalid")
 	}
 
 	if supported := protocol.Supported[c.Protocol]; !supported {
-		return errors.Errorf("protocol %s is not supported", c.Protocol)
+		return errs.NewInvalidArgument("protocol %s is not supported", c.Protocol)
 	}
 
 	if c.Threshold <= 0 {
-		return errors.New("threshold is nonpositive")
+		return errs.NewIncorrectCount("threshold is nonpositive")
 	}
 	if c.Threshold > c.TotalParties {
-		return errors.New("threshold is greater that total parties")
+		return errs.NewIncorrectCount("threshold is greater that total parties")
 	}
 	if c.TotalParties != len(c.Participants) {
-		return errors.New("number of provided participants is not equal to total parties")
+		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
 	}
 
 	c.participantHashSet = map[IdentityKey]bool{}
 	for _, identityKey := range c.Participants {
 		if c.participantHashSet[identityKey] {
-			return errors.New("found duplicate identity key")
+			return errs.NewDuplicate("found duplicate identity key")
 		}
 		c.participantHashSet[identityKey] = true
 	}
 
 	if c.SignatureAggregators == nil || len(c.SignatureAggregators) == 0 {
-		return errors.New("need to specify at least one signature aggregator")
+		return errs.NewIsNil("need to specify at least one signature aggregator")
 	}
 
 	return nil
@@ -104,10 +160,10 @@ func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
 func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	var result CohortConfig
 	if err := json.Unmarshal(data, &result); err != nil {
-		return errors.Wrap(err, "failed to unmarshal json")
+		return errs.WrapDeserializationFailed(err, "failed to unmarshal json")
 	}
 	if err := result.Validate(); err != nil {
-		return errors.Wrap(err, "cohort config is invalid")
+		return errs.WrapDeserializationFailed(err, "cohort config is invalid")
 	}
 	*c = result
 	return nil
@@ -140,7 +196,19 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	return copied
 }
 
-func SerializePublicKey(publicKey curves.Point) (string, error) {
-	encoded := base64.StdEncoding.EncodeToString(publicKey.ToAffineCompressed())
-	return encoded, nil
+func DeriveShamirIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityKey]int, myShamirId int) {
+	idToKey = make(map[int]IdentityKey)
+	keyToId = make(map[IdentityKey]int)
+	myShamirId = -1
+
+	for shamirIdMinusOne, identityKey := range identityKeys {
+		shamirId := shamirIdMinusOne + 1
+		idToKey[shamirId] = identityKey
+		keyToId[identityKey] = shamirId
+		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+			myShamirId = shamirId
+		}
+	}
+
+	return idToKey, keyToId, myShamirId
 }

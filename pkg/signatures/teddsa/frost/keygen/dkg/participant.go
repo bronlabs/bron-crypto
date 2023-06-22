@@ -1,72 +1,43 @@
 package dkg
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/shamir/pedersen"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 )
 
 var _ frost.Participant = (*DKGParticipant)(nil)
 
 type DKGParticipant struct {
-	prng io.Reader
-
-	MyIdentityKey      integration.IdentityKey
-	MyShamirId         int
-	myPartialPublicKey curves.Point
-	secretKeyShare     curves.Scalar
-
-	CohortConfig          *integration.CohortConfig
-	shamirIdToIdentityKey map[int]integration.IdentityKey
-	publicKey             curves.Point
-
-	round int
-	state *State
+	pedersenParty *pedersen.Participant
 }
 
 func (p *DKGParticipant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+	return p.pedersenParty.GetIdentityKey()
 }
 
 func (p *DKGParticipant) GetShamirId() int {
-	return p.MyShamirId
+	return p.pedersenParty.GetShamirId()
 }
 
 func (p *DKGParticipant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
+	return p.pedersenParty.GetCohortConfig()
 }
 
 func (p *DKGParticipant) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range p.CohortConfig.SignatureAggregators {
-		if signatureAggregator.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
-}
-
-type State struct {
-	r_i         curves.Scalar
-	phi         []byte
-	shareVector []*sharing.ShamirShare
-	commitments []curves.Point
+	return p.pedersenParty.GetCohortConfig().IsSignatureAggregator(p.GetIdentityKey())
 }
 
 func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*DKGParticipant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	party, err := pedersen.NewParticipant(identityKey, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}
-	result := &DKGParticipant{
-		MyIdentityKey: identityKey,
-		state:         &State{},
-		prng:          prng,
-		CohortConfig:  cohortConfig,
-	}
-	result.shamirIdToIdentityKey, _, result.MyShamirId = frost.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
-	result.round = 1
-	return result, nil
+	return &DKGParticipant{
+		pedersenParty: party,
+	}, nil
 }
