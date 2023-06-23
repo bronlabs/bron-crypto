@@ -1,8 +1,9 @@
 package interactive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -96,7 +97,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = frost.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
+	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = integration.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
 
 	cosigner.round = 1
 	return cosigner, nil

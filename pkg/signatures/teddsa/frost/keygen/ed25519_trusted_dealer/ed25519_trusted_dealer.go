@@ -2,8 +2,9 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -40,7 +41,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, _ := frost.DeriveShamirIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	shamirIdsToIdentityKeys, _, _ := integration.DeriveShamirIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
 	results := map[integration.IdentityKey]*frost.SigningKeyShare{}
 

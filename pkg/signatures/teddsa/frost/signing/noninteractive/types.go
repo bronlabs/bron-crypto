@@ -1,12 +1,12 @@
 package noninteractive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"sort"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/pkg/errors"
 )
 
@@ -152,7 +152,7 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 
 // We require that attested commitments within a presignature are sorted by the shamir id of the attestor.
 func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) error {
-	_, identityKeyToShamirId, _ := frost.DeriveShamirIds(nil, cohortConfig.Participants)
+	_, identityKeyToShamirId, _ := integration.DeriveShamirIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
 		return identityKeyToShamirId[attestedCommitments[i].Attestor] < identityKeyToShamirId[attestedCommitments[j].Attestor]
 	})

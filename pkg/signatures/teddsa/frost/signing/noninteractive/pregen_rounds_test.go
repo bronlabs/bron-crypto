@@ -8,8 +8,9 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -22,9 +23,9 @@ func pregenHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thre
 		Hash:  h,
 	}
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)

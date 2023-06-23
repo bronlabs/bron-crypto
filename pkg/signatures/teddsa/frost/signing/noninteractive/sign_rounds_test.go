@@ -12,10 +12,11 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/noninteractive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -100,10 +101,10 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 		Hash:  hash,
 	}
 
-	allIdentities, err := test_utils.MakeIdentities(cipherSuite, n)
+	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)

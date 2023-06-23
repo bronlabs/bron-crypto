@@ -1,8 +1,9 @@
 package noninteractive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -75,7 +76,7 @@ func NewNonInteractiveCosigner(
 		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
 	}
 
-	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := frost.DeriveShamirIds(identityKey, cohortConfig.Participants)
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveShamirIds(identityKey, cohortConfig.Participants)
 
 	presentPartiesHashSet := map[integration.IdentityKey]bool{}
 	for _, participant := range presentParties {
