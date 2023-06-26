@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/noninteractive"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/test_utils"
@@ -83,7 +84,7 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 			require.NoError(t, err)
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
+			err = signatures.EDDSAVerify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
 			require.NoError(t, err)
 		}
 	}

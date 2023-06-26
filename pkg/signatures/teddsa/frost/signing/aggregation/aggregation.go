@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 )
 
@@ -83,7 +84,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 }
 
 // TODO: condense/simplify
-func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*signatures.EDDSASignature, error) {
 	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
 	}
@@ -193,9 +194,9 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		z = z.Add(partialSignature.Zi)
 	}
 
-	sigma := &frost.Signature{R: sa.parameters.R, Z: z}
+	sigma := &signatures.EDDSASignature{R: sa.parameters.R, Z: z}
 
-	if err := frost.Verify(sa.CohortConfig.CipherSuite.Curve, sa.CohortConfig.CipherSuite.Hash, sigma, sa.PublicKey, sa.Message); err != nil {
+	if err := signatures.EDDSAVerify(sa.CohortConfig.CipherSuite.Curve, sa.CohortConfig.CipherSuite.Hash, sigma, sa.PublicKey, sa.Message); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not verify frost signature")
 	}
 	return sigma, nil

@@ -1,4 +1,4 @@
-package frost_test
+package signatures_test
 
 import (
 	"crypto/ed25519"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,12 +79,12 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			z, err := curve.Scalar.SetBytes(zBytes)
 			require.NoError(t, err)
 
-			signature := &frost.Signature{
+			signature := &signatures.EDDSASignature{
 				R: R,
 				Z: z,
 			}
 
-			err = frost.Verify(curve, h, signature, publicKey, message)
+			err = signatures.EDDSAVerify(curve, h, signature, publicKey, message)
 			require.Error(t, err)
 
 		})

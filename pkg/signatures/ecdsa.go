@@ -1,0 +1,82 @@
+package signatures
+
+import (
+	"crypto/ecdsa"
+	"hash"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
+)
+
+type ECDSASignature struct {
+	// V is not part of the ECDSA standard and is a bitcoin-concept that allows recovery of the public key from the signature,
+	// because you want to verify the signature coming from an "address", not a public key.
+	// The values of V are:
+	//     v = 0 if R.y is even (= quadratic residue mod q)
+	//     v = 1 if R.y is not even
+	//     v = v if signature is normalized (= r is R.x modulo reduced)
+	//     v = v + 2 if signature is not normalized
+	// Process descirbed here: https://en.bitcoin.it/wiki/Message_signing
+	// Note that V here is the same as recovery Id is EIP-155.
+	// Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
+	V    int
+	R, S curves.Scalar
+}
+
+func ECDSAVerify(hashFunction func() hash.Hash, signature *ECDSASignature, R, publicKey curves.Point, message []byte) error {
+	curve, err := curves.GetCurveByName(publicKey.CurveName())
+	if err != nil {
+		return errs.WrapInvalidCurve(err, "could not find curve of the public key")
+	}
+	ecdsaCurve, err := curve.ToEllipticCurve()
+	if err != nil {
+		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
+	}
+
+	if publicKey.IsIdentity() {
+		return errs.NewVerificationFailed("public key is at infinity")
+	}
+
+	if signature.V != 0 && signature.V != 1 {
+		return errs.NewVerificationFailed("v is not 0 or 1. v=%d", signature.V)
+	}
+
+	wR, ok := R.(curves.WeierstrassPoint)
+	if !ok {
+		return errs.NewFailed("cannot convert R to a type that allows coordinate usage")
+	}
+
+	if wR.X().Cmp(signature.R) != 0 {
+		return errs.NewVerificationFailed("provided signature's r is not the x coordinate of the provided R")
+	}
+
+	if wR.Y().IsEven() && signature.V != 0 {
+		return errs.NewVerificationFailed("R.y is even but v is nonzero")
+	}
+
+	if !wR.Y().IsEven() && signature.V == 0 {
+		return errs.NewVerificationFailed("R.y is not even but v is zero")
+	}
+
+	wPublicKey, ok := publicKey.(curves.WeierstrassPoint)
+	if !ok {
+		return errs.NewFailed("cannot convert public key to a type that allows coordinate usage")
+	}
+
+	ecdsaPublicKey := &ecdsa.PublicKey{
+		Curve: ecdsaCurve,
+		X:     wPublicKey.X().BigInt(),
+		Y:     wPublicKey.Y().BigInt(),
+	}
+
+	digest, err := hashing.Hash(hashFunction, message)
+	if err != nil {
+		return errs.NewFailed("couldnot hash the plaintext")
+	}
+
+	if ok := ecdsa.Verify(ecdsaPublicKey, digest, signature.R.BigInt(), signature.S.BigInt()); !ok {
+		return errs.NewVerificationFailed("ECDSA signature is invalid")
+	}
+	return nil
+}

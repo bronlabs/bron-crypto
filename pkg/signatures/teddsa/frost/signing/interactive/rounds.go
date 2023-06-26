@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/signing/aggregation"
@@ -57,7 +58,7 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	return partialSignature, nil
 }
 
-func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*frost.Signature, error) {
+func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*signatures.EDDSASignature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}

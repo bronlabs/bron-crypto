@@ -1,7 +1,6 @@
-package frost
+package dkls23
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 )
@@ -13,7 +12,3 @@ type Participant interface {
 
 type SigningKeyShare = signatures.SigningKeyShare
 type PublicKeyShares = signatures.PublicKeyShares
-
-type PartialSignature struct {
-	Zi curves.Scalar
-}

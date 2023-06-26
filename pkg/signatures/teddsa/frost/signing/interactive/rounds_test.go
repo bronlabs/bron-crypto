@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/teddsa/frost/test_utils"
 	"github.com/stretchr/testify/require"
@@ -64,23 +65,23 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 	require.NoError(t, err)
 
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
-	var signatures []*frost.Signature
+	var producedSignatures []*signatures.EDDSASignature
 	for i, participant := range participants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
 			signature, err := participant.Aggregate(message, mappedPartialSignatures)
-			signatures = append(signatures, signature)
+			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
-			err = frost.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
+			err = signatures.EDDSAVerify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
 			require.NoError(t, err)
 		}
 	}
-	require.NotEmpty(t, signatures)
+	require.NotEmpty(t, producedSignatures)
 
 	// all signatures the same
-	for i := 0; i < len(signatures); i++ {
-		for j := i + 1; j < len(signatures); j++ {
-			require.True(t, signatures[i].R.Equal(signatures[j].R))
-			require.Zero(t, signatures[i].Z.Cmp(signatures[j].Z))
+	for i := 0; i < len(producedSignatures); i++ {
+		for j := i + 1; j < len(producedSignatures); j++ {
+			require.True(t, producedSignatures[i].R.Equal(producedSignatures[j].R))
+			require.Zero(t, producedSignatures[i].Z.Cmp(producedSignatures[j].Z))
 		}
 	}
 }
