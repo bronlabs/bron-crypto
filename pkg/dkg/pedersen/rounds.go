@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/gtank/merlin"
 )
@@ -108,7 +108,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (*signatures.SigningKeyShare, *signatures.PublicKeyShares, error) {
+func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
 	if p.round != 3 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -200,7 +200,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 		return nil, nil, errs.NewFailed("did not calculate my public key share correctly")
 	}
 
-	publicKeyShares := &signatures.PublicKeyShares{
+	publicKeyShares := &threshold.PublicKeyShares{
 		Curve:     p.CohortConfig.CipherSuite.Curve,
 		PublicKey: publicKey,
 		SharesMap: publicKeySharesMap,
@@ -211,7 +211,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 	// }
 
 	p.round++
-	return &signatures.SigningKeyShare{
+	return &threshold.SigningKeyShare{
 		Share:     secretKeyShare,
 		PublicKey: publicKey,
 	}, publicKeyShares, nil

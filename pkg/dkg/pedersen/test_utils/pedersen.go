@@ -7,7 +7,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/pkg/errors"
 )
 
@@ -101,9 +101,9 @@ func MapDkgRound2OutputsToRound3Inputs(participants []*pedersen.Participant, rou
 	return round3BroadcastInputs, round3UnicastInputs
 }
 
-func DoDkgRound3(participants []*pedersen.Participant, round3BroadcastInputs []map[integration.IdentityKey]*pedersen.Round2Broadcast, round3UnicastInputs []map[integration.IdentityKey]*pedersen.Round2P2P) (signingKeyShares []*signatures.SigningKeyShare, publicKeyShares []*signatures.PublicKeyShares, err error) {
-	signingKeyShares = make([]*signatures.SigningKeyShare, len(participants))
-	publicKeyShares = make([]*signatures.PublicKeyShares, len(participants))
+func DoDkgRound3(participants []*pedersen.Participant, round3BroadcastInputs []map[integration.IdentityKey]*pedersen.Round2Broadcast, round3UnicastInputs []map[integration.IdentityKey]*pedersen.Round2P2P) (signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, err error) {
+	signingKeyShares = make([]*threshold.SigningKeyShare, len(participants))
+	publicKeyShares = make([]*threshold.PublicKeyShares, len(participants))
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i])
 		if err != nil {
