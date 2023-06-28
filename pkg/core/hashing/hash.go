@@ -51,7 +51,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
 
 	// step 1
-	ell := lenInBytes / 32 // size of the underlying field
+	ell := lenInBytes / native.FieldBytes
 
 	//step 2
 	if ell > 255 {
