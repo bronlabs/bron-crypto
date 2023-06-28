@@ -246,6 +246,15 @@ type PairingPoint interface {
 	MultiPairing(...PairingPoint) Scalar
 }
 
+// We need affine X and Y coordinates of K256 and P256 curves for ECDSA verification and recovery id calculation.
+// Since we don't have generics, it is too cumbersome to cast to the underlying struct each time.
+// We are calling it WeierstrassPoint because we don't have a better name for it.
+type WeierstrassPoint interface {
+	Point
+	X() Scalar
+	Y() Scalar
+}
+
 func pointMarshalBinary(point Point) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
