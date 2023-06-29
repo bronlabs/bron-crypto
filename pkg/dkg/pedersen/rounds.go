@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/gtank/merlin"
@@ -64,7 +64,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 
 	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 
-	dealer, err := sharing.NewFeldman(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
+	dealer, err := feldman.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
@@ -161,11 +161,11 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 				return nil, nil, errs.NewMissing("did not get a p2p message from sender with shamir id %d", senderShamirId)
 			}
 			receivedSecretKeyShare := p2pMessageFromSender.Xij
-			receivedShare := &sharing.ShamirShare{
+			receivedShare := &feldman.Share{
 				Id:    p.MyShamirId,
 				Value: receivedSecretKeyShare,
 			}
-			if err := sharing.FeldmanVerify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
+			if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort("abort from feldman (shamir id: %d)", senderShamirId)
 			}
 

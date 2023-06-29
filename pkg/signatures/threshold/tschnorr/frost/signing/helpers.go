@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
@@ -73,7 +73,7 @@ func ProducePartialSignature(
 		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 	}
 
-	shamir, err := sharing.NewShamir(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
+	dealer, err := shamir.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialize shamir methods")
 	}
@@ -81,7 +81,7 @@ func ProducePartialSignature(
 	for i := 0; i < len(sessionParticipants); i++ {
 		presentPartyShamirIds[i] = identityKeyToShamirId[sessionParticipants[i]]
 	}
-	lagrangeCoefficients, err := shamir.LagrangeCoeffs(presentPartyShamirIds)
+	lagrangeCoefficients, err := dealer.LagrangeCoefficients(presentPartyShamirIds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
 	}

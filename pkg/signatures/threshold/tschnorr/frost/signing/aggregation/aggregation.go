@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
 )
@@ -127,7 +127,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	}
 
 	if sa.HasIdentifiableAbort() {
-		shamirConfig, err := sharing.NewShamir(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
+		shamirConfig, err := shamir.NewDealer(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not initialize shamir config")
 		}
@@ -140,7 +140,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 				return nil, errs.NewMissing("could not find shamir id for the party")
 			}
 		}
-		lagrangeCoefficients, err := shamirConfig.LagrangeCoeffs(shamirIDs)
+		lagrangeCoefficients, err := shamirConfig.LagrangeCoefficients(shamirIDs)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 		}

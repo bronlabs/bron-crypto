@@ -5,10 +5,10 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
 )
 
@@ -32,11 +32,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
-	feldmanDealer, err := sharing.NewFeldman(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
-	_, shamirShares, err := feldmanDealer.Split(privateKey, prng)
+	_, shamirShares, err := dealer.Split(privateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}

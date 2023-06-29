@@ -1,10 +1,4 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-
-package sharing
+package shamir_test
 
 import (
 	crand "crypto/rand"
@@ -14,17 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 )
 
 func TestShamirSplitInvalidArgs(t *testing.T) {
 	curve := curves.ED25519()
-	_, err := NewShamir(0, 0, curve)
+	_, err := shamir.NewDealer(0, 0, curve)
 	require.NotNil(t, err)
-	_, err = NewShamir(3, 2, curve)
+	_, err = shamir.NewDealer(3, 2, curve)
 	require.NotNil(t, err)
-	_, err = NewShamir(1, 10, curve)
+	_, err = shamir.NewDealer(1, 10, curve)
 	require.NotNil(t, err)
-	scheme, err := NewShamir(2, 3, curve)
+	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Split(curve.NewScalar(), crand.Reader)
@@ -33,7 +28,7 @@ func TestShamirSplitInvalidArgs(t *testing.T) {
 
 func TestShamirCombineNoShares(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(2, 3, curve)
+	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Combine()
@@ -42,10 +37,10 @@ func TestShamirCombineNoShares(t *testing.T) {
 
 func TestShamirCombineDuplicateShare(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(2, 3, curve)
+	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	_, err = scheme.Combine([]*ShamirShare{
+	_, err = scheme.Combine([]*shamir.Share{
 		{
 			Id:    1,
 			Value: curve.NewScalar().New(3),
@@ -60,10 +55,10 @@ func TestShamirCombineDuplicateShare(t *testing.T) {
 
 func TestShamirCombineBadIdentifier(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(2, 3, curve)
+	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	shares := []*ShamirShare{
+	shares := []*shamir.Share{
 		{
 			Id:    0,
 			Value: curve.NewScalar().New(3),
@@ -75,7 +70,7 @@ func TestShamirCombineBadIdentifier(t *testing.T) {
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
-	shares[0] = &ShamirShare{
+	shares[0] = &shamir.Share{
 		Id:    4,
 		Value: curve.NewScalar().New(3),
 	}
@@ -85,7 +80,7 @@ func TestShamirCombineBadIdentifier(t *testing.T) {
 
 func TestShamirCombineSingle(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(2, 3, curve)
+	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
@@ -100,7 +95,7 @@ func TestShamirCombineSingle(t *testing.T) {
 // Test ComputeL function to compute Lagrange coefficients.
 func TestShamirComputeL(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(2, 2, curve)
+	scheme, err := shamir.NewDealer(2, 2, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	secret := curve.Scalar.Hash([]byte("test"))
@@ -111,7 +106,7 @@ func TestShamirComputeL(t *testing.T) {
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
-	lCoeffs, err := scheme.LagrangeCoeffs(identities)
+	lCoeffs, err := scheme.LagrangeCoefficients(identities)
 	require.Nil(t, err)
 	require.NotNil(t, lCoeffs)
 
@@ -125,7 +120,7 @@ func TestShamirComputeL(t *testing.T) {
 
 func TestShamirAllCombinations(t *testing.T) {
 	curve := curves.ED25519()
-	scheme, err := NewShamir(3, 5, curve)
+	scheme, err := shamir.NewDealer(3, 5, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
@@ -153,10 +148,10 @@ func TestShamirAllCombinations(t *testing.T) {
 	}
 }
 
-// Ensures that ShamirShare's un/marshal successfully.
+// Ensures that Share's un/marshal successfully.
 func TestMarshalJsonRoundTrip(t *testing.T) {
 	curve := curves.ED25519()
-	shares := []ShamirShare{
+	shares := []shamir.Share{
 		{0, curve.Scalar.New(300)},
 		{2, curve.Scalar.New(300000)},
 		{20, curve.Scalar.New(12812798)},
@@ -174,7 +169,7 @@ func TestMarshalJsonRoundTrip(t *testing.T) {
 		require.NotNil(t, input)
 
 		// Unmarshal and test
-		var out ShamirShare
+		var out shamir.Share
 		out.Value = curve.NewScalar()
 		err = json.Unmarshal(input, &out)
 		require.NoError(t, err)

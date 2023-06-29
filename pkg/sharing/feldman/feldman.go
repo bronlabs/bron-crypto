@@ -1,19 +1,17 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-
-package sharing
+package feldman
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 )
 
-func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
+type Share = shamir.Share
+
+func Verify(share *Share, commitments []curves.Point) (err error) {
 	curve, err := curves.GetCurveByName(commitments[0].CurveName())
 	if err != nil {
 		return errs.WrapInvalidCurve(err, "no such curve: %s", commitments[0].CurveName())
@@ -39,14 +37,14 @@ func FeldmanVerify(share *ShamirShare, commitments []curves.Point) (err error) {
 	}
 }
 
-type Feldman struct {
-	Threshold, Limit int
+type Dealer struct {
+	Threshold, Total int
 	Curve            *curves.Curve
 }
 
-func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
-	if limit < threshold {
-		return nil, errs.NewInvalidArgument("limit cannot be less than threshold")
+func NewDealer(threshold, total int, curve *curves.Curve) (*Dealer, error) {
+	if total < threshold {
+		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
 	}
 	if threshold < 2 {
 		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
@@ -55,19 +53,19 @@ func NewFeldman(threshold, limit int, curve *curves.Curve) (*Feldman, error) {
 		return nil, errs.NewIsNil("curve is nil")
 	}
 
-	return &Feldman{threshold, limit, curve}, nil
+	return &Dealer{threshold, total, curve}, nil
 }
 
-func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*ShamirShare, err error) {
+func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
 	if secret.IsZero() {
 		return nil, nil, errs.NewIsZero("secret is nil")
 	}
-	shamir := &Shamir{
-		threshold: f.Threshold,
-		limit:     f.Limit,
-		curve:     f.Curve,
+	shamir := &shamir.Dealer{
+		Threshold: f.Threshold,
+		Total:     f.Total,
+		Curve:     f.Curve,
 	}
-	shares, poly := shamir.getPolyAndShares(secret, prng)
+	shares, poly := shamir.GeneratePolynomialAndShares(secret, prng)
 	commitments = make([]curves.Point, f.Threshold)
 	for i := range commitments {
 		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
@@ -75,33 +73,33 @@ func (f Feldman) Split(secret curves.Scalar, prng io.Reader) (commitments []curv
 	return commitments, shares, nil
 }
 
-func (f Feldman) LagrangeCoeffs(shares map[int]*ShamirShare) (map[int]curves.Scalar, error) {
-	shamir := &Shamir{
-		threshold: f.Threshold,
-		limit:     f.Limit,
-		curve:     f.Curve,
+func (f Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {
+	shamir := &shamir.Dealer{
+		Threshold: f.Threshold,
+		Total:     f.Total,
+		Curve:     f.Curve,
 	}
 	identities := make([]int, 0)
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
-	return shamir.LagrangeCoeffs(identities)
+	return shamir.LagrangeCoefficients(identities)
 }
 
-func (f Feldman) Combine(shares ...*ShamirShare) (curves.Scalar, error) {
-	shamir := &Shamir{
-		threshold: f.Threshold,
-		limit:     f.Limit,
-		curve:     f.Curve,
+func (f Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
+	shamir := &shamir.Dealer{
+		Threshold: f.Threshold,
+		Total:     f.Total,
+		Curve:     f.Curve,
 	}
 	return shamir.Combine(shares...)
 }
 
-func (f Feldman) CombinePoints(shares ...*ShamirShare) (curves.Point, error) {
-	shamir := &Shamir{
-		threshold: f.Threshold,
-		limit:     f.Limit,
-		curve:     f.Curve,
+func (f Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
+	shamir := &shamir.Dealer{
+		Threshold: f.Threshold,
+		Total:     f.Total,
+		Curve:     f.Curve,
 	}
 	return shamir.CombinePoints(shares...)
 }
