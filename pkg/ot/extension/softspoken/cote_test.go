@@ -57,16 +57,22 @@ func TestCOTExtension(t *testing.T) {
 				require.NoError(t, err)
 			}
 		}
-		firstMessage, err := receiver.Round1Initialize(uniqueSessionId, choice)
+		round1Output, err := receiver.Round1Extend(uniqueSessionId, choice)
 		require.NoError(t, err)
-		responseTau, err := sender.Round2Transfer(uniqueSessionId, input, firstMessage)
+		round2Output, err := sender.Round2Extend(uniqueSessionId, round1Output)
 		require.NoError(t, err)
-		err = receiver.Round3Transfer(responseTau)
+		round3Output, err := receiver.Round3ProveConsistency(round2Output)
+		require.NoError(t, err)
+		err = sender.Round4CheckConsistency(round2Output, round3Output)
 		require.NoError(t, err)
 		for j := 0; j < L; j++ {
 			bit := simplest.ExtractBitFromByteVector(choice[:], j) == 1
 			for k := 0; k < KeyCount; k++ {
-				temp := sender.OutputAdditiveShares[j][k].Add(receiver.OutputAdditiveShares[j][k])
+				temp, err := curve.Scalar.SetBytes(sender.OutputCorrelations[k][j][:])
+				require.NoError(t, err)
+				temp2, err := curve.Scalar.SetBytes(receiver.OutputWords[j][:])
+				require.NoError(t, err)
+				temp = temp.Add(temp2)
 				if bit {
 					require.Equal(t, temp, input[j][k])
 				} else {

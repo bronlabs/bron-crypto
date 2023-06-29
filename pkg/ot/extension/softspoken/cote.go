@@ -1,3 +1,9 @@
+// Copyright Copper.co; All Rights Reserved.
+//
+// Package softspoken implements of maliciously secure 1-out-of-2 Correlated
+// Oblivious Transfer (COTe) protocol. We follow most of ROT^{κ,l} from
+// [KOS15](https://eprint.iacr.org/2015/546) (Figure 10), based on the designs
+// from [SoftSpokenOT](https://eprint.iacr.org/2022/192).
 package softspoken
 
 import (
@@ -12,10 +18,11 @@ import (
 // TODO: Binary field addition/multiplication outside of the curve (faster) for consistency.
 // TODO: refactor to use hash module
 //      -> Code hash function using AES primitives and use it for H
-//TODO: refactor to have a secure rand module in core
+// TODO: refactor to have a secure rand module in core
+// TODO: Add Transposition and Hashing to get a ROTe.
+// TODO: Add optional derandomization to get the final OTe
 
 const (
-	// below are the "cryptographic parameters", including computational and statistical,
 	// ------------------------ CONFIGURABLE PARAMETERS --------------------- //
 	// Kappa (κ) is the computational security parameter (λ in SoftSpokenOT)
 	Kappa = 256
