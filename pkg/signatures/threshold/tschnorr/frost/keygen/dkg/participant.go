@@ -7,37 +7,30 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
 )
 
-var _ frost.Participant = (*DKGParticipant)(nil)
-
-type DKGParticipant struct {
+type Participant struct {
 	pedersenParty *pedersen.Participant
 }
 
-func (p *DKGParticipant) GetIdentityKey() integration.IdentityKey {
+func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.pedersenParty.GetIdentityKey()
 }
 
-func (p *DKGParticipant) GetShamirId() int {
+func (p *Participant) GetShamirId() int {
 	return p.pedersenParty.GetShamirId()
 }
 
-func (p *DKGParticipant) GetCohortConfig() *integration.CohortConfig {
+func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.pedersenParty.GetCohortConfig()
 }
 
-func (p *DKGParticipant) IsSignatureAggregator() bool {
-	return p.pedersenParty.GetCohortConfig().IsSignatureAggregator(p.GetIdentityKey())
-}
-
-func NewDKGParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*DKGParticipant, error) {
+func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
 	party, err := pedersen.NewParticipant(identityKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}
-	return &DKGParticipant{
+	return &Participant{
 		pedersenParty: party,
 	}, nil
 }

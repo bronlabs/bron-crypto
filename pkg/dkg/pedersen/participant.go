@@ -57,7 +57,7 @@ func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integrati
 		prng:          prng,
 		CohortConfig:  cohortConfig,
 	}
-	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
 }
