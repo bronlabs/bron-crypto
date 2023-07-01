@@ -65,7 +65,6 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
 	sortedParticipants := integration.SortIdentityKeys(participants)
-
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
 	}

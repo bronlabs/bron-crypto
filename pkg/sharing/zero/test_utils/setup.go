@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/setup"
 )
 
-func MakeParticipants(curve *curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
+func MakeSetupParticipants(curve *curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
 	participants = make([]*setup.Participant, len(identities))
 	for i, identity := range identities {
 		participants[i], err = setup.NewParticipant(curve, identity, identities, nil, crand.Reader)
