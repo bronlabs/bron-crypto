@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+// size should match zero.LambdaBytes
 var h = sha3.New256
 
 type Round1Broadcast struct {
@@ -56,21 +57,22 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	sid := p.state.transcript.ExtractBytes([]byte("session id"), zero.LambdaBytes)
 
 	output := map[integration.IdentityKey]*Round2P2P{}
-	for i, participant := range p.Participants {
-		if participant.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+	for _, participant := range p.Participants {
+		sharingId := p.IdentityKeyToSharingId[participant]
+		if sharingId == p.MySharingId {
 			continue
 		}
 		randomBytes := zero.Seed{}
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
-			return nil, errs.NewFailed("could not produce random bytes for party number %d", i)
+			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
 		seedForThisParticipant, err := hashing.Hash(h, sid, randomBytes[:])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not produce seed for participant number %d", i)
+			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}
 		commitment, witness, err := commitments.Commit(h, seedForThisParticipant)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not commit to the seed for participant %d", i)
+			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with sharing id %d", sharingId)
 		}
 		p.state.sentSeeds[participant] = &committedSeedContribution{
 			seed:       seedForThisParticipant,
@@ -85,20 +87,84 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (zero.Seed, error) {
+func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (map[integration.IdentityKey]*Round3P2P, error) {
 	if p.round != 3 {
-		return zero.Seed{}, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
+	output := map[integration.IdentityKey]*Round3P2P{}
 	for _, participant := range p.Participants {
 		sharingId := p.IdentityKeyToSharingId[participant]
-		if participant.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+		if sharingId == p.MySharingId {
 			continue
 		}
 		message, exists := round2output[participant]
 		if !exists {
-			return zero.Seed{}, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
+			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
+		}
+		if message.Commitment == nil {
+			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty commitment", sharingId)
+		}
+		p.state.receivedSeeds[participant] = message.Commitment
+		contributed, exists := p.state.sentSeeds[participant]
+		if !exists {
+			return nil, errs.NewMissing("missing what I contributed to participant with sharing id %d", sharingId)
+		}
+		output[participant] = &Round3P2P{
+			Message: contributed.seed,
+			Witness: contributed.witness,
 		}
 	}
+	p.round++
+	return output, nil
+}
+
+func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P) (zero.PairwiseSeeds, error) {
+	if p.round != 4 {
+		return nil, errs.NewInvalidRound("round mismatch %d != 4", p.round)
+	}
+	pairwiseSeeds := zero.PairwiseSeeds{}
+	for _, participant := range p.Participants {
+		sharingId := p.IdentityKeyToSharingId[participant]
+		if sharingId == p.MySharingId {
+			continue
+		}
+		message, exists := round3output[participant]
+		if !exists {
+			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
+		}
+		commitment, exists := p.state.receivedSeeds[participant]
+		if !exists {
+			return nil, errs.NewMissing("do not have a commitment from participant with sharing id %d", sharingId)
+		}
+		if message.Message == nil {
+			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty message", sharingId)
+		}
+		if message.Witness == nil {
+			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty witness", sharingId)
+		}
+		if err := commitments.Open(h, message.Message, commitment, message.Witness); err != nil {
+			return nil, errs.NewIdentifiableAbort("commitment from participant with sharing id %d can't be opened", sharingId)
+		}
+		myContributedSeed, exists := p.state.sentSeeds[participant]
+		if !exists {
+			return nil, errs.NewMissing("what I contributed to the participant with sharing id %d is missing", sharingId)
+		}
+		orderedAppendedSeeds := []byte{}
+		if p.MySharingId < sharingId {
+			orderedAppendedSeeds = append(myContributedSeed.seed, message.Message...)
+		} else {
+			orderedAppendedSeeds = append(message.Message, myContributedSeed.seed...)
+		}
+		finalSeedBytes, err := hashing.Hash(h, orderedAppendedSeeds)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", sharingId)
+		}
+		finalSeed := zero.Seed{}
+		copy(finalSeed[:], finalSeedBytes)
+		pairwiseSeeds[participant] = finalSeed
+	}
+	p.round++
+	return pairwiseSeeds, nil
 }
 
 func sortSidContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {

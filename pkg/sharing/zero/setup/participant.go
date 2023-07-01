@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
 	"github.com/gtank/merlin"
 )
 
@@ -19,7 +18,6 @@ type Participant struct {
 	MySharingId   int
 	Participants  []integration.IdentityKey
 
-	SharingIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToSharingId map[integration.IdentityKey]int
 
 	state *State
@@ -28,7 +26,7 @@ type Participant struct {
 
 type State struct {
 	r_i           curves.Scalar
-	receivedSeeds map[integration.IdentityKey]zero.Seed
+	receivedSeeds map[integration.IdentityKey]commitments.Commitment
 	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
 	transcript    *merlin.Transcript
 }
@@ -46,6 +44,9 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
+	if len(participants) < 2 {
+		return nil, errs.NewInvalidArgument("need at least 2 participants")
+	}
 	participantHashSet := map[integration.IdentityKey]bool{}
 	for i, participant := range participants {
 		if participant == nil {
@@ -59,7 +60,7 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 	if _, exists := participantHashSet[identityKey]; !exists {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
-	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, participants)
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
@@ -75,10 +76,11 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 		MyIdentityKey:          identityKey,
 		MySharingId:            mySharingId,
 		Participants:           sortedParticipants,
-		SharingIdToIdentityKey: sharingIdToIdentityKey,
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		state: &State{
-			transcript: transcript,
+			transcript:    transcript,
+			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},
+			sentSeeds:     map[integration.IdentityKey]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil
