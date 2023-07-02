@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -17,7 +18,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
-
+	if cohortConfig.CipherSuite.Curve.Name != curves.ED25519Name {
+		return nil, errs.NewInvalidArgument("curve not supported")
+	}
+	if cohortConfig.Protocol != protocol.FROST {
+		return nil, errs.NewInvalidArgument("protocol not supported")
+	}
 	curve := curves.ED25519()
 	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(prng)
 	if err != nil {
