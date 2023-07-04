@@ -29,7 +29,7 @@
 //
 //
 
-// ----------------------------- Protocol F_COTe ---------------------------- //
+// ------------------------------ Protocol F_COTe --------------------------- //
 // PLAYERS: 2 parties, R (receiver) and S (sender).
 //
 // PARAMS:
@@ -42,43 +42,48 @@
 // # S-> α ∈ [L]group, the InputOpt.
 //
 // OUTPUTS:
-// # R-> γ ∈ [L]group, the DeltaOpt     s.t. γ = x • α + β
-// # S-> β ∈ [L]group, the Correlation  s.t. γ = x • α + β
+// # R-> z_B ∈ [L]group, the DeltaOpt       s.t. z_A = x • α + z_B
+// # S-> z_A ∈ [L]group, the Correlation    s.t. z_A = x • α + z_B
 //
 // STEPS:
 //
-//	# A base OT protocol to generate random 1|2-OT results to be used as seeds:
-//	  [κ × BaseOT]  (NOTE! The BaseOT roles are reversed w.r.t. the COTe roles)
-//	  ├----> R: (k^i_0, k^i_1)                                            ∈ [2]×[κ]bits   ∀i∈[κ]
-//	  └----> S: (Δ_i, k^i_{Δ_i})                                          ∈ 1 + [κ]bits   ∀i∈[κ]
-//	# Seeding a PRG with the BaseOT Options to extend them:
-//	  (Ext.1)   R: sample(x_i) ∈ [L']bits
-//	  (Ext.2)   R: t^i_0, t^i_1 = PRG(k^i_0), PRG(k^i_1)                  ∈ [2]×[L']bits  ∀i∈[κ]
-//	  .         S: t^i_{Δ_i}    = PRG(k^i_{Δ_i})                          ∈ [L']bits      ∀i∈[κ]
-//	  (Ext.3)   R: u^i = t^i_0 ⊕ t^i_1 ⊕ x_i                              ∈ [L']bits      ∀i∈[κ]
-//	  .            Send(u) => S                                           ∈ [L']×[κ]bits
-//	  (Ext.4)   S: q^i = Δ_i • u^i + t^i_{Δ_i}                            ∈ [L']bits      ∀i∈[κ]
-//	# A bit-level correlation used to check the extension consistency.
-//	  (Check.1) S: sample(χ_i)                                            ∈ [s]bits       ∀i∈[m]
-//	  .            Send(χ) => R                                           ∈ [s]×[m]bits
-//	  (Check.2) R: x_check = x^hat_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j       ∈ [2^s]
-//	  .                        └---where x^hat_j = x_{sj:s(j+1)}
-//	  .            t^i_check = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j ∈ [2^s]         ∀i∈[κ]
-//	  .                        └---where t^i_hat_j = t^i_{sj:s(j+1)}
-//	  .            Send(x_check, t^i_check) => S                          ∈ [s] + [s]×[κ]bits
-//	  (Check.3) S: q^i_check = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j • q^i_hat_j ∈ [2^s]         ∀i∈[κ]
-//	  .                        └---where q^i_hat_j = q^i_{sj:s(j+1)}
-//	  .            ABORT if  q^i_check != t^i_check + Δ_i • x_check       ∈ [2^s]         ∀i∈[κ]
-//	# A bit-level randomization to destroy the bit-level correlation.
-//	  (T&R.1)   R: transpose(t^i_0) ->t_j                                 ∈ [κ]bits       ∀j∈[L']
-//	  .         S: transpose(q^i) -> q_j                                  ∈ [κ]bits       ∀j∈[L']
-//	  (T&R.2)   R: v_x = Hash(j || t_j)                                   ∈ [κ]bits       ∀j∈[L]
-//	  .         S: v_0 = Hash(j || q_j)                                   ∈ [κ]bits       ∀j∈[L]
-//	  .         S: v_1 = Hash(j || (q_j + Δ) )                            ∈ [κ]bits       ∀j∈[L]
-//	# A field-level correlation to obtain the final result (in the curve).
-//	  (Derand.1) R: τ_j = ECP(v_0_j) - ECP(v_1_j) + α_j                   ∈ curve.Scalar  ∀j∈[L]
-//	  .                    └---where ECP(v) is the curve point obtained by mapping v to the curve
-//	  .            Send(τ) => S                                           ∈ [L]curve.Scalar
+//		# A base OT protocol to generate random 1|2-OT results to be used as seeds:
+//		  [κ × BaseOT]  (NOTE! The BaseOT roles are reversed w.r.t. the COTe roles)
+//		  ├----> R: (k^i_0, k^i_1)                                            ∈ [2]×[κ]bits   ∀i∈[κ]
+//		  └----> S: (Δ_i, k^i_{Δ_i})                                          ∈ 1 + [κ]bits   ∀i∈[κ]
+//		# Seeding a PRG with the BaseOT Options to extend them:
+//		  (Ext.1)   R: sample(x_i) ∈ [L']bits
+//		  (Ext.2)   R: t^i_0, t^i_1 = PRG(k^i_0), PRG(k^i_1)                  ∈ [2]×[L']bits  ∀i∈[κ]
+//		  .         S: t^i_{Δ_i}    = PRG(k^i_{Δ_i})                          ∈ [L']bits      ∀i∈[κ]
+//		  (Ext.3)   R: u^i = t^i_0 ⊕ t^i_1 ⊕ x_i                              ∈ [L']bits      ∀i∈[κ]
+//		  .            Send(u) => S                                           ∈ [L']×[κ]bits
+//		  (Ext.4)   S: q^i = Δ_i • u^i + t^i_{Δ_i}                            ∈ [L']bits      ∀i∈[κ]
+//		# A bit-level correlation used to check the extension consistency.
+//		  (Check.1) S: sample(χ_i)                                            ∈ [s]bits       ∀i∈[m]
+//		  .            Send(χ) => R                                           ∈ [s]×[m]bits
+//		  (Check.2) R: x_check = x^hat_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j       ∈ [2^s]
+//		  .                        └---where x^hat_j = x_{sj:s(j+1)}
+//		  .            t^i_check = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j ∈ [2^s]         ∀i∈[κ]
+//		  .                        └---where t^i_hat_j = t^i_{sj:s(j+1)}
+//		  .            Send(x_check, t^i_check) => S                          ∈ [s] + [s]×[κ]bits
+//		  (Check.3) S: q^i_check = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j • q^i_hat_j ∈ [2^s]         ∀i∈[κ]
+//		  .                        └---where q^i_hat_j = q^i_{sj:s(j+1)}
+//		  .            ABORT if  q^i_check != t^i_check + Δ_i • x_check       ∈ [2^s]         ∀i∈[κ]
+//		# A bit-level randomization to destroy the bit-level correlation.
+//		  (T&R.1)   R: transpose(t^i_0) ->t_j                                 ∈ [κ]bits       ∀j∈[L']
+//		  .         S: transpose(q^i) -> q_j                                  ∈ [κ]bits       ∀j∈[L']
+//		  (T&R.2)   R: v_x = Hash(j || t_j)                                   ∈ [κ]bits       ∀j∈[L]
+//		  .         S: v_0 = Hash(j || q_j)                                   ∈ [κ]bits       ∀j∈[L]
+//		  .         S: v_1 = Hash(j || (q_j + Δ) )                            ∈ [κ]bits       ∀j∈[L]
+//		# A field-level correlation to obtain the final result (in the curve).
+//		  (Derand.1) S:z_A_j = ECP(v_0_j)                                     ∈ curve.Scalar  ∀j∈[L]
+//	      .            τ_j = ECP(v_1_j) - z_A_j + α_j                         ∈ curve.Scalar  ∀j∈[L]
+//		  .                    └---where ECP(v) is the curve point obtained by mapping v to the curve
+//		  .            Send(τ) => S                                           ∈ [L]curve.Scalar
+//		  (Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1                 ∈ curve.Scalar  ∀j∈[L]
+//		  .                   =       ECP(v_x_j)  if x_j == 0
+//
+// -------------------------------------------------------------------------- //
 package softspoken
 
 import (
@@ -159,11 +164,8 @@ type Sender struct {
 	//    q^i = Δ_i • x + t^i
 	ExtCorrelations [Kappa][LPrimeBytes]byte
 
-	// OutBaseChoices (Δ_i)∈ [κ]bits are the choice bits from the base OTs.
-	OutBaseChoices *[]int
-
-	// OutChosenOpt (m_i) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
-	OutChosenOpt [L]curves.Scalar
+	// OutDeltaOpt (m_i) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
+	OutDeltaOpt [L]curves.Scalar
 
 	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
@@ -183,7 +185,6 @@ func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve) *
 func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve) *Sender {
 	return &Sender{
 		baseOtRecOutputs: baseOtResults,
-		OutBaseChoices:   &baseOtResults.RandomChoiceBits,
 		curve:            curve,
 	}
 }
@@ -302,7 +303,7 @@ func (sender *Sender) Round2Extend(
 
 	// (Derand.1) Derandomize by mapping to curve points and create the correlation
 	for j := 0; j < L; j++ {
-		sender.OutChosenOpt[j], err = sender.curve.Scalar.SetBytes(v_0[j][:])
+		sender.OutDeltaOpt[j], err = sender.curve.Scalar.SetBytes(v_0[j][:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
 		}
@@ -310,7 +311,7 @@ func (sender *Sender) Round2Extend(
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
 		}
-		round2Output.derandTau[j] = round2Output.derandTau[j].Sub(sender.OutChosenOpt[j]).Add(InputDeltaOpts[j])
+		round2Output.derandTau[j] = round2Output.derandTau[j].Sub(sender.OutDeltaOpt[j]).Add(InputDeltaOpts[j])
 	}
 	return round2Output, nil
 }
@@ -354,7 +355,7 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 		return nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
 	}
 
-	// (Derand.2) Derandomize and Correlate in the curve
+	// (Derand.2) Derandomize and Correlate in the curve (constant time)
 	var v_x_curve, v_x_curve_corr curves.Scalar
 	for j := 0; j < L; j++ {
 		v_x_curve, err = receiver.curve.Scalar.SetBytes(v_x[j][:])
