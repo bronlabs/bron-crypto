@@ -1,9 +1,35 @@
 // Copyright Copper.co; All Rights Reserved.
 //
 // Package softspoken implements of maliciously secure 1-out-of-2 Correlated
-// Oblivious Transfer (COTe) protocol. We follow most of ROT^{κ,l} from
+// Oblivious Transfer extension (COTe) protocol. We follow most of ROT^{κ,l} from
 // [KOS15](https://eprint.iacr.org/2015/546) (Figure 10), based on the designs
 // from [SoftSpokenOT](https://eprint.iacr.org/2022/192).
+
+// At high level, a 1-out-of-2 OT realizes this functionality:
+//	┌------┐					  ┌------------------┐               ┌--------┐
+//	|      |                      |                  |               |        |
+//	|      | (Opt_0, Opt_1) --->  |    1|2 base OT   | <--- (Choice) |        |
+//	|Sender|                      |                  |               |Receiver|
+//	|      | 					  └------------------┘               |		  |
+//	|      |                               └-------> (ChosenOpt) --> |		  |
+//	└------┘							    						 └--------┘
+//
+// In contrast, for "Correlated" OTs, we get:
+//  Correlation = Choice • (Opt_1 - Opt_0) + ChosenOpt
+//
+// The options, chosenOpt and correlation come from the same group (e.g. Z_2,
+// Z_{2^N}, F_p, elliptic curves), whereas the choice is always a single bit.
+
+// This protocol, played by a sender S and a receiver R, is semanticaly composed of:
+//   - A base OT protocol to generate some random 1|2-OT results:
+//     [κ × BaseOT]
+//     ├----> S: (k^i_0, k^i_1)        ∈ [κ]×[2][κ]bits
+//     └----> R: (Δ_i, k^i_{Δ_i})      ∈ [κ]bits, [κ]×[κ]bits
+//   - A PRG to extend the base OT results (Ext):
+//     [Ext.1] R: sample(x_i) ∈ [L']bits
+//   - A bit-level correlation used to check the extension consistency.
+//   - A bit-level randomization to destroy the bit-level correlation.
+//   - A field-level correlation to obtain the final result (in the curve).
 package softspoken
 
 import (
@@ -11,28 +37,28 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	uint128 "github.com/copperexchange/crypto-primitives-go/pkg/core/modular"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 	"golang.org/x/crypto/sha3"
 )
 
-// TODO: Binary field addition/multiplication outside of the curve (faster) for consistency.
+// TODO: Testing
+// TODO: Finish pseudocode above.
 // TODO: refactor to use hash module
 //      -> Code hash function using AES primitives and use it for H
 // TODO: refactor to have a secure rand module in core
-// TODO: Add Transposition and Hashing to get a ROTe.
-// TODO: Add optional derandomization to get the final OTe
 
 const (
 	// ------------------------ CONFIGURABLE PARAMETERS --------------------- //
-	// Kappa (κ) is the computational security parameter (λ in SoftSpokenOT)
+	// Kappa (κ) is the computational security parameter (a.k.a. λ in SoftSpokenOT)
 	Kappa = 256
 
 	// L is the batch size used in the cOT functionality.
 	L = 256
 
 	// s is the statistical security parameter. Must divide L (L%s=0) for SoftSpokenOT.
-	//  We set it to kappa in order to perform the validation directly in the curve.
-	s = 256
+	//  This defines the data type of the consistency check to 2^s bits (e.g. s=128 -> Uint128)
+	s = 128
 
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
 	// KeyCount is the number of scalars to choose from in the BaseOT, as well as
@@ -55,42 +81,42 @@ const (
 )
 
 type Receiver struct {
-	// baseOtSendOutputs () are the results of playing the sender role in a base
-	//  OT protocol. They serve as inputs to the COTe protocol.
-	baseOtSendOutputs *simplest.SenderOutput
+	// baseOtSendOptions (k^i_0, k^i_1) ∈ [2][κ][κ]bits are the options used while
+	//  of playing the sender in a base OT protocol. They are inputs to COTe.
+	baseOtSendOptions *simplest.SenderOutput
 
-	// ExpOTeResults (t^i) are the results of expanding the base OT results using a PRG.
-	ExpOTeResults [KeyCount][Kappa][LPrimeBytes]byte
+	// ExtPackChoices (x_i) ∈ [L']bits are the choice bits for the OTe.
+	ExtPackChoices [LPrimeBytes]byte
 
-	// OutExtPackChoices (x_i) are the choice bits from the base OTs.
-	OutExtPackChoices [LPrimeBytes]byte
+	// ExpOptions (t^i) ∈ [2][κ][L']bits are expansions of BaseOT results using a PRG.
+	ExpOptions [KeyCount][Kappa][LPrimeBytes]byte
 
-	// OutputWords (v_{{x_j},j}) are the results of hashing the expansion of the OTs.
-	OutputWords [L][KappaBytes]byte
+	// OutCorrelations (m_x) ∈ [L]curve.Scalar are the output "correlations" (in the curve).
+	OutCorrelations [L]curves.Scalar
 
 	curve           *curves.Curve
 	uniqueSessionId [simplest.DigestSize]byte // store this between rounds
 }
 
 type Sender struct {
-	// baseOtRecOutputs (Δ_i, k^i_{Δ_i}) are the results of playing the receiver
-	//  role in a base OT protocol. They serve as inputs to the COTe protocol.
+	// baseOtRecOutputs (Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits) are the results
+	// of playing the receiver in a base OT protocol. They are inputs of COTe.
 	baseOtRecOutputs *simplest.ReceiverOutput
 
-	// extChosenWords (t^i_{Δ_i}) are the results of expanding the base OT results using a PRG .
-	extChosenWords [Kappa][LPrimeBytes]byte
+	// ExtChosenOpt (t^i_{Δ_i}) are the expansion the base OT chosen option using a PRG
+	ExtChosenOpt [Kappa][LPrimeBytes]byte
 
-	// extCorrelations (q_i)∈ [κ][L']bits are the extended correlations, such that:
-	//    q_i = Δ_i • x + t_i
-	extCorrelations [Kappa][LPrimeBytes]byte
+	// ExtCorrelations (q_i) ∈ [κ][L']bits are the extended correlations, such that:
+	//    q^i = Δ_i • x + t^i
+	ExtCorrelations [Kappa][LPrimeBytes]byte
 
-	// OutputCorrelations (v_0_i, v_1_i) are the extended OT correlations after
-	//  transposition and randomization
-	OutputCorrelations [KeyCount][L][KappaBytes]byte
+	// OutBaseChoices (Δ_i)∈ [κ]bits are the choice bits from the base OTs.
+	OutBaseChoices *[]int
 
-	// OutputBasePackedChoices (Δ_i) are the choice bits from the base OTs.
-	OutputBasePackedChoices *[]byte
+	// OutChosenOpt (m_i) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
+	OutChosenOpt [L]curves.Scalar
 
+	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
 }
 
@@ -98,7 +124,7 @@ type Sender struct {
 // The `baseOtResults` are the results of playing the sender role in kappa baseOTs.
 func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve) *Receiver {
 	return &Receiver{
-		baseOtSendOutputs: baseOtResults,
+		baseOtSendOptions: baseOtResults,
 		curve:             curve,
 	}
 }
@@ -107,217 +133,217 @@ func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve) *
 // The `baseOtResults` are the results of playing the receiver role in kappa baseOTs.
 func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve) *Sender {
 	return &Sender{
-		baseOtRecOutputs:        baseOtResults,
-		OutputBasePackedChoices: &baseOtResults.PackedRandomChoiceBits,
-		curve:                   curve,
+		baseOtRecOutputs: baseOtResults,
+		OutBaseChoices:   &baseOtResults.RandomChoiceBits,
+		curve:            curve,
 	}
 }
 
 // Round1Output contains the expanded and masked PRG outputs u_i
 type Round1Output struct {
-	U [Kappa][LPrimeBytes]byte
+	u [Kappa][LPrimeBytes]byte
 }
 
 // Round1Extend uses the PRG to extend the basseOT results.
-func (receiver *Receiver) Round1Extend(uniqueSessionId [simplest.DigestSize]byte, InputPackedChoices [LBytes]byte) (*Round1Output, error) {
+func (receiver *Receiver) Round1Extend(
+	uniqueSessionId [KappaBytes]byte, // Used to "salt" the PRG
+	InputPackedChoices [LBytes]byte, // x_i ∈ [L]bits
+) (round1Output *Round1Output, err error) {
 
 	// Copy uniqueSessionId into receiver
 	copy(receiver.uniqueSessionId[:], uniqueSessionId[:])
 
-	// (E.1) Store the input choice vector and fill the rest with random values
-	copy(receiver.OutExtPackChoices[:LBytes], InputPackedChoices[:])
-	if _, err := rand.Read(receiver.OutExtPackChoices[LBytes:]); err != nil {
-		return nil, errs.WrapFailed(err, "sampling random bits for extended choice vector")
+	// (Ext.1) Store the input choices and fill the rest with random values
+	copy(receiver.ExtPackChoices[:LBytes], InputPackedChoices[:])
+	if _, err = rand.Read(receiver.ExtPackChoices[LBytes:]); err != nil {
+		return nil, errs.WrapFailed(err, "sampling random bits for extended choice vector (Ext.1)")
 	}
 
-	// (E.2) Expand the baseOT results using them as seed to the PRG
+	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	// expandedOtResults are the results of expanding the base OT results using a PRG.
 	for i := 0; i < Kappa; i++ {
 		for j := 0; j < KeyCount; j++ {
 			shake := sha3.NewCShake256(uniqueSessionId[:], []byte("Copper_Softspoken_COTe"))
-			if _, err := shake.Write(receiver.baseOtSendOutputs.OneTimePadEncryptionKeys[i][j][:]); err != nil {
-				return nil, errs.WrapFailed(err, "writing seed OT into shake in SoftSpoken COTe")
+			if _, err = shake.Write(receiver.baseOtSendOptions.OneTimePadEncryptionKeys[i][j][:]); err != nil {
+				return nil, errs.WrapFailed(err, "writing seed OT into shake in SoftSpoken COTe (Ext.2)")
 			}
 			// This is the core pseudorandom expansion of the secret OT input seeds k_i^0 and k_i^1
 			// use the uniqueSessionId as the "domain separator", and the _secret_ seed as the input
-			if _, err := shake.Read(receiver.ExpOTeResults[j][i][:]); err != nil {
-				return nil, errs.WrapFailed(err, "reading from shake in SoftSpoken COTe")
+			if _, err = shake.Read(receiver.ExpOptions[j][i][:]); err != nil {
+				return nil, errs.WrapFailed(err, "reading from shake in SoftSpoken COTe (Ext.2)")
 			}
 		}
 	}
 
-	// (E.3) Compute u_i and send it
-	round1Output := &Round1Output{}
+	// (Ext.3) Compute u_i and send it
 	for i := 0; i < Kappa; i++ {
 		for j := 0; j < LPrimeBytes; j++ {
-			round1Output.U[i][j] = receiver.ExpOTeResults[0][i][j] ^ receiver.ExpOTeResults[1][i][j] ^ receiver.OutExtPackChoices[j]
+			round1Output.u[i][j] = receiver.ExpOptions[0][i][j] ^ receiver.ExpOptions[1][i][j] ^ receiver.ExtPackChoices[j]
 		}
 	}
-
-	// (T&R.1) Transpose t
-	transposedOtResults := transposeBooleanMatrix(receiver.ExpOTeResults[0])
-
-	// (T&R.2) Hash the L first rows of t using the index as salt, get rid of the rest.
-	for i := int(0); i < L; i++ {
-		hash := sha3.New512()
-		idx_bytes := intToByteArr(i)
-		if _, err := hash.Write(idx_bytes[:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing index into Sha512 for SoftSpoken COTe")
-		}
-		if _, err := hash.Write(transposedOtResults[i][:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing transposed matrix into Sha512 for SoftSpoken COTe")
-		}
-		copy(receiver.OutputWords[i][:], hash.Sum(nil))
-	}
-
 	return round1Output, nil
 }
 
-// Round2Output contains the challenge chi_i.
+// Round2Output contains the random challenge for the consistency check.
 type Round2Output struct {
-	Chi [m + 1][sBytes]byte
+	randomCheckMatrix [m + 1][sBytes]byte // χ_i ∈ [L']bits
+	derandTau         [L]curves.Scalar    // m_i ∈ [L]curve.Scalar
 }
 
 // Round2Extend uses the PRG to extend the basseOT results. It also sends a
 // challenge to the receiver in order to check the consistency.
-func (sender *Sender) Round2Extend(uniqueSessionId [simplest.DigestSize]byte, Round1Output *Round1Output) (*Round2Output, error) {
+func (sender *Sender) Round2Extend(
+	uniqueSessionId [simplest.DigestSize]byte, // Used to "salt" the PRG
+	Round1Output *Round1Output, // u_i ∈ [L']bits
+	InputDeltaOpts [L]curves.Scalar, // α_i ∈ [L]curve.Scalar
+) (round2Output *Round2Output, err error) {
 
-	// (E.2) Expand the baseOT results using them as seed to the PRG
+	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	for i := 0; i < Kappa; i++ {
 		shake := sha3.NewCShake256(uniqueSessionId[:], []byte("Copper_Softspoken_COTe"))
 		if _, err := shake.Write(sender.baseOtRecOutputs.OneTimePadDecryptionKey[i][:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing seed OT into shake in SoftSpoken COTe")
+			return nil, errs.WrapFailed(err, "writing seed OT into shake in SoftSpoken COTe (Ext.2)")
 		}
 		// This is the core pseudorandom expansion of the secret OT input seeds k_i^0 and k_i^1
 		// use the uniqueSessionId as the "domain separator", and the _secret_ seed as the input
-		if _, err := shake.Read(sender.extChosenWords[i][:]); err != nil {
-			return nil, errs.WrapFailed(err, "reading from shake in COTe")
+		if _, err := shake.Read(sender.ExtChosenOpt[i][:]); err != nil {
+			return nil, errs.WrapFailed(err, "reading from shake in COTe (Ext.2)")
 		}
 	}
 
-	// (E.4) Compute q_i
+	// (Ext.4) Compute q_i (constant time)
+	for i := 0; i < Kappa; i++ {
+		// q_i = Δ_i • u_i + t_i
+		for j := 0; j < LPrimeBytes; j++ {
+			qiTemp := Round1Output.u[i][j] ^ sender.ExtChosenOpt[i][j]
+			if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
+				sender.ExtCorrelations[i][j] = qiTemp
+			} else {
+				sender.ExtCorrelations[i][j] = sender.ExtChosenOpt[i][j]
+			}
+		}
+	}
+
+	// (Check.1) Sample and send chi_i as challenge to check consistency
+	for i := 0; i < m+1; i++ {
+		if _, err := rand.Read(round2Output.randomCheckMatrix[i][:]); err != nil {
+			return nil, errs.WrapFailed(err, "sampling random bits for challenge chi (Check.1)")
+		}
+	}
+
+	// (T&R.1) Transpose q^i -> q_j and q^i+Δ -> q_j+Δ
+	q_j := transposeBooleanMatrix(sender.ExtCorrelations)
+	var q_j_pDelta [LPrime][KappaBytes]byte
+	copy(q_j_pDelta[:], q_j[:])
 	for i := 0; i < Kappa; i++ {
 		for j := 0; j < LPrimeBytes; j++ {
-			sender.extCorrelations[i][j] = sender.baseOtRecOutputs.PackedRandomChoiceBits[i]&Round1Output.U[i][j] ^ sender.extChosenWords[i][j]
+			q_j_pDelta[j][i] ^= sender.baseOtRecOutputs.PackedRandomChoiceBits[i]
 		}
 	}
 
-	// (C.1) Sample and send chi_i as challenge to check consistency
-	round2Output := &Round2Output{}
-	for i := 0; i < m+1; i++ {
-		if _, err := rand.Read(round2Output.Chi[i][:]); err != nil {
-			return nil, errs.WrapFailed(err, "sampling random bits for challenge chi")
-		}
+	// (T&R.3) Randomize by hashing the first L rows of q_j and q_j+Δ (throwing away the rest)
+	v_0, err := HashSalted(uniqueSessionId[:], q_j[:])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.3)")
+	}
+	v_1, err := HashSalted(uniqueSessionId[:], q_j_pDelta[:])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.3)")
 	}
 
-	// (T&R.1) Transpose
-	transposedExtCorrelations := transposeBooleanMatrix(sender.extCorrelations)
-
-	// (T&R.3) Hash the rows of q with/without Δ
-	maskedTransposedExtCorrelations := new([LPrimeBytes]byte)
-	for j := int(0); j < L; j++ {
-		hash := sha3.New256()
-		idx_bytes := intToByteArr(j)
-		if _, err := hash.Write(idx_bytes[:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing index into Sha512 for SoftSpoken COTe")
+	// (Derand.1) Derandomize by mapping to curve points and create the correlation
+	for j := 0; j < L; j++ {
+		sender.OutChosenOpt[j], err = sender.curve.Scalar.SetBytes(v_0[j][:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
 		}
-		// v_0_j = H (j || q_j)
-		if _, err := hash.Write(transposedExtCorrelations[j][:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing transposed q_j into Sha512 for SoftSpoken COTe")
+		round2Output.derandTau[j], err = sender.curve.Scalar.SetBytes(v_1[j][:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
 		}
-		// v_1_j = H (j || q_j + Δ)
-		copy(sender.OutputCorrelations[0][j][:], hash.Sum(nil))
-		for i := int(0); i < Kappa; i++ {
-			maskedTransposedExtCorrelations[i] = transposedExtCorrelations[j][i] ^ sender.baseOtRecOutputs.PackedRandomChoiceBits[i]
-		}
-		if _, err := hash.Write(maskedTransposedExtCorrelations[:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing transposed q_j + Delta into Sha512 for SoftSpoken COTe")
-		}
-		copy(sender.OutputCorrelations[1][j][:], hash.Sum(nil))
+		round2Output.derandTau[j] = round2Output.derandTau[j].Sub(sender.OutChosenOpt[j])
 	}
 	return round2Output, nil
 }
 
 // Round2Output this is Alice's response to Bob in COTe
 type Round3Output struct {
-	x_check curves.Scalar        // plain x in the protocol
-	t_check [Kappa]curves.Scalar // plain t^i in the protocol
+	x_check uint128.Uint128        // plain x in the protocol
+	t_check [Kappa]uint128.Uint128 // plain t^i in the protocol
 }
 
 // Round3ProveConsistency answers to the challenge of S.
-func (receiver *Receiver) Round3ProveConsistency(round2Output *Round2Output) (*Round3Output, error) {
-	var err error
+func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round3Output *Round3Output, err error) {
 
-	// (C.2) Compute the challenge response x, t^i \forall i \in [kappa]
-	round3Output := &Round3Output{}
+	// (Check.2) Compute the challenge response x, t^i \forall i \in [kappa]
 	// 		x = x^hat_{m+1} ...
-	round3Output.x_check, err = receiver.curve.Scalar.SetBytes(receiver.OutExtPackChoices[LBytes : LBytes+sBytes])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "Last OutExtPackChoices scalar from bytes for SoftSpoken COTe check")
-	}
-	// 		                ... + Σ{j=0}^{m-1} \chi_j • x_hat_j
+	round3Output.x_check = uint128.FromBytes(receiver.ExtPackChoices[LBytes : LBytes+sBytes])
+	// 		                ... + Σ{j=0}^{m-1} χ_j • x_hat_j
 	for j := 0; j < m; j++ {
-		x_hat_j, err := receiver.curve.Scalar.SetBytes(receiver.OutExtPackChoices[j*sBytes : (j+1)*sBytes])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "OutExtPackChoices scalar from bytes for SoftSpoken COTe check")
-		}
-		Chi_j, err := receiver.curve.Scalar.SetBytes(round2Output.Chi[j][j*sBytes : (j+1)*sBytes])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "Chi scalar from bytes for SoftSpoken COTe check")
-		}
-		round3Output.x_check = round3Output.x_check.Add(Chi_j.Mul(x_hat_j))
+		x_hat_j := uint128.FromBytes(receiver.ExtPackChoices[j*sBytes : (j+1)*sBytes])
+		Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][j*sBytes : (j+1)*sBytes])
+		round3Output.x_check = round3Output.x_check.AddWrap(Chi_j.MulWrap(x_hat_j))
 	}
 	// 		t^i = ...
 	for i := 0; i < Kappa; i++ {
 		//         ... t^i_hat_{m+1} ...
-		round3Output.t_check[i], err = receiver.curve.Scalar.SetBytes(receiver.ExpOTeResults[0][i][LBytes : LBytes+sBytes])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "Last ExpOTeResults scalar from bytes for SoftSpoken COTe check")
-		}
-		//                           ... + Σ{j=0}^{m-1} \chi_j • t^i_hat_j
+		round3Output.t_check[i] = uint128.FromBytes(receiver.ExpOptions[0][i][LBytes : LBytes+sBytes])
+		//                           ... + Σ{j=0}^{m-1} χ_j • t^i_hat_j
 		for j := 0; j < m; j++ {
-			t_hat_j, err := receiver.curve.Scalar.SetBytes(receiver.ExpOTeResults[0][i][j*sBytes : (j+1)*sBytes])
-			if err != nil {
-				return nil, errs.WrapFailed(err, "ExpOTeResults scalar from bytes for SoftSpoken COTe check")
-			}
-			Chi_j, err := receiver.curve.Scalar.SetBytes(round2Output.Chi[j][j*sBytes : (j+1)*sBytes]) // TODO: put in a single loop over j \in [0, m] with x_check
-			if err != nil {
-				return nil, errs.WrapFailed(err, "Chi scalar from bytes for SoftSpoken COTe check")
-			}
-			round3Output.t_check[i] = round3Output.t_check[i].Add(Chi_j.Mul(t_hat_j))
+			t_hat_j := uint128.FromBytes(receiver.ExpOptions[0][i][j*sBytes : (j+1)*sBytes])
+			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][j*sBytes : (j+1)*sBytes])
+			round3Output.t_check[i] = round3Output.t_check[i].AddWrap(Chi_j.MulWrap(t_hat_j))
+		}
+	}
+
+	// (T&R.1) Transpose t^i_0 into t_j
+	t_j := transposeBooleanMatrix(receiver.ExpOptions[0]) // t_j ∈ [L'][κ]bits
+
+	// (T&R.2) Hash L rows of t_j using the index as salt.
+	v_x, err := HashSalted(receiver.uniqueSessionId[:], t_j[:])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
+	}
+
+	// Derandomize and Correlate in the curve
+	var v_x_curve, v_x_curve_corr curves.Scalar
+	for j := 0; j < L; j++ {
+		v_x_curve, err = receiver.curve.Scalar.SetBytes(v_x[j][:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
+		}
+		v_x_curve_corr = round2Out.derandTau[j].Sub(v_x_curve)
+		if UnpackBit(j, receiver.ExtPackChoices[:]) {
+			receiver.OutCorrelations[j] = v_x_curve_corr
+		} else {
+			receiver.OutCorrelations[j] = v_x_curve
 		}
 	}
 	return round3Output, nil
 }
 
 // Round4CheckConsistency checks the consistency using the challenge response.
-func (sender *Sender) Round4CheckConsistency(round2Output *Round2Output, round3Output *Round3Output) error {
-	// (C.3) Check the consistency of the challenge response computing q^i
+func (sender *Sender) Round4CheckConsistency(round2Out *Round2Output, round3Output *Round3Output) error {
+	// (Check.3) Check the consistency of the challenge response computing q^i
 	for i := 0; i < Kappa; i++ {
 		// q^i = q^i_hat_{m+1} ...
-		q_check, err := sender.curve.Scalar.SetBytes(sender.extCorrelations[i][LBytes : LBytes+sBytes])
-		if err != nil {
-			return errs.WrapFailed(err, "Last extCorrelations scalar from bytes for SoftSpoken COTe check")
-		}
-		//         ... + Σ{j=0}^{m-1} \chi_j • q^i_hat_j
+		q_check := uint128.FromBytes(sender.ExtCorrelations[i][LBytes : LBytes+sBytes])
+		//                     ... + Σ{j=0}^{m-1} χ_j • q^i_hat_j
 		for j := 0; j < m; j++ {
-			q_hat_j, err := sender.curve.Scalar.SetBytes(sender.extCorrelations[i][j*sBytes : (j+1)*sBytes])
-			if err != nil {
-				return errs.WrapFailed(err, "extCorrelations scalar from bytes for SoftSpoken COTe check")
-			}
-			Chi_j, err := sender.curve.Scalar.SetBytes(round2Output.Chi[j][j*sBytes : (j+1)*sBytes])
-			if err != nil {
-				return errs.WrapFailed(err, "Chi scalar from bytes for SoftSpoken COTe check")
-			}
-			q_check = q_check.Add(Chi_j.Mul(q_hat_j))
+			q_hat_j := uint128.FromBytes(sender.ExtCorrelations[i][j*sBytes : (j+1)*sBytes])
+			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][j*sBytes : (j+1)*sBytes])
+			q_check = q_check.AddWrap(Chi_j.MulWrap(q_hat_j))
 		}
-		//  and checking q^i = t^i + \Delta_i • x \forall i \in [kappa]. If not, abort. //TODO, unpack bit to use individually.
-		Delta_i, err := sender.curve.Scalar.SetBytes(sender.baseOtRecOutputs.PackedRandomChoiceBits[i : i+1])
-		if err != nil {
-			return errs.WrapFailed(err, "Delta scalar from bytes for SoftSpoken COTe check")
+		//  and checking q^i = t^i + Δ_i • x   ∀ i ∈[κ:]. If not, abort.
+		// \in unicode: ∈
+		var q_expected uint128.Uint128
+		q_sum := round3Output.t_check[i].AddWrap(round3Output.x_check)
+		if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
+			q_expected = q_sum
+		} else {
+			q_expected = round3Output.t_check[i]
 		}
-		q_expected := round3Output.t_check[i].Add(Delta_i.Mul(round3Output.x_check))
-		if !q_check.Sub(q_expected).IsZero() {
+		if !q_check.SubWrap(q_expected).IsZero() {
 			return errs.NewIdentifiableAbort("q_check != q_expected")
 		}
 	}

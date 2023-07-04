@@ -1,5 +1,10 @@
 package softspoken
 
+import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"golang.org/x/crypto/sha3"
+)
+
 // the below code takes as input a `kappa` by `lPrime` _boolean_ matrix, whose rows are actually "compacted" as bytes.
 // so in actuality, it's a `kappa` by `lPrime >> 3 == cOtExtendedBlockSizeBytes` matrix of _bytes_.
 // its output is the same boolean matrix, but transposed, so it has dimensions `lPrime` by `kappa`.
@@ -88,4 +93,30 @@ func binaryFieldMul(A []byte, B []byte) []byte {
 		C[i] = byte(c[i>>3] >> (i & 0x07 << 3)) // truncate word to byte
 	}
 	return C
+}
+
+// HashSalted hashes the rows of a [L]×[κ] bit matrix, outputting a [L]×[κ] bit matrix.
+// The uniqueSessionId is used as a salt.
+func HashSalted(uniqueSessionId []byte, bufferIn [][KappaBytes]byte) (BufferOut [][KappaBytes]byte, e error) {
+	var bufferOut [L][KappaBytes]byte
+	for j := 0; j < L; j++ {
+		hash := sha3.New256()
+		idx_bytes := intToByteArr(j)
+		if _, err := hash.Write(idx_bytes[:]); err != nil {
+			return nil, errs.WrapFailed(err, "writing index into HashSalted")
+		}
+		if _, err := hash.Write(uniqueSessionId); err != nil {
+			return nil, errs.WrapFailed(err, "writing SessionID into HashSalted")
+		}
+		if _, err := hash.Write(bufferIn[j][:]); err != nil {
+			return nil, errs.WrapFailed(err, "reading from HashSalted")
+		}
+		copy(bufferOut[j][:], hash.Sum(nil))
+	}
+	return bufferOut[:], nil
+}
+
+// UnpackBit unpacks a single bit j from a byte array.
+func UnpackBit(j int, array []byte) (bit bool) {
+	return array[j>>3]>>(j&0x07)&0x01 == 1
 }
