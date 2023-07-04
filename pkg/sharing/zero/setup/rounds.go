@@ -143,7 +143,7 @@ func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P
 			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty witness", sharingId)
 		}
 		if err := commitments.Open(h, message.Message, commitment, message.Witness); err != nil {
-			return nil, errs.NewIdentifiableAbort("commitment from participant with sharing id %d can't be opened", sharingId)
+			return nil, errs.WrapIdentifiableAbort(err, "commitment from participant with sharing id %d can't be opened", sharingId)
 		}
 		myContributedSeed, exists := p.state.sentSeeds[participant]
 		if !exists {

@@ -26,6 +26,9 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+	if err := cohortConfig.Validate(); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	party, err := pedersen.NewParticipant(identityKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")

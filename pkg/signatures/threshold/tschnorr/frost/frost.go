@@ -14,6 +14,12 @@ type Participant interface {
 type SigningKeyShare = threshold.SigningKeyShare
 type PublicKeyShares = threshold.PublicKeyShares
 
+// TODO: Refactor and use this
+type Shard struct {
+	SigningKeyShare *SigningKeyShare
+	PublicKeyShares *PublicKeyShares
+}
+
 type PartialSignature struct {
 	Zi curves.Scalar
 }
