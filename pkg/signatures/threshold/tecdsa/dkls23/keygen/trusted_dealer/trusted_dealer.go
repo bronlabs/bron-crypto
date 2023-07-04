@@ -20,8 +20,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
-	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name {
-		return nil, errs.NewInvalidArgument("curve should be K256 where as it is %s", cohortConfig.CipherSuite.Curve.Name)
+	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name && cohortConfig.CipherSuite.Curve.Name != curves.P256Name {
+		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name)
 	}
 	if cohortConfig.Protocol != protocol.DKLS23 {
 		return nil, errs.NewInvalidArgument("protocol not supported")
@@ -38,7 +38,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 	privateKey, err := curve.Scalar.SetBigInt(privateKeyBigInt.X)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
+		return nil, errs.WrapDeserializationFailed(err, "could not convert go private key bytes to a knox scalar")
 	}
 	publicKey := curve.ScalarBaseMult(privateKey)
 
