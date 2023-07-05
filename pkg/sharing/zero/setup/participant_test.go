@@ -2,7 +2,6 @@ package setup
 
 import (
 	crand "crypto/rand"
-	"errors"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -11,21 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
-
-type mockedIdentityKey struct {
-	curve     *curves.Curve
-	publicKey curves.Point
-}
-
-func (k *mockedIdentityKey) PublicKey() curves.Point {
-	return k.publicKey
-}
-func (k *mockedIdentityKey) Sign(message []byte) []byte {
-	return []byte("mocked")
-}
-func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
-}
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
