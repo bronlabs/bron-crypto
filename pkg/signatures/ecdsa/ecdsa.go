@@ -18,7 +18,7 @@ type Signature struct {
 	//     v = 1 if R.y is not even
 	//     v = v if R.x is less than subgroup order
 	//     v = v + 2 if R.x is greater than subgroup order (but less than the field order which it always will be)
-	// Definition of recovery id descirbed here: https://en.bitcoin.it/wiki/Message_signing
+	// Definition of recovery id described here: https://en.bitcoin.it/wiki/Message_signing
 	// Recovery process itself described in 4.1.6: http://www.secg.org/sec1-v2.pdf
 	// Note that V here is the same as recovery Id is EIP-155.
 	// Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
