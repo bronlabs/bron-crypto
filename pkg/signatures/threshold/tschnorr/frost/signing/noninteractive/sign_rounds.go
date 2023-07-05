@@ -19,7 +19,7 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 		nic.SessionParticipants,
 		nic.SigningKeyShare,
 		d_i, e_i,
-		nic.D_alpha, nic.E_alpha,
+		nic.aggregationParameter.D_alpha, nic.aggregationParameter.E_alpha,
 		nic.ShamirIdToIdentityKey,
 		nic.IdentityKeyToShamirId,
 		nic.aggregationParameter,
@@ -33,8 +33,6 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 }
 
 func (nic *NonInteractiveCosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
-	nic.aggregationParameter.D_alpha = nic.D_alpha
-	nic.aggregationParameter.E_alpha = nic.E_alpha
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.SigningKeyShare.PublicKey, nic.PublicKeyShares, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
