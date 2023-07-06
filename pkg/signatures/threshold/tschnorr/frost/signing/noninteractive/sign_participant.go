@@ -76,7 +76,7 @@ func NewNonInteractiveCosigner(
 		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
 	}
 
-	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveShamirIds(identityKey, cohortConfig.Participants)
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 
 	presentPartiesHashSet := map[integration.IdentityKey]bool{}
 	for _, participant := range presentParties {

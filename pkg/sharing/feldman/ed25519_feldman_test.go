@@ -1,10 +1,4 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-
-package sharing
+package feldman_test
 
 import (
 	crand "crypto/rand"
@@ -13,18 +7,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 )
 
 var testCurve = curves.ED25519()
 
 func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
-	_, err := NewFeldman(0, 0, testCurve)
+	_, err := feldman.NewDealer(0, 0, testCurve)
 	require.NotNil(t, err)
-	_, err = NewFeldman(3, 2, testCurve)
+	_, err = feldman.NewDealer(3, 2, testCurve)
 	require.NotNil(t, err)
-	_, err = NewFeldman(1, 10, testCurve)
+	_, err = feldman.NewDealer(1, 10, testCurve)
 	require.NotNil(t, err)
-	scheme, err := NewFeldman(2, 3, testCurve)
+	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	_, _, err = scheme.Split(testCurve.NewScalar(), crand.Reader)
@@ -32,7 +28,7 @@ func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineNoShares(t *testing.T) {
-	scheme, err := NewFeldman(2, 3, testCurve)
+	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Combine()
@@ -40,10 +36,10 @@ func TestEd25519FeldmanCombineNoShares(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
-	scheme, err := NewFeldman(2, 3, testCurve)
+	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	_, err = scheme.Combine([]*ShamirShare{
+	_, err = scheme.Combine([]*shamir.Share{
 		{
 			Id:    1,
 			Value: testCurve.Scalar.New(3),
@@ -57,10 +53,10 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
-	scheme, err := NewFeldman(2, 3, testCurve)
+	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	shares := []*ShamirShare{
+	shares := []*shamir.Share{
 		{
 			Id:    0,
 			Value: testCurve.Scalar.New(3),
@@ -72,7 +68,7 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
-	shares[0] = &ShamirShare{
+	shares[0] = &shamir.Share{
 		Id:    4,
 		Value: testCurve.Scalar.New(3),
 	}
@@ -81,7 +77,7 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineSingle(t *testing.T) {
-	scheme, err := NewFeldman(2, 3, testCurve)
+	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
@@ -90,7 +86,7 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, shares)
 	for _, s := range shares {
-		err = FeldmanVerify(s, commitments)
+		err = feldman.Verify(s, commitments)
 		require.Nil(t, err)
 	}
 	secret2, err := scheme.Combine(shares...)
@@ -99,14 +95,14 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 }
 
 func TestEd25519FeldmanAllCombinations(t *testing.T) {
-	scheme, err := NewFeldman(3, 5, testCurve)
+	scheme, err := feldman.NewDealer(3, 5, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
 	secret := testCurve.Scalar.Hash([]byte("test"))
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	for _, s := range shares {
-		err = FeldmanVerify(s, commitments)
+		err = feldman.Verify(s, commitments)
 		require.Nil(t, err)
 	}
 	require.Nil(t, err)

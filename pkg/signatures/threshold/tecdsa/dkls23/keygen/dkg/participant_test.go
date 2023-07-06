@@ -51,7 +51,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
-		Protocol:             protocol.FROST,
+		Protocol:             protocol.DKLS23,
 		Threshold:            2,
 		TotalParties:         2,
 		Participants:         identityKeys,

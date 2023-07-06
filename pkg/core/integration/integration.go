@@ -145,19 +145,20 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	return copied
 }
 
-func DeriveShamirIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityKey]int, myShamirId int) {
+func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityKey]int, mySharingId int) {
+	identityKeys = SortIdentityKeys(identityKeys)
 	idToKey = make(map[int]IdentityKey)
 	keyToId = make(map[IdentityKey]int)
-	myShamirId = -1
+	mySharingId = -1
 
-	for shamirIdMinusOne, identityKey := range identityKeys {
-		shamirId := shamirIdMinusOne + 1
-		idToKey[shamirId] = identityKey
-		keyToId[identityKey] = shamirId
+	for sharingIdMinusOne, identityKey := range identityKeys {
+		sharingId := sharingIdMinusOne + 1
+		idToKey[sharingId] = identityKey
+		keyToId[identityKey] = sharingId
 		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
-			myShamirId = shamirId
+			mySharingId = sharingId
 		}
 	}
 
-	return idToKey, keyToId, myShamirId
+	return idToKey, keyToId, mySharingId
 }

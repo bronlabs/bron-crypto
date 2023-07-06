@@ -97,7 +97,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = integration.DeriveShamirIds(identityKey, cosigner.CohortConfig.Participants)
+	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = integration.DeriveSharingIds(identityKey, cosigner.CohortConfig.Participants)
 
 	cosigner.round = 1
 	return cosigner, nil

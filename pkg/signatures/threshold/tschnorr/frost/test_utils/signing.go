@@ -20,6 +20,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
 		}
+		// TODO: test for what happens if session participants are set to be different for different parties
 		participants[i], err = interactive_signing.NewInteractiveCosigner(identity, identities, signingKeyShares[i], publicKeyShares[i], cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err

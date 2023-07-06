@@ -4,10 +4,10 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
 )
 
 var _ integration.Participant = (*Participant)(nil)
@@ -43,7 +43,7 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 type State struct {
 	r_i         curves.Scalar
 	phi         []byte
-	shareVector []*sharing.ShamirShare
+	shareVector []*feldman.Share
 	commitments []curves.Point
 }
 
@@ -57,7 +57,7 @@ func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integrati
 		prng:          prng,
 		CohortConfig:  cohortConfig,
 	}
-	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveShamirIds(identityKey, result.CohortConfig.Participants)
+	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
 }

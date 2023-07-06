@@ -16,7 +16,7 @@ import (
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -71,12 +71,12 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		}
 	}
 
-	shamirDealer, err := sharing.NewShamir(threshold, n, curve)
+	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
 	require.NoError(t, err)
 	require.NotNil(t, shamirDealer)
-	shamirShares := make([]*sharing.ShamirShare, len(participants))
+	shamirShares := make([]*shamir.Share, len(participants))
 	for i := 0; i < len(participants); i++ {
-		shamirShares[i] = &sharing.ShamirShare{
+		shamirShares[i] = &shamir.Share{
 			Id:    participants[i].GetShamirId(),
 			Value: signingKeyShares[i].Share,
 		}
