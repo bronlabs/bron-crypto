@@ -435,7 +435,7 @@ func (p *BenchPoint) CurveName() string {
 	return btcec.S256().Name
 }
 
-func (p *BenchPoint) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *BenchPoint) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	biScalars := make([]*big.Int, len(scalars))
 	for i := 0; i < len(scalars); i++ {
 		biScalars[i] = scalars[i].BigInt()

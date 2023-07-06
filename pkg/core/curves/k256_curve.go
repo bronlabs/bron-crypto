@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -109,12 +110,12 @@ type PointK256 struct {
 	value *native.EllipticPoint
 }
 
-func (s *ScalarK256) Random(reader io.Reader) Scalar {
-	if reader == nil {
-		return nil
+func (s *ScalarK256) Random(prng io.Reader) Scalar {
+	if prng == nil {
+		panic("prng is nil")
 	}
 	var seed [64]byte
-	_, _ = reader.Read(seed[:])
+	_, _ = prng.Read(seed[:])
 	return s.Hash(seed[:])
 }
 
@@ -169,11 +170,14 @@ func (s *ScalarK256) New(value int) Scalar {
 }
 
 func (s *ScalarK256) Cmp(rhs Scalar) int {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*ScalarK256)
 	if ok {
 		return s.value.Cmp(r.value)
 	} else {
-		return -2
+		panic("rhs is not ScalarK256")
 	}
 }
 
@@ -224,7 +228,7 @@ func (s *ScalarK256) Add(rhs Scalar) Scalar {
 			value: fq.K256FqNew().Add(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 }
 
@@ -235,7 +239,7 @@ func (s *ScalarK256) Sub(rhs Scalar) Scalar {
 			value: fq.K256FqNew().Sub(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 }
 
@@ -246,7 +250,7 @@ func (s *ScalarK256) Mul(rhs Scalar) Scalar {
 			value: fq.K256FqNew().Mul(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 }
 
@@ -259,19 +263,19 @@ func (s *ScalarK256) Div(rhs Scalar) Scalar {
 	if ok {
 		v, wasInverted := fq.K256FqNew().Invert(r.value)
 		if !wasInverted {
-			return nil
+			panic("cannot invert rhs")
 		}
 		v.Mul(v, s.value)
 		return &ScalarK256{value: v}
 	} else {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 }
 
 func (s *ScalarK256) Exp(k Scalar) Scalar {
 	exponent, ok := k.(*ScalarK256)
 	if !ok {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 
 	value := fq.K256FqNew().Exp(s.value, exponent.value)
@@ -394,9 +398,9 @@ func (s *ScalarK256) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *PointK256) Random(reader io.Reader) Point {
+func (p *PointK256) Random(prng io.Reader) Point {
 	var seed [64]byte
-	_, _ = reader.Read(seed[:])
+	_, _ = prng.Read(seed[:])
 	return p.Hash(seed[:])
 }
 
@@ -405,7 +409,7 @@ func (p *PointK256) Hash(bytes []byte) Point {
 
 	// TODO: change hash to return an error also
 	if err != nil {
-		return nil
+		panic("cannot create Point from hash")
 	}
 
 	return &PointK256{value}
@@ -451,40 +455,40 @@ func (p *PointK256) Neg() Point {
 
 func (p *PointK256) Add(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointK256)
 	if ok {
 		value := secp256k1.K256PointNew().Add(p.value, r.value)
 		return &PointK256{value}
 	} else {
-		return nil
+		panic("rhs is not PointK256")
 	}
 }
 
 func (p *PointK256) Sub(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointK256)
 	if ok {
 		value := secp256k1.K256PointNew().Sub(p.value, r.value)
 		return &PointK256{value}
 	} else {
-		return nil
+		panic("rhs is not PointK256")
 	}
 }
 
 func (p *PointK256) Mul(rhs Scalar) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*ScalarK256)
 	if ok {
 		value := secp256k1.K256PointNew().Mul(p.value, r.value)
 		return &PointK256{value}
 	} else {
-		return nil
+		panic("rhs is not ScalarK256")
 	}
 }
 
@@ -595,29 +599,29 @@ func (p *PointK256) CurveName() string {
 	return p.value.Params.Name
 }
 
-func (p *PointK256) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointK256) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nPoints := make([]*native.EllipticPoint, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
 		ptv, ok := pt.(*PointK256)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointK256", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = ptv.value
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*ScalarK256)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid scalar type %s, expected ScalarK256", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.value
 	}
 	value := secp256k1.K256PointNew()
 	_, err := value.SumOfProducts(nPoints, nScalars)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &PointK256{value}
+	return &PointK256{value}, nil
 }
 
 func (p *PointK256) X() *native.Field {

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 
 	"filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
@@ -34,12 +35,12 @@ type PointEd25519 struct {
 var scOne, _ = edwards25519.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 var scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
 
-func (s *ScalarEd25519) Random(reader io.Reader) Scalar {
-	if reader == nil {
-		return nil
+func (s *ScalarEd25519) Random(prng io.Reader) Scalar {
+	if prng == nil {
+		panic("prng in nil")
 	}
 	var seed [64]byte
-	_, _ = reader.Read(seed[:])
+	_, _ = prng.Read(seed[:])
 	return s.Hash(seed[:])
 }
 
@@ -49,7 +50,7 @@ func (s *ScalarEd25519) Hash(bytes []byte) Scalar {
 	v.BytesInto(&data)
 	value, err := edwards25519.NewScalar().SetCanonicalBytes(data[:])
 	if err != nil {
-		return nil
+		panic("cannot set bytes")
 	}
 	return &ScalarEd25519{value}
 }
@@ -103,7 +104,7 @@ func (s *ScalarEd25519) New(input int) Scalar {
 	data[3] = byte(i >> 24)
 	value, err := edwards25519.NewScalar().SetUniformBytes(data[:])
 	if err != nil {
-		return nil
+		panic("cannot set bytes")
 	}
 	if input < 0 {
 		value.Negate(value)
@@ -160,7 +161,7 @@ func (s *ScalarEd25519) Add(rhs Scalar) Scalar {
 			value: edwards25519.NewScalar().Add(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarEd25519")
 	}
 }
 
@@ -171,7 +172,7 @@ func (s *ScalarEd25519) Sub(rhs Scalar) Scalar {
 			value: edwards25519.NewScalar().Subtract(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarEd25519")
 	}
 }
 
@@ -182,18 +183,18 @@ func (s *ScalarEd25519) Mul(rhs Scalar) Scalar {
 			value: edwards25519.NewScalar().Multiply(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarEd25519")
 	}
 }
 
 func (s *ScalarEd25519) MulAdd(y, z Scalar) Scalar {
 	yy, ok := y.(*ScalarEd25519)
 	if !ok {
-		return nil
+		panic("y is not ScalarEd25519")
 	}
 	zz, ok := z.(*ScalarEd25519)
 	if !ok {
-		return nil
+		panic("z is not ScalarEd25519")
 	}
 	return &ScalarEd25519{value: edwards25519.NewScalar().MultiplyAdd(s.value, yy.value, zz.value)}
 }
@@ -205,14 +206,14 @@ func (s *ScalarEd25519) Div(rhs Scalar) Scalar {
 		value.Multiply(value, s.value)
 		return &ScalarEd25519{value}
 	} else {
-		return nil
+		panic("rhs is not ScalarEd25519")
 	}
 }
 
 func (s *ScalarEd25519) Exp(k Scalar) Scalar {
 	exp, ok := k.(*ScalarEd25519)
 	if !ok {
-		return nil
+		panic("k is not ScalarEd25519")
 	}
 
 	v := new(ScalarEd25519).One()
@@ -454,39 +455,39 @@ func (p *PointEd25519) Neg() Point {
 
 func (p *PointEd25519) Add(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs in nil")
 	}
 	r, ok := rhs.(*PointEd25519)
 	if ok {
 		return &PointEd25519{value: edwards25519.NewIdentityPoint().Add(p.value, r.value)}
 	} else {
-		return nil
+		panic("rhs in not PointEd25519")
 	}
 }
 
 func (p *PointEd25519) Sub(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs in nil")
 	}
 	r, ok := rhs.(*PointEd25519)
 	if ok {
 		rTmp := edwards25519.NewIdentityPoint().Negate(r.value)
 		return &PointEd25519{value: edwards25519.NewIdentityPoint().Add(p.value, rTmp)}
 	} else {
-		return nil
+		panic("rhs in not PointEd25519")
 	}
 }
 
 func (p *PointEd25519) Mul(rhs Scalar) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs in nil")
 	}
 	r, ok := rhs.(*ScalarEd25519)
 	if ok {
 		value := edwards25519.NewIdentityPoint().ScalarMult(r.value, p.value)
 		return &PointEd25519{value}
 	} else {
-		return nil
+		panic("rhs in not ScalarEd25519")
 	}
 }
 
@@ -494,14 +495,14 @@ func (p *PointEd25519) Mul(rhs Scalar) Point {
 // is a function for mangling the bits of a (formerly
 // mathematically well-defined) "scalar" and multiplying it to produce a
 // public key.
-func (p *PointEd25519) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *ScalarEd25519) *PointEd25519 {
+func (p *PointEd25519) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *ScalarEd25519) (*PointEd25519, error) {
 	data := rhs.value.Bytes()
 	s, err := edwards25519.NewScalar().SetBytesWithClamping(data[:])
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	value := edwards25519.NewIdentityPoint().ScalarBaseMult(s)
-	return &PointEd25519{value}
+	return &PointEd25519{value}, nil
 }
 
 func (p *PointEd25519) Equal(rhs Point) bool {
@@ -646,42 +647,42 @@ func (p *PointEd25519) CurveName() string {
 	return ED25519Name
 }
 
-func (p *PointEd25519) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointEd25519) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nScalars := make([]*edwards25519.Scalar, len(scalars))
 	nPoints := make([]*edwards25519.Point, len(points))
 	for i, sc := range scalars {
 		s, err := edwards25519.NewScalar().SetCanonicalBytes(sc.Bytes())
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		nScalars[i] = s
 	}
 	for i, pt := range points {
 		pp, ok := pt.(*PointEd25519)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointEd25519", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = pp.value
 	}
 	pt := edwards25519.NewIdentityPoint().MultiScalarMult(nScalars, nPoints)
-	return &PointEd25519{value: pt}
+	return &PointEd25519{value: pt}, nil
 }
 
-func (p *PointEd25519) VarTimeDoubleScalarBaseMult(a Scalar, A Point, b Scalar) Point {
+func (p *PointEd25519) VarTimeDoubleScalarBaseMult(a Scalar, A Point, b Scalar) (Point, error) {
 	AA, ok := A.(*PointEd25519)
 	if !ok {
-		return nil
+		return nil, errors.Errorf("A is %s, expected PointEd25519", reflect.TypeOf(A).Name())
 	}
 	aa, ok := a.(*ScalarEd25519)
 	if !ok {
-		return nil
+		return nil, errors.Errorf("a is %s, expected PointEd25519", reflect.TypeOf(a).Name())
 	}
 	bb, ok := b.(*ScalarEd25519)
 	if !ok {
-		return nil
+		return nil, errors.Errorf("b is %s, expected PointEd25519", reflect.TypeOf(b).Name())
 	}
 	value := edwards25519.NewIdentityPoint().VarTimeDoubleScalarBaseMult(aa.value, AA.value, bb.value)
-	return &PointEd25519{value}
+	return &PointEd25519{value}, nil
 }
 
 func (p *PointEd25519) MarshalBinary() ([]byte, error) {

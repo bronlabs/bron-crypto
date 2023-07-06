@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sync"
 
 	"golang.org/x/crypto/blake2b"
@@ -628,17 +629,17 @@ func (p *PointPallas) CurveName() string {
 	return PallasName
 }
 
-func (p *PointPallas) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointPallas) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	eps := make([]*Ep, len(points))
 	for i, pt := range points {
 		ps, ok := pt.(*PointPallas)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
 		}
 		eps[i] = ps.value
 	}
 	value := p.value.SumOfProducts(eps, scalars)
-	return &PointPallas{value}
+	return &PointPallas{value}, nil
 }
 
 func (p *PointPallas) MarshalBinary() ([]byte, error) {

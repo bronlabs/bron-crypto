@@ -219,11 +219,11 @@ func TestScalarBls12381G1Serialize(t *testing.T) {
 func TestScalarBls12381G1Nil(t *testing.T) {
 	bls12381G1 := BLS12381G1()
 	one := bls12381G1.Scalar.New(1)
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, one.Div(nil))
-	require.Nil(t, bls12381G1.Scalar.Random(nil))
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.Div(nil) })
+	require.Panics(t, func() { bls12381G1.Scalar.Random(nil) })
 	require.Equal(t, one.Cmp(nil), -2)
 	_, err := bls12381G1.Scalar.SetBigInt(nil)
 	require.Error(t, err)
@@ -367,10 +367,10 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 func TestPointBls12381G2Nil(t *testing.T) {
 	bls12381G2 := BLS12381G2()
 	one := bls12381G2.Point.Generator()
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, bls12381G2.Scalar.Random(nil))
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { bls12381G2.Scalar.Random(nil) })
 	require.False(t, one.Equal(nil))
 	_, err := bls12381G2.Scalar.SetBigInt(nil)
 	require.Error(t, err)
@@ -506,10 +506,10 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 func TestPointBls12381G1Nil(t *testing.T) {
 	bls12381G1 := BLS12381G1()
 	one := bls12381G1.Point.Generator()
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, bls12381G1.Scalar.Random(nil))
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { bls12381G1.Scalar.Random(nil) })
 	require.False(t, one.Equal(nil))
 	_, err := bls12381G1.Scalar.SetBigInt(nil)
 	require.Error(t, err)
@@ -528,7 +528,8 @@ func TestPointBls12381G1SumOfProducts(t *testing.T) {
 		new(ScalarBls12381).New(11),
 		new(ScalarBls12381).New(12),
 	}
-	rhs := lhs.SumOfProducts(points, scalars)
+	rhs, err := lhs.SumOfProducts(points, scalars)
+	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
 }

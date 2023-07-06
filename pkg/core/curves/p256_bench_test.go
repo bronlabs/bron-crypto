@@ -12,8 +12,10 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core"
@@ -646,12 +648,12 @@ func (p *BenchPointP256) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (p *BenchPointP256) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *BenchPointP256) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nScalars := make([]*big.Int, len(scalars))
 	for i, sc := range scalars {
 		s, ok := sc.(*BenchScalarP256)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("scalar is %s, expected BenchScalarP256", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.value
 	}

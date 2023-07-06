@@ -66,7 +66,7 @@ const scalarBytes = 32
 type Scalar interface {
 	// Random returns a random scalar using the provided reader
 	// to retrieve bytes
-	Random(reader io.Reader) Scalar
+	Random(prng io.Reader) Scalar
 	// Hash the specific bytes in a manner to yield a
 	// uniformly distributed scalar
 	Hash(bytes []byte) Scalar
@@ -216,7 +216,7 @@ func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 
 // Point represents an elliptic curve point
 type Point interface {
-	Random(reader io.Reader) Point
+	Random(prng io.Reader) Point
 	Hash(bytes []byte) Point
 	Identity() Point
 	Generator() Point
@@ -236,7 +236,7 @@ type Point interface {
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
 	CurveName() string
-	SumOfProducts(points []Point, scalars []Scalar) Point
+	SumOfProducts(points []Point, scalars []Scalar) (Point, error)
 }
 
 type PairingPoint interface {
@@ -489,16 +489,16 @@ func GetCurveByName(name string) (*Curve, error) {
 	}
 }
 
-func GetPairingCurveByName(name string) *PairingCurve {
+func GetPairingCurveByName(name string) (*PairingCurve, error) {
 	switch name {
 	case BLS12381G1Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint())
+		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
 	case BLS12381G2Name:
-		return BLS12381(BLS12381G2().NewIdentityPoint())
+		return BLS12381(BLS12381G2().NewIdentityPoint()), nil
 	case BLS12831Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint())
+		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
 	default:
-		return nil
+		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
 }
 
@@ -789,9 +789,9 @@ type sswuParams struct {
 //
 // This algorithm is adapted from section 4 of <https://eprint.iacr.org/2012/549.pdf>.
 // and https://cacr.uwaterloo.ca/techreports/2010/cacr2010-26.pdf
-func sumOfProductsPippenger(points []Point, scalars []*big.Int) Point {
+func sumOfProductsPippenger(points []Point, scalars []*big.Int) (Point, error) {
 	if len(points) != len(scalars) {
-		return nil
+		return nil, errors.New("point and scalar arrays lengths mismatch")
 	}
 
 	const w = 6
@@ -831,5 +831,5 @@ func sumOfProductsPippenger(points []Point, scalars []*big.Int) Point {
 		}
 		acc = acc.Add(windows[i])
 	}
-	return acc
+	return acc, nil
 }
