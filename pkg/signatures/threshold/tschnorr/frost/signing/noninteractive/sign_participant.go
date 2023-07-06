@@ -29,9 +29,6 @@ type NonInteractiveCosigner struct {
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
 
-	// The following correspond to the right presignature index
-	D_alpha             map[integration.IdentityKey]curves.Point
-	E_alpha             map[integration.IdentityKey]curves.Point
 	myPrivateNoncePairs []*PrivateNoncePair
 
 	aggregationParameter *aggregation.SignatureAggregatorParameters
@@ -137,9 +134,10 @@ func NewNonInteractiveCosigner(
 		ShamirIdToIdentityKey:        shamirIdToIdentityKey,
 		IdentityKeyToShamirId:        identityKeyToShamirId,
 		SessionParticipants:          presentParties,
-		D_alpha:                      D_alpha,
-		E_alpha:                      E_alpha,
 		myPrivateNoncePairs:          privateNoncePairs,
-		aggregationParameter:         &aggregation.SignatureAggregatorParameters{},
+		aggregationParameter: &aggregation.SignatureAggregatorParameters{
+			D_alpha: D_alpha,
+			E_alpha: E_alpha,
+		},
 	}, nil
 }
