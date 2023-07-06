@@ -209,12 +209,12 @@ func TestScalarEd25519Serialize(t *testing.T) {
 func TestScalarEd25519Nil(t *testing.T) {
 	ed25519 := ED25519()
 	one := ed25519.Scalar.New(1)
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, one.Div(nil))
-	require.Nil(t, ed25519.Scalar.Random(nil))
-	require.Equal(t, one.Cmp(nil), -2)
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.Div(nil) })
+	require.Panics(t, func() { ed25519.Scalar.Random(nil) })
+	require.Panics(t, func() { one.Cmp(nil) })
 	_, err := ed25519.Scalar.SetBigInt(nil)
 	require.Error(t, err)
 }
@@ -367,10 +367,10 @@ func TestPointEd25519Serialize(t *testing.T) {
 func TestPointEd25519Nil(t *testing.T) {
 	ed25519 := ED25519()
 	one := ed25519.Point.Generator()
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, ed25519.Scalar.Random(nil))
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { ed25519.Scalar.Random(nil) })
 	require.False(t, one.Equal(nil))
 	_, err := ed25519.Scalar.SetBigInt(nil)
 	require.Error(t, err)
@@ -389,7 +389,8 @@ func TestPointEd25519SumOfProducts(t *testing.T) {
 		new(ScalarEd25519).New(11),
 		new(ScalarEd25519).New(12),
 	}
-	rhs := lhs.SumOfProducts(points, scalars)
+	rhs, err := lhs.SumOfProducts(points, scalars)
+	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
 }
@@ -401,7 +402,8 @@ func TestPointEd25519VarTimeDoubleScalarBaseMult(t *testing.T) {
 	b := curve.Scalar.New(77)
 	H, ok := h.(*PointEd25519)
 	require.True(t, ok)
-	rhs := H.VarTimeDoubleScalarBaseMult(a, H, b)
+	rhs, err := H.VarTimeDoubleScalarBaseMult(a, H, b)
+	require.NoError(t, err)
 	lhs := h.Mul(a).Add(curve.Point.Generator().Mul(b))
 	require.True(t, lhs.Equal(rhs))
 }

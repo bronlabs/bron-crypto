@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sync"
 
 	"github.com/copperexchange/crypto-primitives-go/internal"
@@ -107,12 +108,12 @@ type PointP256 struct {
 	value *native.EllipticPoint
 }
 
-func (s *ScalarP256) Random(reader io.Reader) Scalar {
-	if reader == nil {
-		return nil
+func (s *ScalarP256) Random(prng io.Reader) Scalar {
+	if prng == nil {
+		panic("prng is nil")
 	}
 	var seed [64]byte
-	_, _ = reader.Read(seed[:])
+	_, _ = prng.Read(seed[:])
 	return s.Hash(seed[:])
 }
 
@@ -167,11 +168,14 @@ func (s *ScalarP256) New(value int) Scalar {
 }
 
 func (s *ScalarP256) Cmp(rhs Scalar) int {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*ScalarP256)
 	if ok {
 		return s.value.Cmp(r.value)
 	} else {
-		return -2
+		panic("rhs is not ScalarP256")
 	}
 }
 
@@ -222,7 +226,7 @@ func (s *ScalarP256) Add(rhs Scalar) Scalar {
 			value: fq.P256FqNew().Add(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 }
 
@@ -233,7 +237,7 @@ func (s *ScalarP256) Sub(rhs Scalar) Scalar {
 			value: fq.P256FqNew().Sub(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 }
 
@@ -244,7 +248,7 @@ func (s *ScalarP256) Mul(rhs Scalar) Scalar {
 			value: fq.P256FqNew().Mul(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 }
 
@@ -257,19 +261,19 @@ func (s *ScalarP256) Div(rhs Scalar) Scalar {
 	if ok {
 		v, wasInverted := fq.P256FqNew().Invert(r.value)
 		if !wasInverted {
-			return nil
+			panic("cannot invert scalar")
 		}
 		v.Mul(v, s.value)
 		return &ScalarP256{value: v}
 	} else {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 }
 
 func (s *ScalarP256) Exp(k Scalar) Scalar {
 	exponent, ok := k.(*ScalarP256)
 	if !ok {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 
 	value := fq.P256FqNew().Exp(s.value, exponent.value)
@@ -449,40 +453,40 @@ func (p *PointP256) Neg() Point {
 
 func (p *PointP256) Add(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointP256)
 	if ok {
 		value := p256n.P256PointNew().Add(p.value, r.value)
 		return &PointP256{value}
 	} else {
-		return nil
+		panic("rhs is not PointP256")
 	}
 }
 
 func (p *PointP256) Sub(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointP256)
 	if ok {
 		value := p256n.P256PointNew().Sub(p.value, r.value)
 		return &PointP256{value}
 	} else {
-		return nil
+		panic("rhs is not PointP256")
 	}
 }
 
 func (p *PointP256) Mul(rhs Scalar) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*ScalarP256)
 	if ok {
 		value := p256n.P256PointNew().Mul(p.value, r.value)
 		return &PointP256{value}
 	} else {
-		return nil
+		panic("rhs is not ScalarP256")
 	}
 }
 
@@ -593,29 +597,29 @@ func (p *PointP256) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (p *PointP256) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointP256) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nPoints := make([]*native.EllipticPoint, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
 		ptv, ok := pt.(*PointP256)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointP256", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = ptv.value
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*ScalarP256)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid scalar type %s, expected ScalarP256", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.value
 	}
 	value := p256n.P256PointNew()
 	_, err := value.SumOfProducts(nPoints, nScalars)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &PointP256{value}
+	return &PointP256{value}, nil
 }
 
 func (p *PointP256) X() *native.Field {

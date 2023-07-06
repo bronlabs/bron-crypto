@@ -249,12 +249,12 @@ func TestScalarK256Serialize(t *testing.T) {
 func TestScalarK256Nil(t *testing.T) {
 	k256 := K256()
 	one := k256.Scalar.New(1)
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, one.Div(nil))
-	require.Nil(t, k256.Scalar.Random(nil))
-	require.Equal(t, one.Cmp(nil), -2)
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.Div(nil) })
+	require.Panics(t, func() { k256.Scalar.Random(nil) })
+	require.Panics(t, func() { one.Cmp(nil) })
 	_, err := k256.Scalar.SetBigInt(nil)
 	require.Error(t, err)
 }
@@ -398,10 +398,10 @@ func TestPointK256Serialize(t *testing.T) {
 func TestPointK256Nil(t *testing.T) {
 	k256 := K256()
 	one := k256.Point.Generator()
-	require.Nil(t, one.Add(nil))
-	require.Nil(t, one.Sub(nil))
-	require.Nil(t, one.Mul(nil))
-	require.Nil(t, k256.Scalar.Random(nil))
+	require.Panics(t, func() { one.Add(nil) })
+	require.Panics(t, func() { one.Sub(nil) })
+	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { k256.Scalar.Random(nil) })
 	require.False(t, one.Equal(nil))
 	_, err := k256.Scalar.SetBigInt(nil)
 	require.Error(t, err)
@@ -420,7 +420,8 @@ func TestPointK256SumOfProducts(t *testing.T) {
 		new(ScalarK256).New(11),
 		new(ScalarK256).New(12),
 	}
-	rhs := lhs.SumOfProducts(points, scalars)
+	rhs, err := lhs.SumOfProducts(points, scalars)
+	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
 
@@ -431,7 +432,8 @@ func TestPointK256SumOfProducts(t *testing.T) {
 			scalars[i] = new(ScalarK256).Random(crand.Reader)
 			lhs = lhs.Add(points[i].Mul(scalars[i]))
 		}
-		rhs = lhs.SumOfProducts(points, scalars)
+		rhs, err = lhs.SumOfProducts(points, scalars)
+		require.NoError(t, err)
 		require.NotNil(t, rhs)
 		require.True(t, lhs.Equal(rhs))
 	}

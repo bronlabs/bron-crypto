@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 
 	"golang.org/x/crypto/sha3"
 
@@ -38,12 +39,12 @@ type ScalarBls12381Gt struct {
 	Value *bls12381.Gt
 }
 
-func (s *ScalarBls12381) Random(reader io.Reader) Scalar {
-	if reader == nil {
-		return nil
+func (s *ScalarBls12381) Random(prng io.Reader) Scalar {
+	if prng == nil {
+		panic("prng in nil")
 	}
 	var seed [64]byte
-	_, _ = reader.Read(seed[:])
+	_, _ = prng.Read(seed[:])
 	return s.Hash(seed[:])
 }
 
@@ -166,7 +167,7 @@ func (s *ScalarBls12381) Add(rhs Scalar) Scalar {
 			point: s.point,
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 }
 
@@ -178,7 +179,7 @@ func (s *ScalarBls12381) Sub(rhs Scalar) Scalar {
 			point: s.point,
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 }
 
@@ -190,7 +191,7 @@ func (s *ScalarBls12381) Mul(rhs Scalar) Scalar {
 			point: s.point,
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 }
 
@@ -203,7 +204,7 @@ func (s *ScalarBls12381) Div(rhs Scalar) Scalar {
 	if ok {
 		v, wasInverted := bls12381.Bls12381FqNew().Invert(r.Value)
 		if !wasInverted {
-			return nil
+			panic("cannot invert scalar")
 		}
 		v.Mul(v, s.Value)
 		return &ScalarBls12381{
@@ -211,14 +212,14 @@ func (s *ScalarBls12381) Div(rhs Scalar) Scalar {
 			point: s.point,
 		}
 	} else {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 }
 
 func (s *ScalarBls12381) Exp(k Scalar) Scalar {
 	exp, ok := k.(*ScalarBls12381)
 	if !ok {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 
 	value := bls12381.Bls12381FqNew().Exp(s.Value, exp.Value)
@@ -414,37 +415,37 @@ func (p *PointBls12381G1) Neg() Point {
 
 func (p *PointBls12381G1) Add(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointBls12381G1)
 	if ok {
 		return &PointBls12381G1{new(bls12381.G1).Add(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not PointBls12381G1")
 	}
 }
 
 func (p *PointBls12381G1) Sub(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointBls12381G1)
 	if ok {
 		return &PointBls12381G1{new(bls12381.G1).Sub(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not PointBls12381G1")
 	}
 }
 
 func (p *PointBls12381G1) Mul(rhs Scalar) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &PointBls12381G1{new(bls12381.G1).Mul(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not ScalarBls12381")
 	}
 }
 
@@ -499,28 +500,28 @@ func (p *PointBls12381G1) CurveName() string {
 	return "BLS12381G1"
 }
 
-func (p *PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nPoints := make([]*bls12381.G1, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
 		pp, ok := pt.(*PointBls12381G1)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointBls12381G1", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = pp.Value
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*ScalarBls12381)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid scalar type %s, expected ScalarBls12381", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.Value
 	}
 	value, err := new(bls12381.G1).SumOfProducts(nPoints, nScalars)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &PointBls12381G1{value}
+	return &PointBls12381G1{value}, nil
 }
 
 func (p *PointBls12381G1) OtherGroup() PairingPoint {
@@ -530,7 +531,7 @@ func (p *PointBls12381G1) OtherGroup() PairingPoint {
 func (p *PointBls12381G1) Pairing(rhs PairingPoint) Scalar {
 	pt, ok := rhs.(*PointBls12381G2)
 	if !ok {
-		return nil
+		panic("rhs is not PointBls12381G2")
 	}
 	e := new(bls12381.Engine)
 	e.AddPair(p.Value, pt.Value)
@@ -666,37 +667,37 @@ func (p *PointBls12381G2) Neg() Point {
 
 func (p *PointBls12381G2) Add(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointBls12381G2)
 	if ok {
 		return &PointBls12381G2{new(bls12381.G2).Add(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not PointBls12381G2")
 	}
 }
 
 func (p *PointBls12381G2) Sub(rhs Point) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointBls12381G2)
 	if ok {
 		return &PointBls12381G2{new(bls12381.G2).Sub(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not PointBls12381G2")
 	}
 }
 
 func (p *PointBls12381G2) Mul(rhs Scalar) Point {
 	if rhs == nil {
-		return nil
+		panic("rhs is nil")
 	}
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &PointBls12381G2{new(bls12381.G2).Mul(p.Value, r.Value)}
 	} else {
-		return nil
+		panic("rhs is not PointBls12381G2")
 	}
 }
 
@@ -751,28 +752,28 @@ func (p *PointBls12381G2) CurveName() string {
 	return "BLS12381G2"
 }
 
-func (p *PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (p *PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
 	nPoints := make([]*bls12381.G2, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
 		pp, ok := pt.(*PointBls12381G2)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid point type %s, expected PointBls12381G2", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = pp.Value
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*ScalarBls12381)
 		if !ok {
-			return nil
+			return nil, errors.Errorf("invalid scalar type %s, expected ScalarBls12381", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.Value
 	}
 	value, err := new(bls12381.G2).SumOfProducts(nPoints, nScalars)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &PointBls12381G2{value}
+	return &PointBls12381G2{value}, nil
 }
 
 func (p *PointBls12381G2) OtherGroup() PairingPoint {
