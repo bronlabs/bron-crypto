@@ -1,4 +1,4 @@
-package pedersen_test
+package gennaro_test
 
 import (
 	"crypto/sha512"
@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/stretchr/testify/require"
@@ -52,7 +52,13 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	}
 
 	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r3Outs, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	require.NoError(t, err)
+	for _, out := range r3Outs {
+		require.NotNil(t, out)
+	}
+	r4Ins := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3Outs)
+	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound4(participants, r4Ins)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		require.NotNil(t, publicKeyShare)
@@ -112,8 +118,8 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	r3InsU[attackerIndex][identities[1]].Xij = r2Ins[attackerIndex][identities[1]].Ri
-	_, _, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r3InsU[attackerIndex][identities[1]].X_ij = r2Ins[attackerIndex][identities[1]].Ri
+	_, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 }
 
@@ -128,35 +134,35 @@ func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() h
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
+	aliceIndex := 0
 
 	// Alpha execution
 	alphaPrngs := make([]io.Reader, n)
 	// force to use the same data for Alice
-	alphaPrngs[0] = rand.New(rand.NewSource(0xcafebabe))
+	alphaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
 	alphaParticipants, err := test_utils.MakeParticipants(cohortConfig, identities, alphaPrngs)
 	alphaR1Outs, err := test_utils.DoDkgRound1(alphaParticipants)
 	require.NoError(t, err)
 	alphaR2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(alphaParticipants, alphaR1Outs)
 	alphaR2OutsB, alphaR2OutsU, err := test_utils.DoDkgRound2(alphaParticipants, alphaR2Ins)
-	alphaAliceDlogProof := alphaR2OutsB[0].DlogProof
 	require.NoError(t, err)
 	alphaR3InsB, alphaR3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(alphaParticipants, alphaR2OutsB, alphaR2OutsU)
-	_, _, err = test_utils.DoDkgRound3(alphaParticipants, alphaR3InsB, alphaR3InsU)
-	require.NoError(t, err)
+	alphaR3Outs, err := test_utils.DoDkgRound3(alphaParticipants, alphaR3InsB, alphaR3InsU)
+	alphaAliceDlogProof := alphaR3Outs[aliceIndex]
 
 	// Beta execution
 	betaPrngs := make([]io.Reader, n)
 	// force to use the same data for Alice
-	betaPrngs[0] = rand.New(rand.NewSource(0xcafebabe))
+	betaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
 	betaParticipants, err := test_utils.MakeParticipants(cohortConfig, identities, betaPrngs)
 	betaR1Outs, err := test_utils.DoDkgRound1(betaParticipants)
 	require.NoError(t, err)
 	betaR2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(betaParticipants, betaR1Outs)
 	betaR2OutsB, betaR2OutsU, err := test_utils.DoDkgRound2(betaParticipants, betaR2Ins)
-	betaAliceDlogProof := betaR2OutsB[0].DlogProof
 	require.NoError(t, err)
 	betaR3InsB, betaR3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(betaParticipants, betaR2OutsB, betaR2OutsU)
-	_, _, err = test_utils.DoDkgRound3(betaParticipants, betaR3InsB, betaR3InsU)
+	betaR3Outs, err := test_utils.DoDkgRound3(betaParticipants, betaR3InsB, betaR3InsU)
+	betaAliceDlogProof := betaR3Outs[aliceIndex]
 	require.NoError(t, err)
 
 	require.NotEqual(t, alphaAliceDlogProof, betaAliceDlogProof)
@@ -182,6 +188,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 	r2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
 	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2Ins)
 	require.NoError(t, err)
+	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	r3Outs, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	require.NoError(t, err)
 
 	t.Run("proving something irrelevant", func(t *testing.T) {
 		t.Parallel()
@@ -189,11 +198,11 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		require.NoError(t, err)
 		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
 		require.NoError(t, err)
-		r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-		for identity := range r3InsU[attackerIndex] {
-			r3InsB[attackerIndex][identity].DlogProof = proof
+		r4Ins := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3Outs)
+		for identity := range r4Ins[attackerIndex] {
+			r4Ins[attackerIndex][identity].A_i0Proof = proof
 		}
-		_, _, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+		_, _, err = test_utils.DoDkgRound4(participants, r4Ins)
 		require.Error(t, err)
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
@@ -202,14 +211,13 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		require.NoError(t, err)
 		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
 		require.NoError(t, err)
-		r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-		for identity := range r3InsU[attackerIndex] {
-			r3InsB[attackerIndex][identity].DlogProof = proof
+		r4Ins := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3Outs)
+		for identity := range r4Ins[attackerIndex] {
+			r4Ins[attackerIndex][identity].A_i0Proof = proof
 		}
-		_, _, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+		_, _, err = test_utils.DoDkgRound4(participants, r4Ins)
 		require.Error(t, err)
 	})
-
 }
 
 func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() hash.Hash) {
@@ -233,11 +241,14 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	r2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
 	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2Ins)
 	require.NoError(t, err)
+	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	r3Outs, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	require.NoError(t, err)
 
 	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
-	r2OutsB[alice].Ci[0] = r2OutsB[alice].Ci[0].Sub(r2OutsB[bob].Ci[0])
-	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	_, _, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r3Outs[alice].Commitments[0] = r3Outs[alice].Commitments[0].Sub(r3Outs[bob].Commitments[0])
+	r4Ins := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3Outs)
+	_, _, err = test_utils.DoDkgRound4(participants, r4Ins)
 	require.Error(t, err, "aborts on calculating public key share")
 }
 
@@ -268,7 +279,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 	r2OutsBAlpha, r2OutsUAlpha, err := test_utils.DoDkgRound2(participantsAlpha, r2InsAlpha)
 	require.NoError(t, err)
 	r3InsBAlpha, r3InsUAlpha := test_utils.MapDkgRound2OutputsToRound3Inputs(participantsAlpha, r2OutsBAlpha, r2OutsUAlpha)
-	_, _, err = test_utils.DoDkgRound3(participantsAlpha, r3InsBAlpha, r3InsUAlpha)
+	_, err = test_utils.DoDkgRound3(participantsAlpha, r3InsBAlpha, r3InsUAlpha)
 	require.NoError(t, err)
 
 	// second execution (beta)
@@ -283,7 +294,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 
 	// smuggle previous execution result - replay of the dlog proof
 	r3InsBBeta[attackerIndex] = r3InsBAlpha[attackerIndex]
-	_, _, err = test_utils.DoDkgRound3(participantsBeta, r3InsBBeta, r3InsUBeta)
+	_, err = test_utils.DoDkgRound3(participantsBeta, r3InsBBeta, r3InsUBeta)
 	require.Error(t, err)
 }
 

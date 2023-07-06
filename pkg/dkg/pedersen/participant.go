@@ -15,14 +15,11 @@ var _ integration.Participant = (*Participant)(nil)
 type Participant struct {
 	prng io.Reader
 
-	MyIdentityKey      integration.IdentityKey
-	MyShamirId         int
-	myPartialPublicKey curves.Point
-	secretKeyShare     curves.Scalar
+	MyIdentityKey integration.IdentityKey
+	MyShamirId    int
 
 	CohortConfig          *integration.CohortConfig
 	shamirIdToIdentityKey map[int]integration.IdentityKey
-	publicKey             curves.Point
 
 	round int
 	state *State
