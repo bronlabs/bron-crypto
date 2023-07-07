@@ -39,9 +39,9 @@ func doSetup(t *testing.T, curve *curves.Curve, identities []integration.Identit
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds, unmatchedSidParticipantIndex int) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds, unmatchedSidParticipantIndex)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -55,10 +55,14 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
 	}
-	require.True(t, sum.IsZero())
+	if unmatchedSidParticipantIndex >= 0 {
+		require.False(t, sum.IsZero())
+	} else {
+		require.True(t, sum.IsZero())
+	}
 }
 
-func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
+func testHappyPath(t *testing.T, curve *curves.Curve, n int, unmatchedSidParticipantIndex int) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -78,7 +82,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSample(t, curve, identities, seeds)
+			doSample(t, curve, identities, seeds, unmatchedSidParticipantIndex)
 		}
 	}
 }
@@ -91,7 +95,21 @@ func Test_HappyPath(t *testing.T) {
 			boundedN := n
 			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
 				t.Parallel()
-				testHappyPath(t, boundedCurve, boundedN)
+				testHappyPath(t, boundedCurve, boundedN, -1)
+			})
+		}
+	}
+}
+
+func Test_UnmatchedSid(t *testing.T) {
+	t.Parallel()
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		for _, n := range []int{2, 5} {
+			boundedCurve := curve
+			boundedN := n
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+				t.Parallel()
+				testHappyPath(t, boundedCurve, boundedN, 0)
 			})
 		}
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
+func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader, unmatchedSidParticipantIndex int) (participants []*pedersen.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -29,7 +29,11 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity, cohortConfig, prng)
+		if i == unmatchedSidParticipantIndex {
+			participants[i], err = pedersen.NewParticipant([]byte(""), identity, cohortConfig, prng)
+		} else {
+			participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity, cohortConfig, prng)
+		}
 		if err != nil {
 			return nil, err
 		}
