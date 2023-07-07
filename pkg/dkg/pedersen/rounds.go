@@ -12,19 +12,19 @@ import (
 	"github.com/gtank/merlin"
 )
 
-type Round2Broadcast struct {
+type Round1Broadcast struct {
 	Ci        []curves.Point
 	DlogProof *dlog.Proof
 }
 
-type Round2P2P struct {
+type Round1P2P struct {
 	Xij curves.Scalar
 }
 
 const DkgLabel = "COPPER-PEDERSEN-DKG-V1-"
 const ShamirIdLabel = "Pedersen DKG shamir id parameter"
 
-func (p *Participant) Round2() (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -53,13 +53,13 @@ func (p *Participant) Round2() (*Round2Broadcast, map[integration.IdentityKey]*R
 		return nil, nil, errs.WrapFailed(err, "couldn't sign")
 	}
 
-	outboundP2PMessages := map[integration.IdentityKey]*Round2P2P{}
+	outboundP2PMessages := map[integration.IdentityKey]*Round1P2P{}
 
 	for shamirId, identityKey := range p.shamirIdToIdentityKey {
 		if shamirId != p.MyShamirId {
 			shamirIndex := shamirId - 1
 			xij := shares[shamirIndex].Value
-			outboundP2PMessages[identityKey] = &Round2P2P{
+			outboundP2PMessages[identityKey] = &Round1P2P{
 				Xij: xij,
 			}
 			shares[shamirIndex] = nil
@@ -69,13 +69,13 @@ func (p *Participant) Round2() (*Round2Broadcast, map[integration.IdentityKey]*R
 
 	p.round++
 
-	return &Round2Broadcast{
+	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
+func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -96,7 +96,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 			if !exists {
 				return nil, nil, errs.NewMissing("can't find identity key of shamir id %d", senderShamirId)
 			}
-			broadcastedMessageFromSender, exists := round2outputBroadcast[senderIdentityKey]
+			broadcastedMessageFromSender, exists := round1outputBroadcast[senderIdentityKey]
 			if !exists {
 				return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with shamir id %d", senderShamirId)
 			}
@@ -123,7 +123,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr (shamir id: %d)", senderShamirId)
 			}
 
-			p2pMessageFromSender, exists := round2outputP2P[senderIdentityKey]
+			p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey]
 			if !exists {
 				return nil, nil, errs.NewMissing("did not get a p2p message from sender with shamir id %d", senderShamirId)
 			}
@@ -153,7 +153,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 			publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)
 			commitmentVectors[senderShamirId] = senderCommitmentVector
 
-			round2outputP2P[senderIdentityKey] = nil
+			round1outputP2P[senderIdentityKey] = nil
 		}
 	}
 

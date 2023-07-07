@@ -32,14 +32,14 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	participants, err := test_utils.MakeDkgParticipants(sessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
-	for _, out := range r2OutsU {
+	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
-	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		require.NotNil(t, publicKeyShare)

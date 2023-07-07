@@ -35,20 +35,20 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	participants, err := test_utils.MakeParticipants(t, curve, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	require.NoError(t, err)
+	for _, out := range r1OutsU {
+		require.Len(t, out, cohortConfig.TotalParties-1)
+	}
+
+	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2OutsU, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
-
-	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	r3OutsU, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
-	require.NoError(t, err)
-	for _, out := range r3OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-	r4Ins := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3OutsU)
-	shards, err := test_utils.DoDkgRound4(participants, r4Ins)
+	r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsU)
+	shards, err := test_utils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {

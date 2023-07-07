@@ -12,21 +12,21 @@ import (
 // size should match zero.LambdaBytes
 var h = sha3.New256
 
-type Round2P2P struct {
+type Round1P2P struct {
 	Commitment commitments.Commitment
 }
 
-type Round3P2P struct {
+type Round2P2P struct {
 	Message []byte
 	Witness commitments.Witness
 }
 
-func (p *Participant) Round2() (map[integration.IdentityKey]*Round2P2P, error) {
+func (p *Participant) Round1() (map[integration.IdentityKey]*Round1P2P, error) {
 	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	output := map[integration.IdentityKey]*Round2P2P{}
+	output := map[integration.IdentityKey]*Round1P2P{}
 	for _, participant := range p.Participants {
 		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
@@ -49,7 +49,7 @@ func (p *Participant) Round2() (map[integration.IdentityKey]*Round2P2P, error) {
 			commitment: commitment,
 			witness:    witness,
 		}
-		output[participant] = &Round2P2P{
+		output[participant] = &Round1P2P{
 			Commitment: commitment,
 		}
 	}
@@ -57,17 +57,17 @@ func (p *Participant) Round2() (map[integration.IdentityKey]*Round2P2P, error) {
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (map[integration.IdentityKey]*Round3P2P, error) {
+func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1P2P) (map[integration.IdentityKey]*Round2P2P, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	output := map[integration.IdentityKey]*Round3P2P{}
+	output := map[integration.IdentityKey]*Round2P2P{}
 	for _, participant := range p.Participants {
 		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round2output[participant]
+		message, exists := round1output[participant]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
@@ -79,7 +79,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P
 		if !exists {
 			return nil, errs.NewMissing("missing what I contributed to participant with sharing id %d", sharingId)
 		}
-		output[participant] = &Round3P2P{
+		output[participant] = &Round2P2P{
 			Message: contributed.seed,
 			Witness: contributed.witness,
 		}
@@ -88,7 +88,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P
 	return output, nil
 }
 
-func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P) (zero.PairwiseSeeds, error) {
+func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (zero.PairwiseSeeds, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -98,7 +98,7 @@ func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round3output[participant]
+		message, exists := round2output[participant]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}

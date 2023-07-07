@@ -14,27 +14,25 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-var h = sha3.New256
-
 func doSetup(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
 	participants, err := test_utils.MakeSetupParticipants(t, curve, identities)
 	if err != nil {
 		return nil, err
 	}
 
-	r2OutsU, err := test_utils.DoSetupRound2(participants)
+	r1OutsU, err := test_utils.DoSetupRound1(participants)
+	if err != nil {
+		return nil, err
+	}
+
+	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
 	if err != nil {
 		return nil, err
 	}
 
 	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
-	r3OutsU, err := test_utils.DoSetupRound3(participants, r3InsU)
-	if err != nil {
-		return nil, err
-	}
-
-	r4InsU := test_utils.MapSetupRound3OutputsToRound4Inputs(participants, r3OutsU)
-	allPairwiseSeeds, err = test_utils.DoSetupRound4(participants, r4InsU)
+	allPairwiseSeeds, err = test_utils.DoSetupRound3(participants, r3InsU)
 	if err != nil {
 		return nil, err
 	}

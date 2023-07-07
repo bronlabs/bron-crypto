@@ -30,13 +30,13 @@ func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortCo
 		return nil, nil, err
 	}
 
-	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := test_utils.MapDkgRound2OutputsToRound3Inputs(dkgParticipants, r2OutB, r2OutU)
-	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound3(dkgParticipants, r3InB, r3InU)
+	r3InB, r3InU := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
 	}
