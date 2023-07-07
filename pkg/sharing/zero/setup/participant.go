@@ -13,6 +13,7 @@ import (
 type Participant struct {
 	prng io.Reader
 
+	Sid           []byte
 	Curve         *curves.Curve
 	MyIdentityKey integration.IdentityKey
 	MySharingId   int
@@ -37,12 +38,15 @@ type committedSeedContribution struct {
 	witness    commitments.Witness
 }
 
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, sessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
+	}
+	if sessionId == nil {
+		return nil, errs.NewInvalidArgument("session id is nil")
 	}
 	if len(participants) < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
@@ -76,6 +80,7 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 		MySharingId:            mySharingId,
 		Participants:           sortedParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
+		Sid:                    sessionId,
 		state: &State{
 			transcript:    transcript,
 			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},

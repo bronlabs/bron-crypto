@@ -32,17 +32,10 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeParticipants(cohortConfig, identities, nil)
+	participants, err := test_utils.MakeParticipants(t, curve, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r1Outs, err := test_utils.DoDkgRound1(participants)
-	require.NoError(t, err)
-	for _, out := range r1Outs {
-		require.NotNil(t, out)
-	}
-
-	r2Ins := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1Outs)
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2Ins)
+	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, cohortConfig.TotalParties-1)

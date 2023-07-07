@@ -2,21 +2,28 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+	"testing"
 
 	"io"
 
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 	"github.com/pkg/errors"
 )
 
-func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
+func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
 
 	participants = make([]*dkg.Participant, cohortConfig.TotalParties)
+
+	pedesenSessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
+	zeroSamplingSessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
+
 	for i, identity := range identities {
 		var prng io.Reader
 		if prngs != nil && prngs[i] != nil {
@@ -29,7 +36,7 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = dkg.NewParticipant(identity, cohortConfig, prng)
+		participants[i], err = dkg.NewParticipant(identity, pedesenSessionId, zeroSamplingSessionId, cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -38,37 +45,11 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*dkg.Participant) (round1Outputs []*dkg.Round1Broadcast, err error) {
-	round1Outputs = make([]*dkg.Round1Broadcast, len(participants))
-	for i, participant := range participants {
-		round1Outputs[i], err = participant.Round1()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return round1Outputs, nil
-}
-
-func MapDkgRound1OutputsToRound2Inputs(participants []*dkg.Participant, round1Outputs []*dkg.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*dkg.Round1Broadcast) {
-	round2Inputs = make([]map[integration.IdentityKey]*dkg.Round1Broadcast, len(participants))
-	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityKey]*dkg.Round1Broadcast)
-		for j := range participants {
-			if j != i {
-				round2Inputs[i][participants[j].GetIdentityKey()] = round1Outputs[j]
-			}
-		}
-	}
-
-	return round2Inputs
-}
-
-func DoDkgRound2(participants []*dkg.Participant, round2Inputs []map[integration.IdentityKey]*dkg.Round1Broadcast) (round2BroadcastOutputs []*dkg.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*dkg.Round2P2P, err error) {
+func DoDkgRound2(participants []*dkg.Participant) (round2BroadcastOutputs []*dkg.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*dkg.Round2P2P, err error) {
 	round2BroadcastOutputs = make([]*dkg.Round2Broadcast, len(participants))
 	round2UnicastOutputs = make([]map[integration.IdentityKey]*dkg.Round2P2P, len(participants))
 	for i, participant := range participants {
-		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2(round2Inputs[i])
+		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2()
 		if err != nil {
 			return nil, nil, err
 		}

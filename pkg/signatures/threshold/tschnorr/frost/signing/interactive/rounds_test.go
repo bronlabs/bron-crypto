@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
@@ -22,19 +23,15 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities, nil)
+func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	sessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
+
+	dkgParticipants, err := test_utils.MakeDkgParticipants(sessionId, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r1Out, err := test_utils.DoDkgRound1(dkgParticipants)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	r2In := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r1Out)
-	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants, r2In)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -100,7 +97,7 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	combinations := combin.Combinations(n, threshold)
@@ -135,7 +132,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
 	// first execution
@@ -183,7 +180,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
 	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)

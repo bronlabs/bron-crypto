@@ -19,10 +19,10 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	alice, err := NewParticipant(curve, aliceIdentityKey, identities, nil, crand.Reader)
+	alice, err := NewParticipant(curve, []byte("test"), aliceIdentityKey, identities, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, bobIdentityKey, identities, nil, crand.Reader)
+	bob, err := NewParticipant(curve, []byte("test"), bobIdentityKey, identities, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {

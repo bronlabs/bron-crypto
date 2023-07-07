@@ -35,16 +35,16 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.pedersenParty.GetCohortConfig()
 }
 
-func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+func NewParticipant(identityKey integration.IdentityKey, pedersenSessionId []byte, zeroSamplingSessionId []byte, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	// TODO: refactor pedersen to use transcripts - you can do it for sid
-	pedersenParty, err := pedersen.NewParticipant(identityKey, cohortConfig, prng)
+	pedersenParty, err := pedersen.NewParticipant(pedersenSessionId, identityKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dkls23 dkg participant out of pedersen dkg participant")
 	}
-	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, identityKey, cohortConfig.Participants, nil, prng)
+	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, zeroSamplingSessionId, identityKey, cohortConfig.Participants, nil, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}

@@ -16,18 +16,13 @@ import (
 
 var h = sha3.New256
 
-func doSetup(curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
-	participants, err := test_utils.MakeSetupParticipants(curve, identities)
-	if err != nil {
-		return nil, err
-	}
-	r1Outs, err := test_utils.DoSetupRound1(participants)
+func doSetup(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
+	participants, err := test_utils.MakeSetupParticipants(t, curve, identities)
 	if err != nil {
 		return nil, err
 	}
 
-	r2Ins := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1Outs)
-	r2OutsU, err := test_utils.DoSetupRound2(participants, r2Ins)
+	r2OutsU, err := test_utils.DoSetupRound2(participants)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +72,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	allPairwiseSeeds, err := doSetup(curve, allIdentities)
+	allPairwiseSeeds, err := doSetup(t, curve, allIdentities)
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)

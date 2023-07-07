@@ -15,6 +15,7 @@ var _ integration.Participant = (*Participant)(nil)
 type Participant struct {
 	prng io.Reader
 
+	SessionId          []byte
 	MyIdentityKey      integration.IdentityKey
 	MyShamirId         int
 	myPartialPublicKey curves.Point
@@ -42,17 +43,17 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 
 type State struct {
 	r_i         curves.Scalar
-	phi         []byte
 	shareVector []*feldman.Share
 	commitments []curves.Point
 }
 
-func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+func NewParticipant(sessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	result := &Participant{
 		MyIdentityKey: identityKey,
+		SessionId:     sessionId,
 		state:         &State{},
 		prng:          prng,
 		CohortConfig:  cohortConfig,

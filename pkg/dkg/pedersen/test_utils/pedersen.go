@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
+func MakeParticipants(sessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -29,7 +29,7 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(identity, cohortConfig, prng)
+		participants[i], err = pedersen.NewParticipant(sessionId, identity, cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -38,37 +38,11 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*pedersen.Participant) (round1Outputs []*pedersen.Round1Broadcast, err error) {
-	round1Outputs = make([]*pedersen.Round1Broadcast, len(participants))
-	for i, participant := range participants {
-		round1Outputs[i], err = participant.Round1()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return round1Outputs, nil
-}
-
-func MapDkgRound1OutputsToRound2Inputs(participants []*pedersen.Participant, round1Outputs []*pedersen.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*pedersen.Round1Broadcast) {
-	round2Inputs = make([]map[integration.IdentityKey]*pedersen.Round1Broadcast, len(participants))
-	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityKey]*pedersen.Round1Broadcast)
-		for j := range participants {
-			if j != i {
-				round2Inputs[i][participants[j].GetIdentityKey()] = round1Outputs[j]
-			}
-		}
-	}
-
-	return round2Inputs
-}
-
-func DoDkgRound2(participants []*pedersen.Participant, round2Inputs []map[integration.IdentityKey]*pedersen.Round1Broadcast) (round2BroadcastOutputs []*pedersen.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*pedersen.Round2P2P, err error) {
+func DoDkgRound2(participants []*pedersen.Participant) (round2BroadcastOutputs []*pedersen.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*pedersen.Round2P2P, err error) {
 	round2BroadcastOutputs = make([]*pedersen.Round2Broadcast, len(participants))
 	round2UnicastOutputs = make([]map[integration.IdentityKey]*pedersen.Round2P2P, len(participants))
 	for i, participant := range participants {
-		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2(round2Inputs[i])
+		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2()
 		if err != nil {
 			return nil, nil, err
 		}

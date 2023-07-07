@@ -15,29 +15,6 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-func doRounds(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, n int) []byte {
-	t.Helper()
-	var participants []*agreeonrandom.Participant
-	for _, identity := range identities {
-		participant, _ := agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
-		participants = append(participants, participant)
-	}
-
-	r1Out, err := test_utils.DoRound1(participants)
-	require.NoError(t, err)
-	r2In := test_utils.MapRound1OutputsToRound2Inputs(participants, r1Out)
-	agreeOnRandoms, err := test_utils.DoRound2(participants, r2In)
-	require.NoError(t, err)
-	require.Len(t, agreeOnRandoms, len(identities))
-
-	// check all values in agreeOnRandoms the same
-	for i := 1; i < len(agreeOnRandoms); i++ {
-		require.Equal(t, agreeOnRandoms[0], agreeOnRandoms[i])
-	}
-
-	return agreeOnRandoms[0]
-}
-
 type AttackerRandomReader struct {
 }
 
@@ -91,7 +68,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random = doRounds(t, curve, identities, n)
+			random = test_utils.DoRounds(t, curve, identities, n)
 		}
 	}
 	return random

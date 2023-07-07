@@ -5,17 +5,12 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/gtank/merlin"
 )
-
-type Round1Broadcast struct {
-	Ri curves.Scalar
-}
 
 type Round2Broadcast struct {
 	Ci        []curves.Point
@@ -26,41 +21,13 @@ type Round2P2P struct {
 	Xij curves.Scalar
 }
 
-func (p *Participant) Round1() (*Round1Broadcast, error) {
-	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
-	}
-	p.state.r_i = p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
-	p.round++
-	return &Round1Broadcast{
-		Ri: p.state.r_i,
-	}, nil
-}
-
 const DkgLabel = "COPPER-PEDERSEN-DKG-V1-"
 const ShamirIdLabel = "Pedersen DKG shamir id parameter"
 
-func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
-	if p.round != 2 {
-		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+func (p *Participant) Round2() (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
+	if p.round != 1 {
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	round1output[p.MyIdentityKey] = &Round1Broadcast{
-		Ri: p.state.r_i,
-	}
-
-	rVector, err := deriveSortedRVector(round1output)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "couldn't derive r vector")
-	}
-	rVectorBytes := make([][]byte, len(rVector))
-	for i, r_i := range rVector {
-		rVectorBytes[i] = r_i.Bytes()
-	}
-	phi, err := hashing.Hash(p.CohortConfig.CipherSuite.Hash, rVectorBytes...)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "couldn't compute phi paramter")
-	}
-	p.state.phi = phi
 
 	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
 
@@ -77,7 +44,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 
 	transcript := merlin.NewTranscript(DkgLabel)
 	transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", p.MyShamirId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), phi, transcript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.SessionId, transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
@@ -109,8 +76,8 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 }
 
 func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
-	if p.round != 3 {
-		return nil, nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+	if p.round != 2 {
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 	myShamirShare := p.state.shareVector[p.MyShamirId-1]
 	if myShamirShare == nil {
@@ -152,7 +119,7 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 
 			transcript := merlin.NewTranscript(DkgLabel)
 			transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.state.phi, transcript); err != nil {
+			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.SessionId, transcript); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr (shamir id: %d)", senderShamirId)
 			}
 
@@ -235,25 +202,4 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 		shares[identityKey] = Y_j
 	}
 	return shares, nil
-}
-
-func deriveSortedRVector(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([]curves.Scalar, error) {
-	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
-	i := 0
-	for identityKey := range allIdentityKeysToRi {
-		identityKeys[i] = identityKey
-		i++
-	}
-	identityKeys = integration.SortIdentityKeys(identityKeys)
-	sortedRVector := make([]curves.Scalar, len(allIdentityKeysToRi))
-	for i, identityKey := range identityKeys {
-		message, exists := allIdentityKeysToRi[identityKey]
-		if !exists {
-			return nil, errs.NewMissing("message couldn't be found")
-		}
-		sortedRVector[i] = message.Ri
-	}
-
-	return sortedRVector, nil
-
 }
