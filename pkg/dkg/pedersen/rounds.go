@@ -44,7 +44,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 
 	transcript := merlin.NewTranscript(DkgLabel)
 	transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", p.MyShamirId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.SessionId, transcript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.uniqueSessionId, transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
@@ -119,7 +119,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 
 			transcript := merlin.NewTranscript(DkgLabel)
 			transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.SessionId, transcript); err != nil {
+			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.uniqueSessionId, transcript); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr (shamir id: %d)", senderShamirId)
 			}
 

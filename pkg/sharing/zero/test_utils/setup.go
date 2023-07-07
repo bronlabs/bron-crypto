@@ -13,9 +13,9 @@ import (
 
 func MakeSetupParticipants(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
 	participants = make([]*setup.Participant, len(identities))
-	sessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, 2)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
 	for i, identity := range identities {
-		participants[i], err = setup.NewParticipant(curve, sessionId, identity, identities, nil, crand.Reader)
+		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, identities, nil, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

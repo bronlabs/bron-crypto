@@ -24,8 +24,8 @@ import (
 )
 
 func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	sessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
-	dkgParticipants, err := test_utils.MakeDkgParticipants(sessionId, cohortConfig, identities, nil)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+	dkgParticipants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, nil, err
 	}

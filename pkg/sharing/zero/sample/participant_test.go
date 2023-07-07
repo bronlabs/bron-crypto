@@ -1,8 +1,9 @@
 package sample
 
 import (
-	crand "crypto/rand"
 	"testing"
+
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
@@ -28,11 +29,12 @@ func Test_CanInitialize(t *testing.T) {
 
 	aliceSeeds := zero.PairwiseSeeds{bobIdentityKey: sharedSeed}
 	bobSeeds := zero.PairwiseSeeds{aliceIdentityKey: sharedSeed}
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
 
-	alice, err := NewParticipant(curve, aliceIdentityKey, aliceSeeds, identities, nil, crand.Reader)
+	alice, err := NewParticipant(curve, uniqueSessionId, aliceIdentityKey, aliceSeeds, identities)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, bobIdentityKey, bobSeeds, identities, nil, crand.Reader)
+	bob, err := NewParticipant(curve, uniqueSessionId, bobIdentityKey, bobSeeds, identities)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
@@ -40,7 +42,6 @@ func Test_CanInitialize(t *testing.T) {
 		require.Equal(t, party.round, 1)
 		require.Len(t, party.IdentityKeyToSharingId, 2)
 		require.Len(t, party.PresentParticipants, 2)
-		require.NotNil(t, party.state)
 	}
 	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
 }

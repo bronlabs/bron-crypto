@@ -58,9 +58,9 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	sessionId := agreeonrandom_test_utils.DoRounds(t, curve, identityKeys, 2)
-	alice, err := NewParticipant(sessionId, aliceIdentityKey, cohortConfig, crand.Reader)
-	bob, err := NewParticipant(sessionId, bobIdentityKey, cohortConfig, crand.Reader)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identityKeys, 2)
+	alice, err := NewParticipant(uniqueSessionId, aliceIdentityKey, cohortConfig, crand.Reader)
+	bob, err := NewParticipant(uniqueSessionId, bobIdentityKey, cohortConfig, crand.Reader)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

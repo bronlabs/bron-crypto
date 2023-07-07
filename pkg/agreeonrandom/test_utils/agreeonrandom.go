@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func DoRounds(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, n int) []byte {
+func ProduceSharedRandomValue(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, n int) []byte {
 	t.Helper()
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {

@@ -41,15 +41,12 @@ func doSetup(t *testing.T, curve *curves.Curve, identities []integration.Identit
 
 func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
 	}
-	r1Out, err := test_utils.DoSampleRound1(participants)
-	require.NoError(t, err)
-	r2In := test_utils.MapSampleRound2OutputsToRound3Inputs(participants, r1Out)
-	samples, err := test_utils.DoSampleRound2(participants, r2In)
+	samples, err := test_utils.DoSample(participants)
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 

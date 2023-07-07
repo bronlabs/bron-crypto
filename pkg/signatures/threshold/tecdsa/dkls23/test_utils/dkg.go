@@ -21,8 +21,8 @@ func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integrati
 
 	participants = make([]*dkg.Participant, cohortConfig.TotalParties)
 
-	pedesenSessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
-	zeroSamplingSessionId := agreeonrandom_test_utils.DoRounds(t, curve, identities, len(identities))
+	pedesenSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+	zeroSamplingSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
 
 	for i, identity := range identities {
 		var prng io.Reader

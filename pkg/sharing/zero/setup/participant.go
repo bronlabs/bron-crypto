@@ -38,14 +38,14 @@ type committedSeedContribution struct {
 	witness    commitments.Witness
 }
 
-func NewParticipant(curve *curves.Curve, sessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
-	if sessionId == nil {
+	if uniqueSessionId == nil {
 		return nil, errs.NewInvalidArgument("session id is nil")
 	}
 	if len(participants) < 2 {
@@ -80,7 +80,7 @@ func NewParticipant(curve *curves.Curve, sessionId []byte, identityKey integrati
 		MySharingId:            mySharingId,
 		Participants:           sortedParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
-		Sid:                    sessionId,
+		Sid:                    uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
 			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},

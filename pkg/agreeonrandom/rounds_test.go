@@ -3,6 +3,7 @@ package agreeonrandom_test
 import (
 	crand "crypto/rand"
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
@@ -15,22 +16,15 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-type AttackerRandomReader struct {
-}
-
-func (a *AttackerRandomReader) Read(p []byte) (n int, err error) {
-	return 0, nil
-}
-
 func doRoundsWithMockR1Output(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, n int) []byte {
 	t.Helper()
-	attackerReader := &AttackerRandomReader{}
+	alphaPrng := rand.New(rand.NewSource(0xcafebabe))
 	var participants []*agreeonrandom.Participant
 	attackerIndex := 0
 	for i, identity := range identities {
 		var participant *agreeonrandom.Participant
 		if i == attackerIndex {
-			participant, _ = agreeonrandom.NewParticipant(curve, identity, identities, nil, attackerReader)
+			participant, _ = agreeonrandom.NewParticipant(curve, identity, identities, nil, alphaPrng)
 		} else {
 			participant, _ = agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
 		}
@@ -68,7 +62,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random = test_utils.DoRounds(t, curve, identities, n)
+			random = test_utils.ProduceSharedRandomValue(t, curve, identities, n)
 		}
 	}
 	return random
