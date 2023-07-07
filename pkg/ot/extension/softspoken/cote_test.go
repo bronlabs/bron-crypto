@@ -36,49 +36,62 @@ func TestCOTExtension(t *testing.T) {
 		curves.P256(),
 	}
 	for _, curve := range curveInstances {
+		// Generic setup
 		uniqueSessionId := [simplest.DigestSize]byte{}
 		_, err := rand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
+
+		// BaseOTs
 		baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, Kappa, uniqueSessionId)
 		require.NoError(t, err)
 		for i := 0; i < Kappa; i++ {
 			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
 		}
 
-		// sender := NewCOtSender(baseOtReceiverOutput, curve)
-		// receiver := NewCOtReceiver(baseOtSenderOutput, curve)
-		// choice := [LBytes]byte{} // receiver's input, namely choice vector. just random
-		// _, err = rand.Read(choice[:])
-		// require.NoError(t, err)
-		// input := [L][KeyCount]curves.Scalar{} // sender's input, namely integer "sums" in case w_j == 1.
-		// for i := 0; i < L; i++ {
-		// 	for j := 0; j < KeyCount; j++ {
-		// 		input[i][j] = curve.Scalar.Random(rand.Reader)
-		// 		require.NoError(t, err)
-		// 	}
-		// }
-		// round1Output, err := receiver.Round1Extend(uniqueSessionId, choice)
-		// require.NoError(t, err)
-		// // round2Output, err := sender.Round2Extend(uniqueSessionId, round1Output)
-		// // require.NoError(t, err)
-		// // round3Output, err := receiver.Round3ProveConsistency(round2Output)
-		// // require.NoError(t, err)
-		// // err = sender.Round4CheckConsistency(round2Output, round3Output)
-		// require.NoError(t, err)
+		// Setup COTe
+		sender := NewCOtSender(baseOtReceiverOutput, curve)
+		receiver := NewCOtReceiver(baseOtSenderOutput, curve)
+		choice := [LBytes]byte{} // receiver's input, the Choice bits x
+		_, err = rand.Read(choice[:])
+		require.NoError(t, err)
+		inputOpt := [L]curves.Scalar{} // sender's input, the InputOpt α
+		for i := 0; i < L; i++ {
+			inputOpt[i] = curve.Scalar.Random(rand.Reader)
+			require.NoError(t, err)
+		}
+
+		round1Output, err := receiver.Round1Extend(uniqueSessionId, choice)
+		require.NoError(t, err)
+		round2Output, err := sender.Round2Extend(uniqueSessionId, round1Output, inputOpt)
+		require.NoError(t, err)
+
+		for i := 0; i < Kappa; i++ {
+			for j := 0; j < LPrimeBytes; j++ {
+				// Check the extended options: t^i_{Δ_i} = Δ_i•t^i_1 ⊕ (1⊕Δ_i)•t^i_0
+				prgSync := sender.ExtChosenOpt[i][j] ^ receiver.ExpOptions[sender.baseOtRecOutputs.RandomChoiceBits[i]][i][j]
+				require.Zero(t, prgSync)
+				// Check each bit-level correlation q_i = t^i_0 ⊕ x • Δ_i
+				bitCorr := sender.ExtCorrelations[i][j] ^ receiver.ExpOptions[0][i][j]
+				if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
+					bitCorr ^= receiver.ExtPackChoices[j]
+				}
+				require.Zero(t, bitCorr)
+			}
+		}
+
+		round3Output, err := receiver.Round3ProveConsistency(round2Output)
+		require.NoError(t, err)
+
+		err = sender.Round4CheckConsistency(round2Output, round3Output)
+		require.NoError(t, err)
+
 		for j := 0; j < L; j++ {
-			// bit := simplest.ExtractBitFromByteVector(choice[:], j) == 1
-			// for k := 0; k < KeyCount; k++ {
-			// 	temp, err := curve.Scalar.SetBytes(sender.OutExtCorrelations[k][j][:])
-			// 	require.NoError(t, err)
-			// 	temp2, err := curve.Scalar.SetBytes(receiver.OutputWords[j][:])
-			// 	require.NoError(t, err)
-			// 	temp = temp.Add(temp2)
-			// 	if bit {
-			// 		require.Equal(t, temp, input[j][k])
-			// 	} else {
-			// 		require.Equal(t, temp, curve.Scalar.Zero())
-			// 	}
-			// }
+			// Check each correlation z_A = x • α + z_B
+			if UnpackBit(j, choice[:]) {
+				require.Equal(t, sender.OutDeltaOpt[j], receiver.OutCorrelations[j].Add(inputOpt[j]))
+			} else {
+				require.Equal(t, sender.OutDeltaOpt[j], receiver.OutCorrelations[j])
+			}
 		}
 	}
 }

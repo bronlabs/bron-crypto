@@ -66,25 +66,25 @@ func (u Uint128) Xor(v Uint128) Uint128 {
 	return Uint128{u.Lo ^ v.Lo, u.Hi ^ v.Hi}
 }
 
-// AddWrap returns u+v with wraparound semantics; for example,
-// Max.AddWrap(From64(1)) == Zero.
-func (u Uint128) AddWrap(v Uint128) Uint128 {
+// Add returns u+v with wraparound semantics; for example,
+// Max.Add(From64(1)) == Zero.
+func (u Uint128) Add(v Uint128) Uint128 {
 	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
 	hi, _ := bits.Add64(u.Hi, v.Hi, carry)
 	return Uint128{lo, hi}
 }
 
-// SubWrap returns u-v with wraparound semantics; for example,
-// Zero.SubWrap(From64(1)) == Max.
-func (u Uint128) SubWrap(v Uint128) Uint128 {
+// Sub returns u-v with wraparound semantics; for example,
+// Zero.Sub(From64(1)) == Max.
+func (u Uint128) Sub(v Uint128) Uint128 {
 	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
 	hi, _ := bits.Sub64(u.Hi, v.Hi, borrow)
 	return Uint128{lo, hi}
 }
 
-// MulWrap returns u*v with wraparound semantics; for example,
-// Max.MulWrap(Max) == 1.
-func (u Uint128) MulWrap(v Uint128) Uint128 {
+// Mul returns u*v with wraparound semantics; for example,
+// Max.Mul(Max) == 1.
+func (u Uint128) Mul(v Uint128) Uint128 {
 	hi, lo := bits.Mul64(u.Lo, v.Lo)
 	hi += u.Hi*v.Lo + u.Lo*v.Hi
 	return Uint128{lo, hi}

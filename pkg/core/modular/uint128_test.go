@@ -99,9 +99,9 @@ func TestArithmetic(t *testing.T) {
 	}
 	for i := 0; i < 1000; i++ {
 		x, y, z := randUint128(), randUint128(), uint(randUint128().Lo&0xFF)
-		checkBinOp(x, "+", y, Uint128.AddWrap, (*big.Int).Add)
-		checkBinOp(x, "-", y, Uint128.SubWrap, (*big.Int).Sub)
-		checkBinOp(x, "*", y, Uint128.MulWrap, (*big.Int).Mul)
+		checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
+		checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
+		checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
 		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
 		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
 		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)

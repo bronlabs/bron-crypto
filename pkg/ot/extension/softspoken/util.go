@@ -120,3 +120,21 @@ func HashSalted(uniqueSessionId []byte, bufferIn [][KappaBytes]byte) (BufferOut 
 func UnpackBit(j int, array []byte) (bit bool) {
 	return array[j>>3]>>(j&0x07)&0x01 == 1
 }
+
+// PRG generates a pseudorandom bit matrix of size [L]×[κ]bits from seeds of
+// size [κ]×[κ], expanding each κ-bit seed to L bits (where L=l*κ for some l ∈ ℕ).
+func PRG(uniqueSessionId []byte, seed []byte, bufferOut []byte) (err error) {
+	if (len(seed) != KappaBytes) || (len(bufferOut) != LPrimeBytes) {
+		return errs.NewInvalidArgument("PRG: invalid input size")
+	}
+	shake := sha3.NewCShake256(uniqueSessionId[:], []byte("Copper_Softspoken_COTe"))
+	if _, err = shake.Write(seed); err != nil {
+		return errs.WrapFailed(err, "writing seed into shake for PRG extension")
+	}
+	// This is the core pseudorandom expansion of the secret OT input seeds k_i^0 and k_i^1
+	// use the uniqueSessionId as the "domain separator", and the _secret_ seed as the input
+	if _, err = shake.Read(bufferOut); err != nil {
+		return errs.WrapFailed(err, "reading from shake in PRG expansion")
+	}
+	return nil
+}
