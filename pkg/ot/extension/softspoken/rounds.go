@@ -96,105 +96,13 @@ import (
 )
 
 // TODO: Testing
-// TODO: Finish pseudocode above.
 // TODO: refactor to use hash module
 //      -> Code hash function using AES primitives and use it for H
 // TODO: refactor to have a secure rand module in core
 
-const (
-	// ------------------------ CONFIGURABLE PARAMETERS --------------------- //
-	// Kappa (κ) is the computational security parameter. Set |q| = κ for a curve
-	// of prime order q. This is the size of the PRG seeds (the BaseOT options).
-	Kappa = 256
-
-	// l is the batch size (in #elements in the curve) used in the cOT functionality.
-	l = 2
-
-	// s is the statistical security parameter. Must divide L (L%s=0) for SoftSpokenOT.
-	//  This defines the data type of the consistency check to 2^s bits (e.g. s=128 -> Uint128)
-	s = 128
-
-	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
-	// KeyCount is the number of scalars to choose from in the BaseOT, as well as
-	//  the number of shares _per_ choice of the cOT. Set to 2 for 1-out-of-2 OT
-	//  and one share per party.
-	KeyCount = 2
-
-	// L is the batch size in bits used in the cOT functionality.
-	L = l * Kappa
-
-	// length of pseudorandom seed expansion
-	LPrime = L + s
-
-	// number of blocks in the consistency check
-	m = L / s
-
-	// Equivalents in Bytes
-	KappaBytes  = Kappa >> 3
-	LBytes      = L >> 3
-	sBytes      = s >> 3
-	LPrimeBytes = LPrime >> 3
-	mBytes      = m >> 3
-)
-
-type Receiver struct {
-	// baseOtSendOptions (k^i_0, k^i_1) ∈ [2][κ][κ]bits are the options used while
-	//  of playing the sender in a base OT protocol. They are inputs to COTe.
-	baseOtSendOptions *simplest.SenderOutput
-
-	// ExtPackChoices (x_i) ∈ [L']bits are the choice bits for the OTe.
-	ExtPackChoices [LPrimeBytes]byte
-
-	// ExpOptions (t^i) ∈ [2][κ][L']bits are expansions of BaseOT results using a PRG.
-	ExpOptions [KeyCount][Kappa][LPrimeBytes]byte
-
-	// OutCorrelations (z_B) ∈ [L]curve.Scalar are the output "correlations" (in the curve).
-	OutCorrelations [L]curves.Scalar
-
-	curve           *curves.Curve
-	uniqueSessionId [simplest.DigestSize]byte // store this between rounds
-}
-
-type Sender struct {
-	// baseOtRecOutputs (Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits) are the results
-	// of playing the receiver in a base OT protocol. They are inputs of COTe.
-	baseOtRecOutputs *simplest.ReceiverOutput
-
-	// ExtChosenOpt (t^i_{Δ_i}) ∈ [κ][L']bits are the expanded (via a PRG) baseOT chosenOption
-	ExtChosenOpt [Kappa][LPrimeBytes]byte
-
-	// ExtCorrelations (q_i) ∈ [κ][L']bits are the extended correlations, such that:
-	//    q^i = Δ_i • x + t^i
-	ExtCorrelations [Kappa][LPrimeBytes]byte
-
-	// OutDeltaOpt (z_A) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
-	OutDeltaOpt [L]curves.Scalar
-
-	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
-}
-
-// NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
-// The `baseOtResults` are the results of playing the sender role in kappa baseOTs.
-func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve) *Receiver {
-	return &Receiver{
-		baseOtSendOptions: baseOtResults,
-		curve:             curve,
-	}
-}
-
-// NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
-// The `baseOtResults` are the results of playing the receiver role in kappa baseOTs.
-func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve) *Sender {
-	return &Sender{
-		baseOtRecOutputs: baseOtResults,
-		curve:            curve,
-	}
-}
-
 // Round1Output contains the expanded and masked PRG outputs u_i
 type Round1Output struct {
-	u [Kappa][LPrimeBytes]byte
+	u [Kappa][M + 1]uint128.Uint128 // u_i ∈ [L']bits
 }
 
 // Round1Extend uses the PRG to extend the basseOT results.
@@ -203,6 +111,7 @@ func (receiver *Receiver) Round1Extend(
 	InputPackedChoices [LBytes]byte, // x_i ∈ [L]bits
 ) (round1Output *Round1Output, err error) {
 	round1Output = &Round1Output{}
+	round1Output.u = [Kappa][M + 1]uint128.Uint128{}
 
 	// Copy uniqueSessionId into receiver
 	copy(receiver.uniqueSessionId[:], uniqueSessionId[:])
@@ -222,11 +131,13 @@ func (receiver *Receiver) Round1Extend(
 				receiver.ExpOptions[k][i][:])
 		}
 	}
-
-	// (Ext.3) Compute u_i and send it
+	// (Ext.3) Compute u_i and send it --> In F_{2^s}
 	for i := 0; i < Kappa; i++ {
-		for j := 0; j < LPrimeBytes; j++ {
-			round1Output.u[i][j] = receiver.ExpOptions[0][i][j] ^ receiver.ExpOptions[1][i][j] ^ receiver.ExtPackChoices[j]
+		for j := 0; j < (M + 1); j++ { // m+s = L'/s
+			ti_0 := uint128.FromBytes(receiver.ExpOptions[0][i][j*SBytes : (j+1)*SBytes])
+			ti_1 := uint128.FromBytes(receiver.ExpOptions[1][i][j*SBytes : (j+1)*SBytes])
+			x := uint128.FromBytes(receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes])
+			round1Output.u[i][j] = ti_0.Sub(ti_1).Add(x)
 		}
 	}
 	return round1Output, nil
@@ -234,8 +145,8 @@ func (receiver *Receiver) Round1Extend(
 
 // Round2Output contains the random challenge for the consistency check.
 type Round2Output struct {
-	randomCheckMatrix [m][sBytes]byte  // χ_i ∈ [m]×[2^s]uints
-	derandTau         [L]curves.Scalar // m_i ∈ [L]curve.Scalar
+	randomCheckMatrix [M][SBytes]byte  // χ_i ∈ [m]×[2^s]uints
+	derandomTau       [L]curves.Scalar // m_i ∈ [L]curve.Scalar
 }
 
 // Round2Extend uses the PRG to extend the basseOT results. It also sends a
@@ -255,21 +166,22 @@ func (sender *Sender) Round2Extend(
 			sender.ExtChosenOpt[i][:])
 	}
 
-	// (Ext.4) Compute q_i (constant time)
+	// (Ext.4) Compute q_i (constant time) --> In F_{2^s}
 	for i := 0; i < Kappa; i++ {
 		// q_i = Δ_i • u_i + t_i
-		for j := 0; j < LPrimeBytes; j++ {
-			qiTemp := Round1Output.u[i][j] ^ sender.ExtChosenOpt[i][j]
+		for j := 0; j < (M + 1); j++ {
+			tiDelta := uint128.FromBytes(sender.ExtChosenOpt[i][j*SBytes : (j+1)*SBytes])
+			tiDeltaPlusDeltaX := Round1Output.u[i][j].Add(tiDelta)
 			if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
-				sender.ExtCorrelations[i][j] = qiTemp
+				tiDeltaPlusDeltaX.PutBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
 			} else {
-				sender.ExtCorrelations[i][j] = sender.ExtChosenOpt[i][j]
+				tiDelta.PutBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
 			}
 		}
 	}
 
 	// (Check.1) Sample and send chi_i as challenge to check consistency
-	for i := 0; i < m; i++ {
+	for i := 0; i < M; i++ {
 		if _, err := rand.Read(round2Output.randomCheckMatrix[i][:]); err != nil {
 			return nil, errs.WrapFailed(err, "sampling random bits for challenge Chi (Check.1)")
 		}
@@ -297,16 +209,16 @@ func (sender *Sender) Round2Extend(
 	}
 
 	// (Derand.1) Derandomize by mapping to curve points and creating the correlation
-	for j := 0; j < L; j++ {
+	for j := 0; j < extensionFactor; j++ {
 		sender.OutDeltaOpt[j], err = sender.curve.Scalar.SetBytes(v_0[j][:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
 		}
-		round2Output.derandTau[j], err = sender.curve.Scalar.SetBytes(v_1[j][:])
+		round2Output.derandomTau[j], err = sender.curve.Scalar.SetBytes(v_1[j][:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
 		}
-		round2Output.derandTau[j] = round2Output.derandTau[j].Sub(sender.OutDeltaOpt[j]).Add(InputOpts[j])
+		round2Output.derandomTau[j] = round2Output.derandomTau[j].Sub(sender.OutDeltaOpt[j]).Add(InputOpts[j])
 	}
 	return round2Output, nil
 }
@@ -323,20 +235,20 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 
 	// (Check.2) Compute the challenge response x, t^i \forall i \in [kappa]
 	// 		x = x^hat_{m+1} ...
-	round3Output.x_check = uint128.FromBytes(receiver.ExtPackChoices[LBytes : LBytes+sBytes])
+	round3Output.x_check = uint128.FromBytes(receiver.ExtPackChoices[LBytes : LBytes+SBytes])
 	// 		                ... + Σ{j=0}^{m-1} χ_j • x_hat_j
-	for j := 0; j < m; j++ {
-		x_hat_j := uint128.FromBytes(receiver.ExtPackChoices[j*sBytes : (j+1)*sBytes])
+	for j := 0; j < M; j++ {
+		x_hat_j := uint128.FromBytes(receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes])
 		Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
 		round3Output.x_check = round3Output.x_check.Add(Chi_j.Mul(x_hat_j))
 	}
 	// 		t^i = ...
 	for i := 0; i < Kappa; i++ {
 		//         ... t^i_hat_{m+1} ...
-		round3Output.t_check[i] = uint128.FromBytes(receiver.ExpOptions[0][i][LBytes : LBytes+sBytes])
+		round3Output.t_check[i] = uint128.FromBytes(receiver.ExpOptions[0][i][LBytes : LBytes+SBytes])
 		//                           ... + Σ{j=0}^{m-1} χ_j • t^i_hat_j
-		for j := 0; j < m; j++ {
-			t_hat_j := uint128.FromBytes(receiver.ExpOptions[0][i][j*sBytes : (j+1)*sBytes])
+		for j := 0; j < M; j++ {
+			t_hat_j := uint128.FromBytes(receiver.ExpOptions[0][i][j*SBytes : (j+1)*SBytes])
 			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
 			round3Output.t_check[i] = round3Output.t_check[i].Add(Chi_j.Mul(t_hat_j))
 		}
@@ -353,12 +265,12 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 
 	// (Derand.2) Derandomize and Correlate in the curve (constant time)
 	var v_x_curve, v_x_curve_corr curves.Scalar
-	for j := 0; j < L; j++ {
+	for j := 0; j < extensionFactor; j++ {
 		v_x_curve, err = receiver.curve.Scalar.SetBytes(v_x[j][:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
 		}
-		v_x_curve_corr = round2Out.derandTau[j].Sub(v_x_curve)
+		v_x_curve_corr = round2Out.derandomTau[j].Sub(v_x_curve)
 		if UnpackBit(j, receiver.ExtPackChoices[:]) {
 			receiver.OutCorrelations[j] = v_x_curve_corr
 		} else {
@@ -373,10 +285,10 @@ func (sender *Sender) Round4CheckConsistency(round2Out *Round2Output, round3Outp
 	// (Check.3) Check the consistency of the challenge response computing q^i
 	for i := 0; i < Kappa; i++ {
 		// q^i = q^i_hat_{m+1} ...
-		q_check := uint128.FromBytes(sender.ExtCorrelations[i][LBytes : LBytes+sBytes])
+		q_check := uint128.FromBytes(sender.ExtCorrelations[i][LBytes : LBytes+SBytes])
 		//                     ... + Σ{j=0}^{m-1} χ_j • q^i_hat_j
-		for j := 0; j < m; j++ {
-			q_hat_j := uint128.FromBytes(sender.ExtCorrelations[i][j*sBytes : (j+1)*sBytes])
+		for j := 0; j < M; j++ {
+			q_hat_j := uint128.FromBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
 			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
 			q_check = q_check.Add(Chi_j.Mul(q_hat_j))
 		}

@@ -8,27 +8,9 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	uint128 "github.com/copperexchange/crypto-primitives-go/pkg/core/modular"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 )
-
-func TestBinaryMult(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		temp := make([]byte, 32)
-		_, err := rand.Read(temp)
-		require.NoError(t, err)
-		expected := make([]byte, 32)
-		copy(expected, temp)
-		// this test is based on Fermat's little theorem.
-		// the multiplicative group of units of a finite field has order |F| - 1
-		// (in fact, it's necessarily cyclic; see e.g. https://math.stackexchange.com/a/59911, but this test doesn't rely on that fact)
-		// thus raising any element to the |F|th power should yield that element itself.
-		// this is a good test because it relies on subtle facts about the field structure, and will fail if anything goes wrong.
-		for j := 0; j < 256; j++ {
-			expected = binaryFieldMul(expected, expected)
-		}
-		require.Equal(t, temp, expected)
-	}
-}
 
 func TestCOTExtension(t *testing.T) {
 	curveInstances := []*curves.Curve{
@@ -50,7 +32,7 @@ func TestCOTExtension(t *testing.T) {
 
 		// Setup COTe
 		sender := NewCOtSender(baseOtReceiverOutput, curve)
-		receiver := NewCOtReceiver(baseOtSenderOutput, curve)
+		receiver := NewCOtReceiver(baseOtSenderOutput, curve, false)
 		choice := [LBytes]byte{} // receiver's input, the Choice bits x
 		_, err = rand.Read(choice[:])
 		require.NoError(t, err)
@@ -66,19 +48,20 @@ func TestCOTExtension(t *testing.T) {
 		require.NoError(t, err)
 
 		for i := 0; i < Kappa; i++ {
-			for j := 0; j < LPrimeBytes; j++ {
+			for j := 0; j < (M + 1); j++ {
 				// Check the extended options: t^i_{Δ_i} = Δ_i•t^i_1 ⊕ (1⊕Δ_i)•t^i_0
-				prgSync := sender.ExtChosenOpt[i][j] ^ receiver.ExpOptions[sender.baseOtRecOutputs.RandomChoiceBits[i]][i][j]
+				prgSync := uint128.FromBytes(sender.ExtChosenOpt[i][j*SBytes : (j+1)*SBytes]).Sub(
+					uint128.FromBytes(receiver.ExpOptions[sender.baseOtRecOutputs.RandomChoiceBits[i]][i][j*SBytes : (j+1)*SBytes]))
 				require.Zero(t, prgSync)
 				// Check each bit-level correlation q_i = t^i_0 ⊕ x • Δ_i
-				bitCorr := sender.ExtCorrelations[i][j] ^ receiver.ExpOptions[0][i][j]
+				bitCorr := uint128.FromBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes]).Sub(
+					uint128.FromBytes(receiver.ExpOptions[0][i][j*SBytes : (j+1)*SBytes]))
 				if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
-					bitCorr ^= receiver.ExtPackChoices[j]
+					bitCorr = bitCorr.Sub(uint128.FromBytes(receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes]))
 				}
 				require.Zero(t, bitCorr)
 			}
 		}
-
 		round3Output, err := receiver.Round3ProveConsistency(round2Output)
 		require.NoError(t, err)
 
@@ -86,9 +69,9 @@ func TestCOTExtension(t *testing.T) {
 		require.NoError(t, err)
 
 		for j := 0; j < L; j++ {
-			// Check each correlation z_A = x • α + z_B
+			// Check each correlation z_A = x • α - z_B
 			if UnpackBit(j, choice[:]) {
-				require.Equal(t, sender.OutDeltaOpt[j], receiver.OutCorrelations[j].Add(inputOpt[j]))
+				require.Equal(t, sender.OutDeltaOpt[j], receiver.OutCorrelations[j].Sub(inputOpt[j]))
 			} else {
 				require.Equal(t, sender.OutDeltaOpt[j], receiver.OutCorrelations[j])
 			}
