@@ -11,6 +11,10 @@ func (p *Participant) Sample() (zero.Sample, error) {
 	}
 
 	sample := p.Curve.Scalar.Zero()
+	var presentSharedSeeds []byte
+	for _, participant := range p.PresentParticipants {
+		presentSharedSeeds = append(presentSharedSeeds, participant.PublicKey().Scalar().Bytes()...)
+	}
 	for _, participant := range p.PresentParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
@@ -20,8 +24,9 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		if !exists {
 			return nil, errs.NewMissing("could not find shared seeds for sharing id %d", sharingId)
 		}
+		sumSharedSeeds := append(presentSharedSeeds, sharedSeed[:]...)
 		// TODO: make hash to curve and scalars variadic
-		toBeHashed := append(p.uniqueSessionId, sharedSeed[:]...)
+		toBeHashed := append(p.uniqueSessionId, sumSharedSeeds[:]...)
 		sampled := p.Curve.Scalar.Hash(toBeHashed)
 		if p.MySharingId < sharingId {
 			sample = sample.Add(sampled)
