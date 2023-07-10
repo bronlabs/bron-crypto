@@ -91,7 +91,6 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	uint128 "github.com/copperexchange/crypto-primitives-go/pkg/core/modular"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 )
 
@@ -102,7 +101,7 @@ import (
 
 // Round1Output contains the expanded and masked PRG outputs u_i
 type Round1Output struct {
-	u [Kappa][M + 1]uint128.Uint128 // u_i ∈ [L']bits
+	u [Kappa][LPrimeBytes]byte // u_i ∈ [L']bits
 }
 
 // Round1Extend uses the PRG to extend the basseOT results.
@@ -111,7 +110,6 @@ func (receiver *Receiver) Round1Extend(
 	InputPackedChoices [LBytes]byte, // x_i ∈ [L]bits
 ) (round1Output *Round1Output, err error) {
 	round1Output = &Round1Output{}
-	round1Output.u = [Kappa][M + 1]uint128.Uint128{}
 
 	// Copy uniqueSessionId into receiver
 	copy(receiver.uniqueSessionId[:], uniqueSessionId[:])
@@ -128,16 +126,13 @@ func (receiver *Receiver) Round1Extend(
 			// k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
 			PRG(uniqueSessionId[:],
 				receiver.baseOtSendOptions.OneTimePadEncryptionKeys[i][k][:],
-				receiver.ExpOptions[k][i][:])
+				receiver.ExtOptions[k][i][:])
 		}
 	}
-	// (Ext.3) Compute u_i and send it --> In F_{2^s}
+	// (Ext.3) Compute u_i and send it
 	for i := 0; i < Kappa; i++ {
-		for j := 0; j < (M + 1); j++ { // m+s = L'/s
-			ti_0 := uint128.FromBytes(receiver.ExpOptions[0][i][j*SBytes : (j+1)*SBytes])
-			ti_1 := uint128.FromBytes(receiver.ExpOptions[1][i][j*SBytes : (j+1)*SBytes])
-			x := uint128.FromBytes(receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes])
-			round1Output.u[i][j] = ti_0.Sub(ti_1).Add(x)
+		for j := 0; j < LPrimeBytes; j++ {
+			round1Output.u[i][j] = receiver.ExtOptions[0][i][j] ^ receiver.ExtOptions[1][i][j] ^ receiver.ExtPackChoices[j]
 		}
 	}
 	return round1Output, nil
@@ -166,16 +161,15 @@ func (sender *Sender) Round2Extend(
 			sender.ExtChosenOpt[i][:])
 	}
 
-	// (Ext.4) Compute q_i (constant time) --> In F_{2^s}
+	// (Ext.4) Compute q_i (constant time)
 	for i := 0; i < Kappa; i++ {
 		// q_i = Δ_i • u_i + t_i
-		for j := 0; j < (M + 1); j++ {
-			tiDelta := uint128.FromBytes(sender.ExtChosenOpt[i][j*SBytes : (j+1)*SBytes])
-			tiDeltaPlusDeltaX := Round1Output.u[i][j].Add(tiDelta)
+		for j := 0; j < LPrimeBytes; j++ {
+			qiTemp := Round1Output.u[i][j] ^ sender.ExtChosenOpt[i][j]
 			if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
-				tiDeltaPlusDeltaX.PutBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
+				sender.ExtCorrelations[i][j] = qiTemp
 			} else {
-				tiDelta.PutBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
+				sender.ExtCorrelations[i][j] = sender.ExtChosenOpt[i][j]
 			}
 		}
 	}
@@ -207,9 +201,11 @@ func (sender *Sender) Round2Extend(
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.3)")
 	}
+	copy(sender.TRExtOpts[0][:], v_0)
+	copy(sender.TRExtOpts[1][:], v_1)
 
 	// (Derand.1) Derandomize by mapping to curve points and creating the correlation
-	for j := 0; j < extensionFactor; j++ {
+	for j := 0; j < L; j++ {
 		sender.OutDeltaOpt[j], err = sender.curve.Scalar.SetBytes(v_0[j][:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
@@ -225,8 +221,8 @@ func (sender *Sender) Round2Extend(
 
 // Round2Output this is Alice's response to Bob in COTe
 type Round3Output struct {
-	x_check uint128.Uint128        // plain x in the protocol
-	t_check [Kappa]uint128.Uint128 // plain t^i in the protocol
+	x_check [SBytes]byte        // plain x in the protocol
+	t_check [Kappa][SBytes]byte // plain t^i in the protocol
 }
 
 // Round3ProveConsistency answers to the challenge of S.
@@ -235,33 +231,39 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 
 	// (Check.2) Compute the challenge response x, t^i \forall i \in [kappa]
 	// 		x = x^hat_{m+1} ...
-	round3Output.x_check = uint128.FromBytes(receiver.ExtPackChoices[LBytes : LBytes+SBytes])
+	copy(round3Output.x_check[:], receiver.ExtPackChoices[LBytes:LBytes+SBytes])
 	// 		                ... + Σ{j=0}^{m-1} χ_j • x_hat_j
 	for j := 0; j < M; j++ {
-		x_hat_j := uint128.FromBytes(receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes])
-		Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
-		round3Output.x_check = round3Output.x_check.Add(Chi_j.Mul(x_hat_j))
+		x_hat_j := receiver.ExtPackChoices[j*SBytes : (j+1)*SBytes]
+		Chi_j := round2Out.randomCheckMatrix[j][:]
+		for idx := 0; idx < SBytes; idx++ {
+			round3Output.x_check[idx] ^= (x_hat_j[idx] & Chi_j[idx])
+		}
 	}
 	// 		t^i = ...
 	for i := 0; i < Kappa; i++ {
 		//         ... t^i_hat_{m+1} ...
-		round3Output.t_check[i] = uint128.FromBytes(receiver.ExpOptions[0][i][LBytes : LBytes+SBytes])
+		copy(round3Output.t_check[i][:], receiver.ExtOptions[0][i][LBytes:LBytes+SBytes])
 		//                           ... + Σ{j=0}^{m-1} χ_j • t^i_hat_j
 		for j := 0; j < M; j++ {
-			t_hat_j := uint128.FromBytes(receiver.ExpOptions[0][i][j*SBytes : (j+1)*SBytes])
-			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
-			round3Output.t_check[i] = round3Output.t_check[i].Add(Chi_j.Mul(t_hat_j))
+			t_hat_j := receiver.ExtOptions[0][i][j*SBytes : (j+1)*SBytes]
+			Chi_j := round2Out.randomCheckMatrix[j][:]
+			for idx := 0; idx < SBytes; idx++ {
+				round3Output.t_check[i][idx] ^= (t_hat_j[idx] & Chi_j[idx])
+			}
 		}
 	}
 
 	// (T&R.1) Transpose t^i_0 into t_j
-	t_j := transposeBooleanMatrix(receiver.ExpOptions[0]) // t_j ∈ [L'][κ]bits
+	t_j := transposeBooleanMatrix(receiver.ExtOptions[0]) // t_j ∈ [L'][κ]bits
 
 	// (T&R.2) Hash L rows of t_j using the index as salt.
 	v_x, err := HashSalted(receiver.uniqueSessionId[:], t_j[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
 	}
+
+	copy(receiver.TRExtChosenOpt[:], v_x)
 
 	// (Derand.2) Derandomize and Correlate in the curve (constant time)
 	var v_x_curve, v_x_curve_corr curves.Scalar
@@ -271,7 +273,7 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 			return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
 		}
 		v_x_curve_corr = round2Out.derandomTau[j].Sub(v_x_curve)
-		if UnpackBit(j, receiver.ExtPackChoices[:]) {
+		if UnpackBit(j, receiver.ExtPackChoices[:]) != 0 {
 			receiver.OutCorrelations[j] = v_x_curve_corr
 		} else {
 			receiver.OutCorrelations[j] = v_x_curve
@@ -283,25 +285,32 @@ func (receiver *Receiver) Round3ProveConsistency(round2Out *Round2Output) (round
 // Round4CheckConsistency checks the consistency using the challenge response.
 func (sender *Sender) Round4CheckConsistency(round2Out *Round2Output, round3Output *Round3Output) error {
 	// (Check.3) Check the consistency of the challenge response computing q^i
+	qi_check := [SBytes]byte{}
+	qi_sum := [SBytes]byte{}
 	for i := 0; i < Kappa; i++ {
 		// q^i = q^i_hat_{m+1} ...
-		q_check := uint128.FromBytes(sender.ExtCorrelations[i][LBytes : LBytes+SBytes])
+		copy(qi_check[:], sender.ExtCorrelations[i][LBytes:LBytes+SBytes])
 		//                     ... + Σ{j=0}^{m-1} χ_j • q^i_hat_j
 		for j := 0; j < M; j++ {
-			q_hat_j := uint128.FromBytes(sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes])
-			Chi_j := uint128.FromBytes(round2Out.randomCheckMatrix[j][:])
-			q_check = q_check.Add(Chi_j.Mul(q_hat_j))
+			qi_hat_j := sender.ExtCorrelations[i][j*SBytes : (j+1)*SBytes]
+			Chi_j := round2Out.randomCheckMatrix[j][:]
+			for idx := 0; idx < SBytes; idx++ {
+				qi_check[idx] ^= (qi_hat_j[idx] & Chi_j[idx])
+			}
+
 		}
 		//  and ABORT if q^i != t^i + Δ_i • x   ∀ i ∈[κ]
-		var q_expected uint128.Uint128
-		q_sum := round3Output.t_check[i].Add(round3Output.x_check)
-		if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
-			q_expected = q_sum
-		} else {
-			q_expected = round3Output.t_check[i]
-		}
-		if !q_check.Sub(q_expected).IsZero() {
-			return errs.NewIdentifiableAbort("q_check != q_expected")
+		var q_expected [SBytes]byte
+		for idx := 0; idx < SBytes; idx++ {
+			qi_sum[idx] = round3Output.t_check[i][idx] ^ round3Output.x_check[idx]
+			if sender.baseOtRecOutputs.RandomChoiceBits[i] != 0 {
+				q_expected[idx] = qi_sum[idx]
+			} else {
+				q_expected[idx] = round3Output.t_check[i][idx]
+			}
+			if !(q_expected[idx] == qi_check[idx]) {
+				return errs.NewIdentifiableAbort("q_check != q_expected in SoftspokenOT")
+			}
 		}
 	}
 	return nil

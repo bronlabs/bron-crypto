@@ -51,8 +51,11 @@ type Receiver struct {
 	// ExtPackChoices (x_i) ∈ [L']bits are the choice bits for the OTe.
 	ExtPackChoices [LPrimeBytes]byte
 
-	// ExpOptions (t^i) ∈ [2][κ][L']bits are expansions of BaseOT results using a PRG.
-	ExpOptions [KeyCount][Kappa][LPrimeBytes]byte
+	// ExtOptions (t^i) ∈ [2][κ][L']bits are expansions of BaseOT results using a PRG.
+	ExtOptions [KeyCount][Kappa][LPrimeBytes]byte
+
+	// TRExtChosenOpt (v_x) ∈ [L][κ]bits are the transposed and randomized chosenOptions
+	TRExtChosenOpt [L][KappaBytes]byte
 
 	// OutCorrelations (z_B) ∈ [L]curve.Scalar are the output "correlations" (in the curve).
 	OutCorrelations [L]curves.Scalar
@@ -74,11 +77,15 @@ type Sender struct {
 	//    q^i = Δ_i • x + t^i
 	ExtCorrelations [Kappa][LPrimeBytes]byte
 
+	// TRExtOpts (v_{0,j} and v_{1,j}) ∈ [2][L][κ]bits are the transposed & randomized protocols
+	TRExtOpts [2][L][KappaBytes]byte
+
 	// OutDeltaOpt (z_A) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
 	OutDeltaOpt [L]curves.Scalar
 
 	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
+	curve       *curves.Curve
+	forcedReuse bool
 }
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
@@ -93,8 +100,9 @@ func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve, f
 
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the receiver role in kappa baseOTs.
-func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve) *Sender {
+func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve, forcedReuse bool) *Sender {
 	return &Sender{
+		forcedReuse:      forcedReuse,
 		baseOtRecOutputs: baseOtResults,
 		curve:            curve,
 	}

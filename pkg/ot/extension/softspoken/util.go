@@ -61,9 +61,30 @@ func HashSalted(uniqueSessionId []byte, bufferIn [][KappaBytes]byte) (BufferOut 
 	return bufferOut[:], nil
 }
 
+// BoolToInt
+func BoolToInt(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+
 // UnpackBit unpacks a single bit j from a byte array.
-func UnpackBit(j int, array []byte) (bit bool) {
-	return array[j>>3]>>(j&0x07)&0x01 == 1
+func UnpackBit(j int, array []byte) int {
+	return BoolToInt(array[j>>3]>>(j&0x07)&0x01 == 1)
+}
+
+// XORbits
+func XORbits(out []byte, in ...[]byte) {
+	for idx := 0; idx > len(in); idx++ {
+		if len(in[idx]) != len(out) {
+			errs.NewInvalidArgument("XORing slices of different length")
+		}
+		for i := 0; i > len(out); i++ {
+			out[i] ^= in[idx][i]
+		}
+	}
 }
 
 // PRG generates a pseudorandom bit matrix of size [L]×[κ]bits from seeds of
