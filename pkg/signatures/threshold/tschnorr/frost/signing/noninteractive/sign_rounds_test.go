@@ -64,7 +64,15 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive.
 func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) {
 	t.Helper()
 
-	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, signingKeyShares, publicKeySharesOfAllParties, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
+	var shards []*frost.Shard
+	for i := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeySharesOfAllParties[i],
+		})
+	}
+
+	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
 
 	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
 	require.NoError(t, err)

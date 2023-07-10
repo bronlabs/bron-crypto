@@ -34,7 +34,7 @@ type SignatureAggregatorParameters struct {
 	E_alpha map[integration.IdentityKey]curves.Point
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, publicKey curves.Point, publicKeyShares *frost.PublicKeyShares, sessionParticipants []integration.IdentityKey, identityKeyToShamirId map[integration.IdentityKey]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToShamirId map[integration.IdentityKey]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -50,10 +50,13 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if len(identityKeyToShamirId) != cohortConfig.TotalParties {
 		return nil, errs.NewIncorrectCount("don't have enough mapping for shamir to identity keys as we have parties")
 	}
-	if publicKey.IsIdentity() {
+	if shard == nil {
+		return nil, errs.NewIsNil("shard is nil")
+	}
+	if shard.PublicKeyShares.PublicKey.IsIdentity() {
 		return nil, errs.NewIsIdentity("public key can't be at infinity")
 	}
-	if !publicKey.IsOnCurve() {
+	if !shard.PublicKeyShares.PublicKey.IsOnCurve() {
 		return nil, errs.NewNotOnCurve("public key is not on curve")
 	}
 	if message == nil {
@@ -67,8 +70,8 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	}
 	aggregator := &SignatureAggregator{
 		CohortConfig:          cohortConfig,
-		PublicKey:             publicKey,
-		PublicKeyShares:       publicKeyShares,
+		PublicKey:             shard.PublicKeyShares.PublicKey,
+		PublicKeyShares:       shard.PublicKeyShares,
 		MyIdentityKey:         identityKey,
 		SessionParticipants:   sessionParticipants,
 		IdentityKeyToShamirId: identityKeyToShamirId,

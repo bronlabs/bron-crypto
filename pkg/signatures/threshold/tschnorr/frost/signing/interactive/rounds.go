@@ -41,7 +41,7 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	partialSignature, err := signing_helpers.ProducePartialSignature(
 		ic,
 		ic.SessionParticipants,
-		ic.SigningKeyShare,
+		ic.Shard.SigningKeyShare,
 		ic.state.d_i, ic.state.e_i,
 		D_alpha, E_alpha,
 		ic.ShamirIdToIdentityKey,
@@ -62,7 +62,7 @@ func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[i
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.SigningKeyShare.PublicKey, ic.PublicKeyShares, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
 	}

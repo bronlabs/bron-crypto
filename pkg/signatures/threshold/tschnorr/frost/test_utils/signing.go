@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares) (participants []*interactive_signing.InteractiveCosigner, err error) {
+func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*interactive_signing.InteractiveCosigner, err error) {
 	if len(identities) < cohortConfig.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
 	}
@@ -21,7 +21,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 			return nil, errors.New("invalid identity")
 		}
 		// TODO: test for what happens if session participants are set to be different for different parties
-		participants[i], err = interactive_signing.NewInteractiveCosigner(identity, identities, signingKeyShares[i], publicKeyShares[i], cohortConfig, crand.Reader)
+		participants[i], err = interactive_signing.NewInteractiveCosigner(identity, identities, shards[i], cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err
 		}
@@ -30,10 +30,10 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 	return participants, nil
 }
 
-func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
+func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
 	participants = make([]*noninteractive.NonInteractiveCosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
-		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, signingKeyShares[i], publicKeySharesOfAllParties[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
+		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

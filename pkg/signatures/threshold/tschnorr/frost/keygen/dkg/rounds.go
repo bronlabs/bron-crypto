@@ -19,10 +19,13 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*frost.SigningKeyShare, *frost.PublicKeyShares, error) {
+func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*frost.Shard, error) {
 	signingKeyShare, publicKeyShares, err := p.pedersenParty.Round2(round1outputBroadcast, round1outputP2P)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "pedersen round 2 failed")
+		return nil, errs.WrapFailed(err, "pedersen round 2 failed")
 	}
-	return signingKeyShare, publicKeyShares, nil
+	return &frost.Shard{
+		SigningKeyShare: signingKeyShare,
+		PublicKeyShares: publicKeyShares,
+	}, nil
 }
