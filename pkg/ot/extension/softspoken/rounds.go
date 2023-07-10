@@ -61,14 +61,14 @@
 //		# A bit-level correlation used to check the extension consistency.
 //		  (Check.1) S: sample(χ_i)                                            ∈ [s]bits       ∀i∈[m]
 //		  .            Send(χ) => R                                           ∈ [s]×[m]bits
-//		  (Check.2) R: x_check = x^hat_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j       ∈ [2^s]
+//		  (Check.2) R: x_check = x^hat_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j       ∈ [s]bits
 //		  .                        └---where x^hat_j = x_{sj:s(j+1)}
-//		  .            t^i_check = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j ∈ [2^s]         ∀i∈[κ]
+//		  .            t^i_check = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j ∈ [s]bits       ∀i∈[κ]
 //		  .                        └---where t^i_hat_j = t^i_{sj:s(j+1)}
 //		  .            Send(x_check, t^i_check) => S                          ∈ [s] + [s]×[κ]bits
-//		  (Check.3) S: q^i_check = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j • q^i_hat_j ∈ [2^s]         ∀i∈[κ]
+//		  (Check.3) S: q^i_check = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j • q^i_hat_j ∈ [s]bits       ∀i∈[κ]
 //		  .                        └---where q^i_hat_j = q^i_{sj:s(j+1)}
-//		  .            ABORT if  q^i_check != t^i_check + Δ_i • x_check       ∈ [2^s]         ∀i∈[κ]
+//		  .            ABORT if  q^i_check != t^i_check + Δ_i • x_check       ∈ [s]bits       ∀i∈[κ]
 //		# A bit-level randomization to destroy the bit-level correlation.
 //		  (T&R.1)   R: transpose(t^i_0) ->t_j                                 ∈ [κ]bits       ∀j∈[L']
 //		  .         S: transpose(q^i) -> q_j                                  ∈ [κ]bits       ∀j∈[L']
