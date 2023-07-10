@@ -20,7 +20,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int, unmatchedSidParticipantIndex int) {
+func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -35,7 +35,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 
 	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
 
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, unmatchedSidParticipantIndex)
+	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -46,45 +46,71 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-	if unmatchedSidParticipantIndex >= 0 {
-		require.Error(t, err)
-	} else {
-		require.NoError(t, err)
-		for _, publicKeyShare := range publicKeyShares {
-			require.NotNil(t, publicKeyShare)
-		}
 
-		// each signing share is different
-		for i := 0; i < len(signingKeyShares); i++ {
-			for j := i + 1; j < len(signingKeyShares); j++ {
-				require.NotZero(t, signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share))
-			}
-		}
-
-		// each public key is the same
-		for i := 0; i < len(signingKeyShares); i++ {
-			for j := i + 1; j < len(signingKeyShares); j++ {
-				require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey))
-			}
-		}
-
-		shamirDealer, err := shamir.NewDealer(threshold, n, curve)
-		require.NoError(t, err)
-		require.NotNil(t, shamirDealer)
-		shamirShares := make([]*shamir.Share, len(participants))
-		for i := 0; i < len(participants); i++ {
-			shamirShares[i] = &shamir.Share{
-				Id:    participants[i].GetShamirId(),
-				Value: signingKeyShares[i].Share,
-			}
-		}
-
-		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
-		require.NoError(t, err)
-
-		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-		require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+	require.NoError(t, err)
+	for _, publicKeyShare := range publicKeyShares {
+		require.NotNil(t, publicKeyShare)
 	}
+
+	// each signing share is different
+	for i := 0; i < len(signingKeyShares); i++ {
+		for j := i + 1; j < len(signingKeyShares); j++ {
+			require.NotZero(t, signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share))
+		}
+	}
+
+	// each public key is the same
+	for i := 0; i < len(signingKeyShares); i++ {
+		for j := i + 1; j < len(signingKeyShares); j++ {
+			require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey))
+		}
+	}
+
+	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+	require.NoError(t, err)
+	require.NotNil(t, shamirDealer)
+	shamirShares := make([]*shamir.Share, len(participants))
+	for i := 0; i < len(participants); i++ {
+		shamirShares[i] = &shamir.Share{
+			Id:    participants[i].GetShamirId(),
+			Value: signingKeyShares[i].Share,
+		}
+	}
+
+	reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+	require.NoError(t, err)
+
+	derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
+	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+}
+
+func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+
+	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
+	require.NoError(t, err)
+
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+
+	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, 0)
+	require.NoError(t, err)
+
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	require.NoError(t, err)
+	for _, out := range r1OutsU {
+		require.Len(t, out, cohortConfig.TotalParties-1)
+	}
+
+	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	require.Error(t, err)
 }
 
 func Test_HappyPath(t *testing.T) {
@@ -105,7 +131,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, -1)
+					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}
@@ -130,7 +156,7 @@ func Test_UnmatchedSid(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, 0)
+					testInvalidSid(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}

@@ -32,11 +32,11 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	round1output[p.MyIdentityKey] = &Round1Broadcast{
 		Ri: p.state.r_i,
 	}
-	sortedSidContributions, err := sortSidContributions(round1output)
+	sortRandomnessContributions, err := sortRandomnessContributions(round1output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
-	for i, sidFromI := range sortedSidContributions {
+	for i, sidFromI := range sortRandomnessContributions {
 		p.state.transcript.AppendMessage([]byte(fmt.Sprintf("sid contribution from %d", i)), sidFromI)
 	}
 	randomValue := p.state.transcript.ExtractBytes([]byte("session id"), zero.LambdaBytes)
@@ -44,7 +44,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return randomValue, nil
 }
 
-func sortSidContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
+func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
 	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
