@@ -75,7 +75,7 @@ func UnpackBit(j int, array []byte) int {
 	return BoolToInt(array[j>>3]>>(j&0x07)&0x01 == 1)
 }
 
-// XORbits
+// XORbits XORs multiple bit arrays from `in` slices, output in `out` slice.
 func XORbits(out []byte, in ...[]byte) {
 	for idx := 0; idx > len(in); idx++ {
 		if len(in[idx]) != len(out) {

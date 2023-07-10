@@ -16,29 +16,28 @@ const (
 	// and the BaseOT scalars used as seeds.
 	extensionFactor = 2
 
-	// S is the statistical security parameter. Must divide L (L%S=0) for SoftSpokenOT.
-	//  This defines the data type of the consistency check to 2^S bits (e.g. S=128 -> Uint128)
-	S = 128
+	// Sigma (σ) is the statistical security parameter. Must divide L (L%Sigma=0)
+	// for SoftSpokenOT.
+	Sigma = 128
 
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
-	// KeyCount is the number of scalars to choose from in the BaseOT, as well as
-	//  the number of shares _per_ choice of the cOT. Set to 2 for 1-out-of-2 OT
-	//  and one share per party.
+	// KeyCount is the number of options to choose from in the BaseOT. Set to 2
+	// for 1-out-of-2 OT.
 	KeyCount = 2
 
 	// L is the batch size in bits used in the cOT functionality.
 	L = extensionFactor * Kappa
 
 	// length of pseudorandom seed expansion
-	LPrime = L + S
+	LPrime = L + Sigma
 
 	// number of blocks in the consistency check
-	M = L / S
+	M = L / Sigma
 
 	// Equivalents in Bytes
 	KappaBytes  = Kappa >> 3
 	LBytes      = L >> 3
-	SBytes      = S >> 3
+	SigmaBytes  = Sigma >> 3
 	LPrimeBytes = LPrime >> 3
 	MBytes      = M >> 3
 )
@@ -54,9 +53,6 @@ type Receiver struct {
 	// ExtOptions (t^i) ∈ [2][κ][L']bits are expansions of BaseOT results using a PRG.
 	ExtOptions [KeyCount][Kappa][LPrimeBytes]byte
 
-	// TRExtChosenOpt (v_x) ∈ [L][κ]bits are the transposed and randomized chosenOptions
-	TRExtChosenOpt [L][KappaBytes]byte
-
 	// OutCorrelations (z_B) ∈ [L]curve.Scalar are the output "correlations" (in the curve).
 	OutCorrelations [L]curves.Scalar
 
@@ -70,17 +66,14 @@ type Sender struct {
 	// of playing the receiver in a base OT protocol. They are inputs of COTe.
 	baseOtRecOutputs *simplest.ReceiverOutput
 
-	// ExtChosenOpt (t^i_{Δ_i}) ∈ [κ][L']bits are the expanded (via a PRG) baseOT chosenOption
+	// ExtChosenOpt (t^i_{Δ_i}) ∈ [κ][L']bits are the extended (via a PRG) baseOT deltaOpts.
 	ExtChosenOpt [Kappa][LPrimeBytes]byte
 
 	// ExtCorrelations (q_i) ∈ [κ][L']bits are the extended correlations, such that:
 	//    q^i = Δ_i • x + t^i
 	ExtCorrelations [Kappa][LPrimeBytes]byte
 
-	// TRExtOpts (v_{0,j} and v_{1,j}) ∈ [2][L][κ]bits are the transposed & randomized protocols
-	TRExtOpts [2][L][KappaBytes]byte
-
-	// OutDeltaOpt (z_A) ∈ [L]curve.Scalar are the output "ChosenOpt" group elements.
+	// OutDeltaOpt (z_A) ∈ [L]curve.Scalar are the output "DeltaOpt" group elements.
 	OutDeltaOpt [L]curves.Scalar
 
 	// curve is the elliptic curve used in the protocol.
@@ -95,6 +88,7 @@ func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve, f
 		forcedReuse:       forcedReuse,
 		baseOtSendOptions: baseOtResults,
 		curve:             curve,
+		OutCorrelations:   *new([L]curves.Scalar),
 	}
 }
 
@@ -104,6 +98,7 @@ func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve, f
 	return &Sender{
 		forcedReuse:      forcedReuse,
 		baseOtRecOutputs: baseOtResults,
+		OutDeltaOpt:      *new([L]curves.Scalar),
 		curve:            curve,
 	}
 }

@@ -36,19 +36,22 @@ func (u Uint128) Equals(v Uint128) bool {
 	return u == v
 }
 
+// BoolToInt converts a boolean value to 0 or 1.
+func BoolToInt(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+
 // Cmp compares u and v and returns:
 //
 //	-1 if u <  v
 //	 0 if u == v
 //	+1 if u >  v
 func (u Uint128) Cmp(v Uint128) int {
-	if u == v {
-		return 0
-	} else if u.Hi < v.Hi || (u.Hi == v.Hi && u.Lo < v.Lo) {
-		return -1
-	} else {
-		return 1
-	}
+	return 1 - BoolToInt(u == v) - 2*BoolToInt(u.Hi < v.Hi || (u.Hi == v.Hi && u.Lo < v.Lo))
 }
 
 // And returns u&v.
@@ -92,24 +95,32 @@ func (u Uint128) Mul(v Uint128) Uint128 {
 
 // Lsh returns u<<n.
 func (u Uint128) Lsh(n uint) (s Uint128) {
+	s_Lo_nLeq64 := uint64(s.Lo << n)
+	s_Hi_nLeq64 := uint64(u.Hi<<n | u.Lo>>(64-n))
+	s_Lo_nGt64 := uint64(0)
+	s_Hi_nGt64 := uint64(u.Lo << (n - 64))
 	if n > 64 {
-		s.Lo = 0
-		s.Hi = u.Lo << (n - 64)
+		s.Lo = s_Lo_nLeq64
+		s.Hi = s_Hi_nLeq64
 	} else {
-		s.Lo = u.Lo << n
-		s.Hi = u.Hi<<n | u.Lo>>(64-n)
+		s.Lo = s_Lo_nGt64
+		s.Hi = s_Hi_nGt64
 	}
 	return
 }
 
 // Rsh returns u>>n.
 func (u Uint128) Rsh(n uint) (s Uint128) {
+	s_Lo_nLeq64 := uint64(u.Lo>>n | u.Hi<<(64-n))
+	s_Hi_nLeq64 := uint64(u.Hi >> n)
+	s_Lo_nGt64 := uint64(u.Hi >> (n - 64))
+	s_Hi_nGt64 := uint64(0)
 	if n > 64 {
-		s.Lo = u.Hi >> (n - 64)
-		s.Hi = 0
+		s.Lo = s_Lo_nGt64
+		s.Hi = s_Hi_nGt64
 	} else {
-		s.Lo = u.Lo>>n | u.Hi<<(64-n)
-		s.Hi = u.Hi >> n
+		s.Lo = s_Lo_nLeq64
+		s.Hi = s_Hi_nLeq64
 	}
 	return
 }
