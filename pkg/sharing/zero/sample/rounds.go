@@ -11,9 +11,11 @@ func (p *Participant) Sample() (zero.Sample, error) {
 	}
 
 	sample := p.Curve.Scalar.Zero()
-	var presentSharedSeeds []byte
+	// We need to sample a random value that is consistent with the seeds we received from the other participants.
+	// Because we want to enforce that we abort if participants don't agree on who's present in the sampling phase.
+	var presentParticipantIdentityKey []byte
 	for _, participant := range p.PresentParticipants {
-		presentSharedSeeds = append(presentSharedSeeds, participant.PublicKey().Scalar().Bytes()...)
+		presentParticipantIdentityKey = append(presentParticipantIdentityKey, participant.PublicKey().ToAffineCompressed()...)
 	}
 	for _, participant := range p.PresentParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant]
@@ -24,9 +26,9 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		if !exists {
 			return nil, errs.NewMissing("could not find shared seeds for sharing id %d", sharingId)
 		}
-		sumSharedSeeds := append(presentSharedSeeds, sharedSeed[:]...)
+		sumSharedSeedsPrefix := append(presentParticipantIdentityKey, sharedSeed[:]...)
 		// TODO: make hash to curve and scalars variadic
-		toBeHashed := append(p.uniqueSessionId, sumSharedSeeds[:]...)
+		toBeHashed := append(p.uniqueSessionId, sumSharedSeedsPrefix[:]...)
 		sampled := p.Curve.Scalar.Hash(toBeHashed)
 		if p.MySharingId < sharingId {
 			sample = sample.Add(sampled)
