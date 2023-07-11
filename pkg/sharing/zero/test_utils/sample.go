@@ -13,7 +13,7 @@ import (
 func MakeSampleParticipants(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	for i, identity := range identities {
 		participants[i], err = sample.NewParticipant(curve, uniqueSessionId, identity, seeds[i], identities)
 		if err != nil {

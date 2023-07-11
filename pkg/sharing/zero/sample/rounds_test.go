@@ -196,7 +196,7 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, allIdentities, len(allIdentities))
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, allIdentities)
 
 	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
 	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})

@@ -34,7 +34,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 
 	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
@@ -98,7 +98,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 
 	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	participants[0].UniqueSessionId = []byte("invalid")
