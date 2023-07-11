@@ -12,7 +12,7 @@ type Participant struct {
 	MyIdentityKey       integration.IdentityKey
 	MySharingId         int
 	PresentParticipants []integration.IdentityKey
-	uniqueSessionId     []byte
+	UniqueSessionId     []byte
 
 	IdentityKeyToSharingId map[integration.IdentityKey]int
 
@@ -86,7 +86,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		Curve:                  curve,
 		MyIdentityKey:          identityKey,
 		MySharingId:            mySharingId,
-		uniqueSessionId:        uniqueSessionId,
+		UniqueSessionId:        uniqueSessionId,
 		PresentParticipants:    presentParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		round:                  1,

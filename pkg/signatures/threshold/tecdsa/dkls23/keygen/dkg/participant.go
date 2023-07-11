@@ -12,8 +12,8 @@ import (
 )
 
 type Participant struct {
-	pedersenParty     *pedersen.Participant
-	zeroSamplingParty *zeroSetup.Participant
+	PedersenParty     *pedersen.Participant
+	ZeroSamplingParty *zeroSetup.Participant
 
 	state *state
 }
@@ -24,15 +24,15 @@ type state struct {
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.pedersenParty.GetIdentityKey()
+	return p.PedersenParty.GetIdentityKey()
 }
 
 func (p *Participant) GetShamirId() int {
-	return p.pedersenParty.GetShamirId()
+	return p.PedersenParty.GetShamirId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.pedersenParty.GetCohortConfig()
+	return p.PedersenParty.GetCohortConfig()
 }
 
 func NewParticipant(identityKey integration.IdentityKey, pedersenSessionId []byte, zeroSamplingSessionId []byte, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
@@ -49,7 +49,7 @@ func NewParticipant(identityKey integration.IdentityKey, pedersenSessionId []byt
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
 	return &Participant{
-		pedersenParty:     pedersenParty,
-		zeroSamplingParty: zeroSamplingParty,
+		PedersenParty:     pedersenParty,
+		ZeroSamplingParty: zeroSamplingParty,
 	}, nil
 }

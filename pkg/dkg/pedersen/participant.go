@@ -17,7 +17,7 @@ type Participant struct {
 
 	MyIdentityKey      integration.IdentityKey
 	MyShamirId         int
-	uniqueSessionId    []byte
+	UniqueSessionId    []byte
 	myPartialPublicKey curves.Point
 	secretKeyShare     curves.Scalar
 
@@ -53,7 +53,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	}
 	result := &Participant{
 		MyIdentityKey:   identityKey,
-		uniqueSessionId: uniqueSessionId,
+		UniqueSessionId: uniqueSessionId,
 		state:           &State{},
 		prng:            prng,
 		CohortConfig:    cohortConfig,

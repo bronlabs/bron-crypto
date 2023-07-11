@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader, InvalidSidParticipantIndex int) (participants []*dkg.Participant, err error) {
+func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -36,11 +36,7 @@ func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integrati
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 
-		if i == InvalidSidParticipantIndex {
-			participants[i], err = dkg.NewParticipant(identity, []byte(""), []byte(""), cohortConfig, prng)
-		} else {
-			participants[i], err = dkg.NewParticipant(identity, pedesenSessionId, zeroSamplingSessionId, cohortConfig, prng)
-		}
+		participants[i], err = dkg.NewParticipant(identity, pedesenSessionId, zeroSamplingSessionId, cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}

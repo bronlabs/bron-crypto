@@ -36,7 +36,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 
 	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
 
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -100,7 +100,8 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 
 	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
 
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, 0)
+	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	participants[0].UniqueSessionId = []byte("invalid")
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -139,7 +140,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 }
 
-func Test_UnmatchedSid(t *testing.T) {
+func TestInvalidSid(t *testing.T) {
 	t.Parallel()
 	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
