@@ -242,10 +242,6 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		PublicKey: publicKey,
 		SharesMap: publicKeySharesMap,
 	}
-	// TODO: Fix this.
-	// if err := publicKeyShares.Validate(); err != nil {
-	// 	return nil, nil, errors.Wrap(err, "couldn't verify public key shares")
-	// }
 
 	p.round++
 	return &threshold.SigningKeyShare{
