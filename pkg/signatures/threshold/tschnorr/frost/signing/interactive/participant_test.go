@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
 	trusted_dealer "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -71,13 +72,23 @@ func Test_CanInitialize(t *testing.T) {
 	require.True(t, exists)
 	require.NotNil(t, bobSigningKeyShare)
 
-	alice, err := NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, aliceSigningKeyShare, nil, cohortConfig, crand.Reader)
-	bob, err := NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, bobSigningKeyShare, nil, cohortConfig, crand.Reader)
+	aliceShard := frost.Shard{
+		SigningKeyShare: aliceSigningKeyShare,
+		PublicKeyShares: nil,
+	}
+
+	bobShard := frost.Shard{
+		SigningKeyShare: bobSigningKeyShare,
+		PublicKeyShares: nil,
+	}
+
+	alice, err := NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, &aliceShard, cohortConfig, crand.Reader)
+	bob, err := NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, &bobShard, cohortConfig, crand.Reader)
 	for _, party := range []*InteractiveCosigner{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
 		require.Len(t, party.ShamirIdToIdentityKey, 2)
-		require.NotNil(t, party.SigningKeyShare)
+		require.NotNil(t, party.Shard)
 	}
 	require.NotEqual(t, alice.MyShamirId, bob.MyShamirId)
 }

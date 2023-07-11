@@ -48,7 +48,15 @@ func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortCo
 func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) {
 	t.Helper()
 
-	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, signingKeyShares, publicKeyShares)
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, shards)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -135,8 +143,16 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
 	// first execution
-	participantsAlpha, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	participantsAlpha, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1OutAlpha, err := test_utils.DoInteractiveSignRound1(participantsAlpha)
 	require.NoError(t, err)
@@ -148,7 +164,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	require.NoError(t, err)
 
 	// second execution
-	participantsBeta, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	participantsBeta, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1OutBeta, err := test_utils.DoInteractiveSignRound1(participantsBeta)
 	require.NoError(t, err)
@@ -183,7 +199,15 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1Out, err := test_utils.DoInteractiveSignRound1(participants)
 	require.NoError(t, err)

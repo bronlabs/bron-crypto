@@ -16,12 +16,11 @@ var _ frost.Participant = (*InteractiveCosigner)(nil)
 type InteractiveCosigner struct {
 	prng io.Reader
 
-	MyIdentityKey   integration.IdentityKey
-	MyShamirId      int
-	SigningKeyShare *frost.SigningKeyShare
+	MyIdentityKey integration.IdentityKey
+	MyShamirId    int
+	Shard         *frost.Shard
 
 	CohortConfig          *integration.CohortConfig
-	PublicKeyShares       *frost.PublicKeyShares
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
 	SessionParticipants   []integration.IdentityKey
@@ -60,14 +59,17 @@ type State struct {
 	aggregation *aggregation.SignatureAggregatorParameters
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*InteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if err := signingKeyShare.Validate(); err != nil {
+	if shard == nil {
+		return nil, errs.NewVerificationFailed("shard is nil")
+	}
+	if err := shard.SigningKeyShare.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
 	}
 
@@ -86,8 +88,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 	cosigner := &InteractiveCosigner{
 		MyIdentityKey:       identityKey,
 		CohortConfig:        cohortConfig,
-		SigningKeyShare:     signingKeyShare,
-		PublicKeyShares:     publicKeyShare,
+		Shard:               shard,
 		SessionParticipants: sessionParticipants,
 		prng:                prng,
 		state:               &State{},
