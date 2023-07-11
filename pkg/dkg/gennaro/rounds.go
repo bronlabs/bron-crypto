@@ -220,7 +220,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 			derivedPartialPublicKeyShare = derivedPartialPublicKeyShare.Add(ikC_lk)
 		}
 		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
-			return nil, nil, errs.NewFailed("shares received from shamir id %d is inconsistent", senderShamirId)
+			return nil, nil, errs.NewIdentifiableAbort("shares received from shamir id %d is inconsistent", senderShamirId)
 		}
 
 		publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)

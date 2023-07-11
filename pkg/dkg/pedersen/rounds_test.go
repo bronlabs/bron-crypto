@@ -186,7 +186,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 			r2InsB[attackerIndex][identity].DlogProof = proof
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -199,7 +199,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 			r2InsB[attackerIndex][identity].DlogProof = proof
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 
 }

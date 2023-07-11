@@ -13,6 +13,7 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -118,7 +119,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	// smuggle previous value
 	r3InsB[attackerIndex][identities[1]].Commitments = r2InsB[attackerIndex][identities[1]].BlindedCommitments
 	_, _, err = test_utils.DoDkgRound3(participants, r3InsB)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -195,7 +196,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 			r3Ins[attackerIndex][identity].A_i0Proof = proof
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -208,7 +209,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 			r3Ins[attackerIndex][identity].A_i0Proof = proof
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 }
 
@@ -239,7 +240,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	r2Outs[alice].Commitments[0] = r2Outs[alice].Commitments[0].Sub(r2Outs[bob].Commitments[0])
 	r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
 	_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
-	require.Error(t, err, "aborts on calculating public key share")
+	require.True(t, errs.IsFailed(err))
 }
 
 func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha int, tBeta, nBeta int) {
@@ -281,7 +282,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 	// smuggle previous execution result - replay of the dlog proof
 	r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 	_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha int, tBeta, nBeta int) {
@@ -328,17 +329,17 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tA
 		// smuggle previous execution result - replay of the dlog proof
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 
-	t.Run("Alice uses a random sid", func(t *testing.T) {
+	t.Run("Alice uses some garbage as sid", func(t *testing.T) {
 		t.Parallel()
 		// second execution (beta)
 		cohortConfigBeta, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nBeta], tBeta, identities[:nBeta])
 		// reused
 		uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
 		participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil, -1)
-		// reused
+		// some garbage
 		participantsBeta[attackerIndex].UniqueSessionId = []byte("2 + 2 = 5")
 		r1OutsBBeta, r1OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta)
 		require.NoError(t, err)
@@ -347,7 +348,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tA
 		// smuggle previous execution result - replay of the dlog proof
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
-		require.Error(t, err)
+		require.True(t, errs.IsIdentifiableAbort(err))
 	})
 
 }
