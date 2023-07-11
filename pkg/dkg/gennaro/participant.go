@@ -25,6 +25,7 @@ type Participant struct {
 	MyShamirId    int
 
 	CohortConfig          *integration.CohortConfig
+	UniqueSessionId       []byte
 	shamirIdToIdentityKey map[int]integration.IdentityKey
 
 	H curves.Point
@@ -46,8 +47,6 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 type State struct {
-	r_i                              curves.Scalar
-	sid                              []byte
 	myPartialSecretShare             *pedersen.Share
 	commitments                      []curves.Point
 	blindedCommitments               []curves.Point
@@ -60,22 +59,26 @@ type State struct {
 	publicKey                        curves.Point
 }
 
-func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript *merlin.Transcript) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript *merlin.Transcript) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_KNOX_GENNARO_DKG-")
 	}
+	if uniqueSessionId == nil || len(uniqueSessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", uniqueSessionId)
+	}
 	result := &Participant{
 		MyIdentityKey: identityKey,
 		state: &State{
 			transcript: transcript,
 		},
-		prng:         prng,
-		CohortConfig: cohortConfig,
-		H:            cohortConfig.CipherSuite.Curve.Point.Hash([]byte(NothingUpMySleeve)),
-		round:        1,
+		prng:            prng,
+		CohortConfig:    cohortConfig,
+		H:               cohortConfig.CipherSuite.Curve.Point.Hash([]byte(NothingUpMySleeve)),
+		round:           1,
+		UniqueSessionId: uniqueSessionId,
 	}
 	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	return result, nil
