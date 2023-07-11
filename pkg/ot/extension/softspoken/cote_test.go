@@ -87,9 +87,9 @@ func TestCOTExtension(t *testing.T) {
 // running a base OT, so that other tests can use it / bootstrap themselves.
 // As a black box, this function uses randomized inputs, and does:
 //
-//	.		      ┌---> R: k^i_{Δ_i}, Δ_i
+//	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
-//	.		      └---> S: k^i_0, k^i_1
+//	.             └---> S: k^i_0, k^i_1
 func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessionId [simplest.DigestSize]byte) (*simplest.SenderOutput, *simplest.ReceiverOutput, error) {
 	t.Helper()
 	receiver, err := simplest.NewReceiver(curve, batchSize, uniqueSessionId, nil)
@@ -128,9 +128,9 @@ func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessi
 // running a SoftspokenOT extension and derandomizing its result.
 // As a black box, this function does:
 //
-//	R: x ---┐							┌---> R: z_B
+//	R: x ---┐                            ┌---> R: z_B
 //	        ├--- COTe_{κ, L, M}(x, α)---┤
-//	S: α ---┘							└---> S: z_A
+//	S: α ---┘                            └---> S: z_A
 func RunSoftspokenCOTe(
 	t *testing.T, curve *curves.Curve, uniqueSessionId [simplest.DigestSize]byte,
 	choice [LBytes]byte, // receiver's input, the Choice bits x

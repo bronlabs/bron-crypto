@@ -10,23 +10,23 @@
 
 // OBLIVIOUS TRANSFER (OT)
 // At high level, a single 1-out-of-2 OT realizes this functionality:
-//	┌------┐					  ┌------------------┐               ┌--------┐
-//	|      |                      |                  |               |        |
-//	|      |--> (Opt_0, Opt_1) -->|      1|2  OT     | <--(Choice)<--|        |
-//	|Sender|                      |                  |               |Receiver|
-//	|      | 					  └------------------┘               |		  |
-//	|      |                               └-------> (DeltaOpt) -->  |		  |
-//	└------┘							    						 └--------┘
+//  ┌------┐                      ┌------------------┐               ┌--------┐
+//  |      |                      |                  |               |        |
+//  |      |--> (Opt_0, Opt_1) -->|      1|2  OT     | <--(Choice)<--|        |
+//  |Sender|                      |                  |               |Receiver|
+//  |      |                      └------------------┘               |        |
+//  |      |                               └-------> (DeltaOpt) -->  |        |
+//  └------┘                                                         └--------┘
 //
 // CORRELATED OBLIVIOUS TRANSFER (COT)
 // In contrast, a single "Correlated" OT realizes tbe following functionality:
-//	┌------┐					  ┌------------------┐               ┌--------┐
-//	|      |                      |                  |               |        |
-//	|      |----> (InputOpt) ---->|      1|2  COT    | <--(Choice)<--|        |
-//	|Sender|                      |                  |               |Receiver|
-//	|      | 					  └------------------┘               |		  |
-//	|      | <----- (Correlation) <--------┴-------> (DeltaOpt) ---> |		  |
-//	└------┘							    						 └--------┘
+//  ┌------┐                      ┌------------------┐               ┌--------┐
+//  |      |                      |                  |               |        |
+//  |      |----> (InputOpt) ---->|      1|2  COT    | <--(Choice)<--|        |
+//  |Sender|                      |                  |               |Receiver|
+//  |      |                      └------------------┘               |        |
+//  |      | <----- (Correlation) <--------┴-------> (DeltaOpt) ---> |        |
+//  └------┘                                                         └--------┘
 //  s.t. Correlation = Choice • DeltaOpt + InputOpt
 //
 // The Options, DeltaOpt and Correlation are elements of a group (e.g. Z_2,
