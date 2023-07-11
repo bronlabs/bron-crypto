@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"testing"
 
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -57,8 +58,11 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	alice, err := NewParticipant(aliceIdentityKey, cohortConfig, crand.Reader)
-	bob, err := NewParticipant(bobIdentityKey, cohortConfig, crand.Reader)
+	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+	pedersenSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
+	zeroSamplingSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
+	alice, err := NewParticipant(aliceIdentityKey, pedersenSessionId, zeroSamplingSessionId, cohortConfig, crand.Reader)
+	bob, err := NewParticipant(bobIdentityKey, pedersenSessionId, zeroSamplingSessionId, cohortConfig, crand.Reader)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
@@ -22,25 +23,20 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities, nil)
+func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+	dkgParticipants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r1Out, err := test_utils.DoDkgRound1(dkgParticipants)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r2In := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r1Out)
-	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants, r2In)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	r3InB, r3InU := test_utils.MapDkgRound2OutputsToRound3Inputs(dkgParticipants, r2OutB, r2OutU)
-	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound3(dkgParticipants, r3InB, r3InU)
+	r3InB, r3InU := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,7 +104,7 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {

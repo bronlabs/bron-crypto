@@ -1,10 +1,7 @@
 package setup
 
 import (
-	"fmt"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -15,48 +12,21 @@ import (
 // size should match zero.LambdaBytes
 var h = sha3.New256
 
-type Round1Broadcast struct {
-	Ri curves.Scalar
-}
-
-type Round2P2P struct {
+type Round1P2P struct {
 	Commitment commitments.Commitment
 }
 
-type Round3P2P struct {
+type Round2P2P struct {
 	Message []byte
 	Witness commitments.Witness
 }
 
-func (p *Participant) Round1() (*Round1Broadcast, error) {
+func (p *Participant) Round1() (map[integration.IdentityKey]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	p.state.r_i = p.Curve.Scalar.Random(p.prng)
-	p.round++
-	return &Round1Broadcast{
-		Ri: p.state.r_i,
-	}, nil
 
-}
-
-func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (map[integration.IdentityKey]*Round2P2P, error) {
-	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
-	}
-	round1output[p.MyIdentityKey] = &Round1Broadcast{
-		Ri: p.state.r_i,
-	}
-	sortedSidContributions, err := sortSidContributions(round1output)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't derive r vector")
-	}
-	for i, sidFromI := range sortedSidContributions {
-		p.state.transcript.AppendMessage([]byte(fmt.Sprintf("sid contribution from %d", i)), sidFromI)
-	}
-	sid := p.state.transcript.ExtractBytes([]byte("session id"), zero.LambdaBytes)
-
-	output := map[integration.IdentityKey]*Round2P2P{}
+	output := map[integration.IdentityKey]*Round1P2P{}
 	for _, participant := range p.Participants {
 		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
@@ -66,7 +36,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
-		seedForThisParticipant, err := hashing.Hash(h, sid, randomBytes[:])
+		seedForThisParticipant, err := hashing.Hash(h, p.Sid, randomBytes[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}
@@ -79,7 +49,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 			commitment: commitment,
 			witness:    witness,
 		}
-		output[participant] = &Round2P2P{
+		output[participant] = &Round1P2P{
 			Commitment: commitment,
 		}
 	}
@@ -87,17 +57,17 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (map[integration.IdentityKey]*Round3P2P, error) {
-	if p.round != 3 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1P2P) (map[integration.IdentityKey]*Round2P2P, error) {
+	if p.round != 2 {
+		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	output := map[integration.IdentityKey]*Round3P2P{}
+	output := map[integration.IdentityKey]*Round2P2P{}
 	for _, participant := range p.Participants {
 		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round2output[participant]
+		message, exists := round1output[participant]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
@@ -109,7 +79,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P
 		if !exists {
 			return nil, errs.NewMissing("missing what I contributed to participant with sharing id %d", sharingId)
 		}
-		output[participant] = &Round3P2P{
+		output[participant] = &Round2P2P{
 			Message: contributed.seed,
 			Witness: contributed.witness,
 		}
@@ -118,9 +88,9 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P
 	return output, nil
 }
 
-func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P) (zero.PairwiseSeeds, error) {
-	if p.round != 4 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 4", p.round)
+func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P) (zero.PairwiseSeeds, error) {
+	if p.round != 3 {
+		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 	pairwiseSeeds := zero.PairwiseSeeds{}
 	for _, participant := range p.Participants {
@@ -128,7 +98,7 @@ func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round3output[participant]
+		message, exists := round2output[participant]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
@@ -165,25 +135,4 @@ func (p *Participant) Round4(round3output map[integration.IdentityKey]*Round3P2P
 	}
 	p.round++
 	return pairwiseSeeds, nil
-}
-
-func sortSidContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
-	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
-	i := 0
-	for identityKey := range allIdentityKeysToRi {
-		identityKeys[i] = identityKey
-		i++
-	}
-	identityKeys = integration.SortIdentityKeys(identityKeys)
-	sortedRVector := make([][]byte, len(allIdentityKeysToRi))
-	for i, identityKey := range identityKeys {
-		message, exists := allIdentityKeysToRi[identityKey]
-		if !exists {
-			return nil, errs.NewMissing("message couldn't be found")
-		}
-		sortedRVector[i] = message.Ri.Bytes()
-	}
-
-	return sortedRVector, nil
-
 }
