@@ -4,12 +4,14 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 
+	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
@@ -22,25 +24,21 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-func doDkg(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	dkgParticipants, err := test_utils.MakeDkgParticipants(cohortConfig, identities, nil)
+func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+
+	dkgParticipants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r1Out, err := test_utils.DoDkgRound1(dkgParticipants)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r2In := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r1Out)
-	r2OutB, r2OutU, err := test_utils.DoDkgRound2(dkgParticipants, r2In)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	r3InB, r3InU := test_utils.MapDkgRound2OutputsToRound3Inputs(dkgParticipants, r2OutB, r2OutU)
-	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound3(dkgParticipants, r3InB, r3InU)
+	r3InB, r3InU := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,7 +49,15 @@ func doDkg(cohortConfig *integration.CohortConfig, identities []integration.Iden
 func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) {
 	t.Helper()
 
-	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, signingKeyShares, publicKeyShares)
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, shards)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -100,7 +106,7 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(cohortConfig, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	combinations := combin.Combinations(n, threshold)
@@ -135,11 +141,19 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
 	// first execution
-	participantsAlpha, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	participantsAlpha, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1OutAlpha, err := test_utils.DoInteractiveSignRound1(participantsAlpha)
 	require.NoError(t, err)
@@ -151,7 +165,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	require.NoError(t, err)
 
 	// second execution
-	participantsBeta, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	participantsBeta, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1OutBeta, err := test_utils.DoInteractiveSignRound1(participantsBeta)
 	require.NoError(t, err)
@@ -162,7 +176,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
 	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
 	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
@@ -183,10 +197,18 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(cohortConfig, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, cohortConfig, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], signingKeyShares, publicKeyShares)
+	var shards []*frost.Shard
+	for i, _ := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities[:threshold], shards)
 	require.NoError(t, err)
 	r1Out, err := test_utils.DoInteractiveSignRound1(participants)
 	require.NoError(t, err)
@@ -198,7 +220,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func Test_HappyPath(t *testing.T) {

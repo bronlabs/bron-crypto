@@ -19,12 +19,11 @@ type NonInteractiveCosigner struct {
 	PreSignatures                *PreSignatureBatch
 	FirstUnusedPreSignatureIndex int
 
-	MyIdentityKey   integration.IdentityKey
-	MyShamirId      int
-	SigningKeyShare *frost.SigningKeyShare
+	MyIdentityKey integration.IdentityKey
+	MyShamirId    int
+	Shard         *frost.Shard
 
 	CohortConfig          *integration.CohortConfig
-	PublicKeyShares       *frost.PublicKeyShares
 	SessionParticipants   []integration.IdentityKey
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[integration.IdentityKey]int
@@ -56,14 +55,17 @@ func (nic *NonInteractiveCosigner) IsSignatureAggregator() bool {
 }
 
 func NewNonInteractiveCosigner(
-	identityKey integration.IdentityKey, signingKeyShare *frost.SigningKeyShare, publicKeyShare *frost.PublicKeyShares,
+	identityKey integration.IdentityKey, shard *frost.Shard,
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
 	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*NonInteractiveCosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if err := signingKeyShare.Validate(); err != nil {
+	if shard == nil {
+		return nil, errs.NewIsNil("shard is nil")
+	}
+	if err := shard.SigningKeyShare.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
 	}
 	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
@@ -128,9 +130,8 @@ func NewNonInteractiveCosigner(
 		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,
 		MyIdentityKey:                identityKey,
 		MyShamirId:                   myShamirId,
-		SigningKeyShare:              signingKeyShare,
+		Shard:                        shard,
 		CohortConfig:                 cohortConfig,
-		PublicKeyShares:              publicKeyShare,
 		ShamirIdToIdentityKey:        shamirIdToIdentityKey,
 		IdentityKeyToShamirId:        identityKeyToShamirId,
 		SessionParticipants:          presentParties,

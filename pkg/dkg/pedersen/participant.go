@@ -15,8 +15,11 @@ var _ integration.Participant = (*Participant)(nil)
 type Participant struct {
 	prng io.Reader
 
-	MyIdentityKey integration.IdentityKey
-	MyShamirId    int
+	MyIdentityKey      integration.IdentityKey
+	MyShamirId         int
+	uniqueSessionId    []byte
+	myPartialPublicKey curves.Point
+	secretKeyShare     curves.Scalar
 
 	CohortConfig          *integration.CohortConfig
 	shamirIdToIdentityKey map[int]integration.IdentityKey
@@ -39,20 +42,20 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 
 type State struct {
 	r_i         curves.Scalar
-	phi         []byte
 	shareVector []*feldman.Share
 	commitments []curves.Point
 }
 
-func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	result := &Participant{
-		MyIdentityKey: identityKey,
-		state:         &State{},
-		prng:          prng,
-		CohortConfig:  cohortConfig,
+		MyIdentityKey:   identityKey,
+		uniqueSessionId: uniqueSessionId,
+		state:           &State{},
+		prng:            prng,
+		CohortConfig:    cohortConfig,
 	}
 	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1

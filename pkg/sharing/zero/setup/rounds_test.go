@@ -25,31 +25,24 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeSetupParticipants(curve, identities)
+	participants, err := test_utils.MakeSetupParticipants(t, curve, identities)
 	require.NoError(t, err)
 
-	r1Outs, err := test_utils.DoSetupRound1(participants)
+	r1OutsU, err := test_utils.DoSetupRound1(participants)
 	require.NoError(t, err)
-	for _, out := range r1Outs {
-		require.NotNil(t, out)
+	for _, out := range r1OutsU {
+		require.Len(t, out, len(identities)-1)
 	}
 
-	r2Ins := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1Outs)
-	r2OutsU, err := test_utils.DoSetupRound2(participants, r2Ins)
+	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, len(identities)-1)
 	}
 
 	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
-	r3OutsU, err := test_utils.DoSetupRound3(participants, r3InsU)
-	require.NoError(t, err)
-	for _, out := range r3OutsU {
-		require.Len(t, out, len(identities)-1)
-	}
-
-	r4InsU := test_utils.MapSetupRound3OutputsToRound4Inputs(participants, r3OutsU)
-	allPairwiseSeeds, err := test_utils.DoSetupRound4(participants, r4InsU)
+	allPairwiseSeeds, err := test_utils.DoSetupRound3(participants, r3InsU)
 	require.NoError(t, err)
 
 	// we have the right number of pairs

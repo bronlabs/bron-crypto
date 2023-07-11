@@ -57,8 +57,8 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	alice, err := NewParticipant(aliceIdentityKey, cohortConfig, crand.Reader)
-	bob, err := NewParticipant(bobIdentityKey, cohortConfig, crand.Reader)
+	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, crand.Reader)
+	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, crand.Reader)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)

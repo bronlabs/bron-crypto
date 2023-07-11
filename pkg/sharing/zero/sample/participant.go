@@ -1,42 +1,35 @@
 package sample
 
 import (
-	"io"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
-	"github.com/gtank/merlin"
 )
 
 type Participant struct {
-	prng io.Reader
-
 	Curve               *curves.Curve
 	MyIdentityKey       integration.IdentityKey
 	MySharingId         int
 	PresentParticipants []integration.IdentityKey
+	uniqueSessionId     []byte
 
 	IdentityKeyToSharingId map[integration.IdentityKey]int
 
 	Seeds zero.PairwiseSeeds
 
-	state *State
 	round int
 }
 
-type State struct {
-	transcript *merlin.Transcript
-	r_i        curves.Scalar
-}
-
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
+	}
+	if uniqueSessionId == nil {
+		return nil, errs.NewInvalidArgument("session id is nil")
 	}
 	if len(presentParticipants) < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
@@ -89,20 +82,14 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, se
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
-	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_KNOX_ZERO_SHARE_SAMPLE")
-	}
 	return &Participant{
-		prng:                   prng,
 		Curve:                  curve,
 		MyIdentityKey:          identityKey,
 		MySharingId:            mySharingId,
+		uniqueSessionId:        uniqueSessionId,
 		PresentParticipants:    presentParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		round:                  1,
 		Seeds:                  seeds,
-		state: &State{
-			transcript: transcript,
-		},
 	}, nil
 }
