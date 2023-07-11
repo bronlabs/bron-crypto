@@ -28,7 +28,7 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		}
 		sumSharedSeedsPrefix := append(presentParticipantIdentityKey, sharedSeed[:]...)
 		// TODO: make hash to curve and scalars variadic
-		toBeHashed := append(p.uniqueSessionId, sumSharedSeedsPrefix[:]...)
+		toBeHashed := append(p.UniqueSessionId, sumSharedSeedsPrefix[:]...)
 		sampled := p.Curve.Scalar.Hash(toBeHashed)
 		if p.MySharingId < sharingId {
 			sample = sample.Add(sampled)

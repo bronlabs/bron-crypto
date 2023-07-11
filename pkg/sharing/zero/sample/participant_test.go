@@ -29,7 +29,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	aliceSeeds := zero.PairwiseSeeds{bobIdentityKey: sharedSeed}
 	bobSeeds := zero.PairwiseSeeds{aliceIdentityKey: sharedSeed}
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, len(identities))
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 
 	alice, err := NewParticipant(curve, uniqueSessionId, aliceIdentityKey, aliceSeeds, identities)
 	require.NoError(t, err)

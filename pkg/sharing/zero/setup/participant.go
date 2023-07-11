@@ -13,11 +13,11 @@ import (
 type Participant struct {
 	prng io.Reader
 
-	Sid           []byte
-	Curve         *curves.Curve
-	MyIdentityKey integration.IdentityKey
-	MySharingId   int
-	Participants  []integration.IdentityKey
+	UniqueSessionId []byte
+	Curve           *curves.Curve
+	MyIdentityKey   integration.IdentityKey
+	MySharingId     int
+	Participants    []integration.IdentityKey
 
 	IdentityKeyToSharingId map[integration.IdentityKey]int
 
@@ -80,7 +80,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		MySharingId:            mySharingId,
 		Participants:           sortedParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
-		Sid:                    uniqueSessionId,
+		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
 			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},

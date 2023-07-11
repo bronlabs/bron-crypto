@@ -41,9 +41,9 @@ func doSetup(t *testing.T, curve *curves.Curve, identities []integration.Identit
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds, InvalidSidParticipantIndex int) {
+func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds, InvalidSidParticipantIndex)
+	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -57,22 +57,38 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
 	}
-	if InvalidSidParticipantIndex >= 0 {
-		require.False(t, sum.IsZero())
-	} else {
-		require.True(t, sum.IsZero())
+	require.True(t, sum.IsZero())
 
-		// test sum of all the shares but one doesn't add up to zero
-		for i := range samples {
-			sum = curve.Scalar.Zero()
-			for j, sample := range samples {
-				if i != j {
-					sum = sum.Add(sample)
-				}
+	// test sum of all the shares but one doesn't add up to zero
+	for i := range samples {
+		sum = curve.Scalar.Zero()
+		for j, sample := range samples {
+			if i != j {
+				sum = sum.Add(sample)
 			}
-			require.False(t, sum.IsZero())
 		}
+		require.False(t, sum.IsZero())
 	}
+}
+
+func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+	t.Helper()
+	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
+	participants[0].UniqueSessionId = []byte("invalid sid")
+	require.NoError(t, err)
+	for _, participant := range participants {
+		require.NotNil(t, participant)
+	}
+	samples, err := test_utils.DoSample(participants)
+	require.NoError(t, err)
+	require.Len(t, samples, len(identities))
+
+	sum := curve.Scalar.Zero()
+	for _, sample := range samples {
+		require.False(t, sample.IsZero())
+		sum = sum.Add(sample)
+	}
+	require.False(t, sum.IsZero())
 }
 
 func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
@@ -95,7 +111,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSample(t, curve, identities, seeds, -1)
+			doSample(t, curve, identities, seeds)
 		}
 	}
 }
@@ -120,7 +136,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSample(t, curve, identities, seeds, 0)
+			doSampleInvalidSid(t, curve, identities, seeds)
 		}
 	}
 }
@@ -139,7 +155,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 }
 
-func Test_UnmatchedSid(t *testing.T) {
+func TestInvalidSid(t *testing.T) {
 	t.Parallel()
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
 		for _, n := range []int{2, 5} {
@@ -180,7 +196,7 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, allIdentities, len(allIdentities))
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, allIdentities)
 
 	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
 	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})
