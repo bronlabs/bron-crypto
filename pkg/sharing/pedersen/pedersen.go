@@ -1,9 +1,3 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-
 package pedersen
 
 import (
@@ -58,14 +52,14 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 
 // Output contains all the data from calling Split
 type Output struct {
-	Blinding                         curves.Scalar
-	BlindingShares, SecretShares     []*Share
-	Commitments, BlindingCommitments []curves.Point
-	Generator                        curves.Point
+	Blinding                        curves.Scalar
+	BlindingShares, SecretShares    []*Share
+	Commitments, BlindedCommitments []curves.Point
+	Generator                       curves.Point
 }
 
-// NewPedersen creates a new pedersen VSS
-func NewPedersen(threshold, total int, generator curves.Point) (*Dealer, error) {
+// NewDealer creates a new pedersen VSS
+func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	if total < threshold {
 		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
 	}

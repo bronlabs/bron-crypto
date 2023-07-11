@@ -1,4 +1,4 @@
-package pedersen
+package gennaro
 
 import (
 	crand "crypto/rand"
@@ -57,12 +57,13 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, crand.Reader)
-	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, crand.Reader)
+	alice, err := NewParticipant([]byte("sid"), aliceIdentityKey, cohortConfig, crand.Reader, nil)
+	bob, err := NewParticipant([]byte("sid"), bobIdentityKey, cohortConfig, crand.Reader, nil)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
 		require.Len(t, party.shamirIdToIdentityKey, 2)
 	}
 	require.NotEqual(t, alice.MyShamirId, bob.MyShamirId)
+	require.True(t, alice.H.Equal(bob.H))
 }

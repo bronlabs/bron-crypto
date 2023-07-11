@@ -23,7 +23,6 @@ type Participant struct {
 
 	CohortConfig          *integration.CohortConfig
 	shamirIdToIdentityKey map[int]integration.IdentityKey
-	publicKey             curves.Point
 
 	round int
 	state *State

@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/gtank/merlin"
 )
@@ -35,7 +36,7 @@ type Proof struct {
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merlin.Transcript) (*Prover, error) {
 	if basePoint == nil {
-		return nil, errors.New("basepoint can't be nil")
+		return nil, errs.NewInvalidArgument("basepoint can't be nil")
 	}
 	if basePoint.IsIdentity() {
 		return nil, errors.New("basepoint is identity")
@@ -58,7 +59,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 
 	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errs.WrapFailed(err, "could not get curve by name")
 	}
 
 	result.Statement = p.BasePoint.Mul(x)
@@ -73,7 +74,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 
 	result.C, err = curve.Scalar.SetBytes(digest)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not produce fiat shamir challenge scalar")
+		return nil, errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 	result.S = result.C.Mul(x).Add(k)
 	return result, nil
@@ -85,19 +86,19 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}
 	if basePoint == nil {
-		return errors.New("basepoint is nil")
+		return errs.NewInvalidArgument("basepoint is nil")
 	}
 	if basePoint.IsIdentity() {
-		return errors.New("basepoint is identity")
+		return errs.NewInvalidArgument("basepoint is identity")
 	}
 
 	curve, err := curves.GetCurveByName(basePoint.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errs.WrapFailed(err, "could not get the curve by name")
 	}
 
 	if proof == nil {
-		return errors.New("proof is nil")
+		return errs.NewInvalidArgument("proof is nil")
 	}
 
 	gs := basePoint.Mul(proof.S)
@@ -112,11 +113,11 @@ func Verify(basePoint curves.Point, proof *Proof, uniqueSessionId []byte, transc
 
 	computedChallenge, err := curve.Scalar.SetBytes(digest)
 	if err != nil {
-		return errors.Wrap(err, "could not produce fiat shamir challenge scalar")
+		return errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
 	if computedChallenge.Cmp(proof.C) != 0 {
-		return errors.New("schnorr verification failed")
+		return errs.NewVerificationFailed("schnorr verification failed")
 	}
 	return nil
 }
