@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -85,8 +86,7 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			}
 
 			err = eddsa.Verify(curve, h, signature, publicKey, message)
-			require.Error(t, err)
-
+			require.True(t, errs.IsFailed(err))
 		})
 	}
 }

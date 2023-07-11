@@ -3,6 +3,7 @@ package commitments_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
@@ -182,7 +183,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
-		require.Error(t, err)
+		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
 
@@ -206,7 +207,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
-		require.Error(t, err)
+		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
 
@@ -221,7 +222,7 @@ func TestOpenOnNewMessage(t *testing.T) {
 
 		// Open and check for failure
 		err := commitments.Open(h, msg, entry.commit, dʹ)
-		require.Error(t, err)
+		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
 
@@ -240,7 +241,7 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
-		require.Error(t, err)
+		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
 
@@ -255,7 +256,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, cʹ, entry.witness)
-		require.Error(t, err)
+		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
 
@@ -265,7 +266,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	for _, entry := range testResults {
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, entry.commit, commitments.Witness{})
-		require.Error(t, err)
+		require.True(t, errs.IsInvalidArgument(err))
 	}
 }
 
@@ -273,7 +274,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
 	err := commitments.Open(h, nil, nil, commitments.Witness{})
-	require.Error(t, err)
+	require.True(t, errs.IsInvalidArgument(err))
 }
 
 // Too long commitment should produce an error
@@ -284,7 +285,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 		copy(tooLong, entry.msg)
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, tooLong, entry.witness)
-		require.Error(t, err)
+		require.True(t, errs.IsInvalidArgument(err))
 	}
 }
 
@@ -296,6 +297,6 @@ func TestOpenOnShortCommitment(t *testing.T) {
 		copy(tooShort, entry.msg)
 		// Open and check for failure
 		err := commitments.Open(h, entry.msg, tooShort, entry.witness)
-		require.Error(t, err)
+		require.True(t, errs.IsInvalidArgument(err))
 	}
 }

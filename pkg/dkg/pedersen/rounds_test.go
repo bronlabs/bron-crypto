@@ -3,6 +3,7 @@ package pedersen_test
 import (
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"io"
 	"math/rand"
@@ -107,7 +108,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	// smuggle previous value
 	r3InsU[attackerIndex][identities[1]].Xij = curve.Scalar.Hash(uniqueSessionId)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -177,7 +178,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	r2OutsB[alice].Ci[0] = r2OutsB[alice].Ci[0].Sub(r2OutsB[bob].Ci[0])
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
-	require.Error(t, err, "aborts on calculating public key share")
+	require.True(t, errs.IsFailed(err))
 }
 
 func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha int, tBeta, nBeta int) {
@@ -219,7 +220,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 	// smuggle previous execution result - replay of the dlog proof
 	r3InsBBeta[attackerIndex] = r3InsBAlpha[attackerIndex]
 	_, _, err = test_utils.DoDkgRound2(participantsBeta, r3InsBBeta, r3InsUBeta)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func Test_HappyPath(t *testing.T) {

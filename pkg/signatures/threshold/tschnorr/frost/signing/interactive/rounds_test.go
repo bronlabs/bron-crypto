@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"reflect"
 	"runtime"
@@ -175,7 +176,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
 	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
 	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
@@ -219,7 +220,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve 
 	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func Test_HappyPath(t *testing.T) {

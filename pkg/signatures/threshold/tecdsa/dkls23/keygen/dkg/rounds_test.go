@@ -3,6 +3,7 @@ package dkg_test
 import (
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"reflect"
 	"runtime"
@@ -136,7 +137,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	_, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-	require.Error(t, err)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
 func Test_HappyPath(t *testing.T) {
