@@ -36,9 +36,9 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 
-	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -104,8 +104,8 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
-	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -138,9 +138,9 @@ func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() h
 	// Alpha execution
 	alphaPrngs := make([]io.Reader, n)
 	// force to use the same data for Alice
-	alphaUniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	alphaUniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	alphaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
-	alphaParticipants, err := test_utils.MakeParticipants(alphaUniqueSessionId, cohortConfig, identities, alphaPrngs, -1)
+	alphaParticipants, err := test_utils.MakeParticipants(alphaUniqueSessionId, cohortConfig, identities, alphaPrngs)
 	alphaR1OutsB, alphaR1OutsU, err := test_utils.DoDkgRound1(alphaParticipants)
 	require.NoError(t, err)
 	alphaR2InsB, alphaR2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(alphaParticipants, alphaR1OutsB, alphaR1OutsU)
@@ -150,9 +150,9 @@ func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() h
 	// Beta execution
 	betaPrngs := make([]io.Reader, n)
 	// force to use the same data for Alice
-	betaUniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	betaUniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	betaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
-	betaParticipants, err := test_utils.MakeParticipants(betaUniqueSessionId, cohortConfig, identities, betaPrngs, -1)
+	betaParticipants, err := test_utils.MakeParticipants(betaUniqueSessionId, cohortConfig, identities, betaPrngs)
 	betaR1OutsB, betaR1OutsU, err := test_utils.DoDkgRound1(betaParticipants)
 	require.NoError(t, err)
 	betaR2InsB, betaR2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(betaParticipants, betaR1OutsB, betaR1OutsU)
@@ -176,8 +176,8 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
-	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
@@ -227,9 +227,9 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, 2, identities)
 	require.NoError(t, err)
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 
-	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -260,10 +260,10 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 	attackerIndex := 0
 
 	// first execution (alpha)
-	uniqueSessionIdAlpha := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
+	uniqueSessionIdAlpha := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	cohortConfigAlpha, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nAlpha], tAlpha, identities[:nAlpha])
 	require.NoError(t, err)
-	participantsAlpha, err := test_utils.MakeParticipants(uniqueSessionIdAlpha, cohortConfigAlpha, identities[:nAlpha], nil, -1)
+	participantsAlpha, err := test_utils.MakeParticipants(uniqueSessionIdAlpha, cohortConfigAlpha, identities[:nAlpha], nil)
 	require.NoError(t, err)
 	r1OutsBAlpha, r1OutsUAlpha, err := test_utils.DoDkgRound1(participantsAlpha)
 	require.NoError(t, err)
@@ -273,8 +273,8 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 
 	// second execution (beta)
 	cohortConfigBeta, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nBeta], tBeta, identities[:nBeta])
-	uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
-	participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil, -1)
+	uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil)
 	r1OutsBBeta, r1OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta)
 	require.NoError(t, err)
 	r2InsBBeta, r2InsUBeta := test_utils.MapDkgRound1OutputsToRound2Inputs(participantsBeta, r1OutsBBeta, r1OutsUBeta)
@@ -302,10 +302,10 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tA
 	attackerIndex := 0
 
 	// first execution (alpha)
-	uniqueSessionIdAlpha := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
+	uniqueSessionIdAlpha := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	cohortConfigAlpha, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nAlpha], tAlpha, identities[:nAlpha])
 	require.NoError(t, err)
-	participantsAlpha, err := test_utils.MakeParticipants(uniqueSessionIdAlpha, cohortConfigAlpha, identities[:nAlpha], nil, -1)
+	participantsAlpha, err := test_utils.MakeParticipants(uniqueSessionIdAlpha, cohortConfigAlpha, identities[:nAlpha], nil)
 	require.NoError(t, err)
 	r1OutsBAlpha, r1OutsUAlpha, err := test_utils.DoDkgRound1(participantsAlpha)
 	require.NoError(t, err)
@@ -318,8 +318,8 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tA
 		// second execution (beta)
 		cohortConfigBeta, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nBeta], tBeta, identities[:nBeta])
 		// reused
-		uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
-		participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil, -1)
+		uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+		participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil)
 		// reused
 		participantsBeta[attackerIndex].UniqueSessionId = uniqueSessionIdAlpha
 		r1OutsBBeta, r1OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta)
@@ -337,8 +337,8 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tA
 		// second execution (beta)
 		cohortConfigBeta, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities[:nBeta], tBeta, identities[:nBeta])
 		// reused
-		uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, 2)
-		participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil, -1)
+		uniqueSessionIdBeta := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+		participantsBeta, err := test_utils.MakeParticipants(uniqueSessionIdBeta, cohortConfigBeta, identities[:nBeta], nil)
 		// some garbage
 		participantsBeta[attackerIndex].UniqueSessionId = []byte("2 + 2 = 5")
 		r1OutsBBeta, r1OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta)

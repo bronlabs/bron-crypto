@@ -194,12 +194,12 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 	}
 	prng := rand.New(rand.NewSource(0xcafebabe))
 	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities, n)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
 	attackerIndex := 0
 	require.NoError(t, err)
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
 	require.NoError(t, err)
-	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil, -1)
+	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
