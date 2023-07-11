@@ -36,7 +36,7 @@ func (p *Participant) Round1() (map[integration.IdentityKey]*Round1P2P, error) {
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
-		seedForThisParticipant, err := hashing.Hash(h, p.Sid, randomBytes[:])
+		seedForThisParticipant, err := hashing.Hash(h, p.UniqueSessionId, randomBytes[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}

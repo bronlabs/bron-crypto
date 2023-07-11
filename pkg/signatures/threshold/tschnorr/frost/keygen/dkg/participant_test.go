@@ -58,7 +58,7 @@ func Test_CanInitialize(t *testing.T) {
 		Participants:         identityKeys,
 		SignatureAggregators: identityKeys,
 	}
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identityKeys, 2)
+	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identityKeys)
 	alice, err := NewParticipant(uniqueSessionId, aliceIdentityKey, cohortConfig, crand.Reader)
 	bob, err := NewParticipant(uniqueSessionId, bobIdentityKey, cohortConfig, crand.Reader)
 	for _, party := range []*Participant{alice, bob} {

@@ -18,12 +18,12 @@ type Round1P2P struct {
 type Round2P2P = zeroSetup.Round2P2P
 
 func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
-	pedersenBroadcast, pedersenP2P, err := p.pedersenParty.Round1()
+	pedersenBroadcast, pedersenP2P, err := p.PedersenParty.Round1()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "pedersen round 1 failed")
 	}
 
-	zeroSamplingP2P, err := p.zeroSamplingParty.Round1()
+	zeroSamplingP2P, err := p.ZeroSamplingParty.Round1()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "zero sampling round 1 failed")
 	}
@@ -44,7 +44,7 @@ func (p *Participant) Round2(round2outputBroadcast map[integration.IdentityKey]*
 		pedersenRound2outputP2P[identity] = message.Pedersen
 		zeroSamplingRound2Output[identity] = message.ZeroSampling
 	}
-	signingKeyShare, publicKeyShares, err := p.pedersenParty.Round2(round2outputBroadcast, pedersenRound2outputP2P)
+	signingKeyShare, publicKeyShares, err := p.PedersenParty.Round2(round2outputBroadcast, pedersenRound2outputP2P)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "pedersen round 2 failed")
 	}
@@ -53,7 +53,7 @@ func (p *Participant) Round2(round2outputBroadcast map[integration.IdentityKey]*
 		publicKeyShares: publicKeyShares,
 	}
 
-	output, err := p.zeroSamplingParty.Round2(zeroSamplingRound2Output)
+	output, err := p.ZeroSamplingParty.Round2(zeroSamplingRound2Output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 2 failed")
 	}
@@ -61,7 +61,7 @@ func (p *Participant) Round2(round2outputBroadcast map[integration.IdentityKey]*
 }
 
 func (p *Participant) Round3(round3output map[integration.IdentityKey]*Round2P2P) (*dkls23.Shard, error) {
-	pairwiseSeeds, err := p.zeroSamplingParty.Round3(round3output)
+	pairwiseSeeds, err := p.ZeroSamplingParty.Round3(round3output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
