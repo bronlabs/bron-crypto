@@ -1,0 +1,124 @@
+package trusted_dealer_test
+
+import (
+	crand "crypto/rand"
+	"crypto/sha256"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/stretchr/testify/require"
+	"hash"
+	"testing"
+)
+
+type testIdentityKey struct {
+	curve  *curves.Curve
+	signer *schnorr.Signer
+	h      func() hash.Hash
+}
+
+func (k *testIdentityKey) PublicKey() curves.Point {
+	return k.signer.PublicKey.Y
+}
+func (k *testIdentityKey) Sign(message []byte) []byte {
+	return nil
+}
+func (k *testIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+	return errs.NewVerificationFailed("not implemented")
+}
+
+func Test_HappyPath(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Lindell 2017 trusted dealer tests.")
+	}
+
+	t.Parallel()
+	curve := curves.K256()
+	h := sha256.New
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+	th := 2
+	n := 3
+
+	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	alice, bob, charlie := identities[0], identities[1], identities[2]
+
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite:          cipherSuite,
+		Protocol:             protocol.LINDELL17,
+		Threshold:            2,
+		TotalParties:         3,
+		Participants:         []integration.IdentityKey{alice, bob, charlie},
+		SignatureAggregators: []integration.IdentityKey{alice, bob, charlie},
+	}
+
+	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
+	require.NoError(t, err)
+	require.NotNil(t, shards)
+	require.Len(t, shards, cohortConfig.TotalParties)
+
+	t.Run("all signing key shares are valid", func(t *testing.T) {
+		t.Parallel()
+		for _, shard := range shards {
+			err = shard.SigningKeyShare.Validate()
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("all public keys are the same", func(t *testing.T) {
+		t.Parallel()
+		publicKeys := map[curves.Point]bool{}
+		for _, shard := range shards {
+			if _, exists := publicKeys[shard.SigningKeyShare.PublicKey]; !exists {
+				publicKeys[shard.SigningKeyShare.PublicKey] = true
+			}
+		}
+		require.Len(t, publicKeys, 1)
+	})
+
+	t.Run("all signing key shares interpolate to dlog of public key", func(t *testing.T) {
+		t.Parallel()
+
+		shamirDealer, err := shamir.NewDealer(th, n, curve)
+		require.NoError(t, err)
+		require.NotNil(t, shamirDealer)
+		shamirShares := make([]*shamir.Share, n)
+		for i := 0; i < 3; i++ {
+			shamirShares[i] = &shamir.Share{
+				Id:    i + 1,
+				Value: shards[identities[i]].SigningKeyShare.Share,
+			}
+		}
+
+		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		require.NoError(t, err)
+
+		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
+		require.True(t, shards[identities[0]].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
+	})
+
+	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {
+		t.Parallel()
+
+		for myIdentityKey, myShard := range shards {
+			myShare := myShard.SigningKeyShare.Share.BigInt()
+			myPaillierPrivateKey := myShard.PaillierSecretKey
+			for _, theirShard := range shards {
+				if myShard != theirShard {
+					theirEncryptedShare := theirShard.PaillierEncryptedShare[myIdentityKey]
+					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
+					require.NoError(t, err)
+					require.Zero(t, theirDecryptedShare.Cmp(myShare))
+				}
+			}
+		}
+	})
+}

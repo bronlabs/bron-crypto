@@ -29,18 +29,22 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	curve := curves.K256()
 	eCurve, err := curve.ToEllipticCurve()
+	ecdsaPrivateKey, err := ecdsa.GenerateKey(eCurve, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert knox curve to go curve")
+		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
-	privateKeyBigInt, err := ecdsa.GenerateKey(eCurve, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate ecdsa private key")
-	}
-	privateKey, err := curve.Scalar.SetBigInt(privateKeyBigInt.X)
+	privateKey, err := curve.Scalar.SetBigInt(ecdsaPrivateKey.D)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "could not convert go private key bytes to a knox scalar")
 	}
-	publicKey := curve.ScalarBaseMult(privateKey)
+	publicKey, err := curve.Point.Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	if err != nil {
+		return nil, errs.WrapDeserializationFailed(err, "could not convert go public key bytes to a knox point")
+	}
+	calculatedPublicKey := curve.ScalarBaseMult(privateKey)
+	if !calculatedPublicKey.Equal(publicKey) {
+		return nil, errs.NewVerificationFailed("calculated public key is incorrect")
+	}
 
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
 	if err != nil {
