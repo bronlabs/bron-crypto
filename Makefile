@@ -110,3 +110,14 @@ run-accumulator-ecc: ## Runs test of cryptographic accumulator
 .PHONY: compare-bench
 compare-bench: ## Runs bench on master and the current branch and compares the result
 	bash scripts/perf-comp-local
+
+.PHONY: fuzz-test
+fuzz-test: ## build and run fuzz test
+	go test github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/fuzz \
+		-fuzz ^FuzzFrostDkgInteractiveSigning$ -run ^$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/fuzz \
+		-fuzz ^FuzzFrostDkgNonInteractiveSigning$ -run ^$ \
+		-parallel=10 \
+		-fuzztime=120s

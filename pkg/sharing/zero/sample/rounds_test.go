@@ -17,7 +17,7 @@ import (
 )
 
 func doSetup(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
-	participants, err := test_utils.MakeSetupParticipants(t, curve, identities)
+	participants, err := test_utils.MakeSetupParticipants(curve, identities)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func doSetup(t *testing.T, curve *curves.Curve, identities []integration.Identit
 
 func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -73,7 +73,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 
 func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(t, curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
 	participants[0].UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
 	for _, participant := range participants {
@@ -196,7 +196,8 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, allIdentities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, allIdentities)
+	require.NoError(t, err)
 
 	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
 	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})

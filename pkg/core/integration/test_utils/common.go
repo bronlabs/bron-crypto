@@ -3,13 +3,12 @@ package test_utils
 import (
 	crand "crypto/rand"
 	"encoding/json"
-	"hash"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/pkg/errors"
+	"hash"
 )
 
 type TestIdentityKey struct {
@@ -63,21 +62,29 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 
 	identities = make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+		identity, err := MakeIdentity(cipherSuite, nil, nil)
+		identities[i] = identity
 		if err != nil {
 			return nil, err
-		}
-
-		identities[i] = &TestIdentityKey{
-			curve:  cipherSuite.Curve,
-			signer: signer,
-			h:      cipherSuite.Hash,
 		}
 	}
 
 	identities = integration.SortIdentityKeys(identities)
 
 	return identities, nil
+}
+
+func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar, options *schnorr.Options) (integration.IdentityKey, error) {
+	signer, err := schnorr.NewSigner(cipherSuite, secret, crand.Reader, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TestIdentityKey{
+		curve:  cipherSuite.Curve,
+		signer: signer,
+		h:      cipherSuite.Hash,
+	}, nil
 }
 
 func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {

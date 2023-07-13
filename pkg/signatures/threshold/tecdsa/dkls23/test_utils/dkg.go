@@ -2,8 +2,6 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"testing"
-
 	"io"
 
 	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
@@ -14,14 +12,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func MakeParticipants(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
+func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
 
 	participants = make([]*dkg.Participant, cohortConfig.TotalParties)
 
-	sid := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	if err != nil {
+		return nil, err
+	}
 
 	for i, identity := range identities {
 		var prng io.Reader

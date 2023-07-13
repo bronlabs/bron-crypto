@@ -4,12 +4,13 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -24,8 +25,11 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+func doDkg(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	if err != nil {
+		return nil, nil, err
+	}
 	dkgParticipants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, nil, err
@@ -122,7 +126,7 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
@@ -157,7 +161,7 @@ func TestSignNilMessage(t *testing.T) {
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {

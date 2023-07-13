@@ -59,7 +59,8 @@ func Test_CanInitialize(t *testing.T) {
 		SignatureAggregators: identityKeys,
 	}
 	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-	sid := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	require.NoError(t, err)
 	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
 	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)
 	for _, party := range []*Participant{alice, bob} {
