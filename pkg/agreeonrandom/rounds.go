@@ -1,8 +1,8 @@
 package agreeonrandom
 
 import (
+	"encoding/hex"
 	"fmt"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -44,12 +44,28 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return randomValue, nil
 }
 
+func hasDuplicate(list []integration.IdentityKey) bool {
+	seen := make(map[string]bool)
+	for _, item := range list {
+		key := hex.EncodeToString(item.PublicKey().ToAffineCompressed())
+		if seen[key] {
+			return true
+		}
+		seen[key] = true
+	}
+	return false
+}
+
 func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
 	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
 		identityKeys[i] = identityKey
 		i++
+	}
+	hasDup := hasDuplicate(identityKeys)
+	if hasDup {
+		return nil, errs.NewDuplicate("duplicate identity keys")
 	}
 	identityKeys = integration.SortIdentityKeys(identityKeys)
 	sortedRVector := make([][]byte, len(allIdentityKeysToRi))

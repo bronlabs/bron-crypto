@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
+	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
@@ -60,6 +61,32 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 		}
 	}
 	return random
+}
+
+func TestDuplicatePubkeys(t *testing.T) {
+	t.Helper()
+
+	var randomErr error
+	// eventually duplicate pubkey will cause failed to generate unique random
+	for i := 0; i < 10; i++ {
+		curve := curves.ED25519()
+		cipherSuite := &integration.CipherSuite{
+			Curve: curve,
+			Hash:  sha3.New256,
+		}
+
+		identityAlice, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		identityBob, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		identityCharlie, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{2}), nil)
+		identities := []integration.IdentityKey{identityAlice, identityBob, identityCharlie}
+		_, err = test_utils.ProduceSharedRandomValue(curve, identities)
+		if err != nil {
+			randomErr = err
+			break
+		}
+	}
+	require.Error(t, randomErr)
+	require.Contains(t, randomErr.Error(), "duplicate identity keys")
 }
 
 func testWithMockR1Output(t *testing.T, curve *curves.Curve, n int) []byte {
