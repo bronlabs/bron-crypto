@@ -158,8 +158,8 @@ func (p *Participant) Round6(round5output map[integration.IdentityKey]Round5P2P)
 			continue
 		}
 		shard.PairwiseBaseOTs[identity] = &dkls23.BaseOTConfig{
-			ActingAsSender:   p.BaseOTSenderParties[identity].Output,
-			ActingAsReceiver: p.BaseOTReceiverParties[identity].Output,
+			AsSender:   p.BaseOTSenderParties[identity].Output,
+			AsReceiver: p.BaseOTReceiverParties[identity].Output,
 		}
 	}
 	return shard, nil

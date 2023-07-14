@@ -17,8 +17,8 @@ type PublicKeyShares = threshold.PublicKeyShares
 type PairwiseSeeds = zero.PairwiseSeeds
 
 type BaseOTConfig struct {
-	ActingAsSender   *vsot.SenderOutput
-	ActingAsReceiver *vsot.ReceiverOutput
+	AsSender   *vsot.SenderOutput
+	AsReceiver *vsot.ReceiverOutput
 }
 
 type Shard struct {

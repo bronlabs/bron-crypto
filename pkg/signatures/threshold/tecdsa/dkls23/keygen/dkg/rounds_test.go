@@ -90,8 +90,8 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		require.Len(t, shard.PairwiseBaseOTs, len(cohortConfig.Participants)-1)
 		for _, baseOTConfig := range shard.PairwiseBaseOTs {
 			require.NotNil(t, baseOTConfig)
-			require.NotNil(t, baseOTConfig.ActingAsSender)
-			require.NotNil(t, baseOTConfig.ActingAsReceiver)
+			require.NotNil(t, baseOTConfig.AsSender)
+			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
 	shardsMap := make(map[integration.IdentityKey]*dkls23.Shard, len(shards))
@@ -158,17 +158,17 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		for _, participant := range participants {
 			shard := shardsMap[participant.MyIdentityKey]
 			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
-				meAsReceiver := myConfig.ActingAsReceiver
-				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].ActingAsSender
+				meAsReceiver := myConfig.AsReceiver
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsSender
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
 						meAsReceiver.OneTimePadDecryptionKey[i],
-						senderCounterParty.OneTimePadEncryptionKeys[i][myConfig.ActingAsReceiver.RandomChoiceBits[i]],
+						senderCounterParty.OneTimePadEncryptionKeys[i][myConfig.AsReceiver.RandomChoiceBits[i]],
 					)
 				}
-				meAsSender := myConfig.ActingAsSender
-				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].ActingAsReceiver
+				meAsSender := myConfig.AsSender
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsReceiver
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
@@ -195,11 +195,11 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		for _, participant := range participants {
 			shard := shardsMap[participant.MyIdentityKey]
 			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
-				meAsReceiver := myConfig.ActingAsReceiver
-				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].ActingAsSender
+				meAsReceiver := myConfig.AsReceiver
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsSender
 
-				meAsSender := myConfig.ActingAsSender
-				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].ActingAsReceiver
+				meAsSender := myConfig.AsSender
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsReceiver
 
 				for _, pair := range []struct {
 					Sender   *vsot.SenderOutput
