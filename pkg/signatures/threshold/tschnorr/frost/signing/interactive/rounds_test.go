@@ -46,9 +46,7 @@ func doDkg(t *testing.T, curve *curves.Curve, cohortConfig *integration.CohortCo
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) {
-	t.Helper()
-
+func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) error {
 	var shards []*frost.Shard
 	for i, _ := range signingKeyShares {
 		shards = append(shards, &frost.Shard{
@@ -58,17 +56,25 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 	}
 
 	participants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, identities, shards)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 	for _, participant := range participants {
-		require.NotNil(t, participant)
+		if participant == nil {
+			return fmt.Errorf("nil participant")
+		}
 	}
 
 	r1Out, err := test_utils.DoInteractiveSignRound1(participants)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	r2In := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1Out)
 	partialSignatures, err := test_utils.DoInteractiveSignRound2(participants, r2In, message)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
 	var producedSignatures []*eddsa.Signature
@@ -76,20 +82,31 @@ func doInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, ide
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
 			signature, err := participant.Aggregate(message, mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	require.NotEmpty(t, producedSignatures)
+	if len(producedSignatures) == 0 {
+		return fmt.Errorf("no signatures produced")
+	}
 
 	// all signatures the same
 	for i := 0; i < len(producedSignatures); i++ {
 		for j := i + 1; j < len(producedSignatures); j++ {
-			require.True(t, producedSignatures[i].R.Equal(producedSignatures[j].R))
-			require.Zero(t, producedSignatures[i].Z.Cmp(producedSignatures[j].Z))
+			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
+				return fmt.Errorf("signatures not equal")
+			}
+			if producedSignatures[i].Z.Cmp(producedSignatures[j].Z) != 0 {
+				return fmt.Errorf("signatures not equal")
+			}
 		}
 	}
+	return nil
 }
 
 func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
@@ -120,7 +137,48 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 			publicKeyShares[i] = allPublicKeyShares[index]
 		}
 
-		doInteractiveSign(t, cohortConfig, identities, signingKeyShares, publicKeyShares, message)
+		err := doInteractiveSign(cohortConfig, identities, signingKeyShares, publicKeyShares, message)
+		require.NoError(t, err)
+	}
+}
+
+func TestSignEmptyMessage(t *testing.T) {
+	t.Helper()
+	curve := curves.ED25519()
+	h := sha3.New256
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+
+	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
+	require.NoError(t, err)
+
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, allIdentities, 2, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
+	require.NoError(t, err)
+
+	combinations := combin.Combinations(2, 2)
+	for _, combinationIndices := range combinations {
+		identities := make([]integration.IdentityKey, 2)
+		signingKeyShares := make([]*frost.SigningKeyShare, 2)
+		publicKeyShares := make([]*frost.PublicKeyShares, 2)
+		for i, index := range combinationIndices {
+			identities[i] = allIdentities[index]
+			signingKeyShares[i] = allSigningKeyShares[index]
+			publicKeyShares[i] = allPublicKeyShares[index]
+		}
+
+		err := doInteractiveSign(cohortConfig, identities, signingKeyShares, publicKeyShares, []byte{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "message is empty")
+
+		err = doInteractiveSign(cohortConfig, identities, signingKeyShares, publicKeyShares, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "message is empty")
 	}
 }
 

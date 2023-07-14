@@ -38,6 +38,12 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't not derive D alpha and E alpha")
 	}
+	if message == nil {
+		return nil, errs.NewIsNil("message is empty")
+	}
+	if len(message) == 0 {
+		return nil, errs.NewIsZero("message is empty")
+	}
 	partialSignature, err := signing_helpers.ProducePartialSignature(
 		ic,
 		ic.SessionParticipants,

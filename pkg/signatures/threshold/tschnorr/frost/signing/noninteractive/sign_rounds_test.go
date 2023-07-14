@@ -61,9 +61,7 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive.
 	return preSignatureBatches[0], privateNoncePairsOfAllParties, nil
 }
 
-func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) {
-	t.Helper()
-
+func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) error {
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
 		shards = append(shards, &frost.Shard{
@@ -75,25 +73,36 @@ func doNonInteractiveSign(t *testing.T, cohortConfig *integration.CohortConfig, 
 	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
 
 	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
 			signature, err := cosigner.Aggregate(message, firstUnusedPreSignatureIndex[i], mappedPartialSignatures)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 
 			s, err := signature.MarshalBinary()
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
 			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	// all signatures are equal
-	require.Len(t, signatureHashSet, 1)
+	if len(signatureHashSet) != 1 {
+		return fmt.Errorf("signatures are not equal")
+	}
+	return nil
 }
 
 func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
@@ -127,8 +136,48 @@ func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve
 		firstUnusedPreSignatureIndices[i] = firstUnusedPreSignatureIndex
 	}
 
-	doNonInteractiveSign(t, cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, message)
+	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, message)
+	require.NoError(t, err)
+}
 
+func TestSignNilMessage(t *testing.T) {
+	t.Helper()
+	curve := curves.ED25519()
+	hash := sha3.New256
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hash,
+	}
+
+	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
+	require.NoError(t, err)
+
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, allIdentities, 2, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, cohortConfig, allIdentities)
+	require.NoError(t, err)
+
+	for i, share := range allSigningKeyShares {
+		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i]].Equal(curve.ScalarBaseMult(share.Share)))
+	}
+
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, 5)
+	require.NoError(t, err)
+
+	firstUnusedPreSignatureIndices := make([]int, 2)
+	for i := 0; i < 2; i++ {
+		firstUnusedPreSignatureIndices[i] = 0
+	}
+
+	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "message is empty")
+
+	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, []byte{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "message is empty")
 }
 
 func TestHappyPath(t *testing.T) {

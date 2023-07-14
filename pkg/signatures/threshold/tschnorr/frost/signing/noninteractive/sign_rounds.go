@@ -10,6 +10,13 @@ import (
 )
 
 func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
+	if message == nil {
+		return nil, errs.NewIsNil("message is empty")
+	}
+	if len(message) == 0 {
+		return nil, errs.NewIsZero("message is empty")
+	}
+
 	privateNoncePair := nic.myPrivateNoncePairs[nic.FirstUnusedPreSignatureIndex]
 	d_i := privateNoncePair.SmallD
 	e_i := privateNoncePair.SmallE
