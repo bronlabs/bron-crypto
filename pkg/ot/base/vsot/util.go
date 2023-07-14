@@ -1,4 +1,4 @@
-package simplest
+package vsot
 
 // xorBytes computes c = a xor b.
 func xorBytes(a, b [DigestSize]byte) (c [DigestSize]byte) {
@@ -11,7 +11,7 @@ func xorBytes(a, b [DigestSize]byte) (c [DigestSize]byte) {
 // initChoice initializes the receiver's choice array from the PackedRandomChoiceBits array
 func (receiver *Receiver) initChoice() {
 	// unpack the random values in PackedRandomChoiceBits into bits in Choice
-	receiver.Output.RandomChoiceBits = make([]int, receiver.batchSize)
+	receiver.Output.RandomChoiceBits = make([]int, receiver.BatchSize)
 	for i := 0; i < len(receiver.Output.RandomChoiceBits); i++ {
 		receiver.Output.RandomChoiceBits[i] = int(ExtractBitFromByteVector(receiver.Output.PackedRandomChoiceBits, i))
 	}

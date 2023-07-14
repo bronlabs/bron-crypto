@@ -4,16 +4,23 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
+	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	zeroSetup "github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/setup"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/gtank/merlin"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 )
 
+const DkgLabel = "COPPER_DKLS23_DKG-"
+
 type Participant struct {
-	PedersenParty     *pedersen.Participant
-	ZeroSamplingParty *zeroSetup.Participant
+	MyIdentityKey         integration.IdentityKey
+	GennaroParty          *gennaro.Participant
+	ZeroSamplingParty     *zeroSetup.Participant
+	BaseOTSenderParties   map[integration.IdentityKey]*vsot.Sender
+	BaseOTReceiverParties map[integration.IdentityKey]*vsot.Receiver
 
 	state *state
 }
@@ -21,35 +28,58 @@ type Participant struct {
 type state struct {
 	signingKeyShare *dkls23.SigningKeyShare
 	publicKeyShares *dkls23.PublicKeyShares
+	pairwiseSeeds   dkls23.PairwiseSeeds
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.PedersenParty.GetIdentityKey()
+	return p.GennaroParty.GetIdentityKey()
 }
 
 func (p *Participant) GetShamirId() int {
-	return p.PedersenParty.GetShamirId()
+	return p.GennaroParty.GetShamirId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.PedersenParty.GetCohortConfig()
+	return p.GennaroParty.GetCohortConfig()
 }
 
-func NewParticipant(identityKey integration.IdentityKey, pedersenSessionId []byte, zeroSamplingSessionId []byte, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript *merlin.Transcript) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
-	// TODO: refactor pedersen to use transcripts - you can do it for sid
-	pedersenParty, err := pedersen.NewParticipant(pedersenSessionId, identityKey, cohortConfig, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct dkls23 dkg participant out of pedersen dkg participant")
+	if transcript == nil {
+		transcript = merlin.NewTranscript(DkgLabel)
 	}
-	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, zeroSamplingSessionId, identityKey, cohortConfig.Participants, nil, prng)
+	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct dkls23 dkg participant out of gennaro dkg participant")
+	}
+	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, identityKey, cohortConfig.Participants, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
+	senders := make(map[integration.IdentityKey]*vsot.Sender, len(cohortConfig.Participants)-1)
+	receivers := make(map[integration.IdentityKey]*vsot.Receiver, len(cohortConfig.Participants)-1)
+	for _, participant := range cohortConfig.Participants {
+		if participant.PublicKey().Equal(identityKey.PublicKey()) {
+			continue
+		}
+		// 256 should be replaced with kappa once ot extensions are here
+		senders[participant], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
+		}
+		receivers[participant], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
+		}
+	}
 	return &Participant{
-		PedersenParty:     pedersenParty,
-		ZeroSamplingParty: zeroSamplingParty,
+		MyIdentityKey:         identityKey,
+		GennaroParty:          gennaroParty,
+		ZeroSamplingParty:     zeroSamplingParty,
+		BaseOTSenderParties:   senders,
+		BaseOTReceiverParties: receivers,
+		state:                 &state{},
 	}, nil
 }
