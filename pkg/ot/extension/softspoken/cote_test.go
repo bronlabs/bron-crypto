@@ -11,7 +11,15 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 )
 
-func TestCOTExtension(t *testing.T) {
+func TestOTextension(t *testing.T) {
+	// TODO: implement
+}
+
+func TestOTextensionWithFiatShamir(t *testing.T) {
+	// TODO: implement
+}
+
+func TestCOTextension(t *testing.T) {
 	curveInstances := []*curves.Curve{
 		curves.K256(),
 		curves.P256(),
@@ -30,20 +38,20 @@ func TestCOTExtension(t *testing.T) {
 		}
 
 		// Setup COTe
-		sender := NewCOtSender(baseOtReceiverOutput, curve, false)
-		receiver := NewCOtReceiver(baseOtSenderOutput, curve, false)
-		choice := [LBytes]byte{} // receiver's input, the Choice bits x
+		sender := NewCOtSender(baseOtReceiverOutput, curve, false, true)
+		receiver := NewCOtReceiver(baseOtSenderOutput, curve, false, true)
+		choice := [EtaBytes]byte{} // receiver's input, the Choice bits x
 		_, err = rand.Read(choice[:])
 		require.NoError(t, err)
-		inputOpt := [L]curves.Scalar{} // sender's input, the InputOpt α
-		for i := 0; i < L; i++ {
+		inputOpt := [Eta]curves.Scalar{} // sender's input, the InputOpt α
+		for i := 0; i < Eta; i++ {
 			inputOpt[i] = curve.Scalar.Random(rand.Reader)
 			require.NoError(t, err)
 		}
 
-		round1Output, err := receiver.Round1Extend(uniqueSessionId, choice)
+		expansionMask, _, err := receiver.Round1Extend(uniqueSessionId, choice)
 		require.NoError(t, err)
-		round2Output, err := sender.Round2Extend(uniqueSessionId, round1Output, inputOpt)
+		challenge, derandomizeMask, _, err := sender.Round2Extend(uniqueSessionId, expansionMask, inputOpt)
 		require.NoError(t, err)
 
 		var prgSync, bitCorr [SigmaBytes]byte
@@ -67,12 +75,12 @@ func TestCOTExtension(t *testing.T) {
 				require.Zero(t, bitCorr)
 			}
 		}
-		round3Output, err := receiver.Round3ProveConsistency(round2Output)
+		challengeResponse, _, err := receiver.Round3ProveConsistency(challenge, derandomizeMask)
 		require.NoError(t, err)
-		err = sender.Round4CheckConsistency(round2Output, round3Output)
+		err = sender.Round4CheckConsistency(challenge, challengeResponse)
 		require.NoError(t, err)
 
-		for j := 0; j < L; j++ {
+		for j := 0; j < Eta; j++ {
 			// Check each correlation z_B = x • α + z_A
 			if UnpackBit(j, choice[:]) != 0 {
 				require.Equal(t, receiver.OutCorrelations[j], inputOpt[j].Sub(sender.OutDeltaOpt[j]))
@@ -81,6 +89,10 @@ func TestCOTExtension(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCOTextensionWithFiatShamir(t *testing.T) {
+	// TODO: implement
 }
 
 // RunSimplestOT is a utility function encapsulating the entire process of
@@ -128,14 +140,14 @@ func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessi
 // running a SoftspokenOT extension and derandomizing its result.
 // As a black box, this function does:
 //
-//	R: x ---┐                            ┌---> R: z_B
+//	R: x ---┐                           ┌---> R: z_B
 //	        ├--- COTe_{κ, L, M}(x, α)---┤
-//	S: α ---┘                            └---> S: z_A
+//	S: α ---┘                           └---> S: z_A
 func RunSoftspokenCOTe(
 	t *testing.T, curve *curves.Curve, uniqueSessionId [simplest.DigestSize]byte,
-	choice [LBytes]byte, // receiver's input, the Choice bits x
-	inputOpt [L]curves.Scalar, // sender's input, the InputOpt α
-) (z_A *[L]curves.Scalar, z_B *[L]curves.Scalar, err error) {
+	choice [EtaBytes]byte, // receiver's input, the Choice bits x
+	inputOpt [Eta]curves.Scalar, // sender's input, the InputOpt α
+) (z_A *[Eta]curves.Scalar, z_B *[Eta]curves.Scalar, err error) {
 	t.Helper()
 	// BaseOTs
 	batchSize := Kappa
@@ -144,25 +156,37 @@ func RunSoftspokenCOTe(
 		return nil, nil, errs.WrapFailed(err, "base OT in run softspoken COTe")
 	}
 	// Setup COTe
-	sender := NewCOtSender(baseOtReceiverOutput, curve, false)
-	receiver := NewCOtReceiver(baseOtSenderOutput, curve, false)
+	sender := NewCOtSender(baseOtReceiverOutput, curve, false, true)
+	receiver := NewCOtReceiver(baseOtSenderOutput, curve, false, true)
 
 	// Run COTe
-	round1Output, err := receiver.Round1Extend(uniqueSessionId, choice)
+	expansionMask, _, err := receiver.Round1Extend(uniqueSessionId, choice)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "receiver round 1 in run softspoken COTe")
 	}
-	round2Output, err := sender.Round2Extend(uniqueSessionId, round1Output, inputOpt)
+	challenge, derandomizeMask, _, err := sender.Round2Extend(uniqueSessionId, expansionMask, inputOpt)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "sender round 2 in run softspoken COTe")
 	}
-	round3Output, err := receiver.Round3ProveConsistency(round2Output)
+	challengeResponse, _, err := receiver.Round3ProveConsistency(challenge, derandomizeMask)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "receiver round 3 in run softspoken COTe")
 	}
-	err = sender.Round4CheckConsistency(round2Output, round3Output)
+	err = sender.Round4CheckConsistency(challenge, challengeResponse)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "sender round 4 in run softspoken COTe")
 	}
 	return &sender.OutDeltaOpt, &receiver.OutCorrelations, nil
+}
+
+func RunSoftspokenCOTeWithFiatShamir() {
+	// TODO: implement
+}
+
+func RunSoftspokenOTe() {
+	// TODO: implement
+}
+
+func RunSoftspokenOTeWithFiatShamir() {
+	// TODO: implement
 }

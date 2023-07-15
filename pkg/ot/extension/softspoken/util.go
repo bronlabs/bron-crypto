@@ -2,6 +2,7 @@ package softspoken
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -11,11 +12,11 @@ import (
 // but likewise we want to compact the output matrix as bytes, again _row-wise_.
 // so the output matrix's dimensions are lPrime by `kappa >> 3 == KappaBytes`, as a _byte_ matrix.
 // the technique is fairly straightforward, but involves some bitwise operations.
-func transposeBooleanMatrix(input [Kappa][LPrimeBytes]byte) [LPrime][KappaBytes]byte {
-	output := [LPrime][KappaBytes]byte{}
+func transposeBooleanMatrix(input [Kappa][EtaPrimeBytes]byte) [EtaPrime][KappaBytes]byte {
+	output := [EtaPrime][KappaBytes]byte{}
 	for rowByte := 0; rowByte < KappaBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
-			for columnByte := 0; columnByte < LPrimeBytes; columnByte++ {
+			for columnByte := 0; columnByte < EtaPrimeBytes; columnByte++ {
 				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
 					rowBit := rowByte<<3 + rowBitWithinByte
 					columnBit := columnByte<<3 + columnBitWithinByte
@@ -40,25 +41,24 @@ func intToByteArray(i int) [4]byte {
 	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
 }
 
-// HashSalted hashes the rows of a [L]×[κ] bit matrix, outputting a [L]×[κ] bit matrix.
+// HashSalted hashes the rows of a [η]×[κ] bit matrix, outputting a [η]×[κ] bit matrix.
 // The uniqueSessionId is used as a salt.
-func HashSalted(uniqueSessionId []byte, bufferIn [][KappaBytes]byte) (BufferOut [][KappaBytes]byte, e error) {
-	var bufferOut [L][KappaBytes]byte
-	for j := 0; j < L; j++ {
+func HashSalted(uniqueSessionId *[simplest.DigestSize]byte, bufferIn [][KappaBytes]byte, bufferOut [][KappaBytes]byte) (e error) {
+	for j := 0; j < Eta; j++ {
 		hash := sha3.New256()
 		idx_bytes := intToByteArray(j)
 		if _, err := hash.Write(idx_bytes[:]); err != nil {
-			return nil, errs.WrapFailed(err, "writing index into HashSalted")
+			return errs.WrapFailed(err, "writing index into HashSalted")
 		}
-		if _, err := hash.Write(uniqueSessionId); err != nil {
-			return nil, errs.WrapFailed(err, "writing SessionID into HashSalted")
+		if _, err := hash.Write((*uniqueSessionId)[:]); err != nil {
+			return errs.WrapFailed(err, "writing SessionID into HashSalted")
 		}
 		if _, err := hash.Write(bufferIn[j][:]); err != nil {
-			return nil, errs.WrapFailed(err, "reading from HashSalted")
+			return errs.WrapFailed(err, "reading from HashSalted")
 		}
 		copy(bufferOut[j][:], hash.Sum(nil))
 	}
-	return bufferOut[:], nil
+	return nil
 }
 
 // BoolToInt
@@ -87,10 +87,10 @@ func XORbits(out []byte, in ...[]byte) {
 	}
 }
 
-// PRG generates a pseudorandom bit matrix of size [L]×[κ]bits from seeds of
+// PRG generates a pseudorandom bit matrix of size [η]×[κ]bits from seeds of
 // size [κ]×[κ], expanding each κ-bit seed to L bits (where L=l*κ for some l ∈ ℕ).
 func PRG(uniqueSessionId []byte, seed []byte, bufferOut []byte) (err error) {
-	if (len(seed) != KappaBytes) || (len(bufferOut) != LPrimeBytes) {
+	if (len(seed) != KappaBytes) || (len(bufferOut) != EtaPrimeBytes) {
 		return errs.NewInvalidArgument("PRG: invalid input size")
 	}
 	shake := sha3.NewCShake256(uniqueSessionId[:], []byte("Copper_Softspoken_COTe"))
