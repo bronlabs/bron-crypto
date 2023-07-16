@@ -32,7 +32,7 @@ package softspoken
 //	# A bit-level correlation used to check the extension consistency.
 //	  (Check.1) S: sample(χ_i)                                        ∈ [σ]bits       ∀i∈[M]
 //	  .            Send(χ) => R                                       ∈ [σ]×[M]bits
-//	  (Check.2) R: x_val = x^hat_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j         ∈ [σ]bits
+//	  (Check.2) R: x_val = x̂_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j         ∈ [σ]bits
 //	  .                        └---where x^hat_j = x_{σj:σ(j+1)}
 //	  .            t_val^i = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j   ∈ [σ]bits       ∀i∈[κ]
 //	  .                        └---where t^i_hat_j = t^i_{σj:σ(j+1)}
@@ -59,8 +59,8 @@ package softspoken
 // -------------------------------------------------------------------------- //
 // ROUNDS (COTe):
 //
-//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)          [BaseOT]
-//  1. R: (x) 		---(Round1)--->u                  [Ext.1, Ext.2, Ext.3]
+//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)     [BaseOT]
+//  1. R: (x) 		---(Round1)--->(u, v_x)           [Ext.1, Ext.2, Ext.3]
 //  2. S: (α) 		---(Round2)--->(χ, τ, z_B)        [Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Derand.1]
 //  3. R: (χ, τ) 	---(Round3)--->(x_val, t_val, z_A)[Check.2, T&R.1, T&R.2, Derand.2]
 //  L. S: (x_val, t_val) ---(RoundLocal)--->()        [Check.3]

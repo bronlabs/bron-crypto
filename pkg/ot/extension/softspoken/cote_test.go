@@ -11,11 +11,12 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 )
 
+var curveInstances = []*curves.Curve{
+	curves.K256(),
+	curves.P256(),
+}
+
 func TestOTextension(t *testing.T) {
-	curveInstances := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
-	}
 	for _, curve := range curveInstances {
 		// Generic setup
 		uniqueSessionId := [simplest.DigestSize]byte{}
@@ -39,64 +40,18 @@ func TestOTextension(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check OTe result
-		print(oTeSenderOutput, oTeReceiverOutput)
-		// TODO
-	}
-}
-
-func TestCOTextension(t *testing.T) {
-	curveInstances := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
-	}
-	for _, curve := range curveInstances {
-		// Generic setup
-		useForcedReuse := false
-		inputBatchLen := 1 // Must be 1 if useForcedReuse is false. Set L>1 for higher batch sizes, or loop over inputBatchLen.
-		uniqueSessionId := [simplest.DigestSize]byte{}
-		_, err := rand.Read(uniqueSessionId[:])
-		require.NoError(t, err)
-
-		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, Kappa, uniqueSessionId)
-		require.NoError(t, err)
 		for i := 0; i < Kappa; i++ {
-			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
-		}
-
-		// Set COTe inputs
-		choices := OTeInputChoices{} // receiver's input, the Choice bits x
-		_, err = rand.Read(choices[:])
-		require.NoError(t, err)
-		inputOpt := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
-		for i := 0; i < Eta; i++ {
-			inputOpt[0][i] = curve.Scalar.Random(rand.Reader)
-			require.NoError(t, err)
-		}
-
-		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, nil, nil)
-		require.NoError(t, err)
-
-		// Check COTe result
-		for k := 0; k < inputBatchLen; k++ {
-			for j := 0; j < Eta; j++ {
-				// Check each correlation z_B = x • α + z_A
-				if UnpackBit(j, choices[:]) != 0 {
-					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpt[k][j].Sub(cOTeSenderOutputs[0][j]))
-				} else {
-					require.Equal(t, cOTeReceiverOutputs[k][j], cOTeSenderOutputs[k][j].Neg())
-				}
+			// Check that v_x = v_1 • x + v_0 • (1-x)
+			if UnpackBit(i, choices[:]) != 0 {
+				require.Equal(t, oTeSenderOutput[1][i], oTeReceiverOutput[i])
+			} else {
+				require.Equal(t, oTeSenderOutput[0][i], oTeReceiverOutput[i])
 			}
 		}
 	}
 }
 
 func TestCOTextensionWithForcedReuse(t *testing.T) {
-	curveInstances := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
-	}
 	for _, curve := range curveInstances {
 		// Generic setup
 		useForcedReuse := true
@@ -116,14 +71,16 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 		choices := OTeInputChoices{} // receiver's input, the Choice bits x
 		_, err = rand.Read(choices[:])
 		require.NoError(t, err)
-		inputOpt := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
-		for i := 0; i < Eta; i++ {
-			inputOpt[0][i] = curve.Scalar.Random(rand.Reader)
-			require.NoError(t, err)
+		inputOpts := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
+		for k := 0; k < inputBatchLen; k++ {
+			for i := 0; i < Eta; i++ {
+				inputOpts[k][i] = curve.Scalar.Random(rand.Reader)
+				require.NoError(t, err)
+			}
 		}
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, nil, nil)
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
@@ -131,7 +88,7 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 			for j := 0; j < Eta; j++ {
 				// Check each correlation z_B = x • α + z_A
 				if UnpackBit(j, choices[:]) != 0 {
-					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpt[k][j].Sub(cOTeSenderOutputs[0][j]))
+					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpts[k][j].Sub(cOTeSenderOutputs[k][j]))
 				} else {
 					require.Equal(t, cOTeReceiverOutputs[k][j], cOTeSenderOutputs[k][j].Neg())
 				}
@@ -140,6 +97,53 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 	}
 }
 
+func TestCOTextension(t *testing.T) {
+	for _, curve := range curveInstances {
+		// Generic setup
+		useForcedReuse := false
+		// inputBatchLen := 1 // Must be 1 if useForcedReuse is false. Set L>1 for higher batch sizes, or loop over inputBatchLen.
+		uniqueSessionId := [simplest.DigestSize]byte{}
+		_, err := rand.Read(uniqueSessionId[:])
+		require.NoError(t, err)
+
+		// BaseOTs
+		baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, Kappa, uniqueSessionId)
+		require.NoError(t, err)
+		for i := 0; i < Kappa; i++ {
+			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
+		}
+
+		// Set COTe inputs
+		choices := OTeInputChoices{} // receiver's input, the Choice bits x
+		_, err = rand.Read(choices[:])
+		require.NoError(t, err)
+		inputOpt := COTeInputOpt{} // sender's input, the InputOpt α
+		for i := 0; i < Eta; i++ {
+			inputOpt[i] = curve.Scalar.Random(rand.Reader)
+			require.NoError(t, err)
+		}
+		inputOpts := []COTeInputOpt{inputOpt} // A slice of length 1 is required if useForcedReuse is false.
+
+		// Run COTe
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
+		require.NoError(t, err)
+
+		// Check COTe result
+		for j := 0; j < Eta; j++ {
+			// Check each correlation z_B = x • α + z_A
+			if UnpackBit(j, choices[:]) != 0 {
+				require.Equal(t, cOTeReceiverOutputs[0][j], inputOpt[j].Sub(cOTeSenderOutputs[0][j]))
+			} else {
+				require.Equal(t, cOTeReceiverOutputs[0][j], cOTeSenderOutputs[0][j].Neg())
+			}
+		}
+
+	}
+}
+
+// ========================================================================== //
+// =========================== RUN FUNCTIONS ================================ //
+// ========================================================================== //
 // RunSimplestOT is a utility function encapsulating the entire process of
 // running a base OT, so that other tests can use it / bootstrap themselves.
 // As a black box, this function uses randomized inputs, and does:
