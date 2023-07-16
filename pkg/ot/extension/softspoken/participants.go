@@ -2,7 +2,9 @@ package softspoken
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
+	"github.com/gtank/merlin"
 )
 
 const (
@@ -16,7 +18,7 @@ const (
 	// and the number of BaseOT seeds. Set to 1 for DKLS23.
 	L = 1
 
-	// Sigma (σ, or s) is the statistical security parameter. Eta%σ=0.
+	// Sigma (σ) is the statistical security parameter. Eta%σ=0.
 	// Sigma is the numbet of bits to consume/discard in the consistency check.
 	Sigma = 128
 
@@ -38,69 +40,94 @@ const (
 	KappaBytes    = Kappa >> 3    // KappaBytes (κ) is the computational security parameter in bytes
 	EtaBytes      = Eta >> 3      // EtaBytes (η) is the batch size in bytes
 	SigmaBytes    = Sigma >> 3    // SigmaBytes (σ) is the statistical security parameter in bytes
-	EtaPrimeBytes = EtaPrime >> 3 // XiBytes (ξ) is the bit-length of PRG seed expansions in bytes
+	EtaPrimeBytes = EtaPrime >> 3 // EtaPrimeBytes (η) is the bit-length of PRG seed expansions in bytes
 	MBytes        = M >> 3        // M Bytesis the number of blocks in the consistency check in bytes
 )
 
 type Receiver struct {
-	// baseOtSendOptions (k^i_0, k^i_1) ∈ [2][κ][κ]bits are the options used while
-	//  of playing the sender in a base OT protocol. They are inputs to COTe.
-	baseOtSendOptions *simplest.SenderOutput
+	// baseOtSeeds (k^i_0, k^i_1) ∈ [2][κ][κ]bits are the options used while
+	//  of playing the sender in a base OT protocol. They act as seeds to COTe.
+	baseOtSeeds *simplest.SenderOutput
 
-	// ExtPackChoices (x_i) ∈ [η]bits are the choice bits for the OTe.
-	ExtPackChoices [EtaPrimeBytes]byte
+	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
+	uniqueSessionId [simplest.DigestSize]byte
 
-	// ExtOptions (t^i) ∈ [2][κ][η]bits are expansions of BaseOT results using a PRG.
-	ExtOptions [KeyCount][Kappa][EtaPrimeBytes]byte
+	// transcript is the transcript containing the protocol's publicly exchanged messages.
+	transcript *merlin.Transcript
 
-	// OutCorrelations (z_B) ∈ [η]curve.Scalar are the output "correlations" (in the curve).
-	OutCorrelations [Eta]curves.Scalar
+	// curve is the elliptic curve used in the protocol.
+	curve *curves.Curve
 
-	curve           *curves.Curve
-	useDerandomize  bool
-	useFiatShamir   bool
-	uniqueSessionId [simplest.DigestSize]byte // store this between rounds
+	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
+	useForcedReuse bool
 }
 
 type Sender struct {
-	// baseOtRecOutputs (Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits) are the results
-	// of playing the receiver in a base OT protocol. They are inputs of COTe.
-	baseOtRecOutputs *simplest.ReceiverOutput
+	// baseOtSeeds (Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits) are the results
+	// of playing the receiver in a base OT protocol. They act as seeds of COTe.
+	baseOtSeeds *simplest.ReceiverOutput
 
-	// ExtChosenOpt (t^i_{Δ_i}) ∈ [κ][η]bits are the extended (via a PRG) baseOT deltaOpts.
-	ExtChosenOpt [Kappa][EtaPrimeBytes]byte
+	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
+	uniqueSessionId [simplest.DigestSize]byte
 
-	// ExtCorrelations (q_i) ∈ [κ][η]bits are the extended correlations, such that:
-	//    q^i = Δ_i • x + t^i
-	ExtCorrelations [Kappa][EtaPrimeBytes]byte
-
-	// OutDeltaOpt (z_A) ∈ [η]curve.Scalar are the output "DeltaOpt" group elements.
-	OutDeltaOpt [Eta]curves.Scalar
+	// transcript is the transcript containing the protocol's publicly exchanged messages.
+	transcript *merlin.Transcript
 
 	// curve is the elliptic curve used in the protocol.
-	curve          *curves.Curve
-	useDerandomize bool
-	useFiatShamir  bool
+	curve *curves.Curve
+
+	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
+	useForcedReuse bool
 }
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the sender role in kappa baseOTs.
-func NewCOtReceiver(baseOtResults *simplest.SenderOutput, curve *curves.Curve, useFiatShamir bool, useDerandomize bool) *Receiver {
-	return &Receiver{
-		useFiatShamir:     useFiatShamir,
-		baseOtSendOptions: baseOtResults,
-		curve:             curve,
-		OutCorrelations:   *new([Eta]curves.Scalar),
+func NewCOtReceiver(
+	baseOtResults *simplest.SenderOutput,
+	uniqueSessionId [simplest.DigestSize]byte,
+	transcript *merlin.Transcript,
+	curve *curves.Curve,
+	useForcedReuse bool,
+) (*Receiver, error) {
+	// Validate parameters: L must be 1 for forced reuse
+	if useForcedReuse && (L != 1) {
+		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
 	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+	}
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	return &Receiver{
+		baseOtSeeds:     baseOtResults,
+		uniqueSessionId: uniqueSessionId,
+		transcript:      transcript,
+		curve:           curve,
+		useForcedReuse:  useForcedReuse,
+	}, nil
 }
 
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the receiver role in kappa baseOTs.
-func NewCOtSender(baseOtResults *simplest.ReceiverOutput, curve *curves.Curve, useFiatShamir bool, useDerandomize bool) *Sender {
-	return &Sender{
-		useFiatShamir:    useFiatShamir,
-		baseOtRecOutputs: baseOtResults,
-		OutDeltaOpt:      *new([Eta]curves.Scalar),
-		curve:            curve,
+func NewCOtSender(
+	baseOtResults *simplest.ReceiverOutput,
+	uniqueSessionId [simplest.DigestSize]byte,
+	transcript *merlin.Transcript,
+	curve *curves.Curve,
+	useForcedReuse bool,
+) (*Sender, error) {
+	// L must be 1 for forced reuse
+	if useForcedReuse && (L != 1) {
+		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
 	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+	}
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	return &Sender{
+		baseOtSeeds:     baseOtResults,
+		uniqueSessionId: uniqueSessionId,
+		transcript:      transcript,
+		curve:           curve,
+		useForcedReuse:  useForcedReuse,
+	}, nil
 }

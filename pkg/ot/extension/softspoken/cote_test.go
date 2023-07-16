@@ -12,14 +12,6 @@ import (
 )
 
 func TestOTextension(t *testing.T) {
-	// TODO: implement
-}
-
-func TestOTextensionWithFiatShamir(t *testing.T) {
-	// TODO: implement
-}
-
-func TestCOTextension(t *testing.T) {
 	curveInstances := []*curves.Curve{
 		curves.K256(),
 		curves.P256(),
@@ -37,62 +29,115 @@ func TestCOTextension(t *testing.T) {
 			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
 		}
 
-		// Setup COTe
-		sender := NewCOtSender(baseOtReceiverOutput, curve, false, true)
-		receiver := NewCOtReceiver(baseOtSenderOutput, curve, false, true)
-		choice := [EtaBytes]byte{} // receiver's input, the Choice bits x
-		_, err = rand.Read(choice[:])
+		// Set OTe inputs
+		choices := OTeInputChoices{} // receiver's input, the Choice bits x
+		_, err = rand.Read(choices[:])
 		require.NoError(t, err)
-		inputOpt := [Eta]curves.Scalar{} // sender's input, the InputOpt α
+
+		// Run OTe
+		oTeSenderOutput, oTeReceiverOutput, err := RunSoftspokenOTe(t, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices)
+		require.NoError(t, err)
+
+		// Check OTe result
+		print(oTeSenderOutput, oTeReceiverOutput)
+		// TODO
+	}
+}
+
+func TestCOTextension(t *testing.T) {
+	curveInstances := []*curves.Curve{
+		curves.K256(),
+		curves.P256(),
+	}
+	for _, curve := range curveInstances {
+		// Generic setup
+		useForcedReuse := false
+		inputBatchLen := 1 // Must be 1 if useForcedReuse is false. Set L>1 for higher batch sizes, or loop over inputBatchLen.
+		uniqueSessionId := [simplest.DigestSize]byte{}
+		_, err := rand.Read(uniqueSessionId[:])
+		require.NoError(t, err)
+
+		// BaseOTs
+		baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, Kappa, uniqueSessionId)
+		require.NoError(t, err)
+		for i := 0; i < Kappa; i++ {
+			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
+		}
+
+		// Set COTe inputs
+		choices := OTeInputChoices{} // receiver's input, the Choice bits x
+		_, err = rand.Read(choices[:])
+		require.NoError(t, err)
+		inputOpt := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
 		for i := 0; i < Eta; i++ {
-			inputOpt[i] = curve.Scalar.Random(rand.Reader)
+			inputOpt[0][i] = curve.Scalar.Random(rand.Reader)
 			require.NoError(t, err)
 		}
 
-		expansionMask, _, err := receiver.Round1Extend(uniqueSessionId, choice)
-		require.NoError(t, err)
-		challenge, derandomizeMask, _, err := sender.Round2Extend(uniqueSessionId, expansionMask, inputOpt)
+		// Run COTe
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, nil, nil)
 		require.NoError(t, err)
 
-		var prgSync, bitCorr [SigmaBytes]byte
-		for i := 0; i < Kappa; i++ {
-			for j := 0; j < (M + 1); j++ {
-				// Check the extended options: t^i_{Δ_i} = Δ_i•t^i_1 ⊕ (1⊕Δ_i)•t^i_0
-				choiceBit := sender.baseOtRecOutputs.RandomChoiceBits[i]
-				XORbits(prgSync[:],
-					sender.ExtChosenOpt[i][j*SigmaBytes:(j+1)*SigmaBytes],
-					receiver.ExtOptions[choiceBit][i][j*SigmaBytes:(j+1)*SigmaBytes])
-				require.Zero(t, prgSync)
-				// Check each bit-level correlation q_i = t^i_0 ⊕ x • Δ_i
-				XORbits(bitCorr[:],
-					sender.ExtCorrelations[i][j*SigmaBytes:(j+1)*SigmaBytes],
-					receiver.ExtOptions[0][i][j*SigmaBytes:(j+1)*SigmaBytes])
-				if choiceBit != 0 {
-					XORbits(bitCorr[:],
-						bitCorr[:],
-						receiver.ExtPackChoices[j*SigmaBytes:(j+1)*SigmaBytes])
+		// Check COTe result
+		for k := 0; k < inputBatchLen; k++ {
+			for j := 0; j < Eta; j++ {
+				// Check each correlation z_B = x • α + z_A
+				if UnpackBit(j, choices[:]) != 0 {
+					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpt[k][j].Sub(cOTeSenderOutputs[0][j]))
+				} else {
+					require.Equal(t, cOTeReceiverOutputs[k][j], cOTeSenderOutputs[k][j].Neg())
 				}
-				require.Zero(t, bitCorr)
-			}
-		}
-		challengeResponse, _, err := receiver.Round3ProveConsistency(challenge, derandomizeMask)
-		require.NoError(t, err)
-		err = sender.Round4CheckConsistency(challenge, challengeResponse)
-		require.NoError(t, err)
-
-		for j := 0; j < Eta; j++ {
-			// Check each correlation z_B = x • α + z_A
-			if UnpackBit(j, choice[:]) != 0 {
-				require.Equal(t, receiver.OutCorrelations[j], inputOpt[j].Sub(sender.OutDeltaOpt[j]))
-			} else {
-				require.Equal(t, receiver.OutCorrelations[j], sender.OutDeltaOpt[j].Neg())
 			}
 		}
 	}
 }
 
-func TestCOTextensionWithFiatShamir(t *testing.T) {
-	// TODO: implement
+func TestCOTextensionWithForcedReuse(t *testing.T) {
+	curveInstances := []*curves.Curve{
+		curves.K256(),
+		curves.P256(),
+	}
+	for _, curve := range curveInstances {
+		// Generic setup
+		useForcedReuse := true
+		inputBatchLen := 128
+		uniqueSessionId := [simplest.DigestSize]byte{}
+		_, err := rand.Read(uniqueSessionId[:])
+		require.NoError(t, err)
+
+		// BaseOTs
+		baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, Kappa, uniqueSessionId)
+		require.NoError(t, err)
+		for i := 0; i < Kappa; i++ {
+			require.Equal(t, baseOtReceiverOutput.OneTimePadDecryptionKey[i], baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]])
+		}
+
+		// Set COTe inputs
+		choices := OTeInputChoices{} // receiver's input, the Choice bits x
+		_, err = rand.Read(choices[:])
+		require.NoError(t, err)
+		inputOpt := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
+		for i := 0; i < Eta; i++ {
+			inputOpt[0][i] = curve.Scalar.Random(rand.Reader)
+			require.NoError(t, err)
+		}
+
+		// Run COTe
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := RunSoftspokenCOTe(t, useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, nil, nil)
+		require.NoError(t, err)
+
+		// Check COTe result
+		for k := 0; k < inputBatchLen; k++ {
+			for j := 0; j < Eta; j++ {
+				// Check each correlation z_B = x • α + z_A
+				if UnpackBit(j, choices[:]) != 0 {
+					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpt[k][j].Sub(cOTeSenderOutputs[0][j]))
+				} else {
+					require.Equal(t, cOTeReceiverOutputs[k][j], cOTeSenderOutputs[k][j].Neg())
+				}
+			}
+		}
+	}
 }
 
 // RunSimplestOT is a utility function encapsulating the entire process of
@@ -140,53 +185,72 @@ func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessi
 // running a SoftspokenOT extension and derandomizing its result.
 // As a black box, this function does:
 //
-//	R: x ---┐                           ┌---> R: z_B
-//	        ├--- COTe_{κ, L, M}(x, α)---┤
-//	S: α ---┘                           └---> S: z_A
-func RunSoftspokenCOTe(
-	t *testing.T, curve *curves.Curve, uniqueSessionId [simplest.DigestSize]byte,
-	choice [EtaBytes]byte, // receiver's input, the Choice bits x
-	inputOpt [Eta]curves.Scalar, // sender's input, the InputOpt α
-) (z_A *[Eta]curves.Scalar, z_B *[Eta]curves.Scalar, err error) {
+//		R: x ---┐                           ┌---> R: z_B
+//		        ├--- COTe_{κ, L, M}(x, α)---┤
+//		S: α ---┘                           └---> S: z_A
+//	 s.t. z_A = x • α - z_B
+//
+// If useForcedReuse: use a single OTe batch for all the inputOpt batches.
+// NOTE: it should only be used by setting L=1 in "participants.go"
+func RunSoftspokenCOTe(t *testing.T,
+	useForcedReuse bool,
+	curve *curves.Curve,
+	uniqueSessionId [simplest.DigestSize]byte,
+	baseOtSenderOutput *simplest.SenderOutput, // baseOT seeds for OTe receiver
+	baseOtReceiverOutput *simplest.ReceiverOutput, // baseOT seeds for OTe sender
+	choices *OTeInputChoices, // receiver's input, the Choice bits x
+	inputOpts []COTeInputOpt, // sender's input, the InputOpt batches of α
+) (cOTeSenderOutputs []COTeSenderOutput, cOTeReceiverOutputs []COTeReceiverOutput, err error) {
 	t.Helper()
-	// BaseOTs
-	batchSize := Kappa
-	baseOtSenderOutput, baseOtReceiverOutput, err := RunSimplestOT(t, curve, batchSize, uniqueSessionId)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "base OT in run softspoken COTe")
-	}
+
 	// Setup COTe
-	sender := NewCOtSender(baseOtReceiverOutput, curve, false, true)
-	receiver := NewCOtReceiver(baseOtSenderOutput, curve, false, true)
+	sender, err := NewCOtSender(baseOtReceiverOutput, uniqueSessionId, nil, curve, useForcedReuse)
+	require.NoError(t, err)
+	receiver, err := NewCOtReceiver(baseOtSenderOutput, uniqueSessionId, nil, curve, useForcedReuse)
+	require.NoError(t, err)
 
 	// Run COTe
-	expansionMask, _, err := receiver.Round1Extend(uniqueSessionId, choice)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "receiver round 1 in run softspoken COTe")
-	}
-	challenge, derandomizeMask, _, err := sender.Round2Extend(uniqueSessionId, expansionMask, inputOpt)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 2 in run softspoken COTe")
-	}
-	challengeResponse, _, err := receiver.Round3ProveConsistency(challenge, derandomizeMask)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "receiver round 3 in run softspoken COTe")
-	}
-	err = sender.Round4CheckConsistency(challenge, challengeResponse)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 4 in run softspoken COTe")
-	}
-	return &sender.OutDeltaOpt, &receiver.OutCorrelations, nil
+	extPackedChoices, oTeReceiverOutput, round1Output, err :=
+		receiver.Round1ExtendAndProveConsistency(choices)
+	require.NoError(t, err)
+	_, cOTeSenderOutputs, round2Output, err :=
+		sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+	require.NoError(t, err)
+	cOTeReceiverOutputs, err = receiver.Round3Derandomize(round2Output, extPackedChoices, oTeReceiverOutput)
+	require.NoError(t, err)
+	return cOTeSenderOutputs, cOTeReceiverOutputs, nil
 }
 
-func RunSoftspokenCOTeWithFiatShamir() {
-	// TODO: implement
-}
+// RunSoftspokenOTe is a utility function encapsulating the entire process of
+// running a random OT extension without derandomization.
+// As a black box, this function does:
+//
+//		R: x ---┐                        ┌---> R: (v_x)
+//		        ├--- COTe_{κ, L, M}(x)---┤
+//		S:   ---┘                        └---> S: (v_0, v_1)
+//	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
+func RunSoftspokenOTe(t *testing.T,
+	curve *curves.Curve,
+	uniqueSessionId [simplest.DigestSize]byte,
+	baseOtSenderOutput *simplest.SenderOutput, // baseOT seeds for OTe receiver
+	baseOtReceiverOutput *simplest.ReceiverOutput, // baseOT seeds for OTe sender
+	choices *OTeInputChoices, // receiver's input, the Choice bits x
+) (oTeSenderOutputs *OTeSenderOutput, oTeReceiverOutputs *OTeReceiverOutput, err error) {
+	t.Helper()
+	// Setup OTe
+	useForcedReuse := false
+	sender, err := NewCOtSender(baseOtReceiverOutput, uniqueSessionId, nil, curve, useForcedReuse)
+	require.NoError(t, err)
+	receiver, err := NewCOtReceiver(baseOtSenderOutput, uniqueSessionId, nil, curve, useForcedReuse)
+	require.NoError(t, err)
 
-func RunSoftspokenOTe() {
-	// TODO: implement
-}
-
-func RunSoftspokenOTeWithFiatShamir() {
-	// TODO: implement
+	// Run OTe
+	_, oTeReceiverOutput, round1Output, err :=
+		receiver.Round1ExtendAndProveConsistency(choices)
+	require.NoError(t, err)
+	oTeSenderOutput, _, _, err :=
+		sender.Round2ExtendAndCheckConsistency(round1Output, nil)
+	require.NoError(t, err)
+	require.NoError(t, err)
+	return oTeSenderOutput, oTeReceiverOutput, nil
 }
