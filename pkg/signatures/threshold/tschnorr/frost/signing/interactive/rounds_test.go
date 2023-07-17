@@ -61,7 +61,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 	}
 	for _, participant := range participants {
 		if participant == nil {
-			return fmt.Errorf("nil participant")
+			return errs.NewFailed("nil participant")
 		}
 	}
 
@@ -92,17 +92,17 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 		}
 	}
 	if len(producedSignatures) == 0 {
-		return fmt.Errorf("no signatures produced")
+		return errs.NewFailed("no signatures produced")
 	}
 
 	// all signatures the same
 	for i := 0; i < len(producedSignatures); i++ {
 		for j := i + 1; j < len(producedSignatures); j++ {
 			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
-				return fmt.Errorf("signatures not equal")
+				return errs.NewFailed("signatures not equal")
 			}
 			if producedSignatures[i].Z.Cmp(producedSignatures[j].Z) != 0 {
-				return fmt.Errorf("signatures not equal")
+				return errs.NewFailed("signatures not equal")
 			}
 		}
 	}

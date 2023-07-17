@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"reflect"
 	"runtime"
@@ -100,7 +101,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 	}
 	// all signatures are equal
 	if len(signatureHashSet) != 1 {
-		return fmt.Errorf("signatures are not equal")
+		return errs.NewFailed("signatures are not equal")
 	}
 	return nil
 }
