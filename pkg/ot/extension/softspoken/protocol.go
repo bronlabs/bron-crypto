@@ -5,7 +5,7 @@ package softspoken
 //
 // PARAMS:
 // # κ (kappa), a computational security parameter. E.g. κ=256
-// # ξ, a bit-level batch size. ξ=L*κ for a chosen L ∈ ℕ. ξ'=ξ+σ
+// # ξ, a bit-level batch size. ξ=L_ote*κ for a chosen L_ote ∈ ℕ. ξ'=ξ+σ. L_ote=1 for DKLS23.
 // # σ (sigma), a statistical security parameter. ξ%σ=0. E.g. σ=128
 //
 // INPUTS:
@@ -34,10 +34,10 @@ package softspoken
 //	  .            Send(χ) => R                                       ∈ [σ]×[M]bits
 //	  (Check.2) R: x_val = x̂_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j         ∈ [σ]bits
 //	  .                        └---where x^hat_j = x_{σj:σ(j+1)}
-//	  .            t_val^i = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j • t^i_hat_j   ∈ [σ]bits       ∀i∈[κ]
+//	  .            t_val^i = t^i_hat_{m} + Σ{j=0}^{m-1} χ_j•t^i_hat_j ∈ [σ]bits       ∀i∈[κ]
 //	  .                        └---where t^i_hat_j = t^i_{σj:σ(j+1)}
-//	  .            Send(x_val, t_val^i) => S                              ∈ [σ] + [σ]×[κ]bits
-//	  (Check.3) S: q_val^i = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j • q^i_hat_j   ∈ [σ]bits       ∀i∈[κ]
+//	  .            Send(x_val, t_val^i) => S                          ∈ [σ] + [σ]×[κ]bits
+//	  (Check.3) S: q_val^i = q^i_hat_{m} + Σ{j=0}^{m-1} χ_j•q^i_hat_j ∈ [σ]bits       ∀i∈[κ]
 //	  .                        └---where q^i_hat_j = q^i_{σj:σ(j+1)}
 //	  .            ABORT if  q_val^i != t_val^i + Δ_i • x_val         ∈ [σ]bits       ∀i∈[κ]
 //	# A bit-level randomization to destroy the bit-level correlation.
@@ -63,27 +63,27 @@ package softspoken
 //  1. R: (x) 		---(Round1)--->(u, v_x)           [Ext.1, Ext.2, Ext.3]
 //  2. S: (α) 		---(Round2)--->(χ, τ, z_B)        [Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Derand.1]
 //  3. R: (χ, τ) 	---(Round3)--->(x_val, t_val, z_A)[Check.2, T&R.1, T&R.2, Derand.2]
-//  L. S: (x_val, t_val) ---(RoundLocal)--->()        [Check.3]
+//  3+.S: (x_val, t_val) ---(Round3+)--->()           [Check.3]
 
 // -------------------------------------------------------------------------- //
 // ROUNDS (COTe with fiat-shamir (*)):
 //
-//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)          [BaseOT]
-//  1. R: (x)---(Round1)--->(u, x_val, t_val) [Ext.1*, Ext.2, Ext.3, Check.1, Check.2, T&R.1, T&R.2]
-//  2. S: (α)---(Round2)--->(τ, z_B)          [Ext.1*, Ext.2, Ext.4, T&R.1, T&R.3, Derand.1, Check.1, Check.3]
-//  L. R: (τ)---(RoundLocal)--->(z_A)			[Derand.2]
+//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)  [BaseOT]
+//  1. R: (x)---(Round1)--->(u, x_val, t_val) 	   [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
+//  2. S: (u,x_val,t_val,α)---(Round2)--->(τ, z_B) [Ext.1, Ext.2, Ext.4, T&R.1, T&R.3, Derand.1, Check.1*, Check.3]
+//  2+.R: (τ)---(Round3)--->(z_A)			   	   [Derand.2]
 
 // -------------------------------------------------------------------------- //
 // ROUNDS (OTe):
 //
-//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)          [BaseOT]
-//  1. R: (x) ---(Round1)--->u                  [Ext.1, Ext.2, Ext.3]
-//  2. S: (u) ---(Round2)--->(χ)                [Ext.2, Ext.4, Check.1, T&R.1, T&R.3]
-//  3. R: (χ) ---(Round3)--->(x_val, t_val)	 [Check.2, T&R.1, T&R.2]
-//  L. S: (x_val, t_val) ---(RoundLocal)--->()  [Check.3]
+//  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)  [BaseOT]
+//  1. R: (x) ---(Round1)--->(u, v_x)              [Ext.1, Ext.2, Ext.3]
+//  2. S: (u) ---(Round2)--->(χ, v_0, v_1)         [Ext.2, Ext.4, Check.1, T&R.1, T&R.3]
+//  3. R: (χ) ---(Round3)--->(x_val, t_val)	       [Check.2, T&R.1, T&R.2]
+//  3+. S: (x_val, t_val) ---(Round3+)--->()       [Check.3]
 // -------------------------------------------------------------------------- //
 // ROUNDS (OTe with fiat-shamir (*)):
 //
-//  0. Setup R & S: (...)---(κ × BaseOT)--->(...)          [BaseOT]
-//  1. R: (x)---(Round1)--->(u, x_val, t_val)[Ext.1*, Ext.2, Ext.3, Check.1, Check.2, T&R.1, T&R.2]
-//  2. S: (x_val, t_val)---(Round2)--->(τ)   [Ext.1*, Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Check.3]
+//  0. Setup R & S: (...)---(κ × BaseOT)--->(...)  [BaseOT]
+//  1. R: (x)---(Round1)--->(u, v_x, x_val, t_val) [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
+//  1+.S: (u,x_val, t_val)---(Round2)--->(v_0, v_1)[Ext.1, Ext.2, Ext.4, Check.1*, T&R.1, T&R.3, Check.3]

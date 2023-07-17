@@ -48,62 +48,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 )
 
-type (
-	// ---------------------------- EXTENSION ------------------------------- //
-	// ExpansionMask (u_i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
-	ExpansionMask [Kappa][ZetaPrimeBytes]byte
-
-	// OTeInputChoices (x_i) ∈ [ξ]bits are the choice bits for the OTe.
-	OTeInputChoices [ZetaBytes]byte
-
-	// ExtPackedChoices (x_i) ∈ [ξ']bits are the choice bits for the OTe filled with σ random values.
-	ExtPackedChoices [ZetaPrimeBytes]byte
-
-	// ExtOptions (t^i_0, t^i_1) ∈ [2][κ][ξ]bits are expansions of BaseOT results using a PRG.
-	ExtOptions [2][Kappa][ZetaPrimeBytes]byte
-
-	// ExtDeltaOpt (t^i_{Δ_i}) ∈ [κ][ξ]bits are the extended (via a PRG) baseOT deltaOpts.
-	ExtDeltaOpt [Kappa][ZetaPrimeBytes]byte
-
-	// ExtCorrelations (q_i) ∈ [κ][ξ]bits are the extended correlations, q^i = Δ_i • x + t^i
-	ExtCorrelations [Kappa][ZetaPrimeBytes]byte
-
-	// ------------------------ CONSISTENCY CHECK --------------------------- //
-	// Challenge (χ_i) ∈ [M]×[σ]bits is the random challenge for the consistency check.
-	Challenge [M][SigmaBytes]byte
-
-	// ChallengeResponse (x_val, t_val) is the consistency check from the receiver,
-	// to be verified by the Sender.
-	ChallengeResponse struct {
-		x_val [SigmaBytes]byte        // plain x in the protocol
-		t_val [Kappa][SigmaBytes]byte // plain t^i in the protocol
-	}
-
-	// --------------------------- (Random) OTe ----------------------------- //
-	// OTeSenderOutput (v_0, v_1) ∈ [2][ξ][κ]bits is the output of the sender in
-	// the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram above)
-	OTeSenderOutput [2][Zeta][OTeWidth][KappaBytes]byte
-
-	// OTeReceiverOutput (v_x) ∈ [ξ][κ]bits is the output of the receiver in the
-	// OTe protocol ("DeltaOpt" in the diagram above)
-	OTeReceiverOutput [Zeta][OTeWidth][KappaBytes]byte
-
-	// ------------------------- (Correlated) COTe -------------------------- //
-	// COTeInputOpt (α) ∈ [ξ]curve.Scalar is the input of the sender in the COTe protocol
-	COTeInputOpt [Zeta][OTeWidth]curves.Scalar
-
-	// DerandomizeMask (τ) ∈ [ξ]curve.Scalar is the correlation mask
-	DerandomizeMask [Zeta][OTeWidth]curves.Scalar
-
-	// COTeSenderOutput (z_A) ∈ [ξ]curve.Scalar is the output of the sender in
-	// the COTe protocol, ("Correlation" in the diagram above)
-	COTeSenderOutput [Zeta][OTeWidth]curves.Scalar
-
-	// COTeReceiverOutput (z_B) is the output of the receiver in the COTe protocol (DeltaOpt)
-	COTeReceiverOutput [Zeta][OTeWidth]curves.Scalar // z_B ∈ [ξ]curve.Scalar are correlated group elements.
-
-)
-
 // -------------------------------------------------------------------------- //
 // -------------------------------- ROUNDS ---------------------------------- //
 // -------------------------------------------------------------------------- //
