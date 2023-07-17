@@ -173,12 +173,10 @@ func TestSignNilMessage(t *testing.T) {
 	}
 
 	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "message is empty")
+	require.True(t, errs.IsIsNil(err))
 
 	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, []byte{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "message is empty")
+	require.True(t, errs.IsIsZero(err))
 }
 
 func TestHappyPath(t *testing.T) {
