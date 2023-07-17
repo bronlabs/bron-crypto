@@ -5,16 +5,16 @@ package softspoken
 //
 // PARAMS:
 // # κ (kappa), a computational security parameter. E.g. κ=256
-// # η, a bit-level batch size. η=L*κ for a chosen L ∈ ℕ. η'=η+σ
-// # σ (sigma), a statistical security parameter. η%σ=0. E.g. σ=128
+// # ξ, a bit-level batch size. ξ=L*κ for a chosen L ∈ ℕ. ξ'=ξ+σ
+// # σ (sigma), a statistical security parameter. ξ%σ=0. E.g. σ=128
 //
 // INPUTS:
-// # R-> x ∈ [η]bits, the Choice bits.
-// # S-> α ∈ [η]group, the InputOpt.
+// # R-> x ∈ [ξ]bits, the Choice bits.
+// # S-> α ∈ [ξ]group, the InputOpt.
 //
 // OUTPUTS:
-// # R-> z_B ∈ [η]group, the Correlation    s.t. z_A = x • α - z_B
-// # S-> z_A ∈ [η]group, the DeltaOpt       s.t. z_A = x • α - z_B
+// # R-> z_B ∈ [ξ]group, the Correlation    s.t. z_A = x • α - z_B
+// # S-> z_A ∈ [ξ]group, the DeltaOpt       s.t. z_A = x • α - z_B
 //
 // PROTOCOL STEPS:
 //
@@ -23,12 +23,12 @@ package softspoken
 //	  ├---->R: (k^i_0, k^i_1)                                         ∈ [2]×[κ]bits   ∀i∈[κ]
 //	  └---->S: (Δ_i, k^i_{Δ_i})                                       ∈ 1 + [κ]bits   ∀i∈[κ]
 //	# Seeding a PRG with the BaseOT Options to extend them:
-//	  (Ext.1)   R: sample(x_i) ∈ [η']bits. Can come from Fiat-Shamir heuristic (*).
-//	  (Ext.2)   R: t^i_0, t^i_1 = PRG(k^i_0), PRG(k^i_1)              ∈ [2]×[η']bits  ∀i∈[κ]
-//	  .         S: t^i_{Δ_i}    = PRG(k^i_{Δ_i})                      ∈ [η']bits      ∀i∈[κ]
-//	  (Ext.3)   R: u^i = t^i_0 ⊕ t^i_1 ⊕ x_i                          ∈ [η']bits      ∀i∈[κ]
-//	  .            Send(u) => S                                       ∈ [η']×[κ]bits
-//	  (Ext.4)   S: q^i = Δ_i • u^i + t^i_{Δ_i}                        ∈ [η']bits      ∀i∈[κ]
+//	  (Ext.1)   R: sample(x_i) ∈ [ξ']bits. Can come from Fiat-Shamir heuristic (*).
+//	  (Ext.2)   R: t^i_0, t^i_1 = PRG(k^i_0), PRG(k^i_1)              ∈ [2]×[ξ']bits  ∀i∈[κ]
+//	  .         S: t^i_{Δ_i}    = PRG(k^i_{Δ_i})                      ∈ [ξ']bits      ∀i∈[κ]
+//	  (Ext.3)   R: u^i = t^i_0 ⊕ t^i_1 ⊕ x_i                          ∈ [ξ']bits      ∀i∈[κ]
+//	  .            Send(u) => S                                       ∈ [ξ']×[κ]bits
+//	  (Ext.4)   S: q^i = Δ_i • u^i + t^i_{Δ_i}                        ∈ [ξ']bits      ∀i∈[κ]
 //	# A bit-level correlation used to check the extension consistency.
 //	  (Check.1) S: sample(χ_i)                                        ∈ [σ]bits       ∀i∈[M]
 //	  .            Send(χ) => R                                       ∈ [σ]×[M]bits
@@ -41,17 +41,17 @@ package softspoken
 //	  .                        └---where q^i_hat_j = q^i_{σj:σ(j+1)}
 //	  .            ABORT if  q_val^i != t_val^i + Δ_i • x_val         ∈ [σ]bits       ∀i∈[κ]
 //	# A bit-level randomization to destroy the bit-level correlation.
-//	  (T&R.1)   R: transpose(t^i_0) ->t_j                             ∈ [κ]bits       ∀j∈[η']
-//	  .         S: transpose(q^i) -> q_j                              ∈ [κ]bits       ∀j∈[η']
-//	  (T&R.2)   R: v_x = Hash(j || t_j)                               ∈ [κ]bits       ∀j∈[η]
-//	  (T&R.3)   S: v_0 = Hash(j || q_j)                               ∈ [κ]bits       ∀j∈[η]
-//	  .         S: v_1 = Hash(j || (q_j + Δ) )                        ∈ [κ]bits       ∀j∈[η]
+//	  (T&R.1)   R: transpose(t^i_0) ->t_j                             ∈ [κ]bits       ∀j∈[ξ']
+//	  .         S: transpose(q^i) -> q_j                              ∈ [κ]bits       ∀j∈[ξ']
+//	  (T&R.2)   R: v_x = Hash(j || t_j)                               ∈ [κ]bits       ∀j∈[ξ]
+//	  (T&R.3)   S: v_0 = Hash(j || q_j)                               ∈ [κ]bits       ∀j∈[ξ]
+//	  .         S: v_1 = Hash(j || (q_j + Δ) )                        ∈ [κ]bits       ∀j∈[ξ]
 //	# A field-level correlation to obtain the COTe result.
-//	  (Derand.1) S: z_A_j = ECP(v_0_j)                                ∈ curve.Scalar  ∀j∈[η]
-//	  .             τ_j = ECP(v_1_j) - z_A_j + α_j                    ∈ curve.Scalar  ∀j∈[η]
+//	  (Derand.1) S: z_A_j = ECP(v_0_j)                                ∈ curve.Scalar  ∀j∈[ξ]
+//	  .             τ_j = ECP(v_1_j) - z_A_j + α_j                    ∈ curve.Scalar  ∀j∈[ξ]
 //	  .                    └---where ECP(v) is the mapping of v to the curve
-//	  .            Send(τ) => R                                       ∈ [η]curve.Scalar
-//	  (Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1             ∈ curve.Scalar  ∀j∈[η]
+//	  .            Send(τ) => R                                       ∈ [ξ]curve.Scalar
+//	  (Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1             ∈ curve.Scalar  ∀j∈[ξ]
 //	  .                   =     - ECP(v_x_j)  if x_j == 0
 //
 // -------------------------------------------------------------------------- //

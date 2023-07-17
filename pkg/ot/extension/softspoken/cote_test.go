@@ -72,10 +72,12 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 		_, err = rand.Read(choices[:])
 		require.NoError(t, err)
 		inputOpts := make([]COTeInputOpt, inputBatchLen) // sender's input, the InputOpt α
-		for k := 0; k < inputBatchLen; k++ {
-			for i := 0; i < Eta; i++ {
-				inputOpts[k][i] = curve.Scalar.Random(rand.Reader)
-				require.NoError(t, err)
+		for batchIndex := 0; batchIndex < inputBatchLen; batchIndex++ {
+			for i := 0; i < Zeta; i++ {
+				for k := 0; k < OTeWidth; k++ {
+					inputOpts[batchIndex][i][k] = curve.Scalar.Random(rand.Reader)
+					require.NoError(t, err)
+				}
 			}
 		}
 
@@ -84,13 +86,15 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check COTe result
-		for k := 0; k < inputBatchLen; k++ {
-			for j := 0; j < Eta; j++ {
-				// Check each correlation z_B = x • α + z_A
-				if UnpackBit(j, choices[:]) != 0 {
-					require.Equal(t, cOTeReceiverOutputs[k][j], inputOpts[k][j].Sub(cOTeSenderOutputs[k][j]))
-				} else {
-					require.Equal(t, cOTeReceiverOutputs[k][j], cOTeSenderOutputs[k][j].Neg())
+		for batchIndex := 0; batchIndex < inputBatchLen; batchIndex++ {
+			for j := 0; j < Zeta; j++ {
+				for k := 0; k < OTeWidth; k++ {
+					// Check each correlation z_B = x • α + z_A
+					if UnpackBit(j, choices[:]) != 0 {
+						require.Equal(t, cOTeReceiverOutputs[batchIndex][j][k], inputOpts[batchIndex][j][k].Sub(cOTeSenderOutputs[batchIndex][j][k]))
+					} else {
+						require.Equal(t, cOTeReceiverOutputs[batchIndex][j][k], cOTeSenderOutputs[batchIndex][j][k].Neg())
+					}
 				}
 			}
 		}
@@ -118,9 +122,11 @@ func TestCOTextension(t *testing.T) {
 		_, err = rand.Read(choices[:])
 		require.NoError(t, err)
 		inputOpt := COTeInputOpt{} // sender's input, the InputOpt α
-		for i := 0; i < Eta; i++ {
-			inputOpt[i] = curve.Scalar.Random(rand.Reader)
-			require.NoError(t, err)
+		for i := 0; i < Zeta; i++ {
+			for k := 0; k < OTeWidth; k++ {
+				inputOpt[i][k] = curve.Scalar.Random(rand.Reader)
+				require.NoError(t, err)
+			}
 		}
 		inputOpts := []COTeInputOpt{inputOpt} // A slice of length 1 is required if useForcedReuse is false.
 
@@ -129,12 +135,14 @@ func TestCOTextension(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check COTe result
-		for j := 0; j < Eta; j++ {
-			// Check each correlation z_B = x • α + z_A
-			if UnpackBit(j, choices[:]) != 0 {
-				require.Equal(t, cOTeReceiverOutputs[0][j], inputOpt[j].Sub(cOTeSenderOutputs[0][j]))
-			} else {
-				require.Equal(t, cOTeReceiverOutputs[0][j], cOTeSenderOutputs[0][j].Neg())
+		for i := 0; i < Zeta; i++ {
+			for k := 0; k < OTeWidth; k++ {
+				// Check each correlation z_B = x • α + z_A
+				if UnpackBit(i, choices[:]) != 0 {
+					require.Equal(t, cOTeReceiverOutputs[0][i][k], inputOpt[i][k].Sub(cOTeSenderOutputs[0][i][k]))
+				} else {
+					require.Equal(t, cOTeReceiverOutputs[0][i][k], cOTeSenderOutputs[0][i][k].Neg())
+				}
 			}
 		}
 

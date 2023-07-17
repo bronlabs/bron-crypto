@@ -50,23 +50,23 @@ import (
 
 type (
 	// ---------------------------- EXTENSION ------------------------------- //
-	// ExpansionMask (u_i) ∈ [κ][η']bits is the expanded and masked PRG outputs
-	ExpansionMask [Kappa][EtaPrimeBytes]byte
+	// ExpansionMask (u_i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
+	ExpansionMask [Kappa][ZetaPrimeBytes]byte
 
-	// OTeInputChoices (x_i) ∈ [η]bits are the choice bits for the OTe.
-	OTeInputChoices [EtaBytes]byte
+	// OTeInputChoices (x_i) ∈ [ξ]bits are the choice bits for the OTe.
+	OTeInputChoices [ZetaBytes]byte
 
-	// ExtPackedChoices (x_i) ∈ [η']bits are the choice bits for the OTe filled with σ random values.
-	ExtPackedChoices [EtaPrimeBytes]byte
+	// ExtPackedChoices (x_i) ∈ [ξ']bits are the choice bits for the OTe filled with σ random values.
+	ExtPackedChoices [ZetaPrimeBytes]byte
 
-	// ExtOptions (t^i_0, t^i_1) ∈ [2][κ][η]bits are expansions of BaseOT results using a PRG.
-	ExtOptions [2][Kappa][EtaPrimeBytes]byte
+	// ExtOptions (t^i_0, t^i_1) ∈ [2][κ][ξ]bits are expansions of BaseOT results using a PRG.
+	ExtOptions [2][Kappa][ZetaPrimeBytes]byte
 
-	// ExtDeltaOpt (t^i_{Δ_i}) ∈ [κ][η]bits are the extended (via a PRG) baseOT deltaOpts.
-	ExtDeltaOpt [Kappa][EtaPrimeBytes]byte
+	// ExtDeltaOpt (t^i_{Δ_i}) ∈ [κ][ξ]bits are the extended (via a PRG) baseOT deltaOpts.
+	ExtDeltaOpt [Kappa][ZetaPrimeBytes]byte
 
-	// ExtCorrelations (q_i) ∈ [κ][η]bits are the extended correlations, q^i = Δ_i • x + t^i
-	ExtCorrelations [Kappa][EtaPrimeBytes]byte
+	// ExtCorrelations (q_i) ∈ [κ][ξ]bits are the extended correlations, q^i = Δ_i • x + t^i
+	ExtCorrelations [Kappa][ZetaPrimeBytes]byte
 
 	// ------------------------ CONSISTENCY CHECK --------------------------- //
 	// Challenge (χ_i) ∈ [M]×[σ]bits is the random challenge for the consistency check.
@@ -80,27 +80,27 @@ type (
 	}
 
 	// --------------------------- (Random) OTe ----------------------------- //
-	// OTeSenderOutput (v_0, v_1) ∈ [2][η][κ]bits is the output of the sender in
+	// OTeSenderOutput (v_0, v_1) ∈ [2][ξ][κ]bits is the output of the sender in
 	// the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram above)
-	OTeSenderOutput [2][Eta][KappaBytes]byte
+	OTeSenderOutput [2][Zeta][OTeWidth][KappaBytes]byte
 
-	// OTeReceiverOutput (v_x) ∈ [η][κ]bits is the output of the receiver in the
+	// OTeReceiverOutput (v_x) ∈ [ξ][κ]bits is the output of the receiver in the
 	// OTe protocol ("DeltaOpt" in the diagram above)
-	OTeReceiverOutput [Eta][KappaBytes]byte
+	OTeReceiverOutput [Zeta][OTeWidth][KappaBytes]byte
 
 	// ------------------------- (Correlated) COTe -------------------------- //
-	// COTeInputOpt (α) ∈ [η]curve.Scalar is the input of the sender in the COTe protocol
-	COTeInputOpt [Eta]curves.Scalar
+	// COTeInputOpt (α) ∈ [ξ]curve.Scalar is the input of the sender in the COTe protocol
+	COTeInputOpt [Zeta][OTeWidth]curves.Scalar
 
-	// DerandomizeMask (τ) ∈ [η]curve.Scalar is the correlation mask
-	DerandomizeMask [Eta]curves.Scalar
+	// DerandomizeMask (τ) ∈ [ξ]curve.Scalar is the correlation mask
+	DerandomizeMask [Zeta][OTeWidth]curves.Scalar
 
-	// COTeSenderOutput (z_A) ∈ [η]curve.Scalar is the output of the sender in
+	// COTeSenderOutput (z_A) ∈ [ξ]curve.Scalar is the output of the sender in
 	// the COTe protocol, ("Correlation" in the diagram above)
-	COTeSenderOutput [Eta]curves.Scalar
+	COTeSenderOutput [Zeta][OTeWidth]curves.Scalar
 
 	// COTeReceiverOutput (z_B) is the output of the receiver in the COTe protocol (DeltaOpt)
-	COTeReceiverOutput [Eta]curves.Scalar // z_B ∈ [η]curve.Scalar are correlated group elements.
+	COTeReceiverOutput [Zeta][OTeWidth]curves.Scalar // z_B ∈ [ξ]curve.Scalar are correlated group elements.
 
 )
 
@@ -109,7 +109,7 @@ type (
 // -------------------------------------------------------------------------- //
 // Round1Output is the receiver's PUBLIC output of round1 of OTe/COTe, to be sent to the Sender.
 type Round1Output struct {
-	// expansionMask (u_i) ∈ [κ][η']bits is the expanded and masked PRG outputs
+	// expansionMask (u_i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
 	expansionMask ExpansionMask
 	// challengeResponse is the challenge response for the consistency,
 	// containing x_val ∈ [σ]bits, t_val ∈ [κ][σ]bits
@@ -118,10 +118,10 @@ type Round1Output struct {
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
 func (receiver *Receiver) Round1ExtendAndProveConsistency(
-	oTeInputChoices *OTeInputChoices, // x_i ∈ [η]bits
-) (extPackedChoices *ExtPackedChoices, // x_i ∈ [η']bits
-	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [η][κ]bits
-	round1Output *Round1Output, // u_i ∈ [κ][η']bits, x_val ∈ [σ]bits, t_val ∈ [κ][σ]bits
+	oTeInputChoices *OTeInputChoices, // x_i ∈ [ξ]bits
+) (extPackedChoices *ExtPackedChoices, // x_i ∈ [ξ']bits
+	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][κ]bits
+	round1Output *Round1Output, // u_i ∈ [κ][ξ']bits, x_val ∈ [σ]bits, t_val ∈ [κ][σ]bits
 	err error) {
 	round1Output = &Round1Output{}
 
@@ -132,26 +132,29 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 
 	// (Ext.1) Store the input choices and fill the rest with random values
 	extPackedChoices = &ExtPackedChoices{}
-	copy(extPackedChoices[:EtaBytes], (*oTeInputChoices)[:])
-	if _, err = rand.Read(extPackedChoices[EtaBytes:]); err != nil {
+	copy(extPackedChoices[:ZetaBytes], (*oTeInputChoices)[:])
+	if _, err = rand.Read(extPackedChoices[ZetaBytes:]); err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	extOptions := &ExtOptions{}
 	for i := 0; i < Kappa; i++ {
-		for k := 0; k < KeyCount; k++ {
-			// k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
-			err = PRG(receiver.uniqueSessionId[:],
-				receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][k][:],
-				extOptions[k][i][:])
-			if err != nil {
-				return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
-			}
+		// k^i_0 --(PRG)--> t^i_0
+		err = PRG(receiver.uniqueSessionId[:], receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:],
+			extOptions[0][i][:])
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
+		}
+		// k^i_1 --(PRG)--> t^i_1
+		err = PRG(receiver.uniqueSessionId[:], receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:],
+			extOptions[1][i][:])
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 	}
 	// (Ext.3) Compute u_i and send it
 	for i := 0; i < Kappa; i++ {
-		for j := 0; j < EtaPrimeBytes; j++ {
+		for j := 0; j < ZetaPrimeBytes; j++ {
 			round1Output.expansionMask[i][j] = extOptions[0][i][j] ^ extOptions[1][i][j] ^ extPackedChoices[j]
 		}
 	}
@@ -170,8 +173,8 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	receiver.ComputeChallengeResponse(extPackedChoices, extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
-	t_j := transposeBooleanMatrix(extOptions[0]) // t_j ∈ [η'][κ]bits
-	// (T&R.2) Hash η rows of t_j using the index as salt.
+	t_j := transposeBooleanMatrix(extOptions[0]) // t_j ∈ [ξ'][κ]bits
+	// (T&R.2) Hash ξ rows of t_j using the index as salt.
 	oTeReceiverOutput = &OTeReceiverOutput{}
 	err = HashSalted(&receiver.uniqueSessionId, t_j[:], oTeReceiverOutput[:])
 	if err != nil {
@@ -195,7 +198,7 @@ type Round2Output struct {
 // and derandomizes them (COTe only).
 func (sender *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
-	InputOpts []COTeInputOpt, // Input opts (α_i) ∈ [η]curve.Scalar. Set to nil for OTe.
+	InputOpts []COTeInputOpt, // Input opts (α_i) ∈ [ξ]curve.Scalar. Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutputs []COTeSenderOutput, round2Output *Round2Output, err error) {
 	// Sanitize inputs
 	if round1Output == nil {
@@ -214,7 +217,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	// (Ext.4) Compute q_i = Δ_i • u_i + t_i (constant time)
 	extCorrelations := ExtCorrelations{}
 	for i := 0; i < Kappa; i++ {
-		for j := 0; j < EtaPrimeBytes; j++ {
+		for j := 0; j < ZetaPrimeBytes; j++ {
 			qiTemp := round1Output.expansionMask[i][j] ^ extChosenOpt[i][j]
 			if sender.baseOtSeeds.RandomChoiceBits[i] != 0 {
 				extCorrelations[i][j] = qiTemp
@@ -227,15 +230,15 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	// (T&R.1, T&R.3) Transpose and Randomize the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and q^i+Δ -> q_j+Δ
 	extCorrelationsTransposed := transposeBooleanMatrix(extCorrelations)
-	var extCorrelationsTransposedPlusDelta [Eta][KappaBytes]byte
-	copy(extCorrelationsTransposedPlusDelta[:], extCorrelationsTransposed[:Eta])
+	var extCorrelationsTransposedPlusDelta [Zeta][KappaBytes]byte
+	copy(extCorrelationsTransposedPlusDelta[:], extCorrelationsTransposed[:Zeta])
 	for i := 0; i < KappaBytes; i++ {
 		Delta := sender.baseOtSeeds.PackedRandomChoiceBits[i]
-		for j := 0; j < Eta; j++ {
+		for j := 0; j < Zeta; j++ {
 			extCorrelationsTransposedPlusDelta[j][i] ^= Delta
 		}
 	}
-	// (T&R.3) Randomize by hashing the first η rows of q_j and q_j+Δ (throwing away the rest)
+	// (T&R.3) Randomize by hashing the first ξ rows of q_j and q_j+Δ (throwing away the rest)
 	oTeSenderOutput = &OTeSenderOutput{}
 	err = HashSalted(&sender.uniqueSessionId, extCorrelationsTransposed[:], oTeSenderOutput[0][:])
 	if err != nil {
@@ -297,9 +300,12 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for k := 0; k < len(round2Output.derandomizeMasks); k++ {
-		for i := 0; i < Eta; i++ {
-			sender.transcript.AppendMessage([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[k][i].Bytes())
+	for batchIndex := 0; batchIndex < len(round2Output.derandomizeMasks); batchIndex++ {
+		for i := 0; i < Zeta; i++ {
+			for k := 0; k < OTeWidth; k++ {
+				sender.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
+					round2Output.derandomizeMasks[batchIndex][i][k].Bytes())
+			}
 		}
 	}
 
@@ -318,9 +324,12 @@ func (receiver *Receiver) Round3Derandomize(
 	}
 
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for k := 0; k < len(round2Output.derandomizeMasks); k++ {
-		for i := 0; i < Eta; i++ {
-			receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[k][i].Bytes())
+	for batchIndex := 0; batchIndex < len(round2Output.derandomizeMasks); batchIndex++ {
+		for i := 0; i < Zeta; i++ {
+			for k := 0; k < OTeWidth; k++ {
+				receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
+					round2Output.derandomizeMasks[batchIndex][i][k].Bytes())
+			}
 		}
 	}
 
@@ -349,7 +358,7 @@ func (receiver *Receiver) Round3Derandomize(
 // (Check.2) Compute the challenge response x, t^i \forall i \in [kappa]
 func (receiver *Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedChoices, extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
 	// 		x = x^hat_{m+1} ...
-	copy(challengeResponse.x_val[:], extPackedChoices[EtaBytes:EtaBytes+SigmaBytes])
+	copy(challengeResponse.x_val[:], extPackedChoices[ZetaBytes:ZetaBytes+SigmaBytes])
 	// 		                ... + Σ{j=0}^{m-1} χ_j • x_hat_j
 	for j := 0; j < M; j++ {
 		x_hat_j := extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
@@ -361,7 +370,7 @@ func (receiver *Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedCh
 	// 		t^i = ...
 	for i := 0; i < Kappa; i++ {
 		//         ... t^i_hat_{m+1} ...
-		copy(challengeResponse.t_val[i][:], extOptions[0][i][EtaBytes:EtaBytes+SigmaBytes])
+		copy(challengeResponse.t_val[i][:], extOptions[0][i][ZetaBytes:ZetaBytes+SigmaBytes])
 		//                           ... + Σ{j=0}^{m-1} χ_j • t^i_hat_j
 		for j := 0; j < M; j++ {
 			t_hat_j := extOptions[0][i][j*SigmaBytes : (j+1)*SigmaBytes]
@@ -383,7 +392,7 @@ func (sender *Sender) CheckConsistency(
 	var q_expected, qi_sum byte
 	for i := 0; i < Kappa; i++ {
 		// q^i = q^i_hat_{m+1} ...
-		copy(qi_val[:], extCorrelations[i][EtaBytes:EtaBytes+SigmaBytes])
+		copy(qi_val[:], extCorrelations[i][ZetaBytes:ZetaBytes+SigmaBytes])
 		//                     ... + Σ{j=0}^{m-1} χ_j • q^i_hat_j
 		for j := 0; j < M; j++ {
 			qi_hat_j := extCorrelations[i][j*SigmaBytes : (j+1)*SigmaBytes]
@@ -416,18 +425,20 @@ func (sender *Sender) ComputeDerandomizeMask(
 	cOTeSenderOutput *COTeSenderOutput,
 	derandomizeMask *DerandomizeMask,
 ) (err error) {
-	for j := 0; j < Eta; j++ {
-		// z_A_j = ECP(v_0_j)
-		cOTeSenderOutput[j], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[0][j][:])
-		if err != nil {
-			return errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
+	for j := 0; j < Zeta; j++ {
+		for k := 0; k < OTeWidth; k++ {
+			// z_A_j = ECP(v_0_j)
+			cOTeSenderOutput[j][k], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[0][j][k][:])
+			if err != nil {
+				return errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
+			}
+			// τ_j = ECP(v_1_j) - z_A_j + α_j
+			derandomizeMask[j][k], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[1][j][k][:])
+			if err != nil {
+				return errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
+			}
+			derandomizeMask[j][k] = derandomizeMask[j][k].Sub(cOTeSenderOutput[j][k]).Add(InputOpts[j][k])
 		}
-		// τ_j = ECP(v_1_j) - z_A_j + α_j
-		derandomizeMask[j], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[1][j][:])
-		if err != nil {
-			return errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
-		}
-		derandomizeMask[j] = derandomizeMask[j].Sub(cOTeSenderOutput[j]).Add(InputOpts[j])
 	}
 	return nil
 }
@@ -461,20 +472,22 @@ func (receiver *Receiver) Derandomize(
 	cOTeReceiverOutput *COTeReceiverOutput,
 ) (err error) {
 	var v_x_NegCurve, v_x_curve_corr curves.Scalar
-	for j := 0; j < Eta; j++ {
-		// ECP(v_x_j)
-		v_x_NegCurve, err = receiver.curve.Scalar.SetBytes(oTeReceiverOutput[j][:])
-		if err != nil {
-			return errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
-		}
-		v_x_NegCurve = v_x_NegCurve.Neg()
-		v_x_curve_corr = derandomizeMask[j].Add(v_x_NegCurve)
-		if UnpackBit(j, extPackChoices[:]) != 0 {
-			// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
-			cOTeReceiverOutput[j] = v_x_curve_corr
-		} else {
-			//       =     - ECP(v_x_j)  if x_j == 0
-			cOTeReceiverOutput[j] = v_x_NegCurve
+	for j := 0; j < Zeta; j++ {
+		for k := 0; k < OTeWidth; k++ {
+			// ECP(v_x_j)
+			v_x_NegCurve, err = receiver.curve.Scalar.SetBytes(oTeReceiverOutput[j][k][:])
+			if err != nil {
+				return errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
+			}
+			v_x_NegCurve = v_x_NegCurve.Neg()
+			v_x_curve_corr = derandomizeMask[j][k].Add(v_x_NegCurve)
+			if UnpackBit(j, extPackChoices[:]) != 0 {
+				// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
+				cOTeReceiverOutput[j][k] = v_x_curve_corr
+			} else {
+				//       =     - ECP(v_x_j)  if x_j == 0
+				cOTeReceiverOutput[j][k] = v_x_NegCurve
+			}
 		}
 	}
 	return nil

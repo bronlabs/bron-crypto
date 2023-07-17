@@ -22,26 +22,27 @@ const (
 	// Sigma is the numbet of bits to consume/discard in the consistency check.
 	Sigma = 128
 
+	// OTeWidth is the number of scalars processed per "slot" of the OT extension.
+	// For each choice bit, the sender provides `OTeWidth` scalars and both the
+	// sender and receiver will obtain `OTWidth` scalars.
+	OTeWidth = 2
+
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
-	// KeyCount is the number of options to choose from in the BaseOT. Set to 2
-	// for 1-out-of-2 OT.
-	KeyCount = 2
+	// Zeta (ξ) is the batch size in bits used in the cOT functionality.
+	Zeta = L * Kappa
 
-	// Eta (η) is the batch size in bits used in the cOT functionality.
-	Eta = L * Kappa
-
-	// EtaPrime (η') is the bit-length of pseudorandom seed expansions.
-	EtaPrime = Eta + Sigma
+	// ZetaPrime (ξ') is the bit-length of pseudorandom seed expansions.
+	ZetaPrime = Zeta + Sigma
 
 	// number of blocks of size Sigma in the output batch
-	M = Eta / Sigma
+	M = Zeta / Sigma
 
 	// Equivalents in Bytes
-	KappaBytes    = Kappa >> 3    // KappaBytes (κ) is the computational security parameter in bytes
-	EtaBytes      = Eta >> 3      // EtaBytes (η) is the batch size in bytes
-	SigmaBytes    = Sigma >> 3    // SigmaBytes (σ) is the statistical security parameter in bytes
-	EtaPrimeBytes = EtaPrime >> 3 // EtaPrimeBytes (η) is the bit-length of PRG seed expansions in bytes
-	MBytes        = M >> 3        // M Bytesis the number of blocks in the consistency check in bytes
+	KappaBytes     = Kappa >> 3     // KappaBytes (κ) is the computational security parameter in bytes
+	ZetaBytes      = Zeta >> 3      // ZetaBytes (ξ) is the batch size in bytes
+	SigmaBytes     = Sigma >> 3     // SigmaBytes (σ) is the statistical security parameter in bytes
+	ZetaPrimeBytes = ZetaPrime >> 3 // ZetaPrimeBytes (ξ) is the batch size in bytesused in the cOT functionality.
+	MBytes         = M >> 3         // M Bytesis the number of blocks in the consistency check in bytes
 )
 
 type Receiver struct {
