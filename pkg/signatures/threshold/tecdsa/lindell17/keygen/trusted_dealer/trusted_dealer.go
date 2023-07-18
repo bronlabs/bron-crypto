@@ -2,6 +2,8 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"io"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -10,7 +12,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"io"
 )
 
 const (
@@ -21,17 +22,8 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func mapKeys[M ~map[K]V, K comparable, V any](m M) []K {
-	r := make([]K, 0, len(m))
-	for k := range m {
-		r = append(r, k)
-	}
-	return r
-}
-
 func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration.IdentityKey]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
-	identities := mapKeys(shards)
-	shamirIdToIdentity, _, _ := integration.DeriveSharingIds(identities[0], identities)
+	shamirIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
 	// verify private key
 	feldmanShares := make([]*feldman.Share, len(shards))
