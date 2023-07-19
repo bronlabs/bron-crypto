@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	cecdsa "crypto/ecdsa"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
@@ -206,7 +205,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(primaryRound3Output *PrimaryR
 	}, nil
 }
 
-func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryRound4Output, messageHash []byte) (signature *ecdsa.Signature, err error) {
+func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryRound4Output, messageHash []byte) (signatureExt *ecdsa.SignatureExt, err error) {
 	if primaryCosigner.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", primaryCosigner.round)
 	}
@@ -227,45 +226,30 @@ func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryR
 	}
 	sBis := k1Inv.Mul(sPrime)
 
-	// create signature
-	ecdsaR := primaryCosigner.state.r.BigInt()
-	ecdsaS := sBis.BigInt()
-	// normalize: take smaller of (s mod n, -s mod n)
-	if sBis.Neg().BigInt().Cmp(ecdsaS) < 0 {
-		ecdsaS = sBis.Neg().BigInt()
+	publicKey := &ecdsa.PublicKey{
+		Q: primaryCosigner.myShard.SigningKeyShare.PublicKey,
 	}
 
-	publicKey := primaryCosigner.myShard.SigningKeyShare.PublicKey
-	publicKeyX, publicKeyY := lindell17.GetPointCoordinates(publicKey)
-	ellipticCurve, err := primaryCosigner.cohortConfig.CipherSuite.Curve.ToEllipticCurve()
+	signature := &ecdsa.Signature{
+		R: primaryCosigner.state.r,
+		S: sBis,
+	}
+	signature.Normalize()
+	if ok := signature.VerifyHashWithPublicKey(publicKey, messageHash); !ok {
+		return nil, errs.NewFailed("invalid signature")
+	}
+
+	recoveryId, err := ecdsa.CalculateRecoveryId(primaryCosigner.state.bigR)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get elliptic curve")
+		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
 	}
-
-	ok := cecdsa.Verify(&cecdsa.PublicKey{
-		Curve: ellipticCurve,
-		X:     publicKeyX,
-		Y:     publicKeyY,
-	}, messageHash[:], ecdsaR, ecdsaS)
-	if !ok {
-		return nil, errs.NewVerificationFailed("invalid ECDSA signature")
+	if ok := signature.VerifyHashWithRecoveryId(recoveryId, messageHash); !ok {
+		return nil, errs.NewFailed("invalid recovery id")
 	}
-
-	r := primaryCosigner.state.r
-	s, err := primaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().SetBigInt(ecdsaS)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set scalar")
-	}
-	ecdsaSignature := &ecdsa.Signature{
-		R: r,
-		S: s,
-	}
-
-	// TODO: When fixed
-	//if err := ecdsaSignature.SetRecoveryId(primaryCosigner.state.bigR); err != nil {
-	//	return nil, errs.WrapFailed(err, "cannot set recovery id of signature")
-	//}
 
 	primaryCosigner.round++
-	return ecdsaSignature, nil
+	return &ecdsa.SignatureExt{
+		Signature:  *signature,
+		RecoveryId: *recoveryId,
+	}, nil
 }
