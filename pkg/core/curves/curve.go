@@ -69,7 +69,7 @@ type Scalar interface {
 	Random(prng io.Reader) Scalar
 	// Hash the specific bytes in a manner to yield a
 	// uniformly distributed scalar
-	Hash(bytes []byte) Scalar
+	Hash(bytes ...[]byte) Scalar
 	// Zero returns the additive identity element
 	Zero() Scalar
 	// One returns the multiplicative identity element
@@ -217,7 +217,7 @@ func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 // Point represents an elliptic curve point
 type Point interface {
 	Random(prng io.Reader) Point
-	Hash(bytes []byte) Point
+	Hash(bytes ...[]byte) Point
 	Identity() Point
 	Generator() Point
 	IsIdentity() bool

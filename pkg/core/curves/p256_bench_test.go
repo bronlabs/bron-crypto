@@ -7,16 +7,18 @@
 package curves
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core"
 )
@@ -188,8 +190,8 @@ func (s *BenchScalarP256) Random(reader io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *BenchScalarP256) Hash(bytes []byte) Scalar {
-	xmd, err := expandMsgXmd(sha256.New(), bytes, []byte("P256_XMD:SHA-256_SSWU_RO_"), 48)
+func (s *BenchScalarP256) Hash(inputs ...[]byte) Scalar {
+	xmd, err := expandMsgXmd(sha256.New(), bytes.Join(inputs, nil), []byte("P256_XMD:SHA-256_SSWU_RO_"), 48)
 	if err != nil {
 		return nil
 	}
@@ -454,11 +456,11 @@ func (p *BenchPointP256) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *BenchPointP256) Hash(bytes []byte) Point {
+func (p *BenchPointP256) Hash(inputs ...[]byte) Point {
 	curve := elliptic.P256().Params()
 
 	var domain = []byte("P256_XMD:SHA-256_SSWU_RO_")
-	uniformBytes, _ := expandMsgXmd(sha256.New(), bytes, domain, 96)
+	uniformBytes, _ := expandMsgXmd(sha256.New(), bytes.Join(inputs, nil), domain, 96)
 
 	u0 := new(big.Int).SetBytes(uniformBytes[:48])
 	u1 := new(big.Int).SetBytes(uniformBytes[48:])

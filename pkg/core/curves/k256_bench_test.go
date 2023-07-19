@@ -1,6 +1,7 @@
 package curves
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
@@ -145,8 +146,8 @@ func (s *BenchScalar) Random(reader io.Reader) Scalar {
 	}
 }
 
-func (s *BenchScalar) Hash(bytes []byte) Scalar {
-	h := sha256.Sum256(bytes)
+func (s *BenchScalar) Hash(inputs ...[]byte) Scalar {
+	h := sha256.Sum256(bytes.Join(inputs, nil))
 	value := new(big.Int).SetBytes(h[:])
 	return &BenchScalar{
 		value: value.Mod(value, btcec.S256().N),
@@ -338,7 +339,7 @@ func (p *BenchPoint) Random(reader io.Reader) Point {
 	return &BenchPoint{x, y}
 }
 
-func (p *BenchPoint) Hash(bytes []byte) Point {
+func (p *BenchPoint) Hash(bytes ...[]byte) Point {
 	return nil
 }
 
