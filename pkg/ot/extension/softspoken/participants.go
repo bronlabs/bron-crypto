@@ -3,7 +3,7 @@ package softspoken
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"github.com/gtank/merlin"
 )
 
@@ -104,10 +104,10 @@ type (
 type Receiver struct {
 	// baseOtSeeds (k^i_0, k^i_1) ∈ [2][κ][κ]bits are the options used while
 	//  of playing the sender in a base OT protocol. They act as seeds to COTe.
-	baseOtSeeds *simplest.SenderOutput
+	baseOtSeeds *vsot.SenderOutput
 
 	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId [simplest.DigestSize]byte
+	uniqueSessionId [vsot.DigestSize]byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript *merlin.Transcript
@@ -122,10 +122,10 @@ type Receiver struct {
 type Sender struct {
 	// baseOtSeeds (Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits) are the results
 	// of playing the receiver in a base OT protocol. They act as seeds of COTe.
-	baseOtSeeds *simplest.ReceiverOutput
+	baseOtSeeds *vsot.ReceiverOutput
 
 	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId [simplest.DigestSize]byte
+	uniqueSessionId [vsot.DigestSize]byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript *merlin.Transcript
@@ -140,8 +140,8 @@ type Sender struct {
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the sender role in kappa baseOTs.
 func NewCOtReceiver(
-	baseOtResults *simplest.SenderOutput,
-	uniqueSessionId [simplest.DigestSize]byte,
+	baseOtResults *vsot.SenderOutput,
+	uniqueSessionId [vsot.DigestSize]byte,
 	transcript *merlin.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
@@ -166,8 +166,8 @@ func NewCOtReceiver(
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the receiver role in kappa baseOTs.
 func NewCOtSender(
-	baseOtResults *simplest.ReceiverOutput,
-	uniqueSessionId [simplest.DigestSize]byte,
+	baseOtResults *vsot.ReceiverOutput,
+	uniqueSessionId [vsot.DigestSize]byte,
 	transcript *merlin.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,

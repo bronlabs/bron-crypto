@@ -2,13 +2,13 @@ package softspoken
 
 import (
 	"crypto/rand"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
 )
 
 var curveInstances = []*curves.Curve{
@@ -19,7 +19,7 @@ var curveInstances = []*curves.Curve{
 func TestOTextension(t *testing.T) {
 	for _, curve := range curveInstances {
 		// Generic setup
-		uniqueSessionId := [simplest.DigestSize]byte{}
+		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := rand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
@@ -56,7 +56,7 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 		// Generic setup
 		useForcedReuse := true
 		inputBatchLen := 128
-		uniqueSessionId := [simplest.DigestSize]byte{}
+		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := rand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
@@ -106,7 +106,7 @@ func TestCOTextension(t *testing.T) {
 		// Generic setup
 		useForcedReuse := false
 		// inputBatchLen := 1 // Must be 1 if useForcedReuse is false. Set L>1 for higher batch sizes, or loop over inputBatchLen.
-		uniqueSessionId := [simplest.DigestSize]byte{}
+		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := rand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
@@ -159,13 +159,13 @@ func TestCOTextension(t *testing.T) {
 //	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
 //	.             └---> S: k^i_0, k^i_1
-func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessionId [simplest.DigestSize]byte) (*simplest.SenderOutput, *simplest.ReceiverOutput, error) {
+func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessionId [vsot.DigestSize]byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
 	t.Helper()
-	receiver, err := simplest.NewReceiver(curve, batchSize, uniqueSessionId, nil)
+	receiver, err := vsot.NewReceiver(curve, batchSize, uniqueSessionId[:], nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run simplest OT")
 	}
-	sender, err := simplest.NewSender(curve, batchSize, uniqueSessionId, nil)
+	sender, err := vsot.NewSender(curve, batchSize, uniqueSessionId[:], nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run simplest OT")
 	}
@@ -207,9 +207,9 @@ func RunSimplestOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessi
 func RunSoftspokenCOTe(t *testing.T,
 	useForcedReuse bool,
 	curve *curves.Curve,
-	uniqueSessionId [simplest.DigestSize]byte,
-	baseOtSenderOutput *simplest.SenderOutput, // baseOT seeds for OTe receiver
-	baseOtReceiverOutput *simplest.ReceiverOutput, // baseOT seeds for OTe sender
+	uniqueSessionId [vsot.DigestSize]byte,
+	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
+	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices *OTeInputChoices, // receiver's input, the Choice bits x
 	inputOpts []COTeInputOpt, // sender's input, the InputOpt batches of α
 ) (cOTeSenderOutputs []COTeSenderOutput, cOTeReceiverOutputs []COTeReceiverOutput, err error) {
@@ -243,9 +243,9 @@ func RunSoftspokenCOTe(t *testing.T,
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
 func RunSoftspokenOTe(t *testing.T,
 	curve *curves.Curve,
-	uniqueSessionId [simplest.DigestSize]byte,
-	baseOtSenderOutput *simplest.SenderOutput, // baseOT seeds for OTe receiver
-	baseOtReceiverOutput *simplest.ReceiverOutput, // baseOT seeds for OTe sender
+	uniqueSessionId [vsot.DigestSize]byte,
+	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
+	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices *OTeInputChoices, // receiver's input, the Choice bits x
 ) (oTeSenderOutputs *OTeSenderOutput, oTeReceiverOutputs *OTeReceiverOutput, err error) {
 	t.Helper()

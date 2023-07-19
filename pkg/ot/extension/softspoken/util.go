@@ -2,7 +2,7 @@ package softspoken
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/simplest"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -44,7 +44,7 @@ func intToByteArray(i int) [4]byte {
 // HashSalted hashes the rows of a [η]×[κ] bit matrix, outputting a [η]×[κ] bit matrix.
 // The uniqueSessionId is used as a salt.
 func HashSalted(
-	uniqueSessionId *[simplest.DigestSize]byte,
+	uniqueSessionId *[vsot.DigestSize]byte,
 	bufferIn [][KappaBytes]byte,
 	bufferOut [][OTeWidth][KappaBytes]byte,
 ) (e error) {
