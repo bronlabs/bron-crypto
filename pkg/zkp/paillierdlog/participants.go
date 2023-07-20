@@ -1,4 +1,4 @@
-package pdl
+package paillierdlog
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
@@ -10,7 +10,6 @@ import (
 )
 
 type Participant struct {
-	c     paillier.CipherText
 	pk    *paillier.PublicKey
 	bigQ1 curves.Point
 	prng  io.Reader
@@ -34,6 +33,7 @@ type VerifierState struct {
 
 type Verifier struct {
 	Participant
+	c     paillier.CipherText
 	state *VerifierState
 }
 
@@ -52,7 +52,7 @@ type Prover struct {
 	state *ProverState
 }
 
-func NewVerifier(cipherText paillier.CipherText, publicKey *paillier.PublicKey, bigQ1 curves.Point, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(x1Encrypted paillier.CipherText, publicKey *paillier.PublicKey, bigQ1 curves.Point, prng io.Reader) (verifier *Verifier, err error) {
 	curve, err := curves.GetCurveByName(bigQ1.CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ1.CurveName())
@@ -66,11 +66,11 @@ func NewVerifier(cipherText paillier.CipherText, publicKey *paillier.PublicKey, 
 
 	return &Verifier{
 		Participant: Participant{
-			c:     cipherText,
 			pk:    publicKey,
 			bigQ1: bigQ1,
 			prng:  prng,
 		},
+		c: x1Encrypted,
 		state: &VerifierState{
 			State: State{
 				curve: curve,
@@ -81,7 +81,7 @@ func NewVerifier(cipherText paillier.CipherText, publicKey *paillier.PublicKey, 
 	}, nil
 }
 
-func NewProver(cipherText paillier.CipherText, secretKey *paillier.SecretKey, x1 curves.Scalar) (verifier *Prover, err error) {
+func NewProver(secretKey *paillier.SecretKey, x1 curves.Scalar) (verifier *Prover, err error) {
 	curve, err := curves.GetCurveByName(x1.Point().CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x1.Point().CurveName())
@@ -95,7 +95,6 @@ func NewProver(cipherText paillier.CipherText, secretKey *paillier.SecretKey, x1
 
 	return &Prover{
 		Participant: Participant{
-			c:     cipherText,
 			pk:    &secretKey.PublicKey,
 			bigQ1: curve.ScalarBaseMult(x1),
 		},

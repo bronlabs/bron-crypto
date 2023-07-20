@@ -1,4 +1,4 @@
-package pdl
+package paillierdlog
 
 import (
 	crand "crypto/rand"
