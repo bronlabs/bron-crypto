@@ -69,7 +69,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
-	verifier.state.bigQPrime = verifier.bigQ1.Mul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
+	verifier.state.bigQPrime = verifier.bigQ.Mul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
 
 	return &VerifierRound1Output{
 		cPrime:         cPrime,
@@ -117,7 +117,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 
-	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.a, prover.x1.BigInt()), input.b)
+	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.a, prover.x.BigInt()), input.b)
 	if prover.state.alpha.Cmp(alphaCheck) != 0 {
 		return nil, errs.NewIdentifiableAbort("verifier is misbehaving")
 	}

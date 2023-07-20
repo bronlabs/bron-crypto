@@ -10,9 +10,9 @@ import (
 )
 
 type Participant struct {
-	pk    *paillier.PublicKey
-	bigQ1 curves.Point
-	prng  io.Reader
+	pk   *paillier.PublicKey
+	bigQ curves.Point
+	prng io.Reader
 }
 
 type State struct {
@@ -48,14 +48,14 @@ type ProverState struct {
 type Prover struct {
 	Participant
 	sk    *paillier.SecretKey
-	x1    curves.Scalar
+	x     curves.Scalar
 	state *ProverState
 }
 
-func NewVerifier(x1Encrypted paillier.CipherText, publicKey *paillier.PublicKey, bigQ1 curves.Point, prng io.Reader) (verifier *Verifier, err error) {
-	curve, err := curves.GetCurveByName(bigQ1.CurveName())
+func NewVerifier(xEncrypted paillier.CipherText, publicKey *paillier.PublicKey, bigQ curves.Point, prng io.Reader) (verifier *Verifier, err error) {
+	curve, err := curves.GetCurveByName(bigQ.CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ1.CurveName())
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ.CurveName())
 	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
@@ -66,11 +66,11 @@ func NewVerifier(x1Encrypted paillier.CipherText, publicKey *paillier.PublicKey,
 
 	return &Verifier{
 		Participant: Participant{
-			pk:    publicKey,
-			bigQ1: bigQ1,
-			prng:  prng,
+			pk:   publicKey,
+			bigQ: bigQ,
+			prng: prng,
 		},
-		c: x1Encrypted,
+		c: xEncrypted,
 		state: &VerifierState{
 			State: State{
 				curve: curve,
@@ -81,10 +81,10 @@ func NewVerifier(x1Encrypted paillier.CipherText, publicKey *paillier.PublicKey,
 	}, nil
 }
 
-func NewProver(secretKey *paillier.SecretKey, x1 curves.Scalar) (verifier *Prover, err error) {
-	curve, err := curves.GetCurveByName(x1.Point().CurveName())
+func NewProver(x curves.Scalar, secretKey *paillier.SecretKey) (verifier *Prover, err error) {
+	curve, err := curves.GetCurveByName(x.Point().CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x1.Point().CurveName())
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.Point().CurveName())
 	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
@@ -95,11 +95,11 @@ func NewProver(secretKey *paillier.SecretKey, x1 curves.Scalar) (verifier *Prove
 
 	return &Prover{
 		Participant: Participant{
-			pk:    &secretKey.PublicKey,
-			bigQ1: curve.ScalarBaseMult(x1),
+			pk:   &secretKey.PublicKey,
+			bigQ: curve.ScalarBaseMult(x),
 		},
 		sk: secretKey,
-		x1: x1,
+		x:  x,
 		state: &ProverState{
 			State: State{
 				curve: curve,

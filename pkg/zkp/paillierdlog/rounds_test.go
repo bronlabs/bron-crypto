@@ -17,16 +17,16 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	curve := curves.P256()
 
-	x1 := curve.NewScalar().Random(prng)
-	bigQ1 := curve.ScalarBaseMult(x1)
+	x := curve.NewScalar().Random(prng)
+	bigQ := curve.ScalarBaseMult(x)
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
-	x1Encrypted, _, err := pk.Encrypt(x1.BigInt())
+	xEncrypted, _, err := pk.Encrypt(x.BigInt())
 	require.NoError(t, err)
 
-	verifier, err := paillierdlog.NewVerifier(x1Encrypted, pk, bigQ1, prng)
+	verifier, err := paillierdlog.NewVerifier(xEncrypted, pk, bigQ, prng)
 	require.NoError(t, err)
-	prover, err := paillierdlog.NewProver(sk, x1)
+	prover, err := paillierdlog.NewProver(x, sk)
 	require.NoError(t, err)
 
 	r1, err := verifier.Round1()
@@ -51,16 +51,16 @@ func Test_UnhappyPath(t *testing.T) {
 	prng := crand.Reader
 	curve := curves.P256()
 
-	x1 := curve.NewScalar().Random(prng)
-	bigQ1 := curve.ScalarBaseMult(curve.NewScalar().Random(prng))
+	x := curve.NewScalar().Random(prng)
+	bigQ := curve.ScalarBaseMult(curve.NewScalar().Random(prng))
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
-	x1Encrypted, _, err := pk.Encrypt(x1.BigInt())
+	xEncrypted, _, err := pk.Encrypt(x.BigInt())
 	require.NoError(t, err)
 
-	verifier, err := paillierdlog.NewVerifier(x1Encrypted, pk, bigQ1, prng)
+	verifier, err := paillierdlog.NewVerifier(xEncrypted, pk, bigQ, prng)
 	require.NoError(t, err)
-	prover, err := paillierdlog.NewProver(sk, x1)
+	prover, err := paillierdlog.NewProver(x, sk)
 	require.NoError(t, err)
 
 	r1, err := verifier.Round1()
