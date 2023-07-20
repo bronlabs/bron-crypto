@@ -1,6 +1,51 @@
-package softspoken
-
-// ------------------------------ PROTOCOL F_COTe --------------------------- //
+// Package softspoken implements of maliciously secure 1-out-of-2 Correlated
+//
+// Oblivious Transfer extension (COTe) protocol. We follow the designs from:
+// - [SoftSpokenOT](https://eprint.iacr.org/2022/192) for the OT extension
+// - [MR19](https://eprint.iacr.org/2019/706) for the Derandomization ("Correlated")
+// We use the notation from ROT^{κ,l} from [KOS15](https://eprint.iacr.org/2015/546)
+// for the protocol description (Figure 10). We apply the "Fiat-Shamir" heuristic,
+// substituting the coin tossing required for the consistency check with the
+// hash of the public transcript (using an (*) to denote the changes). We also
+// apply the "Forced Reuse" technique from [DKLs23](https://eprint.iacr.org/2023/765)
+// fixing one single batch of input choice bits and reusing it for all the input
+// batches.
+//
+// ============================= FUNCTIONALITIES ============================ //
+//
+// OBLIVIOUS TRANSFER (OT)
+// At high level, a single 1-out-of-2 OT realizes this functionality:
+//
+//	┌------┐                      ┌------------------┐               ┌--------┐
+//	|      |                      |                  |               |        |
+//	|      |--> (Opt_0, Opt_1) -->|      1|2  OT     | <--(Choice)<--|        |
+//	|Sender|                      |                  |               |Receiver|
+//	|      |                      └------------------┘               |        |
+//	|      |                               └-------> (DeltaOpt) -->  |        |
+//	└------┘                                                         └--------┘
+//
+// s.t. DeltaOpt = Opt_{Choice} = Opt_0 • (1-Choice) + Opt_1 • Choice
+//
+// CORRELATED OBLIVIOUS TRANSFER (COT)
+// In contrast, a single "Correlated" OT realizes tbe following functionality:
+//
+//	┌------┐                      ┌------------------┐               ┌--------┐
+//	|      |                      |                  |               |        |
+//	|      |----> (InputOpt) ---->|      1|2  COT    | <--(Choice)<--|        |
+//	|Sender|                      |                  |               |Receiver|
+//	|      |                      └------------------┘               |        |
+//	|      | <----- (Correlation) <--------┴-------> (DeltaOpt) ---> |        |
+//	└------┘                                                         └--------┘
+//	s.t. Correlation = Choice • InputOpt - DeltaOpt
+//
+// The Options, DeltaOpt and Correlation are elements of a group (e.g. Z_2,
+// Z_{2^N}, F_q, elliptic curve points), whereas Choice is always a bit.
+//
+// OT EXTENSION (OTe, COTe)
+// An "Extension" (both for OT and COT with Options of length κ) makes use of a
+// PRG to expand each block of κ Base OTs  into L = n*κ OTs.
+//
+// ========================== PROTOCOL STEPS F_COTe ========================= //
 // PLAYERS: 2 parties, R (receiver) and S (sender).
 //
 // PARAMS:
@@ -30,7 +75,7 @@ package softspoken
 //	  .            Send(u) => S                                       ∈ [ξ']×[κ]bits
 //	  (Ext.4)   S: q^i = Δ_i • u^i + t^i_{Δ_i}                        ∈ [ξ']bits      ∀i∈[κ]
 //	# A bit-level correlation used to check the extension consistency.
-//	  (Check.1) S: sample(χ_i)                                        ∈ [σ]bits       ∀i∈[M]
+//	  (Check.1) S: sample(χ_i) ((*) from transcript in Fiat-Shamir)   ∈ [σ]bits       ∀i∈[M]
 //	  .            Send(χ) => R                                       ∈ [σ]×[M]bits
 //	  (Check.2) R: x_val = x̂_{m} + Σ{j=0}^{m-1} χ_j • x_hat_j         ∈ [σ]bits
 //	  .                        └---where x^hat_j = x_{σj:σ(j+1)}
@@ -54,8 +99,8 @@ package softspoken
 //	  (Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1             ∈ curve.Scalar  ∀j∈[ξ]
 //	  .                   =     - ECP(v_x_j)  if x_j == 0
 //
-// -------------------------------------------------------------------------- //
-// ========================================================================== //
+// ============================ PROTOCOL ROUNDS ============================= //
+// Rounds end
 // -------------------------------------------------------------------------- //
 // ROUNDS (COTe):
 //
@@ -63,16 +108,16 @@ package softspoken
 //  1. R: (x) 		---(Round1)--->(u, v_x)           [Ext.1, Ext.2, Ext.3]
 //  2. S: (α) 		---(Round2)--->(χ, τ, z_B)        [Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Derand.1]
 //  3. R: (χ, τ) 	---(Round3)--->(x_val, t_val, z_A)[Check.2, T&R.1, T&R.2, Derand.2]
-//  3+.S: (x_val, t_val) ---(Round3+)--->()           [Check.3]
-
+//  3. S: (x_val, t_val) ---(Round3+)--->()           [Check.3]
+//
 // -------------------------------------------------------------------------- //
 // ROUNDS (COTe with fiat-shamir (*)):
 //
 //  0. Setup R & S:(...) ---(κ × BaseOT)--->(...)  [BaseOT]
-//  1. R: (x)---(Round1)--->(u, x_val, t_val) 	   [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
+//  1. R: (x)---(Round1)--->(u, x_val, t_val)      [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
 //  2. S: (u,x_val,t_val,α)---(Round2)--->(τ, z_B) [Ext.1, Ext.2, Ext.4, T&R.1, T&R.3, Derand.1, Check.1*, Check.3]
-//  2+.R: (τ)---(Round3)--->(z_A)			   	   [Derand.2]
-
+//     2+.R: (τ)---(Round3)--->(z_A)                  [Derand.2]
+//
 // -------------------------------------------------------------------------- //
 // ROUNDS (OTe):
 //
@@ -80,10 +125,12 @@ package softspoken
 //  1. R: (x) ---(Round1)--->(u, v_x)              [Ext.1, Ext.2, Ext.3]
 //  2. S: (u) ---(Round2)--->(χ, v_0, v_1)         [Ext.2, Ext.4, Check.1, T&R.1, T&R.3]
 //  3. R: (χ) ---(Round3)--->(x_val, t_val)	       [Check.2, T&R.1, T&R.2]
-//  3+. S: (x_val, t_val) ---(Round3+)--->()       [Check.3]
+//     3+. S: (x_val, t_val) ---(Round3+)--->()       [Check.3]
+//
 // -------------------------------------------------------------------------- //
 // ROUNDS (OTe with fiat-shamir (*)):
 //
 //  0. Setup R & S: (...)---(κ × BaseOT)--->(...)  [BaseOT]
 //  1. R: (x)---(Round1)--->(u, v_x, x_val, t_val) [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
-//  1+.S: (u,x_val, t_val)---(Round2)--->(v_0, v_1)[Ext.1, Ext.2, Ext.4, Check.1*, T&R.1, T&R.3, Check.3]
+//     1+.S: (u,x_val, t_val)---(Round2)--->(v_0, v_1)[Ext.1, Ext.2, Ext.4, Check.1*, T&R.1, T&R.3, Check.3]
+package softspoken

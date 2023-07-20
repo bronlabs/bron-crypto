@@ -1,4 +1,4 @@
-// Package simplest implements the "Verified Simplest OT", as defined in "protocol 7" of [DKLs18](https://eprint.iacr.org/2018/499.pdf).
+// Package vsot implements the "Verified Simplest OT", as defined in "protocol 7" of [DKLs18](https://eprint.iacr.org/2018/499.pdf).
 // The original "Simplest OT" protocol is presented in [CC15](https://eprint.iacr.org/2015/267.pdf).
 // In our implementation, we run OTs for multiple choice bits in parallel. Furthermore, as described in the DKLs paper,
 // we implement this as Random OT protocol. We also add encryption and decryption steps as defined in the protocol, but
