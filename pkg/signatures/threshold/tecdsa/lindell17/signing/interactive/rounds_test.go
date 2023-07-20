@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -35,7 +34,6 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")
-	messageHash, err := hashing.Hash(sha256.New, message[:])
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
@@ -63,12 +61,12 @@ func Test_HappyPath(t *testing.T) {
 	r3, err := primary.Round3(r2)
 	require.NoError(t, err)
 
-	r4, err := secondary.Round4(r3, messageHash[:])
+	r4, err := secondary.Round4(r3, message)
 	require.NoError(t, err)
 
-	signature, err := primary.Round5(r4, messageHash[:])
+	signature, err := primary.Round5(r4, message)
 	require.NoError(t, err)
 
-	ok := signature.VerifyHash(&ecdsa.PublicKey{Q: shards[bob].SigningKeyShare.PublicKey}, messageHash[:])
+	ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[bob].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
 	require.True(t, ok)
 }

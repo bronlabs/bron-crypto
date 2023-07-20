@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
@@ -115,7 +116,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(secondaryRound2Output *SecondaryR
 	}, nil
 }
 
-func (secondaryCosigner *SecondaryCosigner) Round4(primaryRound3Output *PrimaryRound3Output, messageHash []byte) (secondaryRound4Output *SecondaryRound4Output, err error) {
+func (secondaryCosigner *SecondaryCosigner) Round4(primaryRound3Output *PrimaryRound3Output, message []byte) (secondaryRound4Output *SecondaryRound4Output, err error) {
 	if secondaryCosigner.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", secondaryCosigner.round)
 	}
@@ -138,6 +139,10 @@ func (secondaryCosigner *SecondaryCosigner) Round4(primaryRound3Output *PrimaryR
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
 
+	messageHash, err := hashing.Hash(secondaryCosigner.cohortConfig.CipherSuite.Hash, message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot hash message")
+	}
 	mPrimeInt, err := lindell17.HashToInt(messageHash, secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
@@ -205,7 +210,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(primaryRound3Output *PrimaryR
 	}, nil
 }
 
-func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryRound4Output, messageHash []byte) (signatureExt *ecdsa.SignatureExt, err error) {
+func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryRound4Output, message []byte) (signatureExt *ecdsa.SignatureExt, err error) {
 	if primaryCosigner.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", primaryCosigner.round)
 	}
@@ -235,7 +240,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryR
 		S: sBis,
 	}
 	signature.Normalize()
-	if ok := signature.VerifyHashWithPublicKey(publicKey, messageHash); !ok {
+	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
 		return nil, errs.NewFailed("invalid signature")
 	}
 
@@ -243,7 +248,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(secondaryRound4Output *SecondaryR
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
 	}
-	if ok := signature.VerifyHashWithRecoveryId(recoveryId, messageHash); !ok {
+	if ok := signature.VerifyMessageWithRecoveryId(recoveryId, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
 		return nil, errs.NewFailed("invalid recovery id")
 	}
 
