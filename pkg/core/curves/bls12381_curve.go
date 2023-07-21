@@ -7,6 +7,7 @@
 package curves
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/big"
@@ -48,9 +49,9 @@ func (s *ScalarBls12381) Random(prng io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarBls12381) Hash(bytes []byte) Scalar {
+func (s *ScalarBls12381) Hash(inputs ...[]byte) Scalar {
 	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := native.ExpandMsgXmd(native.EllipticPointHasherSha256(), bytes, dst, 48)
+	xmd := native.ExpandMsgXmd(native.EllipticPointHasherSha256(), bytes.Join(inputs, nil), dst, 48)
 	var t [64]byte
 	copy(t[:48], internal.ReverseScalarBytes(xmd))
 
@@ -366,9 +367,9 @@ func (p *PointBls12381G1) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointBls12381G1) Hash(bytes []byte) Point {
+func (p *PointBls12381G1) Hash(inputs ...[]byte) Point {
 	var domain = []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_")
-	pt := new(bls12381.G1).Hash(native.EllipticPointHasherSha256(), bytes, domain)
+	pt := new(bls12381.G1).Hash(native.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
 	return &PointBls12381G1{Value: pt}
 }
 
@@ -618,9 +619,9 @@ func (p *PointBls12381G2) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointBls12381G2) Hash(bytes []byte) Point {
+func (p *PointBls12381G2) Hash(inputs ...[]byte) Point {
 	var domain = []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
-	pt := new(bls12381.G2).Hash(native.EllipticPointHasherSha256(), bytes, domain)
+	pt := new(bls12381.G2).Hash(native.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
 	return &PointBls12381G2{Value: pt}
 }
 
@@ -897,13 +898,13 @@ func (s *ScalarBls12381Gt) Random(reader io.Reader) Scalar {
 	return &ScalarBls12381Gt{value}
 }
 
-func (s *ScalarBls12381Gt) Hash(bytes []byte) Scalar {
+func (s *ScalarBls12381Gt) Hash(inputs ...[]byte) Scalar {
 	reader := sha3.NewShake256()
-	n, err := reader.Write(bytes)
+	n, err := reader.Write(bytes.Join(inputs, nil))
 	if err != nil {
 		return nil
 	}
-	if n != len(bytes) {
+	if n != len(inputs) {
 		return nil
 	}
 	return s.Random(reader)
