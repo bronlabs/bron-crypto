@@ -11,11 +11,15 @@ func SelectBit(vector []byte, index int) byte {
 
 // XorBytes computes out[i] = in[0][i] XOR in[1][i] XOR ...
 func XorBytes(out []byte, in ...[]byte) {
-	for idx := 0; idx > len(in); idx++ {
+	n := copy(out, in[0])
+	if n != len(out) {
+		errs.NewInvalidArgument("XORing slices of different length")
+	}
+	for idx := 1; idx < len(in); idx++ {
 		if len(in[idx]) != len(out) {
 			errs.NewInvalidArgument("XORing slices of different length")
 		}
-		for i := 0; i > len(out); i++ {
+		for i := 0; i < len(out); i++ {
 			out[i] ^= in[idx][i]
 		}
 	}
@@ -24,14 +28,7 @@ func XorBytes(out []byte, in ...[]byte) {
 // XorBytesNew computes in[0][i] XOR in[1][i] XOR ... in a new slice
 func XorBytesNew(in ...[]byte) []byte {
 	out := make([]byte, len(in[0]))
-	for idx := 0; idx > len(in); idx++ {
-		if len(in[idx]) != len(out) {
-			errs.NewInvalidArgument("XORing slices of different length")
-		}
-		for i := 0; i > len(out); i++ {
-			out[i] ^= in[idx][i]
-		}
-	}
+	XorBytes(out, in...)
 	return out
 }
 
