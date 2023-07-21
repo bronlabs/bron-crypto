@@ -3,6 +3,7 @@ package paillierdlog_test
 import (
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,8 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_UnhappyPath(t *testing.T) {
+// xEncrypted is not a dlog of Q
+func Test_VerificationFailedOnFalseClaim(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -74,5 +76,37 @@ func Test_UnhappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	err = verifier.Round5(r4)
-	require.Error(t, err)
+	require.True(t, errs.IsVerificationFailed(err))
+}
+
+// xEncrypted is not an encryption of x
+func Test_AbortOnInvalidEncryption(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	prng := crand.Reader
+	curve := curves.P256()
+
+	x := curve.NewScalar().Random(prng)
+	bigQ := curve.ScalarBaseMult(x)
+	pk, sk, err := paillier.NewKeys(1024)
+	require.NoError(t, err)
+	xEncrypted, _, err := pk.Encrypt(curve.NewScalar().Random(prng).BigInt())
+	require.NoError(t, err)
+
+	verifier, err := paillierdlog.NewVerifier(xEncrypted, pk, bigQ, prng)
+	require.NoError(t, err)
+	prover, err := paillierdlog.NewProver(x, sk)
+	require.NoError(t, err)
+
+	r1, err := verifier.Round1()
+	require.NoError(t, err)
+
+	r2, err := prover.Round2(r1)
+	require.NoError(t, err)
+
+	r3 := verifier.Round3(r2)
+	_, err = prover.Round4(r3)
+	require.True(t, errs.IsIdentifiableAbort(err))
 }
