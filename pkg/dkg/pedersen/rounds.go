@@ -103,15 +103,9 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 			if broadcastedMessageFromSender.DlogProof == nil {
 				return nil, nil, errs.NewMissing("do not have the dlog proof for shamir id %d", senderShamirId)
 			}
-			if broadcastedMessageFromSender.DlogProof.Statement == nil {
-				return nil, nil, errs.NewMissing("do not have the statement of the dlog proof for shamir id %d", senderShamirId)
-			}
+
 			senderCommitmentVector := broadcastedMessageFromSender.Ci
 			senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
-
-			if !senderCommitmentToTheirLocalSecret.Equal(broadcastedMessageFromSender.DlogProof.Statement) {
-				return nil, nil, errs.NewIdentifiableAbort("shamir id %d proved a statement that's different from their commitment to their local secret", senderShamirId)
-			}
 
 			if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
 				edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
@@ -129,8 +123,8 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 
 			transcript := merlin.NewTranscript(DkgLabel)
 			transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
-				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr (shamir id: %d)", senderShamirId)
+			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
+				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (shamir id: %d)", senderShamirId)
 			}
 
 			p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey]

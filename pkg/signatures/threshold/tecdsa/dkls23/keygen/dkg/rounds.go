@@ -42,7 +42,11 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	}
 	baseOTP2P := map[integration.IdentityKey]*vsot.Round1P2P{}
 	for identity, party := range p.BaseOTSenderParties {
-		baseOTP2P[identity], err = party.Round1ComputeAndZkpToPublicKey()
+		proof, publicKey, err := party.Round1ComputeAndZkpToPublicKey()
+		baseOTP2P[identity] = &vsot.Round1P2P{
+			Proof:     proof,
+			PublicKey: publicKey,
+		}
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "vsot as sender for identity %x", identity.PublicKey().ToAffineCompressed())
 		}
@@ -79,7 +83,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 	}
 	baseOTP2P := map[integration.IdentityKey]vsot.Round2P2P{}
 	for identity, receiver := range p.BaseOTReceiverParties {
-		baseOTP2P[identity], err = receiver.Round2VerifySchnorrAndPadTransfer(vsotRound1Output[identity])
+		baseOTP2P[identity], err = receiver.Round2VerifySchnorrAndPadTransfer(vsotRound1Output[identity].PublicKey, vsotRound1Output[identity].Proof)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "vsot as receiver for identity %x", identity.PublicKey().ToAffineCompressed())
 		}

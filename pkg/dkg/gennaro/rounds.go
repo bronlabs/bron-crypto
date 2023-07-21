@@ -25,9 +25,8 @@ type Round1P2P struct {
 }
 
 type Round2Broadcast struct {
-	Commitments    []curves.Point
-	A_i0Proof      *dlog.Proof
-	APrime_i0Proof *dlog.Proof
+	Commitments []curves.Point
+	A_i0Proof   *dlog.Proof
 }
 
 func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
@@ -51,11 +50,6 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of a_i0")
 	}
 	prover.BasePoint = p.H
-	// note that prover transcript will contain a_i0 transcript
-	aPrime_i0Proof, err := prover.Prove(dealt.Blinding)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of aPrime_i0")
-	}
 
 	outboundP2PMessages := map[integration.IdentityKey]*Round1P2P{}
 	for shamirId, identityKey := range p.shamirIdToIdentityKey {
@@ -78,7 +72,6 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	p.state.commitments = dealt.Commitments
 	p.state.blindedCommitments = dealt.BlindedCommitments
 	p.state.a_i0Proof = a_i0Proof
-	p.state.aPrime_i0Proof = aPrime_i0Proof
 
 	p.round++
 	return &Round1Broadcast{
@@ -138,9 +131,8 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 	p.state.partialPublicKeyShares = partialPublicKeyShares
 	p.round++
 	return &Round2Broadcast{
-		Commitments:    p.state.commitments,
-		A_i0Proof:      p.state.a_i0Proof,
-		APrime_i0Proof: p.state.aPrime_i0Proof,
+		Commitments: p.state.commitments,
+		A_i0Proof:   p.state.a_i0Proof,
 	}, nil
 }
 
@@ -168,24 +160,8 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		if broadcastedMessageFromSender.A_i0Proof == nil {
 			return nil, nil, errs.NewMissing("do not have the dlog proof of a_i0 for shamir id %d", senderShamirId)
 		}
-		if broadcastedMessageFromSender.A_i0Proof.Statement == nil {
-			return nil, nil, errs.NewMissing("do not have the statement of the dlog proof of a_i0 for shamir id %d", senderShamirId)
-		}
-		if broadcastedMessageFromSender.APrime_i0Proof == nil {
-			return nil, nil, errs.NewMissing("do not have the the dlog proof of aPrime_i0 for shamir id %d", senderShamirId)
-		}
-		if broadcastedMessageFromSender.APrime_i0Proof.Statement == nil {
-			return nil, nil, errs.NewMissing("do not have the statement of the dlog proof of aPrime_i0 for shamir id %d", senderShamirId)
-		}
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
-		senderBlindedCommitmentVector := p.state.receivedBlindedCommitmentVectors[senderShamirId]
-		senderCommitmentToTheirBlindedSecret := senderBlindedCommitmentVector[0]
-		jointStatements := broadcastedMessageFromSender.A_i0Proof.Statement.Add(broadcastedMessageFromSender.APrime_i0Proof.Statement)
-
-		if !senderCommitmentToTheirBlindedSecret.Equal(jointStatements) {
-			return nil, nil, errs.NewIdentifiableAbort("aG + a'H != (a+a')(G+H) for shamir id %d", senderShamirId)
-		}
 
 		if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
 			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
@@ -203,11 +179,8 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 
 		transcript := merlin.NewTranscript(DlogProofLabel)
 		transcript.AppendMessage([]byte("shamir id"), []byte(fmt.Sprintf("%d", senderShamirId)))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (shamir id: %d)", senderShamirId)
-		}
-		if err := dlog.Verify(p.H, broadcastedMessageFromSender.APrime_i0Proof, p.UniqueSessionId, transcript); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of aPrime_i0 (shamir id: %d)", senderShamirId)
 		}
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderShamirId]

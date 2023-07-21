@@ -13,7 +13,10 @@ import (
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
-type Round1P2P = schnorr.Proof
+type Round1P2P struct {
+	Proof     *schnorr.Proof
+	PublicKey curves.Point
+}
 type Round2P2P = []ReceiversMaskedChoices
 type Round3P2P = []OtChallenge
 type Round4P2P = []OtChallengeResponse
@@ -24,7 +27,7 @@ type Round8P2P = [][DigestSize]byte
 // Round1ComputeAndZkpToPublicKey is the first phase of the protocol.
 // computes and stores public key and returns the schnorr proof. serialized / packed.
 // This implements step 1 of Protocol 7 of DKLs18, page 16.
-func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, error) {
+func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.Point, error) {
 	var err error
 	// Sample the secret key and compute the public key.
 	sender.SecretKey = sender.Curve.Scalar.Random(rand.Reader)
@@ -35,21 +38,22 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, error) {
 	clonedTranscript := merlin.NewTranscript("VSOT")
 	prover, err := schnorr.NewProver(sender.Curve.NewGeneratorPoint(), sender.UniqueSessionId, clonedTranscript)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "constructing schnorr prover")
+		return nil, nil, errs.WrapFailed(err, "constructing schnorr prover")
 	}
 	proof, err := prover.Prove(sender.SecretKey)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "creating zkp proof for secret key in seed OT sender round 1")
+		return nil, nil, errs.WrapFailed(err, "creating zkp proof for secret key in seed OT sender round 1")
 	}
-	return proof, nil
+	publicKey := prover.BasePoint.Mul(sender.SecretKey)
+	return proof, publicKey, nil
 }
 
 // Round2VerifySchnorrAndPadTransfer verifies the schnorr proof of the public key sent by the sender, i.e., step 2),
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Protocol 7 (page 16) of the paper.
-func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(proof *schnorr.Proof) ([]ReceiversMaskedChoices, error) {
-	receiver.SenderPublicKey = proof.Statement
+func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *schnorr.Proof) ([]ReceiversMaskedChoices, error) {
+	receiver.SenderPublicKey = senderPublicKey
 	clonedTranscript := merlin.NewTranscript("VSOT")
-	if err := schnorr.Verify(receiver.Curve.NewGeneratorPoint(), proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
+	if err := schnorr.Verify(receiver.Curve.NewGeneratorPoint(), senderPublicKey, proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "verifying schnorr proof in seed OT receiver round 2")
 	}
 

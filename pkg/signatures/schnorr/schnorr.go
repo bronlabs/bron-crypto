@@ -142,12 +142,11 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		return errs.NewIsZero("response can't be zero")
 	}
 	proof := &dlog.Proof{
-		C:         signature.C,
-		S:         signature.S,
-		Statement: publicKey.Y,
+		C: signature.C,
+		S: signature.S,
 	}
 
-	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), proof, message, nil); err != nil {
+	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), publicKey.Y, proof, message, nil); err != nil {
 		return errs.NewVerificationFailed("couldn't verify underlying schnor proof")
 	}
 	return nil
