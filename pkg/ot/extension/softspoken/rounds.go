@@ -1,62 +1,19 @@
-// Copyright Copper.co; All Rights Reserved.
-//
-// Package softspoken implements of maliciously secure 1-out-of-2 Correlated
-//  Oblivious Transfer extension (COTe) protocol. We follow the designs from
-//  [SoftSpokenOT](https://eprint.iacr.org/2022/192), alongside a derandomization
-//  from [MR19](https://eprint.iacr.org/2019/706). For the protocol description
-//  we use the notation from ROT^{κ,l} from [KOS15](https://eprint.iacr.org/2015/546)
-// (Figure 10). The protocol is described in "protocol.go". We implement the
-// "COTE with Fiat-Shamir" version, substituting the coin tossing required for
-// the consistency check with the Fiat-Shamir heuristic (hash of the public transcript)
-//
-
-// OBLIVIOUS TRANSFER (OT)
-// At high level, a single 1-out-of-2 OT realizes this functionality:
-//  ┌------┐                      ┌------------------┐               ┌--------┐
-//  |      |                      |                  |               |        |
-//  |      |--> (Opt_0, Opt_1) -->|      1|2  OT     | <--(Choice)<--|        |
-//  |Sender|                      |                  |               |Receiver|
-//  |      |                      └------------------┘               |        |
-//  |      |                               └-------> (DeltaOpt) -->  |        |
-//  └------┘                                                         └--------┘
-// s.t. DeltaOpt = Opt_{Choice} = Opt_0 • (1-Choice) + Opt_1 • Choice
-//
-// CORRELATED OBLIVIOUS TRANSFER (COT)
-// In contrast, a single "Correlated" OT realizes tbe following functionality:
-//  ┌------┐                      ┌------------------┐               ┌--------┐
-//  |      |                      |                  |               |        |
-//  |      |----> (InputOpt) ---->|      1|2  COT    | <--(Choice)<--|        |
-//  |Sender|                      |                  |               |Receiver|
-//  |      |                      └------------------┘               |        |
-//  |      | <----- (Correlation) <--------┴-------> (DeltaOpt) ---> |        |
-//  └------┘                                                         └--------┘
-//  s.t. Correlation = Choice • InputOpt - DeltaOpt
-//
-// The Options, DeltaOpt and Correlation are elements of a group (e.g. Z_2,
-// Z_{2^N}, F_q, elliptic curve points), whereas Choice is always a bit.
-//
-// OT EXTENSION (OTe, COTe)
-// An "Extension" (both for OT and COT with Options of length κ) makes use of a
-// PRG to expand each block of κ Base OTs  into L = n*κ OTs.
-
 package softspoken
 
 import (
 	"crypto/rand"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 )
 
-// -------------------------------------------------------------------------- //
-// -------------------------------- ROUNDS ---------------------------------- //
-// -------------------------------------------------------------------------- //
 // Round1Output is the receiver's PUBLIC output of round1 of OTe/COTe, to be sent to the Sender.
 type Round1Output struct {
-	// expansionMask (u_i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
+	// expansionMask (u^i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
 	expansionMask ExpansionMask
 	// challengeResponse is the challenge response for the consistency,
-	// containing x_val ∈ [σ]bits, t_val ∈ [κ][σ]bits
+	// containing ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	challengeResponse ChallengeResponse
 }
 
@@ -64,8 +21,8 @@ type Round1Output struct {
 func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	oTeInputChoices *OTeInputChoices, // x_i ∈ [ξ]bits
 ) (extPackedChoices *ExtPackedChoices, // x_i ∈ [ξ']bits
-	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][κ]bits
-	round1Output *Round1Output, // u_i ∈ [κ][ξ']bits, x_val ∈ [σ]bits, t_val ∈ [κ][σ]bits
+	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][ω][κ]bits
+	round1Output *Round1Output, // u_i ∈ [κ][ξ']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	err error) {
 	round1Output = &Round1Output{}
 
@@ -113,12 +70,12 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	for i := 0; i < M; i++ {
 		copy(challengeFiatShamir[i][:], receiver.transcript.ExtractBytes([]byte("OTe_challenge_Chi"), SigmaBytes))
 	}
-	// (Check.2) Compute x_val and t_val
+	// (Check.2) Compute ẋ and ṫ
 	receiver.ComputeChallengeResponse(extPackedChoices, extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
 	t_j := transposeBooleanMatrix(extOptions[0]) // t_j ∈ [ξ'][κ]bits
-	// (T&R.2) Hash ξ rows of t_j using the index as salt.
+	// (T&R.2) Hash ξ rows of t_j using the index as salt (drop ξ' - ξ rows, used for consistency check)
 	oTeReceiverOutput = &OTeReceiverOutput{}
 	err = HashSalted(&receiver.uniqueSessionId, t_j[:], oTeReceiverOutput[:])
 	if err != nil {
@@ -142,7 +99,7 @@ type Round2Output struct {
 // and derandomizes them (COTe only).
 func (sender *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
-	InputOpts []COTeInputOpt, // Input opts (α_i) ∈ [ξ]curve.Scalar. Set to nil for OTe.
+	InputOpts []COTeInputOpt, // Input opts (α) ∈ [ξ]curve.Scalar. Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutputs []COTeSenderOutput, round2Output *Round2Output, err error) {
 	// Sanitize inputs
 	if round1Output == nil {
@@ -173,18 +130,17 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 
 	// (T&R.1, T&R.3) Transpose and Randomize the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and q^i+Δ -> q_j+Δ
-	extCorrelationsTransposed := transposeBooleanMatrix(extCorrelations)
+	extCorrelationsTransposed := transposeBooleanMatrix(extCorrelations) // q_j ∈ [ξ'][κ]bits
 	var extCorrelationsTransposedPlusDelta [Zeta][KappaBytes]byte
-	copy(extCorrelationsTransposedPlusDelta[:], extCorrelationsTransposed[:Zeta])
 	for i := 0; i < KappaBytes; i++ {
 		Delta := sender.baseOtSeeds.PackedRandomChoiceBits[i]
-		for j := 0; j < Zeta; j++ {
-			extCorrelationsTransposedPlusDelta[j][i] ^= Delta
+		for j := 0; j < Zeta; j++ { // drop ξ' - ξ rows, used for consistency check
+			extCorrelationsTransposedPlusDelta[j][i] = extCorrelationsTransposed[j][i] ^ Delta
 		}
 	}
-	// (T&R.3) Randomize by hashing the first ξ rows of q_j and q_j+Δ (throwing away the rest)
+	// (T&R.3) Randomize by hashing the first ξ rows of q_j and q_j+Δ (drop ξ' - ξ rows, used for consistency check)
 	oTeSenderOutput = &OTeSenderOutput{}
-	err = HashSalted(&sender.uniqueSessionId, extCorrelationsTransposed[:], oTeSenderOutput[0][:])
+	err = HashSalted(&sender.uniqueSessionId, extCorrelationsTransposed[:Zeta], oTeSenderOutput[0][:])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.3)")
 	}
@@ -222,18 +178,19 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 
 	// (Derand.1) Compute the derandomization mask τ and the correlation z_A
 	round2Output = &Round2Output{}
-	if !sender.useForcedReuse && len(InputOpts) != 1 {
-		return nil, nil, nil, errs.NewInvalidArgument("InputOpts length != 1. Set useForcedReuse, or set a higher value of L, or loop over the InputOpts")
-	}
+	L := len(InputOpts) // Number of reuses of the output OTe batch.
 	if sender.useForcedReuse {
-		cOTeSenderOutputs = make([]COTeSenderOutput, len(InputOpts))
-		round2Output.derandomizeMasks = make([]DerandomizeMask, len(InputOpts))
+		cOTeSenderOutputs = make([]COTeSenderOutput, L)
+		round2Output.derandomizeMasks = make([]DerandomizeMask, L)
 		err = sender.ComputeDerandomizeMaskForcedReuse(
 			oTeSenderOutput, InputOpts, &cOTeSenderOutputs, &round2Output.derandomizeMasks)
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "bad forced-reuse derandomization for SoftSpoken COTe (Derand.1)")
 		}
 	} else {
+		if L != 1 { // If not forced reuse, L must be 1
+			return nil, nil, nil, errs.NewInvalidArgument("InputOpts length != 1. Set useForcedReuse, or set a higher value of L, or loop over the InputOpts")
+		}
 		cOTeSenderOutputs = make([]COTeSenderOutput, 1)
 		round2Output.derandomizeMasks = make([]DerandomizeMask, 1)
 		err = sender.ComputeDerandomizeMask(oTeSenderOutput, &InputOpts[0],
@@ -268,7 +225,8 @@ func (receiver *Receiver) Round3Derandomize(
 	}
 
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for batchIndex := 0; batchIndex < len(round2Output.derandomizeMasks); batchIndex++ {
+	L := len(round2Output.derandomizeMasks) // Number of reuses of the output OTe batch.
+	for batchIndex := 0; batchIndex < L; batchIndex++ {
 		for i := 0; i < Zeta; i++ {
 			for k := 0; k < OTeWidth; k++ {
 				receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
@@ -277,16 +235,16 @@ func (receiver *Receiver) Round3Derandomize(
 		}
 	}
 
-	// (Derand.2) Apply derandomize Mask to
-	if !receiver.useForcedReuse && len(round2Output.derandomizeMasks) != 1 {
-		return nil, errs.NewInvalidArgument("derandomizeMasks length must be 1 unless forced reuse is set. Alternatively, set a higher value of L or loop over the derandomizeMasks")
-	}
+	// (Derand.2) Apply derandomize Mask to the OTe output
 	if receiver.useForcedReuse {
 		cOTeReceiverOutput, err = receiver.DerandomizeForcedReuse(oTeReceiverOutput, extPackedChoices, round2Output.derandomizeMasks)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad forced-reuse derandomization for SoftSpoken COTe (Derand.2)")
 		}
 	} else {
+		if L != 1 {
+			return nil, errs.NewInvalidArgument("derandomizeMasks length must be 1 unless forced reuse is set. Alternatively, set a higher value of L or loop over the derandomizeMasks")
+		}
 		cOTeReceiverOutput = make([]COTeReceiverOutput, 1)
 		err = receiver.Derandomize(oTeReceiverOutput, &round2Output.derandomizeMasks[0], extPackedChoices, &cOTeReceiverOutput[0])
 		if err != nil {
@@ -299,11 +257,11 @@ func (receiver *Receiver) Round3Derandomize(
 // -------------------------------------------------------------------------- //
 // ---------------------------- INDIVIDUAL STEPS ---------------------------- //
 // -------------------------------------------------------------------------- //
-// (Check.2) Compute the challenge response x, t^i \forall i \in [kappa]
+// (Check.2) Compute the challenge response ẋ, ṫ^i ∀i∈[κ]
 func (receiver *Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedChoices, extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
-	// 		x = x^hat_{m+1} ...
+	// 		ẋ = x̂_{m+1} ...
 	copy(challengeResponse.x_val[:], extPackedChoices[ZetaBytes:ZetaBytes+SigmaBytes])
-	// 		                ... + Σ{j=0}^{m-1} χ_j • x_hat_j
+	// 		                ... + Σ{j=1}^{m} χ_j • x̂_j
 	for j := 0; j < M; j++ {
 		x_hat_j := extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
 		Chi_j := challenge[j][:]
@@ -311,11 +269,11 @@ func (receiver *Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedCh
 			challengeResponse.x_val[k] ^= (Chi_j[k] & x_hat_j[k])
 		}
 	}
-	// 		t^i = ...
+	// 		ṫ^i = ...
 	for i := 0; i < Kappa; i++ {
 		//         ... t^i_hat_{m+1} ...
 		copy(challengeResponse.t_val[i][:], extOptions[0][i][ZetaBytes:ZetaBytes+SigmaBytes])
-		//                           ... + Σ{j=0}^{m-1} χ_j • t^i_hat_j
+		//                           ... + Σ{j=1}^{m} χ_j • t^i_hat_j
 		for j := 0; j < M; j++ {
 			t_hat_j := extOptions[0][i][j*SigmaBytes : (j+1)*SigmaBytes]
 			Chi_j := challenge[j][:]
@@ -335,9 +293,9 @@ func (sender *Sender) CheckConsistency(
 	qi_val := [SigmaBytes]byte{}
 	var q_expected, qi_sum byte
 	for i := 0; i < Kappa; i++ {
-		// q^i = q^i_hat_{m+1} ...
+		// q̇^i = q^i_hat_{m+1} ...
 		copy(qi_val[:], extCorrelations[i][ZetaBytes:ZetaBytes+SigmaBytes])
-		//                     ... + Σ{j=0}^{m-1} χ_j • q^i_hat_j
+		//                     ... + Σ{j=1}^{m} χ_j • q^i_hat_j
 		for j := 0; j < M; j++ {
 			qi_hat_j := extCorrelations[i][j*SigmaBytes : (j+1)*SigmaBytes]
 			Chi_j := challenge[j][:]
@@ -345,7 +303,7 @@ func (sender *Sender) CheckConsistency(
 				qi_val[k] ^= (qi_hat_j[k] & Chi_j[k])
 			}
 		}
-		//  and ABORT if q^i != t^i + Δ_i • x   ∀ i ∈[κ]
+		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		for k := 0; k < SigmaBytes; k++ {
 			qi_sum = challengeResponse.t_val[i][k] ^ challengeResponse.x_val[k]
 			if sender.baseOtSeeds.RandomChoiceBits[i] != 0 {
@@ -354,7 +312,7 @@ func (sender *Sender) CheckConsistency(
 				q_expected = challengeResponse.t_val[i][k]
 			}
 			if !(q_expected == qi_val[k]) {
-				return errs.NewIdentifiableAbort("q_val != q_expected in SoftspokenOT")
+				return errs.NewIdentifiableAbort("q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 			}
 		}
 	}
@@ -425,7 +383,7 @@ func (receiver *Receiver) Derandomize(
 			}
 			v_x_NegCurve = v_x_NegCurve.Neg()
 			v_x_curve_corr = derandomizeMask[j][k].Add(v_x_NegCurve)
-			if UnpackBit(j, extPackChoices[:]) != 0 {
+			if bits.SelectBit(extPackChoices[:], j) != 0 {
 				// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 				cOTeReceiverOutput[j][k] = v_x_curve_corr
 			} else {
