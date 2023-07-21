@@ -2,8 +2,9 @@ package softspoken
 
 import (
 	"crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"testing"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 
 	"github.com/stretchr/testify/require"
 
