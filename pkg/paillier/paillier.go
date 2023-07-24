@@ -236,6 +236,29 @@ func (publicKey *PublicKey) Add(lhsCipherText, rhsCipherText CipherText) (Cipher
 	return ctxt, nil
 }
 
+func (publicKey *PublicKey) SubPlain(lhsCipherText, rhsPlain *big.Int) (CipherText, error) {
+	if lhsCipherText == nil || rhsPlain == nil {
+		return nil, errs.NewIsNil("one of the cipher texts in nil")
+	}
+	y := new(big.Int).Sub(publicKey.N, rhsPlain)
+
+	// Ensure lhsCipherText ∈ Z_N², y ∈ Z_N
+	if err := core.In(lhsCipherText, publicKey.N2); err != nil {
+		return nil, errs.NewIsNil("lhs is nil")
+	}
+	if err := core.In(y, publicKey.N); err != nil {
+		return nil, errs.NewIsNil("rhs is nil")
+	}
+
+	g := new(big.Int).Add(publicKey.N, core.One)
+	rhs := new(big.Int).Exp(g, y, publicKey.N2)
+	ctxt, err := core.Mul(lhsCipherText, rhs, publicKey.N2)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "multiplication failed")
+	}
+	return ctxt, nil
+}
+
 // Mul is equivalent to adding two Paillier exponents.
 func (publicKey *PublicKey) Mul(factor *big.Int, cipherText CipherText) (CipherText, error) {
 	if factor == nil || cipherText == nil {

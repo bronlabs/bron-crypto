@@ -24,7 +24,6 @@ type ProverRound2Output struct {
 
 type VerifierRound3Output struct {
 	e           *big.Int
-	sid         []byte
 	esidWitness commitments.Witness
 }
 
@@ -47,6 +46,10 @@ type ProverRound4Output struct {
 }
 
 func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
+	if verifier.round != 1 {
+		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
+	}
+
 	verifier.state.e, err = crand.Int(verifier.prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
@@ -59,14 +62,18 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	}
 	verifier.state.esidWitness = esidWitness
 
+	verifier.round += 2
 	return &VerifierRound1Output{
 		esidCommitment: esidCommitment,
 	}, nil
 }
 
 func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2Output, err error) {
-	prover.state.esidCommitment = input.esidCommitment
+	if prover.round != 2 {
+		return nil, errs.NewInvalidRound("%d != 2", prover.round)
+	}
 
+	prover.state.esidCommitment = input.esidCommitment
 	prover.state.w1 = make([]*big.Int, prover.t)
 	prover.state.w2 = make([]*big.Int, prover.t)
 	for i := 0; i < prover.t; i++ {
@@ -74,18 +81,19 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create random")
 		}
+
 		if flip.Cmp(big.NewInt(1)) == 0 {
-			prover.state.w2[i], err = crand.Int(prover.prng, prover.state.l)
+			prover.state.w2[i], err = prover.randomIntInFirstThird()
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot create random")
 			}
-			prover.state.w1[i] = new(big.Int).Sub(prover.state.w2[i], prover.state.l)
+			prover.state.w1[i] = new(big.Int).Add(prover.state.w2[i], prover.l)
 		} else {
-			prover.state.w1[i], err = crand.Int(prover.prng, prover.state.l)
+			prover.state.w1[i], err = prover.randomIntInFirstThird()
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot create random")
 			}
-			prover.state.w2[i] = new(big.Int).Sub(prover.state.w2[i], prover.state.l)
+			prover.state.w2[i] = new(big.Int).Add(prover.state.w1[i], prover.l)
 		}
 	}
 
@@ -104,6 +112,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		}
 	}
 
+	prover.round += 2
 	return &ProverRound2Output{
 		c1: c1,
 		c2: c2,
@@ -111,18 +120,26 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 }
 
 func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
+	if verifier.round != 3 {
+		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
+	}
+
 	verifier.state.c1 = input.c1
 	verifier.state.c2 = input.c2
 
+	verifier.round += 2
 	return &VerifierRound3Output{
 		e:           verifier.state.e,
-		sid:         verifier.sid,
 		esidWitness: verifier.state.esidWitness,
 	}, nil
 }
 
 func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4Output, err error) {
-	esidMessage := append(input.e.Bytes()[:], input.sid...)
+	if prover.round != 4 {
+		return nil, errs.NewInvalidRound("%d != 4", prover.round)
+	}
+
+	esidMessage := append(input.e.Bytes()[:], prover.sid...)
 	err = commitments.Open(hashFunc, esidMessage, prover.state.esidCommitment, input.esidWitness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
@@ -139,15 +156,15 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 				r2: prover.state.r2[i],
 			}
 		} else {
-			xPlusW1 := new(big.Int).Add(prover.x.BigInt(), prover.state.w1[i])
-			xPlusW2 := new(big.Int).Add(prover.x.BigInt(), prover.state.w2[i])
-			if xPlusW1.Cmp(prover.state.l) >= 0 && xPlusW1.Cmp(new(big.Int).Add(prover.state.l, prover.state.l)) <= 0 {
+			xPlusW1 := new(big.Int).Add(prover.x, prover.state.w1[i])
+			xPlusW2 := new(big.Int).Add(prover.x, prover.state.w2[i])
+			if prover.inSecondThird(xPlusW1) {
 				zetOne[i] = &ZetOne{
 					j:        1,
 					xPlusWj:  xPlusW1,
 					rTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r1[i]), prover.sk.N),
 				}
-			} else if xPlusW2.Cmp(prover.state.l) >= 0 && xPlusW2.Cmp(new(big.Int).Add(prover.state.l, prover.state.l)) <= 0 {
+			} else if prover.inSecondThird(xPlusW2) {
 				zetOne[i] = &ZetOne{
 					j:        2,
 					xPlusWj:  xPlusW2,
@@ -159,6 +176,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		}
 	}
 
+	prover.round += 2
 	return &ProverRound4Output{
 		zetZero: zetZero,
 		zetOne:  zetOne,
@@ -166,6 +184,10 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 }
 
 func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
+	if verifier.round != 5 {
+		return errs.NewInvalidRound("%d != 5", verifier.round)
+	}
+
 	for i := 0; i < verifier.t; i++ {
 		if verifier.state.e.Bit(i) == 0 {
 			z := input.zetZero[i]
@@ -183,16 +205,10 @@ func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
 			if (*c2).Cmp(verifier.state.c2[i]) != 0 {
 				return errs.NewVerificationFailed("failed")
 			}
-			if (z.w1.Cmp(verifier.state.l) >= 0 &&
-				z.w1.Cmp(new(big.Int).Add(verifier.state.l, verifier.state.l)) <= 0 &&
-				z.w2.Cmp(big.NewInt(0)) >= 0 &&
-				z.w2.Cmp(verifier.state.l) <= 0) || (z.w2.Cmp(verifier.state.l) >= 0 &&
-				z.w2.Cmp(new(big.Int).Add(verifier.state.l, verifier.state.l)) <= 0 &&
-				z.w1.Cmp(big.NewInt(0)) >= 0 &&
-				z.w1.Cmp(verifier.state.l) <= 0) {
-				continue
+			if !((verifier.inFirstThird(z.w1) && verifier.inSecondThird(z.w2)) ||
+				(verifier.inFirstThird(z.w2) && verifier.inSecondThird(z.w1))) {
+				return errs.NewVerificationFailed("failed")
 			}
-			return errs.NewVerificationFailed("failed")
 		} else {
 			z := input.zetOne[i]
 			wi := z.xPlusWj
@@ -214,14 +230,37 @@ func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
 				}
 			}
 
-			if (*cCheck).Cmp(c) != 0 {
-				return errs.NewVerificationFailed("failed")
-			}
-			if (*wi).Cmp(verifier.state.l) < 0 || (*wi).Cmp(new(big.Int).Add(verifier.state.l, verifier.state.l)) > 0 {
+			if (*cCheck).Cmp(c) != 0 || !verifier.inSecondThird(wi) {
 				return errs.NewVerificationFailed("failed")
 			}
 		}
 	}
 
+	verifier.round += 2
 	return nil
+}
+
+func (p *Participant) inFirstThird(v *big.Int) bool {
+	if v.Cmp(big.NewInt(0)) >= 0 && v.Cmp(p.l) < 0 {
+		return true
+	}
+
+	return false
+}
+
+func (p *Participant) inSecondThird(v *big.Int) bool {
+	v2 := new(big.Int).Sub(v, p.l)
+	return p.inFirstThird(v2)
+}
+
+func (p *Participant) randomIntInFirstThird() (*big.Int, error) {
+	return crand.Int(p.prng, p.l)
+}
+
+func (p *Participant) randomIntInSecondThird() (*big.Int, error) {
+	v, err := p.randomIntInFirstThird()
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).Add(v, p.l), nil
 }

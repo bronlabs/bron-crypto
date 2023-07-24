@@ -641,6 +641,32 @@ func TestAddErrorConditions(t *testing.T) {
 
 }
 
+func TestSubPlain(t *testing.T) {
+	pk, sk, err := paillier.NewKeys(128)
+	require.NoError(t, err)
+
+	var tests = []struct {
+		x, y, expected int
+	}{
+		{x: 1, y: 1, expected: 0},
+		{x: 75824, y: 8326, expected: 67498},
+		{x: 985739, y: 185635, expected: 800104},
+		{x: 234623, y: 234622, expected: 1},
+		{x: 567295, y: 393645, expected: 173650},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%d - %d = %d", test.x, test.y, test.expected), func(t *testing.T) {
+			encryptedX, _, err := pk.Encrypt(big.NewInt(int64(test.x)))
+			require.NoError(t, err)
+			zEncrypted, err := pk.SubPlain(encryptedX, big.NewInt(int64(test.y)))
+			require.NoError(t, err)
+			z, err := sk.Decrypt(zEncrypted)
+			require.Equal(t, z.Int64(), int64(test.expected))
+		})
+	}
+}
+
 // Tests for paillier addition with known answers
 func TestAdd(t *testing.T) {
 	z9, err := paillier.NewPublicKey(big.NewInt(3))
