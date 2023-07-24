@@ -2,8 +2,10 @@ package merlin
 
 import (
 	"encoding/binary"
+	"hash"
 	"io"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/mimoo/StrobeGo/strobe"
 )
 
@@ -42,6 +44,18 @@ func (t *Transcript) AppendMessage(label, message []byte) {
 	t.s.AD(false, message)
 }
 
+func (t *Transcript) AppendHashedMessage(label, message []byte, h hash.Hash) (err error) {
+	// Hash message
+	if _, err := h.Write(message); err != nil {
+		return errs.WrapFailed(err, "failed to hash message for transcript")
+	}
+	// AdditionalData[label || le32(len(message))]
+	t.s.AD(true, t.appendSizeToLabel(label, len(message)))
+	// Append hash to transcript
+	t.s.AD(false, h.Sum(nil))
+	return nil
+}
+
 // ReseedWithWitness re-keys the transcript with witness data.
 func (t *Transcript) ReseedWithWitness(label, witness []byte) *Transcript {
 	// AdditionalData[label || le32(len(witness))]
@@ -58,7 +72,7 @@ func (t *Transcript) Finalize(rng io.Reader) (*Transcript, error) {
 	// Generate a random key from the supplied rng.
 	var keyBytes [32]byte // 256 bits
 	if _, err := rng.Read(keyBytes[:]); err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "failed to read random bytes for transcript")
 	}
 	// AdditionalData["rng"]
 	t.s.AD(true, []byte("rng"))
