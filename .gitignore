@@ -16,6 +16,7 @@ vendor/
 
 # Editors
 .idea/
+testdata/
 .*.swp
 .*.sw?
 .#*

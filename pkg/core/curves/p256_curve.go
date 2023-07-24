@@ -7,6 +7,7 @@
 package curves
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	"fmt"
 	"io"
@@ -117,9 +118,9 @@ func (s *ScalarP256) Random(prng io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarP256) Hash(bytes []byte) Scalar {
+func (s *ScalarP256) Hash(inputs ...[]byte) Scalar {
 	dst := []byte("P256_XMD:SHA-256_SSWU_RO_")
-	xmd := native.ExpandMsgXmd(native.EllipticPointHasherSha256(), bytes, dst, 48)
+	xmd := native.ExpandMsgXmd(native.EllipticPointHasherSha256(), bytes.Join(inputs, nil), dst, 48)
 	var t [64]byte
 	copy(t[:48], internal.ReverseScalarBytes(xmd))
 
@@ -402,8 +403,8 @@ func (p *PointP256) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointP256) Hash(bytes []byte) Point {
-	value, err := p256n.P256PointNew().Hash(bytes, native.EllipticPointHasherSha256())
+func (p *PointP256) Hash(inputs ...[]byte) Point {
+	value, err := p256n.P256PointNew().Hash(bytes.Join(inputs, nil), native.EllipticPointHasherSha256())
 
 	// TODO: change hash to return an error also
 	if err != nil {

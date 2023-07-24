@@ -8,6 +8,7 @@ require (
 	filippo.io/edwards25519 v1.0.0
 	github.com/btcsuite/btcd v0.22.3
 	github.com/bwesterb/go-ristretto v1.2.3
+	github.com/google/gofuzz v1.2.0
 	github.com/gtank/merlin v0.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
