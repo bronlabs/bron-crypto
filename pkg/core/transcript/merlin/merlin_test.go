@@ -54,7 +54,7 @@ func TestComplexTranscript(t *testing.T) {
 	}
 }
 
-func TestTranscriptPRG(t *testing.T) {
+func TestTranscriptPRNG(t *testing.T) {
 	label := "test protocol"
 	t1 := NewTranscript(label)
 	t2 := NewTranscript(label)
@@ -75,16 +75,16 @@ func TestTranscriptPRG(t *testing.T) {
 
 	// t1, t2 will have same witness data
 	// t3, t4 will have same witness data
-	r1, err := t1.Clone().ReseedWithWitness([]byte("witness"), witness1).Finalize(rand.New(rand.NewSource(0)))
+	r1, err := t1.NewTranscriptPRNG([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r2, err := t2.Clone().ReseedWithWitness([]byte("witness"), witness1).Finalize(rand.New(rand.NewSource(0)))
+	r2, err := t2.NewTranscriptPRNG([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r3, err := t3.Clone().ReseedWithWitness([]byte("witness"), witness2).Finalize(rand.New(rand.NewSource(0)))
+	r3, err := t3.NewTranscriptPRNG([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r4, err := t4.Clone().ReseedWithWitness([]byte("witness"), witness2).Finalize(rand.New(rand.NewSource(0)))
+	r4, err := t4.NewTranscriptPRNG([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 	var (
 		s1 = make([]byte, 32)
