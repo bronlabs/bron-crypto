@@ -3,6 +3,7 @@ package agreeonrandom_test
 import (
 	crand "crypto/rand"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
@@ -81,8 +82,7 @@ func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 			break
 		}
 	}
-	require.Error(t, randomErr)
-	require.Contains(t, randomErr.Error(), "duplicate identity keys")
+	require.True(t, errs.IsDuplicate(randomErr))
 }
 
 func TestDuplicatePubkeys(t *testing.T) {

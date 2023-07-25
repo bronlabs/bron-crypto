@@ -44,26 +44,12 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return randomValue, nil
 }
 
-func hasDuplicate(list []integration.IdentityKey) bool {
-	seen := make(map[integration.IdentityKey]bool)
-	for _, item := range list {
-		if seen[item] {
-			return true
-		}
-		seen[item] = true
-	}
-	return false
-}
-
 func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
 	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
 		identityKeys[i] = identityKey
 		i++
-	}
-	if doesHaveDuplicate := hasDuplicate(identityKeys); doesHaveDuplicate {
-		return nil, errs.NewDuplicate("duplicate identity keys")
 	}
 	identityKeys = integration.SortIdentityKeys(identityKeys)
 	sortedRVector := make([][]byte, len(allIdentityKeysToRi))

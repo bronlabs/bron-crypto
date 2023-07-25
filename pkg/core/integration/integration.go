@@ -51,7 +51,7 @@ type CohortConfig struct {
 	SignatureAggregators []IdentityKey
 	PreSignatureComposer IdentityKey
 
-	participantHashSet map[IdentityKey]bool
+	participantHashSet PresentParticipantSet
 }
 
 func (c *CohortConfig) Validate() error {
@@ -77,13 +77,11 @@ func (c *CohortConfig) Validate() error {
 		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
 	}
 
-	c.participantHashSet = map[IdentityKey]bool{}
-	for _, identityKey := range c.Participants {
-		if c.participantHashSet[identityKey] {
-			return errs.NewDuplicate("found duplicate identity key")
-		}
-		c.participantHashSet[identityKey] = true
+	participantHashSet, err := NewPresentParticipantSet(c.Participants)
+	if err != nil {
+		return err
 	}
+	c.participantHashSet = participantHashSet
 
 	if c.SignatureAggregators == nil || len(c.SignatureAggregators) == 0 {
 		return errs.NewIsNil("need to specify at least one signature aggregator")
@@ -93,8 +91,7 @@ func (c *CohortConfig) Validate() error {
 }
 
 func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
-	c.cacheParticipantHashSet()
-	return c.participantHashSet[identityKey]
+	return c.participantHashSet.Exist(identityKey)
 }
 
 func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
@@ -117,15 +114,6 @@ func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	*c = result
 	return nil
 
-}
-
-func (c *CohortConfig) cacheParticipantHashSet() {
-	if c.participantHashSet == nil || len(c.participantHashSet) == 0 {
-		c.participantHashSet = map[IdentityKey]bool{}
-		for _, identityKey := range c.Participants {
-			c.participantHashSet[identityKey] = true
-		}
-	}
 }
 
 func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
