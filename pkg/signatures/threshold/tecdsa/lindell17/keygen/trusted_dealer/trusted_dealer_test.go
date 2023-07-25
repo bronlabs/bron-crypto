@@ -4,33 +4,14 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/stretchr/testify/require"
-	"hash"
 	"testing"
 )
-
-type testIdentityKey struct {
-	curve  *curves.Curve
-	signer *schnorr.Signer
-	h      func() hash.Hash
-}
-
-func (k *testIdentityKey) PublicKey() curves.Point {
-	return k.signer.PublicKey.Y
-}
-func (k *testIdentityKey) Sign(message []byte) []byte {
-	return nil
-}
-func (k *testIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errs.NewVerificationFailed("not implemented")
-}
 
 func Test_HappyPath(t *testing.T) {
 	if testing.Short() {
@@ -113,7 +94,7 @@ func Test_HappyPath(t *testing.T) {
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for _, theirShard := range shards {
 				if myShard != theirShard {
-					theirEncryptedShare := theirShard.PaillierEncryptedShare[myIdentityKey]
+					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 					require.NoError(t, err)
 					require.Zero(t, theirDecryptedShare.Cmp(myShare))

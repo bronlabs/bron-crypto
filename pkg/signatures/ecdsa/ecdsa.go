@@ -5,6 +5,8 @@ import (
 	"crypto/elliptic"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
+	"hash"
 	"math/big"
 )
 
@@ -89,20 +91,25 @@ func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 	return &RecoveryId{V: recoveryId}, nil
 }
 
-func (signatureExt *SignatureExt) VerifyHash(publicKey *PublicKey, messageHash []byte) bool {
-	if ok := signatureExt.VerifyHashWithPublicKey(publicKey, messageHash); !ok {
+func (signatureExt *SignatureExt) VerifyMessage(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
+	if ok := signatureExt.VerifyMessageWithPublicKey(publicKey, hashFunc, message); !ok {
 		return false
 	}
 
-	if ok := signatureExt.VerifyHashWithRecoveryId(&signatureExt.RecoveryId, messageHash); !ok {
+	if ok := signatureExt.VerifyMessageWithRecoveryId(&signatureExt.RecoveryId, hashFunc, message); !ok {
 		return false
 	}
 
 	return true
 }
 
-func (signature *Signature) VerifyHashWithPublicKey(publicKey *PublicKey, messageHash []byte) bool {
+func (signature *Signature) VerifyMessageWithPublicKey(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
 	nativePublicKey, err := publicKey.ToNative()
+	if err != nil {
+		return false
+	}
+
+	messageHash, err := hashing.Hash(hashFunc, message)
 	if err != nil {
 		return false
 	}
@@ -111,17 +118,17 @@ func (signature *Signature) VerifyHashWithPublicKey(publicKey *PublicKey, messag
 	return nativeEcdsa.Verify(nativePublicKey, messageHash, nativeR, nativeS)
 }
 
-func (signature *Signature) VerifyHashWithRecoveryId(recoveryId *RecoveryId, messageHash []byte) bool {
-	recoveredPublicKey, err := signature.RecoverPublicKey(recoveryId, messageHash)
+func (signature *Signature) VerifyMessageWithRecoveryId(recoveryId *RecoveryId, hashFunc func() hash.Hash, message []byte) bool {
+	recoveredPublicKey, err := signature.RecoverPublicKey(recoveryId, hashFunc, message)
 	if err != nil {
 		return false
 	}
 
-	return signature.VerifyHashWithPublicKey(recoveredPublicKey, messageHash)
+	return signature.VerifyMessageWithPublicKey(recoveredPublicKey, hashFunc, message)
 }
 
 // RecoverPublicKey recovers PublicKey (point on the curve) based od messageHash, public key and recovery id.
-func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, messageHash []byte) (*PublicKey, error) {
+func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc func() hash.Hash, message []byte) (*PublicKey, error) {
 	if recoveryId == nil {
 		return nil, errs.NewIsNil("no recovery id")
 	}
@@ -159,6 +166,10 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, messageHash
 
 	// Calculate point Q (public key)
 	//  Q = r^(-1)(sR - zG)
+	messageHash, err := hashing.Hash(hashFunc, message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot hash message")
+	}
 	zInt, err := hashToInt(messageHash, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get int from hash")

@@ -1,8 +1,6 @@
 package test_utils
 
 import (
-	"testing"
-
 	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -10,10 +8,13 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/sample"
 )
 
-func MakeSampleParticipants(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) (participants []*sample.Participant, err error) {
+func MakeSampleParticipants(curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
-	uniqueSessionId := agreeonrandom_test_utils.ProduceSharedRandomValue(t, curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	if err != nil {
+		return nil, err
+	}
 	for i, identity := range identities {
 		participants[i], err = sample.NewParticipant(curve, uniqueSessionId, identity, seeds[i], identities)
 		if err != nil {

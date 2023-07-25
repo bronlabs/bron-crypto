@@ -35,11 +35,7 @@ func ProducePartialSignature(
 	R_js := map[integration.IdentityKey]curves.Point{}
 	for _, participant := range sessionParticipants {
 		shamirId := identityKeyToShamirId[participant]
-		r_jHashComponents := []byte{byte(shamirId)}
-		r_jHashComponents = append(r_jHashComponents, message...)
-		r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
-
-		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
+		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(shamirId)}, message, combinedDsAndEs)
 		if shamirId == myShamirId {
 			r_i = r_j
 		}

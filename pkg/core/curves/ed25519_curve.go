@@ -44,8 +44,8 @@ func (s *ScalarEd25519) Random(prng io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarEd25519) Hash(bytes []byte) Scalar {
-	v := new(ristretto.Scalar).Derive(bytes)
+func (s *ScalarEd25519) Hash(inputs ...[]byte) Scalar {
+	v := new(ristretto.Scalar).Derive(bytes.Join(inputs, nil))
 	var data [32]byte
 	v.BytesInto(&data)
 	value, err := edwards25519.NewScalar().SetCanonicalBytes(data[:])
@@ -400,11 +400,11 @@ func (p *PointEd25519) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointEd25519) Hash(bytes []byte) Point {
+func (p *PointEd25519) Hash(inputs ...[]byte) Point {
 	/// Perform hashing to the group using the Elligator2 map
 	///
 	/// See https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#section-6.7.1
-	h := sha512.Sum512(bytes)
+	h := sha512.Sum512(bytes.Join(inputs, nil))
 	var res [32]byte
 	copy(res[:], h[:32])
 	signBit := (res[31] & 0x80) >> 7

@@ -1,37 +1,50 @@
 package test_utils
 
 import (
-	"testing"
-
 	crand "crypto/rand"
-
+	"fmt"
 	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/stretchr/testify/require"
 )
 
-func ProduceSharedRandomValue(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) []byte {
-	t.Helper()
+func ProduceSharedRandomValue(curve *curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
-		participant, _ := agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
+		participant, err := agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
+		if err != nil {
+			return nil, err
+		}
 		participants = append(participants, participant)
 	}
 
 	r1Out, err := DoRound1(participants)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	r2In := MapRound1OutputsToRound2Inputs(participants, r1Out)
 	agreeOnRandoms, err := DoRound2(participants, r2In)
-	require.NoError(t, err)
-	require.Len(t, agreeOnRandoms, len(identities))
-
-	// check all values in agreeOnRandoms the same
-	for i := 1; i < len(agreeOnRandoms); i++ {
-		require.Equal(t, agreeOnRandoms[0], agreeOnRandoms[i])
+	if err != nil {
+		return nil, err
+	}
+	if len(agreeOnRandoms) != len(identities) {
+		return nil, fmt.Errorf("expected %d agreeOnRandoms, got %d", len(identities), len(agreeOnRandoms))
 	}
 
-	return agreeOnRandoms[0]
+	// check all values in agreeOnRandoms the same
+	for j := 1; j < len(agreeOnRandoms); j++ {
+		if len(agreeOnRandoms[0]) != len(agreeOnRandoms[j]) {
+			return nil, fmt.Errorf("slices are not equal")
+		}
+
+		for i := range agreeOnRandoms[0] {
+			if agreeOnRandoms[0][i] != agreeOnRandoms[j][i] {
+				return nil, fmt.Errorf("slices are not equal")
+			}
+		}
+	}
+
+	return agreeOnRandoms[0], nil
 }
 
 func DoRound1(participants []*agreeonrandom.Participant) (round1Outputs []*agreeonrandom.Round1Broadcast, err error) {

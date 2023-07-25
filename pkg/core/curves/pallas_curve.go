@@ -7,6 +7,7 @@
 package curves
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	crand "crypto/rand"
 	"crypto/subtle"
@@ -226,9 +227,9 @@ func (s *ScalarPallas) Random(reader io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarPallas) Hash(bytes []byte) Scalar {
+func (s *ScalarPallas) Hash(inputs ...[]byte) Scalar {
 	h, _ := blake2b.New(64, []byte{})
-	xmd, err := expandMsgXmd(h, bytes, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
+	xmd, err := expandMsgXmd(h, bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	if err != nil {
 		return nil
 	}
@@ -513,8 +514,8 @@ func (p *PointPallas) Random(reader io.Reader) Point {
 	return &PointPallas{new(Ep).Random(reader)}
 }
 
-func (p *PointPallas) Hash(bytes []byte) Point {
-	return &PointPallas{new(Ep).Hash(bytes)}
+func (p *PointPallas) Hash(inputs ...[]byte) Point {
+	return &PointPallas{new(Ep).Hash(bytes.Join(inputs, nil))}
 }
 
 func (p *PointPallas) Identity() Point {

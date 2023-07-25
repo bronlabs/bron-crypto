@@ -109,11 +109,8 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 
 		for _, jIdentityKey := range sa.SessionParticipants {
 			j := sa.IdentityKeyToShamirId[jIdentityKey]
-			r_jHashComponents := []byte{byte(j)}
-			r_jHashComponents = append(r_jHashComponents, sa.Message...)
-			r_jHashComponents = append(r_jHashComponents, combinedDsAndEs...)
 
-			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash(r_jHashComponents)
+			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
 			D_j, exists := sa.parameters.D_alpha[jIdentityKey]
 			if !exists {
 				return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", j)
