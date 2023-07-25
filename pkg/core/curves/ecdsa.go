@@ -26,7 +26,7 @@ type EcdsaSignature struct {
 // Static type assertion
 var _ EcdsaVerify = VerifyEcdsa
 
-// Verifies ECDSA signature using core types.
+// VerifyEcdsa Verifies ECDSA signature using core types.
 func VerifyEcdsa(pk *EcPoint, hash []byte, sig *EcdsaSignature) bool {
 	return ecdsa.Verify(
 		&ecdsa.PublicKey{

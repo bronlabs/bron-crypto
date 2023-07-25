@@ -258,10 +258,18 @@ func (publicKey *PublicKey) Mul(factor *big.Int, cipherText CipherText) (CipherT
 
 // Encrypt produces a ciphertext on input message.
 func (publicKey *PublicKey) Encrypt(message *big.Int) (CipherText, *big.Int, error) {
-	// generate a nonce: r \in Z**_N
-	r, err := core.Rand(publicKey.N)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot generate nonce")
+	// generate a nonce: r \in Z**_N that r and N are coprime
+	var r *big.Int
+	for {
+		rand, err := core.Rand(publicKey.N)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot generate nonce")
+		}
+		if new(big.Int).GCD(nil, nil, rand, publicKey.N).Cmp(core.One) != 0 {
+			continue
+		}
+		r = rand
+		break
 	}
 
 	// Generate and return the ciphertext

@@ -67,7 +67,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 		myPaillierPrivateKey := myShard.PaillierSecretKey
 		for _, theirShard := range shards {
 			if myShard != theirShard {
-				theirEncryptedShare := theirShard.PaillierEncryptedShare[myIdentityKey]
+				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 				theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 				if err != nil {
 					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
@@ -135,8 +135,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 				Share:     share,
 				PublicKey: publicKey,
 			},
-			PaillierPublicKeys:     make(map[integration.IdentityKey]*paillier.PublicKey),
-			PaillierEncryptedShare: make(map[integration.IdentityKey]paillier.CipherText),
+			PaillierPublicKeys:      make(map[integration.IdentityKey]*paillier.PublicKey),
+			PaillierEncryptedShares: make(map[integration.IdentityKey]paillier.CipherText),
 		}
 	}
 
@@ -150,7 +150,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		for _, otherIdentityKey := range shamirIdsToIdentityKeys {
 			if identityKey != otherIdentityKey {
 				shards[otherIdentityKey].PaillierPublicKeys[identityKey] = paillierPublicKey
-				shards[otherIdentityKey].PaillierEncryptedShare[identityKey], _, err = paillierPublicKey.Encrypt(shards[identityKey].SigningKeyShare.Share.BigInt())
+				shards[otherIdentityKey].PaillierEncryptedShares[identityKey], _, err = paillierPublicKey.Encrypt(shards[identityKey].SigningKeyShare.Share.BigInt())
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot encrypt share with paillier")
 				}
