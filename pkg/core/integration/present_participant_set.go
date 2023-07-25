@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"encoding/hex"
+	"encoding/base64"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 )
 
@@ -15,7 +15,7 @@ func NewPresentParticipantSet(participants []IdentityKey) (PresentParticipantSet
 		if participant == nil {
 			return PresentParticipantSet{}, errs.NewIsNil("participant %d is nil", i)
 		}
-		pubkeyHex := hex.EncodeToString(participant.PublicKey().ToAffineCompressed())
+		pubkeyHex := getKey(participant)
 		if _, exists := participantMap[pubkeyHex]; exists {
 			return PresentParticipantSet{}, errs.NewDuplicate("participant %d is duplicate", i)
 		}
@@ -30,9 +30,12 @@ func NewPresentParticipantSet(participants []IdentityKey) (PresentParticipantSet
 }
 
 func (p *PresentParticipantSet) Exist(identityKey IdentityKey) bool {
-	pubkeyHex := hex.EncodeToString(identityKey.PublicKey().ToAffineCompressed())
-	_, exists := p.participants[pubkeyHex]
+	_, exists := p.participants[getKey(identityKey)]
 	return exists
+}
+
+func getKey(identityKey IdentityKey) string {
+	return base64.StdEncoding.EncodeToString(identityKey.PublicKey().ToAffineCompressed())
 }
 
 func (p *PresentParticipantSet) Size() int {

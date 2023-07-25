@@ -34,6 +34,7 @@ func TestCheckExistIdentity(t *testing.T) {
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
 	set, err := integration.NewPresentParticipantSet([]integration.IdentityKey{identityAlice})
 	assert.NoError(t, err)
+	assert.True(t, set.Size() == 1)
 	assert.True(t, set.Exist(identityAlice))
 	assert.False(t, set.Exist(identityBob))
 }
