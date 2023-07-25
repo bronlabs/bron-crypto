@@ -18,7 +18,7 @@ var _ lindell17.Participant = (*Participant)(nil)
 
 type ParticipantState struct {
 	myXPrime         curves.Scalar
-	myxBis           curves.Scalar
+	myXBis           curves.Scalar
 	myBigQPrimeProof *dlog.Proof
 	myBigQBisProof   *dlog.Proof
 	myBigQWitness    commitments.Witness
@@ -28,8 +28,8 @@ type ParticipantState struct {
 	myRBis           *big.Int
 
 	theirBigQCommitment map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime      curves.Point
-	theirBigQBis        curves.Point
+	theirBigQPrime      map[integration.IdentityKey]curves.Point
+	theirBigQBis        map[integration.IdentityKey]curves.Point
 }
 
 type Participant struct {
@@ -44,6 +44,18 @@ type Participant struct {
 	prng              io.Reader
 
 	state *ParticipantState
+}
+
+func (participant *Participant) GetIdentityKey() integration.IdentityKey {
+	return participant.myIdentityKey
+}
+
+func (participant *Participant) GetShamirId() int {
+	return participant.myShamirId
+}
+
+func (participant *Participant) GetCohortConfig() *integration.CohortConfig {
+	return participant.cohortConfig
 }
 
 func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript *merlin.Transcript) (participant *Participant, err error) {

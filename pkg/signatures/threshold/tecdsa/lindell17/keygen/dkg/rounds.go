@@ -1,7 +1,6 @@
 package dkg
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
@@ -11,8 +10,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"io"
-	"math/big"
 )
 
 const (
@@ -40,7 +37,7 @@ type Round3Broadcast struct {
 }
 
 func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
-	xPrime, xBis, _, err := split(participant.mySigningKeyShare.Share, participant.prng)
+	xPrime, xBis, _, err := lindell17.Split(participant.mySigningKeyShare.Share, participant.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
@@ -78,9 +75,20 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q' and Q''")
 	}
+
+	participant.state.myXPrime = xPrime
+	participant.state.myXBis = xBis
 	participant.state.myBigQPrimeProof = bigQPrimeProof
 	participant.state.myBigQBisProof = bigQBisProof
 	participant.state.myBigQWitness = bigQWitness
+
+	// some paranoid checks
+	if xPrime.Add(xPrime).Add(xPrime).Add(xBis).Cmp(participant.mySigningKeyShare.Share) != 0 {
+		return nil, errs.NewFailed("Something went really wrong")
+	}
+	if !bigQPrimeProof.Statement.Add(bigQPrimeProof.Statement).Add(bigQPrimeProof.Statement).Add(bigQBisProof.Statement).Equal(participant.publicKeyShares.SharesMap[participant.myIdentityKey]) {
+		return nil, errs.NewFailed("Something went really wrong")
+	}
 
 	return &Round1Broadcast{
 		BigQCommitment: bigQCommitment,
@@ -107,6 +115,9 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 }
 
 func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast) (output *Round3Broadcast, err error) {
+	participant.state.theirBigQPrime = make(map[integration.IdentityKey]curves.Point)
+	participant.state.theirBigQBis = make(map[integration.IdentityKey]curves.Point)
+
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
@@ -139,13 +150,13 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 
 		theirBigQPrime := input[identity].BigQPrimeProof.Statement
 		theirBigQBis := input[identity].BigQBisProof.Statement
-		theirBigQ := theirBigQPrime.Add(theirBigQPrime).Add(theirBigQPrime).Sub(theirBigQBis)
+		theirBigQ := theirBigQPrime.Add(theirBigQPrime).Add(theirBigQPrime).Add(theirBigQBis)
 		if !theirBigQ.Equal(participant.publicKeyShares.SharesMap[identity]) {
 			return nil, errs.NewVerificationFailed("public key share don't match")
 		}
 
-		participant.state.theirBigQPrime = theirBigQPrime
-		participant.state.theirBigQBis = theirBigQBis
+		participant.state.theirBigQPrime[identity] = theirBigQPrime
+		participant.state.theirBigQBis[identity] = theirBigQBis
 	}
 
 	participant.state.myPaillierPk, participant.state.myPaillierSk, err = paillier.NewKeys(paillierBitSize)
@@ -157,7 +168,7 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
 	}
-	cKeyBis, rBis, err := participant.state.myPaillierPk.Encrypt(participant.state.myxBis.BigInt())
+	cKeyBis, rBis, err := participant.state.myPaillierPk.Encrypt(participant.state.myXBis.BigInt())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x''")
 	}
@@ -172,7 +183,7 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 }
 
 func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast) (shard *lindell17.Shard, err error) {
-	// TODO: add zk-proof (3 additional rounds)
+	// TODO: add zk-proof when merged (+3 additional rounds)
 
 	paillierPublicKeys := make(map[integration.IdentityKey]*paillier.PublicKey)
 	paillierEncryptedShares := make(map[integration.IdentityKey]paillier.CipherText)
@@ -210,63 +221,4 @@ func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3
 		PaillierPublicKeys:      paillierPublicKeys,
 		PaillierEncryptedShares: paillierEncryptedShares,
 	}, nil
-}
-
-func split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis curves.Scalar, i int, err error) {
-	curve, err := curves.GetCurveByName(scalar.Point().CurveName())
-	if err != nil {
-		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.Point().CurveName())
-	}
-	order, err := getCurveSubgroupOrder(curve)
-	if err != nil {
-		return nil, nil, 0, errs.WrapFailed(err, "cannot get curve order")
-	}
-
-	i = 0
-	l := new(big.Int).Div(order, big.NewInt(3))
-	for {
-		r, err := crand.Int(prng, l)
-		if err != nil {
-			return nil, nil, 0, errs.WrapFailed(err, "cannot generate random")
-		}
-		xPrimeInt := new(big.Int).Add(l, r)
-		xPrime, err = curve.NewScalar().SetBigInt(xPrimeInt)
-		if err != nil {
-			return nil, nil, 0, errs.WrapFailed(err, "cannot set scalar")
-		}
-		xBis = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-
-		if isInSecondThird(xPrime) && isInSecondThird(xBis) {
-			break
-		}
-		// failsafe
-		i++
-		if i > 974 {
-			// probability of this happening is (5/6)^(974) =~ (1/2)^(256)
-			return nil, nil, 0, errs.NewFailed("cannot find x' and x''")
-		}
-	}
-
-	return xPrime, xBis, i, nil
-}
-
-func isInSecondThird(scalar curves.Scalar) bool {
-	curve, err := curves.GetCurveByName(scalar.Point().CurveName())
-	if err != nil {
-		return false
-	}
-	order, err := getCurveSubgroupOrder(curve)
-	if err != nil {
-		return false
-	}
-	l := new(big.Int).Div(order, big.NewInt(3))
-	return scalar.BigInt().Cmp(l) >= 0 && scalar.BigInt().Cmp(new(big.Int).Add(l, l)) < 0
-}
-
-func getCurveSubgroupOrder(curve *curves.Curve) (order *big.Int, err error) {
-	elCurve, err := curve.ToEllipticCurve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name)
-	}
-	return elCurve.Params().N, nil
 }
