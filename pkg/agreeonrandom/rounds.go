@@ -1,7 +1,6 @@
 package agreeonrandom
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -46,13 +45,12 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 }
 
 func hasDuplicate(list []integration.IdentityKey) bool {
-	seen := make(map[string]bool)
+	seen := make(map[integration.IdentityKey]bool)
 	for _, item := range list {
-		key := hex.EncodeToString(item.PublicKey().ToAffineCompressed())
-		if seen[key] {
+		if seen[item] {
 			return true
 		}
-		seen[key] = true
+		seen[item] = true
 	}
 	return false
 }
