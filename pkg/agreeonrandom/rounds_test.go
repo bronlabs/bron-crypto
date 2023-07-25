@@ -9,7 +9,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	integration_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
@@ -46,7 +45,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
@@ -63,13 +62,10 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 	return random
 }
 
-func TestDuplicatePubkeys(t *testing.T) {
-	t.Helper()
-
+func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 	var randomErr error
 	// eventually duplicate pubkey will cause failed to generate unique random
 	for i := 0; i < 10; i++ {
-		curve := curves.ED25519()
 		cipherSuite := &integration.CipherSuite{
 			Curve: curve,
 			Hash:  sha3.New256,
@@ -89,13 +85,24 @@ func TestDuplicatePubkeys(t *testing.T) {
 	require.Contains(t, randomErr.Error(), "duplicate identity keys")
 }
 
+func TestDuplicatePubkeys(t *testing.T) {
+	t.Helper()
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", curve.Name), func(t *testing.T) {
+			t.Parallel()
+			testDuplicatePubKeys(t, curve)
+		})
+
+	}
+}
+
 func testWithMockR1Output(t *testing.T, curve *curves.Curve, n int) []byte {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {

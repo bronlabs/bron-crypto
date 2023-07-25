@@ -3,6 +3,7 @@ package agreeonrandom
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -63,8 +64,7 @@ func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey
 		identityKeys[i] = identityKey
 		i++
 	}
-	hasDup := hasDuplicate(identityKeys)
-	if hasDup {
+	if doesHaveDuplicate := hasDuplicate(identityKeys); doesHaveDuplicate {
 		return nil, errs.NewDuplicate("duplicate identity keys")
 	}
 	identityKeys = integration.SortIdentityKeys(identityKeys)
