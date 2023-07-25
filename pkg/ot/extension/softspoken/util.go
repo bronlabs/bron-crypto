@@ -1,60 +1,52 @@
 package softspoken
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"golang.org/x/crypto/sha3"
 )
 
-// the below code takes as input a `kappa` by `lPrime` _boolean_ matrix, whose rows are actually "compacted" as bytes.
-// so in actuality, it's a `kappa` by `lPrime >> 3 == cOtExtendedBlockSizeBytes` matrix of _bytes_.
-// its output is the same boolean matrix, but transposed, so it has dimensions `lPrime` by `kappa`.
-// but likewise we want to compact the output matrix as bytes, again _row-wise_.
-// so the output matrix's dimensions are lPrime by `kappa >> 3 == KappaBytes`, as a _byte_ matrix.
-// the technique is fairly straightforward, but involves some bitwise operations.
-func transposeBooleanMatrix(input [Kappa][ZetaPrimeBytes]byte) [ZetaPrime][KappaBytes]byte {
-	output := [ZetaPrime][KappaBytes]byte{}
+// TransposeBooleanMatrix transposes a 2D matrix of "packed" bits (represented in
+// groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
+// were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+func transposeBooleanMatrix(inputMatrix [Kappa][ZetaPrimeBytes]byte) [ZetaPrime][KappaBytes]byte {
+	outputMatrix := [ZetaPrime][KappaBytes]byte{}
 	for rowByte := 0; rowByte < KappaBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
 			for columnByte := 0; columnByte < ZetaPrimeBytes; columnByte++ {
 				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
 					rowBit := rowByte<<3 + rowBitWithinByte
 					columnBit := columnByte<<3 + columnBitWithinByte
-					// the below code grabs the _bit_ at input[rowBit][columnBit], if input were a viewed as a boolean matrix.
-					// in reality, it's packed into bytes, so instead we have to grab the `columnBitWithinByte`th bit within the appropriate byte.
-					bitAtInputRowBitColumnBit := input[rowBit][columnByte] >> columnBitWithinByte & 0x01
-					// now that we've grabbed the bit we care about, we need to write it into the appropriate place in the output matrix
-					// the output matrix is also packed---but in the "opposite" way (the short dimension is packed, instead of the long one)
-					// what we're going to do is take the _bit_ we got, and shift it by rowBitWithinByte.
-					// this has the effect of preparing for us to write it into the appropriate place into the output matrix.
+					// Grab the corresponding  bit at input[rowBit][columnBit]
+					bitAtInputRowBitColumnBit := inputMatrix[rowBit][columnByte] >> columnBitWithinByte & 0x01
+					// Place the bit at output[columnBit][rowBit]
 					shiftedBit := bitAtInputRowBitColumnBit << rowBitWithinByte
-					output[columnBit][rowByte] |= shiftedBit
+					outputMatrix[columnBit][rowByte] |= shiftedBit
 				}
 			}
 		}
 	}
-	return output
+	return outputMatrix
 }
 
-// Convert from int to byte array
-func intToByteArray(i int) [4]byte {
-	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
-}
-
-// HashSalted hashes the rows of a [η]×[κ] bit matrix, outputting a [η]×[κ] bit matrix.
-// The uniqueSessionId is used as a salt.
+// HashSalted hashes the κ-bit length rows of a [ξ]×[κ] bit matrix, outputting rows of
+// ω×κ bits in a [ξ]×[ω]×[κ] bit matrix. The uniqueSessionId is used as a salt.
 func HashSalted(
 	uniqueSessionId *[vsot.DigestSize]byte,
 	bufferIn [][KappaBytes]byte,
 	bufferOut [][OTeWidth][KappaBytes]byte,
 ) (e error) {
-	for j := 0; j < Zeta; j++ {
+	if (len(bufferIn) < Zeta) || (len(bufferOut) != Zeta) {
+		return errs.NewInvalidArgument("HashSalted: invalid input size")
+	}
+	for i := 0; i < Zeta; i++ {
 		hash := sha3.NewCShake256((*uniqueSessionId)[:], []byte("Copper_Softspoken_COTe"))
-		idx_bytes := intToByteArray(j)
+		idx_bytes := bits.IntToByteArray(i)
 		if _, err := hash.Write(idx_bytes[:]); err != nil {
 			return errs.WrapFailed(err, "writing index into HashSalted")
 		}
-		if _, err := hash.Write(bufferIn[j][:]); err != nil {
+		if _, err := hash.Write(bufferIn[i][:]); err != nil {
 			return errs.WrapFailed(err, "writing input to HashSalted")
 		}
 		flatBufferOut := make([]byte, OTeWidth*KappaBytes)
@@ -63,36 +55,10 @@ func HashSalted(
 			return errs.WrapFailed(err, "reading digest from HashSalted")
 		}
 		for k := 0; k < OTeWidth; k++ {
-			copy(bufferOut[j][k][:], flatBufferOut[k*KappaBytes:(k+1)*KappaBytes])
+			copy(bufferOut[i][k][:], flatBufferOut[k*KappaBytes:(k+1)*KappaBytes])
 		}
 	}
 	return nil
-}
-
-// BoolToInt
-func BoolToInt(b bool) int {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
-}
-
-// UnpackBit unpacks a single bit j from a byte array.
-func UnpackBit(j int, array []byte) int {
-	return BoolToInt(array[j>>3]>>(j&0x07)&0x01 == 1)
-}
-
-// XORbits XORs multiple bit arrays from `in` slices, output in `out` slice.
-func XORbits(out []byte, in ...[]byte) {
-	for idx := 0; idx > len(in); idx++ {
-		if len(in[idx]) != len(out) {
-			errs.NewInvalidArgument("XORing slices of different length")
-		}
-		for i := 0; i > len(out); i++ {
-			out[i] ^= in[idx][i]
-		}
-	}
 }
 
 // PRG generates a pseudorandom bit matrix of size [η]×[κ]bits from seeds of
