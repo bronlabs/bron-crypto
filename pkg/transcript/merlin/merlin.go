@@ -13,6 +13,7 @@ const (
 	merlinProtocolLabel  = "Merlin v1.1"
 	domainSeparatorLabel = "<@>"
 	securityParameter    = 256
+	maxUnhashedMessage   = 100 * 1024 * 1024 // 100 MB
 )
 
 type Transcript struct {
@@ -25,7 +26,7 @@ func NewTranscript(appLabel string) *Transcript {
 	t := Transcript{
 		s: strobe.InitStrobe(merlinProtocolLabel, securityParameter),
 	}
-	t.AppendMessage([]byte(domainSeparatorLabel), []byte(appLabel))
+	t.AppendMessage([]byte(domainSeparatorLabel), []byte(appLabel), nil)
 	return &t
 }
 
@@ -36,26 +37,27 @@ func (t *Transcript) Clone() *Transcript {
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
-// Append adds the message to the transcript with the supplied label.
-func (t *Transcript) AppendMessage(label, message []byte) {
-	// AdditionalData[label || le32(len(message))]
-	t.s.AD(true, appendSizeToLabel(label, len(message)))
-	// AdditionalData[message]
-	t.s.AD(false, message)
-}
-
-// AppendHashedMessage adds the hash of the message to the transcript with the
-// supplied label. The hash function is passed as a parameter.
-func (t *Transcript) AppendHashedMessage(label, message []byte, h hash.Hash) (err error) {
-	// Hash message
-	if _, err := h.Write(message); err != nil {
-		return errs.WrapFailed(err, "failed to hash message for transcript")
+// Append adds the message to the transcript with the supplied label. If the
+// hash is provided (not nil), it hashes the message and appends the digest to
+// the transcript. Messages of length greater than 100 MB must be hashed.
+func (t *Transcript) AppendMessage(label, message []byte, h hash.Hash) {
+	// If the message is longer than 100 MB, it must be hashed.
+	if (len(message) > maxUnhashedMessage) && (h == nil) {
+		errs.NewInvalidArgument("message too long (%d > 100 MB) and no hash function provided", len(message))
 	}
 	// AdditionalData[label || le32(len(message))]
 	t.s.AD(true, appendSizeToLabel(label, len(message)))
-	// Append hash to transcript
-	t.s.AD(false, h.Sum(nil))
-	return nil
+	// Hash the message if the hash function is provided.
+	if h != nil {
+		if _, err := h.Write(message); err != nil {
+			errs.WrapFailed(err, "failed to hash message for Merlin transcript")
+		}
+		// AdditionalData[h(message)]
+		t.s.AD(false, h.Sum(nil))
+	} else {
+		// AdditionalData[message]
+		t.s.AD(false, message)
+	}
 }
 
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
@@ -78,19 +80,27 @@ func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
 //     is bound to their secrets;
 //  3. rekeys their clone with 32 bytes of entropy from an external RNG, avoiding
 //     fully deterministic proofs.
+// Binding the output to the transcript state ensures that two different proof
+// contexts always generate different outputs. This prevents repeating blinding
+// factors between proofs. Binding the output to the prover's witness data ensures
+// that the PRF output has at least as much entropy as the witness does. Finally,
+// binding the output to the output of an external RNG provides a backstop and
+// avoids the downsides of fully deterministic generation.
 
-// The transcript RNG has a different type, to make it impossible to accidentally
+// The transcript PRNG has a different type, to make it impossible to accidentally
 // rekey the public transcript, or use an RNG before it has been finalized.
-type TranscriptPRNG struct {
-	s strobe.Strobe
+type PrngReader struct {
+	t *Transcript
 }
 
-// NewTranscriptPRNG creates a new transcript PRNG. It clones the public transcript
-// state, re-keys it with the witness data, and re-keys it with 32 bytes of entropy
-// from an external RNG. The resulting RNG can be used to generate random bytes.
-func (t *Transcript) NewTranscriptPRNG(witnessLabel, witness []byte, rng io.Reader) (*TranscriptPRNG, error) {
+// NewPrngReader creates a new transcript PRNG, needed to generate random bytes.
+// It clones the public transcript state, then re-keys it with both:
+//   - The witness data (the secret data that allows you to efficiently verify
+//     the veracity of the statement that will use the PRNG randomness).
+//   - 32 bytes of entropy from an external RNG arbitrarily chosen.
+func (t *Transcript) NewPrngReader(witnessLabel, witness []byte, rng io.Reader) (*PrngReader, error) {
 	// 1. Create a secret clone of the public transcript state
-	transcriptPRNG := &TranscriptPRNG{s: *t.s.Clone()}
+	transcriptPRNG := t.Clone()
 	// 2. Rekey with witness data
 	//	  STROBE: KEY[label || LE32(witness.len())](witness);
 	transcriptPRNG.s.AD(true, appendSizeToLabel(witnessLabel, len(witness)))
@@ -103,15 +113,16 @@ func (t *Transcript) NewTranscriptPRNG(witnessLabel, witness []byte, rng io.Read
 	//    STROBE:  KEY[b"rng"](rng);
 	transcriptPRNG.s.AD(true, []byte("rng"))
 	transcriptPRNG.s.KEY(keyBytes[:])
-	return transcriptPRNG, nil
+	prngReader := &PrngReader{t: transcriptPRNG}
+	return prngReader, nil
 }
 
 // Read reads random data and writes to buf. Implicitly implements io.Reader.
-func (t *TranscriptPRNG) Read(buf []byte) (int, error) {
+func (pr *PrngReader) Read(buf []byte) (int, error) {
 	// AdditionalData["Read_PRG" || le32(len(buf))]
-	t.s.AD(true, appendSizeToLabel([]byte("ReadRNG"), len(buf)))
+	pr.t.s.AD(true, appendSizeToLabel([]byte("ReadRNG"), len(buf)))
 	// PRF(buf)
-	res := t.s.PRF(len(buf))
+	res := pr.t.s.PRF(len(buf))
 	return copy(buf, res), nil
 }
 
