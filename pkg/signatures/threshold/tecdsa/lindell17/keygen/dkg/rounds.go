@@ -37,6 +37,10 @@ type Round3Broadcast struct {
 }
 
 func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
+	if participant.round != 1 {
+		return nil, errs.NewInvalidRound("%d != 1", participant.round)
+	}
+
 	xPrime, xBis, _, err := lindell17.Split(participant.mySigningKeyShare.Share, participant.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
@@ -90,12 +94,17 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 		return nil, errs.NewFailed("Something went really wrong")
 	}
 
+	participant.round++
 	return &Round1Broadcast{
 		BigQCommitment: bigQCommitment,
 	}, nil
 }
 
 func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast) (output *Round2Broadcast, err error) {
+	if participant.round != 2 {
+		return nil, errs.NewInvalidRound("%d != 2", participant.round)
+	}
+
 	participant.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
@@ -107,6 +116,7 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 		participant.state.theirBigQCommitment[identity] = input[identity].BigQCommitment
 	}
 
+	participant.round++
 	return &Round2Broadcast{
 		BigQWitness:    participant.state.myBigQWitness,
 		BigQPrimeProof: participant.state.myBigQPrimeProof,
@@ -115,6 +125,10 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 }
 
 func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast) (output *Round3Broadcast, err error) {
+	if participant.round != 3 {
+		return nil, errs.NewInvalidRound("%d != 3", participant.round)
+	}
+
 	participant.state.theirBigQPrime = make(map[integration.IdentityKey]curves.Point)
 	participant.state.theirBigQBis = make(map[integration.IdentityKey]curves.Point)
 
@@ -175,6 +189,7 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 	participant.state.myRPrime = rPrime
 	participant.state.myRBis = rBis
 
+	participant.round++
 	return &Round3Broadcast{
 		CKeyPrime:         cKeyPrime,
 		CKeyBis:           cKeyBis,
@@ -183,6 +198,10 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 }
 
 func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast) (shard *lindell17.Shard, err error) {
+	if participant.round != 4 {
+		return nil, errs.NewInvalidRound("%d != 4", participant.round)
+	}
+
 	// TODO: add zk-proof when merged (+3 additional rounds)
 
 	paillierPublicKeys := make(map[integration.IdentityKey]*paillier.PublicKey)
@@ -215,6 +234,7 @@ func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3
 		paillierPublicKeys[identity] = theirPaillierPk
 	}
 
+	participant.round++
 	return &lindell17.Shard{
 		SigningKeyShare:         participant.mySigningKeyShare,
 		PaillierSecretKey:       participant.state.myPaillierSk,

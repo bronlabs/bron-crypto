@@ -15,10 +15,17 @@ func GetPointCoordinates(point curves.Point) (x *big.Int, y *big.Int) {
 
 func GetCurveOrder(curve *curves.Curve) (*big.Int, error) {
 	ec, err := curve.ToEllipticCurve()
-	if err != nil {
-		return nil, errs.NewFailed("cannot get curve order")
+	if err == nil {
+		return ec.Params().N, nil
 	}
-	return ec.Params().N, nil
+
+	// fallback
+	minusOne, err := curve.NewScalar().SetBigInt(big.NewInt(-1))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot set scalar")
+	}
+
+	return new(big.Int).Add(minusOne.BigInt(), big.NewInt(1)), nil
 }
 
 func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {

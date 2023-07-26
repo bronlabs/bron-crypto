@@ -43,6 +43,7 @@ type Participant struct {
 	sessionId         []byte
 	prng              io.Reader
 
+	round int
 	state *ParticipantState
 }
 
@@ -80,6 +81,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	//transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
 		myShamirId:        myShamirId,
@@ -89,6 +91,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		idKeyToShamirId:   idKeyToShamirId,
 		sessionId:         sessionId,
 		prng:              prng,
+		round:             1,
 		state:             &ParticipantState{},
 	}, nil
 }

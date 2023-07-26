@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	gennaro_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	lindell_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
+	lindell17_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -51,22 +51,22 @@ func Test_HappyPath(t *testing.T) {
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_test_utils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
-	lindellParticipants, err := lindell_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, nil)
+	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, nil)
 	require.NoError(t, err)
 
-	r1o, err := lindell_dkg_test_utils.DoDkgRound1(lindellParticipants)
+	r1o, err := lindell17_dkg_test_utils.DoDkgRound1(lindellParticipants)
 	require.NoError(t, err)
 
-	r2i := lindell_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(lindellParticipants, r1o)
-	r2o, err := lindell_dkg_test_utils.DoDkgRound2(lindellParticipants, r2i)
+	r2i := lindell17_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(lindellParticipants, r1o)
+	r2o, err := lindell17_dkg_test_utils.DoDkgRound2(lindellParticipants, r2i)
 	require.NoError(t, err)
 
-	r3i := lindell_dkg_test_utils.MapDkgRound2OutputsToRound3Inputs(lindellParticipants, r2o)
-	r3o, err := lindell_dkg_test_utils.DoDkgRound3(lindellParticipants, r3i)
+	r3i := lindell17_dkg_test_utils.MapDkgRound2OutputsToRound3Inputs(lindellParticipants, r2o)
+	r3o, err := lindell17_dkg_test_utils.DoDkgRound3(lindellParticipants, r3i)
 	require.NoError(t, err)
 
-	r4i := lindell_dkg_test_utils.MapDkgRound3OutputsToRound4Inputs(lindellParticipants, r3o)
-	shards, err := lindell_dkg_test_utils.DoDkgRound4(lindellParticipants, r4i)
+	r4i := lindell17_dkg_test_utils.MapDkgRound3OutputsToRound4Inputs(lindellParticipants, r3o)
+	shards, err := lindell17_dkg_test_utils.DoDkgRound4(lindellParticipants, r4i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 
