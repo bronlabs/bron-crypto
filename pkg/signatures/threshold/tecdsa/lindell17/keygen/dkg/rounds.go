@@ -216,7 +216,7 @@ func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3
 	paillierPublicKeys := make(map[integration.IdentityKey]*paillier.PublicKey)
 	paillierEncryptedShares := make(map[integration.IdentityKey]paillier.CipherText)
 
-	// 6. P stores encrypted Enc(x) (which is Enc(3x' + x'')
+	// 6. P stores encrypted Enc(x) which is Enc(3x' + x'')
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
