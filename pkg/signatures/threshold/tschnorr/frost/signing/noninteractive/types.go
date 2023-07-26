@@ -61,13 +61,13 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	if ps == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
-	attestorsHashSet := map[integration.IdentityKey]bool{}
+	attestorsHashSet, err := integration.NewPresentParticipantSet(cohortConfig.Participants)
+	if err != nil {
+		return err
+	}
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
 	for _, thisPartyAttestedCommitment := range *ps {
-		if attestorsHashSet[thisPartyAttestedCommitment.Attestor] {
-			return errs.NewDuplicate("found duplicate attestor in this presignature")
-		}
 		if DHashSet[thisPartyAttestedCommitment.D] {
 			return errs.NewDuplicate("found duplicate D")
 		}
@@ -77,12 +77,11 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 		if err := thisPartyAttestedCommitment.Validate(cohortConfig); err != nil {
 			return errs.WrapVerificationFailed(err, "invalid attested commitments")
 		}
-		attestorsHashSet[thisPartyAttestedCommitment.Attestor] = true
 		DHashSet[thisPartyAttestedCommitment.D] = true
 		EHashSet[thisPartyAttestedCommitment.E] = true
 	}
 	for _, participant := range cohortConfig.Participants {
-		if !attestorsHashSet[participant] {
+		if !attestorsHashSet.Exist(participant) {
 			return errs.NewMissing("at least one party in the cohort does not have an attested commitment")
 		}
 	}

@@ -77,19 +77,17 @@ func NewNonInteractiveCosigner(
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 
-	presentPartiesHashSet := map[integration.IdentityKey]bool{}
+	presentPartiesHashSet, err := integration.NewPresentParticipantSet(presentParties)
+	if err != nil {
+		return nil, err
+	}
+	if presentPartiesHashSet.Size() <= 0 {
+		return nil, errs.NewInvalidArgument("no party is present")
+	}
 	for _, participant := range presentParties {
-		if presentPartiesHashSet[participant] {
-			return nil, errs.NewDuplicate("found duplicate present party")
-		}
-		presentPartiesHashSet[participant] = true
-
 		if !cohortConfig.IsInCohort(participant) {
 			return nil, errs.NewMissing("present party is not in cohort")
 		}
-	}
-	if len(presentPartiesHashSet) <= 0 {
-		return nil, errs.NewInvalidArgument("no party is present")
 	}
 
 	if privateNoncePairs == nil {
@@ -117,7 +115,7 @@ func NewNonInteractiveCosigner(
 	E_alpha := map[integration.IdentityKey]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
-		if !presentPartiesHashSet[attestedCommitment.Attestor] {
+		if !presentPartiesHashSet.Exist(attestedCommitment.Attestor) {
 			continue
 		}
 		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D

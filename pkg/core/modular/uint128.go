@@ -94,19 +94,16 @@ func (u Uint128) Mul(v Uint128) Uint128 {
 }
 
 // Lsh returns u<<n.
-func (u Uint128) Lsh(n uint) (s Uint128) {
-	s_Lo_nLeq64 := uint64(s.Lo << n)
-	s_Hi_nLeq64 := uint64(u.Hi<<n | u.Lo>>(64-n))
-	s_Lo_nGt64 := uint64(0)
-	s_Hi_nGt64 := uint64(u.Lo << (n - 64))
+func (u Uint128) Lsh(n uint) Uint128 {
+	Lo_nLeq64 := uint64(u.Lo << n)
+	Hi_nLeq64 := uint64(u.Hi<<n | u.Lo>>(64-n))
+	Lo_nGt64 := uint64(0)
+	Hi_nGt64 := uint64(u.Lo << (n - 64))
 	if n > 64 {
-		s.Lo = s_Lo_nLeq64
-		s.Hi = s_Hi_nLeq64
+		return Uint128{Lo_nGt64, Hi_nGt64}
 	} else {
-		s.Lo = s_Lo_nGt64
-		s.Hi = s_Hi_nGt64
+		return Uint128{Lo_nLeq64, Hi_nLeq64}
 	}
-	return
 }
 
 // Rsh returns u>>n.

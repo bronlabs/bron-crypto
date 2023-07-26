@@ -51,17 +51,11 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if len(participants) < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	participantHashSet := map[integration.IdentityKey]bool{}
-	for i, participant := range participants {
-		if participant == nil {
-			return nil, errs.NewInvalidArgument("participant %d is nil", i)
-		}
-		if _, exists := participantHashSet[participant]; exists {
-			return nil, errs.NewDuplicate("participant %d is duplicate", i)
-		}
-		participantHashSet[participant] = true
+	participantHashSet, err := integration.NewPresentParticipantSet(participants)
+	if err != nil {
+		return nil, err
 	}
-	if _, exists := participantHashSet[identityKey]; !exists {
+	if !participantHashSet.Exist(identityKey) {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, participants)
