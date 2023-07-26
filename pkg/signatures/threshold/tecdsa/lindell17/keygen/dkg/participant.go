@@ -47,6 +47,11 @@ type Participant struct {
 	state *ParticipantState
 }
 
+const (
+	transcriptAppLabel       = "COPPER_KNOX_LINDELL17_DKG"
+	transcriptSessionIdLabel = "Lindell2017 DKG Session"
+)
+
 func (participant *Participant) GetIdentityKey() integration.IdentityKey {
 	return participant.myIdentityKey
 }
@@ -75,13 +80,13 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if sessionId == nil || len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
-	//if transcript == nil {
-	//	transcript = merlin.NewTranscript(transcriptLabel)
-	//}
-	//transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
 
 	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
 		myShamirId:        myShamirId,

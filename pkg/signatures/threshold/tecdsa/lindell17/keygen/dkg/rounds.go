@@ -41,11 +41,15 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 		return nil, errs.NewInvalidRound("%d != 1", participant.round)
 	}
 
+	// 1.a + 2.b In the original paper P chooses a random x in [q/3, 2q/3) range and computes Q = x * G.
+	// Since this protocol runs on already existing x, we choose x' and x'' in the given range
+	// such that x = 3x' + x'', calculate Q', Q'' respectively and proceed with x' and x'' as if they were x.
 	xPrime, xBis, _, err := lindell17.Split(participant.mySigningKeyShare.Share, participant.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
 
+	// 1.b P sends commitment of dlog proof of Q
 	bigQPrimeSessionId := append([]byte("backupQ'"), participant.sessionId...)
 	bigQPrimeProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigQPrimeSessionId, nil)
 	if err != nil {
@@ -55,7 +59,6 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of x'")
 	}
-
 	bigQBisSessionId := append([]byte("backupQ''"), participant.sessionId...)
 	bigQBisProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigQBisSessionId, nil)
 	if err != nil {
@@ -65,7 +68,6 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of x'")
 	}
-
 	bigQPrimeProofMessage, err := json.Marshal(bigQPrimeProof)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot serialize dlog proof of Q'")
@@ -105,6 +107,8 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 		return nil, errs.NewInvalidRound("%d != 2", participant.round)
 	}
 
+	// 2.a P receives dlog proof commitment of Q
+	// 2.c P sends dlog proof of Q
 	participant.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
@@ -129,9 +133,11 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 		return nil, errs.NewInvalidRound("%d != 3", participant.round)
 	}
 
+	// 3.a P receives dlog proof of Q
 	participant.state.theirBigQPrime = make(map[integration.IdentityKey]curves.Point)
 	participant.state.theirBigQBis = make(map[integration.IdentityKey]curves.Point)
 
+	// 3.b P opens the commitment and verifies dlog proofs
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
@@ -173,11 +179,11 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 		participant.state.theirBigQBis[identity] = theirBigQBis
 	}
 
+	// 3.c P generates a Paillier key-pair
 	participant.state.myPaillierPk, participant.state.myPaillierSk, err = paillier.NewKeys(paillierBitSize)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}
-
 	cKeyPrime, rPrime, err := participant.state.myPaillierPk.Encrypt(participant.state.myXPrime.BigInt())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
@@ -189,6 +195,7 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 	participant.state.myRPrime = rPrime
 	participant.state.myRBis = rBis
 
+	// 3.d P sends public-key and encryption of x to other parties
 	participant.round++
 	return &Round3Broadcast{
 		CKeyPrime:         cKeyPrime,
@@ -202,11 +209,14 @@ func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3
 		return nil, errs.NewInvalidRound("%d != 4", participant.round)
 	}
 
+	// 4. P proves in zero knowledge that public-key was generated correctly (L_P)
+	// and the encrypted share encrypts dlog of Q (L_PDL)
 	// TODO: add zk-proof when merged (+3 additional rounds)
 
 	paillierPublicKeys := make(map[integration.IdentityKey]*paillier.PublicKey)
 	paillierEncryptedShares := make(map[integration.IdentityKey]paillier.CipherText)
 
+	// 6. P stores encrypted x
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
