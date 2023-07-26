@@ -23,15 +23,12 @@ type Round1OutputP2P struct {
 
 type Round2OutputP2P struct {
 	K2Proof     *schnorr.Proof
-	K1PublicKey curves.Point
 	K2PublicKey curves.Point
 }
 
 type Round3OutputP2P struct {
 	K1Proof        *schnorr.Proof
 	K1ProofWitness commitments.Witness
-	K1PublicKey    curves.Point
-	K2PublicKey    curves.Point
 }
 
 type Round4OutputP2P struct {
@@ -54,8 +51,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr prover")
 	}
-	var publicKey curves.Point
-	primaryCosigner.state.k1Proof, publicKey, err = prover1.Prove(primaryCosigner.state.k1)
+	primaryCosigner.state.k1Proof, primaryCosigner.state.k1PublicKey, err = prover1.Prove(primaryCosigner.state.k1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
 	}
@@ -73,7 +69,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	primaryCosigner.round++
 	return &Round1OutputP2P{
 		K1ProofCommitment: k1ProofCommitment,
-		K1PublicKey:       publicKey,
+		K1PublicKey:       primaryCosigner.state.k1PublicKey,
 	}, nil
 }
 
@@ -84,6 +80,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 
 	secondaryCosigner.state.k1ProofCommitment = round1Output.K1ProofCommitment
 	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(secondaryCosigner.prng)
+	secondaryCosigner.state.k1PublicKey = round1Output.K1PublicKey
 	proverSessionId := append(secondaryCosigner.sessionId[:], byte(secondaryCosigner.myShamirId))
 	prover2, err := schnorr.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), proverSessionId, nil) // TODO: clone transcript
 	if err != nil {
@@ -94,11 +91,11 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
 	}
 
+	secondaryCosigner.state.k2PublicKey = publicKey
 	secondaryCosigner.round++
 	return &Round2OutputP2P{
 		K2Proof:     k2Proof,
-		K1PublicKey: round1Output.K1PublicKey,
-		K2PublicKey: publicKey,
+		K2PublicKey: secondaryCosigner.state.k2PublicKey,
 	}, nil
 }
 
@@ -107,6 +104,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", primaryCosigner.round)
 	}
 
+	primaryCosigner.state.k2PublicKey = round2Output.K2PublicKey
 	proverSessionId := append(primaryCosigner.sessionId[:], byte(primaryCosigner.secondaryShamirId))
 	err = schnorr.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round2Output.K2PublicKey, round2Output.K2Proof, proverSessionId, nil) // TODO: clone transcript
 	if err != nil {
@@ -123,8 +121,6 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	return &Round3OutputP2P{
 		K1Proof:        primaryCosigner.state.k1Proof,
 		K1ProofWitness: primaryCosigner.state.k1ProofWitness,
-		K1PublicKey:    round2Output.K1PublicKey,
-		K2PublicKey:    round2Output.K2PublicKey,
 	}, nil
 }
 
@@ -141,10 +137,10 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 	sessionId := append(secondaryCosigner.sessionId[:], byte(secondaryCosigner.primaryShamirId))
-	if err := schnorr.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.K1PublicKey, round3Output.K1Proof, sessionId, nil); err != nil { // TODO: clone transcript
+	if err := schnorr.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), secondaryCosigner.state.k1PublicKey, round3Output.K1Proof, sessionId, nil); err != nil { // TODO: clone transcript
 		return nil, errs.WrapFailed(err, "cannot verify Schnorr proof")
 	}
-	bigR := round3Output.K1PublicKey.Mul(secondaryCosigner.state.k2)
+	bigR := secondaryCosigner.state.k1PublicKey.Mul(secondaryCosigner.state.k2)
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
 	if err != nil {
