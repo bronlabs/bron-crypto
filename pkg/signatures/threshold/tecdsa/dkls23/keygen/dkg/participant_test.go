@@ -3,6 +3,7 @@ package dkg
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"encoding/base64"
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
@@ -20,6 +21,9 @@ type mockedIdentityKey struct {
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {
 	return k.publicKey
+}
+func (k *mockedIdentityKey) HashCode() string {
+	return base64.StdEncoding.EncodeToString(k.publicKey.ToAffineCompressed())
 }
 func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")

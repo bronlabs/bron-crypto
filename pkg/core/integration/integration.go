@@ -6,6 +6,8 @@ import (
 	"hash"
 	"sort"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
@@ -21,6 +23,7 @@ type IdentityKey interface {
 	Sign(message []byte) []byte
 	Verify(signature []byte, publicKey curves.Point, message []byte) error
 	PublicKey() curves.Point
+	HashCode() string
 }
 
 type CipherSuite struct {
@@ -51,7 +54,7 @@ type CohortConfig struct {
 	SignatureAggregators []IdentityKey
 	PreSignatureComposer IdentityKey
 
-	participantHashSet PresentParticipantSet
+	participantHashSet hashmap.HashMap[IdentityKey]
 }
 
 func (c *CohortConfig) Validate() error {
@@ -76,8 +79,12 @@ func (c *CohortConfig) Validate() error {
 	if c.TotalParties != len(c.Participants) {
 		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
 	}
-
-	participantHashSet, err := NewPresentParticipantSet(c.Participants)
+	for i, participant := range c.Participants {
+		if participant == nil {
+			return errs.NewIsNil("participant %d is nil", i)
+		}
+	}
+	participantHashSet, err := hashmap.NewHashmap(c.Participants)
 	if err != nil {
 		return err
 	}
@@ -91,7 +98,8 @@ func (c *CohortConfig) Validate() error {
 }
 
 func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
-	return c.participantHashSet.Exist(identityKey)
+	_, found := hashmap.Get(c.participantHashSet, identityKey)
+	return found
 }
 
 func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {

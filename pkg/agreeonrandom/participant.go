@@ -3,6 +3,8 @@ package agreeonrandom
 import (
 	"io"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -34,11 +36,17 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 	if len(participants) < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	presentParticipantHashSet, err := integration.NewPresentParticipantSet(participants)
+	for i, participant := range participants {
+		if participant == nil {
+			return nil, errs.NewIsNil("participant %d is nil", i)
+		}
+	}
+	presentParticipantHashSet, err := hashmap.NewHashmap(participants)
 	if err != nil {
 		return nil, err
 	}
-	if !presentParticipantHashSet.Exist(identityKey) {
+	_, found := hashmap.Get(presentParticipantHashSet, identityKey)
+	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
 

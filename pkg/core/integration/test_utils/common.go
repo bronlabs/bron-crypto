@@ -2,13 +2,15 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+	"encoding/base64"
 	"encoding/json"
+	"hash"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/pkg/errors"
-	"hash"
 )
 
 type TestIdentityKey struct {
@@ -21,6 +23,9 @@ var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
+}
+func (k *TestIdentityKey) HashCode() string {
+	return base64.StdEncoding.EncodeToString(k.signer.PublicKey.Y.ToAffineCompressed())
 }
 func (k *TestIdentityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)
