@@ -30,8 +30,7 @@ func TestZKPOverMultipleCurves(t *testing.T) {
 			require.NotNil(t, prover.BasePoint)
 
 			secret := boundedCurve.Scalar.Random(rand.Reader)
-			statement := prover.BasePoint.Mul(secret)
-			proof, err := prover.Prove(secret)
+			proof, statement, err := prover.Prove(secret)
 			require.NoError(t, err)
 
 			err = Verify(boundedCurve.Point.Generator(), statement, proof, uniqueSessionId[:], nil)
@@ -57,11 +56,11 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 			require.NotNil(t, prover.BasePoint)
 
 			secret := boundedCurve.Scalar.Random(rand.Reader)
-			proof, err := prover.Prove(secret)
-			statement := boundedCurve.Scalar.Random(rand.Reader).Point()
+			proof, _, err := prover.Prove(secret)
+			badStatement := boundedCurve.Point.Random(rand.Reader)
 			require.NoError(t, err)
 
-			err = Verify(boundedCurve.Point.Generator(), statement, proof, uniqueSessionId[:], nil)
+			err = Verify(boundedCurve.Point.Generator(), badStatement, proof, uniqueSessionId[:], nil)
 			require.True(t, errs.IsVerificationFailed(err))
 		})
 	}

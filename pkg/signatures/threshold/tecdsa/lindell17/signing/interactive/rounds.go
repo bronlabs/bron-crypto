@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
@@ -17,15 +18,20 @@ import (
 
 type Round1OutputP2P struct {
 	K1ProofCommitment commitments.Commitment
+	K1PublicKey       curves.Point
 }
 
 type Round2OutputP2P struct {
-	K2Proof *schnorr.Proof
+	K2Proof     *schnorr.Proof
+	K1PublicKey curves.Point
+	K2PublicKey curves.Point
 }
 
 type Round3OutputP2P struct {
 	K1Proof        *schnorr.Proof
 	K1ProofWitness commitments.Witness
+	K1PublicKey    curves.Point
+	K2PublicKey    curves.Point
 }
 
 type Round4OutputP2P struct {
@@ -48,7 +54,8 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr prover")
 	}
-	primaryCosigner.state.k1Proof, err = prover1.Prove(primaryCosigner.state.k1)
+	var publicKey curves.Point
+	primaryCosigner.state.k1Proof, publicKey, err = prover1.Prove(primaryCosigner.state.k1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
 	}
@@ -66,6 +73,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	primaryCosigner.round++
 	return &Round1OutputP2P{
 		K1ProofCommitment: k1ProofCommitment,
+		K1PublicKey:       publicKey,
 	}, nil
 }
 
@@ -81,14 +89,16 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr prover")
 	}
-	k2Proof, err := prover2.Prove(secondaryCosigner.state.k2)
+	k2Proof, publicKey, err := prover2.Prove(secondaryCosigner.state.k2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
 	}
 
 	secondaryCosigner.round++
 	return &Round2OutputP2P{
-		K2Proof: k2Proof,
+		K2Proof:     k2Proof,
+		K1PublicKey: round1Output.K1PublicKey,
+		K2PublicKey: publicKey,
 	}, nil
 }
 
@@ -98,11 +108,11 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	proverSessionId := append(primaryCosigner.sessionId[:], byte(primaryCosigner.secondaryShamirId))
-	err = schnorr.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round2Output.K2Proof, proverSessionId, nil) // TODO: clone transcript
+	err = schnorr.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round2Output.K2PublicKey, round2Output.K2Proof, proverSessionId, nil) // TODO: clone transcript
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot verify Schnorr proof")
 	}
-	primaryCosigner.state.bigR = round2Output.K2Proof.Statement.Mul(primaryCosigner.state.k1)
+	primaryCosigner.state.bigR = round2Output.K2PublicKey.Mul(primaryCosigner.state.k1)
 	bigRx, _ := lindell17.GetPointCoordinates(primaryCosigner.state.bigR)
 	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
 	if err != nil {
@@ -113,6 +123,8 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	return &Round3OutputP2P{
 		K1Proof:        primaryCosigner.state.k1Proof,
 		K1ProofWitness: primaryCosigner.state.k1ProofWitness,
+		K1PublicKey:    round2Output.K1PublicKey,
+		K2PublicKey:    round2Output.K2PublicKey,
 	}, nil
 }
 
@@ -129,10 +141,10 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 	sessionId := append(secondaryCosigner.sessionId[:], byte(secondaryCosigner.primaryShamirId))
-	if err := schnorr.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.K1Proof, sessionId, nil); err != nil { // TODO: clone transcript
+	if err := schnorr.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.K1PublicKey, round3Output.K1Proof, sessionId, nil); err != nil { // TODO: clone transcript
 		return nil, errs.WrapFailed(err, "cannot verify Schnorr proof")
 	}
-	bigR := round3Output.K1Proof.Statement.Mul(secondaryCosigner.state.k2)
+	bigR := round3Output.K1PublicKey.Mul(secondaryCosigner.state.k2)
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
 	if err != nil {

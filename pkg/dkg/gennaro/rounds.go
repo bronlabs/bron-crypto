@@ -45,7 +45,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	proverTranscript.AppendMessage([]byte("shamir id"), []byte(fmt.Sprintf("%d", p.MyShamirId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, proverTranscript)
 
-	a_i0Proof, err := prover.Prove(a_i0)
+	a_i0Proof, _, err := prover.Prove(a_i0)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of a_i0")
 	}

@@ -214,7 +214,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		t.Parallel()
 		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {
@@ -227,7 +227,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		t.Parallel()
 		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {

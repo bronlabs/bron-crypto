@@ -83,7 +83,7 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct an internal prover")
 	}
-	proof, err := prover.Prove(s.privateKey.a)
+	proof, _, err := prover.Prove(s.privateKey.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make proof of knowledge of discrete log of public key bound with the message")
 	}

@@ -48,7 +48,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
-	proof, err := prover.Prove(a_i0)
+	proof, _, err := prover.Prove(a_i0)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't sign")
 	}

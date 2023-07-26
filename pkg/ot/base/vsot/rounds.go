@@ -40,11 +40,10 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.P
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing schnorr prover")
 	}
-	proof, err := prover.Prove(sender.SecretKey)
+	proof, publicKey, err := prover.Prove(sender.SecretKey)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "creating zkp proof for secret key in seed OT sender round 1")
 	}
-	publicKey := prover.BasePoint.Mul(sender.SecretKey)
 	return proof, publicKey, nil
 }
 

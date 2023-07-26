@@ -52,13 +52,13 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merli
 
 // Prove generates and returns a Schnorr proof, given the scalar witness `x`.
 // in the process, it will actually also construct the statement (just one curve mult in this case)
-func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
+func (p *Prover) Prove(x curves.Scalar) (*Proof, curves.Point, error) {
 	var err error
 	result := &Proof{}
 
 	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not get curve by name")
+		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
 	}
 
 	statement := p.BasePoint.Mul(x)
@@ -73,10 +73,10 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 
 	result.C, err = curve.Scalar.SetBytes(digest)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 	result.S = result.C.Mul(x).Add(k)
-	return result, nil
+	return result, statement, nil
 }
 
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
