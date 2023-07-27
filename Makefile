@@ -121,3 +121,27 @@ fuzz-test: ## build and run fuzz test
 		-fuzz ^FuzzFrostDkgNonInteractiveSigning$ -run ^$ \
 		-parallel=10 \
 		-fuzztime=120s
+
+
+.PHONY: run-profile
+run-profile:
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
+
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
+
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile memprofile.out -cpuprofile profile.out
+	go tool pprof -top profile.out | grep copperexchange
+	go tool pprof -top memprofile.out | grep copperexchange
