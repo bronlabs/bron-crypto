@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"hash"
 	"io"
+	"reflect"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/mimoo/StrobeGo/strobe"
 )
 
@@ -16,14 +18,14 @@ const (
 	maxUnhashedMessage   = 100 * 1024 * 1024 // 100 MB
 )
 
-type Transcript struct {
+type MerlinTranscript struct {
 	s strobe.Strobe
 }
 
-// NewTranscript creates a new transcript with the supplied application label. The
+// NewMerlinTranscript creates a new transcript with the supplied application label. The
 // computational security parameter is set to 256 bits.
-func NewTranscript(appLabel string) *Transcript {
-	t := Transcript{
+func NewMerlinTranscript(appLabel string) *MerlinTranscript {
+	t := MerlinTranscript{
 		s: strobe.InitStrobe(merlinProtocolLabel, securityParameter),
 	}
 	t.AppendMessage([]byte(domainSeparatorLabel), []byte(appLabel), nil)
@@ -31,16 +33,20 @@ func NewTranscript(appLabel string) *Transcript {
 }
 
 // Clone returns a copy of the transcript.
-func (t *Transcript) Clone() *Transcript {
+func (t *MerlinTranscript) Clone() transcript.Transcript {
 	s := t.s.Clone()
-	return &Transcript{s: *s}
+	return &MerlinTranscript{s: *s}
+}
+
+func (t *MerlinTranscript) Type() reflect.Type {
+	return reflect.TypeOf(t)
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
 // Append adds the message to the transcript with the supplied label. If the
 // hash is provided (not nil), it hashes the message and appends the digest to
 // the transcript. Messages of length greater than 100 MB must be hashed.
-func (t *Transcript) AppendMessage(label, message []byte, h hash.Hash) {
+func (t *MerlinTranscript) AppendMessage(label, message []byte, h hash.Hash) error {
 	// If the message is longer than 100 MB, it must be hashed.
 	if (len(message) > maxUnhashedMessage) && (h == nil) {
 		errs.NewInvalidArgument("message too long (%d > 100 MB) and no hash function provided", len(message))
@@ -58,12 +64,13 @@ func (t *Transcript) AppendMessage(label, message []byte, h hash.Hash) {
 		// AdditionalData[message]
 		t.s.AD(false, message)
 	}
+	return nil
 }
 
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
 // The label parameter is metadata about the challenge, and is also appended to
 // the transcript. More derails on "Transcript Protocols" section of Merlin.tool
-func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
+func (t *MerlinTranscript) ExtractBytes(label []byte, outLen int) []byte {
 	// AdditionalData[label || le32(outLen)]
 	t.s.AD(true, appendSizeToLabel(label, outLen))
 	// Call the unterlying PRF function to fill a buffer with random bytes.
@@ -90,7 +97,7 @@ func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
 // The transcript PRNG has a different type, to make it impossible to accidentally
 // rekey the public transcript, or use an RNG before it has been finalized.
 type PrngReader struct {
-	t *Transcript
+	t *MerlinTranscript
 }
 
 // NewPrngReader creates a new transcript PRNG, needed to generate random bytes.
@@ -98,22 +105,22 @@ type PrngReader struct {
 //   - The witness data (the secret data that allows you to efficiently verify
 //     the veracity of the statement that will use the PRNG randomness).
 //   - 32 bytes of entropy from an external RNG arbitrarily chosen.
-func (t *Transcript) NewPrngReader(witnessLabel, witness []byte, rng io.Reader) (*PrngReader, error) {
+func (t *MerlinTranscript) NewPrngReader(witnessLabel, witness []byte, rng io.Reader) (io.Reader, error) {
 	// 1. Create a secret clone of the public transcript state
-	transcriptPRNG := t.Clone()
+	prng := t.Clone().(*MerlinTranscript)
 	// 2. Rekey with witness data
 	//	  STROBE: KEY[label || LE32(witness.len())](witness);
-	transcriptPRNG.s.AD(true, appendSizeToLabel(witnessLabel, len(witness)))
-	transcriptPRNG.s.KEY(witness)
+	prng.s.AD(true, appendSizeToLabel(witnessLabel, len(witness)))
+	prng.s.KEY(witness)
 	// 3. Rekey with 32 bytes of entropy from an external RNG
 	var keyBytes [32]byte // 256 bits
 	if _, err := rng.Read(keyBytes[:]); err != nil {
 		return nil, errs.WrapFailed(err, "failed to read random bytes for transcript RNG")
 	}
 	//    STROBE:  KEY[b"rng"](rng);
-	transcriptPRNG.s.AD(true, []byte("rng"))
-	transcriptPRNG.s.KEY(keyBytes[:])
-	prngReader := &PrngReader{t: transcriptPRNG}
+	prng.s.AD(true, []byte("rng"))
+	prng.s.KEY(keyBytes[:])
+	prngReader := &PrngReader{t: prng}
 	return prngReader, nil
 }
 

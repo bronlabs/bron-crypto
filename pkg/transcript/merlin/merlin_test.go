@@ -18,7 +18,7 @@ import (
 // test transcript::tests::equivalence_simple ... ok
 
 func TestSimpleTranscript(t *testing.T) {
-	mt := NewTranscript("test protocol")
+	mt := NewMerlinTranscript("test protocol")
 	mt.AppendMessage([]byte("some label"), []byte("some data"), nil)
 
 	cBytes := mt.ExtractBytes([]byte("challenge"), 32)
@@ -31,7 +31,7 @@ func TestSimpleTranscript(t *testing.T) {
 }
 
 func TestComplexTranscript(t *testing.T) {
-	tr := NewTranscript("test protocol")
+	tr := NewMerlinTranscript("test protocol")
 	tr.AppendMessage([]byte("step1"), []byte("some data"), nil)
 
 	data := make([]byte, 1024)
@@ -56,10 +56,10 @@ func TestComplexTranscript(t *testing.T) {
 
 func TestTranscriptPRNG(t *testing.T) {
 	label := "test protocol"
-	t1 := NewTranscript(label)
-	t2 := NewTranscript(label)
-	t3 := NewTranscript(label)
-	t4 := NewTranscript(label)
+	t1 := NewMerlinTranscript(label)
+	t2 := NewMerlinTranscript(label)
+	t3 := NewMerlinTranscript(label)
+	t4 := NewMerlinTranscript(label)
 
 	comm1 := []byte("Commitment data 1")
 	comm2 := []byte("Commitment data 2")
