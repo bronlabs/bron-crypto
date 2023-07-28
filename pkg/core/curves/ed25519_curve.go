@@ -321,8 +321,8 @@ func (s *ScalarEd25519) SetBytes(input []byte) (result Scalar, err error) {
 	return &ScalarEd25519{value}, nil
 }
 
-func (s *ScalarEd25519) Point() Point {
-	return new(PointEd25519).Identity()
+func (s *ScalarEd25519) CurveName() string {
+	return ED25519Name
 }
 
 func (s *ScalarEd25519) Clone() Scalar {
@@ -378,7 +378,7 @@ func (s *ScalarEd25519) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarEd25519) UnmarshalJSON(input []byte) error {
-	curve, err := GetCurveByName(s.Point().CurveName())
+	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
 		return errors.WithStack(err)
 	}

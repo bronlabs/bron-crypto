@@ -293,8 +293,8 @@ func (s *BenchScalar) BigInt() *big.Int {
 	return new(big.Int).Set(s.value)
 }
 
-func (s *BenchScalar) Point() Point {
-	return (&BenchPoint{}).Identity()
+func (s *BenchScalar) CurveName() string {
+	return (&BenchPoint{}).Identity().CurveName()
 }
 
 func (s *BenchScalar) Bytes() []byte {

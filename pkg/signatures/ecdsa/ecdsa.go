@@ -3,11 +3,12 @@ package ecdsa
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/elliptic"
+	"hash"
+	"math/big"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"hash"
-	"math/big"
 )
 
 type Signature struct {
@@ -133,9 +134,9 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
-	curve, err := curves.GetCurveByName(signature.R.Point().CurveName())
+	curve, err := curves.GetCurveByName(signature.R.CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.Point().CurveName())
+		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.CurveName())
 	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
@@ -159,7 +160,7 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 		ryCompressed[0]++
 	}
 	affine := append(ryCompressed[:], rxBytes...)
-	bigR, err := signature.R.Point().FromAffineCompressed(affine[:])
+	bigR, err := curve.Point.FromAffineCompressed(affine[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate R")
 	}

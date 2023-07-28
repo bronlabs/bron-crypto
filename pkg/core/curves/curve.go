@@ -118,8 +118,6 @@ type Scalar interface {
 	SetBigInt(v *big.Int) (Scalar, error)
 	// BigInt returns this element as a big integer
 	BigInt() *big.Int
-	// Point returns the associated point for this scalar
-	Point() Point
 	// Bytes returns the canonical byte representation of this scalar
 	Bytes() []byte
 	// SetBytes creates a scalar from the canonical representation expecting the exact number of bytes needed to represent the scalar
@@ -128,11 +126,14 @@ type Scalar interface {
 	SetBytesWide(bytes []byte) (Scalar, error)
 	// Clone returns a cloned Scalar of this value
 	Clone() Scalar
+	CurveName() string
 }
 
 type PairingScalar interface {
 	Scalar
-	SetPoint(p Point) PairingScalar
+	SetPoint(p PairingPoint) PairingScalar
+	Point() PairingPoint
+	OtherGroup() PairingPoint
 }
 
 func unmarshalScalar(input []byte) (*Curve, []byte, error) {
@@ -156,7 +157,7 @@ func scalarMarshalBinary(scalar Scalar) ([]byte, error) {
 	// The last 32 bytes are the actual value
 	// The first remaining bytes are the curve name
 	// separated by a colon
-	name := []byte(scalar.Point().CurveName())
+	name := []byte(scalar.CurveName())
 	output := make([]byte, len(name)+1+scalarBytes)
 	copy(output[:len(name)], name)
 	output[len(name)] = byte(':')
@@ -183,7 +184,7 @@ func scalarMarshalText(scalar Scalar) ([]byte, error) {
 	// For text encoding we put the curve name first for readability
 	// separated by a colon, then the hex encoding of the scalar
 	// which avoids the base64 weakness with strict mode or not
-	name := []byte(scalar.Point().CurveName())
+	name := []byte(scalar.CurveName())
 	output := make([]byte, len(name)+1+scalarBytes*2)
 	copy(output[:len(name)], name)
 	output[len(name)] = byte(':')
@@ -209,7 +210,7 @@ func scalarUnmarshalText(input []byte) (Scalar, error) {
 
 func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 	m := make(map[string]string, 2)
-	m["type"] = scalar.Point().CurveName()
+	m["type"] = scalar.CurveName()
 	m["value"] = hex.EncodeToString(scalar.Bytes())
 	return json.Marshal(m)
 }
@@ -492,11 +493,11 @@ func GetCurveByName(name string) (*Curve, error) {
 func GetPairingCurveByName(name string) (*PairingCurve, error) {
 	switch name {
 	case BLS12381G1Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G1)), nil
 	case BLS12381G2Name:
-		return BLS12381(BLS12381G2().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G2)), nil
 	case BLS12831Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G1)), nil
 	default:
 		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
@@ -536,7 +537,7 @@ func bls12381g2Init() {
 	}
 }
 
-func BLS12381(preferredPoint Point) *PairingCurve {
+func BLS12381(preferredPoint PairingPoint) *PairingCurve {
 	return &PairingCurve{
 		Scalar: &ScalarBls12381{
 			Value: bls12381.Bls12381FqNew(),

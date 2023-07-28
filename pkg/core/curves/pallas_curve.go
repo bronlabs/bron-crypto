@@ -432,8 +432,8 @@ func (s *ScalarPallas) SetBytesWide(bytes []byte) (Scalar, error) {
 	}, nil
 }
 
-func (s *ScalarPallas) Point() Point {
-	return new(PointPallas).Identity()
+func (s *ScalarPallas) CurveName() string {
+	return PallasName
 }
 
 func (s *ScalarPallas) Clone() Scalar {
@@ -490,7 +490,7 @@ func (s *ScalarPallas) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarPallas) UnmarshalJSON(input []byte) error {
-	curve, err := GetCurveByName(s.Point().CurveName())
+	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
 		return errors.WithStack(err)
 	}

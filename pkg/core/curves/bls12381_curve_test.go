@@ -231,10 +231,10 @@ func TestScalarBls12381G1Nil(t *testing.T) {
 
 func TestScalarBls12381Point(t *testing.T) {
 	bls12381G1 := BLS12381G1()
-	_, ok := bls12381G1.Scalar.Point().(*PointBls12381G1)
+	_, ok := bls12381G1.Point.Identity().(*PointBls12381G1)
 	require.True(t, ok)
 	bls12381G2 := BLS12381G2()
-	_, ok = bls12381G2.Scalar.Point().(*PointBls12381G2)
+	_, ok = bls12381G2.Point.Identity().(*PointBls12381G2)
 	require.True(t, ok)
 }
 
