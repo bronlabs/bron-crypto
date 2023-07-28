@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
+	"os"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -20,6 +22,32 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
+
+func TestRunProfile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping profiling test in short mode")
+	}
+	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
+		t.Skip("skipping profiling test missing parameter")
+	}
+	var curve *curves.Curve
+	var h func() hash.Hash
+	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
+	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
+	if os.Getenv("PROFILE_CURVE") == "ED25519" {
+		curve = curves.ED25519()
+	} else {
+		curve = curves.K256()
+	}
+	if os.Getenv("PROFILE_HASH") == "SHA3" {
+		h = sha3.New256
+	} else {
+		h = sha512.New
+	}
+	for i := 0; i < 1000; i++ {
+		testHappyPath(t, curve, h, th, n)
+	}
+}
 
 func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()

@@ -121,3 +121,31 @@ fuzz-test: ## build and run fuzz test
 		-fuzz ^FuzzFrostDkgNonInteractiveSigning$ -run ^$ \
 		-parallel=10 \
 		-fuzztime=120s
+
+
+.PHONY: run-profile-frost-dkg
+run-profile-frost-dkg:
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile ${TMPDIR}dkg_memprofile_K256.out -cpuprofile ${TMPDIR}dkg_cpuprofile_K256.out
+	go tool pprof -top ${TMPDIR}dkg_cpuprofile_K256.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}dkg_memprofile_K256.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile ${TMPDIR}dkg_memprofile_ED25519.out -cpuprofile ${TMPDIR}dkg_cpuprofile_ED25519.out
+	go tool pprof -top ${TMPDIR}dkg_cpuprofile_ED25519.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}dkg_memprofile_ED25519.out | grep copperexchange
+
+.PHONY: run-profile-frost-interactive-signing
+run-profile-frost-interactive-signing:
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile ${TMPDIR}interactive_memprofile_K256.out -cpuprofile ${TMPDIR}interactive_cpuprofile_K256.out
+	go tool pprof -top ${TMPDIR}interactive_cpuprofile_K256.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}interactive_memprofile_K256.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile ${TMPDIR}interactive_memprofile_ED25519.out -cpuprofile ${TMPDIR}interactive_cpuprofile_ED25519.out
+	go tool pprof -top ${TMPDIR}interactive_cpuprofile_ED25519.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}interactive_memprofile_ED25519.out | grep copperexchange
+
+.PHONY: run-profile-frost-noninteractive-signing
+run-profile-frost-noninteractive-signing:
+	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile ${TMPDIR}noninteractive_memprofile_K256.out -cpuprofile ${TMPDIR}noninteractive_cpuprofile_K256.out
+	go tool pprof -top ${TMPDIR}noninteractive_cpuprofile_K256.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}noninteractive_memprofile_K256.out | grep copperexchange
+	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile ${TMPDIR}noninteractive_memprofile_ED25519.out -cpuprofile ${TMPDIR}noninteractive_cpuprofile_ED25519.out
+	go tool pprof -top ${TMPDIR}noninteractive_cpuprofile_ED25519.out | grep copperexchange
+	go tool pprof -top ${TMPDIR}noninteractive_memprofile_ED25519.out | grep copperexchange
