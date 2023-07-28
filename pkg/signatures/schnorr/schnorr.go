@@ -83,7 +83,7 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct an internal prover")
 	}
-	proof, err := prover.Prove(s.privateKey.a)
+	proof, _, err := prover.Prove(s.privateKey.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make proof of knowledge of discrete log of public key bound with the message")
 	}
@@ -142,12 +142,11 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		return errs.NewIsZero("response can't be zero")
 	}
 	proof := &dlog.Proof{
-		C:         signature.C,
-		S:         signature.S,
-		Statement: publicKey.Y,
+		C: signature.C,
+		S: signature.S,
 	}
 
-	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), proof, message, nil); err != nil {
+	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), publicKey.Y, proof, message, nil); err != nil {
 		return errs.NewVerificationFailed("couldn't verify underlying schnor proof")
 	}
 	return nil

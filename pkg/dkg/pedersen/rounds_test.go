@@ -214,7 +214,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		t.Parallel()
 		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {
@@ -227,7 +227,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		t.Parallel()
 		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {
@@ -263,8 +263,9 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
 	r2OutsB[alice].Ci[0] = r2OutsB[alice].Ci[0].Sub(r2OutsB[bob].Ci[0])
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
-	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
-	require.True(t, errs.IsFailed(err))
+	_, _, err = participants[bob].Round2(r3InsB[bob], r3InsU[bob])
+	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, strings.Contains(err.Error(), "dlog proof"))
 }
 
 func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha int, tBeta, nBeta int) {
