@@ -23,7 +23,7 @@ func (ss Share) Validate(curve *curves.Curve) error {
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
 	}
-	if shareCurveName := ss.Value.Point().CurveName(); shareCurveName != curve.Name {
+	if shareCurveName := ss.Value.CurveName(); shareCurveName != curve.Name {
 		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurveName, curve.Name)
 	}
 

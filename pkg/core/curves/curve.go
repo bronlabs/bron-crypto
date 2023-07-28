@@ -118,8 +118,6 @@ type Scalar interface {
 	SetBigInt(v *big.Int) (Scalar, error)
 	// BigInt returns this element as a big integer
 	BigInt() *big.Int
-	// Point returns the associated point for this scalar
-	Point() Point
 	// Bytes returns the canonical byte representation of this scalar
 	Bytes() []byte
 	// SetBytes creates a scalar from the canonical representation expecting the exact number of bytes needed to represent the scalar
@@ -128,6 +126,7 @@ type Scalar interface {
 	SetBytesWide(bytes []byte) (Scalar, error)
 	// Clone returns a cloned Scalar of this value
 	Clone() Scalar
+	CurveName() string
 }
 
 type PairingScalar interface {
@@ -156,7 +155,7 @@ func scalarMarshalBinary(scalar Scalar) ([]byte, error) {
 	// The last 32 bytes are the actual value
 	// The first remaining bytes are the curve name
 	// separated by a colon
-	name := []byte(scalar.Point().CurveName())
+	name := []byte(scalar.CurveName())
 	output := make([]byte, len(name)+1+scalarBytes)
 	copy(output[:len(name)], name)
 	output[len(name)] = byte(':')
@@ -183,7 +182,7 @@ func scalarMarshalText(scalar Scalar) ([]byte, error) {
 	// For text encoding we put the curve name first for readability
 	// separated by a colon, then the hex encoding of the scalar
 	// which avoids the base64 weakness with strict mode or not
-	name := []byte(scalar.Point().CurveName())
+	name := []byte(scalar.CurveName())
 	output := make([]byte, len(name)+1+scalarBytes*2)
 	copy(output[:len(name)], name)
 	output[len(name)] = byte(':')
@@ -209,7 +208,7 @@ func scalarUnmarshalText(input []byte) (Scalar, error) {
 
 func scalarMarshalJson(scalar Scalar) ([]byte, error) {
 	m := make(map[string]string, 2)
-	m["type"] = scalar.Point().CurveName()
+	m["type"] = scalar.CurveName()
 	m["value"] = hex.EncodeToString(scalar.Bytes())
 	return json.Marshal(m)
 }
