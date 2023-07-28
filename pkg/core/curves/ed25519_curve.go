@@ -322,7 +322,7 @@ func (s *ScalarEd25519) SetBytes(input []byte) (result Scalar, err error) {
 }
 
 func (s *ScalarEd25519) CurveName() string {
-	return new(PointEd25519).Identity().CurveName()
+	return ED25519Name
 }
 
 func (s *ScalarEd25519) Clone() Scalar {

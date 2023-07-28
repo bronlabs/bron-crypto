@@ -433,7 +433,7 @@ func (s *ScalarPallas) SetBytesWide(bytes []byte) (Scalar, error) {
 }
 
 func (s *ScalarPallas) CurveName() string {
-	return new(PointPallas).Identity().CurveName()
+	return PallasName
 }
 
 func (s *ScalarPallas) Clone() Scalar {

@@ -335,7 +335,7 @@ func (s *ScalarK256) SetBytesWide(bytes []byte) (Scalar, error) {
 }
 
 func (s *ScalarK256) CurveName() string {
-	return new(PointK256).Identity().CurveName()
+	return K256Name
 }
 
 func (s *ScalarK256) Clone() Scalar {
