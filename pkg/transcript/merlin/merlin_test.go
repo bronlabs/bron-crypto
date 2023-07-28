@@ -8,22 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Initialize STROBE-128(4d65726c696e2076312e30)   # b"Merlin v1.0"
-// meta-AD : 646f6d2d736570 || LE32(13)    # b"dom-sep"
-// AD : 746573742070726f746f636f6c    # b"test protocol"
-// meta-AD : 736f6d65206c6162656c || LE32(9)       # b"some label"
-// AD : 736f6d652064617461    # b"some data"
-// meta-AD : 6368616c6c656e6765 || LE32(32)        # b"challenge"
-// PRF: d5a21972d0d5fe320c0d263fac7fffb8145aa640af6e9bca177c03c7efcf0615
-// test transcript::tests::equivalence_simple ... ok
-
 func TestSimpleTranscript(t *testing.T) {
-	mt := NewMerlinTranscript("test protocol")
-	mt.AppendMessage([]byte("some label"), []byte("some data"), nil)
+	mt := NewTranscript("test protocol")
+	mt.AppendMessage([]byte("some label"), []byte("some data"))
 
 	cBytes := mt.ExtractBytes([]byte("challenge"), 32)
 	cHex := fmt.Sprintf("%x", cBytes)
-	expectedHex := "d5a21972d0d5fe320c0d263fac7fffb8145aa640af6e9bca177c03c7efcf0615"
+	expectedHex := "aa57b4786a83baba7ed4ad21ac2fa9a76542358b32cd0eac24b05ea353f1d9b2"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -31,8 +22,8 @@ func TestSimpleTranscript(t *testing.T) {
 }
 
 func TestComplexTranscript(t *testing.T) {
-	tr := NewMerlinTranscript("test protocol")
-	tr.AppendMessage([]byte("step1"), []byte("some data"), nil)
+	tr := NewTranscript("test protocol")
+	tr.AppendMessage([]byte("step1"), []byte("some data"))
 
 	data := make([]byte, 1024)
 	for i := range data {
@@ -42,11 +33,11 @@ func TestComplexTranscript(t *testing.T) {
 	var chlBytes []byte
 	for i := 0; i < 32; i++ {
 		chlBytes = tr.ExtractBytes([]byte("challenge"), 32)
-		tr.AppendMessage([]byte("bigdata"), data, nil)
-		tr.AppendMessage([]byte("challengedata"), chlBytes, nil)
+		tr.AppendMessage([]byte("bigdata"), data)
+		tr.AppendMessage([]byte("challengedata"), chlBytes)
 	}
 
-	expectedChlHex := "a8c933f54fae76e3f9bea93648c1308e7dfa2152dd51674ff3ca438351cf003c"
+	expectedChlHex := "30bce6b150411d5ad51dd231a2d96d1ea886664e58e09dd7a5730a09f554a7d4"
 	chlHex := fmt.Sprintf("%x", chlBytes)
 
 	if chlHex != expectedChlHex {
@@ -56,10 +47,10 @@ func TestComplexTranscript(t *testing.T) {
 
 func TestTranscriptPRNG(t *testing.T) {
 	label := "test protocol"
-	t1 := NewMerlinTranscript(label)
-	t2 := NewMerlinTranscript(label)
-	t3 := NewMerlinTranscript(label)
-	t4 := NewMerlinTranscript(label)
+	t1 := NewTranscript(label)
+	t2 := NewTranscript(label)
+	t3 := NewTranscript(label)
+	t4 := NewTranscript(label)
 
 	comm1 := []byte("Commitment data 1")
 	comm2 := []byte("Commitment data 2")
@@ -68,23 +59,23 @@ func TestTranscriptPRNG(t *testing.T) {
 	witness2 := []byte("Witness data 2")
 
 	// t1 will have commitment 1 and t2, t3, t4 will gave same commitment
-	t1.AppendMessage([]byte("com"), comm1, nil)
-	t2.AppendMessage([]byte("com"), comm2, nil)
-	t3.AppendMessage([]byte("com"), comm2, nil)
-	t4.AppendMessage([]byte("com"), comm2, nil)
+	t1.AppendMessage([]byte("com"), comm1)
+	t2.AppendMessage([]byte("com"), comm2)
+	t3.AppendMessage([]byte("com"), comm2)
+	t4.AppendMessage([]byte("com"), comm2)
 
 	// t1, t2 will have same witness data
 	// t3, t4 will have same witness data
-	r1, err := t1.NewPrngReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
+	r1, err := t1.NewReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r2, err := t2.NewPrngReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
+	r2, err := t2.NewReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r3, err := t3.NewPrngReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
+	r3, err := t3.NewReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r4, err := t4.NewPrngReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
+	r4, err := t4.NewReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 	var (
 		s1 = make([]byte, 32)
