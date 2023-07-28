@@ -25,7 +25,7 @@ var bls12381modulus = bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730
 
 type ScalarBls12381 struct {
 	Value *native.Field
-	point Point
+	point PairingPoint
 }
 
 type PointBls12381G1 struct {
@@ -293,7 +293,15 @@ func (s *ScalarBls12381) Clone() Scalar {
 	}
 }
 
-func (s *ScalarBls12381) SetPoint(p Point) PairingScalar {
+func (s *ScalarBls12381) OtherGroup() PairingPoint {
+	return s.point.OtherGroup()
+}
+
+func (s *ScalarBls12381) Point() PairingPoint {
+	return s.point
+}
+
+func (s *ScalarBls12381) SetPoint(p PairingPoint) PairingScalar {
 	return &ScalarBls12381{
 		Value: bls12381.Bls12381FqNew().Set(s.Value),
 		point: p,

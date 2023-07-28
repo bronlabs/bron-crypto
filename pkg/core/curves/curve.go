@@ -131,7 +131,9 @@ type Scalar interface {
 
 type PairingScalar interface {
 	Scalar
-	SetPoint(p Point) PairingScalar
+	SetPoint(p PairingPoint) PairingScalar
+	Point() PairingPoint
+	OtherGroup() PairingPoint
 }
 
 func unmarshalScalar(input []byte) (*Curve, []byte, error) {
@@ -491,11 +493,11 @@ func GetCurveByName(name string) (*Curve, error) {
 func GetPairingCurveByName(name string) (*PairingCurve, error) {
 	switch name {
 	case BLS12381G1Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G1)), nil
 	case BLS12381G2Name:
-		return BLS12381(BLS12381G2().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G2)), nil
 	case BLS12831Name:
-		return BLS12381(BLS12381G1().NewIdentityPoint()), nil
+		return BLS12381(new(PointBls12381G1)), nil
 	default:
 		return nil, errors.Errorf("curve with name %s is not supported", name)
 	}
@@ -535,7 +537,7 @@ func bls12381g2Init() {
 	}
 }
 
-func BLS12381(preferredPoint Point) *PairingCurve {
+func BLS12381(preferredPoint PairingPoint) *PairingCurve {
 	return &PairingCurve{
 		Scalar: &ScalarBls12381{
 			Value: bls12381.Bls12381FqNew(),
