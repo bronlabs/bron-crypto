@@ -32,6 +32,8 @@ type Proof struct {
 	S curves.Scalar
 }
 
+type Statement = curves.Point
+
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merlin.Transcript) (*Prover, error) {
 	if basePoint == nil {
@@ -52,7 +54,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merli
 
 // Prove generates and returns a Schnorr proof, given the scalar witness `x`.
 // in the process, it will actually also construct the statement (just one curve mult in this case)
-func (p *Prover) Prove(x curves.Scalar) (*Proof, curves.Point, error) {
+func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	var err error
 	result := &Proof{}
 
@@ -80,7 +82,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, curves.Point, error) {
 }
 
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
-func Verify(basePoint curves.Point, statement curves.Point, proof *Proof, uniqueSessionId []byte, transcript *merlin.Transcript) error {
+func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript *merlin.Transcript) error {
 	if transcript == nil {
 		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}
