@@ -188,12 +188,12 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
-	verifier, err := paillierdlog.NewVerifier(xEncrypted, pk, bigQ, sessionId, prng)
+	verifier, err := paillierdlog.NewVerifier(sessionId, pk, bigQ, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
 
-	prover, err := paillierdlog.NewProver(x, r, sk, sessionId, prng)
+	prover, err := paillierdlog.NewProver(sessionId, sk, x, r, prng)
 	if err != nil {
 		return err
 	}

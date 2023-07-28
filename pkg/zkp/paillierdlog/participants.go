@@ -56,7 +56,7 @@ type Prover struct {
 	state       *ProverState
 }
 
-func NewVerifier(xEncrypted paillier.CipherText, publicKey *paillier.PublicKey, bigQ curves.Point, sid []byte, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, prng io.Reader) (verifier *Verifier, err error) {
 	curve, err := curves.GetCurveByName(bigQ.CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ.CurveName())
@@ -68,7 +68,7 @@ func NewVerifier(xEncrypted paillier.CipherText, publicKey *paillier.PublicKey, 
 	q := nativeCurve.Params().N
 	q2 := new(big.Int).Mul(q, q)
 
-	rangeVerifier, err := paillierrange.NewVerifier(40, xEncrypted, q, publicKey, sid, prng)
+	rangeVerifier, err := paillierrange.NewVerifier(128, q, sid, publicKey, xEncrypted, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
@@ -92,7 +92,7 @@ func NewVerifier(xEncrypted paillier.CipherText, publicKey *paillier.PublicKey, 
 	}, nil
 }
 
-func NewProver(x curves.Scalar, r *big.Int, secretKey *paillier.SecretKey, sid []byte, prng io.Reader) (verifier *Prover, err error) {
+func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, prng io.Reader) (verifier *Prover, err error) {
 	curve, err := curves.GetCurveByName(x.Point().CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.Point().CurveName())
@@ -104,7 +104,7 @@ func NewProver(x curves.Scalar, r *big.Int, secretKey *paillier.SecretKey, sid [
 	q := nativeCurve.Params().N
 	qSquared := new(big.Int).Mul(q, q)
 
-	rangeProver, err := paillierrange.NewProver(40, x.BigInt(), r, q, secretKey, sid, prng)
+	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range prover")
 	}

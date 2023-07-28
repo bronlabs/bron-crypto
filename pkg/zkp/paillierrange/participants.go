@@ -9,7 +9,7 @@ import (
 )
 
 type Participant struct {
-	t     int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t)
+	t     int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
 	q     *big.Int
 	l     *big.Int
 	round int
@@ -47,8 +47,11 @@ type Verifier struct {
 	state *VerifierState
 }
 
-func NewProver(t int, x *big.Int, r *big.Int, q *big.Int, sk *paillier.SecretKey, sid []byte, prng io.Reader) (prover *Prover, err error) {
+func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x *big.Int, r *big.Int, prng io.Reader) (prover *Prover, err error) {
+	// 2.a. computes l = floor(q/3)
 	l := new(big.Int).Div(q, big.NewInt(3)) // l = floor(q/3)
+
+	// 2.b. computes c = c (-) l
 	xMinusQThird := new(big.Int).Sub(x, l)
 
 	return &Prover{
@@ -67,8 +70,11 @@ func NewProver(t int, x *big.Int, r *big.Int, q *big.Int, sk *paillier.SecretKey
 	}, nil
 }
 
-func NewVerifier(t int, xEncrypted paillier.CipherText, q *big.Int, pk *paillier.PublicKey, sid []byte, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(t int, q *big.Int, sid []byte, pk *paillier.PublicKey, xEncrypted paillier.CipherText, prng io.Reader) (verifier *Verifier, err error) {
+	// 1.a. computes l = floor(q/3)
 	l := new(big.Int).Div(q, big.NewInt(3)) // l = floor(q/3)
+
+	// 1.b. computes c = c (-) l
 	cMinusQThirdEncrypted, err := pk.SubPlain(xEncrypted, l)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt l")

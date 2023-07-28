@@ -236,6 +236,7 @@ func (publicKey *PublicKey) Add(lhsCipherText, rhsCipherText CipherText) (Cipher
 	return ctxt, nil
 }
 
+// SubPlain subtract homomorphically plain integer from cipher text
 func (publicKey *PublicKey) SubPlain(lhsCipherText, rhsPlain *big.Int) (CipherText, error) {
 	if lhsCipherText == nil || rhsPlain == nil {
 		return nil, errs.NewIsNil("one of the cipher texts in nil")

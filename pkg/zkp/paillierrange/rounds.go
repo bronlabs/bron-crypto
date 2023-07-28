@@ -50,11 +50,13 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
 	}
 
+	// 1.c. chooses a random e (t bit length)
 	verifier.state.e, err = crand.Int(verifier.prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
 	}
 
+	// 1.d. compute commitment to (e, sid) and send to P
 	esidMessage := append(verifier.state.e.Bytes()[:], verifier.sid...)
 	esidCommitment, esidWitness, err := commitments.Commit(hashFunc, esidMessage)
 	if err != nil {
@@ -82,6 +84,8 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 			return nil, errs.WrapFailed(err, "cannot create random")
 		}
 
+		// 2.c. choose random w1i (in 0-l range), w2i (in l-2l range)
+		// 2.d. flip value of w1i and w2i with 0.5 probability
 		if flip.Cmp(big.NewInt(1)) == 0 {
 			prover.state.w2[i], err = prover.randomIntInFirstThird()
 			if err != nil {
@@ -97,6 +101,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		}
 	}
 
+	// 2.e. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
 	prover.state.r1 = make([]*big.Int, prover.t)
 	prover.state.r2 = make([]*big.Int, prover.t)
 	c1 := make([]paillier.CipherText, prover.t)
@@ -112,6 +117,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		}
 	}
 
+	// 2.f. send c1i, c2i to V
 	prover.round += 2
 	return &ProverRound2Output{
 		c1: c1,
@@ -128,6 +134,8 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 	verifier.state.c2 = input.c2
 
 	verifier.round += 2
+
+	// 3. decommit (e, sid), reveal (e, sid) to P
 	return &VerifierRound3Output{
 		e:           verifier.state.e,
 		esidWitness: verifier.state.esidWitness,
@@ -145,10 +153,12 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 
+	// 4. for every i
 	zetZero := make([]*ZetZero, prover.t)
 	zetOne := make([]*ZetOne, prover.t)
 	for i := 0; i < prover.t; i++ {
 		if input.e.Bit(i) == 0 {
+			// 4.a. if ei == 0 set zi = (w1i, r1i, w2i, r2i)
 			zetZero[i] = &ZetZero{
 				w1: prover.state.w1[i],
 				r1: prover.state.r1[i],
@@ -156,15 +166,18 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 				r2: prover.state.r2[i],
 			}
 		} else {
+			// 4.b. if ei == 1
 			xPlusW1 := new(big.Int).Add(prover.x, prover.state.w1[i])
 			xPlusW2 := new(big.Int).Add(prover.x, prover.state.w2[i])
 			if prover.inSecondThird(xPlusW1) {
+				// 4.b. if (x + w1) in l-2l range set zi = (1, x + w1i, r * r1i mod N)
 				zetOne[i] = &ZetOne{
 					j:        1,
 					xPlusWj:  xPlusW1,
 					rTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r1[i]), prover.sk.N),
 				}
 			} else if prover.inSecondThird(xPlusW2) {
+				// 4.b. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					j:        2,
 					xPlusWj:  xPlusW2,
@@ -176,6 +189,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		}
 	}
 
+	// 4.c. send zi to V
 	prover.round += 2
 	return &ProverRound4Output{
 		zetZero: zetZero,
@@ -188,8 +202,11 @@ func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
 		return errs.NewInvalidRound("%d != 5", verifier.round)
 	}
 
+	// 5. Parse zi
 	for i := 0; i < verifier.t; i++ {
 		if verifier.state.e.Bit(i) == 0 {
+			// 5.a. if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
+			// and one of w1i, w2i is in l-2l range while other is in 0-l range
 			z := input.zetZero[i]
 			c1, err := verifier.pk.EncryptWithNonce(z.w1, z.r1)
 			if err != nil {
@@ -210,6 +227,8 @@ func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
 				return errs.NewVerificationFailed("failed")
 			}
 		} else {
+			// 5.b if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
+			// where zi = (j, wi, ri)
 			z := input.zetOne[i]
 			wi := z.xPlusWj
 			ri := z.rTimesRj

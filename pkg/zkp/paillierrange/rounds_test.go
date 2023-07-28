@@ -87,11 +87,11 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
-	verifier, err := paillierrange.NewVerifier(40, xEncrypted, q, pk, sid, prng)
+	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
-	prover, err := paillierrange.NewProver(40, x, r, q, sk, sid, prng)
+	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, prng)
 	if err != nil {
 		return err
 	}
