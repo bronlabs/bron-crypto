@@ -1129,7 +1129,7 @@ func (s *ScalarBls12381Gt) BigInt() *big.Int {
 }
 
 func (s *ScalarBls12381Gt) CurveName() string {
-	return "BLS12381G1"
+	return BLS12381G1Name
 }
 
 func (s *ScalarBls12381Gt) Bytes() []byte {
