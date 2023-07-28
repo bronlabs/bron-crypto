@@ -1,0 +1,154 @@
+package paillierpk
+
+import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/nthroot"
+	"math/big"
+)
+
+type VerifierRound1Output struct {
+	NthRootProverOutputs []*nthroot.ProverRound1Output
+	X                    []paillier.CipherText
+}
+
+type ProverRound2Output struct {
+	NthRootVerifierOutputs []*nthroot.VerifierRound2Output
+}
+
+type VerifierRound3Output struct {
+	NthRootProverOutputs []*nthroot.ProverRound3Output
+}
+
+type ProverRound4Output struct {
+	YPrime []*big.Int
+}
+
+func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
+	if verifier.round != 1 {
+		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
+	}
+
+	verifier.state.y = make([]*big.Int, verifier.k)
+	verifier.state.x = make([]paillier.CipherText, verifier.k)
+
+	zero := big.NewInt(0)
+	nthRootProverRound1Outputs := make([]*nthroot.ProverRound1Output, verifier.k)
+	verifier.state.rootProvers = make([]*nthroot.Prover, verifier.k)
+	for i := 0; i < verifier.k; i++ {
+		// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
+		verifier.state.x[i], verifier.state.y[i], err = verifier.paillierPublicKey.Encrypt(zero)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "encryption failed")
+		}
+
+		// V proves the knowledge of y, the Nth root of x,
+		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create Nth root prover")
+		}
+		nthRootProverRound1Outputs[i], err = verifier.state.rootProvers[i].Round1()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 1 of Nth root prover")
+		}
+	}
+
+	verifier.round += 2
+	return &VerifierRound1Output{
+		NthRootProverOutputs: nthRootProverRound1Outputs,
+		X:                    verifier.state.x,
+	}, nil
+}
+
+func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2Output, err error) {
+	if prover.round != 2 {
+		return nil, errs.NewInvalidRound("%d != 2", prover.round)
+	}
+
+	prover.state.x = input.X
+
+	nthRootVerifierRound2Outputs := make([]*nthroot.VerifierRound2Output, prover.k)
+	prover.state.rootVerifiers = make([]*nthroot.Verifier, prover.k)
+	for i := 0; i < prover.k; i++ {
+		// round 2 of proving the knowledge of y
+		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
+		}
+		nthRootVerifierRound2Outputs[i], err = prover.state.rootVerifiers[i].Round2(input.NthRootProverOutputs[i])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of Nth root verifier")
+		}
+	}
+
+	prover.round += 2
+	return &ProverRound2Output{
+		NthRootVerifierOutputs: nthRootVerifierRound2Outputs,
+	}, nil
+}
+
+func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
+	if verifier.round != 3 {
+		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
+	}
+
+	nthRootProverRound3Outputs := make([]*nthroot.ProverRound3Output, verifier.k)
+	for i := 0; i < verifier.k; i++ {
+		// round 3 of proving the knowledge of y
+		nthRootProverRound3Outputs[i], err = verifier.state.rootProvers[i].Round3(input.NthRootVerifierOutputs[i])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 3 of Nth root prover")
+		}
+	}
+
+	verifier.round += 2
+	return &VerifierRound3Output{
+		NthRootProverOutputs: nthRootProverRound3Outputs,
+	}, nil
+}
+
+func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4Output, err error) {
+	if prover.round != 4 {
+		return nil, errs.NewInvalidRound("%d != 4", prover.round)
+	}
+
+	for i := 0; i < prover.k; i++ {
+		// round 4 of proving the knowledge of y
+		err = prover.state.rootVerifiers[i].Round4(input.NthRootProverOutputs[i])
+		if err != nil {
+			return nil, errs.WrapVerificationFailed(err, "cannot verify knowledge of Nth root from Verifier")
+		}
+	}
+
+	// V proved the knowledge of Nth root x
+	yPrime := make([]*big.Int, prover.k)
+	for i := 0; i < prover.k; i++ {
+		// P calculates a y', the Nth root of x
+		// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
+		m := new(big.Int).ModInverse(prover.paillierSecretKey.N, prover.paillierSecretKey.Lambda)
+		yPrime[i] = new(big.Int).Exp(prover.state.x[i], m, prover.paillierSecretKey.N)
+	}
+
+	// P returns a y'
+	prover.round += 2
+	return &ProverRound4Output{
+		YPrime: yPrime,
+	}, nil
+}
+
+func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
+	if verifier.round != 5 {
+		return errs.NewInvalidRound("%d != 5", verifier.round)
+	}
+
+	for i := 0; i < verifier.k; i++ {
+		if input.YPrime[i].Cmp(verifier.state.y[i]) != 0 {
+			// V rejects if y != y'
+			return errs.NewVerificationFailed("failed to verify Paillier public key")
+		}
+	}
+
+	// V accepts if every y_i == y'_i
+	verifier.round += 2
+	return nil
+}
