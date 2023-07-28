@@ -6,7 +6,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/comparableelement"
 	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/sha3"
@@ -27,19 +26,6 @@ func TestCheckDuplicateParticipantByPubkey(t *testing.T) {
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
 	_, err = hashmap.NewHashmap([]integration.IdentityKey{identityAlice, identityBob})
 	assert.True(t, errs.IsDuplicate(err))
-}
-
-func TestCompareIdentity(t *testing.T) {
-	cipherSuite := &integration.CipherSuite{
-		Curve: curves.ED25519(),
-		Hash:  sha3.New256,
-	}
-	identityAlice, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	identitySameAlice, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	identityBob, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
-	assert.True(t, comparableelement.Compare(identityAlice, identityBob) > 0)
-	assert.True(t, comparableelement.Compare(identityBob, identityAlice) < 0)
-	assert.True(t, comparableelement.Compare(identityAlice, identitySameAlice) == 0)
 }
 
 func TestCheckExistIdentity(t *testing.T) {

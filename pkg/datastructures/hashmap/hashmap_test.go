@@ -2,7 +2,6 @@ package hashmap
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
@@ -13,9 +12,8 @@ type Value struct {
 	value string
 }
 
-func (k Value) HashCode() uint32 {
-	hashed := sha256.Sum256([]byte(k.value))
-	return binary.BigEndian.Uint32(hashed[:])
+func (k Value) HashCode() [32]byte {
+	return sha256.Sum256([]byte(k.value))
 }
 
 func TestGet(t *testing.T) {

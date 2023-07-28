@@ -2,8 +2,8 @@ package trusted_dealer_test
 
 import (
 	crand "crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"hash"
@@ -26,8 +26,8 @@ type identityKey struct {
 func (k *identityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
-func (k *identityKey) HashCode() string {
-	return base64.StdEncoding.EncodeToString(k.signer.PublicKey.Y.ToAffineCompressed())
+func (k *identityKey) HashCode() [32]byte {
+	return sha256.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
 func (k *identityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)

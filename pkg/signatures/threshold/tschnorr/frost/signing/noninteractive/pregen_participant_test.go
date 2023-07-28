@@ -2,8 +2,8 @@ package noninteractive
 
 import (
 	crand "crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/base64"
 	"testing"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -21,8 +21,8 @@ type mockedIdentityKey struct {
 func (k *mockedIdentityKey) PublicKey() curves.Point {
 	return k.publicKey
 }
-func (k *mockedIdentityKey) HashCode() string {
-	return base64.StdEncoding.EncodeToString(k.publicKey.ToAffineCompressed())
+func (k *mockedIdentityKey) HashCode() [32]byte {
+	return sha256.Sum256(k.publicKey.ToAffineCompressed())
 }
 func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")

@@ -24,7 +24,7 @@ var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
-func (k *TestIdentityKey) HashCode() string {
+func (k *TestIdentityKey) HashCode() [32]byte {
 	return sha256.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
 func (k *TestIdentityKey) Cmp(i TestIdentityKey) string {
