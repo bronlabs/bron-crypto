@@ -54,7 +54,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
 
-	// 1.a. compute a (*) c (+) Enc(b, r) for random r
+	// 1.i. compute a (*) c (+) Enc(b, r) for random r
 	acEnc, err := verifier.pk.Mul(verifier.state.a, verifier.c)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot perform homomorphic multiplication")
@@ -65,7 +65,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	}
 	cPrime, err := verifier.pk.Add(acEnc, bEnc)
 
-	// 1.b. compute c'' = commit(a, b)
+	// 1.ii. compute c'' = commit(a, b)
 	cDoublePrimeMessage := append(verifier.state.a.Bytes()[:], verifier.state.b.Bytes()...)
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(hashFunc, cDoublePrimeMessage)
 	if err != nil {
@@ -73,7 +73,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	}
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
-	// 1.c. compute Q' = aQ + bQ
+	// 1.iii. compute Q' = aQ + bQ
 	aScalar, err := verifier.state.curve.NewScalar().SetBigInt(verifier.state.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
@@ -84,12 +84,13 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	}
 	verifier.state.bigQPrime = verifier.bigQ.Mul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
 
-	// 4.a. In parallel to the above, run L_P protocol
+	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round1()
 	if err != nil {
 		return nil, err
 	}
 
+	// 1.iv sends c' and c'' to P
 	verifier.round += 2
 	return &VerifierRound1Output{
 		RangeVerifierOutput:    rangeVerifierOutput,
@@ -105,7 +106,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 
 	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
 
-	// 2.a. decrypt c' to obtain alpha, compute Q^ = alpha * G
+	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
 	prover.state.alpha, err = prover.sk.Decrypt(input.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
@@ -116,7 +117,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 	}
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
-	// 2.b. compute c^ = commit(Q^) and send to V
+	// 2.ii. compute c^ = commit(Q^) and send to V
 	bigQHatMessage := prover.state.bigQHat.ToAffineCompressed()
 	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(hashFunc, bigQHatMessage)
 	if err != nil {
@@ -124,7 +125,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 	}
 	prover.state.bigQHatWitness = bigQHatWitness
 
-	// 4.a. In parallel to the above, run L_P protocol
+	// 4.i. In parallel to the above, run L_P protocol
 	rangeProverOutput, err := prover.rangeProver.Round2(input.RangeVerifierOutput)
 	if err != nil {
 		return nil, err
@@ -144,7 +145,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 
 	verifier.state.cHat = input.CHat
 
-	// 4.a. In parallel to the above, run L_P protocol
+	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(input.RangeProverOutput)
 	if err != nil {
 		return nil, err

@@ -16,16 +16,17 @@ $V$ input:
 * $c, r$ - c is encrypted value of x, such that $c = Enc_{pk}(x;r)$
 
 Steps:
-1. V chooses a random $a \leftarrow \mathbb{Z}_q$ and $b ← \mathbb{Z}_{q^2}$
-   1.a. computes $c' = (a \odot c) \oplus Enc_{pk}(b; r)$ for a random $r \in Z_N^*$ (verifying explicitly that $\gcd(r, N) = 1$),
-   1.b computes $c'' = commit(a, b)$,
-   1.c computes $Q' = a \cdot Q + b \cdot G$.
-   1.d sends $(c' , c'')$ to $P$.
-2. $P$ receives $(c' , c'')$ from $V$ ,
-   2.a decrypts it to obtain $\alpha = Dec_{sk}(c')$, and computes $\hat{Q} = \alpha \cdot G$,
-   2.b sends $\hat{c} = commit(\hat{Q})$ to $V$ .
-3. $V$ decommits $c''$ , revealing $(a, b)$.
+1. V chooses a random $a \leftarrow \mathbb{Z} _q$ and $b \leftarrow \mathbb{Z} _{q^2}$
+    1. computes $c' = (a \odot c) \oplus Enc_{pk}(b; r)$ for a random $r \in Z_N^*$ (verifying explicitly that $\gcd(r, N) = 1$),
+    2. computes $c'' = commit(a, b)$,
+    3. computes $Q' = a \cdot Q + b \cdot G$,
+    4. sends $(c' , c'')$ to $P$.
+2. $P$ receives $(c' , c'')$ from $V$,
+    1. decrypts it to obtain $\alpha = Dec_{sk}(c')$, and computes $\hat{Q} = \alpha \cdot G$,
+    2. sends $\hat{c} = commit(\hat{Q})$ to $V$.
+3. $V$ decommits $c''$, revealing $(a, b)$.
 4. $P$ checks that $\alpha = a \cdot x + b$ (over the integers). If not, it aborts. Else, it decommits $\hat{c}$ revealing $\hat{Q}$,
-   4.a. Range-ZK proof: In parallel to the above, proves in zero knoledge that $x \in \mathbb{Z}_q$ (protocol $L_P$)
+    1. Range-ZK proof: In parallel to the above, proves in zero knowledge that $x \in \mathbb{Z}_q$ (protocol $L_P$).
+5. $V$ accepts if and only if it accepts the range proof and $\hat{Q} = Q'$
 
 [Lin17]: <https://eprint.iacr.org/2017/552>
