@@ -16,9 +16,9 @@ var (
 )
 
 type VerifierRound1Output struct {
-	rangeVerifierOutput *paillierrange.VerifierRound1Output
-	cPrime              paillier.CipherText
-	cBisCommitment      commitments.Commitment
+	rangeVerifierOutput    *paillierrange.VerifierRound1Output
+	cPrime                 paillier.CipherText
+	cDoublePrimeCommitment commitments.Commitment
 }
 
 type ProverRound2Output struct {
@@ -30,7 +30,7 @@ type VerifierRound3Output struct {
 	rangeVerifierOutput *paillierrange.VerifierRound3Output
 	a                   *big.Int
 	b                   *big.Int
-	cBisWitness         commitments.Witness
+	cDoublePrimeWitness commitments.Witness
 }
 
 type ProverRound4Output struct {
@@ -71,7 +71,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to a and b")
 	}
-	verifier.state.cBisWitness = cDoublePrimeWitness
+	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.c. compute Q' = aQ + bQ
 	aScalar, err := verifier.state.curve.NewScalar().SetBigInt(verifier.state.a)
@@ -92,9 +92,9 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 
 	verifier.round += 2
 	return &VerifierRound1Output{
-		rangeVerifierOutput: rangeVerifierOutput,
-		cPrime:              cPrime,
-		cBisCommitment:      cDoublePrimeCommitment,
+		rangeVerifierOutput:    rangeVerifierOutput,
+		cPrime:                 cPrime,
+		cDoublePrimeCommitment: cDoublePrimeCommitment,
 	}, nil
 }
 
@@ -103,7 +103,7 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		return nil, errs.NewInvalidRound("%d != 2", prover.round)
 	}
 
-	prover.state.cBisCommitment = input.cBisCommitment
+	prover.state.cDoublePrimeCommitment = input.cDoublePrimeCommitment
 
 	// 2.a. decrypt c' to obtain alpha, compute Q^ = alpha * G
 	prover.state.alpha, err = prover.sk.Decrypt(input.cPrime)
@@ -156,7 +156,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 		rangeVerifierOutput: rangeVerifierOutput,
 		a:                   verifier.state.a,
 		b:                   verifier.state.b,
-		cBisWitness:         verifier.state.cBisWitness,
+		cDoublePrimeWitness: verifier.state.cDoublePrimeWitness,
 	}, nil
 }
 
@@ -165,8 +165,8 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	cBisMessage := append(input.a.Bytes()[:], input.b.Bytes()...)
-	if err := commitments.Open(hashFunc, cBisMessage, prover.state.cBisCommitment, input.cBisWitness); err != nil {
+	cDoublePrimeMessage := append(input.a.Bytes()[:], input.b.Bytes()...)
+	if err := commitments.Open(hashFunc, cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.cDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 

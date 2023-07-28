@@ -27,10 +27,10 @@ type State struct {
 
 type VerifierState struct {
 	State
-	cPrime      *paillier.CipherText
-	cBisWitness commitments.Witness
-	bigQPrime   curves.Point
-	cHat        commitments.Commitment
+	cPrime              *paillier.CipherText
+	cDoublePrimeWitness commitments.Witness
+	bigQPrime           curves.Point
+	cHat                commitments.Commitment
 }
 
 type Verifier struct {
@@ -42,10 +42,10 @@ type Verifier struct {
 
 type ProverState struct {
 	State
-	alpha          *big.Int
-	bigQHat        curves.Point
-	bigQHatWitness commitments.Witness
-	cBisCommitment commitments.Commitment
+	alpha                  *big.Int
+	bigQHat                curves.Point
+	bigQHatWitness         commitments.Witness
+	cDoublePrimeCommitment commitments.Commitment
 }
 
 type Prover struct {
