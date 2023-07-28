@@ -16,27 +16,27 @@ var (
 )
 
 type VerifierRound1Output struct {
-	rangeVerifierOutput    *paillierrange.VerifierRound1Output
-	cPrime                 paillier.CipherText
-	cDoublePrimeCommitment commitments.Commitment
+	RangeVerifierOutput    *paillierrange.VerifierRound1Output
+	CPrime                 paillier.CipherText
+	CDoublePrimeCommitment commitments.Commitment
 }
 
 type ProverRound2Output struct {
-	rangeProverOutput *paillierrange.ProverRound2Output
-	cHat              commitments.Commitment
+	RangeProverOutput *paillierrange.ProverRound2Output
+	CHat              commitments.Commitment
 }
 
 type VerifierRound3Output struct {
-	rangeVerifierOutput *paillierrange.VerifierRound3Output
-	a                   *big.Int
-	b                   *big.Int
-	cDoublePrimeWitness commitments.Witness
+	RangeVerifierOutput *paillierrange.VerifierRound3Output
+	A                   *big.Int
+	B                   *big.Int
+	CDoublePrimeWitness commitments.Witness
 }
 
 type ProverRound4Output struct {
-	rangeProverOutput *paillierrange.ProverRound4Output
-	bigQHat           curves.Point
-	bigQHatWitness    commitments.Witness
+	RangeProverOutput *paillierrange.ProverRound4Output
+	BigQHat           curves.Point
+	BigQHatWitness    commitments.Witness
 }
 
 func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
@@ -92,9 +92,9 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 
 	verifier.round += 2
 	return &VerifierRound1Output{
-		rangeVerifierOutput:    rangeVerifierOutput,
-		cPrime:                 cPrime,
-		cDoublePrimeCommitment: cDoublePrimeCommitment,
+		RangeVerifierOutput:    rangeVerifierOutput,
+		CPrime:                 cPrime,
+		CDoublePrimeCommitment: cDoublePrimeCommitment,
 	}, nil
 }
 
@@ -103,10 +103,10 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 		return nil, errs.NewInvalidRound("%d != 2", prover.round)
 	}
 
-	prover.state.cDoublePrimeCommitment = input.cDoublePrimeCommitment
+	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
 
 	// 2.a. decrypt c' to obtain alpha, compute Q^ = alpha * G
-	prover.state.alpha, err = prover.sk.Decrypt(input.cPrime)
+	prover.state.alpha, err = prover.sk.Decrypt(input.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
@@ -125,15 +125,15 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 	prover.state.bigQHatWitness = bigQHatWitness
 
 	// 4.a. In parallel to the above, run L_P protocol
-	rangeProverOutput, err := prover.rangeProver.Round2(input.rangeVerifierOutput)
+	rangeProverOutput, err := prover.rangeProver.Round2(input.RangeVerifierOutput)
 	if err != nil {
 		return nil, err
 	}
 
 	prover.round += 2
 	return &ProverRound2Output{
-		rangeProverOutput: rangeProverOutput,
-		cHat:              bigQHatCommitment,
+		RangeProverOutput: rangeProverOutput,
+		CHat:              bigQHatCommitment,
 	}, nil
 }
 
@@ -142,10 +142,10 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
 	}
 
-	verifier.state.cHat = input.cHat
+	verifier.state.cHat = input.CHat
 
 	// 4.a. In parallel to the above, run L_P protocol
-	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(input.rangeProverOutput)
+	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(input.RangeProverOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -153,10 +153,10 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 	// 3. decommit c'' revealing a, b
 	verifier.round += 2
 	return &VerifierRound3Output{
-		rangeVerifierOutput: rangeVerifierOutput,
-		a:                   verifier.state.a,
-		b:                   verifier.state.b,
-		cDoublePrimeWitness: verifier.state.cDoublePrimeWitness,
+		RangeVerifierOutput: rangeVerifierOutput,
+		A:                   verifier.state.a,
+		B:                   verifier.state.b,
+		CDoublePrimeWitness: verifier.state.cDoublePrimeWitness,
 	}, nil
 }
 
@@ -165,18 +165,18 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	cDoublePrimeMessage := append(input.a.Bytes()[:], input.b.Bytes()...)
-	if err := commitments.Open(hashFunc, cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.cDoublePrimeWitness); err != nil {
+	cDoublePrimeMessage := append(input.A.Bytes()[:], input.B.Bytes()...)
+	if err := commitments.Open(hashFunc, cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 
 	// 4. check that alpha == ax + b (over integers), if not aborts
-	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.a, prover.x.BigInt()), input.b)
+	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.A, prover.x.BigInt()), input.B)
 	if prover.state.alpha.Cmp(alphaCheck) != 0 {
 		return nil, errs.NewIdentifiableAbort("verifier is misbehaving")
 	}
 
-	rangeProverOutput, err := prover.rangeProver.Round4(input.rangeVerifierOutput)
+	rangeProverOutput, err := prover.rangeProver.Round4(input.RangeVerifierOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -184,9 +184,9 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 	// 4. decommit c^ revealing Q^
 	prover.round += 2
 	return &ProverRound4Output{
-		rangeProverOutput: rangeProverOutput,
-		bigQHat:           prover.state.bigQHat,
-		bigQHatWitness:    prover.state.bigQHatWitness,
+		RangeProverOutput: rangeProverOutput,
+		BigQHat:           prover.state.bigQHat,
+		BigQHatWitness:    prover.state.bigQHatWitness,
 	}, nil
 }
 
@@ -195,16 +195,16 @@ func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
 		return errs.NewInvalidRound("%d != 5", verifier.round)
 	}
 
-	bigQHatMessage := input.bigQHat.ToAffineCompressed()
-	if err := commitments.Open(hashFunc, bigQHatMessage, verifier.state.cHat, input.bigQHatWitness); err != nil {
+	bigQHatMessage := input.BigQHat.ToAffineCompressed()
+	if err := commitments.Open(hashFunc, bigQHatMessage, verifier.state.cHat, input.BigQHatWitness); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
 
 	// 5. accepts if and only if it accepts the range proof and Q^ == Q'
-	if !input.bigQHat.Equal(verifier.state.bigQPrime) {
+	if !input.BigQHat.Equal(verifier.state.bigQPrime) {
 		return errs.NewVerificationFailed("cannot verify")
 	}
-	err = verifier.rangeVerifier.Round5(input.rangeProverOutput)
+	err = verifier.rangeVerifier.Round5(input.RangeProverOutput)
 	if err != nil {
 		return err
 	}
