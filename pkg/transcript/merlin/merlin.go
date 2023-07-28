@@ -41,7 +41,7 @@ func (t *Transcript) Clone() transcript.Transcript {
 }
 
 func (t *Transcript) Type() transcript.Type {
-	return "Merlin"
+	return Type
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
@@ -94,7 +94,7 @@ func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
 
 // The transcript PRNG has a different type, to make it impossible to accidentally
 // rekey the public transcript, or use an RNG before it has been finalized.
-type PrngReader struct {
+type prngReader struct {
 	t *Transcript
 }
 
@@ -118,12 +118,12 @@ func (t *Transcript) NewReader(witnessLabel, witness []byte, rng io.Reader) (io.
 	//    STROBE:  KEY[b"rng"](rng);
 	prng.s.AD(true, []byte("rng"))
 	prng.s.KEY(keyBytes[:])
-	prngReader := &PrngReader{t: prng}
+	prngReader := &prngReader{t: prng}
 	return prngReader, nil
 }
 
 // Read reads random data and writes to buf. Implicitly implements io.Reader.
-func (pr *PrngReader) Read(buf []byte) (int, error) {
+func (pr *prngReader) Read(buf []byte) (int, error) {
 	// AdditionalData["Read_PRG" || le32(len(buf))]
 	pr.t.s.AD(true, appendSizeToLabel([]byte("ReadRNG"), len(buf)))
 	// PRF(buf)
