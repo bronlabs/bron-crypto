@@ -2,7 +2,6 @@ package trusted_dealer_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/json"
 	"errors"
@@ -15,6 +14,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	trusted_dealer "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
 
 type identityKey struct {
@@ -26,8 +26,8 @@ type identityKey struct {
 func (k *identityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
-func (k *identityKey) HashCode() [32]byte {
-	return sha256.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
+func (k *identityKey) Hash() [32]byte {
+	return sha3.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
 func (k *identityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)

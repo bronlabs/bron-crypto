@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/sha3"
 )
@@ -24,7 +24,7 @@ func TestCheckDuplicateParticipantByPubkey(t *testing.T) {
 	}
 	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	_, err = hashmap.NewHashmap([]integration.IdentityKey{identityAlice, identityBob})
+	_, err = hashset.NewHashSet([]integration.IdentityKey{identityAlice, identityBob})
 	assert.True(t, errs.IsDuplicate(err))
 }
 
@@ -35,11 +35,11 @@ func TestCheckExistIdentity(t *testing.T) {
 	}
 	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
-	s, err := hashmap.NewHashmap([]integration.IdentityKey{identityAlice})
+	s, err := hashset.NewHashSet([]integration.IdentityKey{identityAlice})
 	assert.NoError(t, err)
-	assert.True(t, hashmap.Size(s) == 1)
-	_, found := hashmap.Get(s, identityAlice)
+	assert.True(t, s.Size() == 1)
+	_, found := s.Get(identityAlice)
 	assert.True(t, found)
-	_, found = hashmap.Get(s, identityBob)
+	_, found = s.Get(identityBob)
 	assert.False(t, found)
 }

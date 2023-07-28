@@ -2,7 +2,6 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"crypto/sha256"
 	"encoding/json"
 	"hash"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/sha3"
 )
 
 type TestIdentityKey struct {
@@ -24,8 +24,8 @@ var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
-func (k *TestIdentityKey) HashCode() [32]byte {
-	return sha256.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
+func (k *TestIdentityKey) Hash() [32]byte {
+	return sha3.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
 func (k *TestIdentityKey) Cmp(i TestIdentityKey) string {
 	return ""

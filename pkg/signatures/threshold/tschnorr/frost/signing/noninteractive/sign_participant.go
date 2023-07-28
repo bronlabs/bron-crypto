@@ -3,7 +3,7 @@ package noninteractive
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
@@ -84,11 +84,11 @@ func NewNonInteractiveCosigner(
 			return nil, errs.NewIsNil("participant %d is nil", i)
 		}
 	}
-	presentPartiesHashSet, err := hashmap.NewHashmap(presentParties)
+	presentPartiesHashSet, err := hashset.NewHashSet(presentParties)
 	if err != nil {
 		return nil, err
 	}
-	if hashmap.Size(presentPartiesHashSet) <= 0 {
+	if presentPartiesHashSet.Size() <= 0 {
 		return nil, errs.NewInvalidArgument("no party is present")
 	}
 	for _, participant := range presentParties {
@@ -122,7 +122,7 @@ func NewNonInteractiveCosigner(
 	E_alpha := map[integration.IdentityKey]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
-		_, found := hashmap.Get(presentPartiesHashSet, attestedCommitment.Attestor)
+		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
 		if !found {
 			continue
 		}
