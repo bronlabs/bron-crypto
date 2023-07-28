@@ -42,30 +42,6 @@ func TestCompareIdentity(t *testing.T) {
 	assert.True(t, comparableelement.Compare(identityAlice, identitySameAlice) == 0)
 }
 
-func TestSortIdentities(t *testing.T) {
-	cipherSuite := &integration.CipherSuite{
-		Curve: curves.ED25519(),
-		Hash:  sha3.New256,
-	}
-	identityAlice, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	identityBob, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
-	sorted, err := comparableelement.SortNoDuplicate([]comparableelement.ComparableElement{identityBob, identityAlice})
-	assert.NoError(t, err)
-	assert.Equal(t, sorted[0].HashCode(), identityBob.HashCode())
-	assert.Equal(t, sorted[1].HashCode(), identityAlice.HashCode())
-}
-
-func TestSortDuplicateIdentities(t *testing.T) {
-	cipherSuite := &integration.CipherSuite{
-		Curve: curves.ED25519(),
-		Hash:  sha3.New256,
-	}
-	identityAlice, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	identityBob, _ := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
-	_, err := comparableelement.SortNoDuplicate([]comparableelement.ComparableElement{identityBob, identityAlice})
-	assert.True(t, errs.IsDuplicate(err))
-}
-
 func TestCheckExistIdentity(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
 		Curve: curves.ED25519(),

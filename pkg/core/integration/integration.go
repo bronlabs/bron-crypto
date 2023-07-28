@@ -6,6 +6,7 @@ import (
 	"hash"
 	"sort"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/comparableelement"
 	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashmap"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -24,6 +25,7 @@ type IdentityKey interface {
 	Verify(signature []byte, publicKey curves.Point, message []byte) error
 	PublicKey() curves.Point
 	HashCode() string
+	Cmp(comparableelement.Comparable) int
 }
 
 type CipherSuite struct {

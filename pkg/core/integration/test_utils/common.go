@@ -2,7 +2,7 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"encoding/base64"
+	"crypto/sha256"
 	"encoding/json"
 	"hash"
 
@@ -25,7 +25,10 @@ func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
 func (k *TestIdentityKey) HashCode() string {
-	return base64.StdEncoding.EncodeToString(k.signer.PublicKey.Y.ToAffineCompressed())
+	return sha256.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
+}
+func (k *TestIdentityKey) Cmp(i TestIdentityKey) string {
+	return ""
 }
 func (k *TestIdentityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)
