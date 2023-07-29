@@ -27,9 +27,6 @@ func (k *TestIdentityKey) PublicKey() curves.Point {
 func (k *TestIdentityKey) Hash() [32]byte {
 	return sha3.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
-func (k *TestIdentityKey) Cmp(i TestIdentityKey) string {
-	return ""
-}
 func (k *TestIdentityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)
 	if err != nil {
