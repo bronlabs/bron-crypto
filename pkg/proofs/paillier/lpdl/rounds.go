@@ -1,4 +1,4 @@
-package paillierdlog
+package lpdl
 
 import (
 	crand "crypto/rand"
@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierrange"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
 	"math/big"
 )
 
@@ -16,25 +16,25 @@ var (
 )
 
 type VerifierRound1Output struct {
-	RangeVerifierOutput    *paillierrange.VerifierRound1Output
+	RangeVerifierOutput    *_range.VerifierRound1Output
 	CPrime                 paillier.CipherText
 	CDoublePrimeCommitment commitments.Commitment
 }
 
 type ProverRound2Output struct {
-	RangeProverOutput *paillierrange.ProverRound2Output
+	RangeProverOutput *_range.ProverRound2Output
 	CHat              commitments.Commitment
 }
 
 type VerifierRound3Output struct {
-	RangeVerifierOutput *paillierrange.VerifierRound3Output
+	RangeVerifierOutput *_range.VerifierRound3Output
 	A                   *big.Int
 	B                   *big.Int
 	CDoublePrimeWitness commitments.Witness
 }
 
 type ProverRound4Output struct {
-	RangeProverOutput *paillierrange.ProverRound4Output
+	RangeProverOutput *_range.ProverRound4Output
 	BigQHat           curves.Point
 	BigQHatWitness    commitments.Witness
 }

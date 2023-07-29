@@ -1,4 +1,4 @@
-package paillierrange
+package _range
 
 import (
 	crand "crypto/rand"

@@ -3,7 +3,7 @@ package nthroot_test
 import (
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"

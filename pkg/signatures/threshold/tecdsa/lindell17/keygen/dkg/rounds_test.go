@@ -66,7 +66,23 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	r4i := lindell17_dkg_test_utils.MapDkgRound3OutputsToRound4Inputs(lindellParticipants, r3o)
-	shards, err := lindell17_dkg_test_utils.DoDkgRound4(lindellParticipants, r4i)
+	r4o, err := lindell17_dkg_test_utils.DoDkgRound4(lindellParticipants, r4i)
+	require.NoError(t, err)
+
+	r5i := lindell17_dkg_test_utils.MapDkgRound4OutputsToRound5Inputs(lindellParticipants, r4o)
+	r5o, err := lindell17_dkg_test_utils.DoDkgRound5(lindellParticipants, r5i)
+	require.NoError(t, err)
+
+	r6i := lindell17_dkg_test_utils.MapDkgRound5OutputsToRound6Inputs(lindellParticipants, r5o)
+	r6o, err := lindell17_dkg_test_utils.DoDkgRound6(lindellParticipants, r6i)
+	require.NoError(t, err)
+
+	r7i := lindell17_dkg_test_utils.MapDkgRound6OutputsToRound7Inputs(lindellParticipants, r6o)
+	r7o, err := lindell17_dkg_test_utils.DoDkgRound7(lindellParticipants, r7i)
+	require.NoError(t, err)
+
+	r8i := lindell17_dkg_test_utils.MapDkgRound7OutputsToRound8Inputs(lindellParticipants, r7o)
+	shards, err := lindell17_dkg_test_utils.DoDkgRound8(lindellParticipants, r8i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 

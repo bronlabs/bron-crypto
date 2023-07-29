@@ -1,10 +1,10 @@
-package paillierdlog_test
+package lpdl_test
 
 import (
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
@@ -162,12 +162,12 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
-	verifier, err := paillierdlog.NewVerifier(sessionId, pk, bigQ, xEncrypted, prng)
+	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
 
-	prover, err := paillierdlog.NewProver(sessionId, sk, x, r, prng)
+	prover, err := lpdl.NewProver(sessionId, sk, x, r, prng)
 	if err != nil {
 		return err
 	}

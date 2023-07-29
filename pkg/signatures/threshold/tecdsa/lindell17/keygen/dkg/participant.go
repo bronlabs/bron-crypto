@@ -6,10 +6,10 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierpk"
 	"github.com/gtank/merlin"
 	"io"
 	"math/big"
@@ -18,30 +18,30 @@ import (
 var _ lindell17.Participant = (*Participant)(nil)
 
 type ParticipantState struct {
-	myXPrime           curves.Scalar
-	myXBis             curves.Scalar
-	myBigQPrime        curves.Point
-	myBigQBis          curves.Point
-	myBigQPrimeWitness commitments.Witness
-	myBigQBisWitness   commitments.Witness
-	myPaillierPk       *paillier.PublicKey
-	myPaillierSk       *paillier.SecretKey
-	myRPrime           *big.Int
-	myRBis             *big.Int
+	myXPrime                 curves.Scalar
+	myXDoublePrime           curves.Scalar
+	myBigQPrime              curves.Point
+	myBigQDoublePrime        curves.Point
+	myBigQPrimeWitness       commitments.Witness
+	myBigQDoublePrimeWitness commitments.Witness
+	myPaillierPk             *paillier.PublicKey
+	myPaillierSk             *paillier.SecretKey
+	myRPrime                 *big.Int
+	myRDoublePrime           *big.Int
 
-	theirBigQPrimeCommitment     map[integration.IdentityKey]commitments.Commitment
-	theirBigQBisCommitment       map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime               map[integration.IdentityKey]curves.Point
-	theirBigQBis                 map[integration.IdentityKey]curves.Point
-	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
-	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+	theirBigQPrimeCommitment       map[integration.IdentityKey]commitments.Commitment
+	theirBigQDoublePrimeCommitment map[integration.IdentityKey]commitments.Commitment
+	theirBigQPrime                 map[integration.IdentityKey]curves.Point
+	theirBigQDoublePrime           map[integration.IdentityKey]curves.Point
+	theirPaillierPublicKeys        map[integration.IdentityKey]*paillier.PublicKey
+	theirPaillierEncryptedShares   map[integration.IdentityKey]paillier.CipherText
 
-	lpProvers          map[integration.IdentityKey]*paillierpk.Prover
-	lpVerifiers        map[integration.IdentityKey]*paillierpk.Verifier
-	lpdlPrimeProvers   map[integration.IdentityKey]*paillierdlog.Prover
-	lpdlPrimeVerifiers map[integration.IdentityKey]*paillierdlog.Verifier
-	lpdlBisProvers     map[integration.IdentityKey]*paillierdlog.Prover
-	lpdlBisVerifiers   map[integration.IdentityKey]*paillierdlog.Verifier
+	lpProvers                map[integration.IdentityKey]*lp.Prover
+	lpVerifiers              map[integration.IdentityKey]*lp.Verifier
+	lpdlPrimeProvers         map[integration.IdentityKey]*lpdl.Prover
+	lpdlPrimeVerifiers       map[integration.IdentityKey]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[integration.IdentityKey]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[integration.IdentityKey]*lpdl.Verifier
 }
 
 type Participant struct {
@@ -64,16 +64,16 @@ const (
 	transcriptSessionIdLabel = "Lindell2017 DKG Session"
 )
 
-func (participant *Participant) GetIdentityKey() integration.IdentityKey {
-	return participant.myIdentityKey
+func (p *Participant) GetIdentityKey() integration.IdentityKey {
+	return p.myIdentityKey
 }
 
-func (participant *Participant) GetShamirId() int {
-	return participant.myShamirId
+func (p *Participant) GetShamirId() int {
+	return p.myShamirId
 }
 
-func (participant *Participant) GetCohortConfig() *integration.CohortConfig {
-	return participant.cohortConfig
+func (p *Participant) GetCohortConfig() *integration.CohortConfig {
+	return p.cohortConfig
 }
 
 func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript *merlin.Transcript) (participant *Participant, err error) {

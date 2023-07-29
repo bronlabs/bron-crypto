@@ -1,4 +1,4 @@
-package paillierrange
+package _range
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"

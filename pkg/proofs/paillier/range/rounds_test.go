@@ -1,9 +1,9 @@
-package paillierrange_test
+package _range_test
 
 import (
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierrange"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
@@ -87,11 +87,11 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
-	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, prng)
+	verifier, err := _range.NewVerifier(128, q, sid, pk, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
-	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, prng)
+	prover, err := _range.NewProver(128, q, sid, sk, x, r, prng)
 	if err != nil {
 		return err
 	}

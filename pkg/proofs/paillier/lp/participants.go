@@ -1,8 +1,8 @@
-package paillierpk
+package lp
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
 	"io"
 	"math/big"
 )

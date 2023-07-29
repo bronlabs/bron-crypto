@@ -1,10 +1,10 @@
-package paillierpk_test
+package lp_test
 
 import (
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierpk"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
@@ -12,8 +12,8 @@ import (
 
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
 	prng := crand.Reader
-	verifier := paillierpk.NewVerifier(k, pk, prng)
-	prover := paillierpk.NewProver(k, sk, prng)
+	verifier := lp.NewVerifier(k, pk, prng)
+	prover := lp.NewProver(k, sk, prng)
 
 	r1, err := verifier.Round1()
 	if err != nil {
