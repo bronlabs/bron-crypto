@@ -8,6 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierpk"
 	"github.com/gtank/merlin"
 	"io"
 	"math/big"
@@ -27,10 +29,19 @@ type ParticipantState struct {
 	myRPrime           *big.Int
 	myRBis             *big.Int
 
-	theirBigQPrimeCommitment map[integration.IdentityKey]commitments.Commitment
-	theirBigQBisCommitment   map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime           map[integration.IdentityKey]curves.Point
-	theirBigQBis             map[integration.IdentityKey]curves.Point
+	theirBigQPrimeCommitment     map[integration.IdentityKey]commitments.Commitment
+	theirBigQBisCommitment       map[integration.IdentityKey]commitments.Commitment
+	theirBigQPrime               map[integration.IdentityKey]curves.Point
+	theirBigQBis                 map[integration.IdentityKey]curves.Point
+	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
+	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+
+	lpProvers          map[integration.IdentityKey]*paillierpk.Prover
+	lpVerifiers        map[integration.IdentityKey]*paillierpk.Verifier
+	lpdlPrimeProvers   map[integration.IdentityKey]*paillierdlog.Prover
+	lpdlPrimeVerifiers map[integration.IdentityKey]*paillierdlog.Verifier
+	lpdlBisProvers     map[integration.IdentityKey]*paillierdlog.Prover
+	lpdlBisVerifiers   map[integration.IdentityKey]*paillierdlog.Verifier
 }
 
 type Participant struct {

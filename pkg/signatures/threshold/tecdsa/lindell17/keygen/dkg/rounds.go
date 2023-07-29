@@ -8,6 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
+	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierpk"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 )
 
@@ -37,6 +39,30 @@ type Round3Broadcast struct {
 	CKeyPrime         paillier.CipherText
 	CKeyBis           paillier.CipherText
 	PaillierPublicKey *paillier.PublicKey
+}
+
+type Round4P2P struct {
+	lpRound1Output        *paillierpk.VerifierRound1Output
+	lpdlPrimeRound1Output *paillierdlog.VerifierRound1Output
+	lpdlBisRound1Output   *paillierdlog.VerifierRound1Output
+}
+
+type Round5P2P struct {
+	lpRound2Output        *paillierpk.ProverRound2Output
+	lpdlPrimeRound2Output *paillierdlog.ProverRound2Output
+	lpdlBisRound2Output   *paillierdlog.ProverRound2Output
+}
+
+type Round6P2P struct {
+	lpRound3Output        *paillierpk.VerifierRound3Output
+	lpdlPrimeRound3Output *paillierdlog.VerifierRound3Output
+	lpdlBisRound3Output   *paillierdlog.VerifierRound3Output
+}
+
+type Round7P2P struct {
+	lpRound4Output        *paillierpk.ProverRound4Output
+	lpdlPrimeRound4Output *paillierdlog.ProverRound4Output
+	lpdlBisRound4Output   *paillierdlog.ProverRound4Output
 }
 
 func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
@@ -173,11 +199,11 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 		bigQBisCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQBis.ToAffineCompressed()...)
 		err = commitments.Open(commitmentHashFunc, bigQBisCommitmentMessage, participant.state.theirBigQBisCommitment[identity], input[identity].BigQBisWitness)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot open Q' commitment")
+			return nil, errs.WrapFailed(err, "cannot open Q'' commitment")
 		}
 		err = dlog.Verify(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQBis, input[identity].BigQBisProof, participant.sessionId, nil)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
+			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
 		participant.state.theirBigQBis[identity] = input[identity].BigQBis
 	}
@@ -198,6 +224,27 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 	participant.state.myRPrime = rPrime
 	participant.state.myRBis = rBis
 
+	participant.state.lpProvers = make(map[integration.IdentityKey]*paillierpk.Prover)
+	participant.state.lpdlPrimeProvers = make(map[integration.IdentityKey]*paillierdlog.Prover)
+	participant.state.lpdlBisProvers = make(map[integration.IdentityKey]*paillierdlog.Prover)
+	for _, identity := range participant.cohortConfig.Participants {
+		if identity == participant.myIdentityKey {
+			continue
+		}
+
+		// 4. P proves in zero knowledge that public-key was generated correctly (L_P)
+		// and the encrypted share encrypts dlog of Q (L_PDL)
+		participant.state.lpProvers[identity] = paillierpk.NewProver(40, participant.state.myPaillierSk, participant.prng)
+		participant.state.lpdlPrimeProvers[identity], err = paillierdlog.NewProver(participant.sessionId, participant.state.myPaillierSk, participant.state.myXPrime, participant.state.myRPrime, participant.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create PDL prover")
+		}
+		participant.state.lpdlBisProvers[identity], err = paillierdlog.NewProver(participant.sessionId, participant.state.myPaillierSk, participant.state.myXBis, participant.state.myRBis, participant.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create PDL prover")
+		}
+	}
+
 	// 3.d P sends public-key and encryption of x to other parties
 	participant.round++
 	return &Round3Broadcast{
@@ -207,19 +254,19 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 	}, nil
 }
 
-func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast) (shard *lindell17.Shard, err error) {
+func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast) (output map[integration.IdentityKey]*Round4P2P, err error) {
 	if participant.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", participant.round)
 	}
 
-	// 4. P proves in zero knowledge that public-key was generated correctly (L_P)
-	// and the encrypted share encrypts dlog of Q (L_PDL)
-	// TODO: add zk-proof when merged (+3 additional rounds)
+	participant.state.theirPaillierPublicKeys = make(map[integration.IdentityKey]*paillier.PublicKey)
+	participant.state.theirPaillierEncryptedShares = make(map[integration.IdentityKey]paillier.CipherText)
 
-	paillierPublicKeys := make(map[integration.IdentityKey]*paillier.PublicKey)
-	paillierEncryptedShares := make(map[integration.IdentityKey]paillier.CipherText)
+	participant.state.lpVerifiers = make(map[integration.IdentityKey]*paillierpk.Verifier)
+	participant.state.lpdlPrimeVerifiers = make(map[integration.IdentityKey]*paillierdlog.Verifier)
+	participant.state.lpdlBisVerifiers = make(map[integration.IdentityKey]*paillierdlog.Verifier)
 
-	// 6. P stores encrypted Enc(x) which is Enc(3x' + x'')
+	round4Outputs := make(map[integration.IdentityKey]*Round4P2P)
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
@@ -227,31 +274,185 @@ func (participant *Participant) Round4(input map[integration.IdentityKey]*Round3
 		if input[identity] == nil {
 			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
 		}
-		theirPaillierPk := input[identity].PaillierPublicKey
+
+		participant.state.theirPaillierPublicKeys[identity] = input[identity].PaillierPublicKey
 		theirCKeyPrime := input[identity].CKeyPrime
 		theirCKeyBis := input[identity].CKeyBis
-		cKey1, err := theirPaillierPk.Add(theirCKeyPrime, theirCKeyPrime)
+
+		cKey1, err := participant.state.theirPaillierPublicKeys[identity].Add(theirCKeyPrime, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		cKey2, err := theirPaillierPk.Add(cKey1, theirCKeyPrime)
+		cKey2, err := participant.state.theirPaillierPublicKeys[identity].Add(cKey1, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		theirCKey, err := theirPaillierPk.Add(cKey2, theirCKeyBis)
+		participant.state.theirPaillierEncryptedShares[identity], err = participant.state.theirPaillierPublicKeys[identity].Add(cKey2, theirCKeyBis)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
 
-		paillierEncryptedShares[identity] = theirCKey
-		paillierPublicKeys[identity] = theirPaillierPk
+		participant.state.lpVerifiers[identity] = paillierpk.NewVerifier(40, participant.state.theirPaillierPublicKeys[identity], participant.prng)
+		participant.state.lpdlPrimeVerifiers[identity], err = paillierdlog.NewVerifier(participant.sessionId, participant.state.theirPaillierPublicKeys[identity], participant.state.theirBigQPrime[identity], theirCKeyPrime, participant.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
+		}
+		participant.state.lpdlBisVerifiers[identity], err = paillierdlog.NewVerifier(participant.sessionId, participant.state.theirPaillierPublicKeys[identity], participant.state.theirBigQBis[identity], theirCKeyBis, participant.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
+		}
+
+		round4Outputs[identity] = new(Round4P2P)
+		round4Outputs[identity].lpRound1Output, err = participant.state.lpVerifiers[identity].Round1()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
+		}
+		round4Outputs[identity].lpdlPrimeRound1Output, err = participant.state.lpdlPrimeVerifiers[identity].Round1()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
+		}
+		round4Outputs[identity].lpdlBisRound1Output, err = participant.state.lpdlBisVerifiers[identity].Round1()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
+		}
 	}
 
 	participant.round++
+	return round4Outputs, nil
+}
+
+func (participant *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (output map[integration.IdentityKey]*Round5P2P, err error) {
+	if participant.round != 5 {
+		return nil, errs.NewInvalidRound("%d != 5", participant.round)
+	}
+
+	round5Outputs := make(map[integration.IdentityKey]*Round5P2P)
+	for _, identity := range participant.cohortConfig.Participants {
+		if identity == participant.myIdentityKey {
+			continue
+		}
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
+		}
+
+		round5Outputs[identity] = new(Round5P2P)
+		round5Outputs[identity].lpRound2Output, err = participant.state.lpProvers[identity].Round2(input[identity].lpRound1Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+		round5Outputs[identity].lpdlPrimeRound2Output, err = participant.state.lpdlPrimeProvers[identity].Round2(input[identity].lpdlPrimeRound1Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+		round5Outputs[identity].lpdlBisRound2Output, err = participant.state.lpdlBisProvers[identity].Round2(input[identity].lpdlBisRound1Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+	}
+
+	participant.round++
+	return round5Outputs, nil
+}
+
+func (participant *Participant) Round6(input map[integration.IdentityKey]*Round5P2P) (output map[integration.IdentityKey]*Round6P2P, err error) {
+	if participant.round != 6 {
+		return nil, errs.NewInvalidRound("%d != 6", participant.round)
+	}
+
+	round6Outputs := make(map[integration.IdentityKey]*Round6P2P)
+	for _, identity := range participant.cohortConfig.Participants {
+		if identity == participant.myIdentityKey {
+			continue
+		}
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
+		}
+
+		round6Outputs[identity] = new(Round6P2P)
+		round6Outputs[identity].lpRound3Output, err = participant.state.lpVerifiers[identity].Round3(input[identity].lpRound2Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
+		}
+		round6Outputs[identity].lpdlPrimeRound3Output, err = participant.state.lpdlPrimeVerifiers[identity].Round3(input[identity].lpdlPrimeRound2Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
+		}
+		round6Outputs[identity].lpdlBisRound3Output, err = participant.state.lpdlBisVerifiers[identity].Round3(input[identity].lpdlBisRound2Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
+		}
+	}
+
+	participant.round++
+	return round6Outputs, nil
+}
+
+func (participant *Participant) Round7(input map[integration.IdentityKey]*Round6P2P) (output map[integration.IdentityKey]*Round7P2P, err error) {
+	if participant.round != 7 {
+		return nil, errs.NewInvalidRound("%d != 7", participant.round)
+	}
+
+	round7Outputs := make(map[integration.IdentityKey]*Round7P2P)
+	for _, identity := range participant.cohortConfig.Participants {
+		if identity == participant.myIdentityKey {
+			continue
+		}
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
+		}
+
+		round7Outputs[identity] = new(Round7P2P)
+		round7Outputs[identity].lpRound4Output, err = participant.state.lpProvers[identity].Round4(input[identity].lpRound3Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+		round7Outputs[identity].lpdlPrimeRound4Output, err = participant.state.lpdlPrimeProvers[identity].Round4(input[identity].lpdlPrimeRound3Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+		round7Outputs[identity].lpdlBisRound4Output, err = participant.state.lpdlBisProvers[identity].Round4(input[identity].lpdlBisRound3Output)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+		}
+	}
+
+	participant.round++
+	return round7Outputs, nil
+}
+
+func (participant *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shard *lindell17.Shard, err error) {
+	if participant.round != 8 {
+		return nil, errs.NewInvalidRound("%d != 8", participant.round)
+	}
+
+	for _, identity := range participant.cohortConfig.Participants {
+		if identity == participant.myIdentityKey {
+			continue
+		}
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
+		}
+
+		err = participant.state.lpVerifiers[identity].Round5(input[identity].lpRound4Output)
+		if err != nil {
+			return nil, errs.WrapIdentifiableAbort(err, "failed to verify valid Paillier public-key")
+		}
+		err = participant.state.lpdlPrimeVerifiers[identity].Round5(input[identity].lpdlPrimeRound4Output)
+		if err != nil {
+			return nil, errs.WrapIdentifiableAbort(err, "failed to verify encrypted dlog")
+		}
+		err = participant.state.lpdlBisVerifiers[identity].Round5(input[identity].lpdlBisRound4Output)
+		if err != nil {
+			return nil, errs.WrapIdentifiableAbort(err, "failed to verify encrypted dlog")
+		}
+	}
+
+	participant.round++
+	// 6. P stores encrypted Enc(x) which is Enc(3x' + x'')
 	return &lindell17.Shard{
 		SigningKeyShare:         participant.mySigningKeyShare,
 		PaillierSecretKey:       participant.state.myPaillierSk,
-		PaillierPublicKeys:      paillierPublicKeys,
-		PaillierEncryptedShares: paillierEncryptedShares,
+		PaillierPublicKeys:      participant.state.theirPaillierPublicKeys,
+		PaillierEncryptedShares: participant.state.theirPaillierEncryptedShares,
 	}, nil
 }
