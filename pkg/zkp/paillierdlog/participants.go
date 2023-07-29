@@ -93,9 +93,9 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 }
 
 func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, prng io.Reader) (verifier *Prover, err error) {
-	curve, err := curves.GetCurveByName(x.Point().CurveName())
+	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.Point().CurveName())
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.CurveName())
 	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
