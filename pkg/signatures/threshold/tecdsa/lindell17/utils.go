@@ -48,7 +48,7 @@ func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
 }
 
 // Split splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
-func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis curves.Scalar, i int, err error) {
+func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, i int, err error) {
 	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
 		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.CurveName())
@@ -70,9 +70,9 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis cur
 		if err != nil {
 			return nil, nil, 0, errs.WrapFailed(err, "cannot set scalar")
 		}
-		xBis = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
+		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 
-		if IsInSecondThird(xPrime) && IsInSecondThird(xBis) {
+		if IsInSecondThird(xPrime) && IsInSecondThird(xDoublePrime) {
 			break
 		}
 
@@ -83,7 +83,7 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis cur
 		}
 	}
 
-	return xPrime, xBis, i, nil
+	return xPrime, xDoublePrime, i, nil
 }
 
 func IsInSecondThird(scalar curves.Scalar) bool {

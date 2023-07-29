@@ -237,7 +237,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot invert k1")
 	}
-	sBis := k1Inv.Mul(sPrime)
+	sDoublePrime := k1Inv.Mul(sPrime)
 
 	publicKey := &ecdsa.PublicKey{
 		Q: primaryCosigner.myShard.SigningKeyShare.PublicKey,
@@ -245,7 +245,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 
 	signature := &ecdsa.Signature{
 		R: primaryCosigner.state.r,
-		S: sBis,
+		S: sDoublePrime,
 	}
 	signature.Normalize()
 	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
