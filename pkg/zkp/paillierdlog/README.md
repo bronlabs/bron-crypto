@@ -10,10 +10,10 @@ Input:
 
 $P$ input:
 * $sk$ - Paillier secret-key
-* x - scalar
+* $x$ - scalar
 
 $V$ input:
-* $c, r$ - c is encrypted value of x, such that $c = Enc_{pk}(x;r)$
+* $c, r$ - $c$ is encrypted value of $x$, such that $c = Enc_{pk}(x;r)$
 
 Steps:
 1. V chooses a random $a \leftarrow \mathbb{Z} _q$ and $b \leftarrow \mathbb{Z} _{q^2}$
