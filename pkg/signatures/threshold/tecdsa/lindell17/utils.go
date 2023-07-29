@@ -49,9 +49,9 @@ func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
 
 // Split splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
 func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis curves.Scalar, i int, err error) {
-	curve, err := curves.GetCurveByName(scalar.Point().CurveName())
+	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
-		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.Point().CurveName())
+		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.CurveName())
 	}
 	order, err := GetCurveOrder(curve)
 	if err != nil {
@@ -87,7 +87,7 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xBis cur
 }
 
 func IsInSecondThird(scalar curves.Scalar) bool {
-	curve, err := curves.GetCurveByName(scalar.Point().CurveName())
+	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
 		return false
 	}

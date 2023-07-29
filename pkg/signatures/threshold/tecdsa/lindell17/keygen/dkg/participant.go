@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"github.com/gtank/merlin"
 	"io"
 	"math/big"
@@ -17,19 +16,21 @@ import (
 var _ lindell17.Participant = (*Participant)(nil)
 
 type ParticipantState struct {
-	myXPrime         curves.Scalar
-	myXBis           curves.Scalar
-	myBigQPrimeProof *dlog.Proof
-	myBigQBisProof   *dlog.Proof
-	myBigQWitness    commitments.Witness
-	myPaillierPk     *paillier.PublicKey
-	myPaillierSk     *paillier.SecretKey
-	myRPrime         *big.Int
-	myRBis           *big.Int
+	myXPrime           curves.Scalar
+	myXBis             curves.Scalar
+	myBigQPrime        curves.Point
+	myBigQBis          curves.Point
+	myBigQPrimeWitness commitments.Witness
+	myBigQBisWitness   commitments.Witness
+	myPaillierPk       *paillier.PublicKey
+	myPaillierSk       *paillier.SecretKey
+	myRPrime           *big.Int
+	myRBis             *big.Int
 
-	theirBigQCommitment map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime      map[integration.IdentityKey]curves.Point
-	theirBigQBis        map[integration.IdentityKey]curves.Point
+	theirBigQPrimeCommitment map[integration.IdentityKey]commitments.Commitment
+	theirBigQBisCommitment   map[integration.IdentityKey]commitments.Commitment
+	theirBigQPrime           map[integration.IdentityKey]curves.Point
+	theirBigQBis             map[integration.IdentityKey]curves.Point
 }
 
 type Participant struct {

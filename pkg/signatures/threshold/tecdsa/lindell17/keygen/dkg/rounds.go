@@ -2,7 +2,6 @@ package dkg
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
@@ -21,13 +20,17 @@ var (
 )
 
 type Round1Broadcast struct {
-	BigQCommitment commitments.Commitment
+	BigQPrimeCommitment commitments.Commitment
+	BigQBisCommitment   commitments.Commitment
 }
 
 type Round2Broadcast struct {
-	BigQWitness    commitments.Witness
-	BigQPrimeProof *dlog.Proof
-	BigQBisProof   *dlog.Proof
+	BigQPrime        curves.Point
+	BigQPrimeWitness commitments.Witness
+	BigQPrimeProof   *dlog.Proof
+	BigQBis          curves.Point
+	BigQBisWitness   commitments.Witness
+	BigQBisProof     *dlog.Proof
 }
 
 type Round3Broadcast struct {
@@ -48,57 +51,40 @@ func (participant *Participant) Round1() (output *Round1Broadcast, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
+	bigQPrime := participant.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xPrime)
+	bigQBis := participant.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xBis)
 
-	// 1.b P sends commitment of dlog proof of Q
-	bigQPrimeSessionId := append([]byte("backupQ'"), participant.sessionId...)
-	bigQPrimeProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigQPrimeSessionId, nil)
+	bigQPrimeCommitmentMessage := append(participant.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQPrime.ToAffineCompressed()...)
+	bigQPrimeCommitment, bigQPrimeWitness, err := commitments.Commit(commitmentHashFunc, bigQPrimeCommitmentMessage)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
+		return nil, errs.WrapFailed(err, "cannot commit to Q'")
 	}
-	bigQPrimeProof, err := bigQPrimeProver.Prove(xPrime)
+
+	bigQBisCommitmentMessage := append(participant.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQBis.ToAffineCompressed()...)
+	bigQBisCommitment, biqQBisWitness, err := commitments.Commit(commitmentHashFunc, bigQBisCommitmentMessage)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create dlog proof of x'")
-	}
-	bigQBisSessionId := append([]byte("backupQ''"), participant.sessionId...)
-	bigQBisProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigQBisSessionId, nil)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
-	}
-	bigQBisProof, err := bigQBisProver.Prove(xBis)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create dlog proof of x'")
-	}
-	bigQPrimeProofMessage, err := json.Marshal(bigQPrimeProof)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot serialize dlog proof of Q'")
-	}
-	bigQBisProofMessage, err := json.Marshal(bigQBisProof)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot serialize dlog proof of Q''")
-	}
-	bigQMessage := append(bigQPrimeProofMessage[:], bigQBisProofMessage...)
-	bigQCommitment, bigQWitness, err := commitments.Commit(commitmentHashFunc, bigQMessage)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to Q' and Q''")
+		return nil, errs.WrapFailed(err, "cannot commit to Q''")
 	}
 
 	participant.state.myXPrime = xPrime
 	participant.state.myXBis = xBis
-	participant.state.myBigQPrimeProof = bigQPrimeProof
-	participant.state.myBigQBisProof = bigQBisProof
-	participant.state.myBigQWitness = bigQWitness
+	participant.state.myBigQPrime = bigQPrime
+	participant.state.myBigQBis = bigQBis
+	participant.state.myBigQPrimeWitness = bigQPrimeWitness
+	participant.state.myBigQBisWitness = biqQBisWitness
 
 	// some paranoid checks
 	if xPrime.Add(xPrime).Add(xPrime).Add(xBis).Cmp(participant.mySigningKeyShare.Share) != 0 {
-		return nil, errs.NewFailed("Something went really wrong")
+		return nil, errs.NewFailed("something went really wrong")
 	}
-	if !bigQPrimeProof.Statement.Add(bigQPrimeProof.Statement).Add(bigQPrimeProof.Statement).Add(bigQBisProof.Statement).Equal(participant.publicKeyShares.SharesMap[participant.myIdentityKey]) {
-		return nil, errs.NewFailed("Something went really wrong")
+	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQBis).Equal(participant.publicKeyShares.SharesMap[participant.myIdentityKey]) {
+		return nil, errs.NewFailed("something went really wrong")
 	}
 
 	participant.round++
 	return &Round1Broadcast{
-		BigQCommitment: bigQCommitment,
+		BigQPrimeCommitment: bigQPrimeCommitment,
+		BigQBisCommitment:   bigQBisCommitment,
 	}, nil
 }
 
@@ -107,9 +93,8 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 		return nil, errs.NewInvalidRound("%d != 2", participant.round)
 	}
 
-	// 2.a P receives dlog proof commitment of Q
-	// 2.c P sends dlog proof of Q
-	participant.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
+	participant.state.theirBigQPrimeCommitment = make(map[integration.IdentityKey]commitments.Commitment)
+	participant.state.theirBigQBisCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range participant.cohortConfig.Participants {
 		if identity == participant.myIdentityKey {
 			continue
@@ -117,14 +102,42 @@ func (participant *Participant) Round2(input map[integration.IdentityKey]*Round1
 		if input[identity] == nil {
 			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
 		}
-		participant.state.theirBigQCommitment[identity] = input[identity].BigQCommitment
+		participant.state.theirBigQPrimeCommitment[identity] = input[identity].BigQPrimeCommitment
+		participant.state.theirBigQBisCommitment[identity] = input[identity].BigQBisCommitment
+	}
+
+	bigQPrimeProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), participant.sessionId, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
+	}
+	bigQPrimeProof, bigQPrimeStatement, err := bigQPrimeProver.Prove(participant.state.myXPrime)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
+	}
+	if !participant.state.myBigQPrime.Equal(bigQPrimeStatement) {
+		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
+	}
+
+	bigQBisProver, err := dlog.NewProver(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), participant.sessionId, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
+	}
+	bigQBisProof, bigQBisStatement, err := bigQBisProver.Prove(participant.state.myXBis)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
+	}
+	if !participant.state.myBigQBis.Equal(bigQBisStatement) {
+		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
 	}
 
 	participant.round++
 	return &Round2Broadcast{
-		BigQWitness:    participant.state.myBigQWitness,
-		BigQPrimeProof: participant.state.myBigQPrimeProof,
-		BigQBisProof:   participant.state.myBigQBisProof,
+		BigQPrime:        participant.state.myBigQPrime,
+		BigQPrimeWitness: participant.state.myBigQPrimeWitness,
+		BigQPrimeProof:   bigQPrimeProof,
+		BigQBis:          participant.state.myBigQBis,
+		BigQBisWitness:   participant.state.myBigQBisWitness,
+		BigQBisProof:     bigQBisProof,
 	}, nil
 }
 
@@ -146,37 +159,27 @@ func (participant *Participant) Round3(input map[integration.IdentityKey]*Round2
 			return nil, errs.NewFailed("no input from participant with shamir id %d", participant.idKeyToShamirId[identity])
 		}
 
-		bigQPrimeProofMessage, err := json.Marshal(input[identity].BigQPrimeProof)
+		bigQPrimeCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQPrime.ToAffineCompressed()...)
+		err = commitments.Open(commitmentHashFunc, bigQPrimeCommitmentMessage, participant.state.theirBigQPrimeCommitment[identity], input[identity].BigQPrimeWitness)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot serialize dlog proof of Q'")
+			return nil, errs.WrapFailed(err, "cannot open Q' commitment")
 		}
-		bigQBisProofMessage, err := json.Marshal(input[identity].BigQBisProof)
+		err = dlog.Verify(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQPrime, input[identity].BigQPrimeProof, participant.sessionId, nil)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot serialize dlog proof of Q''")
-		}
-		bigQMessage := append(bigQPrimeProofMessage[:], bigQBisProofMessage...)
-		if err := commitments.Open(commitmentHashFunc, bigQMessage, participant.state.theirBigQCommitment[identity], input[identity].BigQWitness); err != nil {
-			return nil, errs.WrapFailed(err, "cannot open commitment")
-		}
-
-		bigQPrimeSessionId := append([]byte("backupQ'"), participant.sessionId...)
-		if err := dlog.Verify(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQPrimeProof, bigQPrimeSessionId, nil); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
-		bigQBisSessionId := append([]byte("backupQ''"), participant.sessionId...)
-		if err := dlog.Verify(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQBisProof, bigQBisSessionId, nil); err != nil {
+		participant.state.theirBigQPrime[identity] = input[identity].BigQPrime
+
+		bigQBisCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQBis.ToAffineCompressed()...)
+		err = commitments.Open(commitmentHashFunc, bigQBisCommitmentMessage, participant.state.theirBigQBisCommitment[identity], input[identity].BigQBisWitness)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot open Q' commitment")
+		}
+		err = dlog.Verify(participant.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQBis, input[identity].BigQBisProof, participant.sessionId, nil)
+		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
-
-		theirBigQPrime := input[identity].BigQPrimeProof.Statement
-		theirBigQBis := input[identity].BigQBisProof.Statement
-		theirBigQ := theirBigQPrime.Add(theirBigQPrime).Add(theirBigQPrime).Add(theirBigQBis)
-		if !theirBigQ.Equal(participant.publicKeyShares.SharesMap[identity]) {
-			return nil, errs.NewVerificationFailed("public key share don't match")
-		}
-
-		participant.state.theirBigQPrime[identity] = theirBigQPrime
-		participant.state.theirBigQBis[identity] = theirBigQBis
+		participant.state.theirBigQBis[identity] = input[identity].BigQBis
 	}
 
 	// 3.c P generates a Paillier key-pair
