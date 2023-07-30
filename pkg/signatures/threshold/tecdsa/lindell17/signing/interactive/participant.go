@@ -8,6 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/gtank/merlin"
+	"io"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
@@ -35,13 +37,11 @@ type Cosigner struct {
 }
 
 type PrimaryCosignerState struct {
-	k1             curves.Scalar
-	k1Proof        *schnorr.Proof
-	k1ProofWitness []byte
-	bigR           curves.Point
-	r              curves.Scalar
-	k1PublicKey    curves.Point
-	k2PublicKey    curves.Point
+	k1           curves.Scalar
+	bigR1Witness []byte
+	bigR         curves.Point
+	r            curves.Scalar
+	bigR1        curves.Point
 }
 
 type PrimaryCosigner struct {
@@ -53,11 +53,10 @@ type PrimaryCosigner struct {
 }
 
 type SecondaryCosignerState struct {
-	k1ProofCommitment commitments.Commitment
-	k2                curves.Scalar
-	r                 curves.Scalar
-	k1PublicKey       curves.Point
-	k2PublicKey       curves.Point
+	bigR1Commitment commitments.Commitment
+	k2              curves.Scalar
+	r               curves.Scalar
+	bigR2           curves.Point
 }
 
 type SecondaryCosigner struct {
