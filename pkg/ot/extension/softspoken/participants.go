@@ -4,7 +4,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 )
 
 type Receiver struct {
@@ -16,7 +17,7 @@ type Receiver struct {
 	uniqueSessionId [vsot.DigestSize]byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
-	transcript *merlin.Transcript
+	transcript transcript.Transcript
 
 	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
@@ -34,7 +35,7 @@ type Sender struct {
 	uniqueSessionId [vsot.DigestSize]byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
-	transcript *merlin.Transcript
+	transcript transcript.Transcript
 
 	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
@@ -48,7 +49,7 @@ type Sender struct {
 func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
 	uniqueSessionId [vsot.DigestSize]byte,
-	transcript *merlin.Transcript,
+	transcript transcript.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
@@ -74,7 +75,7 @@ func NewCOtReceiver(
 func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
 	uniqueSessionId [vsot.DigestSize]byte,
-	transcript *merlin.Transcript,
+	transcript transcript.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {

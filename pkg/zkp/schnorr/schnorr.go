@@ -8,8 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 )
 
 const domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
@@ -22,7 +22,7 @@ const digestLabel = "digest"
 type Prover struct {
 	BasePoint       curves.Point
 	uniqueSessionId []byte
-	transcript      *merlin.Transcript
+	transcript      transcript.Transcript
 }
 
 // Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,
@@ -35,7 +35,7 @@ type Proof struct {
 type Statement = curves.Point
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
-func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript *merlin.Transcript) (*Prover, error) {
+func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcript.Transcript) (*Prover, error) {
 	if basePoint == nil {
 		return nil, errs.NewInvalidArgument("basepoint can't be nil")
 	}
@@ -82,7 +82,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 }
 
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
-func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript *merlin.Transcript) error {
+func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript transcript.Transcript) error {
 	if transcript == nil {
 		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}

@@ -9,8 +9,8 @@ import (
 	pedersenDkg "github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/pedersen"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
 )
 
 const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
