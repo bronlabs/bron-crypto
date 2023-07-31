@@ -33,8 +33,8 @@ func TestIsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	empty := obj.IsEmpty()
 	require.True(t, empty)
-	exist := obj.Add(Value{value: "1"})
-	require.False(t, exist)
+	added := obj.Add(Value{value: "1"})
+	require.True(t, added)
 	empty = obj.IsEmpty()
 	require.False(t, empty)
 }
@@ -55,12 +55,12 @@ func TestAdd(t *testing.T) {
 		{value: "1"},
 	})
 	require.NoError(t, err)
-	exist := obj.Add(Value{value: "2"})
-	require.False(t, exist)
+	added := obj.Add(Value{value: "2"})
+	require.True(t, added)
 	require.Equal(t, 2, obj.Size())
-	exist = obj.Add(Value{value: "2"})
+	added = obj.Add(Value{value: "2"})
 	require.Equal(t, 2, obj.Size())
-	require.True(t, exist)
+	require.False(t, added)
 }
 
 func TestRemove(t *testing.T) {
@@ -69,9 +69,12 @@ func TestRemove(t *testing.T) {
 	})
 	obj.Add(Value{value: "1"})
 	obj.Add(Value{value: "2"})
-	obj.Remove(Value{value: "2"})
+	removed := obj.Remove(Value{value: "2"})
+	require.True(t, removed)
 	_, found := obj.Get(Value{value: "2"})
 	require.False(t, found)
+	removed = obj.Remove(Value{value: "2"})
+	require.False(t, removed)
 }
 
 func TestClear(t *testing.T) {
@@ -93,17 +96,17 @@ func TestJoin(t *testing.T) {
 	set2.Add(Value{value: "4"})
 	set2.Add(Value{value: "5"})
 	set2.Add(Value{value: "3"})
-	set1.Join(set2)
-	require.Equal(t, 5, set1.Size())
-	_, found := set1.Get(Value{value: "1"})
+	newSet := set1.Union(set2)
+	require.Equal(t, 5, newSet.Size())
+	_, found := newSet.Get(Value{value: "1"})
 	require.True(t, found)
-	_, found = set1.Get(Value{value: "2"})
+	_, found = newSet.Get(Value{value: "2"})
 	require.True(t, found)
-	_, found = set1.Get(Value{value: "3"})
+	_, found = newSet.Get(Value{value: "3"})
 	require.True(t, found)
-	_, found = set1.Get(Value{value: "4"})
+	_, found = newSet.Get(Value{value: "4"})
 	require.True(t, found)
-	_, found = set1.Get(Value{value: "5"})
+	_, found = newSet.Get(Value{value: "5"})
 	require.True(t, found)
 }
 
@@ -116,9 +119,9 @@ func TestIntersect(t *testing.T) {
 	set2.Add(Value{value: "4"})
 	set2.Add(Value{value: "5"})
 	set2.Add(Value{value: "3"})
-	set1.Intersect(set2)
-	require.Equal(t, 1, set1.Size())
-	_, found := set1.Get(Value{value: "3"})
+	newSet := set1.Intersection(set2)
+	require.Equal(t, 1, newSet.Size())
+	_, found := newSet.Get(Value{value: "3"})
 	require.True(t, found)
 }
 
@@ -131,10 +134,10 @@ func TestDisjoint(t *testing.T) {
 	set2.Add(Value{value: "4"})
 	set2.Add(Value{value: "5"})
 	set2.Add(Value{value: "3"})
-	set1.Disjoint(set2)
-	require.Equal(t, 2, set1.Size())
-	_, found := set1.Get(Value{value: "1"})
+	newSet := set1.Difference(set2)
+	require.Equal(t, 2, newSet.Size())
+	_, found := newSet.Get(Value{value: "1"})
 	require.True(t, found)
-	_, found = set1.Get(Value{value: "2"})
+	_, found = newSet.Get(Value{value: "2"})
 	require.True(t, found)
 }
