@@ -2,43 +2,20 @@ package paillierdlog_test
 
 import (
 	crand "crypto/rand"
-	"flag"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierdlog"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
-	"os"
 	"testing"
 )
 
-var (
-	pk *paillier.PublicKey
-	sk *paillier.SecretKey
-)
-
-// Paillier key generation is slow, do it once for all tests
-func TestMain(m *testing.M) {
-	flag.Parse()
-	if !testing.Short() {
-		var err error
-		pk, sk, err = paillier.NewKeys(1024)
-		if err != nil {
-			os.Exit(1)
-		}
-	}
-
-	code := m.Run()
-	os.Exit(code)
-}
-
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	if testing.Short() {
-		t.Skip()
-	}
 
+	pk, sk, err := paillier.NewKeys(1024)
+	require.NoError(t, err)
 	prng := crand.Reader
 	curve := curves.P256()
 	elCurve, err := curve.ToEllipticCurve()
@@ -63,10 +40,9 @@ func Test_HappyPath(t *testing.T) {
 // xEncrypted is not a dlog of Q
 func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	t.Parallel()
-	if testing.Short() {
-		t.Skip()
-	}
 
+	pk, sk, err := paillier.NewKeys(1024)
+	require.NoError(t, err)
 	prng := crand.Reader
 	curve := curves.P256()
 	elCurve, err := curve.ToEllipticCurve()
@@ -95,10 +71,9 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 // xEncrypted is not encryption of x
 func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	t.Parallel()
-	if testing.Short() {
-		t.Skip()
-	}
 
+	pk, sk, err := paillier.NewKeys(1024)
+	require.NoError(t, err)
 	prng := crand.Reader
 	curve := curves.P256()
 	elCurve, err := curve.ToEllipticCurve()
@@ -120,11 +95,10 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 }
 
 func Test_FailOnOutOfRange(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
 	t.Parallel()
 
+	pk, sk, err := paillier.NewKeys(1024)
+	require.NoError(t, err)
 	prng := crand.Reader
 	curve := curves.P256()
 	elCurve, err := curve.ToEllipticCurve()
