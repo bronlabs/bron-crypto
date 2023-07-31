@@ -53,3 +53,39 @@ func (set *HashSet[T]) Add(element T) bool {
 	set.value[key] = element
 	return false
 }
+
+func (set *HashSet[T]) Remove(element T) {
+	delete(set.value, element.Hash())
+}
+
+func (set *HashSet[T]) Clear() {
+	set.value = make(map[[32]byte]T)
+}
+
+func (set *HashSet[T]) Join(other HashSet[T]) {
+	for _, element := range other.value {
+		set.Add(element)
+	}
+}
+
+func (set *HashSet[T]) Disjoint(other HashSet[T]) {
+	for _, element := range other.value {
+		set.Remove(element)
+	}
+}
+
+func (set *HashSet[T]) Intersect(other HashSet[T]) {
+	for _, element := range set.value {
+		if !other.Contains(element) {
+			set.Remove(element)
+		}
+	}
+}
+
+func (set *HashSet[T]) Outersect(other HashSet[T]) {
+	for _, element := range other.value {
+		if set.Contains(element) {
+			set.Remove(element)
+		}
+	}
+}

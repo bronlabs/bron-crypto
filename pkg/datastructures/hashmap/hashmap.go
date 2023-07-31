@@ -38,3 +38,11 @@ func (set *HashMap[K, T]) Put(key types.Hashable, value T) {
 	}
 	set.value[key.Hash()] = value
 }
+
+func (set *HashMap[K, T]) Remove(key types.Hashable) {
+	delete(set.value, key.Hash())
+}
+
+func (set *HashMap[K, T]) Clear() {
+	set.value = make(map[[32]byte]T)
+}

@@ -72,3 +72,22 @@ func TestEmpty(t *testing.T) {
 	obj.Put(Key{value: "2"}, "2")
 	require.False(t, obj.IsEmpty())
 }
+
+func TestRemove(t *testing.T) {
+	obj := NewHashMap[Key, string]()
+	require.True(t, obj.IsEmpty())
+	obj.Put(Key{value: "1"}, "1")
+	obj.Put(Key{value: "2"}, "2")
+	obj.Remove(Key{value: "2"})
+	_, found := obj.Get(Key{value: "2"})
+	require.False(t, found)
+}
+
+func TestClear(t *testing.T) {
+	obj := NewHashMap[Key, string]()
+	require.True(t, obj.IsEmpty())
+	obj.Put(Key{value: "1"}, "1")
+	obj.Put(Key{value: "2"}, "2")
+	obj.Clear()
+	require.True(t, obj.IsEmpty())
+}

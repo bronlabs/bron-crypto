@@ -16,49 +16,125 @@ func (k Value) Hash() [32]byte {
 }
 
 func TestGet(t *testing.T) {
-	testHashMap, err := NewHashSet[Value]([]Value{
+	obj, err := NewHashSet[Value]([]Value{
 		{value: "1"},
 		{value: "2"},
 	})
 	require.NoError(t, err)
-	actual, found := testHashMap.Get(Value{value: "1"})
+	actual, found := obj.Get(Value{value: "1"})
 	require.True(t, found)
 	require.Equal(t, Value{value: "1"}, actual)
-	_, found = testHashMap.Get(Value{value: "3"})
+	_, found = obj.Get(Value{value: "3"})
 	require.False(t, found)
 }
 
 func TestIsEmpty(t *testing.T) {
-	testHashMap, err := NewHashSet[Value]([]Value{})
+	obj, err := NewHashSet[Value]([]Value{})
 	require.NoError(t, err)
-	empty := testHashMap.IsEmpty()
+	empty := obj.IsEmpty()
 	require.True(t, empty)
-	exist := testHashMap.Add(Value{value: "1"})
+	exist := obj.Add(Value{value: "1"})
 	require.False(t, exist)
-	empty = testHashMap.IsEmpty()
+	empty = obj.IsEmpty()
 	require.False(t, empty)
 }
 
 func TestContains(t *testing.T) {
-	testHashMap, err := NewHashSet[Value]([]Value{
+	obj, err := NewHashSet[Value]([]Value{
 		{value: "1"},
 	})
 	require.NoError(t, err)
-	actual := testHashMap.Contains(Value{value: "1"})
+	actual := obj.Contains(Value{value: "1"})
 	require.True(t, actual)
-	actual = testHashMap.Contains(Value{value: "2"})
+	actual = obj.Contains(Value{value: "2"})
 	require.False(t, actual)
 }
 
 func TestAdd(t *testing.T) {
-	testHashMap, err := NewHashSet[Value]([]Value{
+	obj, err := NewHashSet[Value]([]Value{
 		{value: "1"},
 	})
 	require.NoError(t, err)
-	exist := testHashMap.Add(Value{value: "2"})
+	exist := obj.Add(Value{value: "2"})
 	require.False(t, exist)
-	require.Equal(t, 2, testHashMap.Size())
-	exist = testHashMap.Add(Value{value: "2"})
-	require.Equal(t, 2, testHashMap.Size())
+	require.Equal(t, 2, obj.Size())
+	exist = obj.Add(Value{value: "2"})
+	require.Equal(t, 2, obj.Size())
 	require.True(t, exist)
+}
+
+func TestRemove(t *testing.T) {
+	obj, _ := NewHashSet[Value]([]Value{
+		{value: "1"},
+	})
+	obj.Add(Value{value: "1"})
+	obj.Add(Value{value: "2"})
+	obj.Remove(Value{value: "2"})
+	_, found := obj.Get(Value{value: "2"})
+	require.False(t, found)
+}
+
+func TestClear(t *testing.T) {
+	obj, _ := NewHashSet[Value]([]Value{
+		{value: "1"},
+	})
+	obj.Add(Value{value: "1"})
+	obj.Add(Value{value: "2"})
+	obj.Clear()
+	require.Equal(t, 0, obj.Size())
+}
+
+func TestJoin(t *testing.T) {
+	set1, _ := NewHashSet[Value]([]Value{})
+	set2, _ := NewHashSet[Value]([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "4"})
+	set2.Add(Value{value: "5"})
+	set2.Add(Value{value: "3"})
+	set1.Join(set2)
+	require.Equal(t, 5, set1.Size())
+	_, found := set1.Get(Value{value: "1"})
+	require.True(t, found)
+	_, found = set1.Get(Value{value: "2"})
+	require.True(t, found)
+	_, found = set1.Get(Value{value: "3"})
+	require.True(t, found)
+	_, found = set1.Get(Value{value: "4"})
+	require.True(t, found)
+	_, found = set1.Get(Value{value: "5"})
+	require.True(t, found)
+}
+
+func TestIntersect(t *testing.T) {
+	set1, _ := NewHashSet[Value]([]Value{})
+	set2, _ := NewHashSet[Value]([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "4"})
+	set2.Add(Value{value: "5"})
+	set2.Add(Value{value: "3"})
+	set1.Intersect(set2)
+	require.Equal(t, 1, set1.Size())
+	_, found := set1.Get(Value{value: "3"})
+	require.True(t, found)
+}
+
+func TestDisjoint(t *testing.T) {
+	set1, _ := NewHashSet[Value]([]Value{})
+	set2, _ := NewHashSet[Value]([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "4"})
+	set2.Add(Value{value: "5"})
+	set2.Add(Value{value: "3"})
+	set1.Disjoint(set2)
+	require.Equal(t, 2, set1.Size())
+	_, found := set1.Get(Value{value: "1"})
+	require.True(t, found)
+	_, found = set1.Get(Value{value: "2"})
+	require.True(t, found)
 }
