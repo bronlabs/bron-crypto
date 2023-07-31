@@ -70,22 +70,22 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 		return nil, errs.NewInvalidRound("%d != 1", p.round)
 	}
 
-	// 1.a + 2.b In the original paper P chooses a random x in [q/3, 2q/3) range and computes Q = x * G.
-	// Since this protocol runs on already existing x, we choose x' and x'' in the given range
-	// such that x = 3x' + x'', calculate Q', Q'' respectively and proceed with x' and x'' as if they were x.
+	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
 	xPrime, xDoublePrime, _, err := lindell17.Split(p.mySigningKeyShare.Share, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
+
+	// 1.ii. calculate Q' and Q''
 	bigQPrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xPrime)
 	bigQDoublePrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xDoublePrime)
 
+	// 1.iii. calculates commitments Qcom', Qcom'' to Q' and Q'' respectively
 	bigQPrimeCommitmentMessage := append(p.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQPrime.ToAffineCompressed()...)
 	bigQPrimeCommitment, bigQPrimeWitness, err := commitments.Commit(commitmentHashFunc, bigQPrimeCommitmentMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q'")
 	}
-
 	bigQDoublePrimeCommitmentMessage := append(p.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQDoublePrime.ToAffineCompressed()...)
 	bigQDoublePrimeCommitment, biqQDoublePrimeWitness, err := commitments.Commit(commitmentHashFunc, bigQDoublePrimeCommitmentMessage)
 	if err != nil {
@@ -107,6 +107,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 		return nil, errs.NewFailed("something went really wrong")
 	}
 
+	// 1.iv. broadcast commitments
 	p.round++
 	return &Round1Broadcast{
 		BigQPrimeCommitment:       bigQPrimeCommitment,
@@ -119,6 +120,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 		return nil, errs.NewInvalidRound("%d != 2", p.round)
 	}
 
+	// 2. store commitments
 	p.state.theirBigQPrimeCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	p.state.theirBigQDoublePrimeCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants {
@@ -132,6 +134,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 		p.state.theirBigQDoublePrimeCommitment[identity] = input[identity].BigQDoublePrimeCommitment
 	}
 
+	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
 	bigQPrimeProver, err := dlog.NewProver(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), p.sessionId, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
@@ -143,7 +146,6 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 	if !p.state.myBigQPrime.Equal(bigQPrimeStatement) {
 		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
 	}
-
 	bigQDoublePrimeProver, err := dlog.NewProver(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), p.sessionId, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
@@ -156,6 +158,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
 	}
 
+	// 2.ii. open commitments revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
 	p.round++
 	return &Round2Broadcast{
 		BigQPrime:              p.state.myBigQPrime,
@@ -172,11 +175,10 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		return nil, errs.NewInvalidRound("%d != 3", p.round)
 	}
 
-	// 3.a P receives dlog proof of Q
 	p.state.theirBigQPrime = make(map[integration.IdentityKey]curves.Point)
 	p.state.theirBigQDoublePrime = make(map[integration.IdentityKey]curves.Point)
 
-	// 3.b P opens the commitment and verifies dlog proofs
+	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
@@ -206,14 +208,22 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQDoublePrime[identity] = input[identity].BigQDoublePrime
+
+		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
+		theirBigQ := p.state.theirBigQPrime[identity].Mul(p.cohortConfig.CipherSuite.Curve.NewScalar().New(3)).Add(p.state.theirBigQDoublePrime[identity])
+		if !theirBigQ.Equal(p.publicKeyShares.SharesMap[identity]) {
+			return nil, errs.NewIdentifiableAbort("invalid Q' or Q''")
+		}
 	}
 
-	// 3.c P generates a Paillier key-pair
+	// 3.iii. generate a Paillier key pair
 	p.state.myPaillierPk, p.state.myPaillierSk, err = paillier.NewKeys(paillierBitSize)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}
 	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.BigInt())
+
+	// 3.iv. calculate ckey' = Enc(x'; r') and ckey'' = Enc(x''; r'')
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
 	}
@@ -224,6 +234,8 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 	p.state.myRPrime = rPrime
 	p.state.myRDoublePrime = rDoublePrime
 
+	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
+	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
 	p.state.lpProvers = make(map[integration.IdentityKey]*lp.Prover)
 	p.state.lpdlPrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
@@ -231,9 +243,6 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		if identity == p.myIdentityKey {
 			continue
 		}
-
-		// 4. P proves in zero knowledge that public-key was generated correctly (L_P)
-		// and the encrypted share encrypts dlog of Q (L_PDL)
 		p.state.lpProvers[identity] = lp.NewProver(40, p.state.myPaillierSk, p.prng)
 		p.state.lpdlPrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.prng)
 		if err != nil {
@@ -245,7 +254,7 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		}
 	}
 
-	// 3.d P sends public-key and encryption of x to other parties
+	// 3.v. broadcast (pk, ckey', ckey'')
 	p.round++
 	return &Round3Broadcast{
 		CKeyPrime:         cKeyPrime,
@@ -279,6 +288,7 @@ func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast)
 		theirCKeyPrime := input[identity].CKeyPrime
 		theirCKeyDoublePrime := input[identity].CKeyDoublePrime
 
+		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
 		cKey1, err := p.state.theirPaillierPublicKeys[identity].Add(theirCKeyPrime, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
@@ -292,6 +302,7 @@ func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast)
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
 
+		// 4.ii. LP and LPDL continue
 		p.state.lpVerifiers[identity] = lp.NewVerifier(40, p.state.theirPaillierPublicKeys[identity], p.prng)
 		p.state.lpdlPrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQPrime[identity], theirCKeyPrime, p.prng)
 		if err != nil {
@@ -326,6 +337,7 @@ func (p *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (outp
 		return nil, errs.NewInvalidRound("%d != 5", p.round)
 	}
 
+	// 5. LP and LPDL continue
 	round5Outputs := make(map[integration.IdentityKey]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
@@ -359,6 +371,7 @@ func (p *Participant) Round6(input map[integration.IdentityKey]*Round5P2P) (outp
 		return nil, errs.NewInvalidRound("%d != 6", p.round)
 	}
 
+	// 6. LP and LPDL continue
 	round6Outputs := make(map[integration.IdentityKey]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
@@ -392,6 +405,7 @@ func (p *Participant) Round7(input map[integration.IdentityKey]*Round6P2P) (outp
 		return nil, errs.NewInvalidRound("%d != 7", p.round)
 	}
 
+	// 7. LP and LPDL continue
 	round7Outputs := make(map[integration.IdentityKey]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
@@ -448,7 +462,7 @@ func (p *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shar
 	}
 
 	p.round++
-	// 6. P stores encrypted Enc(x) which is Enc(3x' + x'')
+	// 8. store encrypted x_j aka ckey_j (ckey_j = Enc(x_j) = Enc(3x'_j + x''_j)) and pk_j alongside share
 	return &lindell17.Shard{
 		SigningKeyShare:         p.mySigningKeyShare,
 		PaillierSecretKey:       p.state.myPaillierSk,
