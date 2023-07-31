@@ -43,26 +43,26 @@ type Round3Broadcast struct {
 
 type Round4P2P struct {
 	LpRound1Output              *lp.Round1Output
-	LpdlPrimeRound1Output       *lpdl.VerifierRound1Output
-	LpdlDoublePrimeRound1Output *lpdl.VerifierRound1Output
+	LpdlPrimeRound1Output       *lpdl.Round1Output
+	LpdlDoublePrimeRound1Output *lpdl.Round1Output
 }
 
 type Round5P2P struct {
 	LpRound2Output              *lp.Round2Output
-	LpdlPrimeRound2Output       *lpdl.ProverRound2Output
-	LpdlDoublePrimeRound2Output *lpdl.ProverRound2Output
+	LpdlPrimeRound2Output       *lpdl.Round2Output
+	LpdlDoublePrimeRound2Output *lpdl.Round2Output
 }
 
 type Round6P2P struct {
 	LpRound3Output              *lp.Round3Output
-	LpdlPrimeRound3Output       *lpdl.VerifierRound3Output
-	LpdlDoublePrimeRound3Output *lpdl.VerifierRound3Output
+	LpdlPrimeRound3Output       *lpdl.Round3Output
+	LpdlDoublePrimeRound3Output *lpdl.Round3Output
 }
 
 type Round7P2P struct {
 	LpRound4Output              *lp.Round4Output
-	LpdlPrimeRound4Output       *lpdl.ProverRound4Output
-	LpdlDoublePrimeRound4Output *lpdl.ProverRound4Output
+	LpdlPrimeRound4Output       *lpdl.Round4Output
+	LpdlDoublePrimeRound4Output *lpdl.Round4Output
 }
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
@@ -188,23 +188,19 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		}
 
 		bigQPrimeCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQPrime.ToAffineCompressed()...)
-		err = commitments.Open(commitmentHashFunc, bigQPrimeCommitmentMessage, p.state.theirBigQPrimeCommitment[identity], input[identity].BigQPrimeWitness)
-		if err != nil {
+		if err := commitments.Open(commitmentHashFunc, bigQPrimeCommitmentMessage, p.state.theirBigQPrimeCommitment[identity], input[identity].BigQPrimeWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open Q' commitment")
 		}
-		err = dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQPrime, input[identity].BigQPrimeProof, p.sessionId, nil)
-		if err != nil {
+		if err := dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQPrime, input[identity].BigQPrimeProof, p.sessionId, nil); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
 		p.state.theirBigQPrime[identity] = input[identity].BigQPrime
 
 		bigQDoublePrimeCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQDoublePrime.ToAffineCompressed()...)
-		err = commitments.Open(commitmentHashFunc, bigQDoublePrimeCommitmentMessage, p.state.theirBigQDoublePrimeCommitment[identity], input[identity].BigQDoublePrimeWitness)
-		if err != nil {
+		if err := commitments.Open(commitmentHashFunc, bigQDoublePrimeCommitmentMessage, p.state.theirBigQDoublePrimeCommitment[identity], input[identity].BigQDoublePrimeWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open Q'' commitment")
 		}
-		err = dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQDoublePrime, input[identity].BigQDoublePrimeProof, p.sessionId, nil)
-		if err != nil {
+		if err := dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQDoublePrime, input[identity].BigQDoublePrimeProof, p.sessionId, nil); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQDoublePrime[identity] = input[identity].BigQDoublePrime

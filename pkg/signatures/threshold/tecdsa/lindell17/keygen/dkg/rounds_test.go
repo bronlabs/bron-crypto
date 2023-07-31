@@ -86,51 +86,61 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 
-	// each signing share is different
-	for i := 0; i < len(shards); i++ {
-		for j := i + 1; j < len(shards); j++ {
-			require.NotZero(t, shards[i].SigningKeyShare.Share.Cmp(shards[j].SigningKeyShare.Share))
-		}
-	}
+	t.Run("each signing share is different", func(t *testing.T) {
+		t.Parallel()
 
-	// each public key is the same
-	for i := 0; i < len(shards); i++ {
-		for j := i + 1; j < len(shards); j++ {
-			require.True(t, shards[i].SigningKeyShare.PublicKey.Equal(shards[j].SigningKeyShare.PublicKey))
-		}
-	}
-
-	shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve)
-	require.NoError(t, err)
-	require.NotNil(t, shamirDealer)
-	shamirShares := make([]*shamir.Share, len(lindellParticipants))
-	for i := 0; i < len(lindellParticipants); i++ {
-		shamirShares[i] = &shamir.Share{
-			Id:    lindellParticipants[i].GetShamirId(),
-			Value: signingKeyShares[i].Share,
-		}
-	}
-
-	reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
-	require.NoError(t, err)
-
-	derivedPublicKey := cipherSuite.Curve.ScalarBaseMult(reconstructedPrivateKey)
-	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
-
-	// cKey is encryption of Share
-	for i := 0; i < len(shards); i++ {
-		for j := 0; j < len(shards); j++ {
-			if i != j {
-				myShard := shards[i]
-				theirShard := shards[j]
-				mySigningShare := myShard.SigningKeyShare.Share
-				theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i]]
-				theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
-				require.NoError(t, err)
-				theirDecryptedSigningShare, err := cipherSuite.Curve.NewScalar().SetBigInt(theirDecryptedSigningShareInt)
-				require.NoError(t, err)
-				require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
+		for i := 0; i < len(shards); i++ {
+			for j := i + 1; j < len(shards); j++ {
+				require.NotZero(t, shards[i].SigningKeyShare.Share.Cmp(shards[j].SigningKeyShare.Share))
 			}
 		}
-	}
+	})
+
+	t.Run("each public key is the same", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(shards); i++ {
+			for j := i + 1; j < len(shards); j++ {
+				require.True(t, shards[i].SigningKeyShare.PublicKey.Equal(shards[j].SigningKeyShare.PublicKey))
+			}
+		}
+	})
+
+	t.Run("private key matches public key", func(t *testing.T) {
+		t.Parallel()
+
+		shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve)
+		require.NoError(t, err)
+		require.NotNil(t, shamirDealer)
+		shamirShares := make([]*shamir.Share, len(lindellParticipants))
+		for i := 0; i < len(lindellParticipants); i++ {
+			shamirShares[i] = &shamir.Share{
+				Id:    lindellParticipants[i].GetShamirId(),
+				Value: signingKeyShares[i].Share,
+			}
+		}
+
+		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		require.NoError(t, err)
+
+		derivedPublicKey := cipherSuite.Curve.ScalarBaseMult(reconstructedPrivateKey)
+		require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+	})
+
+	t.Run("cKey is encryption of share", func(t *testing.T) {
+		for i := 0; i < len(shards); i++ {
+			for j := 0; j < len(shards); j++ {
+				if i != j {
+					myShard := shards[i]
+					theirShard := shards[j]
+					mySigningShare := myShard.SigningKeyShare.Share
+					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i]]
+					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
+					require.NoError(t, err)
+					theirDecryptedSigningShare, err := cipherSuite.Curve.NewScalar().SetBigInt(theirDecryptedSigningShareInt)
+					require.NoError(t, err)
+					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
+				}
+			}
+		}
+	})
 }

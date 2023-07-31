@@ -1,4 +1,4 @@
-package _range_test
+package paillierrange_test
 
 import (
 	crand "crypto/rand"
@@ -87,11 +87,11 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
-	verifier, err := _range.NewVerifier(128, q, sid, pk, xEncrypted, prng)
+	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, prng)
 	if err != nil {
 		return err
 	}
-	prover, err := _range.NewProver(128, q, sid, sk, x, r, prng)
+	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, prng)
 	if err != nil {
 		return err
 	}

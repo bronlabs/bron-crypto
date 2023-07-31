@@ -83,6 +83,10 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoubleP
 		}
 	}
 
+	// double check
+	if xPrime.Add(xPrime).Add(xPrime).Add(xDoublePrime).Cmp(scalar) != 0 {
+		return nil, nil, 0, errs.NewFailed("split failed")
+	}
 	return xPrime, xDoublePrime, i, nil
 }
 

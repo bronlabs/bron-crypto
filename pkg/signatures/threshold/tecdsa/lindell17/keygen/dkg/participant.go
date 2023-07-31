@@ -17,7 +17,7 @@ import (
 
 var _ lindell17.Participant = (*Participant)(nil)
 
-type ParticipantState struct {
+type State struct {
 	myXPrime                 curves.Scalar
 	myXDoublePrime           curves.Scalar
 	myBigQPrime              curves.Point
@@ -56,7 +56,7 @@ type Participant struct {
 	prng              io.Reader
 
 	round int
-	state *ParticipantState
+	state *State
 }
 
 const (
@@ -109,6 +109,6 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		sessionId:         sessionId,
 		prng:              prng,
 		round:             1,
-		state:             &ParticipantState{},
+		state:             &State{},
 	}, nil
 }

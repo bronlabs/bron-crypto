@@ -35,7 +35,7 @@ type VerifierState struct {
 
 type Verifier struct {
 	Participant
-	rangeVerifier *_range.Verifier
+	rangeVerifier *paillierrange.Verifier
 	c             paillier.CipherText
 	state         *VerifierState
 }
@@ -50,7 +50,7 @@ type ProverState struct {
 
 type Prover struct {
 	Participant
-	rangeProver *_range.Prover
+	rangeProver *paillierrange.Prover
 	sk          *paillier.SecretKey
 	x           curves.Scalar
 	state       *ProverState
@@ -68,7 +68,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	q := nativeCurve.Params().N
 	q2 := new(big.Int).Mul(q, q)
 
-	rangeVerifier, err := _range.NewVerifier(128, q, sid, publicKey, xEncrypted, prng)
+	rangeVerifier, err := paillierrange.NewVerifier(128, q, sid, publicKey, xEncrypted, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
@@ -104,7 +104,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 	q := nativeCurve.Params().N
 	qSquared := new(big.Int).Mul(q, q)
 
-	rangeProver, err := _range.NewProver(128, q, sid, secretKey, x.BigInt(), r, prng)
+	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range prover")
 	}

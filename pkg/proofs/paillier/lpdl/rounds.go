@@ -15,31 +15,31 @@ var (
 	hashFunc = sha256.New
 )
 
-type VerifierRound1Output struct {
-	RangeVerifierOutput    *_range.VerifierRound1Output
+type Round1Output struct {
+	RangeVerifierOutput    *paillierrange.Round1Output
 	CPrime                 paillier.CipherText
 	CDoublePrimeCommitment commitments.Commitment
 }
 
-type ProverRound2Output struct {
-	RangeProverOutput *_range.ProverRound2Output
+type Round2Output struct {
+	RangeProverOutput *paillierrange.ProverRound2Output
 	CHat              commitments.Commitment
 }
 
-type VerifierRound3Output struct {
-	RangeVerifierOutput *_range.VerifierRound3Output
+type Round3Output struct {
+	RangeVerifierOutput *paillierrange.VerifierRound3Output
 	A                   *big.Int
 	B                   *big.Int
 	CDoublePrimeWitness commitments.Witness
 }
 
-type ProverRound4Output struct {
-	RangeProverOutput *_range.ProverRound4Output
+type Round4Output struct {
+	RangeProverOutput *paillierrange.Round4Output
 	BigQHat           curves.Point
 	BigQHatWitness    commitments.Witness
 }
 
-func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
+func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
 		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
 	}
@@ -92,14 +92,14 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 
 	// 1.iv sends c' and c'' to P
 	verifier.round += 2
-	return &VerifierRound1Output{
+	return &Round1Output{
 		RangeVerifierOutput:    rangeVerifierOutput,
 		CPrime:                 cPrime,
 		CDoublePrimeCommitment: cDoublePrimeCommitment,
 	}, nil
 }
 
-func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2Output, err error) {
+func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", prover.round)
 	}
@@ -132,13 +132,13 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 	}
 
 	prover.round += 2
-	return &ProverRound2Output{
+	return &Round2Output{
 		RangeProverOutput: rangeProverOutput,
 		CHat:              bigQHatCommitment,
 	}, nil
 }
 
-func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
+func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
 	}
@@ -153,7 +153,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 
 	// 3. decommit c'' revealing a, b
 	verifier.round += 2
-	return &VerifierRound3Output{
+	return &Round3Output{
 		RangeVerifierOutput: rangeVerifierOutput,
 		A:                   verifier.state.a,
 		B:                   verifier.state.b,
@@ -161,7 +161,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 	}, nil
 }
 
-func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4Output, err error) {
+func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
@@ -184,14 +184,14 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 
 	// 4. decommit c^ revealing Q^
 	prover.round += 2
-	return &ProverRound4Output{
+	return &Round4Output{
 		RangeProverOutput: rangeProverOutput,
 		BigQHat:           prover.state.bigQHat,
 		BigQHatWitness:    prover.state.bigQHatWitness,
 	}, nil
 }
 
-func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
+func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
 		return errs.NewInvalidRound("%d != 5", verifier.round)
 	}

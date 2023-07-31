@@ -1,4 +1,4 @@
-package lpdl_test
+package dkg_test
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
