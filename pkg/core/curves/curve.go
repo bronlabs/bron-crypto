@@ -237,7 +237,7 @@ type Point interface {
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
 	CurveName() string
-	SumOfProducts(points []Point, scalars []Scalar) (Point, error)
+	MultiScalarMult(scalars []Scalar, points []Point) (Point, error)
 }
 
 type PairingPoint interface {

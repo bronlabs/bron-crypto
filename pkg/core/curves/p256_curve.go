@@ -598,7 +598,7 @@ func (p *PointP256) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (p *PointP256) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func (p *PointP256) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	nPoints := make([]*native.EllipticPoint, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {

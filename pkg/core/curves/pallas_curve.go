@@ -630,7 +630,7 @@ func (p *PointPallas) CurveName() string {
 	return PallasName
 }
 
-func (p *PointPallas) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func (p *PointPallas) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	eps := make([]*Ep, len(points))
 	for i, pt := range points {
 		ps, ok := pt.(*PointPallas)

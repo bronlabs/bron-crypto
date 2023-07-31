@@ -528,7 +528,7 @@ func TestPointBls12381G1SumOfProducts(t *testing.T) {
 		new(ScalarBls12381).New(11),
 		new(ScalarBls12381).New(12),
 	}
-	rhs, err := lhs.SumOfProducts(points, scalars)
+	rhs, err := lhs.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))

@@ -650,7 +650,7 @@ func (p *BenchPointP256) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (p *BenchPointP256) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func (p *BenchPointP256) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	nScalars := make([]*big.Int, len(scalars))
 	for i, sc := range scalars {
 		s, ok := sc.(*BenchScalarP256)

@@ -185,12 +185,18 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderShamirId]
 		derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
+		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
+		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 		for k := 0; k < p.CohortConfig.Threshold; k++ {
 			exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
 			iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId).Exp(exp)
 			C_lk := senderCommitmentVector[k]
-			ikC_lk := C_lk.Mul(iToK)
-			derivedPartialPublicKeyShare = derivedPartialPublicKeyShare.Add(ikC_lk)
+			iToKs[k] = iToK
+			C_lks[k] = C_lk
+		}
+		derivedPartialPublicKeyShare, err := derivedPartialPublicKeyShare.MultiScalarMult(iToKs, C_lks)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "couldn't derive partial public key share")
 		}
 		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
 			return nil, nil, errs.NewIdentifiableAbort("shares received from shamir id %d is inconsistent", senderShamirId)

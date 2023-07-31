@@ -509,7 +509,7 @@ func (p *PointBls12381G1) CurveName() string {
 	return "BLS12381G1"
 }
 
-func (p *PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func (p *PointBls12381G1) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	nPoints := make([]*bls12381.G1, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
@@ -761,7 +761,7 @@ func (p *PointBls12381G2) CurveName() string {
 	return "BLS12381G2"
 }
 
-func (p *PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func (p *PointBls12381G2) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	nPoints := make([]*bls12381.G2, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
