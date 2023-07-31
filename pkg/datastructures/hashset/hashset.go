@@ -81,11 +81,3 @@ func (set *HashSet[T]) Intersect(other HashSet[T]) {
 		}
 	}
 }
-
-func (set *HashSet[T]) Outersect(other HashSet[T]) {
-	for _, element := range other.value {
-		if set.Contains(element) {
-			set.Remove(element)
-		}
-	}
-}
