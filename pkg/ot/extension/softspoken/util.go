@@ -3,7 +3,6 @@ package softspoken
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -33,7 +32,7 @@ func transposeBooleanMatrix(inputMatrix [Kappa][ZetaPrimeBytes]byte) [ZetaPrime]
 // HashSalted hashes the κ-bit length rows of a [ξ]×[κ] bit matrix, outputting rows of
 // ω×κ bits in a [ξ]×[ω]×[κ] bit matrix. The uniqueSessionId is used as a salt.
 func HashSalted(
-	uniqueSessionId *[vsot.DigestSize]byte,
+	uniqueSessionId *[]byte,
 	bufferIn [][KappaBytes]byte,
 	bufferOut [][OTeWidth][KappaBytes]byte,
 ) (e error) {

@@ -18,11 +18,11 @@ const (
 	SBytes = S >> 3
 
 	// number of random choice bits per element in each batch
-	Zeta      = Kappa + 2*S
-	ZetaBytes = Zeta / 8
+	Xi      = Kappa + 2*S
+	XiBytes = Xi / 8
 
 	// OTe batch size
-	Eta      = Zeta * L
+	Eta      = Xi * L
 	EtaBytes = Eta / 8
 )
 

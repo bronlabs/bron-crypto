@@ -13,7 +13,7 @@ type Receiver struct {
 	baseOtSeeds *vsot.SenderOutput
 
 	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId [vsot.DigestSize]byte
+	uniqueSessionId []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript *merlin.Transcript
@@ -31,7 +31,7 @@ type Sender struct {
 	baseOtSeeds *vsot.ReceiverOutput
 
 	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId [vsot.DigestSize]byte
+	uniqueSessionId []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript *merlin.Transcript
@@ -47,7 +47,7 @@ type Sender struct {
 // The `baseOtResults` are the results of playing the sender role in ξ baseOTs.
 func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
-	uniqueSessionId [vsot.DigestSize]byte,
+	uniqueSessionId []byte,
 	transcript *merlin.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
@@ -73,7 +73,7 @@ func NewCOtReceiver(
 // The `baseOtResults` are the results of playing the receiver role in ξ baseOTs.
 func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
-	uniqueSessionId [vsot.DigestSize]byte,
+	uniqueSessionId []byte,
 	transcript *merlin.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,

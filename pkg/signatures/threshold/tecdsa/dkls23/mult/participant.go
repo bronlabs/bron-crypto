@@ -18,7 +18,7 @@ type Alice struct {
 	Curve           *curves.Curve
 	transcript      *merlin.Transcript
 	uniqueSessionId []byte
-	Gadget          [Zeta]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
+	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
 	aTilde [L]curves.Scalar // ã ∈ [L]ℤq is the vector of one-time pads of Alice
 	aHat   [L]curves.Scalar // â ∈ [L]ℤq is the vector of check values of Alice
@@ -31,17 +31,13 @@ type Bob struct {
 	Curve           *curves.Curve
 	transcript      *merlin.Transcript
 	uniqueSessionId []byte
-	Gadget          [Zeta]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
+	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
 	// beta (β) ∈ [eta]bits is a vector of random bits used as input to COTe
 	// This should be considered as an enum. Only one field should be used
-	ForcedReuse     bool
-	Beta            [EtaBytes]byte
-	BetaForcedReuse [ZetaBytes]byte // EtaBytes = ZetaBytes * 1 when L = 1
-
+	Beta [XiBytes]byte
 	// BTilde (b̃) ∈ ℤq^L is the sum of the gadget vector elements weighted by the bits in beta
-	BTilde [L]curves.Scalar
-
+	BTilde                [L]curves.Scalar
 	oteReceiverOutput     *softspoken.OTeReceiverOutput
 	extendedPackedChoices *softspoken.ExtPackedChoices
 }
@@ -59,12 +55,11 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
-	// TODO: parametrize forcedreuse
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, nil, curve, true)
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, true)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
 	gadget, err := generateGadgetVector(curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
@@ -74,7 +69,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 		sender:          sender,
 		transcript:      transcript,
 		uniqueSessionId: uniqueSessionId,
-		Gadget:          gadget,
+		gadget:          gadget,
 		prng:            prng,
 	}, nil
 }
@@ -89,15 +84,14 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse b
 	if seedOtResults == nil {
 		return nil, errs.NewInvalidArgument("seet ot results is nil")
 	}
-	// TODO: parametrize forcedreuse
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, nil, curve, true)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create receiver")
-	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, true)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create receiver")
+	}
 	gadget, err := generateGadgetVector(curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
@@ -107,16 +101,15 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse b
 		receiver:        receiver,
 		transcript:      transcript,
 		uniqueSessionId: uniqueSessionId,
-		Gadget:          gadget,
-		ForcedReuse:     true,
+		gadget:          gadget,
 		prng:            prng,
 	}, nil
 }
 
-func generateGadgetVector(curve *curves.Curve) (gadget [Zeta]curves.Scalar, err error) {
-	gadget = [Zeta]curves.Scalar{}
+func generateGadgetVector(curve *curves.Curve) (gadget [Xi]curves.Scalar, err error) {
+	gadget = [Xi]curves.Scalar{}
 	shake := sha3.NewCShake256(nil, []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
-	for i := 0; i < Zeta; i++ {
+	for i := 0; i < Xi; i++ {
 		bytes := [native.FieldBytes]byte{}
 		if _, err = shake.Read(bytes[:]); err != nil {
 			return gadget, errs.WrapFailed(err, "could not read bytes")
