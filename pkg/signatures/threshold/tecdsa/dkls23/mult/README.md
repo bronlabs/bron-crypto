@@ -46,7 +46,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 1.1. samples random choice bits $\beta$ from $\mathbb{Z}_{\xi}$
 
 1.2. define a pad $\tilde{b}$. Note that $\tilde{b}$ is effectively bob's input.
-   $\tilde{b} = \sum_{j=0}^{\xi - 1} g_j \cdot \beta_j$
+   $\tilde{b}_j = g_j \cdot \beta_j$ $\in \mathbb{Z}_q, \forall{j}{\xi}$
 
 1.3. Initiate COTe($\xi$) Round 1 and receive `extendedPackedChoices`, `cOTeReceiverOutput` and `R1Output`. Cache the first two.
 
