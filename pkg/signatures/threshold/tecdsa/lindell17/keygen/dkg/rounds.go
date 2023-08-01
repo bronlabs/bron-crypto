@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/gtank/merlin"
 )
 
 const (
@@ -22,17 +23,15 @@ var (
 )
 
 type Round1Broadcast struct {
-	BigQPrimeCommitment       commitments.Commitment
-	BigQDoublePrimeCommitment commitments.Commitment
+	BigQCommitment commitments.Commitment
 }
 
 type Round2Broadcast struct {
-	BigQPrime              curves.Point
-	BigQPrimeWitness       commitments.Witness
-	BigQPrimeProof         *dlog.Proof
-	BigQDoublePrime        curves.Point
-	BigQDoublePrimeWitness commitments.Witness
-	BigQDoublePrimeProof   *dlog.Proof
+	BigQWitness          commitments.Witness
+	BigQPrime            curves.Point
+	BigQPrimeProof       *dlog.Proof
+	BigQDoublePrime      curves.Point
+	BigQDoublePrimeProof *dlog.Proof
 }
 
 type Round3Broadcast struct {
@@ -80,29 +79,19 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	bigQPrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xPrime)
 	bigQDoublePrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xDoublePrime)
 
-	// 1.iii. calculates commitments Qcom', Qcom'' to Q' and Q'' respectively
-	bigQPrimeCommitmentMessage := append(p.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQPrime.ToAffineCompressed()...)
-	bigQPrimeCommitment, bigQPrimeWitness, err := commitments.Commit(commitmentHashFunc, bigQPrimeCommitmentMessage)
+	// 1.iii. calculates commitments Qcom to Q' and Q''
+	bigQCommitment, bigQWitness, err := commit(bigQPrime, bigQDoublePrime, p.sessionId, p.myIdentityKey.PublicKey())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to Q'")
-	}
-	bigQDoublePrimeCommitmentMessage := append(p.myIdentityKey.PublicKey().ToAffineCompressed()[:], bigQDoublePrime.ToAffineCompressed()...)
-	bigQDoublePrimeCommitment, biqQDoublePrimeWitness, err := commitments.Commit(commitmentHashFunc, bigQDoublePrimeCommitmentMessage)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to Q''")
+		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
 	}
 
 	p.state.myXPrime = xPrime
 	p.state.myXDoublePrime = xDoublePrime
 	p.state.myBigQPrime = bigQPrime
 	p.state.myBigQDoublePrime = bigQDoublePrime
-	p.state.myBigQPrimeWitness = bigQPrimeWitness
-	p.state.myBigQDoublePrimeWitness = biqQDoublePrimeWitness
+	p.state.myBigQWitness = bigQWitness
 
 	// some paranoid checks
-	if xPrime.Add(xPrime).Add(xPrime).Add(xDoublePrime).Cmp(p.mySigningKeyShare.Share) != 0 {
-		return nil, errs.NewFailed("something went really wrong")
-	}
 	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQDoublePrime).Equal(p.publicKeyShares.SharesMap[p.myIdentityKey]) {
 		return nil, errs.NewFailed("something went really wrong")
 	}
@@ -110,8 +99,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	// 1.iv. broadcast commitments
 	p.round++
 	return &Round1Broadcast{
-		BigQPrimeCommitment:       bigQPrimeCommitment,
-		BigQDoublePrimeCommitment: bigQDoublePrimeCommitment,
+		bigQCommitment,
 	}, nil
 }
 
@@ -121,8 +109,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 	}
 
 	// 2. store commitments
-	p.state.theirBigQPrimeCommitment = make(map[integration.IdentityKey]commitments.Commitment)
-	p.state.theirBigQDoublePrimeCommitment = make(map[integration.IdentityKey]commitments.Commitment)
+	p.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
@@ -130,43 +117,27 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 		if input[identity] == nil {
 			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
 		}
-		p.state.theirBigQPrimeCommitment[identity] = input[identity].BigQPrimeCommitment
-		p.state.theirBigQDoublePrimeCommitment[identity] = input[identity].BigQDoublePrimeCommitment
+		p.state.theirBigQCommitment[identity] = input[identity].BigQCommitment
 	}
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
-	bigQPrimeProver, err := dlog.NewProver(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), p.sessionId, nil)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
-	}
-	bigQPrimeProof, bigQPrimeStatement, err := bigQPrimeProver.Prove(p.state.myXPrime)
+	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, p.myIdentityKey.PublicKey(), nil) // TODO: clone transport when interface ready
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
 	}
-	if !p.state.myBigQPrime.Equal(bigQPrimeStatement) {
-		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
-	}
-	bigQDoublePrimeProver, err := dlog.NewProver(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), p.sessionId, nil)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create prover for Q'")
-	}
-	bigQDoublePrimeProof, bigQDoublePrimeStatement, err := bigQDoublePrimeProver.Prove(p.state.myXDoublePrime)
+	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, p.myIdentityKey.PublicKey(), nil) // TODO: ditto
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
 	}
-	if !p.state.myBigQDoublePrime.Equal(bigQDoublePrimeStatement) {
-		return nil, errs.NewFailed("invalid statement, something went horribly wrong")
-	}
 
-	// 2.ii. open commitments revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
+	// 2.ii. send opening of Qcom revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
 	p.round++
 	return &Round2Broadcast{
-		BigQPrime:              p.state.myBigQPrime,
-		BigQPrimeWitness:       p.state.myBigQPrimeWitness,
-		BigQPrimeProof:         bigQPrimeProof,
-		BigQDoublePrime:        p.state.myBigQDoublePrime,
-		BigQDoublePrimeWitness: p.state.myBigQDoublePrimeWitness,
-		BigQDoublePrimeProof:   bigQDoublePrimeProof,
+		BigQWitness:          p.state.myBigQWitness,
+		BigQPrime:            p.state.myBigQPrime,
+		BigQPrimeProof:       bigQPrimeProof,
+		BigQDoublePrime:      p.state.myBigQDoublePrime,
+		BigQDoublePrimeProof: bigQDoublePrimeProof,
 	}, nil
 }
 
@@ -187,22 +158,17 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
 		}
 
-		bigQPrimeCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQPrime.ToAffineCompressed()...)
-		if err := commitments.Open(commitmentHashFunc, bigQPrimeCommitmentMessage, p.state.theirBigQPrimeCommitment[identity], input[identity].BigQPrimeWitness); err != nil {
-			return nil, errs.WrapFailed(err, "cannot open Q' commitment")
+		// 3.i. open commitments
+		if err := openCommitment(p.state.theirBigQCommitment[identity], input[identity].BigQWitness, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, identity.PublicKey()); err != nil {
+			return nil, errs.WrapFailed(err, "cannot open (Q', Q'') commitment")
 		}
-		if err := dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQPrime, input[identity].BigQPrimeProof, p.sessionId, nil); err != nil {
+		if err := dlogVerify(input[identity].BigQPrimeProof, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, identity.PublicKey(), nil); err != nil { // TODO: clone transcript when ready
+			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
+		}
+		if err := dlogVerify(input[identity].BigQDoublePrimeProof, input[identity].BigQDoublePrime, input[identity].BigQPrime, p.sessionId, identity.PublicKey(), nil); err != nil { // TODO: clone transcript when ready
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
 		p.state.theirBigQPrime[identity] = input[identity].BigQPrime
-
-		bigQDoublePrimeCommitmentMessage := append(identity.PublicKey().ToAffineCompressed()[:], input[identity].BigQDoublePrime.ToAffineCompressed()...)
-		if err := commitments.Open(commitmentHashFunc, bigQDoublePrimeCommitmentMessage, p.state.theirBigQDoublePrimeCommitment[identity], input[identity].BigQDoublePrimeWitness); err != nil {
-			return nil, errs.WrapFailed(err, "cannot open Q'' commitment")
-		}
-		if err := dlog.Verify(p.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), input[identity].BigQDoublePrime, input[identity].BigQDoublePrimeProof, p.sessionId, nil); err != nil {
-			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
-		}
 		p.state.theirBigQDoublePrime[identity] = input[identity].BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
@@ -465,4 +431,69 @@ func (p *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shar
 		PaillierPublicKeys:      p.state.theirPaillierPublicKeys,
 		PaillierEncryptedShares: p.state.theirPaillierEncryptedShares,
 	}, nil
+}
+
+func commit(bigQPrime curves.Point, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	message := []byte{}
+	message = append(message, bigQPrime.ToAffineCompressed()...)
+	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
+	message = append(message, sid...)
+	message = append(message, pid.ToAffineCompressed()...)
+	return commitments.Commit(commitmentHashFunc, message)
+}
+
+func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime curves.Point, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (err error) {
+	message := []byte{}
+	message = append(message, bigQPrime.ToAffineCompressed()...)
+	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
+	message = append(message, sid...)
+	message = append(message, pid.ToAffineCompressed()...)
+	return commitments.Open(commitmentHashFunc, message, commitment, witness)
+}
+
+func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, pid curves.Point, transcript *merlin.Transcript) (proof *dlog.Proof, err error) {
+	if transcript == nil {
+		transcript = merlin.NewTranscript("lindell2017Dlog")
+	}
+	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
+	transcript.AppendMessage([]byte("pid"), pid.ToAffineCompressed())
+
+	curveName := bigQ.CurveName()
+	curve, err := curves.GetCurveByName(curveName)
+	if err != nil {
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curveName)
+	}
+	generator := curve.NewGeneratorPoint()
+
+	prover, err := dlog.NewProver(generator, sid, transcript)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create dlog prover")
+	}
+
+	proof, statement, err := prover.Prove(x)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot prove dlog")
+	}
+	if !bigQ.Equal(statement) {
+		return nil, errs.NewFailed("invalid statement")
+	}
+
+	return proof, nil
+}
+
+func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, pid curves.Point, transcript *merlin.Transcript) (err error) {
+	if transcript == nil {
+		transcript = merlin.NewTranscript("lindell2017Dlog")
+	}
+	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
+	transcript.AppendMessage([]byte("pid"), pid.ToAffineCompressed())
+
+	curveName := bigQ.CurveName()
+	curve, err := curves.GetCurveByName(curveName)
+	if err != nil {
+		return errs.WrapInvalidCurve(err, "invalid curve %s", curveName)
+	}
+	generator := curve.NewGeneratorPoint()
+
+	return dlog.Verify(generator, bigQ, proof, sid, transcript)
 }

@@ -18,23 +18,21 @@ import (
 var _ lindell17.Participant = (*Participant)(nil)
 
 type State struct {
-	myXPrime                 curves.Scalar
-	myXDoublePrime           curves.Scalar
-	myBigQPrime              curves.Point
-	myBigQDoublePrime        curves.Point
-	myBigQPrimeWitness       commitments.Witness
-	myBigQDoublePrimeWitness commitments.Witness
-	myPaillierPk             *paillier.PublicKey
-	myPaillierSk             *paillier.SecretKey
-	myRPrime                 *big.Int
-	myRDoublePrime           *big.Int
+	myXPrime          curves.Scalar
+	myXDoublePrime    curves.Scalar
+	myBigQPrime       curves.Point
+	myBigQDoublePrime curves.Point
+	myBigQWitness     commitments.Witness
+	myPaillierPk      *paillier.PublicKey
+	myPaillierSk      *paillier.SecretKey
+	myRPrime          *big.Int
+	myRDoublePrime    *big.Int
 
-	theirBigQPrimeCommitment       map[integration.IdentityKey]commitments.Commitment
-	theirBigQDoublePrimeCommitment map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime                 map[integration.IdentityKey]curves.Point
-	theirBigQDoublePrime           map[integration.IdentityKey]curves.Point
-	theirPaillierPublicKeys        map[integration.IdentityKey]*paillier.PublicKey
-	theirPaillierEncryptedShares   map[integration.IdentityKey]paillier.CipherText
+	theirBigQCommitment          map[integration.IdentityKey]commitments.Commitment
+	theirBigQPrime               map[integration.IdentityKey]curves.Point
+	theirBigQDoublePrime         map[integration.IdentityKey]curves.Point
+	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
+	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
 
 	lpProvers                map[integration.IdentityKey]*lp.Prover
 	lpVerifiers              map[integration.IdentityKey]*lp.Verifier
@@ -53,6 +51,7 @@ type Participant struct {
 	cohortConfig      *integration.CohortConfig
 	idKeyToShamirId   map[integration.IdentityKey]int
 	sessionId         []byte
+	transcript        *merlin.Transcript
 	prng              io.Reader
 
 	round int
@@ -107,6 +106,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		cohortConfig:      cohortConfig,
 		idKeyToShamirId:   idKeyToShamirId,
 		sessionId:         sessionId,
+		transcript:        transcript,
 		prng:              prng,
 		round:             1,
 		state:             &State{},

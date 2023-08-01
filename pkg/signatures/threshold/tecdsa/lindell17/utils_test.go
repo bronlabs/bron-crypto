@@ -43,3 +43,12 @@ func Test_ShouldSplitDegenerativeCases(t *testing.T) {
 		})
 	}
 }
+
+func Test_ShouldSplitDeterministically(t *testing.T) {
+	curve := curves.P256()
+	for i := 0; i < 1_000_000; i++ {
+		x := curve.NewScalar().Random(crand.Reader)
+		_, _, err := lindell17.SplitDeterministically(x, crand.Reader)
+		require.NoError(t, err)
+	}
+}

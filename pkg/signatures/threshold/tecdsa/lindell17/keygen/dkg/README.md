@@ -12,11 +12,11 @@ Rounds:
 1. Each $P_i$:
    1. chooses randomly $x_i'$ and $x_i''$ such that $x_i', x_i'' \in \left[\frac{q}{3}, \frac{2q}{3} \right)$ and $x_i = 3 \cdot x_i' + x_i''$,
    2. calculates $R_i' = x_i' \cdot G$ and $R_i'' = x_i'' \cdot G$
-   3. calculates commitments $R_{com_i}' = commit(R_i')$ and $R_{com_i}'' = commit(R_i'')$,
-   4. broadcasts $R_{com_i}', R_{com_i}''$.
+   3. calculates commitment $R_{com} = commit(R_i', R_i'')$,
+   4. broadcasts $R_{com_i}$.
 2. Each $P_i$:
    1. calculates proofs of dlog knowledge $R_{dl_i}' = dlogProof(R_i'', x_i'')$ and $R_{dl_i}'' = dlogProof(R_i'', x_i'')$,
-   2. broadcasts openings of $(R_{com_i}', R_{com_i}'')$ revealing $(R_i', R_i'')$,
+   2. broadcasts openings of $(R_{com_i}$ revealing $(R_i', R_i'')$,
    3. broadcasts  $R_{dl_i}', R_{dl_i}''$.
 3. Each $P_i$:
    1. verifies $R_{dl_j}', R_{dl_j}''$ received from every $P_j$ and aborts if any fails to verify,
