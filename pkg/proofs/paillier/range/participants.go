@@ -48,8 +48,8 @@ type Verifier struct {
 }
 
 func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x *big.Int, r *big.Int, prng io.Reader) (prover *Prover, err error) {
-	// 2.i. computes l = floor(q/3)
-	l := new(big.Int).Div(q, big.NewInt(3)) // l = floor(q/3)
+	// 2.i. computes l = ceil(q/3)
+	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)
 
 	// 2.ii. computes c = c (-) l
 	xMinusQThird := new(big.Int).Sub(x, l)
@@ -71,8 +71,8 @@ func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x *big.Int
 }
 
 func NewVerifier(t int, q *big.Int, sid []byte, pk *paillier.PublicKey, xEncrypted paillier.CipherText, prng io.Reader) (verifier *Verifier, err error) {
-	// 1.i. computes l = floor(q/3)
-	l := new(big.Int).Div(q, big.NewInt(3)) // l = floor(q/3)
+	// 1.i. computes l = ceil(q/3)
+	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)
 
 	// 1.ii. computes c = c (-) l
 	cMinusQThirdEncrypted, err := pk.SubPlain(xEncrypted, l)

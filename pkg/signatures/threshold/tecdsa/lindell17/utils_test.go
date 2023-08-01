@@ -9,8 +9,7 @@ import (
 	"testing"
 )
 
-// test for x: floor(q/3)*3 <= x < q
-func Test_ShouldSplitDegenerativeCases(t *testing.T) {
+func Test_ShouldSplitEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []*curves.Curve{
@@ -21,30 +20,56 @@ func Test_ShouldSplitDegenerativeCases(t *testing.T) {
 		curves.BLS12381G2(),
 	}
 
-	for _, curve := range supportedCurves {
-		curveBound := curve
-		t.Run(curve.Name, func(t *testing.T) {
+	for _, c := range supportedCurves {
+		curve := c
+		order, err := lindell17.GetCurveOrder(curve)
+		oneThird := new(big.Int).Div(new(big.Int).Add(order, big.NewInt(2)), big.NewInt(3))
+		twoThird := new(big.Int).Div(new(big.Int).Add(big.NewInt(2), new(big.Int).Mul(order, big.NewInt(2))), big.NewInt(3))
+
+		edgeCases := []*big.Int{
+			big.NewInt(0),
+			big.NewInt(1),
+			big.NewInt(2),
+			new(big.Int).Sub(oneThird, big.NewInt(2)),
+			new(big.Int).Sub(oneThird, big.NewInt(1)),
+			oneThird,
+			new(big.Int).Add(oneThird, big.NewInt(1)),
+			new(big.Int).Add(oneThird, big.NewInt(2)),
+			new(big.Int).Sub(twoThird, big.NewInt(2)),
+			new(big.Int).Sub(twoThird, big.NewInt(1)),
+			twoThird,
+			new(big.Int).Add(twoThird, big.NewInt(1)),
+			new(big.Int).Add(twoThird, big.NewInt(2)),
+			new(big.Int).Sub(order, big.NewInt(2)),
+			new(big.Int).Sub(order, big.NewInt(1)),
+			order,
+		}
+
+		require.NoError(t, err)
+		t.Run(c.Name, func(t *testing.T) {
 			t.Parallel()
-			x1, err := curveBound.NewScalar().SetBigInt(big.NewInt(-1))
-			require.NoError(t, err)
-			x2, err := curveBound.NewScalar().SetBigInt(big.NewInt(-2))
-			require.NoError(t, err)
-			x3, err := curveBound.NewScalar().SetBigInt(big.NewInt(-3))
-			require.NoError(t, err)
 
-			_, _, _, err = lindell17.Split(x1, crand.Reader)
-			require.NoError(t, err)
+			for _, xInt := range edgeCases {
+				x, err := curve.NewScalar().SetBigInt(xInt)
+				require.NoError(t, err)
 
-			_, _, _, err = lindell17.Split(x2, crand.Reader)
-			require.NoError(t, err)
+				x1, x2, _, err := lindell17.Split(x, crand.Reader)
+				require.NoError(t, err)
+				require.True(t, lindell17.IsInSecondThird(x1))
+				require.True(t, lindell17.IsInSecondThird(x2))
+				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
 
-			_, _, _, err = lindell17.Split(x3, crand.Reader)
-			require.NoError(t, err)
+				x1, x2, err = lindell17.SplitDeterministically(x, crand.Reader)
+				require.NoError(t, err)
+				require.True(t, lindell17.IsInSecondThird(x1))
+				require.True(t, lindell17.IsInSecondThird(x2))
+				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
+			}
 		})
 	}
 }
 
-func Test_ShouldSplitDeterministically(t *testing.T) {
+func Test_ShouldSplit(t *testing.T) {
 	t.Parallel()
 	n := 1_000_000
 	if testing.Short() {
@@ -63,9 +88,17 @@ func Test_ShouldSplitDeterministically(t *testing.T) {
 		curve := c
 		t.Run(curve.Name, func(t *testing.T) {
 			t.Parallel()
+
 			for i := 0; i < n; i++ {
 				x := curve.NewScalar().Random(crand.Reader)
-				x1, x2, err := lindell17.SplitDeterministically(x, crand.Reader)
+
+				x1, x2, _, err := lindell17.Split(x, crand.Reader)
+				require.NoError(t, err)
+				require.True(t, lindell17.IsInSecondThird(x1))
+				require.True(t, lindell17.IsInSecondThird(x2))
+				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
+
+				x1, x2, err = lindell17.SplitDeterministically(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
 				require.True(t, lindell17.IsInSecondThird(x2))

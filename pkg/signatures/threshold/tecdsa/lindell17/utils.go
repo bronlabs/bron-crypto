@@ -59,9 +59,10 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoubleP
 	}
 
 	i = 0
-	l := new(big.Int).Div(order, big.NewInt(3))
+	l := new(big.Int).Div(new(big.Int).Add(order, big.NewInt(2)), big.NewInt(3))
+	h := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(2)), big.NewInt(2)), big.NewInt(3))
 	for {
-		r, err := crand.Int(prng, l)
+		r, err := crand.Int(prng, new(big.Int).Sub(h, l))
 		if err != nil {
 			return nil, nil, 0, errs.WrapFailed(err, "cannot generate random")
 		}
@@ -153,8 +154,9 @@ func IsInSecondThird(scalar curves.Scalar) bool {
 	if err != nil {
 		return false
 	}
-	l := new(big.Int).Div(order, big.NewInt(3))
-	return scalar.BigInt().Cmp(l) >= 0 && scalar.BigInt().Cmp(new(big.Int).Add(l, l)) < 0
+	l := new(big.Int).Div(new(big.Int).Add(order, big.NewInt(2)), big.NewInt(3))
+	twoL := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(2)), big.NewInt(2)), big.NewInt(3))
+	return scalar.BigInt().Cmp(l) >= 0 && scalar.BigInt().Cmp(twoL) < 0
 }
 
 func inEighteenth(lowBoundInclusive int64, highBoundExclusive int64, x curves.Scalar) bool {
@@ -168,7 +170,7 @@ func inEighteenth(lowBoundInclusive int64, highBoundExclusive int64, x curves.Sc
 	}
 
 	l := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(lowBoundInclusive)), big.NewInt(17)), big.NewInt(18))
-	h := new(big.Int).Div(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(18))
+	h := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(17)), big.NewInt(18))
 	return x.BigInt().Cmp(l) >= 0 && x.BigInt().Cmp(h) < 0
 }
 
@@ -183,7 +185,7 @@ func randomInEighteenth(lowBoundInclusive int64, highBoundExclusive int64, curve
 	}
 
 	l := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(lowBoundInclusive)), big.NewInt(17)), big.NewInt(18))
-	h := new(big.Int).Div(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(18))
+	h := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(17)), big.NewInt(18))
 
 	x, err := crand.Int(prng, new(big.Int).Sub(h, l))
 	if err != nil {
