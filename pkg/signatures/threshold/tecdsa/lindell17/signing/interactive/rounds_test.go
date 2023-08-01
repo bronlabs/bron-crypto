@@ -3,6 +3,8 @@ package interactive_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"testing"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
@@ -10,9 +12,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/interactive"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_HappyPath(t *testing.T) {

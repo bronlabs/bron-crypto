@@ -8,7 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	zeroSetup "github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/setup"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 )
@@ -43,7 +44,7 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.GennaroParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript *merlin.Transcript) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcript.Transcript) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}

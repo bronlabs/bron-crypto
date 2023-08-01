@@ -7,7 +7,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 )
 
 type Participant struct {
@@ -29,7 +30,7 @@ type State struct {
 	r_i           curves.Scalar
 	receivedSeeds map[integration.IdentityKey]commitments.Commitment
 	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
-	transcript    *merlin.Transcript
+	transcript    transcript.Transcript
 }
 
 type committedSeedContribution struct {
@@ -38,7 +39,7 @@ type committedSeedContribution struct {
 	witness    commitments.Witness
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcript.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}

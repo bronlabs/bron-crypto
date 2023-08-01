@@ -6,7 +6,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 )
 
 type Participant struct {
@@ -20,11 +21,11 @@ type Participant struct {
 }
 
 type State struct {
-	transcript *merlin.Transcript
+	transcript transcript.Transcript
 	r_i        curves.Scalar
 }
 
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript *merlin.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcript.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
