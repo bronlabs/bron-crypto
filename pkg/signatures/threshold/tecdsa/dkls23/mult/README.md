@@ -43,10 +43,10 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 0.2. Compute COTe.Setup (init S&R in SoftspokenOT with [ $\kappa \times$ BaseOT] seeds)
 
 ### Round 1 (Bob):
-1.1. samples random choice bits $\beta$: $\beta \xleftarrow{abc} \mathbb{Z}_{\xi}$
+1.1. samples random choice bits $\beta$ from $\mathbb{Z}_{\xi}$
 
 1.2. define a pad $\tilde{b}$. Note that $\tilde{b}$ is effectively bob's input.
-   $\tilde{b} \overset{\$}{\leftarrow} \sum_{j=0}^{\xi - 1} g_j \cdot \beta_j$
+   $\tilde{b} = \sum_{j=0}^{\xi - 1} g_j \cdot \beta_j$
 
 1.3. Initiate COTe($\xi$) Round 1 and receive `extendedPackedChoices`, `cOTeReceiverOutput` and `R1Output`. Cache the first two.
 
@@ -55,11 +55,9 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 ### Round 2 (Alice):
 2.0. receive `R1Output`
 
-2.1. Samples pads
-   $\tilde{a} \overset{\$}{\leftarrow} \mathbb{Z}^L$
+2.1. Samples pads $\tilde{a}$ from $\mathbb{Z}^L$
 
-2.2. Samples check values
-   $\hat{a} \overset{\$}{\leftarrow} \mathbb{Z}^L$
+2.2. Samples check values $\hat{a}$ from $\mathbb{Z}^L$
 
 2.3. Compute $\alpha$
 
@@ -72,7 +70,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 
 2.4. Initiate COTe round 2 with inputs `R1Output` and `a` and receive `cOTeSenderOutputs` and `R2Output`.
 
-2.5. Parse `cOTeSenderOutputs` as `($\tilde{z}_A=[L][$\xi$][0]z, $\hat{z}_A=[L][$\xi$][1]z)` where $z \in \mathbb{Z}_q$
+2.5. Parse `cOTeSenderOutputs` as ($\tilde{z}_A$=[L][$\xi$][0]z, $\hat{z}_A$=[L][$\xi$][1]z) where $z \in \mathbb{Z}_q$
             $\tilde{z}_A$ = cOTeSenderOutputs[:][:][0]    // Every first element                $\in$ [L][$\xi$]$\mathbb{Z}_q$
             $\hat{z}_A$ = cOTeSenderOutputs[:][:][1]      // Every other element                $\in$ [L][$\xi$]$\mathbb{Z}_q$
 
