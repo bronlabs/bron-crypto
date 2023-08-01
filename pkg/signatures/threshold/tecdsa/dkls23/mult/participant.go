@@ -8,7 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -16,7 +17,7 @@ type Alice struct {
 	prng            io.Reader
 	sender          *softspoken.Sender
 	Curve           *curves.Curve
-	transcript      *merlin.Transcript
+	transcript      transcript.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
@@ -29,7 +30,7 @@ type Bob struct {
 	prng            io.Reader
 	receiver        *softspoken.Receiver
 	Curve           *curves.Curve
-	transcript      *merlin.Transcript
+	transcript      transcript.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
@@ -42,7 +43,7 @@ type Bob struct {
 	extendedPackedChoices *softspoken.ExtPackedChoices
 }
 
-func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript *merlin.Transcript) (*Alice, error) {
+func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Alice, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -74,7 +75,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	}, nil
 }
 
-func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse bool, uniqueSessionId []byte, prng io.Reader, transcript *merlin.Transcript) (*Bob, error) {
+func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse bool, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Bob, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
