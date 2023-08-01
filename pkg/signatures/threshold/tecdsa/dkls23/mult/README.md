@@ -23,15 +23,15 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 - $\kappa$: a computational security parameter, $\kappa$ = |q| (for a field $\mathbb{Z}_q$). E.g. $\kappa$=256
 - $\xi$: the COTe input batch size, set to $\xi$ = $\kappa$+2s
 - L ∈ $\mathbb{N}$, the DKLs23 batch size in #elements
-- g: public gadget vector (sampled from $\mathbb{Z}_{q}^{$\xi}$).
+- g: public gadget vector (sampled from $\mathbb{Z}_{q}^{\xi}$).
 
 **Functionalities**:
 - `COTe(η)` Correlated Oblivious Transfer with $\eta$ choice bits.
 - `H(x,L)` Hash function, input x of variable size, output of size $\mathbb{Z}_q^L$
-- `Send(x)=> P** Send message x to party P.
+- `Send(x)=> P` Send message x to party P.
 
 **Inputs**:
-- Alice: `a=[$\a_1$, $\a_2$]` $\in \mathbb{Z_q^L$, the input vector of Alice.
+- Alice: a=[$\a_1$, $\a_2$] $\in \mathbb{Z}_q^L$, the input vector of Alice.
 
 **Outputs**:
 - Alice -> z_A ∈ $\mathbb{Z}_q^L$, the correlation of Alice s.t. z_A + z_B = a • b
@@ -40,7 +40,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 ## Protocol
 ### INIT:
 0.1. Unique session id `sid`.
-0.2. Compute COTe.Setup (init S&R in SoftspokenOT with [$\kappa$ × BaseOT] seeds)
+0.2. Compute COTe.Setup (init S&R in SoftspokenOT with [ $\kappa \times$ BaseOT] seeds)
 
 ### Round 1 (Bob):
 1.1. samples random choice bits $\beta$.
