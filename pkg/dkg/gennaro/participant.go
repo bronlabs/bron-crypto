@@ -52,7 +52,6 @@ type State struct {
 	blindedCommitments               []curves.Point
 	transcript                       *merlin.Transcript
 	a_i0Proof                        *schnorr.Proof
-	aPrime_i0Proof                   *schnorr.Proof
 	secretKeyShare                   curves.Scalar
 	receivedBlindedCommitmentVectors map[int][]curves.Point
 	partialPublicKeyShares           map[int]curves.Point

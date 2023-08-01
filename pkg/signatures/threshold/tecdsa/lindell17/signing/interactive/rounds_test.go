@@ -16,9 +16,6 @@ import (
 )
 
 func Test_HappyPath(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Lindell 2017 rounds tests.")
-	}
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{

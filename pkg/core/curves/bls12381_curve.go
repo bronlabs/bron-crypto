@@ -25,7 +25,7 @@ var bls12381modulus = bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730
 
 type ScalarBls12381 struct {
 	Value *native.Field
-	point Point
+	point PairingPoint
 }
 
 type PointBls12381G1 struct {
@@ -73,6 +73,10 @@ func (s *ScalarBls12381) One() Scalar {
 		Value: bls12381.Bls12381FqNew().SetOne(),
 		point: s.point,
 	}
+}
+
+func (s *ScalarBls12381) CurveName() string {
+	return s.point.CurveName()
 }
 
 func (s *ScalarBls12381) IsZero() bool {
@@ -282,10 +286,6 @@ func (s *ScalarBls12381) SetBytesWide(bytes []byte) (Scalar, error) {
 	}, nil
 }
 
-func (s *ScalarBls12381) Point() Point {
-	return s.point.Identity()
-}
-
 func (s *ScalarBls12381) Clone() Scalar {
 	return &ScalarBls12381{
 		Value: bls12381.Bls12381FqNew().Set(s.Value),
@@ -293,7 +293,15 @@ func (s *ScalarBls12381) Clone() Scalar {
 	}
 }
 
-func (s *ScalarBls12381) SetPoint(p Point) PairingScalar {
+func (s *ScalarBls12381) OtherGroup() PairingPoint {
+	return s.point.OtherGroup()
+}
+
+func (s *ScalarBls12381) Point() PairingPoint {
+	return s.point
+}
+
+func (s *ScalarBls12381) SetPoint(p PairingPoint) PairingScalar {
 	return &ScalarBls12381{
 		Value: bls12381.Bls12381FqNew().Set(s.Value),
 		point: p,
@@ -345,7 +353,7 @@ func (s *ScalarBls12381) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381) UnmarshalJSON(input []byte) error {
-	curve, err := GetCurveByName(s.Point().CurveName())
+	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -965,7 +973,7 @@ func (s *ScalarBls12381Gt) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ScalarBls12381Gt) UnmarshalJSON(input []byte) error {
-	curve, err := GetCurveByName(s.Point().CurveName())
+	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -1128,8 +1136,8 @@ func (s *ScalarBls12381Gt) BigInt() *big.Int {
 	return new(big.Int).SetBytes(bytes[:])
 }
 
-func (s *ScalarBls12381Gt) Point() Point {
-	return &PointBls12381G1{Value: new(bls12381.G1).Identity()}
+func (s *ScalarBls12381Gt) CurveName() string {
+	return BLS12381G1Name
 }
 
 func (s *ScalarBls12381Gt) Bytes() []byte {

@@ -38,6 +38,8 @@ type PrimaryCosignerState struct {
 	k1ProofWitness []byte
 	bigR           curves.Point
 	r              curves.Scalar
+	k1PublicKey    curves.Point
+	k2PublicKey    curves.Point
 }
 
 type PrimaryCosigner struct {
@@ -52,6 +54,8 @@ type SecondaryCosignerState struct {
 	k1ProofCommitment commitments.Commitment
 	k2                curves.Scalar
 	r                 curves.Scalar
+	k1PublicKey       curves.Point
+	k2PublicKey       curves.Point
 }
 
 type SecondaryCosigner struct {

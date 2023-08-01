@@ -22,11 +22,11 @@ func RunVSOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessionId [
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run simplest OT")
 	}
-	proof, err := sender.Round1ComputeAndZkpToPublicKey()
+	proof, publicKey, err := sender.Round1ComputeAndZkpToPublicKey()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "sender round 1 in run simplest OT")
 	}
-	receiversMaskedChoice, err := receiver.Round2VerifySchnorrAndPadTransfer(proof)
+	receiversMaskedChoice, err := receiver.Round2VerifySchnorrAndPadTransfer(publicKey, proof)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "receiver round 2 in run simplest OT")
 	}

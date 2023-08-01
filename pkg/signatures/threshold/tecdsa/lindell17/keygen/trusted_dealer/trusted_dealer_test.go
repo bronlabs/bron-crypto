@@ -14,10 +14,6 @@ import (
 )
 
 func Test_HappyPath(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Lindell 2017 trusted dealer tests.")
-	}
-
 	t.Parallel()
 	curve := curves.K256()
 	h := sha256.New

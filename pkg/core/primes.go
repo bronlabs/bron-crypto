@@ -15,7 +15,7 @@ import (
 
 // GenerateSafePrime creates a prime number `p`
 // where (`p`-1)/2 is also prime with at least `bits`
-func GenerateSafePrime(bits uint) (*big.Int, error) {
+var GenerateSafePrime = func(bits uint) (*big.Int, error) {
 	if bits < 3 {
 		return nil, fmt.Errorf("safe prime size must be at least 3-bits")
 	}

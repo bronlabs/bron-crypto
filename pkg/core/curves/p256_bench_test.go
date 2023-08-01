@@ -389,8 +389,8 @@ func (s *BenchScalarP256) SetBytesWide(bytes []byte) (Scalar, error) {
 	}, nil
 }
 
-func (s *BenchScalarP256) Point() Point {
-	return new(BenchPointP256).Identity()
+func (s *BenchScalarP256) CurveName() string {
+	return new(BenchPointP256).Identity().CurveName()
 }
 
 func (s *BenchScalarP256) Clone() Scalar {
