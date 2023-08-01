@@ -23,7 +23,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 - $\kappa$: a computational security parameter, $\kappa$ = |q| (for a field $\mathbb{Z}_q$). E.g. $\kappa$=256
 - $\xi$: the COTe input batch size, set to $\xi$ = $\kappa$+2s
 - L ∈ $\mathbb{N}$, the DKLs23 batch size in #elements
-- g: public gadget vector (sampled from $\mathbb{Z}_{q}^{$\xi$}).
+- g: public gadget vector (sampled from $\mathbb{Z}_{q}^{$\xi}$).
 
 **Functionalities**:
 - `COTe(η)` Correlated Oblivious Transfer with $\eta$ choice bits.
