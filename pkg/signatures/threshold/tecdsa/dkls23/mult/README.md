@@ -43,7 +43,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 0.2. Compute COTe.Setup (init S&R in SoftspokenOT with [ $\kappa \times$ BaseOT] seeds)
 
 ### Round 1 (Bob):
-1.1. samples random choice bits $\beta$: $\beta \xleftarrow{\$} \mathbb{Z}_{\xi}$
+1.1. samples random choice bits $\beta$: $\beta \xleftarrow{abc} \mathbb{Z}_{\xi}$
 
 1.2. define a pad $\tilde{b}$. Note that $\tilde{b}$ is effectively bob's input.
    $\tilde{b} \overset{\$}{\leftarrow} \sum_{j=0}^{\xi - 1} g_j \cdot \beta_j$
