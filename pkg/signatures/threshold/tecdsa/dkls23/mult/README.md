@@ -31,11 +31,11 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 - `Send(x)=> P` Send message x to party P.
 
 **Inputs**:
-- Alice: a=[$\a_1$, $\a_2$] $\in \mathbb{Z}_q^L$, the input vector of Alice.
+- Alice: a=[ $a_{1}$, $a_{2}$ ] $\in \mathbb{Z}_q^L$, the input vector of Alice.
 
 **Outputs**:
-- Alice -> z_A ∈ $\mathbb{Z}_q^L$, the correlation of Alice s.t. z_A + z_B = a • b
-- Bob -> z_B ∈ $\mathbb{Z**_q^L$, the correlation of Bob   s.t. z_A + z_B = a • b
+- Alice -> z_A ∈ $\mathbb{Z}_q^L$, the correlation of Alice    s.t. z_A + z_B = a • b
+- Bob -> z_B ∈ $\mathbb{Z}_q^L$, the correlation of Bob        s.t. z_A + z_B = a • b
 
 ## Protocol
 ### INIT:
@@ -43,8 +43,7 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
 0.2. Compute COTe.Setup (init S&R in SoftspokenOT with [ $\kappa \times$ BaseOT] seeds)
 
 ### Round 1 (Bob):
-1.1. samples random choice bits $\beta$.
-   $\beta \overset{\$}{\leftarrow} \mathbb{Z}_{\xi}$
+1.1. samples random choice bits $\beta$: $\beta \overset{\$}{\leftarrow} \mathbb{Z}_{\xi}$
 
 1.2. define a pad $\tilde{b}$. Note that $\tilde{b}$ is effectively bob's input.
    $\tilde{b} \overset{\$}{\leftarrow} \sum_{j=0}^{\xi - 1} g_j \cdot \beta_j$
