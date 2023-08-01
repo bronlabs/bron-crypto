@@ -1,14 +1,16 @@
 package interactive
 
 import (
+	"io"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
-	"io"
 )
 
 const (
@@ -25,7 +27,7 @@ type Cosigner struct {
 	prng          io.Reader
 	cohortConfig  *integration.CohortConfig
 	sessionId     []byte
-	transcript    *merlin.Transcript
+	transcript    transcript.Transcript
 	myIdentityKey integration.IdentityKey
 	myShamirId    int
 	myShard       *lindell17.Shard
@@ -87,7 +89,7 @@ func (cosigner *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript *merlin.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
+func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -134,7 +136,7 @@ func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentity
 	return primaryCosigner, nil
 }
 
-func NewSecondaryCosigner(myIdentityKey integration.IdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript *merlin.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
+func NewSecondaryCosigner(myIdentityKey integration.IdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}

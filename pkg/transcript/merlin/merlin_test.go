@@ -1,15 +1,16 @@
-package merlin
+package merlin_test
 
 import (
 	"fmt"
 	"math/rand"
 	"testing"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleTranscript(t *testing.T) {
-	mt := NewTranscript("test protocol")
+	mt := merlin.NewTranscript("test protocol")
 	mt.AppendMessage([]byte("some label"), []byte("some data"))
 
 	cBytes := mt.ExtractBytes([]byte("challenge"), 32)
@@ -22,7 +23,7 @@ func TestSimpleTranscript(t *testing.T) {
 }
 
 func TestComplexTranscript(t *testing.T) {
-	tr := NewTranscript("test protocol")
+	tr := merlin.NewTranscript("test protocol")
 	tr.AppendMessage([]byte("step1"), []byte("some data"))
 
 	data := make([]byte, 1024)
@@ -47,10 +48,10 @@ func TestComplexTranscript(t *testing.T) {
 
 func TestTranscriptPRNG(t *testing.T) {
 	label := "test protocol"
-	t1 := NewTranscript(label)
-	t2 := NewTranscript(label)
-	t3 := NewTranscript(label)
-	t4 := NewTranscript(label)
+	t1 := merlin.NewTranscript(label)
+	t2 := merlin.NewTranscript(label)
+	t3 := merlin.NewTranscript(label)
+	t4 := merlin.NewTranscript(label)
 
 	comm1 := []byte("Commitment data 1")
 	comm2 := []byte("Commitment data 2")

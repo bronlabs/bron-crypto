@@ -7,8 +7,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
 	"golang.org/x/crypto/sha3"
 )
 

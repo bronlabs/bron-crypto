@@ -8,8 +8,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
 )
 
 type Round1Broadcast struct {

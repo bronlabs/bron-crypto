@@ -7,8 +7,9 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/pedersen"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
 )
 
 // To get H for Pedersen commitments, we'll hash below to curve. We assume that It is not
@@ -50,7 +51,7 @@ type State struct {
 	myPartialSecretShare             *pedersen.Share
 	commitments                      []curves.Point
 	blindedCommitments               []curves.Point
-	transcript                       *merlin.Transcript
+	transcript                       transcript.Transcript
 	a_i0Proof                        *schnorr.Proof
 	secretKeyShare                   curves.Scalar
 	receivedBlindedCommitmentVectors map[int][]curves.Point
@@ -58,7 +59,7 @@ type State struct {
 	publicKey                        curves.Point
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript *merlin.Transcript) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcript.Transcript) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}

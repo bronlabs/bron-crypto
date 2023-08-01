@@ -54,7 +54,7 @@ func (t *Transcript) AppendMessage(label, message []byte) error {
 	if len(message) > maxUnhashedMessageSize {
 		h := hashConstructor() // Create a local hash function.
 		if _, err := h.Write(message); err != nil {
-			errs.WrapFailed(err, "failed to hash message for Merlin transcript")
+			return errs.WrapFailed(err, "failed to hash message for Merlin transcript")
 		}
 		// AdditionalData[h(message)]
 		t.s.AD(false, h.Sum(nil))
