@@ -79,6 +79,8 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoubleP
 		i++ // failsafe
 		if i > 974 {
 			// probability of this happening is (5/6)^(974) =~ (1/2)^(256)
+			// this is because doing this randomly you have 1/6 chance to get x' such that x'' will be in range
+			// see SplitDeterministically function for details
 			return nil, nil, 0, errs.NewFailed("cannot find x' and x''")
 		}
 	}

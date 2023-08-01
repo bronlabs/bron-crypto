@@ -45,10 +45,32 @@ func Test_ShouldSplitDegenerativeCases(t *testing.T) {
 }
 
 func Test_ShouldSplitDeterministically(t *testing.T) {
-	curve := curves.P256()
-	for i := 0; i < 1_000_000; i++ {
-		x := curve.NewScalar().Random(crand.Reader)
-		_, _, err := lindell17.SplitDeterministically(x, crand.Reader)
-		require.NoError(t, err)
+	t.Parallel()
+	n := 1_000_000
+	if testing.Short() {
+		n = 10_000
+	}
+
+	supportedCurves := []*curves.Curve{
+		curves.K256(),
+		curves.P256(),
+		curves.ED25519(),
+		curves.BLS12381G1(),
+		curves.BLS12381G2(),
+	}
+
+	for _, c := range supportedCurves {
+		curve := c
+		t.Run(curve.Name, func(t *testing.T) {
+			t.Parallel()
+			for i := 0; i < n; i++ {
+				x := curve.NewScalar().Random(crand.Reader)
+				x1, x2, err := lindell17.SplitDeterministically(x, crand.Reader)
+				require.NoError(t, err)
+				require.True(t, lindell17.IsInSecondThird(x1))
+				require.True(t, lindell17.IsInSecondThird(x2))
+				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
+			}
+		})
 	}
 }
