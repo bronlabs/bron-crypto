@@ -47,8 +47,8 @@ func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
 	return ret, nil
 }
 
-// Split splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
-func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, i int, err error) {
+// DecomposeInQThirds splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
+func DecomposeInQThirds(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, i int, err error) {
 	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
 		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.CurveName())
@@ -93,8 +93,8 @@ func Split(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoubleP
 	return xPrime, xDoublePrime, i, nil
 }
 
-// SplitDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
-func SplitDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, err error) {
+// DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
+func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, err error) {
 	if inEighteenth(0, 3, scalar) {
 		xPrime, err = randomInEighteenth(9, 10, scalar.CurveName(), prng)
 		if err != nil {
@@ -145,6 +145,7 @@ func SplitDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime curves
 	return xPrime, xDoublePrime, nil
 }
 
+// IsInSecondThird check if scalar s: q/3 <= s < 2q/3 (q being subgroup order)
 func IsInSecondThird(scalar curves.Scalar) bool {
 	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {

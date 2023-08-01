@@ -53,13 +53,13 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 				x, err := curve.NewScalar().SetBigInt(xInt)
 				require.NoError(t, err)
 
-				x1, x2, _, err := lindell17.Split(x, crand.Reader)
+				x1, x2, _, err := lindell17.DecomposeInQThirds(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
 				require.True(t, lindell17.IsInSecondThird(x2))
 				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
 
-				x1, x2, err = lindell17.SplitDeterministically(x, crand.Reader)
+				x1, x2, err = lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
 				require.True(t, lindell17.IsInSecondThird(x2))
@@ -92,13 +92,13 @@ func Test_ShouldSplit(t *testing.T) {
 			for i := 0; i < n; i++ {
 				x := curve.NewScalar().Random(crand.Reader)
 
-				x1, x2, _, err := lindell17.Split(x, crand.Reader)
+				x1, x2, _, err := lindell17.DecomposeInQThirds(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
 				require.True(t, lindell17.IsInSecondThird(x2))
 				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
 
-				x1, x2, err = lindell17.SplitDeterministically(x, crand.Reader)
+				x1, x2, err = lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
 				require.True(t, lindell17.IsInSecondThird(x2))

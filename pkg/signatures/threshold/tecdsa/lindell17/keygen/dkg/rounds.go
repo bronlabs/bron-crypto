@@ -70,7 +70,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
-	xPrime, xDoublePrime, _, err := lindell17.Split(p.mySigningKeyShare.Share, p.prng)
+	xPrime, xDoublePrime, err := lindell17.DecomposeInQThirdsDeterministically(p.mySigningKeyShare.Share, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
