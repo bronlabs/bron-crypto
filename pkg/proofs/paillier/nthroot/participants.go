@@ -1,8 +1,16 @@
 package nthroot
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
+)
+
+const (
+	transcriptAppLabel       = "PAILLIER_NTH_ROOT_PROOF"
+	transcriptSessionIdLabel = "PaillierNthRoot_SessionId"
 )
 
 type Participant struct {
@@ -34,7 +42,18 @@ type Verifier struct {
 	state *VerifierState
 }
 
-func NewProver(bigN *big.Int, x *big.Int, y *big.Int, prng io.Reader) (prover *Prover, err error) {
+func NewProver(bigN *big.Int, x *big.Int, y *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (prover *Prover, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	return &Prover{
 		Participant: Participant{
 			bigN:  bigN,
@@ -49,7 +68,18 @@ func NewProver(bigN *big.Int, x *big.Int, y *big.Int, prng io.Reader) (prover *P
 	}, nil
 }
 
-func NewVerifier(bigN *big.Int, x *big.Int, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(bigN *big.Int, x *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	return &Verifier{
 		Participant: Participant{
 			bigN:  bigN,

@@ -71,7 +71,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
 	bigR2ProofSessionId := append(secondaryCosigner.sessionId[:], secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
-	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR2ProofSessionId, nil)
+	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -96,7 +96,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	bigR2ProofSessionId := append(primaryCosigner.sessionId[:], primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
-	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, nil) // TODO: clone transcript
+	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
 	}

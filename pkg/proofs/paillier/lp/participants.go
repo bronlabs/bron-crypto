@@ -1,16 +1,26 @@
 package lp
 
 import (
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
 )
 
+const (
+	transcriptAppLabel       = "PAILLIER_LP_PROOF"
+	transcriptSessionIdLabel = "PaillierLP_SessionId"
+)
+
 type Participant struct {
-	k     int // security parameter - cheating prover can succeed with probability < 2^(-k)
-	round int
-	prng  io.Reader
+	k          int // security parameter - cheating prover can succeed with probability < 2^(-k)
+	round      int
+	sessionId  []byte
+	transcript transcript.Transcript
+	prng       io.Reader
 }
 
 type VerifierState struct {
@@ -36,26 +46,52 @@ type Prover struct {
 	state             *ProverState
 }
 
-func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, prng io.Reader) (verifier *Verifier) {
+func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	return &Verifier{
 		Participant: Participant{
-			k:     k,
-			round: 1,
-			prng:  prng,
+			k:          k,
+			round:      1,
+			sessionId:  sessionId,
+			transcript: transcript,
+			prng:       prng,
 		},
 		paillierPublicKey: paillierPublicKey,
 		state:             &VerifierState{},
-	}
+	}, nil
 }
 
-func NewProver(k int, paillierSecretKey *paillier.SecretKey, prng io.Reader) (prover *Prover) {
+func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (prover *Prover, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	return &Prover{
 		Participant: Participant{
-			k:     k,
-			round: 2,
-			prng:  prng,
+			k:          k,
+			round:      2,
+			sessionId:  sessionId,
+			transcript: transcript,
+			prng:       prng,
 		},
 		paillierSecretKey: paillierSecretKey,
 		state:             &ProverState{},
-	}
+	}, nil
 }

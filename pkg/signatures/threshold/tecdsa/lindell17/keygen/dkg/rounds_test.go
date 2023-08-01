@@ -10,6 +10,8 @@ import (
 	gennaro_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	lindell17_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -51,7 +53,12 @@ func Test_HappyPath(t *testing.T) {
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_test_utils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
-	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, nil)
+	transcripts := make([]transcript.Transcript, len(identities))
+	for i := range identities {
+		transcripts[i] = merlin.NewTranscript("Lindell 2017 DKG")
+	}
+
+	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)
 	require.NoError(t, err)
 
 	r1o, err := lindell17_dkg_test_utils.DoDkgRound1(lindellParticipants)
@@ -85,6 +92,21 @@ func Test_HappyPath(t *testing.T) {
 	shards, err := lindell17_dkg_test_utils.DoDkgRound8(lindellParticipants, r8i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
+
+	t.Run("each transcript recorded common", func(t *testing.T) {
+		t.Parallel()
+
+		data := make([][]byte, len(identities))
+		for i := range identities {
+			data[i] = transcripts[i].ExtractBytes([]byte("gimme something"), 128)
+		}
+
+		for i := 0; i < len(data); i++ {
+			for j := i + 1; j < len(data); j++ {
+				require.Equal(t, data[i], data[j])
+			}
+		}
+	})
 
 	t.Run("each signing share is different", func(t *testing.T) {
 		t.Parallel()

@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"github.com/gtank/merlin"
 )
 
 const (
@@ -121,11 +121,12 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 	}
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
-	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, p.myIdentityKey.PublicKey(), nil) // TODO: clone transport when interface ready
+	dlogTranscript := p.transcript.Clone()
+	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, dlogTranscript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
 	}
-	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, p.myIdentityKey.PublicKey(), nil) // TODO: ditto
+	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, dlogTranscript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
 	}
@@ -162,11 +163,13 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		if err := openCommitment(p.state.theirBigQCommitment[identity], input[identity].BigQWitness, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, identity.PublicKey()); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open (Q', Q'') commitment")
 		}
-		if err := dlogVerify(input[identity].BigQPrimeProof, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, identity.PublicKey(), nil); err != nil { // TODO: clone transcript when ready
+
+		dlogTranscript := p.transcript.Clone()
+		if err := dlogVerify(input[identity].BigQPrimeProof, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, dlogTranscript); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
-		if err := dlogVerify(input[identity].BigQDoublePrimeProof, input[identity].BigQDoublePrime, input[identity].BigQPrime, p.sessionId, identity.PublicKey(), nil); err != nil { // TODO: clone transcript when ready
-			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
+		if err := dlogVerify(input[identity].BigQDoublePrimeProof, input[identity].BigQDoublePrime, input[identity].BigQPrime, p.sessionId, dlogTranscript); err != nil {
+			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQPrime[identity] = input[identity].BigQPrime
 		p.state.theirBigQDoublePrime[identity] = input[identity].BigQDoublePrime
@@ -205,12 +208,16 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 		if identity == p.myIdentityKey {
 			continue
 		}
-		p.state.lpProvers[identity] = lp.NewProver(40, p.state.myPaillierSk, p.prng)
-		p.state.lpdlPrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.prng)
+		paillierProofsTranscript := p.transcript.Clone()
+		p.state.lpProvers[identity], err = lp.NewProver(128, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create LP prover")
+		}
+		p.state.lpdlPrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.prng)
+		p.state.lpdlDoublePrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
@@ -265,12 +272,16 @@ func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast)
 		}
 
 		// 4.ii. LP and LPDL continue
-		p.state.lpVerifiers[identity] = lp.NewVerifier(40, p.state.theirPaillierPublicKeys[identity], p.prng)
-		p.state.lpdlPrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQPrime[identity], theirCKeyPrime, p.prng)
+		paillierProofsTranscript := p.transcript.Clone()
+		p.state.lpVerifiers[identity], err = lp.NewVerifier(128, p.state.theirPaillierPublicKeys[identity], p.sessionId, paillierProofsTranscript, p.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create P verifier")
+		}
+		p.state.lpdlPrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQPrime[identity], theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
-		p.state.lpdlDoublePrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQDoublePrime[identity], theirCKeyDoublePrime, p.prng)
+		p.state.lpdlDoublePrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQDoublePrime[identity], theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
@@ -316,11 +327,11 @@ func (p *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (outp
 		}
 		round5Outputs[identity].LpdlPrimeRound2Output, err = p.state.lpdlPrimeProvers[identity].Round2(input[identity].LpdlPrimeRound1Output)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
 		}
 		round5Outputs[identity].LpdlDoublePrimeRound2Output, err = p.state.lpdlDoublePrimeProvers[identity].Round2(input[identity].LpdlDoublePrimeRound1Output)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
+			return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
 		}
 	}
 
@@ -451,12 +462,10 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 	return commitments.Open(commitmentHashFunc, message, commitment, witness)
 }
 
-func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, pid curves.Point, transcript *merlin.Transcript) (proof *dlog.Proof, err error) {
-	if transcript == nil {
-		transcript = merlin.NewTranscript("lindell2017Dlog")
+func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcript.Transcript) (proof *dlog.Proof, err error) {
+	if err := transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed()); err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
 	}
-	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
-	transcript.AppendMessage([]byte("pid"), pid.ToAffineCompressed())
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)
@@ -481,12 +490,10 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 	return proof, nil
 }
 
-func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, pid curves.Point, transcript *merlin.Transcript) (err error) {
-	if transcript == nil {
-		transcript = merlin.NewTranscript("lindell2017Dlog")
+func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcript.Transcript) (err error) {
+	if err := transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed()); err != nil {
+		return errs.WrapFailed(err, "cannot write to transcript")
 	}
-	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
-	transcript.AppendMessage([]byte("pid"), pid.ToAffineCompressed())
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)

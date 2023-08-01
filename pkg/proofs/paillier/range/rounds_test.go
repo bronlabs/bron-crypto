@@ -1,9 +1,12 @@
 package paillierrange_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
@@ -87,11 +90,15 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
-	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, prng)
+	appLabel := "Range"
+
+	verifierTranscript := merlin.NewTranscript(appLabel)
+	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
-	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, prng)
+	proverTranscript := merlin.NewTranscript(appLabel)
+	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 	if err != nil {
 		return err
 	}
@@ -115,6 +122,13 @@ func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int,
 	err = verifier.Round5(r4)
 	if err != nil {
 		return err
+	}
+
+	label := "gimme, gimme"
+	proverBytes := proverTranscript.ExtractBytes([]byte(label), 128)
+	verifierBytes := verifierTranscript.ExtractBytes([]byte(label), 128)
+	if !bytes.Equal(proverBytes, verifierBytes) {
+		return errs.NewFailed("transcript record different data")
 	}
 
 	return nil

@@ -35,6 +35,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	zero := big.NewInt(0)
 	nthRootProverRound1Outputs := make([]*nthroot.Round1Output, verifier.k)
 	verifier.state.rootProvers = make([]*nthroot.Prover, verifier.k)
+	rootTranscript := verifier.transcript.Clone()
 	for i := 0; i < verifier.k; i++ {
 		// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
 		verifier.state.x[i], verifier.state.y[i], err = verifier.paillierPublicKey.Encrypt(zero)
@@ -43,7 +44,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		}
 
 		// V proves the knowledge of y, the Nth root of x,
-		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.prng)
+		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.sessionId, rootTranscript, verifier.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root prover")
 		}
@@ -69,9 +70,10 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 	nthRootVerifierRound2Outputs := make([]*nthroot.Round2Output, prover.k)
 	prover.state.rootVerifiers = make([]*nthroot.Verifier, prover.k)
+	rootTranscript := prover.transcript.Clone()
 	for i := 0; i < prover.k; i++ {
 		// round 2 of proving the knowledge of y
-		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.prng)
+		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.sessionId, rootTranscript, prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 		}

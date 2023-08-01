@@ -6,11 +6,12 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
 	lindell17_dkg "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/pkg/errors"
 	"io"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, prngs []io.Reader) (participants []*lindell17_dkg.Participant, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, transcripts []transcript.Transcript, prngs []io.Reader) (participants []*lindell17_dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -23,11 +24,15 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		} else {
 			prng = crand.Reader
 		}
+		var transcript transcript.Transcript
+		if transcripts != nil && transcripts[i] != nil {
+			transcript = transcripts[i]
+		}
 
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = lindell17_dkg.NewBackupParticipant(identity, signingShares[i], publicKeyShares[i], cohortConfig, prng, sid, nil)
+		participants[i], err = lindell17_dkg.NewBackupParticipant(identity, signingShares[i], publicKeyShares[i], cohortConfig, prng, sid, transcript)
 	}
 
 	return participants, nil

@@ -16,7 +16,6 @@ import (
 	lindell17_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/interactive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,13 +43,11 @@ func Test_HappyPath(t *testing.T) {
 	require.Len(t, shards, cohortConfig.TotalParties)
 
 	sessionId := []byte("TestSession")
-	transcript := merlin.NewTranscript("DummyTranscriptLabel")
-
-	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice], cohortConfig, sessionId, transcript, crand.Reader)
+	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob], cohortConfig, sessionId, transcript, crand.Reader)
+	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
@@ -129,7 +126,7 @@ func doGennaroDkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConf
 func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares) (shards []*lindell17.Shard) {
 	t.Helper()
 
-	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants(sid, cohortConfig, identities, signingKeyShares, publicKeyShares, nil)
+	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants(sid, cohortConfig, identities, signingKeyShares, publicKeyShares, nil, nil)
 	require.NoError(t, err)
 
 	r1o, err := lindell17_dkg_test_utils.DoDkgRound1(lindellParticipants)

@@ -1,18 +1,14 @@
 package interactive
 
 import (
-	"io"
-
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/gtank/merlin"
-	"io"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"io"
 )
 
 const (
@@ -110,7 +106,9 @@ func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentity
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err := transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId); err != nil {
+		return nil, errs.WrapFailed(nil, "cannot write to transcript")
+	}
 
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	primaryCosigner = &PrimaryCosigner{
@@ -157,7 +155,9 @@ func NewSecondaryCosigner(myIdentityKey integration.IdentityKey, primaryIdentity
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err := transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId); err != nil {
+		return nil, errs.WrapFailed(nil, "cannot write to transcript")
+	}
 
 	_, keyToId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	return &SecondaryCosigner{

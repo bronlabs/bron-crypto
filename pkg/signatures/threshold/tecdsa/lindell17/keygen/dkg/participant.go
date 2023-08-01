@@ -10,7 +10,8 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/gtank/merlin"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
 )
@@ -51,7 +52,7 @@ type Participant struct {
 	cohortConfig      *integration.CohortConfig
 	idKeyToShamirId   map[integration.IdentityKey]int
 	sessionId         []byte
-	transcript        *merlin.Transcript
+	transcript        transcript.Transcript
 	prng              io.Reader
 
 	round int
@@ -75,7 +76,7 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.cohortConfig
 }
 
-func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript *merlin.Transcript) (participant *Participant, err error) {
+func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcript.Transcript) (participant *Participant, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -94,10 +95,13 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
 
 	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
 		myShamirId:        myShamirId,
