@@ -389,7 +389,8 @@ func TestPointEd25519SumOfProducts(t *testing.T) {
 		new(ScalarEd25519).New(11),
 		new(ScalarEd25519).New(12),
 	}
-	rhs, err := MultiScalarMult(scalars, points)
+	curve, err := GetCurveByName(ED25519Name)
+	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))

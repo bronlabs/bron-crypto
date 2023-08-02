@@ -420,7 +420,9 @@ func TestPointK256SumOfProducts(t *testing.T) {
 		new(ScalarK256).New(11),
 		new(ScalarK256).New(12),
 	}
-	rhs, err := MultiScalarMult(scalars, points)
+	curve, err := GetCurveByName(K256Name)
+	require.NoError(t, err)
+	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
@@ -432,7 +434,7 @@ func TestPointK256SumOfProducts(t *testing.T) {
 			scalars[i] = new(ScalarK256).Random(crand.Reader)
 			lhs = lhs.Add(points[i].Mul(scalars[i]))
 		}
-		rhs, err = MultiScalarMult(scalars, points)
+		rhs, err = curve.MultiScalarMult(scalars, points)
 		require.NoError(t, err)
 		require.NotNil(t, rhs)
 		require.True(t, lhs.Equal(rhs))

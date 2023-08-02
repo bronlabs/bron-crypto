@@ -341,6 +341,31 @@ type Curve struct {
 	Name   string
 }
 
+func (c Curve) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewFailed("scalar and point lengths do not match")
+	}
+	if len(scalars) == 0 {
+		return nil, errs.NewFailed("invalid input lengths")
+	}
+	switch c.Name {
+	case P256Name:
+		return multiScalarMultP256(scalars, points)
+	case PallasName:
+		return multiScalarMultPallas(scalars, points)
+	case K256Name:
+		return multiScalarMultK256(scalars, points)
+	case ED25519Name:
+		return multiScalarMultEd25519(scalars, points)
+	case BLS12381G1Name:
+		return multiScalarMultBls12381G1(scalars, points)
+	case BLS12381G2Name:
+		return multiScalarMultBls12381G2(scalars, points)
+	default:
+		return nil, errs.NewFailed("unsupported curve")
+	}
+}
+
 func (c Curve) ScalarBaseMult(sc Scalar) Point {
 	return c.Point.Generator().Mul(sc)
 }
@@ -833,33 +858,4 @@ func sumOfProductsPippenger(points []Point, scalars []*big.Int) (Point, error) {
 		acc = acc.Add(windows[i])
 	}
 	return acc, nil
-}
-
-func MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
-	if len(scalars) != len(points) {
-		return nil, errs.NewFailed("scalar and point lengths do not match")
-	}
-	if len(scalars) == 0 {
-		return nil, errs.NewFailed("invalid input lengths")
-	}
-	curve, err := GetCurveByName(points[0].CurveName())
-	if err != nil {
-		return nil, err
-	}
-	switch curve.Name {
-	case P256Name:
-		return multiScalarMultP256(scalars, points)
-	case PallasName:
-		return multiScalarMultPallas(scalars, points)
-	case K256Name:
-		return multiScalarMultK256(scalars, points)
-	case ED25519Name:
-		return multiScalarMultEd25519(scalars, points)
-	case BLS12381G1Name:
-		return multiScalarMultBls12381G1(scalars, points)
-	case BLS12381G2Name:
-		return multiScalarMultBls12381G2(scalars, points)
-	default:
-		return nil, errs.NewFailed("unsupported curve")
-	}
 }

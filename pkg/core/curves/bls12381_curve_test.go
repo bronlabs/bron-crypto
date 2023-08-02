@@ -528,7 +528,9 @@ func TestPointBls12381G1SumOfProducts(t *testing.T) {
 		new(ScalarBls12381).New(11),
 		new(ScalarBls12381).New(12),
 	}
-	rhs, err := MultiScalarMult(scalars, points)
+	curve, err := GetCurveByName(BLS12381G1Name)
+	require.NoError(t, err)
+	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
