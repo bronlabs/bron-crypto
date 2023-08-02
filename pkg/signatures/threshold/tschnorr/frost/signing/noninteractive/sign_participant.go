@@ -3,6 +3,8 @@ package noninteractive
 import (
 	"io"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -77,7 +79,12 @@ func NewNonInteractiveCosigner(
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 
-	presentPartiesHashSet, err := integration.NewPresentParticipantSet(presentParties)
+	for i, participant := range presentParties {
+		if participant == nil {
+			return nil, errs.NewIsNil("participant %d is nil", i)
+		}
+	}
+	presentPartiesHashSet, err := hashset.NewHashSet(presentParties)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +122,8 @@ func NewNonInteractiveCosigner(
 	E_alpha := map[integration.IdentityKey]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
-		if !presentPartiesHashSet.Exist(attestedCommitment.Attestor) {
+		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
+		if !found {
 			continue
 		}
 		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
