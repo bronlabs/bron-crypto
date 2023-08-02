@@ -33,14 +33,14 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
 	rhs := commitments[0].Identity()
-	is := make([]curves.Scalar, len(commitments)-1)
+	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
-		is[j-1] = i
+		is[j] = i
 	}
-	rhs, err = rhs.MultiScalarMult(is, commitments[1:])
+	rhs, err = rhs.MultiScalarMult(is[1:], commitments[1:])
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "multiscalarmult failed")
+		return errs.WrapFailed(err, "multiscalarmult failed")
 	}
 	rhs = rhs.Add(commitments[0])
 
