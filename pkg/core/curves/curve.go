@@ -16,6 +16,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
 	"github.com/pkg/errors"
 )
@@ -237,7 +239,6 @@ type Point interface {
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
 	CurveName() string
-	SumOfProducts(points []Point, scalars []Scalar) (Point, error)
 }
 
 type PairingPoint interface {
@@ -339,6 +340,31 @@ type Curve struct {
 	Scalar Scalar
 	Point  Point
 	Name   string
+}
+
+func (c Curve) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewInvalidArgument("scalar and point lengths do not match")
+	}
+	if len(scalars) == 0 {
+		return nil, errs.NewFailed("zero-length or nil inputs")
+	}
+	switch c.Name {
+	case P256Name:
+		return multiScalarMultP256(scalars, points)
+	case PallasName:
+		return multiScalarMultPallas(scalars, points)
+	case K256Name:
+		return multiScalarMultK256(scalars, points)
+	case ED25519Name:
+		return multiScalarMultEd25519(scalars, points)
+	case BLS12381G1Name:
+		return multiScalarMultBls12381G1(scalars, points)
+	case BLS12381G2Name:
+		return multiScalarMultBls12381G2(scalars, points)
+	default:
+		return nil, errs.NewFailed("unsupported curve")
+	}
 }
 
 func (c Curve) ScalarBaseMult(sc Scalar) Point {

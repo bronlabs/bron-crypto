@@ -142,12 +142,18 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 
 			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
 			derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
+			iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
+			C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 			for k := 0; k < p.CohortConfig.Threshold; k++ {
 				exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
 				iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId).Exp(exp)
 				C_lk := senderCommitmentVector[k]
-				ikC_lk := C_lk.Mul(iToK)
-				derivedPartialPublicKeyShare = derivedPartialPublicKeyShare.Add(ikC_lk)
+				iToKs[k] = iToK
+				C_lks[k] = C_lk
+			}
+			derivedPartialPublicKeyShare, err := p.CohortConfig.CipherSuite.Curve.MultiScalarMult(iToKs, C_lks)
+			if err != nil {
+				return nil, nil, errs.NewFailed("couldn't derive partial public key share")
 			}
 			if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
 				return nil, nil, errs.NewFailed("shares received from shamir id %d is inconsistent", senderShamirId)
@@ -193,12 +199,18 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 	for j, identityKey := range shamirIdToIdentityKey {
 		Y_j := cohort.CipherSuite.Curve.Point.Identity()
 		for _, C_l := range commitmentVectors {
+			jToKs := make([]curves.Scalar, cohort.Threshold)
+			jkC_lk := cohort.CipherSuite.Curve.Point.Identity()
 			for k := 0; k < cohort.Threshold; k++ {
 				exp := cohort.CipherSuite.Curve.Scalar.New(k)
 				jToK := cohort.CipherSuite.Curve.Scalar.New(j).Exp(exp)
-				jkC_lk := C_l[k].Mul(jToK)
-				Y_j = Y_j.Add(jkC_lk)
+				jToKs[k] = jToK
 			}
+			jkC_lk, err := cohort.CipherSuite.Curve.MultiScalarMult(jToKs, C_l)
+			if err != nil {
+				return nil, errs.NewFailed("couldn't derive partial public key share")
+			}
+			Y_j = Y_j.Add(jkC_lk)
 		}
 		if Y_j.IsIdentity() {
 			return nil, errs.NewIsIdentity("public key share of shamir id %d is at infinity", j)
