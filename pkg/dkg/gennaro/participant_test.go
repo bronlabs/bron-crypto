@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
 
 type mockedIdentityKey struct {
@@ -19,6 +20,9 @@ type mockedIdentityKey struct {
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {
 	return k.publicKey
+}
+func (k *mockedIdentityKey) Hash() [32]byte {
+	return sha3.Sum256(k.publicKey.ToAffineCompressed())
 }
 func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")

@@ -3,6 +3,8 @@ package noninteractive
 import (
 	"sort"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -61,7 +63,12 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	if ps == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
-	attestorsHashSet, err := integration.NewPresentParticipantSet(cohortConfig.Participants)
+	for i, participant := range cohortConfig.Participants {
+		if participant == nil {
+			return errs.NewIsNil("participant %d is nil", i)
+		}
+	}
+	attestorsHashSet, err := hashset.NewHashSet(cohortConfig.Participants)
 	if err != nil {
 		return err
 	}
@@ -81,7 +88,8 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 		EHashSet[thisPartyAttestedCommitment.E] = true
 	}
 	for _, participant := range cohortConfig.Participants {
-		if !attestorsHashSet.Exist(participant) {
+		_, found := attestorsHashSet.Get(participant)
+		if !found {
 			return errs.NewMissing("at least one party in the cohort does not have an attested commitment")
 		}
 	}

@@ -3,6 +3,8 @@ package setup
 import (
 	"io"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
@@ -52,11 +54,17 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if len(participants) < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	participantHashSet, err := integration.NewPresentParticipantSet(participants)
+	for i, participant := range participants {
+		if participant == nil {
+			return nil, errs.NewIsNil("participant %d is nil", i)
+		}
+	}
+	participantHashSet, err := hashset.NewHashSet(participants)
 	if err != nil {
 		return nil, err
 	}
-	if !participantHashSet.Exist(identityKey) {
+	_, found := participantHashSet.Get(identityKey)
+	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, participants)
