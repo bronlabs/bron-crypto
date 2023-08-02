@@ -3,7 +3,6 @@ package interactive
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"encoding/json"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
@@ -12,23 +11,23 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"math/big"
 )
 
 type Round1OutputP2P struct {
-	K1ProofCommitment commitments.Commitment
-	K1PublicKey       curves.Point
+	BigR1Commitment commitments.Commitment
 }
 
 type Round2OutputP2P struct {
-	K2Proof     *schnorr.Proof
-	K2PublicKey curves.Point
+	BigR2      curves.Point
+	BigR2Proof *dlog.Proof
 }
 
 type Round3OutputP2P struct {
-	K1Proof        *schnorr.Proof
-	K1ProofWitness commitments.Witness
+	BigR1Witness commitments.Witness
+	BigR1        curves.Point
+	BigR1Proof   *dlog.Proof
 }
 
 type Round4OutputP2P struct {
@@ -45,31 +44,19 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	}
 
 	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(primaryCosigner.prng)
+	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
-	proverSessionId := append(primaryCosigner.sessionId[:], byte(primaryCosigner.myShamirId))
-	prover1, err := schnorr.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), proverSessionId, nil) // TODO: clone transcript
+	bigR1CommitmentMessage := append(append(primaryCosigner.sessionId[:], primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...), primaryCosigner.state.bigR1.ToAffineCompressed()...)
+	bigR1Commitment, bigR1Witness, err := commitments.Commit(commitmentHashFunc, bigR1CommitmentMessage)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Schnorr prover")
-	}
-	primaryCosigner.state.k1Proof, primaryCosigner.state.k1PublicKey, err = prover1.Prove(primaryCosigner.state.k1)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
+		return nil, errs.WrapFailed(err, "cannot commit to R1")
 	}
 
-	k1ProofMessage, err := json.Marshal(primaryCosigner.state.k1Proof)
-	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "cannot marshall k1 proof")
-	}
-	k1ProofCommitment, k1ProofWitness, err := commitments.Commit(commitmentHashFunc, k1ProofMessage)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create k1 proof commitment")
-	}
-	primaryCosigner.state.k1ProofWitness = k1ProofWitness
+	primaryCosigner.state.bigR1Witness = bigR1Witness
 
 	primaryCosigner.round++
 	return &Round1OutputP2P{
-		K1ProofCommitment: k1ProofCommitment,
-		K1PublicKey:       primaryCosigner.state.k1PublicKey,
+		BigR1Commitment: bigR1Commitment,
 	}, nil
 }
 
@@ -78,24 +65,28 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", secondaryCosigner.round)
 	}
 
-	secondaryCosigner.state.k1ProofCommitment = round1Output.K1ProofCommitment
+	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
+
 	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(secondaryCosigner.prng)
-	secondaryCosigner.state.k1PublicKey = round1Output.K1PublicKey
-	proverSessionId := append(secondaryCosigner.sessionId[:], byte(secondaryCosigner.myShamirId))
-	prover2, err := schnorr.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), proverSessionId, nil) // TODO: clone transcript
+	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
+
+	bigR2ProofSessionId := append(secondaryCosigner.sessionId[:], secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Schnorr prover")
+		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
-	k2Proof, publicKey, err := prover2.Prove(secondaryCosigner.state.k2)
+	bigR2Proof, bigR2ProofStatement, err := bigR2Prover.Prove(secondaryCosigner.state.k2)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Schnorr proof")
+		return nil, errs.WrapFailed(err, "cannot create R2 dlog proof")
+	}
+	if !secondaryCosigner.state.bigR2.Equal(bigR2ProofStatement) {
+		return nil, errs.NewFailed("invalid statement, something went terribly wrong")
 	}
 
-	secondaryCosigner.state.k2PublicKey = publicKey
 	secondaryCosigner.round++
 	return &Round2OutputP2P{
-		K2Proof:     k2Proof,
-		K2PublicKey: secondaryCosigner.state.k2PublicKey,
+		BigR2:      secondaryCosigner.state.bigR2,
+		BigR2Proof: bigR2Proof,
 	}, nil
 }
 
@@ -104,13 +95,26 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", primaryCosigner.round)
 	}
 
-	primaryCosigner.state.k2PublicKey = round2Output.K2PublicKey
-	proverSessionId := append(primaryCosigner.sessionId[:], byte(primaryCosigner.secondaryShamirId))
-	err = schnorr.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round2Output.K2PublicKey, round2Output.K2Proof, proverSessionId, nil) // TODO: clone transcript
+	bigR2ProofSessionId := append(primaryCosigner.sessionId[:], primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
+	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot verify Schnorr proof")
+		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
 	}
-	primaryCosigner.state.bigR = round2Output.K2PublicKey.Mul(primaryCosigner.state.k1)
+
+	bigR1ProofSessionId := append(primaryCosigner.sessionId[:], primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR1ProofSessionId, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create dlog prover")
+	}
+	bigR1Proof, bigR1ProofStatement, err := bigR1Prover.Prove(primaryCosigner.state.k1)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create R1 dlog proof")
+	}
+	if !primaryCosigner.state.bigR1.Equal(bigR1ProofStatement) {
+		return nil, errs.NewFailed("invalid R1 proof statement, something went terribly wrong")
+	}
+
+	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
 	bigRx, _ := lindell17.GetPointCoordinates(primaryCosigner.state.bigR)
 	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
 	if err != nil {
@@ -119,8 +123,9 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 
 	primaryCosigner.round++
 	return &Round3OutputP2P{
-		K1Proof:        primaryCosigner.state.k1Proof,
-		K1ProofWitness: primaryCosigner.state.k1ProofWitness,
+		BigR1Witness: primaryCosigner.state.bigR1Witness,
+		BigR1:        primaryCosigner.state.bigR1,
+		BigR1Proof:   bigR1Proof,
 	}, nil
 }
 
@@ -129,18 +134,18 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", secondaryCosigner.round)
 	}
 
-	k1ProofMessage, err := json.Marshal(round3Output.K1Proof)
+	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId[:], secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
+	err = commitments.Open(commitmentHashFunc, bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot marshal k1 proof")
+		return nil, errs.WrapFailed(err, "cannot open R1 commitment")
 	}
-	if err := commitments.Open(commitmentHashFunc, k1ProofMessage, secondaryCosigner.state.k1ProofCommitment, round3Output.K1ProofWitness); err != nil {
-		return nil, errs.WrapFailed(err, "cannot open commitment")
+
+	bigR1ProofSessionId := append(secondaryCosigner.sessionId[:], secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
+	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId, nil); err != nil { // TODO: clone transcript
+		return nil, errs.WrapFailed(err, "cannot verify R1 dlog proof")
 	}
-	sessionId := append(secondaryCosigner.sessionId[:], byte(secondaryCosigner.primaryShamirId))
-	if err := schnorr.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), secondaryCosigner.state.k1PublicKey, round3Output.K1Proof, sessionId, nil); err != nil { // TODO: clone transcript
-		return nil, errs.WrapFailed(err, "cannot verify Schnorr proof")
-	}
-	bigR := secondaryCosigner.state.k1PublicKey.Mul(secondaryCosigner.state.k2)
+
+	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
 	if err != nil {
@@ -237,7 +242,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot invert k1")
 	}
-	sBis := k1Inv.Mul(sPrime)
+	sDoublePrime := k1Inv.Mul(sPrime)
 
 	publicKey := &ecdsa.PublicKey{
 		Q: primaryCosigner.myShard.SigningKeyShare.PublicKey,
@@ -245,7 +250,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 
 	signature := &ecdsa.Signature{
 		R: primaryCosigner.state.r,
-		S: sBis,
+		S: sDoublePrime,
 	}
 	signature.Normalize()
 	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {

@@ -1,20 +1,29 @@
-package paillierdlog
+package lpdl
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierrange"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
 )
 
+const (
+	transcriptAppLabel       = "PAILLIER_LPDL_PROOF"
+	transcriptSessionIdLabel = "PaillierLP_SessionId"
+)
+
 type Participant struct {
-	pk    *paillier.PublicKey
-	bigQ  curves.Point
-	round int
-	prng  io.Reader
+	pk         *paillier.PublicKey
+	bigQ       curves.Point
+	round      int
+	sessionId  []byte
+	transcript transcript.Transcript
+	prng       io.Reader
 }
 
 type State struct {
@@ -56,7 +65,18 @@ type Prover struct {
 	state       *ProverState
 }
 
-func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	curve, err := curves.GetCurveByName(bigQ.CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ.CurveName())
@@ -68,17 +88,20 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	q := nativeCurve.Params().N
 	q2 := new(big.Int).Mul(q, q)
 
-	rangeVerifier, err := paillierrange.NewVerifier(128, q, sid, publicKey, xEncrypted, prng)
+	rangeProofTranscript := transcript.Clone()
+	rangeVerifier, err := paillierrange.NewVerifier(128, q, sid, publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
 
 	return &Verifier{
 		Participant: Participant{
-			pk:    publicKey,
-			bigQ:  bigQ,
-			round: 1,
-			prng:  prng,
+			pk:         publicKey,
+			bigQ:       bigQ,
+			round:      1,
+			sessionId:  sessionId,
+			transcript: transcript,
+			prng:       prng,
 		},
 		rangeVerifier: rangeVerifier,
 		c:             xEncrypted,
@@ -92,7 +115,18 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}, nil
 }
 
-func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, prng io.Reader) (verifier *Prover, err error) {
+func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Prover, err error) {
+	if sessionId == nil || len(sessionId) == 0 {
+		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if transcript == nil {
+		transcript = merlin.NewTranscript(transcriptAppLabel)
+	}
+	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to transcript")
+	}
+
 	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.CurveName())
@@ -104,7 +138,8 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 	q := nativeCurve.Params().N
 	qSquared := new(big.Int).Mul(q, q)
 
-	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, prng)
+	rangeProofTranscript := transcript.Clone()
+	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, sessionId, rangeProofTranscript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range prover")
 	}

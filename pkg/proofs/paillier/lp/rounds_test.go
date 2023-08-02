@@ -1,10 +1,12 @@
-package paillierpk_test
+package lp_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/paillierpk"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
@@ -12,8 +14,20 @@ import (
 
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
 	prng := crand.Reader
-	verifier := paillierpk.NewVerifier(k, pk, prng)
-	prover := paillierpk.NewProver(k, sk, prng)
+	sessionId := []byte("lpSession")
+	transcriptLabel := "LP"
+
+	verifierTranscript := merlin.NewTranscript(transcriptLabel)
+	verifier, err := lp.NewVerifier(k, pk, sessionId, verifierTranscript, prng)
+	if err != nil {
+		return err
+	}
+
+	proverTranscript := merlin.NewTranscript(transcriptLabel)
+	prover, err := lp.NewProver(k, sk, sessionId, proverTranscript, prng)
+	if err != nil {
+		return err
+	}
 
 	r1, err := verifier.Round1()
 	if err != nil {
@@ -35,7 +49,19 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 		return err
 	}
 
-	return verifier.Round5(r4)
+	err = verifier.Round5(r4)
+	if err != nil {
+		return err
+	}
+
+	label := "gimme, gimme"
+	proverBytes := proverTranscript.ExtractBytes([]byte(label), 128)
+	verifierBytes := verifierTranscript.ExtractBytes([]byte(label), 128)
+	if !bytes.Equal(proverBytes, verifierBytes) {
+		return errs.NewFailed("transcript record different data")
+	}
+
+	return nil
 }
 
 func Test_HappyPath(t *testing.T) {
