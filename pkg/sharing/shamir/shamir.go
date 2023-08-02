@@ -13,7 +13,6 @@ type Share struct {
 	Value curves.Scalar `json:"value"`
 }
 
-// TODO: have a convert to additive method
 type AdditiveShare = Share
 
 func (ss Share) Validate(curve *curves.Curve) error {
@@ -28,6 +27,26 @@ func (ss Share) Validate(curve *curves.Curve) error {
 	}
 
 	return nil
+}
+
+// TODO: incorporate in the code
+func (ss Share) ToAdditive(identities []int) (*AdditiveShare, error) {
+	curve, err := curves.GetCurveByName(ss.Value.CurveName())
+	if err != nil {
+		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
+	}
+	coefficients, err := lagrangeCoefficients(curve, identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
+	}
+	myCoefficient, exists := coefficients[ss.Id]
+	if !exists {
+		return nil, errs.NewMissing("i am not one of the provided identities")
+	}
+	return &AdditiveShare{
+		Id:    ss.Id,
+		Value: myCoefficient.Mul(ss.Value),
+	}, nil
 }
 
 type Dealer struct {
@@ -70,29 +89,7 @@ func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader
 }
 
 func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, error) {
-	xs := make(map[int]curves.Scalar, len(identities))
-	for _, xi := range identities {
-		xs[xi] = s.Curve.Scalar.New(xi)
-	}
-
-	result := make(map[int]curves.Scalar, len(identities))
-	for i, xi := range xs {
-		num := s.Curve.Scalar.One()
-		den := s.Curve.Scalar.One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-
-			num = num.Mul(xj)
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		result[i] = num.Div(den)
-	}
-	return result, nil
+	return lagrangeCoefficients(s.Curve, identities)
 }
 
 func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
@@ -185,6 +182,32 @@ func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluate
 			return nil, errs.NewDivisionByZero("divide by zero")
 		}
 		result = result.Add(ys[i].Mul(num.Div(den)))
+	}
+	return result, nil
+}
+
+func lagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves.Scalar, error) {
+	xs := make(map[int]curves.Scalar, len(identities))
+	for _, xi := range identities {
+		xs[xi] = curve.Scalar.New(xi)
+	}
+
+	result := make(map[int]curves.Scalar, len(identities))
+	for i, xi := range xs {
+		num := curve.Scalar.One()
+		den := curve.Scalar.One()
+		for j, xj := range xs {
+			if i == j {
+				continue
+			}
+
+			num = num.Mul(xj)
+			den = den.Mul(xj.Sub(xi))
+		}
+		if den.IsZero() {
+			return nil, errs.NewDivisionByZero("divide by zero")
+		}
+		result[i] = num.Div(den)
 	}
 	return result, nil
 }
