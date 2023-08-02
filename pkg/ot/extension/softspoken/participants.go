@@ -13,6 +13,9 @@ type Receiver struct {
 	//  of playing the sender in a base OT protocol. They act as seeds to COTe.
 	baseOtSeeds *vsot.SenderOutput
 
+	// extPackedChoices (x_i ∈ [ξ']bits) are the extended packed choices of the receiver.
+	extPackedChoices ExtPackedChoices
+
 	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
 	uniqueSessionId []byte
 

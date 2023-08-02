@@ -20,8 +20,7 @@ type Round1Output struct {
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
 func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	oTeInputChoices *OTeInputChoices, // x_i ∈ [ξ]bits
-) (extPackedChoices *ExtPackedChoices, // x_i ∈ [ξ']bits
-	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][ω][κ]bits
+) (oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][ω][κ]bits
 	round1Output *Round1Output, // u_i ∈ [κ][ξ']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	err error,
 ) {
@@ -29,14 +28,14 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 
 	// Sanitise inputs
 	if oTeInputChoices == nil {
-		return nil, nil, nil, errs.NewInvalidArgument("nil (oTeInputChoices) in input arguments of Round1ExtendAndProveConsistency")
+		return nil, nil, errs.NewInvalidArgument("nil (oTeInputChoices) in input arguments of Round1ExtendAndProveConsistency")
 	}
 
 	// (Ext.1) Store the input choices and fill the rest with random values
-	extPackedChoices = &ExtPackedChoices{}
-	copy(extPackedChoices[:ZetaBytes], (*oTeInputChoices)[:])
-	if _, err = rand.Read(extPackedChoices[ZetaBytes:]); err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
+	receiver.extPackedChoices = ExtPackedChoices{}
+	copy(receiver.extPackedChoices[:ZetaBytes], (*oTeInputChoices)[:])
+	if _, err = rand.Read(receiver.extPackedChoices[ZetaBytes:]); err != nil {
+		return nil, nil, errs.WrapFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	extOptions := &ExtOptions{}
@@ -45,19 +44,19 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 		err = PRG(receiver.uniqueSessionId, receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:],
 			extOptions[0][i][:])
 		if err != nil {
-			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 		// k^i_1 --(PRG)--> t^i_1
 		err = PRG(receiver.uniqueSessionId, receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:],
 			extOptions[1][i][:])
 		if err != nil {
-			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 	}
 	// (Ext.3) Compute u_i and send it
 	for i := 0; i < Kappa; i++ {
 		for j := 0; j < ZetaPrimeBytes; j++ {
-			round1Output.expansionMask[i][j] = extOptions[0][i][j] ^ extOptions[1][i][j] ^ extPackedChoices[j]
+			round1Output.expansionMask[i][j] = extOptions[0][i][j] ^ extOptions[1][i][j] ^ receiver.extPackedChoices[j]
 		}
 	}
 
@@ -72,7 +71,7 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 		copy(challengeFiatShamir[i][:], receiver.transcript.ExtractBytes([]byte("OTe_challenge_Chi"), SigmaBytes))
 	}
 	// (Check.2) Compute ẋ and ṫ
-	receiver.ComputeChallengeResponse(extPackedChoices, extOptions, challengeFiatShamir, &round1Output.challengeResponse)
+	receiver.ComputeChallengeResponse(extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
 	t_j := transposeBooleanMatrix(&extOptions[0]) // t_j ∈ [ξ'][κ]bits
@@ -80,7 +79,7 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	oTeReceiverOutput = &OTeReceiverOutput{}
 	err = HashSalted(&receiver.uniqueSessionId, t_j[:], oTeReceiverOutput[:])
 	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
+		return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
@@ -88,7 +87,7 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	for i := 0; i < Kappa; i++ {
 		receiver.transcript.AppendMessage([]byte("OTe_challengeResponse_t_val"), round1Output.challengeResponse.t_val[i][:])
 	}
-	return extPackedChoices, oTeReceiverOutput, round1Output, nil
+	return oTeReceiverOutput, round1Output, nil
 }
 
 // Round2Output is the sender's PUBLIC output of round2 of OTe/COTe, to be sent to the Receiver.
@@ -100,7 +99,7 @@ type Round2Output struct {
 // and derandomizes them (COTe only).
 func (sender *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
-	InputOpts []COTeInputOpt, // Input opts (α) ∈ [ξ]curve.Scalar. Set to nil for OTe.
+	InputOpts []COTeInputOpt, // Input opts (α) ∈ [L][ξ]curve.Scalar. Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutputs []COTeSenderOutput, round2Output *Round2Output, err error) {
 	// Sanitise inputs
 	if round1Output == nil {
@@ -186,7 +185,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 		cOTeSenderOutputs = make([]COTeSenderOutput, L)
 		round2Output.derandomizeMasks = make([]DerandomizeMask, L)
 		err = sender.ComputeDerandomizeMaskForcedReuse(
-			oTeSenderOutput, InputOpts, &cOTeSenderOutputs, &round2Output.derandomizeMasks)
+			oTeSenderOutput, InputOpts, cOTeSenderOutputs, round2Output.derandomizeMasks)
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "bad forced-reuse derandomization for SoftSpoken COTe (Derand.1)")
 		}
@@ -219,11 +218,10 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 // Round3Derandomize uses the derandomization mask to derandomize the COTe output.
 func (receiver *Receiver) Round3Derandomize(
 	round2Output *Round2Output,
-	extPackedChoices *ExtPackedChoices,
 	oTeReceiverOutput *OTeReceiverOutput,
 ) (cOTeReceiverOutput []COTeReceiverOutput, err error) {
-	// Sanitise input
-	if (round2Output == nil) || (extPackedChoices == nil) || (oTeReceiverOutput == nil) {
+	// Sanitize input
+	if (round2Output == nil) || (oTeReceiverOutput == nil) {
 		return nil, errs.NewInvalidArgument("nil in input arguments of Round3Derandomize")
 	}
 
@@ -240,7 +238,7 @@ func (receiver *Receiver) Round3Derandomize(
 
 	// (Derand.2) Apply derandomize Mask to the OTe output
 	if receiver.useForcedReuse {
-		cOTeReceiverOutput, err = receiver.DerandomizeForcedReuse(oTeReceiverOutput, extPackedChoices, round2Output.derandomizeMasks)
+		cOTeReceiverOutput, err = receiver.DerandomizeForcedReuse(oTeReceiverOutput, round2Output.derandomizeMasks)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad forced-reuse derandomization for SoftSpoken COTe (Derand.2)")
 		}
@@ -249,7 +247,7 @@ func (receiver *Receiver) Round3Derandomize(
 			return nil, errs.NewInvalidArgument("derandomizeMasks length must be 1 unless forced reuse is set. Alternatively, set a higher value of L or loop over the derandomizeMasks")
 		}
 		cOTeReceiverOutput = make([]COTeReceiverOutput, 1)
-		err = receiver.Derandomize(oTeReceiverOutput, &round2Output.derandomizeMasks[0], extPackedChoices, &cOTeReceiverOutput[0])
+		err = receiver.Derandomize(oTeReceiverOutput, &round2Output.derandomizeMasks[0], &cOTeReceiverOutput[0])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad derandomization for SoftSpoken COTe (Derand.2)")
 		}
@@ -260,13 +258,13 @@ func (receiver *Receiver) Round3Derandomize(
 // -------------------------------------------------------------------------- //
 // ---------------------------- INDIVIDUAL STEPS ---------------------------- //
 // -------------------------------------------------------------------------- //
-// (Check.2) Compute the challenge response ẋ, ṫ^i ∀i∈[κ].
-func (*Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedChoices, extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
+// (Check.2) Compute the challenge response ẋ, ṫ^i ∀i∈[κ]
+func (receiver *Receiver) ComputeChallengeResponse(extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
 	// 		ẋ = x̂_{m+1} ...
-	copy(challengeResponse.x_val[:], extPackedChoices[ZetaBytes:ZetaBytes+SigmaBytes])
+	copy(challengeResponse.x_val[:], receiver.extPackedChoices[ZetaBytes:ZetaBytes+SigmaBytes])
 	// 		                ... + Σ{j=1}^{m} χ_j • x̂_j
 	for j := 0; j < M; j++ {
-		x_hat_j := extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
+		x_hat_j := receiver.extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
 		Chi_j := challenge[j][:]
 		for k := 0; k < SigmaBytes; k++ {
 			challengeResponse.x_val[k] ^= (Chi_j[k] & x_hat_j[k])
@@ -354,13 +352,13 @@ func (sender *Sender) ComputeDerandomizeMask(
 func (sender *Sender) ComputeDerandomizeMaskForcedReuse(
 	oTeSenderOutput *OTeSenderOutput,
 	inputOpts []COTeInputOpt,
-	cOTeSenderOutputs *[]COTeSenderOutput,
-	derandomizeMasks *[]DerandomizeMask,
+	cOTeSenderOutputs []COTeSenderOutput,
+	derandomizeMasks []DerandomizeMask,
 ) (err error) {
 	inputBatchLen := len(inputOpts)
 	for k := 0; k < inputBatchLen; k++ {
 		// Apply the same OTe batch to all the inputs
-		err = sender.ComputeDerandomizeMask(oTeSenderOutput, &inputOpts[k], &(*cOTeSenderOutputs)[k], &(*derandomizeMasks)[k])
+		err = sender.ComputeDerandomizeMask(oTeSenderOutput, &inputOpts[k], &cOTeSenderOutputs[k], &derandomizeMasks[k])
 		if err != nil {
 			return errs.WrapFailed(err, "bad Sender Forced Reuse derandomization (Derand.1)")
 		}
@@ -373,7 +371,6 @@ func (sender *Sender) ComputeDerandomizeMaskForcedReuse(
 func (receiver *Receiver) Derandomize(
 	oTeReceiverOutput *OTeReceiverOutput,
 	derandomizeMask *DerandomizeMask,
-	extPackChoices *ExtPackedChoices,
 	cOTeReceiverOutput *COTeReceiverOutput,
 ) (err error) {
 	var v_x_NegCurve, v_x_curve_corr curves.Scalar
@@ -386,7 +383,7 @@ func (receiver *Receiver) Derandomize(
 			}
 			v_x_NegCurve = v_x_NegCurve.Neg()
 			v_x_curve_corr = derandomizeMask[j][k].Add(v_x_NegCurve)
-			if bitstring.SelectBit(extPackChoices[:], j) != 0 {
+			if bitstring.SelectBit(receiver.extPackedChoices[:], j) != 0 {
 				// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 				cOTeReceiverOutput[j][k] = v_x_curve_corr
 			} else {
@@ -403,14 +400,13 @@ func (receiver *Receiver) Derandomize(
 // batch to all the input opts.
 func (receiver *Receiver) DerandomizeForcedReuse(
 	oTeReceiverOutput *OTeReceiverOutput,
-	inputExtPackChoices *ExtPackedChoices,
 	derandomizeMasks []DerandomizeMask,
 ) (cOTeReceiverOutput []COTeReceiverOutput, err error) {
 	inputBatchLen := len(derandomizeMasks)
 	cOTeReceiverOutput = make([]COTeReceiverOutput, len(derandomizeMasks))
 	for k := 0; k < inputBatchLen; k++ {
 		// Apply the same OTe batch to all the masks
-		err = receiver.Derandomize(oTeReceiverOutput, &derandomizeMasks[k], inputExtPackChoices, &cOTeReceiverOutput[k])
+		err = receiver.Derandomize(oTeReceiverOutput, &derandomizeMasks[k], &cOTeReceiverOutput[k])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bad Receiver Forced-Reuse derandomization (Derand.2)")
 		}

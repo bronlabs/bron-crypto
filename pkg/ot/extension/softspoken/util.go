@@ -61,8 +61,8 @@ func HashSalted(
 	return nil
 }
 
-// PRG generates a pseudorandom bit matrix of size [η]×[κ]bits from seeds of
-// size [κ]×[κ], expanding each κ-bit seed to L bits (where L=l*κ for some l ∈ ℕ).
+// PRG generates a pseudorandom bit matrix of size [η']×[κ]bits from seeds of
+// size [κ]×[κ], expanding each κ-bit seed to η' bits (where η=lOTe*ξ + σ).
 func PRG(uniqueSessionId, seed, bufferOut []byte) (err error) {
 	if (len(seed) != KappaBytes) || (len(bufferOut) != ZetaPrimeBytes) {
 		return errs.NewInvalidArgument("PRG: invalid input size")
