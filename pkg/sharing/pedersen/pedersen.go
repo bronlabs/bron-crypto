@@ -38,7 +38,7 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 		i = i.Mul(x)
 		is[j] = i
 	}
-	rhs, err = rhs.MultiScalarMult(is[1:], commitments[1:])
+	rhs, err = curves.MultiScalarMult(is[1:], commitments[1:])
 	if err != nil {
 		return errs.WrapFailed(err, "multiscalarmult failed")
 	}

@@ -376,7 +376,7 @@ func TestPointP256SumOfProducts(t *testing.T) {
 		new(ScalarP256).New(11),
 		new(ScalarP256).New(12),
 	}
-	rhs, err := lhs.MultiScalarMult(scalars, points)
+	rhs, err := MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))

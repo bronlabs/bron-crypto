@@ -600,7 +600,7 @@ func (p *PointK256) CurveName() string {
 	return p.value.Params.Name
 }
 
-func (p *PointK256) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
+func multiScalarMultK256(scalars []Scalar, points []Point) (Point, error) {
 	nPoints := make([]*native.EllipticPoint, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {

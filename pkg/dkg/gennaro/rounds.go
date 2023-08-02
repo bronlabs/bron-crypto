@@ -194,7 +194,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 			iToKs[k] = iToK
 			C_lks[k] = C_lk
 		}
-		derivedPartialPublicKeyShare, err := derivedPartialPublicKeyShare.MultiScalarMult(iToKs, C_lks)
+		derivedPartialPublicKeyShare, err := curves.MultiScalarMult(iToKs, C_lks)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "couldn't derive partial public key share")
 		}

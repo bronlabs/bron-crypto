@@ -15,10 +15,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"reflect"
 	"testing"
-
-	"github.com/pkg/errors"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core"
 )
@@ -648,18 +645,6 @@ func (p *BenchPointP256) FromAffineUncompressed(bytes []byte) (Point, error) {
 
 func (p *BenchPointP256) CurveName() string {
 	return elliptic.P256().Params().Name
-}
-
-func (p *BenchPointP256) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
-	nScalars := make([]*big.Int, len(scalars))
-	for i, sc := range scalars {
-		s, ok := sc.(*BenchScalarP256)
-		if !ok {
-			return nil, errors.Errorf("scalar is %s, expected BenchScalarP256", reflect.TypeOf(sc).Name())
-		}
-		nScalars[i] = s.value
-	}
-	return sumOfProductsPippenger(points, nScalars)
 }
 
 func (p *BenchPointP256) X() *big.Int {

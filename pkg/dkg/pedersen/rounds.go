@@ -151,7 +151,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 				iToKs[k] = iToK
 				C_lks[k] = C_lk
 			}
-			derivedPartialPublicKeyShare, err := derivedPartialPublicKeyShare.MultiScalarMult(iToKs, C_lks)
+			derivedPartialPublicKeyShare, err := curves.MultiScalarMult(iToKs, C_lks)
 			if err != nil {
 				return nil, nil, errs.NewFailed("couldn't derive partial public key share")
 			}
@@ -206,7 +206,7 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 				jToK := cohort.CipherSuite.Curve.Scalar.New(j).Exp(exp)
 				jToKs[k] = jToK
 			}
-			jkC_lk, err := jkC_lk.MultiScalarMult(jToKs, C_l)
+			jkC_lk, err := curves.MultiScalarMult(jToKs, C_l)
 			if err != nil {
 				return nil, errs.NewFailed("couldn't derive partial public key share")
 			}

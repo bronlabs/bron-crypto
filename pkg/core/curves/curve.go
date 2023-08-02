@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"io"
 	"math/big"
@@ -237,7 +238,6 @@ type Point interface {
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
 	CurveName() string
-	MultiScalarMult(scalars []Scalar, points []Point) (Point, error)
 }
 
 type PairingPoint interface {
@@ -833,4 +833,33 @@ func sumOfProductsPippenger(points []Point, scalars []*big.Int) (Point, error) {
 		acc = acc.Add(windows[i])
 	}
 	return acc, nil
+}
+
+func MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewFailed("scalar and point lengths do not match")
+	}
+	if len(scalars) == 0 {
+		return nil, errs.NewFailed("invalid input lengths")
+	}
+	curve, err := GetCurveByName(points[0].CurveName())
+	if err != nil {
+		return nil, err
+	}
+	switch curve.Name {
+	case P256Name:
+		return multiScalarMultP256(scalars, points)
+	case PallasName:
+		return multiScalarMultPallas(scalars, points)
+	case K256Name:
+		return multiScalarMultK256(scalars, points)
+	case ED25519Name:
+		return multiScalarMultEd25519(scalars, points)
+	case BLS12381G1Name:
+		return multiScalarMultBls12381G1(scalars, points)
+	case BLS12381G2Name:
+		return multiScalarMultBls12381G2(scalars, points)
+	default:
+		return nil, errs.NewFailed("unsupported curve")
+	}
 }
