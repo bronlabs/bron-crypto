@@ -167,7 +167,7 @@ func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (c
 }
 
 func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	result := s.Curve.NewIdentityPoint()
+	coefficients := make([]curves.Scalar, len(xs))
 	for i, xi := range xs {
 		num := s.Curve.Scalar.One()
 		den := s.Curve.Scalar.One()
@@ -181,7 +181,11 @@ func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluate
 		if den.IsZero() {
 			return nil, errs.NewDivisionByZero("divide by zero")
 		}
-		result = result.Add(ys[i].Mul(num.Div(den)))
+		coefficients[i] = num.Div(den)
+	}
+	result, err := s.Curve.MultiScalarMult(coefficients, ys)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "MSM failed")
 	}
 	return result, nil
 }
