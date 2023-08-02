@@ -11,11 +11,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"hash"
 	"io"
 	"math/big"
 	"sync"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
 	"github.com/pkg/errors"
@@ -343,10 +344,10 @@ type Curve struct {
 
 func (c Curve) MultiScalarMult(scalars []Scalar, points []Point) (Point, error) {
 	if len(scalars) != len(points) {
-		return nil, errs.NewFailed("scalar and point lengths do not match")
+		return nil, errs.NewInvalidArgument("scalar and point lengths do not match")
 	}
 	if len(scalars) == 0 {
-		return nil, errs.NewFailed("invalid input lengths")
+		return nil, errs.NewFailed("zero-length or nil inputs")
 	}
 	switch c.Name {
 	case P256Name:

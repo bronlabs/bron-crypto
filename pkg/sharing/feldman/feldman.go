@@ -23,13 +23,12 @@ func Verify(share *Share, commitments []curves.Point) (err error) {
 	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
 
-	rhs := commitments[0].Identity()
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
 		is[j] = i
 	}
-	rhs, err = curve.MultiScalarMult(is[1:], commitments[1:])
+	rhs, err := curve.MultiScalarMult(is[1:], commitments[1:])
 	if err != nil {
 		return errs.WrapFailed(err, "multiscalarmult failed")
 	}
