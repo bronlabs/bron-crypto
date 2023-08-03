@@ -66,8 +66,9 @@ func Test_HappyPath(t *testing.T) {
 	signature, err := primary.Round5(r4, message)
 	require.NoError(t, err)
 
-	ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[bob].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-	require.True(t, ok)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+	require.NoError(t, err)
+	require.Fail(t, "stuff")
 }
 
 func Test_HappyPathWithDkg(t *testing.T) {
@@ -94,8 +95,8 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	shards := doLindell17Dkg(t, sid, cohortConfig, identities, signingKeyShares, publicKeyShares)
 	signature := doLindell17Sign(t, sid, cohortConfig, identities, shards, alice, bob, message)
 
-	ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[alice].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-	require.True(t, ok)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+	require.NoError(t, err)
 }
 
 func doGennaroDkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares) {
@@ -164,7 +165,7 @@ func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortCo
 	return shards
 }
 
-func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice int, bob int, message []byte) (signature *ecdsa.SignatureExt) {
+func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice int, bob int, message []byte) (signature *ecdsa.Signature) {
 	t.Helper()
 
 	primary, err := interactive.NewPrimaryCosigner(identities[alice], identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)

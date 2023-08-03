@@ -2,6 +2,8 @@ package interactive
 
 import (
 	"crypto/sha256"
+	"fmt"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
@@ -178,7 +180,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}, nil
 }
 
-func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, message []byte) (signatureExt *ecdsa.SignatureExt, err error) {
+func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, message []byte) (signature *ecdsa.Signature, err error) {
 	if primaryCosigner.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", primaryCosigner.round)
 	}
@@ -199,30 +201,21 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	}
 	sDoublePrime := k1Inv.Mul(sPrime)
 
-	publicKey := &ecdsa.PublicKey{
-		Q: primaryCosigner.myShard.SigningKeyShare.PublicKey,
+	var v *int
+	v = new(int)
+	*v, err = ecdsa.CalculateRecoveryId(primaryCosigner.state.bigR)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not compute recovery id")
 	}
 
-	signature := &ecdsa.Signature{
+	signature = &ecdsa.Signature{
+		V: v,
 		R: primaryCosigner.state.r,
 		S: sDoublePrime,
 	}
-	signature.Normalize()
-	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid signature")
+	fmt.Println(">>>>>>>>", *signature.V)
+	if err := ecdsa.Verify(signature, primaryCosigner.cohortConfig.CipherSuite.Hash, primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
 	}
-
-	recoveryId, err := ecdsa.CalculateRecoveryId(primaryCosigner.state.bigR)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
-	}
-	if ok := signature.VerifyMessageWithRecoveryId(recoveryId, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid recovery id")
-	}
-
-	primaryCosigner.round++
-	return &ecdsa.SignatureExt{
-		Signature:  *signature,
-		RecoveryId: *recoveryId,
-	}, nil
+	return signature, nil
 }
