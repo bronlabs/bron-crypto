@@ -1,7 +1,6 @@
 package additive
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -35,7 +34,6 @@ func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, e
 	if !exists {
 		return nil, errs.NewMissing("i am not one of the provided identities")
 	}
-	fmt.Println("!!!!!", id, myCoefficient.BigInt())
 	return &shamir.Share{
 		Id:    id,
 		Value: s.Value.Div(myCoefficient),

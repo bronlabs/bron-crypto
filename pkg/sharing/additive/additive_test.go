@@ -36,57 +36,62 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 	t.Parallel()
 	total := 5
 	threshold := 3
-	curve := curves.ED25519()
-	shamirDealer, err := shamir.NewDealer(threshold, total, curve)
-	require.Nil(t, err)
-	require.NotNil(t, shamirDealer)
-
-	secret := curve.Scalar.Hash([]byte("2+2=5"))
-
-	shamirShares, err := shamirDealer.Split(secret, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, shamirShares)
-
-	allValidSetsOfShamirIndices := [][]int{}
-	for i := 0; i <= total-threshold; i++ {
-		for _, c := range combin.Combinations(total, threshold+i) {
-			allValidSetsOfShamirIndices = append(allValidSetsOfShamirIndices, c)
-		}
-	}
-	for _, indices := range allValidSetsOfShamirIndices {
-		identities := make([]int, len(indices))
-		for i, index := range indices {
-			identities[i] = index + 1
-		}
-		t.Run(fmt.Sprintf("testing round trip for identities %v", identities), func(t *testing.T) {
+	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()} {
+		boundedCurve := curve
+		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name), func(t *testing.T) {
 			t.Parallel()
+			shamirDealer, err := shamir.NewDealer(threshold, total, boundedCurve)
+			require.Nil(t, err)
+			require.NotNil(t, shamirDealer)
 
-			additiveDealer, err := additive.NewDealer(len(identities), curve)
+			secret := boundedCurve.Scalar.Hash([]byte("2+2=5"))
+
+			shamirShares, err := shamirDealer.Split(secret, crand.Reader)
 			require.NoError(t, err)
-			require.NotNil(t, additiveDealer)
+			require.NotNil(t, shamirShares)
 
-			additiveShares := make([]*additive.Share, len(identities))
-			for i, id := range identities {
-				value, err := shamirShares[id-1].ToAdditive(identities)
-				require.NoError(t, err)
-				additiveShares[i] = &additive.Share{value}
+			allValidSetsOfShamirIndices := [][]int{}
+			for i := 0; i <= total-threshold; i++ {
+				for _, c := range combin.Combinations(total, threshold+i) {
+					allValidSetsOfShamirIndices = append(allValidSetsOfShamirIndices, c)
+				}
 			}
+			for _, indices := range allValidSetsOfShamirIndices {
+				identities := make([]int, len(indices))
+				for i, index := range indices {
+					identities[i] = index + 1
+				}
+				t.Run(fmt.Sprintf("testing round trip for identities %v", identities), func(t *testing.T) {
+					t.Parallel()
 
-			combinedAdditiveShares, err := additiveDealer.Combine(additiveShares)
-			require.NoError(t, err)
-			require.Zero(t, secret.Cmp(combinedAdditiveShares))
+					additiveDealer, err := additive.NewDealer(len(identities), boundedCurve)
+					require.NoError(t, err)
+					require.NotNil(t, additiveDealer)
 
-			recomputedShamirShares := make([]*shamir.Share, len(identities))
-			for i, additiveShare := range additiveShares {
-				recomputedShare, err := additiveShare.ConvertToShamir(identities[i], threshold, total, identities)
-				require.NoError(t, err)
-				recomputedShamirShares[i] = recomputedShare
+					additiveShares := make([]*additive.Share, len(identities))
+					for i, id := range identities {
+						value, err := shamirShares[id-1].ToAdditive(identities)
+						require.NoError(t, err)
+						additiveShares[i] = &additive.Share{value}
+					}
+
+					combinedAdditiveShares, err := additiveDealer.Combine(additiveShares)
+					require.NoError(t, err)
+					require.Zero(t, secret.Cmp(combinedAdditiveShares))
+
+					recomputedShamirShares := make([]*shamir.Share, len(identities))
+					for i, additiveShare := range additiveShares {
+						recomputedShare, err := additiveShare.ConvertToShamir(identities[i], threshold, total, identities)
+						require.NoError(t, err)
+						recomputedShamirShares[i] = recomputedShare
+					}
+
+					recomputedSecret, err := shamirDealer.Combine(recomputedShamirShares...)
+					require.NoError(t, err)
+					require.NotNil(t, recomputedSecret)
+					require.Zero(t, secret.Cmp(recomputedSecret))
+				})
 			}
-
-			recomputedSecret, err := shamirDealer.Combine(recomputedShamirShares...)
-			require.NoError(t, err)
-			require.NotNil(t, recomputedSecret)
-			require.Zero(t, secret.Cmp(recomputedSecret))
 		})
 	}
 }
