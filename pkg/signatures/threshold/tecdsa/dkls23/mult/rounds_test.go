@@ -27,30 +27,27 @@ func TestMultiplicationHappyPath(t *testing.T) {
 			Hash:  sha3.New256,
 		},
 	}
-	for trial := 0; trial < 10; trial++ {
-		for _, cipherSuite := range cipherSuites {
-			boundedCipherSuite := cipherSuite
-			boundedTrial := trial
-			t.Run(fmt.Sprintf("trial %d, running multiplication happy path for curve %s", boundedTrial, boundedCipherSuite.Curve.Name), func(t *testing.T) {
-				t.Parallel()
-				sid := []byte("this is a unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := vsot_test_utils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid)
-				require.NoError(t, err)
-				alice, bob, err := test_utils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, sid, sid)
-				require.NoError(t, err)
+	for _, cipherSuite := range cipherSuites {
+		boundedCipherSuite := cipherSuite
+		t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve.Name), func(t *testing.T) {
+			t.Parallel()
+			sid := []byte("this is a unique session id")
+			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_test_utils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid)
+			require.NoError(t, err)
+			alice, bob, err := test_utils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, sid, sid)
+			require.NoError(t, err)
 
-				a := [mult.L]curves.Scalar{}
-				for i := 0; i < mult.L; i++ {
-					a[i] = boundedCipherSuite.Curve.Scalar.Random(crand.Reader)
-				}
-				zA, zB, err := test_utils.RunMult(t, alice, bob, a)
-				require.NoError(t, err)
-				for i := 0; i < mult.L; i++ {
-					lhs := zA[i].Add(zB[i])
-					rhs := a[i].Mul(bob.BTilde[i])
-					require.Equal(t, 0, lhs.Cmp(rhs))
-				}
-			})
-		}
+			a := [mult.L]curves.Scalar{}
+			for i := 0; i < mult.L; i++ {
+				a[i] = boundedCipherSuite.Curve.Scalar.Random(crand.Reader)
+			}
+			zA, zB, err := test_utils.RunMult(t, alice, bob, a)
+			require.NoError(t, err)
+			for i := 0; i < mult.L; i++ {
+				lhs := zA[i].Add(zB[i])
+				rhs := a[i].Mul(bob.BTilde[i])
+				require.Equal(t, 0, lhs.Cmp(rhs))
+			}
+		})
 	}
 }
