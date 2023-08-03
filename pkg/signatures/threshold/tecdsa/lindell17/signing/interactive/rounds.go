@@ -213,6 +213,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 		R: primaryCosigner.state.r,
 		S: sDoublePrime,
 	}
+	signature.Normalize()
 	fmt.Println(">>>>>>>>", *signature.V)
 	if err := ecdsa.Verify(signature, primaryCosigner.cohortConfig.CipherSuite.Hash, primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
