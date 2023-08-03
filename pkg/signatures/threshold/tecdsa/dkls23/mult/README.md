@@ -1,19 +1,18 @@
 # Realization of DKLs23 RVOLE functionality
 
-This package implements the two-party OT-based multiplication protocol that is used inside [DKLs23](https://eprint.iacr.org/2023/765.pdf), originating from [DKLs19](https://eprint.iacr.org/2019/523.pdf). This protocol is realization of F_RVOLE functionality accepting two commands: Sampling and Multiplication.
+This package implements the two-party OT-based multiplication protocol that is used inside [DKLs23](https://eprint.iacr.org/2023/765.pdf), originating from [DKLs19](https://eprint.iacr.org/2019/523.pdf). This protocol is realization of DKLs23 F_RVOLE functionality accepting two commands: Sampling and Multiplication.
 
 A two-party multiplication protocol between Alice and Bob is a protocol resulting in additive shares of the multiplication of Alice and Bob's secrets. In other words, Let $a$ be Alice's secret and $b$ be Bob's secret. The protocol outputs $\alpha$ to Alice and $\beta$ to Bob such that $a * b = \alpha + \beta$
 
-The protocol we've implemented has the following properties is batched ie. It allows parallel multiplication of `L` many inputs from Alice and Bob.
+The protocol we've implemented is batched ie. It allows parallel multiplication of `L` many inputs from Alice and Bob.
 
 Trivially, by providing random values as `a` and/or `b`, this protocol becomes a randomized multiplication protocol.
 
 Note that in DKLs23, a particular variant of this protocol is used that is called "Forced Reuse". Effectively, Bob has a single random input. The output of the protocol is multiplication of Bob's single input to the vector of Alice's inputs. As a consequence of randomizing Bob's input, this protocol will have one fewer rounds than the original version described in DKLs19.
 
-What we've implmeneted, is forced reuse variant of this multiplication protocol with L=2.
+We implement the forced-reuse variant of the DKLs19 multiplication protocol, setting L=2 as required by F_RVOLE.
 
-
-The details of the main protocol is sketched in Protocol 1 of DkLs19 and the necessary modifications to this protocol for DKLs23 is described in Functionality 3.5 of DKLs23.
+The details of the main protocol are sketched in Protocol 1 of DkLs19 and the necessary modifications to this protocol for DKLs23 are described in Functionality 3.5 of DKLs23.
 
 ## Configuration
 
@@ -70,11 +69,11 @@ The details of the main protocol is sketched in Protocol 1 of DkLs19 and the nec
             $\hat{z}_A$ = cOTeSenderOutputs[:][:][1] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Every other element                $\in$ [L][$\xi$]$\mathbb{Z}_q$
     6. Compute $\tilde{\chi} \leftarrow H^{\xi}(1, sid, t)$ where t is the shared transcript of COTe.
     7. Compute $\hat{\chi} \leftarrow H^{\xi}(2, sid, t)$ where t is the shared transcript of COTe.
-    8. Compute `r`: <br>
-$r_{i,j}=\tilde{\chi}_{i} \cdot \tilde{z_{A_{\xi}}} + \hat{\chi}_i \cdot $$\hat{z_{A_{\xi}}}$  $\in \mathbb{Z}_q, \forall{i}\in\[L\], \forall{j} \in \[ \xi \]$
-    9. Compute $\tilde{r}$ by hashing `r` and `sid` to $\mathbb{Z}_q$.
-    10. Compute `u`:<br>
+    8. Compute `u`:<br>
       $u = \sum_{i=0}^{L-1} {\tilde{\chi}_i \cdot \tilde{a}_i + \hat{\chi}_i + \hat{a}_i}$
+    9. Compute `r`: <br>
+$r_{i,j}=\tilde{\chi}_{i} \cdot \tilde{z_{A_{\xi}}} + \hat{\chi}_i \cdot $$\hat{z_{A_{\xi}}}$  $\in \mathbb{Z}_q, \forall{i}\in\[L\], \forall{j} \in \[ \xi \]$
+    10. Compute $\tilde{r}$ by hashing `r` and `sid` to $\mathbb{Z}_q$.
     11. Compute $\gamma_A$:<br>
       $\gamma_A = \sum_{i=0}^{L-1} a_i - \tilde{a}_i$                                       $\in \mathbb{Z}_q$
     12. Derive `$\z_A$` (**This is the result for Alice**):<br>

@@ -4,13 +4,11 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"golang.org/x/crypto/sha3"
 )
 
 type Alice struct {
@@ -57,11 +55,12 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, true)
+	forcedReuse := true
+	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
-	gadget, err := generateGadgetVector(curve)
+	gadget, err := generateGadgetVector(curve, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
@@ -75,7 +74,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	}, nil
 }
 
-func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse bool, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Bob, error) {
+func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Bob, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -89,11 +88,12 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse b
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, true)
+	forcedReuse := true
+	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
-	gadget, err := generateGadgetVector(curve)
+	gadget, err := generateGadgetVector(curve, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
@@ -107,15 +107,14 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, forcedReuse b
 	}, nil
 }
 
-func generateGadgetVector(curve *curves.Curve) (gadget [Xi]curves.Scalar, err error) {
+func generateGadgetVector(curve *curves.Curve, transcript transcript.Transcript) (gadget [Xi]curves.Scalar, err error) {
 	gadget = [Xi]curves.Scalar{}
-	shake := sha3.NewCShake256(nil, []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
+	if err := transcript.AppendMessage([]byte("gadget vector"), []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR")); err != nil {
+		return gadget, errs.WrapFailed(err, "could not write to transcript")
+	}
 	for i := 0; i < Xi; i++ {
-		bytes := [native.FieldBytes]byte{}
-		if _, err = shake.Read(bytes[:]); err != nil {
-			return gadget, errs.WrapFailed(err, "could not read bytes")
-		}
-		gadget[i], err = curve.Scalar.SetBytes(bytes[:])
+		bytes := transcript.ExtractBytes([]byte("gadget"), KappaBytes)
+		gadget[i], err = curve.Scalar.SetBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

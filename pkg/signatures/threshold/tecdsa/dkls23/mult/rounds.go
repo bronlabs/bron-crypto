@@ -1,20 +1,22 @@
 package mult
 
 import (
+	"fmt"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
 )
 
 type Round1Output = softspoken.Round1Output
 
 type Round2Output struct {
-	COTe   *softspoken.Round2Output
-	RTilde curves.Scalar
-	U      [L]curves.Scalar
-	GammaA [L]curves.Scalar
+	COTeRound2Output *softspoken.Round2Output
+	RTilde           curves.Scalar
+	U                [L]curves.Scalar
+	GammaA           [L]curves.Scalar
 }
 
 func (bob *Bob) Round1() (*Round1Output, error) {
@@ -27,8 +29,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	for i := 0; i < L; i++ {
 		bob.BTilde[i] = bob.Curve.Scalar.Zero()
 		for j := 0; j < Xi; j++ {
-			// TODO: move this function to bits package
-			if vsot.ExtractBitFromByteVector(bob.Beta[:], j) == 0x01 {
+			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
 				bob.BTilde[i] = bob.BTilde[i].Add(bob.gadget[j])
 			}
 		}
@@ -48,8 +49,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	return COTeR1Output, nil
 }
 
-// a ∈ [L]ℤq is the input vector of Alice
-func (alice *Alice) Round2(round1output *softspoken.Round1Output, a [L]curves.Scalar) (*OutputShares, *Round2Output, error) {
+func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceInput) (*OutputShares, *Round2Output, error) {
 	for i := 0; i < L; i++ {
 		// step 2.1
 		alice.aTilde[i] = alice.Curve.Scalar.Random(alice.prng)
@@ -102,6 +102,16 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a [L]curves.Sc
 	}
 
 	// step 2.8
+	u := [L]curves.Scalar{}
+	for i := 0; i < L; i++ {
+		u[i] = chiTilde[i].Mul(alice.aTilde[i]).Add(chiHat[i].Mul(alice.aHat[i]))
+		if err := alice.transcript.AppendMessage([]byte(fmt.Sprintf("u_%d", i)), u[i].Bytes()); err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not append u_i")
+		}
+	}
+	alice.transcript.AppendScalars([]byte("u"), u[:]...)
+
+	// step 2.9
 	r := [Xi]curves.Scalar{}
 	for j := 0; j < Xi; j++ {
 		jThR := alice.Curve.Scalar.Zero()
@@ -112,24 +122,23 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a [L]curves.Sc
 		r[j] = jThR
 	}
 
-	// step 2.9
+	// step 2.10
 	toBeHashed := []byte{}
 	toBeHashed = append(toBeHashed, alice.uniqueSessionId...)
 	for _, element := range r {
 		toBeHashed = append(toBeHashed, element.Bytes()...)
 	}
 	rTilde := alice.Curve.Scalar.Hash(toBeHashed)
-
-	// step 2.10
-	u := [L]curves.Scalar{}
-	for i := 0; i < L; i++ {
-		u[i] = chiTilde[i].Mul(alice.aTilde[i]).Add(chiHat[i].Mul(alice.aHat[i]))
-	}
+	alice.transcript.AppendScalars([]byte("rTilde"), rTilde)
 
 	// step 2.11
 	for i := 0; i < L; i++ {
 		alice.gammaA[i] = a[i].Sub(alice.aTilde[i])
+		if err := alice.transcript.AppendMessage([]byte(fmt.Sprintf("Gamma_A_%d", i)), alice.gammaA[i].Bytes()); err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not append Gamma_A_i")
+		}
 	}
+	alice.transcript.AppendScalars([]byte("Gamma_A"), alice.gammaA[:]...)
 
 	// step 2.12
 	output := &OutputShares{}
@@ -141,16 +150,16 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a [L]curves.Sc
 	}
 
 	return output, &Round2Output{
-		COTe:   cOTeRound2Output,
-		RTilde: rTilde,
-		U:      u,
-		GammaA: alice.gammaA,
+		COTeRound2Output: cOTeRound2Output,
+		RTilde:           rTilde,
+		U:                u,
+		GammaA:           alice.gammaA,
 	}, nil
 }
 
 func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err error) {
 	// step 2.1
-	coteReceiverOutput, err := bob.receiver.Round3Derandomize(round2output.COTe, bob.extendedPackedChoices, bob.oteReceiverOutput)
+	coteReceiverOutput, err := bob.receiver.Round3Derandomize(round2output.COTeRound2Output, bob.extendedPackedChoices, bob.oteReceiverOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob cote round 3")
 	}
@@ -178,12 +187,15 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 		chiHat[i] = bob.Curve.Scalar.Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
 	}
 
+	// According to spec, Alice would have generated u right after producing chiTilde and chiHat
+	bob.transcript.AppendScalars([]byte("u"), round2output.U[:]...)
+
 	// step 2.5
 	rTildeBElements := [Xi]curves.Scalar{}
 	for j := 0; j < Xi; j++ {
 		current := bob.Curve.Scalar.Zero()
 		for i := 0; i < L; i++ {
-			if vsot.ExtractBitFromByteVector(bob.Beta[:], j) == 0x01 {
+			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
 				current = current.Add(round2output.U[i])
 			}
 			current = current.
@@ -202,6 +214,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	if rTildeB.Cmp(round2output.RTilde) != 0 {
 		return nil, errs.NewVerificationFailed("bob round 3 rtilde check")
 	}
+	bob.transcript.AppendScalars([]byte("rTilde"), rTildeB)
 
 	// step 2.7
 	output = &OutputShares{}
@@ -211,6 +224,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 			output[i] = output[i].Add(bob.gadget[j].Mul(zTildeB[i][j]))
 		}
 	}
+	bob.transcript.AppendScalars([]byte("Gamma_A"), round2output.GammaA[:]...)
 	return output, nil
 
 }

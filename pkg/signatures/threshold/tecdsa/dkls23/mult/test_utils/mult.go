@@ -17,8 +17,7 @@ func MakeMultParticipants(t *testing.T, cipherSuite *integration.CipherSuite, ba
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO parametrize forced reuse
-	bob, err = mult.NewBob(cipherSuite.Curve, baseOtSenderOutput, true, bobSid, bobPrng, nil)
+	bob, err = mult.NewBob(cipherSuite.Curve, baseOtSenderOutput, bobSid, bobPrng, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -31,7 +30,7 @@ func RunMult(t *testing.T, alice *mult.Alice, bob *mult.Bob, aliceInput [mult.L]
 	if err != nil {
 		return nil, nil, err
 	}
-	ZA, aliceOutput, err := alice.Round2(bobOutput, aliceInput)
+	zA, aliceOutput, err := alice.Round2(bobOutput, aliceInput)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,5 +38,5 @@ func RunMult(t *testing.T, alice *mult.Alice, bob *mult.Bob, aliceInput [mult.L]
 	if err != nil {
 		return nil, nil, err
 	}
-	return ZA, zB, nil
+	return zA, zB, nil
 }
