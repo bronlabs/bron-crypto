@@ -132,7 +132,7 @@ func TestPointPallasSumOfProducts(t *testing.T) {
 		new(ScalarPallas).New(11),
 		new(ScalarPallas).New(12),
 	}
-	rhs := lhs.SumOfProducts(points, scalars)
+	rhs := sumOfProducts(points, scalars)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))
 }

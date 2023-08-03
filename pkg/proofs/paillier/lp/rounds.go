@@ -1,30 +1,30 @@
-package paillierpk
+package lp
 
 import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
 	"math/big"
 )
 
-type VerifierRound1Output struct {
-	NthRootProverOutputs []*nthroot.ProverRound1Output
+type Round1Output struct {
+	NthRootProverOutputs []*nthroot.Round1Output
 	X                    []paillier.CipherText
 }
 
-type ProverRound2Output struct {
-	NthRootVerifierOutputs []*nthroot.VerifierRound2Output
+type Round2Output struct {
+	NthRootVerifierOutputs []*nthroot.Round2Output
 }
 
-type VerifierRound3Output struct {
-	NthRootProverOutputs []*nthroot.ProverRound3Output
+type Round3Output struct {
+	NthRootProverOutputs []*nthroot.Round3Output
 }
 
-type ProverRound4Output struct {
+type Round4Output struct {
 	YPrime []*big.Int
 }
 
-func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
+func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
 		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
 	}
@@ -33,8 +33,9 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	verifier.state.x = make([]paillier.CipherText, verifier.k)
 
 	zero := big.NewInt(0)
-	nthRootProverRound1Outputs := make([]*nthroot.ProverRound1Output, verifier.k)
+	nthRootProverRound1Outputs := make([]*nthroot.Round1Output, verifier.k)
 	verifier.state.rootProvers = make([]*nthroot.Prover, verifier.k)
+	rootTranscript := verifier.transcript.Clone()
 	for i := 0; i < verifier.k; i++ {
 		// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
 		verifier.state.x[i], verifier.state.y[i], err = verifier.paillierPublicKey.Encrypt(zero)
@@ -43,7 +44,7 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 		}
 
 		// V proves the knowledge of y, the Nth root of x,
-		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.prng)
+		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.sessionId, rootTranscript, verifier.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root prover")
 		}
@@ -54,24 +55,25 @@ func (verifier *Verifier) Round1() (output *VerifierRound1Output, err error) {
 	}
 
 	verifier.round += 2
-	return &VerifierRound1Output{
+	return &Round1Output{
 		NthRootProverOutputs: nthRootProverRound1Outputs,
 		X:                    verifier.state.x,
 	}, nil
 }
 
-func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2Output, err error) {
+func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", prover.round)
 	}
 
 	prover.state.x = input.X
 
-	nthRootVerifierRound2Outputs := make([]*nthroot.VerifierRound2Output, prover.k)
+	nthRootVerifierRound2Outputs := make([]*nthroot.Round2Output, prover.k)
 	prover.state.rootVerifiers = make([]*nthroot.Verifier, prover.k)
+	rootTranscript := prover.transcript.Clone()
 	for i := 0; i < prover.k; i++ {
 		// round 2 of proving the knowledge of y
-		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.prng)
+		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.sessionId, rootTranscript, prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 		}
@@ -82,17 +84,17 @@ func (prover *Prover) Round2(input *VerifierRound1Output) (output *ProverRound2O
 	}
 
 	prover.round += 2
-	return &ProverRound2Output{
+	return &Round2Output{
 		NthRootVerifierOutputs: nthRootVerifierRound2Outputs,
 	}, nil
 }
 
-func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
+func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
 	}
 
-	nthRootProverRound3Outputs := make([]*nthroot.ProverRound3Output, verifier.k)
+	nthRootProverRound3Outputs := make([]*nthroot.Round3Output, verifier.k)
 	for i := 0; i < verifier.k; i++ {
 		// round 3 of proving the knowledge of y
 		nthRootProverRound3Outputs[i], err = verifier.state.rootProvers[i].Round3(input.NthRootVerifierOutputs[i])
@@ -102,12 +104,12 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 	}
 
 	verifier.round += 2
-	return &VerifierRound3Output{
+	return &Round3Output{
 		NthRootProverOutputs: nthRootProverRound3Outputs,
 	}, nil
 }
 
-func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4Output, err error) {
+func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
@@ -131,12 +133,12 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *ProverRound4O
 
 	// P returns a y'
 	prover.round += 2
-	return &ProverRound4Output{
+	return &Round4Output{
 		YPrime: yPrime,
 	}, nil
 }
 
-func (verifier *Verifier) Round5(input *ProverRound4Output) (err error) {
+func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
 		return errs.NewInvalidRound("%d != 5", verifier.round)
 	}

@@ -376,7 +376,9 @@ func TestPointP256SumOfProducts(t *testing.T) {
 		new(ScalarP256).New(11),
 		new(ScalarP256).New(12),
 	}
-	rhs, err := lhs.SumOfProducts(points, scalars)
+	curve, err := GetCurveByName(P256Name)
+	require.NoError(t, err)
+	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))

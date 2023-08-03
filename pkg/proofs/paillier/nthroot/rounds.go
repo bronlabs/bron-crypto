@@ -6,19 +6,19 @@ import (
 	"math/big"
 )
 
-type ProverRound1Output struct {
+type Round1Output struct {
 	A *big.Int
 }
 
-type VerifierRound2Output struct {
+type Round2Output struct {
 	E *big.Int
 }
 
-type ProverRound3Output struct {
+type Round3Output struct {
 	Z *big.Int
 }
 
-func (prover *Prover) Round1() (output *ProverRound1Output, err error) {
+func (prover *Prover) Round1() (output *Round1Output, err error) {
 	if prover.round != 1 {
 		return nil, errs.NewInvalidRound("%d != 1", prover.round)
 	}
@@ -33,12 +33,12 @@ func (prover *Prover) Round1() (output *ProverRound1Output, err error) {
 	a := new(big.Int).Exp(prover.state.r, prover.bigN, prover.state.bigNSquared)
 
 	prover.round += 2
-	return &ProverRound1Output{
+	return &Round1Output{
 		A: a,
 	}, nil
 }
 
-func (verifier *Verifier) Round2(input *ProverRound1Output) (output *VerifierRound2Output, err error) {
+func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if verifier.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", verifier.round)
 	}
@@ -57,12 +57,12 @@ func (verifier *Verifier) Round2(input *ProverRound1Output) (output *VerifierRou
 	verifier.state.e = new(big.Int).SetBit(e, k-1, 1)
 
 	verifier.round += 2
-	return &VerifierRound2Output{
+	return &Round2Output{
 		E: verifier.state.e,
 	}, nil
 }
 
-func (prover *Prover) Round3(input *VerifierRound2Output) (output *ProverRound3Output, err error) {
+func (prover *Prover) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if prover.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", prover.round)
 	}
@@ -71,12 +71,12 @@ func (prover *Prover) Round3(input *VerifierRound2Output) (output *ProverRound3O
 	z := new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Exp(prover.y, input.E, prover.state.bigNSquared), prover.state.r), prover.state.bigNSquared)
 
 	prover.round += 2
-	return &ProverRound3Output{
+	return &Round3Output{
 		Z: z,
 	}, nil
 }
 
-func (verifier *Verifier) Round4(input *ProverRound3Output) (err error) {
+func (verifier *Verifier) Round4(input *Round3Output) (err error) {
 	if verifier.round != 4 {
 		return errs.NewInvalidRound("%d != 4", verifier.round)
 	}

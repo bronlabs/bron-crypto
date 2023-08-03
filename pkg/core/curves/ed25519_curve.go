@@ -647,7 +647,7 @@ func (p *PointEd25519) CurveName() string {
 	return ED25519Name
 }
 
-func (p *PointEd25519) SumOfProducts(points []Point, scalars []Scalar) (Point, error) {
+func multiScalarMultEd25519(scalars []Scalar, points []Point) (Point, error) {
 	nScalars := make([]*edwards25519.Scalar, len(scalars))
 	nPoints := make([]*edwards25519.Point, len(points))
 	for i, sc := range scalars {

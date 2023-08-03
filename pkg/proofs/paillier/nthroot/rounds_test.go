@@ -1,9 +1,11 @@
 package nthroot_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
@@ -11,11 +13,15 @@ import (
 )
 
 func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {
-	prover, err := nthroot.NewProver(bigN, x, y, prng)
+	sessionId := []byte("nthRootSession")
+	appLabel := "NthRoot"
+	proverTranscript := merlin.NewTranscript(appLabel)
+	prover, err := nthroot.NewProver(bigN, x, y, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err
 	}
-	verifier, err := nthroot.NewVerifier(bigN, x, prng)
+	verifierTranscript := merlin.NewTranscript(appLabel)
+	verifier, err := nthroot.NewVerifier(bigN, x, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
@@ -33,7 +39,19 @@ func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {
 		return err
 	}
 
-	return verifier.Round4(r3)
+	err = verifier.Round4(r3)
+	if err != nil {
+		return err
+	}
+
+	label := "gimme, gimme"
+	proverBytes := proverTranscript.ExtractBytes([]byte(label), 128)
+	verifierBytes := verifierTranscript.ExtractBytes([]byte(label), 128)
+	if !bytes.Equal(proverBytes, verifierBytes) {
+		return errs.NewFailed("transcript record different data")
+	}
+
+	return nil
 }
 
 func Test_HappyPath(t *testing.T) {
