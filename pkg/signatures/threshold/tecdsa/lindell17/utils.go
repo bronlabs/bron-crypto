@@ -28,19 +28,19 @@ func GetCurveOrder(curve *curves.Curve) (*big.Int, error) {
 	return new(big.Int).Add(minusOne.BigInt(), big.NewInt(1)), nil
 }
 
-func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
+func DigestToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
 	order, err := GetCurveOrder(curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get curve order")
 	}
 	orderBits := order.BitLen()
 	orderBytes := (orderBits + 7) / 8
-	if len(hash) > orderBytes {
-		hash = hash[:orderBytes]
+	if len(digest) > orderBytes {
+		digest = digest[:orderBytes]
 	}
 
-	ret := new(big.Int).SetBytes(hash)
-	excess := len(hash)*8 - orderBits
+	ret := new(big.Int).SetBytes(digest)
+	excess := len(digest)*8 - orderBits
 	if excess > 0 {
 		ret.Rsh(ret, uint(excess))
 	}
