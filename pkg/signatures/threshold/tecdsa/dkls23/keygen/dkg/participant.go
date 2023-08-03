@@ -23,13 +23,7 @@ type Participant struct {
 	BaseOTSenderParties   map[integration.IdentityKey]*vsot.Sender
 	BaseOTReceiverParties map[integration.IdentityKey]*vsot.Receiver
 
-	state *state
-}
-
-type state struct {
-	signingKeyShare *dkls23.SigningKeyShare
-	publicKeyShares *dkls23.PublicKeyShares
-	pairwiseSeeds   dkls23.PairwiseSeeds
+	Shard *dkls23.Shard
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -82,6 +76,6 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
-		state:                 &state{},
+		Shard:                 &dkls23.Shard{},
 	}, nil
 }

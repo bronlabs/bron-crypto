@@ -12,6 +12,7 @@ import (
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
+	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
@@ -27,8 +28,7 @@ import (
 func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
-	// TODO: replace with softspoken kappa
-	batchSize := 256
+	batchSize := softspoken.Kappa
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

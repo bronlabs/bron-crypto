@@ -1,0 +1,72 @@
+package tecdsa
+
+import (
+	crand "crypto/rand"
+	"io"
+
+	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	dkls23 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
+	lindell17 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+)
+
+const DKGLabel = "COPPER_KNOX_DKG_TECDSA-"
+
+var _ integration.Participant = (*Participant)(nil)
+
+type Participant struct {
+	MyIdentityKey integration.IdentityKey
+	CohortConfig  *integration.CohortConfig
+
+	UniqueSessionId []byte
+	SIDParty        *agreeonrandom.Participant
+	Main            *dkls23.Participant
+	Backup          *lindell17.Participant
+	Shard           *Shard
+
+	transcript transcript.Transcript
+	prng       io.Reader
+	round      int
+}
+
+func (p *Participant) GetIdentityKey() integration.IdentityKey {
+	return p.MyIdentityKey
+}
+
+func (p *Participant) GetShamirId() int {
+	return p.Main.GetShamirId()
+}
+
+func (p *Participant) GetCohortConfig() *integration.CohortConfig {
+	return p.CohortConfig
+}
+
+func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+	if err := cohortConfig.Validate(); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name && cohortConfig.CipherSuite.Curve.Name != curves.P256Name {
+		return nil, errs.NewInvalidCurve("only K256 and P256 curves are supported")
+	}
+	transcript := merlin.NewTranscript(DKGLabel)
+	sidParty, err := agreeonrandom.NewParticipant(cohortConfig.CipherSuite.Curve, identityKey, cohortConfig.Participants, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
+	}
+	if prng == nil {
+		prng = crand.Reader
+	}
+	return &Participant{
+		MyIdentityKey: identityKey,
+		CohortConfig:  cohortConfig,
+		SIDParty:      sidParty,
+		Shard:         &Shard{},
+		transcript:    transcript,
+		prng:          prng,
+		round:         1,
+	}, nil
+}

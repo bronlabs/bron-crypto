@@ -1,18 +1,15 @@
 package interactive
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing"
 	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"math/big"
 )
 
 type Round1OutputP2P struct {
@@ -152,70 +149,28 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
 
-	messageHash, err := hashing.Hash(secondaryCosigner.cohortConfig.CipherSuite.Hash, message)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot hash message")
-	}
-	mPrimeInt, err := lindell17.HashToInt(messageHash, secondaryCosigner.cohortConfig.CipherSuite.Curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create int from hash")
-	}
-	mPrime, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().SetBigInt(mPrimeInt)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot hash to scalar")
-	}
-
+	k2 := secondaryCosigner.state.k2
+	share := secondaryCosigner.myShard.SigningKeyShare.Share
 	paillierPublicKey := secondaryCosigner.myShard.PaillierPublicKeys[secondaryCosigner.primaryIdentityKey]
 	cKey := secondaryCosigner.myShard.PaillierEncryptedShares[secondaryCosigner.primaryIdentityKey]
-
-	k2Inv, err := secondaryCosigner.state.k2.Invert()
+	lambda1, lambda2, err := signing.CalcLagrangeCoefficients(secondaryCosigner.primaryShamirId, secondaryCosigner.myShamirId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot invert k2")
+		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-
-	// c1 = Enc(ρq + k2^(-1) * m')
-	c1Plain := k2Inv.Mul(mPrime).BigInt()
 	q, err := lindell17.GetCurveOrder(secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get curve order")
+		return nil, errs.WrapFailed(err, "cannot calculate subgroup order")
 	}
-	qSquared := new(big.Int).Mul(q, q)
-	rho, err := crand.Int(secondaryCosigner.prng, qSquared)
+	mPrime, err := signing.MessageToScalar(secondaryCosigner.cohortConfig.CipherSuite.Hash, secondaryCosigner.cohortConfig.CipherSuite.Curve, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot generate random int")
-	}
-	rhoMulQ := new(big.Int).Mul(rho, q)
-	c1, _, err := paillierPublicKey.Encrypt(new(big.Int).Add(rhoMulQ, c1Plain))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot encrypt c1")
+		return nil, errs.WrapFailed(err, "cannot get scalar from message")
 	}
 
-	// c2 = Enc(k2^(-1) * r * (y1 * λ1 + y2 * λ2))
-	dealer, err := shamir.NewDealer(secondaryCosigner.cohortConfig.Threshold, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
+	// c3 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
+	c3, err := signing.CalcC3(lambda1, lambda2, k2, mPrime, r, share, q, paillierPublicKey, cKey, secondaryCosigner.prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create shamir dealer")
+		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
-	coefficients, err := dealer.LagrangeCoefficients([]int{secondaryCosigner.primaryShamirId, secondaryCosigner.myShamirId})
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
-	}
-	lambda1 := coefficients[secondaryCosigner.primaryShamirId]
-	c2Left, err := paillierPublicKey.Mul(k2Inv.Mul(r).Mul(lambda1).BigInt(), cKey)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "homomorphic multiplication failed")
-	}
-	lambda2 := coefficients[secondaryCosigner.myShamirId]
-	c2Right, _, err := paillierPublicKey.Encrypt(k2Inv.Mul(r).Mul(lambda2).Mul(secondaryCosigner.myShard.SigningKeyShare.Share).BigInt())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot encrypt c2")
-	}
-	c2, err := paillierPublicKey.Add(c2Left, c2Right)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "homomorphic addition failed")
-	}
-
-	// c3 = c1 + c2 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := paillierPublicKey.Add(c1, c2)
 
 	secondaryCosigner.round++
 	return &Round4OutputP2P{
