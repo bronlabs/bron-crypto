@@ -3,6 +3,7 @@ package shamir_test
 import (
 	crand "crypto/rand"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -102,13 +103,16 @@ func TestShamirComputeL(t *testing.T) {
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
-	identities := make([]int, 0)
-	for _, xi := range shares {
-		identities = append(identities, xi.Id)
+	identities := make([]int, len(shares))
+	for i, xi := range shares {
+		identities[i] = xi.Id
 	}
 	lCoeffs, err := scheme.LagrangeCoefficients(identities)
 	require.Nil(t, err)
 	require.NotNil(t, lCoeffs)
+	require.Len(t, lCoeffs, len(identities))
+	fmt.Println(identities)
+	fmt.Println(lCoeffs)
 
 	// Checking we can reconstruct the same secret using Lagrange coefficients.
 	result := curve.NewScalar()
@@ -177,7 +181,7 @@ func TestAdditiveAllCombinations(t *testing.T) {
 				kAdditive, err := shares[k].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
 				require.NoError(t, err)
 
-				rSecret := iAdditive.Value.Add(jAdditive.Value.Add(kAdditive.Value))
+				rSecret := iAdditive.Add(jAdditive.Add(kAdditive))
 				require.NotNil(t, rSecret)
 				require.Equal(t, rSecret.Cmp(secret), 0)
 			}

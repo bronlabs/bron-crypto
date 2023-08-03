@@ -13,8 +13,6 @@ type Share struct {
 	Value curves.Scalar `json:"value"`
 }
 
-type AdditiveShare = Share
-
 func (ss Share) Validate(curve *curves.Curve) error {
 	if ss.Id == 0 {
 		return errs.NewInvalidIdentifier("invalid identifier - id is zero")
@@ -29,24 +27,24 @@ func (ss Share) Validate(curve *curves.Curve) error {
 	return nil
 }
 
-// TODO: incorporate in the code
-func (ss Share) ToAdditive(identities []int) (*AdditiveShare, error) {
+func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
 	curve, err := curves.GetCurveByName(ss.Value.CurveName())
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
 	}
-	coefficients, err := lagrangeCoefficients(curve, identities)
+	coefficients, err := sharing.LagrangeCoefficients(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
 	}
-	myCoefficient, exists := coefficients[ss.Id]
-	if !exists {
-		return nil, errs.NewMissing("i am not one of the provided identities")
+	return coefficients[ss.Id], nil
+}
+
+func (ss Share) ToAdditive(identities []int) (curves.Scalar, error) {
+	lambda, err := ss.LagrangeCoefficient(identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive my lagrange coefficient")
 	}
-	return &AdditiveShare{
-		Id:    ss.Id,
-		Value: myCoefficient.Mul(ss.Value),
-	}, nil
+	return lambda.Mul(ss.Value), nil
 }
 
 type Dealer struct {
@@ -89,7 +87,13 @@ func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader
 }
 
 func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, error) {
-	return lagrangeCoefficients(s.Curve, identities)
+	if len(identities) < s.Threshold {
+		return nil, errs.NewInvalidArgument("not enough identities")
+	}
+	if len(identities) > s.Total {
+		return nil, errs.NewInvalidArgument("too many identities")
+	}
+	return sharing.LagrangeCoefficients(s.Curve, identities)
 }
 
 func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
@@ -186,32 +190,6 @@ func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluate
 	result, err := s.Curve.MultiScalarMult(coefficients, ys)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "MSM failed")
-	}
-	return result, nil
-}
-
-func lagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves.Scalar, error) {
-	xs := make(map[int]curves.Scalar, len(identities))
-	for _, xi := range identities {
-		xs[xi] = curve.Scalar.New(xi)
-	}
-
-	result := make(map[int]curves.Scalar, len(identities))
-	for i, xi := range xs {
-		num := curve.Scalar.One()
-		den := curve.Scalar.One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-
-			num = num.Mul(xj)
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		result[i] = num.Div(den)
 	}
 	return result, nil
 }
