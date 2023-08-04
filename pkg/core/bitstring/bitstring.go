@@ -1,6 +1,10 @@
 package bitstring
 
-import "github.com/copperexchange/knox-primitives/pkg/core/errs"
+import (
+	"reflect"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+)
 
 // SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
 // it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
@@ -44,16 +48,56 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// IntToByteArray converts from int to byte array.
-func IntToByteArray(i int) [4]byte {
-	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
+// ToByteArray converts from any integer type to a byte array (big-endian).
+func ToByteArray[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
+	typeByteSize := reflect.TypeOf(i).Size()
+	arr := make([]byte, typeByteSize)
+	for j := 0; j < int(typeByteSize); j++ { // higher bytes first
+		arr[j] = byte(i >> uint((int(typeByteSize)-1-j)*8))
+	}
+	return arr
 }
 
-// BoolToByte converts a boolean to a byte.
-func BoolToByte(b bool) byte {
+// To converts a boolean to any chosen type.
+func To[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](b bool) T {
 	if b {
-		return 1
+		return T(1)
 	} else {
-		return 0
+		return T(0)
 	}
+}
+
+// TransposeBooleanMatrix transposes a 2D matrix of "packed" bits (represented in
+// groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
+// were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+func TransposeBooleanMatrix(inputMatrix [][]byte) [][]byte {
+	// Read input sizes and allocate output
+	nRowsInput := len(inputMatrix)
+	if nRowsInput%8 != 0 {
+		panic("input matrix must have a number of rows divisible by 8")
+	}
+	nColsInputBytes := len(inputMatrix[0])
+	nRowsOutput := nColsInputBytes << 3
+	nColsOutputBytes := nRowsInput >> 3
+	transposedMatrix := make([][]byte, nRowsOutput)
+	for i := 0; i < nRowsOutput; i++ {
+		transposedMatrix[i] = make([]byte, nColsOutputBytes)
+	}
+	// Transpose the matrix
+	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
+		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
+			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
+				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
+					rowBit := rowByte<<3 + rowBitWithinByte
+					columnBit := columnByte<<3 + columnBitWithinByte
+					// Grab the corresponding  bit at input[rowBit][columnBit]
+					bitAtInputRowBitColumnBit := inputMatrix[rowBit][columnByte] >> columnBitWithinByte & 0x01
+					// Place the bit at output[columnBit][rowBit]
+					shiftedBit := bitAtInputRowBitColumnBit << rowBitWithinByte
+					transposedMatrix[columnBit][rowByte] |= shiftedBit
+				}
+			}
+		}
+	}
+	return transposedMatrix
 }
