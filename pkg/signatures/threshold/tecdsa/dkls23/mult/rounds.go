@@ -31,8 +31,11 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 		for j := 0; j < Xi; j++ {
 			// constant time branching, because we'll add if even if we don't need it
 			addedCurrent := bob.BTilde[i].Add(bob.gadget[j])
+			originalCurrent := bob.BTilde[i]
 			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
 				bob.BTilde[i] = addedCurrent
+			} else {
+				bob.BTilde[i] = originalCurrent
 			}
 		}
 	}
