@@ -203,26 +203,27 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 		Q: primaryCosigner.myShard.SigningKeyShare.PublicKey,
 	}
 
-	signature := &ecdsa.Signature{
-		R: primaryCosigner.state.r,
-		S: sDoublePrime,
-	}
-	signature.Normalize()
-	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid signature")
-	}
-
 	recoveryId, err := ecdsa.CalculateRecoveryId(primaryCosigner.state.bigR)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
 	}
-	if ok := signature.VerifyMessageWithRecoveryId(recoveryId, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
+
+	signature := &ecdsa.SignatureExt{
+		Signature: ecdsa.Signature{
+			R: primaryCosigner.state.r,
+			S: sDoublePrime,
+		},
+		RecoveryId: *recoveryId,
+	}
+	signature.Normalize()
+
+	if ok := signature.VerifyMessageWithPublicKey(publicKey, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
+		return nil, errs.NewFailed("invalid signature")
+	}
+	if ok := signature.VerifyMessageWithRecoveryId(&signature.RecoveryId, primaryCosigner.cohortConfig.CipherSuite.Hash, message); !ok {
 		return nil, errs.NewFailed("invalid recovery id")
 	}
 
 	primaryCosigner.round++
-	return &ecdsa.SignatureExt{
-		Signature:  *signature,
-		RecoveryId: *recoveryId,
-	}, nil
+	return signature, nil
 }

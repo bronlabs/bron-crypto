@@ -71,25 +71,25 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 		Q: p.myShard.SigningKeyShare.PublicKey,
 	}
 
-	signature := &ecdsa.Signature{
-		R: r,
-		S: sDoublePrime,
-	}
-	signature.Normalize()
-	if ok := signature.VerifyMessageWithPublicKey(publicKey, p.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid signature")
-	}
-
 	recoveryId, err := ecdsa.CalculateRecoveryId(bigR)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
 	}
-	if ok := signature.VerifyMessageWithRecoveryId(recoveryId, p.cohortConfig.CipherSuite.Hash, message); !ok {
+	signature := &ecdsa.SignatureExt{
+		Signature: ecdsa.Signature{
+			R: r,
+			S: sDoublePrime,
+		},
+		RecoveryId: *recoveryId,
+	}
+	signature.Normalize()
+
+	if ok := signature.VerifyMessageWithPublicKey(publicKey, p.cohortConfig.CipherSuite.Hash, message); !ok {
+		return nil, errs.NewFailed("invalid signature")
+	}
+	if ok := signature.VerifyMessageWithRecoveryId(&signature.RecoveryId, p.cohortConfig.CipherSuite.Hash, message); !ok {
 		return nil, errs.NewFailed("invalid recovery id")
 	}
 
-	return &ecdsa.SignatureExt{
-		Signature:  *signature,
-		RecoveryId: *recoveryId,
-	}, nil
+	return signature, nil
 }

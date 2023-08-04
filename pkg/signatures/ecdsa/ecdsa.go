@@ -50,6 +50,7 @@ type SecretKey struct {
 // Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
 func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 	var rx, ry *big.Int
+
 	if p, ok := bigR.(*curves.PointK256); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
@@ -71,7 +72,7 @@ func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 	subGroupOrder := nativeCurve.Params().N
 
 	var recoveryId int
-	if ry.Bytes()[0]&1 == 0 {
+	if ry.Bit(0) == 0 {
 		recoveryId = 0
 	} else {
 		recoveryId = 1
@@ -92,16 +93,33 @@ func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 	return &RecoveryId{V: recoveryId}, nil
 }
 
+// Normalize normalizes the signature to a "low S" form. In ECDSA, signatures are
+// of the form (r, s) where r and s are numbers lying in some finite
+// field. Both (r, s) and (r, -s) are valid signatures of the same message
+// so ECDSA does not have strong existential unforgeability
+// We normalize to the low S form which ensures that the s value
+// lies in the lower half of its range.
+// See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
+func (signatureExt *SignatureExt) Normalize() {
+	if !signatureExt.IsNormalized() {
+		signatureExt.S = signatureExt.S.Neg()
+		signatureExt.V ^= 1
+	}
+}
+
 func (signatureExt *SignatureExt) VerifyMessage(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
 	if ok := signatureExt.VerifyMessageWithPublicKey(publicKey, hashFunc, message); !ok {
 		return false
 	}
-
 	if ok := signatureExt.VerifyMessageWithRecoveryId(&signatureExt.RecoveryId, hashFunc, message); !ok {
 		return false
 	}
 
 	return true
+}
+
+func (signature *Signature) IsNormalized() bool {
+	return signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
 }
 
 func (signature *Signature) VerifyMessageWithPublicKey(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
@@ -186,19 +204,6 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 	bigQ := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
 
 	return &PublicKey{Q: bigQ}, nil
-}
-
-// Normalize normalizes the signature to a "low S" form. In ECDSA, signatures are
-// of the form (r, s) where r and s are numbers lying in some finite
-// field. Both (r, s) and (r, -s) are valid signatures of the same message
-// so ECDSA does not have strong existential unforgeability
-// We normalize to the low S form which ensures that the s value
-// lies in the lower half of its range.
-// See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
-func (signature *Signature) Normalize() {
-	if signature.S.Neg().BigInt().Cmp(signature.S.BigInt()) < 0 {
-		signature.S = signature.S.Neg()
-	}
 }
 
 func (signature *Signature) ToNative() (r *big.Int, s *big.Int) {
