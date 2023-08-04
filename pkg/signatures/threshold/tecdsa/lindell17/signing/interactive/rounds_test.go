@@ -69,7 +69,6 @@ func Test_HappyPath(t *testing.T) {
 
 	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
 	require.NoError(t, err)
-	require.Fail(t, "stuff")
 }
 
 func Test_HappyPathWithDkg(t *testing.T) {

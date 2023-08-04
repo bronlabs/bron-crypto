@@ -2,7 +2,6 @@ package ecdsa
 
 import (
 	nativeEcdsa "crypto/ecdsa"
-	"fmt"
 	"hash"
 	"math/big"
 
@@ -172,10 +171,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		if err != nil {
 			return errs.WrapFailed(err, "signature has a recovery id but public key could not be recovered")
 		}
-		fmt.Println("!!!!", *signature.V)
 		if !recoveredPublicKey.Equal(publicKey) {
-			fmt.Println(recoveredPublicKey.ToAffineCompressed())
-			fmt.Println(publicKey.ToAffineCompressed())
 			return errs.NewVerificationFailed("incorrect recovery id")
 		}
 	}
