@@ -12,13 +12,17 @@
 [ ] Failure Tests
 <!--- Ensures we fail, if more involved and technical cryptographic attacks are done. --->
 [ ] Technical Attacks
+
 [ ] Benchmarking
+
 [ ] Fuzzing
 
 <!-- If this is a primitive, you need to have all. -->
 ## Documentation
 [ ] Comments on hard to understand places
+
 [ ] Comments on exported function
+
 [ ] Spec
 
 <!-- These should be simple enough, and tied to this ticket enough to warrant fixing it in the same PR. Otherwise, create a new ticket. -->
