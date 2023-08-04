@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 )
 
 type Polynomial struct {
@@ -26,4 +27,30 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 		out = out.Mul(x).Add(p.Coefficients[i])
 	}
 	return out
+}
+
+func LagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves.Scalar, error) {
+	xs := make(map[int]curves.Scalar, len(identities))
+	for _, xi := range identities {
+		xs[xi] = curve.Scalar.New(xi)
+	}
+
+	result := make(map[int]curves.Scalar, len(identities))
+	for i, xi := range xs {
+		num := curve.Scalar.One()
+		den := curve.Scalar.One()
+		for j, xj := range xs {
+			if i == j {
+				continue
+			}
+
+			num = num.Mul(xj)
+			den = den.Mul(xj.Sub(xi))
+		}
+		if den.IsZero() {
+			return nil, errs.NewDivisionByZero("divide by zero")
+		}
+		result[i] = num.Div(den)
+	}
+	return result, nil
 }

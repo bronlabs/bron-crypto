@@ -107,11 +107,11 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 		vsotRound2Output[identity] = message.VSOTReceiver
 	}
 	var err error
-	p.state.signingKeyShare, p.state.publicKeyShares, err = p.GennaroParty.Round3(round2outputBroadcast)
+	p.Shard.SigningKeyShare, p.Shard.PublicKeyShares, err = p.GennaroParty.Round3(round2outputBroadcast)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "gennaro round 3 failed")
 	}
-	p.state.pairwiseSeeds, err = p.ZeroSamplingParty.Round3(zeroSamplingRound2Output)
+	p.Shard.PairwiseSeeds, err = p.ZeroSamplingParty.Round3(zeroSamplingRound2Output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
@@ -151,20 +151,16 @@ func (p *Participant) Round6(round5output map[integration.IdentityKey]Round5P2P)
 			return nil, errs.WrapFailed(err, "vsot as receiver for indentity %x", identity.PublicKey().ToAffineCompressed())
 		}
 	}
-	shard := &dkls23.Shard{
-		SigningKeyShare: p.state.signingKeyShare,
-		PublicKeyShares: p.state.publicKeyShares,
-		PairwiseSeeds:   p.state.pairwiseSeeds,
-	}
-	shard.PairwiseBaseOTs = map[integration.IdentityKey]*dkls23.BaseOTConfig{}
+	p.Shard.PairwiseBaseOTs = map[integration.IdentityKey]*dkls23.BaseOTConfig{}
 	for _, identity := range p.GetCohortConfig().Participants {
 		if identity.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
 			continue
 		}
-		shard.PairwiseBaseOTs[identity] = &dkls23.BaseOTConfig{
+		p.Shard.PairwiseBaseOTs[identity] = &dkls23.BaseOTConfig{
 			AsSender:   p.BaseOTSenderParties[identity].Output,
 			AsReceiver: p.BaseOTReceiverParties[identity].Output,
 		}
 	}
-	return shard, nil
+	// by now, it's fully computed
+	return p.Shard, nil
 }
