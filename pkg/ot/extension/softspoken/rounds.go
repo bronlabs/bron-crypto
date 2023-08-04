@@ -51,12 +51,12 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	extOptions := &ExtOptions{}
 	for i := 0; i < Kappa; i++ {
 		// k^i_0 --(PRG)--> t^i_0
-		extOptions[0][i], err = hashing.PRG(R.sid[:], R.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:], etaPrimeBytes)
+		extOptions[0][i], err = hashing.PRG(R.sid, R.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:], etaPrimeBytes)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 		// k^i_1 --(PRG)--> t^i_1
-		extOptions[1][i], err = hashing.PRG(R.sid[:], R.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:], etaPrimeBytes)
+		extOptions[1][i], err = hashing.PRG(R.sid, R.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:], etaPrimeBytes)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
@@ -83,7 +83,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	t_j := bitstring.TransposeBooleanMatrix(extOptions[0][:]) // t_j ∈ [η'][κ]bits
 	// (T&R.2) Hash η rows of t_j using the index as salt (drop η' - η rows, used for consistency check)
 	oTeReceiverOutput = make(OTeReceiverOutput, L)
-	err = HashSalted(R.sid[:], t_j[:eta], oTeReceiverOutput)
+	err = HashSalted(R.sid, t_j[:eta], oTeReceiverOutput)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
 	}
@@ -136,7 +136,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	extDeltaOpt := ExtDeltaOpt{}
 	for i := 0; i < Kappa; i++ {
 		// This is the core expansion of the OT: k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
-		extDeltaOpt[i], err = hashing.PRG(S.sid[:], S.baseOtSeeds.OneTimePadDecryptionKey[i][:], etaPrimeBytes)
+		extDeltaOpt[i], err = hashing.PRG(S.sid, S.baseOtSeeds.OneTimePadDecryptionKey[i][:], etaPrimeBytes)
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken COTe (Ext.2)")
 		}
@@ -169,11 +169,11 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 		}
 	}
 	// (T&R.3) Randomize by hashing the first η rows of q_j and q_j+Δ (drop η' - η = σ rows)
-	err = HashSalted(S.sid[:], extCorrelationsTransposed[:eta], oTeSenderOutput[0][:])
+	err = HashSalted(S.sid, extCorrelationsTransposed[:eta], oTeSenderOutput[0][:])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.3)")
 	}
-	err = HashSalted(S.sid[:], extCorrelationsTransposedPlusDelta[:eta], oTeSenderOutput[1][:])
+	err = HashSalted(S.sid, extCorrelationsTransposedPlusDelta[:eta], oTeSenderOutput[1][:])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.3)")
 	}
