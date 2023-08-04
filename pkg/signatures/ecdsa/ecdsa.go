@@ -178,7 +178,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	messageDigest, err := hashing.Hash(hashFunc, message)
 	if err != nil {
-		return errs.WrapFailed(err, "could not produce ")
+		return errs.WrapFailed(err, "could not produce message digest")
 	}
 
 	nativeCurve, err := curve.ToEllipticCurve()
