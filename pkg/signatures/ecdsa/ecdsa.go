@@ -2,7 +2,6 @@ package ecdsa
 
 import (
 	nativeEcdsa "crypto/ecdsa"
-	"crypto/elliptic"
 	"hash"
 	"math/big"
 
@@ -12,26 +11,30 @@ import (
 )
 
 type Signature struct {
+	V *int
 	R curves.Scalar
 	S curves.Scalar
 }
 
-type RecoveryId struct {
-	V int
+// Normalize normalizes the signature to a "low S" form. In ECDSA, signatures are
+// of the form (r, s) where r and s are numbers lying in some finite
+// field. Both (r, s) and (r, -s) are valid signatures of the same message
+// so ECDSA does not have strong existential unforgeability
+// We normalize to the low S form which ensures that the s value
+// lies in the lower half of its range.
+// See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
+func (signature *Signature) Normalize() {
+	if !signature.IsNormalized() {
+		signature.S = signature.S.Neg()
+		if signature.V != nil {
+			v := *signature.V ^ 1
+			signature.V = &v
+		}
+	}
 }
 
-type SignatureExt struct {
-	Signature
-	RecoveryId
-}
-
-type PublicKey struct {
-	Q curves.Point
-}
-
-type SecretKey struct {
-	PublicKey
-	D curves.Scalar
+func (signature *Signature) IsNormalized() bool {
+	return signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
 }
 
 // CalculateRecoveryId calculates recoveryId
@@ -48,7 +51,7 @@ type SecretKey struct {
 // Recovery process itself described in 4.1.6: http://www.secg.org/sec1-v2.pdf
 // Note that V here is the same as recovery Id is EIP-155.
 // Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
-func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
+func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *big.Int
 
 	if p, ok := bigR.(*curves.PointK256); ok {
@@ -58,16 +61,16 @@ func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
 	} else {
-		return nil, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
+		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
 	}
 
 	curve, err := curves.GetCurveByName(bigR.CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
+		return -1, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
 	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
+		return -1, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
 	subGroupOrder := nativeCurve.Params().N
 
@@ -82,73 +85,20 @@ func CalculateRecoveryId(bigR curves.Point) (*RecoveryId, error) {
 	case -1:
 		break
 	case 0:
-		return nil, errs.NewFailed("x coordinate of the signature is equal to subGroupOrder")
+		return -1, errs.NewFailed("x coordinate of the signature is equal to subGroupOrder")
 	case 1:
 		recoveryId += 2
 		break
 	default:
-		return nil, errs.NewFailed("big int cmp failed, we should never be here")
+		return -1, errs.NewFailed("big int cmp failed, we should never be here")
 	}
 
-	return &RecoveryId{V: recoveryId}, nil
-}
-
-// Normalize normalizes the signature to a "low S" form. In ECDSA, signatures are
-// of the form (r, s) where r and s are numbers lying in some finite
-// field. Both (r, s) and (r, -s) are valid signatures of the same message
-// so ECDSA does not have strong existential unforgeability
-// We normalize to the low S form which ensures that the s value
-// lies in the lower half of its range.
-// See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
-func (signatureExt *SignatureExt) Normalize() {
-	if !signatureExt.IsNormalized() {
-		signatureExt.S = signatureExt.S.Neg()
-		signatureExt.V ^= 1
-	}
-}
-
-func (signatureExt *SignatureExt) VerifyMessage(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
-	if ok := signatureExt.VerifyMessageWithPublicKey(publicKey, hashFunc, message); !ok {
-		return false
-	}
-	if ok := signatureExt.VerifyMessageWithRecoveryId(&signatureExt.RecoveryId, hashFunc, message); !ok {
-		return false
-	}
-
-	return true
-}
-
-func (signature *Signature) IsNormalized() bool {
-	return signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
-}
-
-func (signature *Signature) VerifyMessageWithPublicKey(publicKey *PublicKey, hashFunc func() hash.Hash, message []byte) bool {
-	nativePublicKey, err := publicKey.ToNative()
-	if err != nil {
-		return false
-	}
-
-	messageHash, err := hashing.Hash(hashFunc, message)
-	if err != nil {
-		return false
-	}
-
-	nativeR, nativeS := signature.ToNative()
-	return nativeEcdsa.Verify(nativePublicKey, messageHash, nativeR, nativeS)
-}
-
-func (signature *Signature) VerifyMessageWithRecoveryId(recoveryId *RecoveryId, hashFunc func() hash.Hash, message []byte) bool {
-	recoveredPublicKey, err := signature.RecoverPublicKey(recoveryId, hashFunc, message)
-	if err != nil {
-		return false
-	}
-
-	return signature.VerifyMessageWithPublicKey(recoveredPublicKey, hashFunc, message)
+	return recoveryId, nil
 }
 
 // RecoverPublicKey recovers PublicKey (point on the curve) based od messageHash, public key and recovery id.
-func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc func() hash.Hash, message []byte) (*PublicKey, error) {
-	if recoveryId == nil {
+func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message []byte) (curves.Point, error) {
+	if signature.V == nil {
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
@@ -166,7 +116,7 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx := signature.R.BigInt()
-	if (recoveryId.V & 2) != 0 {
+	if (*signature.V & 2) != 0 {
 		rx = new(big.Int).Add(rx, subGroupOrder)
 	}
 	rxBytes := rx.Bytes()
@@ -174,7 +124,7 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 		rxBytes = append(make([]byte, 32-len(rxBytes)), rxBytes...)
 	}
 	ryCompressed := []byte{byte(2)}
-	if (recoveryId.V & 1) != 0 {
+	if (*signature.V & 1) != 0 {
 		ryCompressed[0]++
 	}
 	affine := append(ryCompressed[:], rxBytes...)
@@ -189,7 +139,7 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash message")
 	}
-	zInt, err := hashToInt(messageHash, curve)
+	zInt, err := HashToInt(messageHash, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get int from hash")
 	}
@@ -201,103 +151,57 @@ func (signature *Signature) RecoverPublicKey(recoveryId *RecoveryId, hashFunc fu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate inverse of R.x")
 	}
-	bigQ := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
+	publicKey := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
 
-	return &PublicKey{Q: bigQ}, nil
+	return publicKey, nil
 }
 
-func (signature *Signature) ToNative() (r *big.Int, s *big.Int) {
-	return signature.R.BigInt(), signature.S.BigInt()
-}
-
-func (signature *Signature) FromNative(curve elliptic.Curve, r *big.Int, s *big.Int) (*Signature, error) {
-	knoxCurve, err := curves.GetCurveByName(curve.Params().Name)
+func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Point, message []byte) error {
+	curve, err := curves.GetCurveByName(publicKey.CurveName())
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "curve not supported")
+		return errs.WrapFailed(err, "could not get curve")
+	}
+	if curve.Name != curves.K256Name && curve.Name != curves.P256Name {
+		return errs.NewFailed("curve is not supported")
+	}
+	if !publicKey.IsOnCurve() {
+		return errs.NewVerificationFailed("public key is not on curve")
+	}
+	if publicKey.IsIdentity() {
+		return errs.NewIsIdentity("public key is identity")
+	}
+	if signature.V != nil {
+		recoveredPublicKey, err := RecoverPublicKey(signature, hashFunc, message)
+		if err != nil {
+			return errs.WrapFailed(err, "signature has a recovery id but public key could not be recovered")
+		}
+		if !recoveredPublicKey.Equal(publicKey) {
+			return errs.NewVerificationFailed("incorrect recovery id")
+		}
 	}
 
-	knoxR, err := knoxCurve.NewScalar().SetBigInt(r)
+	messageDigest, err := hashing.Hash(hashFunc, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate r")
-	}
-	knoxS, err := knoxCurve.NewScalar().SetBigInt(s)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate s")
+		return errs.WrapFailed(err, "could not produce message digest")
 	}
 
-	signature.R = knoxR
-	signature.S = knoxS
-	return signature, nil
-}
-
-func (pk *PublicKey) ToNative() (nativePublicKey *nativeEcdsa.PublicKey, err error) {
-	curve, err := curves.GetCurveByName(pk.Q.CurveName())
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve of the public key")
-	}
 	nativeCurve, err := curve.ToEllipticCurve()
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
+		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
 
-	pkX, pkY := getPointCoordinates(pk.Q)
-	return &nativeEcdsa.PublicKey{
+	x, y := getPointCoordinates(publicKey)
+	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     pkX,
-		Y:     pkY,
-	}, nil
+		X:     x, Y: y,
+	}
+	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.BigInt(), signature.S.BigInt()); !ok {
+		return errs.NewVerificationFailed("signature verification failed")
+	}
+	return nil
 }
 
-func (pk *PublicKey) FromNative(nativePublicKey *nativeEcdsa.PublicKey) (*PublicKey, error) {
-	curve, err := curves.GetCurveByName(nativePublicKey.Curve.Params().Name)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve of the public key")
-	}
-
-	q, err := curve.NewIdentityPoint().Set(nativePublicKey.X, nativePublicKey.Y)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set point coordinates")
-	}
-
-	return &PublicKey{
-		Q: q,
-	}, nil
-}
-
-func (sk *SecretKey) ToNative() (nativePrivateKey *nativeEcdsa.PrivateKey, err error) {
-	nativePublicKey, err := sk.PublicKey.ToNative()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot map public key")
-	}
-
-	return &nativeEcdsa.PrivateKey{
-		PublicKey: *nativePublicKey,
-		D:         sk.D.BigInt(),
-	}, nil
-}
-
-func (sk *SecretKey) FromNative(nativePrivateKey *nativeEcdsa.PrivateKey) (secretKey *SecretKey, err error) {
-	publicKey, err := new(PublicKey).FromNative(&nativePrivateKey.PublicKey)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot map public key")
-	}
-
-	curve, err := curves.GetCurveByName(nativePrivateKey.Curve.Params().Name)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve of the private key")
-	}
-	d, err := curve.NewScalar().SetBigInt(nativePrivateKey.D)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not set scalar")
-	}
-
-	return &SecretKey{
-		PublicKey: *publicKey,
-		D:         d,
-	}, nil
-}
-
-func hashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
+func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
 	ecdsaCurve, err := curve.ToEllipticCurve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")

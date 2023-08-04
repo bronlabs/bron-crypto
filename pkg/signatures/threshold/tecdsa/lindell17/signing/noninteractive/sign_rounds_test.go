@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"testing"
+
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
@@ -14,7 +16,6 @@ import (
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
 	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_NonInteractiveSignHappyPath(t *testing.T) {
@@ -85,8 +86,8 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 
 					// signature is valid
 					for _, identity := range identities {
-						ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[identity].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-						require.True(t, ok)
+						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity].SigningKeyShare.PublicKey, message)
+						require.NoError(t, err)
 					}
 				})
 			}
