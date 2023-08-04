@@ -24,13 +24,17 @@ type Signature struct {
 // lies in the lower half of its range.
 // See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
 func (signature *Signature) Normalize() {
-	isNormalized := signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
-	if !isNormalized {
+	if !signature.IsNormalized() {
 		signature.S = signature.S.Neg()
 		if signature.V != nil {
-			*signature.V ^= 1
+			v := *signature.V ^ 1
+			signature.V = &v
 		}
 	}
+}
+
+func (signature *Signature) IsNormalized() bool {
+	return signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
 }
 
 // CalculateRecoveryId calculates recoveryId
