@@ -29,13 +29,14 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	for i := 0; i < L; i++ {
 		bob.BTilde[i] = bob.Curve.Scalar.Zero()
 		for j := 0; j < Xi; j++ {
+			// constant time branching, because we'll add if even if we don't need it
+			addedCurrent := bob.BTilde[i].Add(bob.gadget[j])
 			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
-				bob.BTilde[i] = bob.BTilde[i].Add(bob.gadget[j])
+				bob.BTilde[i] = addedCurrent
 			}
 		}
 	}
 
-	// TODO: modify to work without forced reuse
 	// TODO: get rid of pointer stuff, because otherwise cannot take address
 	// step 1.3
 	x := softspoken.OTeInputChoices(bob.Beta)
@@ -114,12 +115,11 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.9
 	r := [Xi]curves.Scalar{}
 	for j := 0; j < Xi; j++ {
-		jThR := alice.Curve.Scalar.Zero()
+		r[j] = alice.Curve.Scalar.Zero()
 		for i := 0; i < L; i++ {
-			jThR = jThR.Add(chiTilde[i].Mul(zTildeA[i][j]))
-			jThR = jThR.Add(chiHat[i].Mul(zHatA[i][j]))
+			r[j] = r[j].Add(chiTilde[i].Mul(zTildeA[i][j]))
+			r[j] = r[j].Add(chiHat[i].Mul(zHatA[i][j]))
 		}
-		r[j] = jThR
 	}
 
 	// step 2.10
@@ -195,8 +195,13 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	for j := 0; j < Xi; j++ {
 		current := bob.Curve.Scalar.Zero()
 		for i := 0; i < L; i++ {
+			// constant time branching
+			addedCurrent := current.Add(round2output.U[i])
+			originalCurrent := current
 			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
-				current = current.Add(round2output.U[i])
+				current = addedCurrent
+			} else {
+				current = originalCurrent
 			}
 			current = current.
 				Sub(chiTilde[i].Mul(zTildeB[i][j])).
