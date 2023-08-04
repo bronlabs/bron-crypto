@@ -56,7 +56,7 @@ func CheckSoftspokenBaseOTOutputs(t *testing.T, baseOtSenderOutput *vsot.SenderO
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
 func RunSoftspokenOTe(t *testing.T,
 	curve *curves.Curve,
-	uniqueSessionId [vsot.DigestSize]byte,
+	uniqueSessionId []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices *softspoken.OTeInputChoices, // receiver's input, the Choice bits x
@@ -117,7 +117,7 @@ func CheckSoftspokenOTeOutputs(t *testing.T,
 func RunSoftspokenCOTe(t *testing.T,
 	useForcedReuse bool,
 	curve *curves.Curve,
-	uniqueSessionId [vsot.DigestSize]byte,
+	uniqueSessionId []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices *softspoken.OTeInputChoices, // receiver's input, the Choice bits x

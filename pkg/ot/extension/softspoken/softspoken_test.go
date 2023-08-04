@@ -34,7 +34,7 @@ func TestOTextension(t *testing.T) {
 
 		// Run OTe
 		oTeSenderOutput, oTeReceiverOutput, err := test_utils.RunSoftspokenOTe(
-			t, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices)
+			t, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices)
 		require.NoError(t, err)
 
 		// Check OTe result
@@ -62,7 +62,7 @@ func TestCOTextension(t *testing.T) {
 
 		// Run COTe
 		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(t,
-			useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
+			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
@@ -93,7 +93,7 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 
 		// Run COTe
 		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(t,
-			useForcedReuse, curve, uniqueSessionId, baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
+			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result

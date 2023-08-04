@@ -3,8 +3,10 @@ package merlin
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"io"
 
+	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/mimoo/StrobeGo/strobe"
@@ -19,6 +21,8 @@ const (
 )
 
 var hashConstructor = sha256.New // Hash function used to hash messages longer than maxUnhashedMessage bytes.
+
+var _ transcript.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
 	s strobe.Strobe
@@ -45,7 +49,7 @@ func (t *Transcript) Type() transcript.Type {
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
-// Append adds the message to the transcript with the supplied label. Messages
+// AppendMessage adds the message to the transcript with the supplied label. Messages
 // of length greater than 100 MB must be hashed.
 func (t *Transcript) AppendMessage(label, message []byte) error {
 	// AdditionalData[label || le32(len(message))]
@@ -63,6 +67,33 @@ func (t *Transcript) AppendMessage(label, message []byte) error {
 		t.s.AD(false, message)
 	}
 	return nil
+}
+
+// AppendScalars appends a vector of scalars to the transcript, serializing each scalar
+// with the label=label_i. If the vector's length is 1, label is used directly.
+func (t *Transcript) AppendScalars(label []byte, scalars ...curves.Scalar) {
+	if len(scalars) == 1 {
+		_ = t.AppendMessage([]byte("curve_name"), []byte(scalars[0].CurveName()))
+		_ = t.AppendMessage(label, scalars[0].Bytes())
+	}
+	for i, scalar := range scalars {
+		_ = t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(scalar.CurveName()))
+		_ = t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), scalar.Bytes())
+	}
+}
+
+// AppendPoints appends a vector of points to the transcript, serializing each
+// point to the compressed affine form, with the label=label_i. If the vector's length
+// is 1, label is used directly.
+func (t *Transcript) AppendPoints(label []byte, points ...curves.Point) {
+	if len(points) == 1 {
+		_ = t.AppendMessage([]byte("curve_name"), []byte(points[0].CurveName()))
+		_ = t.AppendMessage(label, points[0].ToAffineCompressed())
+	}
+	for i, point := range points {
+		_ = t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(point.CurveName()))
+		_ = t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), point.ToAffineCompressed())
+	}
 }
 
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
