@@ -43,7 +43,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}, nil
 }
 
-func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.SignatureExt, err error) {
+func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.Signature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey]
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := p.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
@@ -67,29 +67,17 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	}
 	sDoublePrime := k1Inv.Mul(sPrime)
 
-	publicKey := &ecdsa.PublicKey{
-		Q: p.myShard.SigningKeyShare.PublicKey,
+	sigma = &ecdsa.Signature{
+		R: r,
+		S: sDoublePrime,
 	}
-
-	recoveryId, err := ecdsa.CalculateRecoveryId(bigR)
+	v, err := ecdsa.CalculateRecoveryId(bigR)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate recovery id")
+		return nil, errs.WrapFailed(err, "could not compute recovery id")
 	}
-	signature := &ecdsa.SignatureExt{
-		Signature: ecdsa.Signature{
-			R: r,
-			S: sDoublePrime,
-		},
-		RecoveryId: *recoveryId,
+	sigma.V = &v
+	if err := ecdsa.Verify(sigma, p.cohortConfig.CipherSuite.Hash, p.myShard.SigningKeyShare.PublicKey, message); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
 	}
-	signature.Normalize()
-
-	if ok := signature.VerifyMessageWithPublicKey(publicKey, p.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid signature")
-	}
-	if ok := signature.VerifyMessageWithRecoveryId(&signature.RecoveryId, p.cohortConfig.CipherSuite.Hash, message); !ok {
-		return nil, errs.NewFailed("invalid recovery id")
-	}
-
-	return signature, nil
+	return sigma, nil
 }

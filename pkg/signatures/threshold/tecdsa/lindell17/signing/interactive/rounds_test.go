@@ -67,8 +67,8 @@ func Test_HappyPath(t *testing.T) {
 	signature, err := primary.Round5(r4, message)
 	require.NoError(t, err)
 
-	ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[bob].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-	require.True(t, ok)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+	require.NoError(t, err)
 }
 
 func Test_HappyPathWithDkg(t *testing.T) {
@@ -83,7 +83,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, lindell17.Threshold, identities)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, lindell17.Threshold, identities)
 	require.NoError(t, err)
 
 	alice := 0
@@ -95,8 +95,8 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	shards := doLindell17Dkg(t, sid, cohortConfig, identities, signingKeyShares, publicKeyShares)
 	signature := doLindell17Sign(t, sid, cohortConfig, identities, shards, alice, bob, message)
 
-	ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[alice].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-	require.True(t, ok)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+	require.NoError(t, err)
 }
 
 func Test_RecoveryIdCalculation(t *testing.T) {
@@ -154,19 +154,25 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			signature, err := primary.Round5(r4, message)
 			require.NoError(t, err)
 
-			ok := signature.VerifyMessage(&ecdsa.PublicKey{Q: shards[bob].SigningKeyShare.PublicKey}, cipherSuite.Hash, message)
-			require.True(t, ok)
+			err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+			require.NoError(t, err)
 
 			t.Run("signature should be normalized", func(t *testing.T) {
 				t.Parallel()
-				require.True(t, signature.IsNormalized())
+				signatureCopy := &ecdsa.Signature{
+					R: signature.R,
+					S: signature.S,
+					V: signature.V,
+				}
+				signatureCopy.Normalize()
+				require.Zero(t, signatureCopy.S.Cmp(signature.S))
 			})
 
 			t.Run("should recover public key", func(t *testing.T) {
 				t.Parallel()
-				recoveredPublicKey, err := signature.RecoverPublicKey(&signature.RecoveryId, cipherSuite.Hash, message)
+				recoveredPublicKey, err := ecdsa.RecoverPublicKey(signature, cipherSuite.Hash, message)
 				require.NoError(t, err)
-				require.True(t, recoveredPublicKey.Q.Equal(shards[alice].SigningKeyShare.PublicKey))
+				require.True(t, recoveredPublicKey.Equal(shards[alice].SigningKeyShare.PublicKey))
 			})
 		})
 	}
@@ -238,7 +244,7 @@ func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortCo
 	return shards
 }
 
-func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice int, bob int, message []byte) (signature *ecdsa.SignatureExt) {
+func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice int, bob int, message []byte) (signature *ecdsa.Signature) {
 	t.Helper()
 
 	primary, err := interactive.NewPrimaryCosigner(identities[alice], identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)

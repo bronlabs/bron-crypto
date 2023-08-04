@@ -19,6 +19,9 @@ import (
 )
 
 func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+	if testing.Short() {
+		t.Skip()
+	}
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
