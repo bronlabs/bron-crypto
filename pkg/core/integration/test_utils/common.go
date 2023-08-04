@@ -3,6 +3,8 @@ package test_utils
 import (
 	crand "crypto/rand"
 	"encoding/json"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"hash"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -112,4 +114,12 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol
 	}
 
 	return cohortConfig, nil
+}
+
+func MakeTranscripts(identities []integration.IdentityKey, label string) (transcripts []transcript.Transcript) {
+	transcripts = make([]transcript.Transcript, len(identities))
+	for i := range identities {
+		transcripts[i] = merlin.NewTranscript(label)
+	}
+	return transcripts
 }
