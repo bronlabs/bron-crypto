@@ -17,24 +17,25 @@
 
 [ ] Fuzzing
 
-<!-- If this is a primitive, you need to have all. -->
+<!--- If this is a primitive, you need to have all. --->
 ## Documentation
 [ ] Comments on hard to understand places
 
 [ ] Comments on exported function
 
+<!--- Every logical piece of your code corresponds to a numbered code on a spec written somewhere in README.md or in LaTeX In overleaf. --->
 [ ] Spec
 
-<!-- These should be simple enough, and tied to this ticket enough to warrant fixing it in the same PR. Otherwise, create a new ticket. -->
+<!--- These should be simple enough, and tied to this ticket enough to warrant fixing it in the same PR. Otherwise, create a new ticket. --->
 ## Other Issues Fix, If Any:
 
 
 
-<!-- If It's a Bug, Fill in both. If it's a feature, fill at least one. --->
+<!--- If It's a Bug, Fill in both. If it's a feature, fill at least one. --->
 ## Impact
-<!-- Priority: The level of (business) importance. -->
-<!--           High | Medium | Low                 -->
+<!--- Priority: The level of (business) importance.                --->
+<!---           Critical (select carefully) | High | Medium | Low  --->
 Priority:
-<!-- Severity: The degree of impact on the development or operation of a component or system. -->
-<!--           Critical (select carefully) | Major | Minor | Low                                                 -->
+<!--- Severity: The degree of impact on the development or operation of a component or system. --->
+<!---           Critical (select carefully) | Major | Minor | Low                              --->
 Severity:
