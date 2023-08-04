@@ -3,6 +3,7 @@ package shamir_test
 import (
 	crand "crypto/rand"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -102,13 +103,16 @@ func TestShamirComputeL(t *testing.T) {
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
-	identities := make([]int, 0)
-	for _, xi := range shares {
-		identities = append(identities, xi.Id)
+	identities := make([]int, len(shares))
+	for i, xi := range shares {
+		identities[i] = xi.Id
 	}
 	lCoeffs, err := scheme.LagrangeCoefficients(identities)
 	require.Nil(t, err)
 	require.NotNil(t, lCoeffs)
+	require.Len(t, lCoeffs, len(identities))
+	fmt.Println(identities)
+	fmt.Println(lCoeffs)
 
 	// Checking we can reconstruct the same secret using Lagrange coefficients.
 	result := curve.NewScalar()
@@ -142,7 +146,44 @@ func TestShamirAllCombinations(t *testing.T) {
 				rSecret, err := scheme.Combine(shares[i], shares[j], shares[k])
 				require.Nil(t, err)
 				require.NotNil(t, rSecret)
-				require.Equal(t, rSecret, secret)
+				require.Equal(t, rSecret.Cmp(secret), 0)
+			}
+		}
+	}
+}
+
+func TestAdditiveAllCombinations(t *testing.T) {
+	t.Parallel()
+	curve := curves.ED25519()
+	scheme, err := shamir.NewDealer(3, 5, curve)
+	require.Nil(t, err)
+	require.NotNil(t, scheme)
+
+	secret := curve.Scalar.Hash([]byte("test"))
+	shares, err := scheme.Split(secret, crand.Reader)
+	require.Nil(t, err)
+	require.NotNil(t, shares)
+	// There are 5*4*3 possible combinations
+	for i := 0; i < 5; i++ {
+		for j := 0; j < 5; j++ {
+			if i == j {
+				continue
+			}
+			for k := 0; k < 5; k++ {
+				if i == k || j == k {
+					continue
+				}
+
+				iAdditive, err := shares[i].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				require.NoError(t, err)
+				jAdditive, err := shares[j].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				require.NoError(t, err)
+				kAdditive, err := shares[k].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				require.NoError(t, err)
+
+				rSecret := iAdditive.Add(jAdditive.Add(kAdditive))
+				require.NotNil(t, rSecret)
+				require.Equal(t, rSecret.Cmp(secret), 0)
 			}
 		}
 	}

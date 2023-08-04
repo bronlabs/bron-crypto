@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"crypto/sha256"
-	"fmt"
 
 	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
@@ -214,7 +213,6 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 		S: sDoublePrime,
 	}
 	signature.Normalize()
-	fmt.Println(">>>>>>>>", *signature.V)
 	if err := ecdsa.Verify(signature, primaryCosigner.cohortConfig.CipherSuite.Hash, primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
 	}

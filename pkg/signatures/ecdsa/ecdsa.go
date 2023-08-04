@@ -25,8 +25,12 @@ type Signature struct {
 // lies in the lower half of its range.
 // See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
 func (signature *Signature) Normalize() {
-	if signature.S.Neg().BigInt().Cmp(signature.S.BigInt()) < 0 {
+	isNormalized := signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
+	if !isNormalized {
 		signature.S = signature.S.Neg()
+		if signature.V != nil {
+			*signature.V ^= 1
+		}
 	}
 }
 
@@ -46,6 +50,7 @@ func (signature *Signature) Normalize() {
 // Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
 func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *big.Int
+
 	if p, ok := bigR.(*curves.PointK256); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
@@ -67,7 +72,7 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	subGroupOrder := nativeCurve.Params().N
 
 	var recoveryId int
-	if ry.Bytes()[0]&1 == 0 {
+	if ry.Bit(0) == 0 {
 		recoveryId = 0
 	} else {
 		recoveryId = 1
