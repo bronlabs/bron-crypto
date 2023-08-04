@@ -14,7 +14,7 @@ for all of the input batches.
 */
 package softspoken
 
-import "github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+import "github.com/copperexchange/knox-primitives/pkg/core/curves"
 
 const (
 	// ------------------------ CONFIGURABLE PARAMETERS --------------------- //
@@ -35,7 +35,7 @@ const (
 
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
 	// Xi (ξ) is the batch size in bits used in the COTe protocol. For DKLS23,
-	// ξ = l_OTe (κ + 2s), where s is their statistical security parameter. For
+	// ξ = LOTe (κ + 2s), where s is their statistical security parameter. For
 	// convenience, we set s = σ
 	Xi = (Kappa + 2*Sigma)
 
@@ -43,14 +43,14 @@ const (
 	N = 2
 
 	// SET DYNAMICALY TO ALLOW VARIABLE-SIZE INPUTS
-	// L is the number of ξ×ω×κ-bit batches after in the expansion. For "Forced Reuse"
+	// LOTe is the number of ξ×ω×κ-bit batches after in the expansion. For "Forced Reuse"
 	// (as in DKLS23), it is instead the number of reuses of the output OTe batch.
-	// L = ...
+	// LOTe = ...
 
 	// eta (η) is the OT expansion size without the statistical redundancy.
-	// Eta = L*ξ
+	// Eta = LOTe*ξ
 
-	// etaPrime (η') is the full OT expansion size. EtaPrime = L*ξ + σ
+	// etaPrime (η') is the full OT expansion size. EtaPrime = LOTe*ξ + σ
 	// EtaPrime = Eta + σ
 
 	// M is the number of consistency check challenges. M = η/σ
@@ -65,32 +65,32 @@ const (
 type (
 	// --------------------------- (Random) OTe ----------------------------- //
 
-	// OTeInputChoices (x_i) ∈ [L][ξ]bits are the input choice bits for the OTe
-	// ("Choice" in the diagram above)
+	// OTeInputChoices (x_i) ∈ [LOTe][ξ]bits are the input choice bits for the OTe
+	// ("Choice" in the diagram)
 	OTeInputChoices = [][XiBytes]byte
 
-	// OTeSenderOutput (v_0, v_1) ∈ [N][L][ξ][ω][κ]bits is the output of the sender
-	// in the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram above)
+	// OTeSenderOutput (v_0, v_1) ∈ [N][LOTe][ξ][ω][κ]bits is the output of the
+	// sender in the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram)
 	OTeSenderOutput = [N][][Xi][ROTeWidth][KappaBytes]byte
 
-	// OTeReceiverOutput (v_x) ∈ [L][ξ][ω][κ]bits is the output of the receiver in the
-	// OTe protocol ("DeltaOpt" in the diagram above)
+	// OTeReceiverOutput (v_x) ∈ [LOTe][ξ][ω][κ]bits is the output of the receiver
+	// in the OTe protocol ("DeltaOpt" in the diagram)
 	OTeReceiverOutput = [][Xi][ROTeWidth][KappaBytes]byte
 
 	// ----------------------- (Correlated OTe) COTe ------------------------ //
 
-	// COTeInputOpt (α) ∈ [L'][ξ][ω]curve.Scalar is the sender input to COTe
-	// protocol ("InputOpt" in the diagram above)
+	// COTeInputOpt (α) ∈ [L][ξ][ω]curve.Scalar is the sender input to COTe
+	// protocol ("InputOpt" in the diagram)
 	COTeInputOpt = [][Xi][ROTeWidth]curves.Scalar
 
-	// DerandomizeMask (τ) ∈ [L'][ξ][ω]curve.Scalar is the correlation mask
+	// DerandomizeMask (τ) ∈ [L][ξ][ω]curve.Scalar is the correlation mask
 	DerandomizeMask [][Xi][ROTeWidth]curves.Scalar
 
-	// COTeSenderOutput (z_A) ∈ [L'][ξ][ω]curve.Scalar is the output of the sender
+	// COTeSenderOutput (z_A) ∈ [L][ξ][ω]curve.Scalar is the output of the sender
 	// in the COTe protocol, ("Correlation" in the diagram above)
 	COTeSenderOutput = [][Xi][ROTeWidth]curves.Scalar
 
-	// COTeReceiverOutput (z_B) ∈ [L'][ξ][ω]curve.Scalar is the receiver output
+	// COTeReceiverOutput (z_B) ∈ [L][ξ][ω]curve.Scalar is the receiver output
 	// in the COTe protocol ("DeltaOpt" in the diagram above)
 	COTeReceiverOutput = [][Xi][ROTeWidth]curves.Scalar
 

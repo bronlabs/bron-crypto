@@ -21,27 +21,27 @@ type Round1Output struct {
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
 func (R *Receiver) Round1ExtendAndProveConsistency(
-	oTeInputChoices OTeInputChoices, // x_i ∈ [L][ξ]bits
-) (oTeReceiverOutput OTeReceiverOutput, // v_x ∈ [L][ξ][ω][κ]bits
+	oTeInputChoices OTeInputChoices, // x_i ∈ [LOTe][ξ]bits
+) (oTeReceiverOutput OTeReceiverOutput, // v_x ∈ [LOTe][ξ][ω][κ]bits
 	round1Output *Round1Output, // u_i ∈ [κ][η']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	err error) {
 	round1Output = &Round1Output{}
 
 	// Sanitize inputs and compute sizes
-	L := len(oTeInputChoices) // Number of ξ×ω×κ-bit output OTe batches
-	if L == 0 {
+	LOTe := len(oTeInputChoices) // Number of ξ×ω×κ-bit output OTe batches
+	if LOTe == 0 {
 		return nil, nil, errs.NewInvalidArgument("nil (oTeInputChoices) in input arguments of Round1ExtendAndProveConsistency")
 	}
-	if (L > 1) && (R.useForcedReuse) {
-		return nil, nil, errs.NewInvalidArgument("len(choices) should be 1 when useForcedReuse is set (is %d)", L)
+	if (LOTe > 1) && (R.useForcedReuse) {
+		return nil, nil, errs.NewInvalidArgument("len(choices) should be 1 when useForcedReuse is set (is %d)", LOTe)
 	}
-	eta := L * Xi                          // η = L*ξ
+	eta := LOTe * Xi                       // η = L*ξ
 	etaBytes := eta >> 3                   // η/8
 	etaPrimeBytes := etaBytes + SigmaBytes // η'=η+σ (η'=ξ+σ if useForcedReuse is set)
 
 	// (Ext.1) Store the input choices and fill the rest with random values
 	R.extPackedChoices = make([]byte, etaPrimeBytes) // x_i ∈ [η']bits
-	for l := 0; l < L; l++ {
+	for l := 0; l < LOTe; l++ {
 		copy(R.extPackedChoices[l*XiBytes:(l+1)*XiBytes], oTeInputChoices[l][:])
 	}
 	if _, err = rand.Read(R.extPackedChoices[etaBytes:]); err != nil {
@@ -82,7 +82,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	// (T&R.1) Transpose t^i_0 into t_j
 	t_j := bitstring.TransposeBooleanMatrix(extOptions[0][:]) // t_j ∈ [η'][κ]bits
 	// (T&R.2) Hash η rows of t_j using the index as salt (drop η' - η rows, used for consistency check)
-	oTeReceiverOutput = make(OTeReceiverOutput, L)
+	oTeReceiverOutput = make(OTeReceiverOutput, LOTe)
 	err = HashSalted(R.sid, t_j[:eta], oTeReceiverOutput)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
@@ -112,24 +112,21 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 		return nil, nil, nil, errs.NewInvalidArgument("nil (round1Output) in input arguments of Round2 of COTe")
 	}
 	etaPrimeBytes := len(round1Output.expansionMask[0])
-	etaPrime := etaPrimeBytes << 3 // η' = L*ξ + σ
-	eta := etaPrime - Sigma        // η = L*ξ
-	L := eta / Xi                  // L = (η' - σ)/ξ (L = 1 if useForcedReuse is set)
-	LPrime := len(InputOpts)       // Number of ξ×ω-scalar batches (L' = L unless useForcedReuse is set)
-	if S.useForcedReuse {          // Forced reuse: reuse a single ξ-bit OTe batch
-		if L != 1 {
-			return nil, nil, nil, errs.NewInvalidArgument("ExpansionMask batch length (L=%d) should be 1 (Forced Reuse)", L)
+	etaPrime := etaPrimeBytes << 3 // η' = LOTe*ξ + σ
+	eta := etaPrime - Sigma        // η = LOTe*ξ
+	LOTe := eta / Xi               // LOTe = (η' - σ)/ξ (L = 1 if useForcedReuse is set)
+	L := len(InputOpts)            // Number of ξ×ω-scalar batches (L = LOTe unless useForcedReuse is set)
+	if S.useForcedReuse {          // Forced reuse: reuse a single ξ×ω×κ-bit OTe batch
+		if LOTe != 1 {
+			return nil, nil, nil, errs.NewInvalidArgument("ExpansionMask batch length (L=%d) should be 1 (Forced Reuse)", LOTe)
 		}
-		oTeSenderOutput = &OTeSenderOutput{
-			make([][Xi][ROTeWidth][KappaBytes]byte, 1), make([][Xi][ROTeWidth][KappaBytes]byte, 1),
+	} else { // No forced reuse: get L different OTe batches
+		if (L != LOTe) && (L != 0) { // L = 0 if InputOpts is nil (to just run OTe)
+			return nil, nil, nil, errs.NewInvalidArgument("InputOpts and expansionMask lengths don't match (%d != %d) ", LOTe, L)
 		}
-	} else { // No forced reuse: get L' different ξ-bit OTe batches
-		if (LPrime != L) && (LPrime != 0) { // L' = 0 if InputOpts is nil (just OTe)
-			return nil, nil, nil, errs.NewInvalidArgument("InputOpts and expansionMask lengths don't match (%d != %d) ", L, LPrime)
-		}
-		oTeSenderOutput = &OTeSenderOutput{
-			make([][Xi][ROTeWidth][KappaBytes]byte, L), make([][Xi][ROTeWidth][KappaBytes]byte, L),
-		}
+	}
+	oTeSenderOutput = &OTeSenderOutput{
+		make([][Xi][ROTeWidth][KappaBytes]byte, LOTe), make([][Xi][ROTeWidth][KappaBytes]byte, LOTe),
 	}
 
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
@@ -203,9 +200,9 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (Derand.1) Compute the derandomization mask τ and the output correlation z_A
-	cOTeSenderOutput = make(COTeSenderOutput, LPrime)
-	round2Output = &Round2Output{derandMask: make(DerandomizeMask, LPrime)}
-	for l := 0; l < LPrime; l++ {
+	cOTeSenderOutput = make(COTeSenderOutput, L)
+	round2Output = &Round2Output{derandMask: make(DerandomizeMask, L)}
+	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// if forced reuse, use a single OTe batch (set idxOTe = 0)
@@ -229,7 +226,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for l := 0; l < LPrime; l++ {
+	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				S.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
@@ -250,17 +247,17 @@ func (receiver *Receiver) Round3Derandomize(
 	if (round2Output == nil) || (len(oTeReceiverOutput) == 0) {
 		return nil, errs.NewInvalidArgument("nil in input arguments of Round3Derandomize")
 	}
-	L := len(oTeReceiverOutput)                // Number of ξ×ω×κ-bit OTe batches
-	LPrime := len(round2Output.derandMask)     // Number of ξ×ω-scalar COTe batches
-	if (receiver.useForcedReuse) && (L != 1) { // Forced reuse: reuse a single OTe batch
-		return nil, errs.NewInvalidArgument("oTeReceiverOutput batch length (L=%d) should be 1 (Forced Reuse)", L)
-	} else if (!receiver.useForcedReuse) && (LPrime != L) { // No forced reuse: get L' different OTe batches
-		return nil, errs.NewInvalidArgument("oTeReceiverOutput and derandMask lengths don't match (%d != %d) ", L, LPrime)
+	LOTe := len(oTeReceiverOutput)                // Number of ξ×ω×κ-bit OTe batches
+	L := len(round2Output.derandMask)             // Number of ξ×ω-scalar COTe batches
+	if (receiver.useForcedReuse) && (LOTe != 1) { // Forced reuse: reuse a single OTe batch
+		return nil, errs.NewInvalidArgument("oTeReceiverOutput batch length (L=%d) should be 1 (Forced Reuse)", LOTe)
+	} else if (!receiver.useForcedReuse) && (L != LOTe) { // No forced reuse: get L different OTe batches
+		return nil, errs.NewInvalidArgument("oTeReceiverOutput and derandMask lengths don't match (%d != %d) ", LOTe, L)
 	}
-	cOTeReceiverOutput = make(COTeReceiverOutput, LPrime)
+	cOTeReceiverOutput = make(COTeReceiverOutput, L)
 
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for l := 0; l < LPrime; l++ {
+	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
@@ -271,7 +268,7 @@ func (receiver *Receiver) Round3Derandomize(
 
 	// (Derand.2) Apply derandomization Mask to the ROTe output
 	var v_x_NegCurve, v_x_curve_corr curves.Scalar
-	for l := 0; l < LPrime; l++ {
+	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// if forced reuse, use a single OTe batch (set idxOTe = 0)

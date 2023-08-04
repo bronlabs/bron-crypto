@@ -21,7 +21,8 @@ type Round2Output struct {
 
 func (bob *Bob) Round1() (*Round1Output, error) {
 	// step 1.1
-	if _, err := bob.prng.Read(bob.Beta[:]); err != nil {
+	bob.Beta = make([][XiBytes]byte, 1) // LOTe = 1 for Forced Reuse
+	if _, err := bob.prng.Read(bob.Beta[0][:]); err != nil {
 		return nil, errs.WrapFailed(err, "could not sample beta")
 	}
 
@@ -30,9 +31,9 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 		bob.BTilde[i] = bob.Curve.Scalar.Zero()
 		for j := 0; j < Xi; j++ {
 			// constant time branching, because we'll add if even if we don't need it
-			addedCurrent := bob.BTilde[i].Add(bob.gadget[j])
+			addedCurrent := bob.BTilde[i].Add(bob.gadget[0][j])
 			originalCurrent := bob.BTilde[i]
-			if bitstring.SelectBit(bob.Beta[:], j) == 0x01 {
+			if bitstring.SelectBit(bob.Beta[0][:], j) == 0x01 {
 				bob.BTilde[i] = addedCurrent
 			} else {
 				bob.BTilde[i] = originalCurrent
@@ -41,12 +42,11 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	}
 
 	// step 1.3
-	extPackedChoices, cOTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1ExtendAndProveConsistency(&bob.Beta)
+	oTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1ExtendAndProveConsistency(bob.Beta)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob step 1.3")
 	}
-	bob.oteReceiverOutput = cOTeReceiverOutput
-	bob.extendedPackedChoices = extPackedChoices
+	bob.oTeReceiverOutput = oTeReceiverOutput
 
 	return COTeR1Output, nil
 }
@@ -70,11 +70,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 
 	// TODO: get rid of pointer stuff
 	// step 2.4
-	x := []softspoken.COTeInputOpt{}
-	for i := range &alpha {
-		x = append(x, alpha[i])
-	}
-	_, cOTeSenderOutputs, cOTeRound2Output, err := alice.sender.Round2ExtendAndCheckConsistency(round1output, x)
+	_, cOTeSenderOutputs, cOTeRound2Output, err := alice.sender.Round2ExtendAndCheckConsistency(round1output, alpha[:])
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "alice cote round 2")
 	}
@@ -142,7 +138,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	for i := 0; i < L; i++ {
 		output[i] = alice.Curve.Scalar.Zero() // gamma_b of DKLs19 is zero
 		for j := 0; j < Xi; j++ {
-			output[i] = output[i].Add(alice.gadget[j].Mul(zTildeA[i][j]))
+			output[i] = output[i].Add(alice.gadget[0][j].Mul(zTildeA[i][j]))
 		}
 	}
 
@@ -156,7 +152,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 
 func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err error) {
 	// step 2.1
-	coteReceiverOutput, err := bob.receiver.Round3Derandomize(round2output.COTeRound2Output, bob.extendedPackedChoices, bob.oteReceiverOutput)
+	coteReceiverOutput, err := bob.receiver.Round3Derandomize(round2output.COTeRound2Output, bob.oTeReceiverOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob cote round 3")
 	}
@@ -195,7 +191,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 			// constant time branching
 			addedCurrent := current.Add(round2output.U[i])
 			originalCurrent := current
-			if bitstring.SelectBit(bob.Beta[:], j) == 0x01 {
+			if bitstring.SelectBit(bob.Beta[0][:], j) == 0x01 {
 				current = addedCurrent
 			} else {
 				current = originalCurrent
@@ -223,7 +219,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	for i := 0; i < L; i++ {
 		output[i] = bob.BTilde[i].Mul(round2output.GammaA[i])
 		for j := 0; j < Xi; j++ {
-			output[i] = output[i].Add(bob.gadget[j].Mul(zTildeB[i][j]))
+			output[i] = output[i].Add(bob.gadget[0][j].Mul(zTildeB[i][j]))
 		}
 	}
 	bob.transcript.AppendScalars([]byte("Gamma_A"), round2output.GammaA[:]...)

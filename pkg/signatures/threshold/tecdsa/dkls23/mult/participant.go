@@ -17,7 +17,7 @@ type Alice struct {
 	Curve           *curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
-	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
+	gadget          [][Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
 	aTilde [L]curves.Scalar // ã ∈ [L]ℤq is the vector of one-time pads of Alice
 	aHat   [L]curves.Scalar // â ∈ [L]ℤq is the vector of check values of Alice
@@ -30,15 +30,14 @@ type Bob struct {
 	Curve           *curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
-	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
+	gadget          [][Xi]curves.Scalar // Gadget (g) ∈ [LOTe][ξ]ℤq is the gadget vector
 
-	// beta (β) ∈ [eta]bits is a vector of random bits used as input to COTe
+	// beta (β) ∈ [ξ]bits is a vector of random bits used as input to COTe
 	// This should be considered as an enum. Only one field should be used
-	Beta [XiBytes]byte
+	Beta [][XiBytes]byte
 	// BTilde (b̃) ∈ ℤq^L is the sum of the gadget vector elements weighted by the bits in beta
-	BTilde                [L]curves.Scalar
-	oteReceiverOutput     *softspoken.OTeReceiverOutput
-	extendedPackedChoices *softspoken.ExtPackedChoices
+	BTilde            [L]curves.Scalar
+	oTeReceiverOutput softspoken.OTeReceiverOutput
 }
 
 func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {
@@ -107,12 +106,12 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 	}, nil
 }
 
-func generateGadgetVector(curve *curves.Curve, transcript transcripts.Transcript) (gadget [Xi]curves.Scalar, err error) {
-	gadget = [Xi]curves.Scalar{}
+func generateGadgetVector(curve *curves.Curve, transcript transcripts.Transcript) (gadget [][Xi]curves.Scalar, err error) {
+	gadget = make([][Xi]curves.Scalar, 1) // LOTe = 1 for Forced Reuse
 	transcript.AppendMessage([]byte("gadget vector"), []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes := transcript.ExtractBytes([]byte("gadget"), KappaBytes)
-		gadget[i], err = curve.Scalar.SetBytes(bytes)
+		gadget[0][i], err = curve.Scalar.SetBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

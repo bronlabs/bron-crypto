@@ -59,22 +59,26 @@ PLAYERS: 2 parties, R (receiver) and S (sender).
 
 PARAMS:
 # κ (kappa), a computational security parameter. E.g. κ=256
-# ξ, a bit-level OTe batch size. ξ=𝒪(κ,...) --> ξ=κ+2s for DKLS23.
-# σ (sigma), a statistical security parameter. ξ%σ=0. E.g. σ=128.
-# L, the number of ξ-bit batches after in the expansion. L=1 For "Forced Reuse" (as in DKLS23).
-# L', the number of ξ-scalar COTe input & output batches. L'=L in general,
-#     L' > L(=1) for "Forced Reuse" such that L'/L is the # of reuses of the single OTe batch.
-# η (eta), OT expansion size without the statistical redundancy. η=L*ξ (η=ξ for "Forced Reuse").
-# η' (etaPrime), the full OT expansion size. η=L*ξ+σ (η=ξ+σ for "Forced Reuse").
-# ω (omega), a field-level expansion factor at the derandomization. E.g., ω=2 for DKLS23.
+# ξ, a bit-level OTe batch size. ξ=𝒪(κ,...) --> ξ=κ+2s=κ+2σ for DKLS23.
+# σ (sigma), a statistical security parameter. ξ%σ=0. We set σ=κ for DKLS23 to 
+#     allign the statistical security with the computational security (fiat-shamir
+#     compliant).
+# LOTe, the number of ξ×ω×κ-bit batches after in the expansion. LOTe=1 for 
+#     "Forced Reuse" (as in DKLS23).
+# L, the number of ξ×ω-scalar COTe input & output batches. L=LOTe in general;
+#     L > LOTe(=1) for "Forced Reuse" such that L is the # of reuses of the single OTe batch.
+# η (eta), Total OT expansion size. η=LOTe*ξ (η=ξ for "Forced Reuse").
+# η' (etaPrime), Total OT expansion size with extra randomness for the consistency
+#     check. η=L*ξ+σ (η=ξ+σ for "Forced Reuse").
+# ω (omega), an expansion factor at the randomization of the OTe batches. E.g., ω=2 for DKLS23.
 
 INPUTS:
 # R-> x ∈ [η] bits, the Choice bits. (just [ξ] bits for "Forced Reuse")
-# S-> α ∈ [L'][ω][ξ]curve.Scalar, the InputOpt.
+# S-> α ∈ [L][ω][ξ]curve.Scalar, the InputOpt.
 
 OUTPUTS:
-# R-> z_B ∈ [L'][ω][ξ]group, the Correlation    s.t. z_A = x • α - z_B
-# S-> z_A ∈ [L'][ω][ξ]group, the DeltaOpt       s.t. z_A = x • α - z_B
+# R-> z_B ∈ [L][ω][ξ]group, the Correlation    s.t. z_A = x • α - z_B
+# S-> z_A ∈ [L][ω][ξ]group, the DeltaOpt       s.t. z_A = x • α - z_B
 
 PROTOCOL STEPS:
 # A base OT protocol to generate random 1|2-OT results to be used as seeds:
@@ -109,17 +113,17 @@ PROTOCOL STEPS:
 
 	(T&R.1)   R: transpose(t^i_0) ->t_j                             ∈ [κ]bits       ∀j∈[η']
 	.         S: transpose(q^i) -> q_j                              ∈ [κ]bits       ∀j∈[η']
-	(T&R.2)   R: v_x = Hash(j || t_j)                               ∈ [ω]×[κ]bits   ∀j∈[L][ξ]
-	(T&R.3)   S: v_0 = Hash(j || q_j)                               ∈ [ω]×[κ]bits   ∀j∈[L][ξ]
-	.         S: v_1 = Hash(j || (q_j + Δ))                         ∈ [ω]×[κ]bits   ∀j∈[L][ξ]
+	(T&R.2)   R: v_x = Hash(j || t_j)                               ∈ [ω]×[κ]bits   ∀j∈[LOTe][ξ]
+	(T&R.3)   S: v_0 = Hash(j || q_j)                               ∈ [ω]×[κ]bits   ∀j∈[LOTe][ξ]
+	.         S: v_1 = Hash(j || (q_j + Δ))                         ∈ [ω]×[κ]bits   ∀j∈[LOTe][ξ]
 
-# A field-level correlation to obtain the COTe result. (L' > L(=1) for "Forced Reuse", L'=L otherwise)
+# A field-level correlation to obtain the COTe result. (L > LOTe(=1) for "Forced Reuse", L=LOTe otherwise)
 
-	(Derand.1) S: z_A_j = ECP(v_0_j)                                ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L']
-	.             τ_j = ECP(v_1_j) - z_A_j + α_j                    ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L']
+	(Derand.1) S: z_A_j = ECP(v_0_j)                                ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L]
+	.             τ_j = ECP(v_1_j) - z_A_j + α_j                    ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L]
 	.                    └---where ECP(v) is the mapping of v to the curve
 	.            Send(τ) => R                                       ∈ [L][ω][ξ]curve.Scalar
-	(Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1             ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L']
+	(Derand.2) R: z_B_j = τ_j - ECP(v_x_j)  if x_j == 1             ∈ curve.Scalar  ∀j∈[ξ] ∀k∈[ω] ∀[L]
 	.                   =     - ECP(v_x_j)  if x_j == 0
 
 // ============================ PROTOCOL ROUNDS ============================= //
