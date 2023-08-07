@@ -250,7 +250,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	v_i := ic.state.sk_i.Mul(phiPsi).Add(cVdV)
 
 	// step 3.6
-	xBigInt, _ := getPointCoordinates(R)
+	xBigInt := getXCoordinate(R)
 	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar.SetBigInt(xBigInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
@@ -281,7 +281,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 		u = u.Add(partialSignature.Ui)
 		R = R.Add(partialSignature.Ri)
 	}
-	xBigInt, _ := getPointCoordinates(R)
+	xBigInt := getXCoordinate(R)
 
 	// step 4.2
 	rx, err := curve.Scalar.SetBigInt(xBigInt)
@@ -308,7 +308,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 }
 
 // TODO: remove when curve interface is extended.
-func getPointCoordinates(point curves.Point) (x, y *big.Int) {
+func getXCoordinate(point curves.Point) (x *big.Int) {
 	affine := point.ToAffineUncompressed()
-	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
+	return new(big.Int).SetBytes(affine[1:33])
 }

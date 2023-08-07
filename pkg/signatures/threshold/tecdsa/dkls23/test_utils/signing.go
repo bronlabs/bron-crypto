@@ -168,7 +168,7 @@ func RunInteractiveSign(cohortConfig *integration.CohortConfig, identities []int
 	mappedPartialSignatures := MapPartialSignatures(identities, partialSignatures)
 	var producedSignatures []*ecdsa.Signature
 	for _, participant := range participants {
-		//TODO: test for signature aggregator
+		// TODO: test for signature aggregator
 		if !cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
 			continue
 		}
