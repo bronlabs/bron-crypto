@@ -55,15 +55,8 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 		}
 
 		// step 1.3.1
-		toBeCommitted := bytes.Join([][]byte{
-			{
-				byte(ic.MyShamirId),
-				byte(ic.IdentityKeyToShamirId[participant]),
-			},
-			ic.UniqueSessionId,
-			ic.state.R_i.ToAffineCompressed(),
-		}, []byte(""))
-		commitmentToInstanceKey, witness, err := commitments.Commit(h, toBeCommitted)
+		message := computeCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[participant], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
+		commitmentToInstanceKey, witness, err := commitments.Commit(h, message)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
 		}
@@ -185,15 +178,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.1.3
-		supposedlyCommittedMessage := bytes.Join([][]byte{
-			{
-				byte(ic.IdentityKeyToShamirId[participant]),
-				byte(ic.MyShamirId),
-			},
-			ic.UniqueSessionId,
-			ic.state.receivedR_i[participant].ToAffineCompressed(),
-		}, []byte(""))
-
+		supposedlyCommittedMessage := computeCommitmentMessage(ic.IdentityKeyToShamirId[participant], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
 		if err := commitments.Open(
 			h,
 			supposedlyCommittedMessage,
@@ -305,6 +290,20 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	}
 	// step 4.8
 	return sigma, nil
+}
+
+func computeCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId, R_i []byte) []byte {
+	return bytes.Join(
+		[][]byte{
+			{
+				byte(myShamirId),
+				byte(theOtherShamirId),
+			}, uniqueSessionId,
+			R_i,
+		},
+		[]byte(""),
+	)
+
 }
 
 // TODO: remove when curve interface is extended.
