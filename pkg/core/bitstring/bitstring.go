@@ -1,7 +1,8 @@
 package bitstring
 
 import (
-	"reflect"
+	"bytes"
+	"encoding/binary"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
@@ -50,12 +51,9 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 
 // ToByteArray converts from any integer type to a byte array (big-endian).
 func ToByteArray[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
-	typeByteSize := reflect.TypeOf(i).Size()
-	arr := make([]byte, typeByteSize)
-	for j := 0; j < int(typeByteSize); j++ { // higher bytes first
-		arr[j] = byte(i >> uint((int(typeByteSize)-1-j)*8))
-	}
-	return arr
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, i)
+	return buf.Bytes()
 }
 
 // To converts a boolean to any chosen type.
