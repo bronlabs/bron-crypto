@@ -298,12 +298,12 @@ func computeCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId,
 			{
 				byte(myShamirId),
 				byte(theOtherShamirId),
-			}, uniqueSessionId,
+			},
+			uniqueSessionId,
 			R_i,
 		},
 		[]byte(""),
 	)
-
 }
 
 // TODO: remove when curve interface is extended.
