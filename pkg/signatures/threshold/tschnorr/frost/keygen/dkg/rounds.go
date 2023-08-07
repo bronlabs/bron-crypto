@@ -1,10 +1,10 @@
 package dkg
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 )
 
 type Round1Broadcast = pedersen.Round1Broadcast

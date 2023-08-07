@@ -1,11 +1,11 @@
 package noninteractive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 type PreGenParticipant struct {

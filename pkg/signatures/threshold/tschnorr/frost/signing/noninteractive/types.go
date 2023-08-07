@@ -3,13 +3,10 @@ package noninteractive
 import (
 	"sort"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/pkg/errors"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 type PrivateNoncePair struct {
@@ -52,7 +49,7 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	message := ac.D.ToAffineCompressed()
 	message = append(message, ac.E.ToAffineCompressed()...)
 	if err := ac.Attestor.Verify(ac.Attestation, ac.Attestor.PublicKey(), message); err != nil {
-		return errors.Wrap(err, "could not verify attestation")
+		return errs.WrapVerificationFailed(err, "could not verify attestation")
 	}
 	return nil
 }
@@ -70,7 +67,7 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	}
 	attestorsHashSet, err := hashset.NewHashSet(cohortConfig.Participants)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "could not construct participant hash set")
 	}
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
@@ -93,9 +90,7 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 			return errs.NewMissing("at least one party in the cohort does not have an attested commitment")
 		}
 	}
-	if err := sortPreSignatureInPlace(cohortConfig, *ps); err != nil {
-		return errs.WrapFailed(err, "couldn't sort presignature elements by shamir id")
-	}
+	sortPreSignatureInPlace(cohortConfig, *ps)
 	return nil
 }
 
@@ -115,13 +110,8 @@ func (ps *PreSignature) Es() []curves.Point {
 	return result
 }
 
+// TODO: serialisation/deserialization.
 type PreSignatureBatch []*PreSignature
-
-// TODO: serialization/deserialization
-type preSignatureBatchJSON struct {
-	Attestors     []integration.IdentityKey
-	PreSignatures []*PreSignature
-}
 
 func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) error {
 	if psb == nil {
@@ -130,7 +120,7 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
-	if len(*psb) <= 0 {
+	if len(*psb) == 0 {
 		return errs.NewIsZero("batch is empty")
 	}
 
@@ -158,10 +148,9 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 }
 
 // We require that attested commitments within a presignature are sorted by the shamir id of the attestor.
-func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) error {
+func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) {
 	_, identityKeyToShamirId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
 		return identityKeyToShamirId[attestedCommitments[i].Attestor] < identityKeyToShamirId[attestedCommitments[j].Attestor]
 	})
-	return nil
 }

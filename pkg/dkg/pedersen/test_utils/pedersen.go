@@ -2,13 +2,13 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/pkg/errors"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
 func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
@@ -19,7 +19,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	participants = make([]*pedersen.Participant, cohortConfig.TotalParties)
 	for i, identity := range identities {
 		var prng io.Reader
-		if prngs != nil && prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader

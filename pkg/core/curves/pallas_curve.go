@@ -11,7 +11,6 @@ import (
 	"crypto/elliptic"
 	crand "crypto/rand"
 	"crypto/subtle"
-	"fmt"
 	"io"
 	"math/big"
 	"reflect"
@@ -19,18 +18,20 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fp"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fq"
-	"github.com/pkg/errors"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/pasta/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/pasta/fq"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
-var b = new(fp.Fp).SetUint64(5)
-var three = &fp.Fp{0x6b0ee5d0fffffff5, 0x86f76d2b99b14bd0, 0xfffffffffffffffe, 0x3fffffffffffffff}
-var eight = &fp.Fp{0x7387134cffffffe1, 0xd973797adfadd5a8, 0xfffffffffffffffb, 0x3fffffffffffffff}
-var bool2int = map[bool]int{
-	true:  1,
-	false: 0,
-}
+var (
+	b        = new(fp.Fp).SetUint64(5)
+	three    = &fp.Fp{0x6b0ee5d0fffffff5, 0x86f76d2b99b14bd0, 0xfffffffffffffffe, 0x3fffffffffffffff}
+	eight    = &fp.Fp{0x7387134cffffffe1, 0xd973797adfadd5a8, 0xfffffffffffffffb, 0x3fffffffffffffff}
+	bool2int = map[bool]int{
+		true:  1,
+		false: 0,
+	}
+)
 
 var isomapper = [13]*fp.Fp{
 	new(fp.Fp).SetRaw(&[4]uint64{0x775f6034aaaaaaab, 0x4081775473d8375b, 0xe38e38e38e38e38e, 0x0e38e38e38e38e38}),
@@ -47,12 +48,17 @@ var isomapper = [13]*fp.Fp{
 	new(fp.Fp).SetRaw(&[4]uint64{0x4d90ab820b12320a, 0xd976bbfabbc5661d, 0x573b3d7f7d681310, 0x17033d3c60c68173}),
 	new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffde5, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000}),
 }
-var isoa = new(fp.Fp).SetRaw(&[4]uint64{0x92bb4b0b657a014b, 0xb74134581a27a59f, 0x49be2d7258370742, 0x18354a2eb0ea8c9c})
-var isob = new(fp.Fp).SetRaw(&[4]uint64{1265, 0, 0, 0})
-var z = new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffff4, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000})
 
-var oldPallasInitonce sync.Once
-var oldPallas PallasCurve
+var (
+	isoa = new(fp.Fp).SetRaw(&[4]uint64{0x92bb4b0b657a014b, 0xb74134581a27a59f, 0x49be2d7258370742, 0x18354a2eb0ea8c9c})
+	isob = new(fp.Fp).SetRaw(&[4]uint64{1265, 0, 0, 0})
+	z    = new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffff4, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000})
+)
+
+var (
+	oldPallasInitonce sync.Once
+	oldPallas         PallasCurve
+)
 
 type PallasCurve struct {
 	*elliptic.CurveParams
@@ -80,7 +86,7 @@ func oldPallasInitAll() {
 	pallas.Name = PallasName
 }
 
-func Pallas() *PallasCurve {
+func NewCurve() *PallasCurve {
 	oldPallasInitonce.Do(oldPallasInitAll)
 	return &oldPallas
 }
@@ -89,7 +95,7 @@ func (curve *PallasCurve) Params() *elliptic.CurveParams {
 	return curve.CurveParams
 }
 
-func (curve *PallasCurve) IsOnCurve(x, y *big.Int) bool {
+func (*PallasCurve) IsOnCurve(x, y *big.Int) bool {
 	p := new(Ep)
 	p.x = new(fp.Fp).SetBigInt(x)
 	p.y = new(fp.Fp).SetBigInt(y)
@@ -98,7 +104,7 @@ func (curve *PallasCurve) IsOnCurve(x, y *big.Int) bool {
 	return p.IsOnCurve()
 }
 
-func (curve *PallasCurve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
+func (*PallasCurve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	p := new(Ep)
 	p.x = new(fp.Fp).SetBigInt(x1)
 	p.y = new(fp.Fp).SetBigInt(y1)
@@ -119,7 +125,7 @@ func (curve *PallasCurve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	return p.x.BigInt(), p.y.BigInt()
 }
 
-func (curve *PallasCurve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
+func (*PallasCurve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 	p := new(Ep)
 	p.x = new(fp.Fp).SetBigInt(x1)
 	p.y = new(fp.Fp).SetBigInt(y1)
@@ -132,7 +138,7 @@ func (curve *PallasCurve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 	return p.x.BigInt(), p.y.BigInt()
 }
 
-func (curve *PallasCurve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
+func (*PallasCurve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	p := new(Ep)
 	p.x = new(fp.Fp).SetBigInt(Bx)
 	p.y = new(fp.Fp).SetBigInt(By)
@@ -149,7 +155,7 @@ func (curve *PallasCurve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.
 	return p.x.BigInt(), p.y.BigInt()
 }
 
-func (curve *PallasCurve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
+func (*PallasCurve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	p := new(Ep).Generator()
 	var t [32]byte
 	copy(t[:], k)
@@ -160,60 +166,60 @@ func (curve *PallasCurve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	return p.x.BigInt(), p.y.BigInt()
 }
 
-// PallasScalar - Old interface
+// PallasScalar - Old interface.
 type PallasScalar struct{}
 
 func NewPallasScalar() *PallasScalar {
 	return &PallasScalar{}
 }
 
-func (k PallasScalar) Add(x, y *big.Int) *big.Int {
+func (PallasScalar) Add(x, y *big.Int) *big.Int {
 	r := new(big.Int).Add(x, y)
 	return r.Mod(r, fq.BiModulus)
 }
 
-func (k PallasScalar) Sub(x, y *big.Int) *big.Int {
+func (PallasScalar) Sub(x, y *big.Int) *big.Int {
 	r := new(big.Int).Sub(x, y)
 	return r.Mod(r, fq.BiModulus)
 }
 
-func (k PallasScalar) Neg(x *big.Int) *big.Int {
+func (PallasScalar) Neg(x *big.Int) *big.Int {
 	r := new(big.Int).Neg(x)
 	return r.Mod(r, fq.BiModulus)
 }
 
-func (k PallasScalar) Mul(x, y *big.Int) *big.Int {
+func (PallasScalar) Mul(x, y *big.Int) *big.Int {
 	r := new(big.Int).Mul(x, y)
 	return r.Mod(r, fq.BiModulus)
 }
 
-func (k PallasScalar) Div(x, y *big.Int) *big.Int {
+func (PallasScalar) Div(x, y *big.Int) *big.Int {
 	r := new(big.Int).ModInverse(y, fq.BiModulus)
 	r.Mul(r, x)
 	return r.Mod(r, fq.BiModulus)
 }
 
-func (k PallasScalar) Hash(input []byte) *big.Int {
+func (PallasScalar) Hash(input []byte) *big.Int {
 	return new(ScalarPallas).Hash(input).(*ScalarPallas).value.BigInt()
 }
 
-func (k PallasScalar) Bytes(x *big.Int) []byte {
+func (PallasScalar) Bytes(x *big.Int) []byte {
 	return x.Bytes()
 }
 
-func (k PallasScalar) Random() (*big.Int, error) {
+func (PallasScalar) Random() (*big.Int, error) {
 	s, ok := new(ScalarPallas).Random(crand.Reader).(*ScalarPallas)
 	if !ok {
-		return nil, errors.New("incorrect type conversion")
+		return nil, errs.NewFailed("incorrect type conversion")
 	}
 	return s.value.BigInt(), nil
 }
 
-func (k PallasScalar) IsValid(x *big.Int) bool {
+func (PallasScalar) IsValid(x *big.Int) bool {
 	return x.Cmp(fq.BiModulus) == -1
 }
 
-// ScalarPallas - New interface
+// ScalarPallas - New interface.
 type ScalarPallas struct {
 	value *fq.Fq
 }
@@ -227,7 +233,7 @@ func (s *ScalarPallas) Random(reader io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarPallas) Hash(inputs ...[]byte) Scalar {
+func (*ScalarPallas) Hash(inputs ...[]byte) Scalar {
 	h, _ := blake2b.New(64, []byte{})
 	xmd, err := expandMsgXmd(h, bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	if err != nil {
@@ -240,13 +246,13 @@ func (s *ScalarPallas) Hash(inputs ...[]byte) Scalar {
 	}
 }
 
-func (s *ScalarPallas) Zero() Scalar {
+func (*ScalarPallas) Zero() Scalar {
 	return &ScalarPallas{
 		value: new(fq.Fq).SetZero(),
 	}
 }
 
-func (s *ScalarPallas) One() Scalar {
+func (*ScalarPallas) One() Scalar {
 	return &ScalarPallas{
 		value: new(fq.Fq).SetOne(),
 	}
@@ -268,7 +274,7 @@ func (s *ScalarPallas) IsEven() bool {
 	return (s.value[0] & 1) == 0
 }
 
-func (s *ScalarPallas) New(value int) Scalar {
+func (*ScalarPallas) New(value int) Scalar {
 	v := big.NewInt(int64(value))
 	return &ScalarPallas{
 		value: new(fq.Fq).SetBigInt(v),
@@ -299,7 +305,7 @@ func (s *ScalarPallas) Double() Scalar {
 func (s *ScalarPallas) Invert() (Scalar, error) {
 	value, wasInverted := new(fq.Fq).Invert(s.value)
 	if !wasInverted {
-		return nil, fmt.Errorf("inverse doesn't exist")
+		return nil, errs.NewFailed("inverse doesn't exist")
 	}
 	return &ScalarPallas{
 		value,
@@ -309,7 +315,7 @@ func (s *ScalarPallas) Invert() (Scalar, error) {
 func (s *ScalarPallas) Sqrt() (Scalar, error) {
 	value, wasSquare := new(fq.Fq).Sqrt(s.value)
 	if !wasSquare {
-		return nil, fmt.Errorf("not a square")
+		return nil, errs.NewFailed("not a square")
 	}
 	return &ScalarPallas{
 		value,
@@ -391,7 +397,7 @@ func (s *ScalarPallas) Neg() Scalar {
 	}
 }
 
-func (s *ScalarPallas) SetBigInt(v *big.Int) (Scalar, error) {
+func (*ScalarPallas) SetBigInt(v *big.Int) (Scalar, error) {
 	return &ScalarPallas{
 		value: new(fq.Fq).SetBigInt(v),
 	}, nil
@@ -406,33 +412,33 @@ func (s *ScalarPallas) Bytes() []byte {
 	return t[:]
 }
 
-func (s *ScalarPallas) SetBytes(bytes []byte) (Scalar, error) {
-	if len(bytes) != 32 {
-		return nil, fmt.Errorf("invalid length")
+func (*ScalarPallas) SetBytes(input []byte) (Scalar, error) {
+	if len(input) != 32 {
+		return nil, errs.NewInvalidLength("invalid length")
 	}
 	var seq [32]byte
-	copy(seq[:], bytes)
+	copy(seq[:], input)
 	value, err := new(fq.Fq).SetBytes(&seq)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not set bytes")
 	}
 	return &ScalarPallas{
 		value,
 	}, nil
 }
 
-func (s *ScalarPallas) SetBytesWide(bytes []byte) (Scalar, error) {
-	if len(bytes) != 64 {
-		return nil, fmt.Errorf("invalid length")
+func (*ScalarPallas) SetBytesWide(input []byte) (Scalar, error) {
+	if len(input) != 64 {
+		return nil, errs.NewInvalidLength("invalid length")
 	}
 	var seq [64]byte
-	copy(seq[:], bytes)
+	copy(seq[:], input)
 	return &ScalarPallas{
 		value: new(fq.Fq).SetBytesWide(&seq),
 	}, nil
 }
 
-func (s *ScalarPallas) CurveName() string {
+func (*ScalarPallas) CurveName() string {
 	return PallasName
 }
 
@@ -446,8 +452,8 @@ func (s *ScalarPallas) GetFq() *fq.Fq {
 	return new(fq.Fq).Set(s.value)
 }
 
-func (s *ScalarPallas) SetFq(fq *fq.Fq) *ScalarPallas {
-	s.value = fq
+func (s *ScalarPallas) SetFq(element *fq.Fq) *ScalarPallas {
+	s.value = element
 	return s
 }
 
@@ -458,11 +464,11 @@ func (s *ScalarPallas) MarshalBinary() ([]byte, error) {
 func (s *ScalarPallas) UnmarshalBinary(input []byte) error {
 	sc, err := scalarUnmarshalBinary(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal binary")
 	}
 	ss, ok := sc.(*ScalarPallas)
 	if !ok {
-		return fmt.Errorf("invalid scalar")
+		return errs.NewInvalidType("invalid scalar")
 	}
 	s.value = ss.value
 	return nil
@@ -475,11 +481,11 @@ func (s *ScalarPallas) MarshalText() ([]byte, error) {
 func (s *ScalarPallas) UnmarshalText(input []byte) error {
 	sc, err := scalarUnmarshalText(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal text")
 	}
 	ss, ok := sc.(*ScalarPallas)
 	if !ok {
-		return fmt.Errorf("invalid scalar")
+		return errs.NewInvalidLength("invalid scalar")
 	}
 	s.value = ss.value
 	return nil
@@ -492,15 +498,15 @@ func (s *ScalarPallas) MarshalJSON() ([]byte, error) {
 func (s *ScalarPallas) UnmarshalJSON(input []byte) error {
 	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errs.WrapDeserializationFailed(err, "json unmarshal failed")
 	}
 	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return errors.Wrap(err, "could not extract a scalar from json")
+		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarPallas)
 	if !ok {
-		return errors.New("invalid type")
+		return errs.NewFailed("invalid type")
 	}
 	s.value = S.value
 	return nil
@@ -510,19 +516,19 @@ type PointPallas struct {
 	value *Ep
 }
 
-func (p *PointPallas) Random(reader io.Reader) Point {
+func (*PointPallas) Random(reader io.Reader) Point {
 	return &PointPallas{new(Ep).Random(reader)}
 }
 
-func (p *PointPallas) Hash(inputs ...[]byte) Point {
+func (*PointPallas) Hash(inputs ...[]byte) Point {
 	return &PointPallas{new(Ep).Hash(bytes.Join(inputs, nil))}
 }
 
-func (p *PointPallas) Identity() Point {
+func (*PointPallas) Identity() Point {
 	return &PointPallas{new(Ep).Identity()}
 }
 
-func (p *PointPallas) Generator() Point {
+func (*PointPallas) Generator() Point {
 	return &PointPallas{new(Ep).Generator()}
 }
 
@@ -542,7 +548,7 @@ func (p *PointPallas) Double() Point {
 	return &PointPallas{new(Ep).Double(p.value)}
 }
 
-func (p *PointPallas) Scalar() Scalar {
+func (*PointPallas) Scalar() Scalar {
 	return &ScalarPallas{new(fq.Fq).SetZero()}
 }
 
@@ -597,7 +603,7 @@ func (p *PointPallas) Set(x, y *big.Int) (Point, error) {
 	yElem := new(fp.Fp).SetBigInt(y)
 	value := &Ep{xElem, yElem, new(fp.Fp).SetOne()}
 	if !value.IsOnCurve() {
-		return nil, fmt.Errorf("point is not on the curve")
+		return nil, errs.NewNotOnCurve("point is not on the curve")
 	}
 	return &PointPallas{value}, nil
 }
@@ -610,23 +616,23 @@ func (p *PointPallas) ToAffineUncompressed() []byte {
 	return p.value.ToAffineUncompressed()
 }
 
-func (p *PointPallas) FromAffineCompressed(bytes []byte) (Point, error) {
-	value, err := new(Ep).FromAffineCompressed(bytes)
+func (*PointPallas) FromAffineCompressed(input []byte) (Point, error) {
+	value, err := new(Ep).FromAffineCompressed(input)
 	if err != nil {
 		return nil, err
 	}
 	return &PointPallas{value}, nil
 }
 
-func (p *PointPallas) FromAffineUncompressed(bytes []byte) (Point, error) {
-	value, err := new(Ep).FromAffineUncompressed(bytes)
+func (*PointPallas) FromAffineUncompressed(input []byte) (Point, error) {
+	value, err := new(Ep).FromAffineUncompressed(input)
 	if err != nil {
 		return nil, err
 	}
 	return &PointPallas{value}, nil
 }
 
-func (p *PointPallas) CurveName() string {
+func (*PointPallas) CurveName() string {
 	return PallasName
 }
 
@@ -635,7 +641,7 @@ func multiScalarMultPallas(scalars []Scalar, points []Point) (Point, error) {
 	for i, pt := range points {
 		ps, ok := pt.(*PointPallas)
 		if !ok {
-			return nil, errors.Errorf("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
+			return nil, errs.NewFailed("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
 		}
 		eps[i] = ps.value
 	}
@@ -654,7 +660,7 @@ func (p *PointPallas) UnmarshalBinary(input []byte) error {
 	}
 	ppt, ok := pt.(*PointPallas)
 	if !ok {
-		return fmt.Errorf("invalid point")
+		return errs.NewInvalidType("invalid point")
 	}
 	p.value = ppt.value
 	return nil
@@ -671,7 +677,7 @@ func (p *PointPallas) UnmarshalText(input []byte) error {
 	}
 	ppt, ok := pt.(*PointPallas)
 	if !ok {
-		return fmt.Errorf("invalid point")
+		return errs.NewInvalidType("invalid point")
 	}
 	p.value = ppt.value
 	return nil
@@ -684,15 +690,15 @@ func (p *PointPallas) MarshalJSON() ([]byte, error) {
 func (p *PointPallas) UnmarshalJSON(input []byte) error {
 	curve, err := GetCurveByName(p.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errs.WrapDeserializationFailed(err, "json umarshal failed")
 	}
 	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return errors.Wrap(err, "could not extract a point from json")
+		return errs.WrapFailed(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointPallas)
 	if !ok {
-		return errors.New("invalid type")
+		return errs.NewFailed("invalid type")
 	}
 	p.value = P.value
 	return nil
@@ -722,12 +728,12 @@ func (p *Ep) Random(reader io.Reader) *Ep {
 	return p.Hash(seed[:])
 }
 
-func (p *Ep) Hash(bytes []byte) *Ep {
-	if bytes == nil {
-		bytes = []byte{}
+func (p *Ep) Hash(input []byte) *Ep {
+	if input == nil {
+		input = []byte{}
 	}
 	h, _ := blake2b.New(64, []byte{})
-	u, _ := expandMsgXmd(h, bytes, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
+	u, _ := expandMsgXmd(h, input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
 	var buf [64]byte
 	copy(buf[:], u[:64])
 	u0 := new(fp.Fp).SetBytesWide(&buf)
@@ -767,6 +773,7 @@ func (p *Ep) Double(other *Ep) *Ep {
 	r := new(Ep)
 	// essentially paraphrased https://github.com/MinaProtocol/c-reference-signer/blob/master/crypto.c#L306-L337
 	a := new(fp.Fp).Square(other.x)
+	//nolint:govet // it produces a shadow error for b defined at the top. disabled for readability
 	b := new(fp.Fp).Square(other.y)
 	c := new(fp.Fp).Square(b)
 	r.x = new(fp.Fp).Add(other.x, b)
@@ -795,7 +802,7 @@ func (p *Ep) Neg(other *Ep) *Ep {
 	return p
 }
 
-func (p *Ep) Add(lhs *Ep, rhs *Ep) *Ep {
+func (p *Ep) Add(lhs, rhs *Ep) *Ep {
 	if lhs.IsIdentity() {
 		return p.Set(rhs)
 	}
@@ -811,13 +818,7 @@ func (p *Ep) Add(lhs *Ep, rhs *Ep) *Ep {
 	s2 := new(fp.Fp).Mul(rhs.y, z1z1)
 	s2.Mul(s2, lhs.z)
 
-	if u1.Equal(u2) {
-		if s1.Equal(s2) {
-			return p.Double(lhs)
-		} else {
-			return p.Identity()
-		}
-	} else {
+	if !u1.Equal(u2) {
 		h := new(fp.Fp).Sub(u2, u1)
 		i := new(fp.Fp).Double(h)
 		i.Square(i)
@@ -843,6 +844,12 @@ func (p *Ep) Add(lhs *Ep, rhs *Ep) *Ep {
 
 		return p
 	}
+
+	if s1.Equal(s2) {
+		return p.Double(lhs)
+	} else {
+		return p.Identity()
+	}
 }
 
 func (p *Ep) Sub(lhs, rhs *Ep) *Ep {
@@ -850,7 +857,7 @@ func (p *Ep) Sub(lhs, rhs *Ep) *Ep {
 }
 
 func (p *Ep) Mul(point *Ep, scalar *fq.Fq) *Ep {
-	bytes := scalar.Bytes()
+	bytes_ := scalar.Bytes()
 	precomputed := [16]*Ep{}
 	precomputed[0] = new(Ep).Identity()
 	precomputed[1] = new(Ep).Set(point)
@@ -864,7 +871,7 @@ func (p *Ep) Mul(point *Ep, scalar *fq.Fq) *Ep {
 		for j := 0; j < 4; j++ {
 			p.Double(p)
 		}
-		window := bytes[32-1-i>>3] >> (4 - i&0x04) & 0x0F
+		window := bytes_[32-1-i>>3] >> (4 - i&0x04) & 0x0F
 		p.Add(p, precomputed[window])
 	}
 	return p
@@ -890,14 +897,14 @@ func (p *Ep) Set(other *Ep) *Ep {
 	return p
 }
 
-func (p *Ep) toAffine() *Ep {
+func (p *Ep) toAffine() {
 	// mutates `p` in-place to convert it to "affine" form.
 	if p.IsIdentity() {
+		// TODO: make constant time
 		// warning: control flow / not constant-time
 		p.x.SetZero()
 		p.y.SetZero()
 		p.z.SetOne()
-		return p
 	}
 	zInv3, _ := new(fp.Fp).Invert(p.z) // z is necessarily nonzero
 	zInv2 := new(fp.Fp).Square(zInv3)
@@ -905,7 +912,6 @@ func (p *Ep) toAffine() *Ep {
 	p.x.Mul(p.x, zInv2)
 	p.y.Mul(p.y, zInv3)
 	p.z.SetOne()
-	return p
 }
 
 func (p *Ep) ToAffineCompressed() []byte {
@@ -929,23 +935,23 @@ func (p *Ep) ToAffineUncompressed() []byte {
 	return append(x[:], y[:]...)
 }
 
-func (p *Ep) FromAffineCompressed(bytes []byte) (*Ep, error) {
-	if len(bytes) != 32 {
-		return nil, fmt.Errorf("invalid byte sequence")
+func (p *Ep) FromAffineCompressed(bytes_ []byte) (*Ep, error) {
+	if len(bytes_) != 32 {
+		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 
 	var input [32]byte
-	copy(input[:], bytes)
+	copy(input[:], bytes_)
 	sign := (input[31] >> 7) & 1
 	input[31] &= 0x7F
 
 	x := new(fp.Fp)
 	if _, err := x.SetBytes(&input); err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCoordinates(err, "x")
 	}
 	rhs := rhsPallas(x)
 	if _, square := rhs.Sqrt(rhs); !square {
-		return nil, fmt.Errorf("rhs of given x-coordinate is not a square")
+		return nil, errs.NewInvalidCoordinates("rhs of given x-coordinate is not a square")
 	}
 	if rhs.Bytes()[0]&1 != sign {
 		rhs.Neg(rhs)
@@ -954,41 +960,41 @@ func (p *Ep) FromAffineCompressed(bytes []byte) (*Ep, error) {
 	p.y = rhs
 	p.z = new(fp.Fp).SetOne()
 	if !p.IsOnCurve() {
-		return nil, fmt.Errorf("invalid point")
+		return nil, errs.NewInvalidType("invalid point")
 	}
 	return p, nil
 }
 
-func (p *Ep) FromAffineUncompressed(bytes []byte) (*Ep, error) {
-	if len(bytes) != 64 {
-		return nil, fmt.Errorf("invalid length")
+func (p *Ep) FromAffineUncompressed(bytes_ []byte) (*Ep, error) {
+	if len(bytes_) != 64 {
+		return nil, errs.NewInvalidLength("invalid length")
 	}
 	p.z = new(fp.Fp).SetOne()
 	p.x = new(fp.Fp)
 	p.y = new(fp.Fp)
 	var x, y [32]byte
-	copy(x[:], bytes[:32])
-	copy(y[:], bytes[32:])
+	copy(x[:], bytes_[:32])
+	copy(y[:], bytes_[32:])
 	if _, err := p.x.SetBytes(&x); err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCoordinates(err, "could not set x")
 	}
 	if _, err := p.y.SetBytes(&y); err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCoordinates(err, "could not set y")
 	}
 	if !p.IsOnCurve() {
-		return nil, fmt.Errorf("invalid point")
+		return nil, errs.NewNotOnCurve("invalid point")
 	}
 	return p, nil
 }
 
-// rhs of the curve equation
+// rhs of the curve equation.
 func rhsPallas(x *fp.Fp) *fp.Fp {
 	x2 := new(fp.Fp).Square(x)
 	x3 := new(fp.Fp).Mul(x, x2)
 	return new(fp.Fp).Add(x3, b)
 }
 
-func (p Ep) CurveName() string {
+func (Ep) CurveName() string {
 	return "pallas"
 }
 
@@ -1090,7 +1096,7 @@ func sumOfProductsPippengerPallas(points []*Ep, scalars []*big.Int) *Ep {
 // in "Avoiding inversions" [WB2019, section 4.3].
 func isoMap(p *Ep) *Ep {
 	var z [4]*fp.Fp
-	z[0] = new(fp.Fp).Square(p.z)    //z^2
+	z[0] = new(fp.Fp).Square(p.z)    // z^2
 	z[1] = new(fp.Fp).Mul(z[0], p.z) // z^3
 	z[2] = new(fp.Fp).Square(z[0])   // z^4
 	z[3] = new(fp.Fp).Square(z[1])   // z^6
@@ -1142,17 +1148,17 @@ func isoMap(p *Ep) *Ep {
 }
 
 func mapSswu(u *fp.Fp) *Ep {
-	//c1 := new(fp.Fp).Neg(isoa)
-	//c1.Invert(c1)
-	//c1.Mul(isob, c1)
+	// c1 := new(fp.Fp).Neg(isoa)
+	// c1.Invert(c1)
+	// c1.Mul(isob, c1)
 	c1 := &fp.Fp{
 		0x1ee770ce078456ec,
 		0x48cfd64c2ce76be0,
 		0x43d5774c0ab79e2f,
 		0x23368d2bdce28cf3,
 	}
-	//c2 := new(fp.Fp).Neg(z)
-	//c2.Invert(c2)
+	// c2 := new(fp.Fp).Neg(z)
+	// c2.Invert(c2)
 	c2 := &fp.Fp{
 		0x03df915f89d89d8a,
 		0x8f1e8db09ef82653,

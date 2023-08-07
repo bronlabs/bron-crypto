@@ -1,13 +1,13 @@
 package interactive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	signing_helpers "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
 
 type Round1Broadcast struct {
@@ -15,7 +15,7 @@ type Round1Broadcast struct {
 	Ei curves.Point
 }
 
-func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
+func (ic *Cosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
@@ -30,7 +30,7 @@ func (ic *InteractiveCosigner) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*Round1Broadcast, message []byte) (*frost.PartialSignature, error) {
+func (ic *Cosigner) Round2(round1output map[integration.IdentityKey]*Round1Broadcast, message []byte) (*frost.PartialSignature, error) {
 	if ic.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
 	}
@@ -64,23 +64,23 @@ func (ic *InteractiveCosigner) Round2(round1output map[integration.IdentityKey]*
 	return partialSignature, nil
 }
 
-func (ic *InteractiveCosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
 	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
+		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
 	signature, err := aggregator.Aggregate(partialSignatures)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not aggregate partial signatures")
 	}
 	ic.round++
-	return signature, err
+	return signature, nil
 }
 
-func (ic *InteractiveCosigner) processNonceCommitmentOnline(round1output map[integration.IdentityKey]*Round1Broadcast) (D_alpha, E_alpha map[integration.IdentityKey]curves.Point, err error) {
+func (ic *Cosigner) processNonceCommitmentOnline(round1output map[integration.IdentityKey]*Round1Broadcast) (D_alpha, E_alpha map[integration.IdentityKey]curves.Point, err error) {
 	round1output[ic.MyIdentityKey] = &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,

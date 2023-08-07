@@ -3,14 +3,14 @@ package gennaro
 import (
 	"fmt"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	pedersenDkg "github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	pedersenDkg "github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
@@ -44,6 +44,9 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	proverTranscript := merlin.NewTranscript(DlogProofLabel)
 	proverTranscript.AppendMessage([]byte("shamir id"), []byte(fmt.Sprintf("%d", p.MyShamirId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, proverTranscript)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
+	}
 
 	a_i0Proof, _, err := prover.Prove(a_i0)
 	if err != nil {
@@ -53,19 +56,19 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 
 	outboundP2PMessages := map[integration.IdentityKey]*Round1P2P{}
 	for shamirId, identityKey := range p.shamirIdToIdentityKey {
-		if shamirId != p.MyShamirId {
-			shamirIndex := shamirId - 1
-			xij := dealt.SecretShares[shamirIndex].Value
-			xPrimeIJ := dealt.BlindingShares[shamirIndex].Value
-			outboundP2PMessages[identityKey] = &Round1P2P{
-				X_ij:      xij,
-				XPrime_ij: xPrimeIJ,
-			}
-			dealt.SecretShares[shamirIndex] = nil
-			dealt.BlindingShares[shamirIndex] = nil
+		if shamirId == p.MyShamirId {
+			continue
 		}
+		shamirIndex := shamirId - 1
+		xij := dealt.SecretShares[shamirIndex].Value
+		xPrimeIJ := dealt.BlindingShares[shamirIndex].Value
+		outboundP2PMessages[identityKey] = &Round1P2P{
+			X_ij:      xij,
+			XPrime_ij: xPrimeIJ,
+		}
+		dealt.SecretShares[shamirIndex] = nil
+		dealt.BlindingShares[shamirIndex] = nil
 	}
-	a_i0 = nil
 	dealt.Blinding = nil
 
 	p.state.myPartialSecretShare = dealt.SecretShares[p.MyShamirId-1]
@@ -168,7 +171,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 			if !ok {
 				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", senderShamirId)
 			}
-			// Since the honest behavior is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
+			// Since the honest behaviour is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
 			// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
 			// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
 			// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
@@ -184,7 +187,6 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		}
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderShamirId]
-		derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
 		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 		for k := 0; k < p.CohortConfig.Threshold; k++ {

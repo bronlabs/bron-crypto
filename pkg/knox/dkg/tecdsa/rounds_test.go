@@ -9,20 +9,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/knox/dkg/tecdsa/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/knox/dkg/tecdsa/test_utils"
 )
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold, n int) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip()
 	}
-	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -31,7 +32,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 
 	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.DKLS23, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := test_utils.MakeParticipants(curve, cohortConfig, identities, nil)

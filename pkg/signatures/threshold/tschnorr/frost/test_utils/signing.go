@@ -3,19 +3,20 @@ package test_utils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	interactive_signing "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 	"github.com/pkg/errors"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	interactive_signing "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/interactive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 )
 
-func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*interactive_signing.InteractiveCosigner, err error) {
+func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*interactive_signing.Cosigner, err error) {
 	if len(identities) < cohortConfig.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
 	}
 
-	participants = make([]*interactive_signing.InteractiveCosigner, cohortConfig.Threshold)
+	participants = make([]*interactive_signing.Cosigner, cohortConfig.Threshold)
 	for i, identity := range identities {
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
@@ -30,8 +31,8 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 	return participants, nil
 }
 
-func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.NonInteractiveCosigner, err error) {
-	participants = make([]*noninteractive.NonInteractiveCosigner, cohortConfig.TotalParties)
+func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.Cosigner, err error) {
+	participants = make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
 		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
 		if err != nil {
@@ -41,7 +42,7 @@ func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identit
 	return participants, nil
 }
 
-func DoInteractiveSignRound1(participants []*interactive_signing.InteractiveCosigner) (round1Outputs []*interactive_signing.Round1Broadcast, err error) {
+func DoInteractiveSignRound1(participants []*interactive_signing.Cosigner) (round1Outputs []*interactive_signing.Round1Broadcast, err error) {
 	round1Outputs = make([]*interactive_signing.Round1Broadcast, len(participants))
 	for i, participant := range participants {
 		round1Outputs[i], err = participant.Round1()
@@ -53,7 +54,7 @@ func DoInteractiveSignRound1(participants []*interactive_signing.InteractiveCosi
 	return round1Outputs, nil
 }
 
-func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_signing.InteractiveCosigner, round1Outputs []*interactive_signing.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast) {
+func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_signing.Cosigner, round1Outputs []*interactive_signing.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast) {
 	round2Inputs = make([]map[integration.IdentityKey]*interactive_signing.Round1Broadcast, len(participants))
 	for i := range participants {
 		round2Inputs[i] = make(map[integration.IdentityKey]*interactive_signing.Round1Broadcast)
@@ -67,7 +68,7 @@ func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_s
 	return round2Inputs
 }
 
-func DoInteractiveSignRound2(participants []*interactive_signing.InteractiveCosigner, round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+func DoInteractiveSignRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round2(round2Inputs[i], message)
@@ -88,7 +89,7 @@ func MapPartialSignatures(identities []integration.IdentityKey, partialSignature
 	return result
 }
 
-func DoProducePartialSignature(participants []*noninteractive.NonInteractiveCosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+func DoProducePartialSignature(participants []*noninteractive.Cosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.ProducePartialSignature(message)

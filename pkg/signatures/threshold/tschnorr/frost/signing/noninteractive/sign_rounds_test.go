@@ -12,19 +12,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
 func doDkg(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
@@ -78,6 +78,9 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 	}
 
 	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
+	if err != nil {
+		return err
+	}
 
 	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
 	if err != nil {
@@ -112,7 +115,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 	return nil
 }
 
-func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
+func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
 	t.Helper()
 
 	message := []byte("something")
@@ -160,7 +163,7 @@ func TestSignNilMessage(t *testing.T) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -208,7 +211,7 @@ func TestHappyPath(t *testing.T) {
 						firstUnusedPreSignatureIndex := firstUnusedPreSignatureIndex
 						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and first unused pre signature index=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex), func(t *testing.T) {
 							t.Parallel()
-							testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
+							testHappyPath(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
 						})
 					}
 				}
@@ -239,6 +242,6 @@ func TestRunProfile(t *testing.T) {
 		h = sha512.New
 	}
 	for i := 0; i < 1000; i++ {
-		testHappyPath(t, protocol.FROST, curve, h, th, n, 10, 0)
+		testHappyPath(t, protocols.FROST, curve, h, th, n, 10, 0)
 	}
 }

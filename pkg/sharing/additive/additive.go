@@ -3,9 +3,9 @@ package additive
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 type Share struct {
@@ -16,7 +16,7 @@ type Share struct {
 // is a shamir concept, and the holder of the additive share may have different ids for different
 // shamir configs.
 // In case after conversion, resharing of the new shamir share is desired. A new protocol must
-// be implemented where it runs the Pedersen DKG with a_i0 = Share.Value
+// be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
 func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, error) {
 	curve, err := curves.GetCurveByName(s.Value.CurveName())
 	if err != nil {

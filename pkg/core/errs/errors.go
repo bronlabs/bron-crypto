@@ -1,3 +1,4 @@
+//nolint:depguard,wrapcheck // we want to use pkg/errors only here, but nowhere else
 package errs
 
 import (
@@ -17,9 +18,12 @@ const (
 	identifiableAbort     ErrorType = "[ABORT]"
 	incorrectCount        ErrorType = "[INCORRECT_COUNT]"
 	invalidArgument       ErrorType = "[INVALID_ARGUMENT]"
+	invalidCoordinates    ErrorType = "[INVALID_COORDINATES]"
 	invalidCurve          ErrorType = "[INVALID_CURVE]"
 	invalidIdentifier     ErrorType = "[INVALID_IDENTIFIER]"
+	invalidLength         ErrorType = "[INVALID_LENGTH]"
 	invalidRound          ErrorType = "[INVALID_ROUND]"
+	invalidType           ErrorType = "[INVALID_TYPE]"
 	isIdentity            ErrorType = "[IS_IDENTITY]"
 	isNil                 ErrorType = "[IS_NIL]"
 	isZero                ErrorType = "[IS_ZERO]"
@@ -43,21 +47,20 @@ func has(err error, errorType ErrorType) bool {
 		}
 
 		cause := errors.Cause(err)
-		if cause == err || cause == nil {
+		if errors.Is(cause, err) || cause == nil {
 			break
-		} else {
-			err = cause
 		}
+		err = cause
 	}
 
 	return false
 }
 
-func NewIsNil(format string, args ...interface{}) error {
+func NewIsNil(format string, args ...any) error {
 	return errors.Errorf("%s %s", isNil, fmt.Sprintf(format, args...))
 }
 
-func WrapIsNil(err error, format string, args ...interface{}) error {
+func WrapIsNil(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", isNil, fmt.Sprintf(format, args...))
 }
 
@@ -69,11 +72,11 @@ func HasIsNil(err error) bool {
 	return has(err, isNil)
 }
 
-func NewInvalidArgument(format string, args ...interface{}) error {
+func NewInvalidArgument(format string, args ...any) error {
 	return errors.Errorf("%s %s", invalidArgument, fmt.Sprintf(format, args...))
 }
 
-func WrapInvalidArgument(err error, format string, args ...interface{}) error {
+func WrapInvalidArgument(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", invalidArgument, fmt.Sprintf(format, args...))
 }
 
@@ -85,11 +88,11 @@ func HasInvalidArgument(err error) bool {
 	return has(err, invalidArgument)
 }
 
-func NewNotOnCurve(format string, args ...interface{}) error {
+func NewNotOnCurve(format string, args ...any) error {
 	return errors.Errorf("%s %s", notOnCurve, fmt.Sprintf(format, args...))
 }
 
-func WrapNotOnCurve(err error, format string, args ...interface{}) error {
+func WrapNotOnCurve(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", notOnCurve, fmt.Sprintf(format, args...))
 }
 
@@ -101,11 +104,27 @@ func HasNotOnCurve(err error) bool {
 	return has(err, notOnCurve)
 }
 
-func NewInvalidCurve(format string, args ...interface{}) error {
+func NewInvalidCoordinates(format string, args ...any) error {
+	return errors.Errorf("%s %s", invalidCoordinates, fmt.Sprintf(format, args...))
+}
+
+func WrapInvalidCoordinates(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", invalidCoordinates, fmt.Sprintf(format, args...))
+}
+
+func IsInvalidCoordinates(err error) bool {
+	return is(err, invalidCoordinates)
+}
+
+func HasInvalidCoordinates(err error) bool {
+	return has(err, invalidCoordinates)
+}
+
+func NewInvalidCurve(format string, args ...any) error {
 	return errors.Errorf("%s %s", invalidCurve, fmt.Sprintf(format, args...))
 }
 
-func WrapInvalidCurve(err error, format string, args ...interface{}) error {
+func WrapInvalidCurve(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", invalidCurve, fmt.Sprintf(format, args...))
 }
 
@@ -117,11 +136,11 @@ func HasInvalidCurve(err error) bool {
 	return has(err, invalidCurve)
 }
 
-func NewIsZero(format string, args ...interface{}) error {
+func NewIsZero(format string, args ...any) error {
 	return errors.Errorf("%s %s", isZero, fmt.Sprintf(format, args...))
 }
 
-func WrapIsZero(err error, format string, args ...interface{}) error {
+func WrapIsZero(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", isZero, fmt.Sprintf(format, args...))
 }
 
@@ -133,11 +152,11 @@ func HasIsZero(err error) bool {
 	return has(err, isZero)
 }
 
-func NewIsIdentity(format string, args ...interface{}) error {
+func NewIsIdentity(format string, args ...any) error {
 	return errors.Errorf("%s %s", isIdentity, fmt.Sprintf(format, args...))
 }
 
-func WrapIsIdentity(err error, format string, args ...interface{}) error {
+func WrapIsIdentity(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", isIdentity, fmt.Sprintf(format, args...))
 }
 
@@ -149,11 +168,11 @@ func HasIsIdentity(err error) bool {
 	return has(err, isIdentity)
 }
 
-func NewInvalidRound(format string, args ...interface{}) error {
+func NewInvalidRound(format string, args ...any) error {
 	return errors.Errorf("%s %s", invalidRound, fmt.Sprintf(format, args...))
 }
 
-func WrapInvalidRound(err error, format string, args ...interface{}) error {
+func WrapInvalidRound(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", invalidRound, fmt.Sprintf(format, args...))
 }
 
@@ -165,11 +184,27 @@ func HasInvalidRound(err error) bool {
 	return has(err, invalidRound)
 }
 
-func NewIncorrectCount(format string, args ...interface{}) error {
+func NewInvalidType(format string, args ...any) error {
+	return errors.Errorf("%s %s", invalidType, fmt.Sprintf(format, args...))
+}
+
+func WrapInvalidType(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", invalidType, fmt.Sprintf(format, args...))
+}
+
+func IsInvalidType(err error) bool {
+	return is(err, invalidType)
+}
+
+func HasInvalidType(err error) bool {
+	return has(err, invalidType)
+}
+
+func NewIncorrectCount(format string, args ...any) error {
 	return errors.Errorf("%s %s", incorrectCount, fmt.Sprintf(format, args...))
 }
 
-func WrapIncorrectCount(err error, format string, args ...interface{}) error {
+func WrapIncorrectCount(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", incorrectCount, fmt.Sprintf(format, args...))
 }
 
@@ -181,11 +216,11 @@ func HasIncorrectCount(err error) bool {
 	return has(err, incorrectCount)
 }
 
-func NewVerificationFailed(format string, args ...interface{}) error {
+func NewVerificationFailed(format string, args ...any) error {
 	return errors.Errorf("%s %s", verificationFailed, fmt.Sprintf(format, args...))
 }
 
-func WrapVerificationFailed(err error, format string, args ...interface{}) error {
+func WrapVerificationFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", verificationFailed, fmt.Sprintf(format, args...))
 }
 
@@ -197,11 +232,11 @@ func HasVerificationFailed(err error) bool {
 	return has(err, verificationFailed)
 }
 
-func NewDivisionByZero(format string, args ...interface{}) error {
+func NewDivisionByZero(format string, args ...any) error {
 	return errors.Errorf("%s %s", divisionByZero, fmt.Sprintf(format, args...))
 }
 
-func WrapDivisionByZero(err error, format string, args ...interface{}) error {
+func WrapDivisionByZero(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", divisionByZero, fmt.Sprintf(format, args...))
 }
 
@@ -213,11 +248,27 @@ func HasDivisionByZero(err error) bool {
 	return has(err, divisionByZero)
 }
 
-func NewInvalidIdentifier(format string, args ...interface{}) error {
+func NewInvalidLength(format string, args ...any) error {
+	return errors.Errorf("%s %s", invalidLength, fmt.Sprintf(format, args...))
+}
+
+func WrapInvalidLength(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", invalidLength, fmt.Sprintf(format, args...))
+}
+
+func IsInvalidLength(err error) bool {
+	return is(err, invalidLength)
+}
+
+func HasInvalidLength(err error) bool {
+	return has(err, invalidLength)
+}
+
+func NewInvalidIdentifier(format string, args ...any) error {
 	return errors.Errorf("%s %s", invalidIdentifier, fmt.Sprintf(format, args...))
 }
 
-func WrapInvalidIdentifier(err error, format string, args ...interface{}) error {
+func WrapInvalidIdentifier(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", invalidIdentifier, fmt.Sprintf(format, args...))
 }
 
@@ -229,11 +280,11 @@ func HasInvalidIdentifier(err error) bool {
 	return has(err, invalidIdentifier)
 }
 
-func NewDeserializationFailed(format string, args ...interface{}) error {
+func NewDeserializationFailed(format string, args ...any) error {
 	return errors.Errorf("%s %s", deserializationFailed, fmt.Sprintf(format, args...))
 }
 
-func WrapDeserializationFailed(err error, format string, args ...interface{}) error {
+func WrapDeserializationFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", deserializationFailed, fmt.Sprintf(format, args...))
 }
 
@@ -245,11 +296,11 @@ func HasDeserializationFailed(err error) bool {
 	return has(err, deserializationFailed)
 }
 
-func NewMissing(format string, args ...interface{}) error {
+func NewMissing(format string, args ...any) error {
 	return errors.Errorf("%s %s", missing, fmt.Sprintf(format, args...))
 }
 
-func WrapMissing(err error, format string, args ...interface{}) error {
+func WrapMissing(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", missing, fmt.Sprintf(format, args...))
 }
 
@@ -261,11 +312,11 @@ func HasMissing(err error) bool {
 	return has(err, missing)
 }
 
-func NewDuplicate(format string, args ...interface{}) error {
+func NewDuplicate(format string, args ...any) error {
 	return errors.Errorf("%s %s", duplicate, fmt.Sprintf(format, args...))
 }
 
-func WrapDuplicate(err error, format string, args ...interface{}) error {
+func WrapDuplicate(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", duplicate, fmt.Sprintf(format, args...))
 }
 
@@ -277,11 +328,11 @@ func HasDuplicate(err error) bool {
 	return has(err, duplicate)
 }
 
-func NewIdentifiableAbort(format string, args ...interface{}) error {
+func NewIdentifiableAbort(format string, args ...any) error {
 	return errors.Errorf("%s %s", identifiableAbort, fmt.Sprintf(format, args...))
 }
 
-func WrapIdentifiableAbort(err error, format string, args ...interface{}) error {
+func WrapIdentifiableAbort(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", identifiableAbort, fmt.Sprintf(format, args...))
 }
 
@@ -293,11 +344,11 @@ func HasIdentifiableAbort(err error) bool {
 	return has(err, identifiableAbort)
 }
 
-func NewFailed(format string, args ...interface{}) error {
+func NewFailed(format string, args ...any) error {
 	return errors.Errorf("%s %s", failed, fmt.Sprintf(format, args...))
 }
 
-func WrapFailed(err error, format string, args ...interface{}) error {
+func WrapFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", failed, fmt.Sprintf(format, args...))
 }
 

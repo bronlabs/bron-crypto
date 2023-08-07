@@ -5,13 +5,13 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
@@ -23,7 +23,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name && cohortConfig.CipherSuite.Curve.Name != curves.P256Name {
 		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name)
 	}
-	if cohortConfig.Protocol != protocol.DKLS23 {
+	if cohortConfig.Protocol != protocols.DKLS23 {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 

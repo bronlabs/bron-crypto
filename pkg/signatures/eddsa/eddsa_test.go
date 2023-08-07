@@ -4,12 +4,13 @@ import (
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 )
 
 // passing of this test by the standard library's ed25519 implementation means that
@@ -31,14 +32,18 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 		signature string
 		name      string
 	}{
-		{message: "8c93255d71dcab10e8f379c26200f3c7bd5f09d9bc3068d3ef4edeb4853022b6",
+		{
+			message:   "8c93255d71dcab10e8f379c26200f3c7bd5f09d9bc3068d3ef4edeb4853022b6",
 			pub_key:   "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
 			signature: "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
-			name:      "z=0 | Public key small order and compressed | R small order | test vector 0"},
-		{message: "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
+			name:      "z=0 | Public key small order and compressed | R small order | test vector 0",
+		},
+		{
+			message:   "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
 			pub_key:   "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
 			signature: "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43a5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04",
-			name:      "reduced z | public key small order and compressed | R mixed order | test vector 1"},
+			name:      "reduced z | public key small order and compressed | R mixed order | test vector 1",
+		},
 
 		// Although the public key order of below (test vector 10) is small, it is designed to fail for implementations that do not compress public key before hashing.
 		//
@@ -46,10 +51,12 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 		// 	pub_key:   "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		// 	signature: "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04"},
 
-		{message: "39a591f5321bbe07fd5a23dc2f39d025d74526615746727ceefd6e82ae65c06f",
+		{
+			message:   "39a591f5321bbe07fd5a23dc2f39d025d74526615746727ceefd6e82ae65c06f",
 			pub_key:   "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			signature: "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04",
-			name:      "reduced z | public key small order and uncompressed | R mised order | test vector 11"},
+			name:      "reduced z | public key small order and uncompressed | R mised order | test vector 11",
+		},
 	} {
 		boundedTest := test
 		t.Run(boundedTest.name, func(t *testing.T) {

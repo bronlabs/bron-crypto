@@ -3,17 +3,17 @@ package bls12381
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
-// GtFieldBytes is the number of bytes needed to represent this field
+// GtFieldBytes is the number of bytes needed to represent this field.
 const GtFieldBytes = 576
 
-// Gt is the target group
+// Gt is the target group.
 type Gt fp12
 
-// Random generates a random field element
+// Random generates a random field element.
 func (gt *Gt) Random(reader io.Reader) (*Gt, error) {
 	_, err := (*fp12)(gt).Random(reader)
 	return gt, err
@@ -70,56 +70,56 @@ func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
 	return gt
 }
 
-// IsZero returns 1 if gt == 0, 0 otherwise
+// IsZero returns 1 if gt == 0, 0 otherwise.
 func (gt *Gt) IsZero() int {
 	return (*fp12)(gt).IsZero()
 }
 
-// IsOne returns 1 if gt == 1, 0 otherwise
+// IsOne returns 1 if gt == 1, 0 otherwise.
 func (gt *Gt) IsOne() int {
 	return (*fp12)(gt).IsOne()
 }
 
-// SetOne gt = one
+// SetOne gt = one.
 func (gt *Gt) SetOne() *Gt {
 	(*fp12)(gt).SetOne()
 	return gt
 }
 
-// Set copies a into gt
+// Set copies a into gt.
 func (gt *Gt) Set(a *Gt) *Gt {
 	gt.A.Set(&a.A)
 	gt.B.Set(&a.B)
 	return gt
 }
 
-// Bytes returns the Gt field byte representation
+// Bytes returns the Gt field byte representation.
 func (gt *Gt) Bytes() [GtFieldBytes]byte {
 	var out [GtFieldBytes]byte
 	t := gt.A.A.A.Bytes()
-	copy(out[:FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[:FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.A.A.B.Bytes()
-	copy(out[FieldBytes:2*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[FieldBytes:2*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.A.B.A.Bytes()
-	copy(out[2*FieldBytes:3*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[2*FieldBytes:3*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.A.B.B.Bytes()
-	copy(out[3*FieldBytes:4*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[3*FieldBytes:4*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.A.C.A.Bytes()
-	copy(out[4*FieldBytes:5*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[4*FieldBytes:5*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.A.C.B.Bytes()
-	copy(out[5*FieldBytes:6*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[5*FieldBytes:6*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.A.A.Bytes()
-	copy(out[6*FieldBytes:7*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[6*FieldBytes:7*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.A.B.Bytes()
-	copy(out[7*FieldBytes:8*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[7*FieldBytes:8*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.B.A.Bytes()
-	copy(out[8*FieldBytes:9*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[8*FieldBytes:9*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.B.B.Bytes()
-	copy(out[9*FieldBytes:10*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[9*FieldBytes:10*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.C.A.Bytes()
-	copy(out[10*FieldBytes:11*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[10*FieldBytes:11*FieldBytes], bitstring.ReverseBytes(t[:]))
 	t = gt.B.C.B.Bytes()
-	copy(out[11*FieldBytes:12*FieldBytes], internal.ReverseScalarBytes(t[:]))
+	copy(out[11*FieldBytes:12*FieldBytes], bitstring.ReverseBytes(t[:]))
 
 	return out
 }
@@ -129,29 +129,29 @@ func (gt *Gt) Bytes() [GtFieldBytes]byte {
 func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (*Gt, int) {
 	var t [FieldBytes]byte
 	var valid [12]int
-	copy(t[:], internal.ReverseScalarBytes(input[:FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
 	_, valid[0] = gt.A.A.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[FieldBytes:2*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:2*FieldBytes]))
 	_, valid[1] = gt.A.A.B.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[2*FieldBytes:3*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[2*FieldBytes:3*FieldBytes]))
 	_, valid[2] = gt.A.B.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[3*FieldBytes:4*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[3*FieldBytes:4*FieldBytes]))
 	_, valid[3] = gt.A.B.B.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[4*FieldBytes:5*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[4*FieldBytes:5*FieldBytes]))
 	_, valid[4] = gt.A.C.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[5*FieldBytes:6*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[5*FieldBytes:6*FieldBytes]))
 	_, valid[5] = gt.A.C.B.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[6*FieldBytes:7*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[6*FieldBytes:7*FieldBytes]))
 	_, valid[6] = gt.B.A.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[7*FieldBytes:8*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[7*FieldBytes:8*FieldBytes]))
 	_, valid[7] = gt.B.A.B.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[8*FieldBytes:9*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[8*FieldBytes:9*FieldBytes]))
 	_, valid[8] = gt.B.B.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[9*FieldBytes:10*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[9*FieldBytes:10*FieldBytes]))
 	_, valid[9] = gt.B.B.B.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[10*FieldBytes:11*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[10*FieldBytes:11*FieldBytes]))
 	_, valid[10] = gt.B.C.A.SetBytes(&t)
-	copy(t[:], internal.ReverseScalarBytes(input[11*FieldBytes:12*FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[11*FieldBytes:12*FieldBytes]))
 	_, valid[11] = gt.B.C.B.SetBytes(&t)
 
 	return gt, valid[0] & valid[1] &
@@ -162,12 +162,12 @@ func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (*Gt, int) {
 		valid[10] & valid[11]
 }
 
-// Equal returns 1 if gt == rhs, 0 otherwise
+// Equal returns 1 if gt == rhs, 0 otherwise.
 func (gt *Gt) Equal(rhs *Gt) int {
 	return (*fp12)(gt).Equal((*fp12)(rhs))
 }
 
-// Generator returns the base point
+// Generator returns the base point.
 func (gt *Gt) Generator() *Gt {
 	// pairing(&G1::generator(), &G2::generator())
 	gt.Set((*Gt)(&fp12{
@@ -293,13 +293,13 @@ func (gt *Gt) Add(arg1, arg2 *Gt) *Gt {
 	return gt
 }
 
-// Double this value
+// Double this value.
 func (gt *Gt) Double(a *Gt) *Gt {
 	(*fp12)(gt).Square((*fp12)(a))
 	return gt
 }
 
-// Sub subtracts the two values
+// Sub subtracts the two values.
 func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
 	var t fp12
 	t.Conjugate((*fp12)(arg2))
@@ -307,13 +307,13 @@ func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
 	return gt
 }
 
-// Neg negates this value
+// Neg negates this value.
 func (gt *Gt) Neg(a *Gt) *Gt {
 	(*fp12)(gt).Conjugate((*fp12)(a))
 	return gt
 }
 
-// Mul multiplies this value by the input scalar
+// Mul multiplies this value by the input scalar.
 func (gt *Gt) Mul(a *Gt, s *native.Field) *Gt {
 	var f, p fp12
 	f.Set((*fp12)(a))
@@ -337,13 +337,13 @@ func (gt *Gt) Mul(a *Gt, s *native.Field) *Gt {
 	return gt
 }
 
-// Square this value
+// Square this value.
 func (gt *Gt) Square(a *Gt) *Gt {
 	(*fp12)(gt).cyclotomicSquare((*fp12)(a))
 	return gt
 }
 
-// Invert this value
+// Invert this value.
 func (gt *Gt) Invert(a *Gt) (*Gt, int) {
 	_, wasInverted := (*fp12)(gt).Invert((*fp12)(a))
 	return gt, wasInverted
@@ -362,7 +362,7 @@ func fp4Square(a, b, arg1, arg2 *fp2) {
 	b.Sub(&t2, &t1)
 }
 
-func (f *fp12) cyclotomicSquare(a *fp12) *fp12 {
+func (f *fp12) cyclotomicSquare(a *fp12) {
 	// Adaptation of Algorithm 5.5.4, Guide to Pairing-Based Cryptography
 	// Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
 	// https://eprint.iacr.org/2009/565.pdf
@@ -410,10 +410,9 @@ func (f *fp12) cyclotomicSquare(a *fp12) *fp12 {
 	f.B.A.Set(&z2)
 	f.B.B.Set(&z1)
 	f.B.C.Set(&z5)
-	return f
 }
 
-func (f *fp12) cyclotomicExp(a *fp12) *fp12 {
+func (f *fp12) cyclotomicExp(a *fp12) {
 	var t fp12
 	t.SetOne()
 	foundOne := 0
@@ -430,5 +429,4 @@ func (f *fp12) cyclotomicExp(a *fp12) *fp12 {
 		}
 	}
 	f.Conjugate(&t)
-	return f
 }

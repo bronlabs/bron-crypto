@@ -4,40 +4,40 @@ import (
 	"io"
 )
 
-// fp2 is a point in p^2
+// fp2 is a point in p^2.
 type fp2 struct {
 	A, B fp
 }
 
-// Set copies a into fp2
+// Set copies a into fp2.
 func (f *fp2) Set(a *fp2) *fp2 {
 	f.A.Set(&a.A)
 	f.B.Set(&a.B)
 	return f
 }
 
-// SetZero fp2 = 0
+// SetZero fp2 = 0.
 func (f *fp2) SetZero() *fp2 {
 	f.A.SetZero()
 	f.B.SetZero()
 	return f
 }
 
-// SetOne fp2 to the multiplicative identity element
+// SetOne fp2 to the multiplicative identity element.
 func (f *fp2) SetOne() *fp2 {
 	f.A.SetOne()
 	f.B.SetZero()
 	return f
 }
 
-// SetFp creates an element from a lower field
+// SetFp creates an element from a lower field.
 func (f *fp2) SetFp(a *fp) *fp2 {
 	f.A.Set(a)
 	f.B.SetZero()
 	return f
 }
 
-// Random generates a random field element
+// Random generates a random field element.
 func (f *fp2) Random(reader io.Reader) (*fp2, error) {
 	a, err := new(fp).Random(reader)
 	if err != nil {
@@ -52,24 +52,24 @@ func (f *fp2) Random(reader io.Reader) (*fp2, error) {
 	return f, nil
 }
 
-// IsZero returns 1 if fp2 == 0, 0 otherwise
+// IsZero returns 1 if fp2 == 0, 0 otherwise.
 func (f *fp2) IsZero() int {
 	return f.A.IsZero() & f.B.IsZero()
 }
 
-// IsOne returns 1 if fp2 == 1, 0 otherwise
+// IsOne returns 1 if fp2 == 1, 0 otherwise.
 func (f *fp2) IsOne() int {
 	return f.A.IsOne() & f.B.IsZero()
 }
 
-// Equal returns 1 if f == rhs, 0 otherwise
+// Equal returns 1 if f == rhs, 0 otherwise.
 func (f *fp2) Equal(rhs *fp2) int {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B)
 }
 
 // LexicographicallyLargest returns 1 if
 // this element is strictly lexicographically larger than its negation
-// 0 otherwise
+// 0 otherwise.
 func (f *fp2) LexicographicallyLargest() int {
 	// If this element's B coefficient is lexicographically largest
 	// then it is lexicographically largest. Otherwise, in the event
@@ -81,7 +81,7 @@ func (f *fp2) LexicographicallyLargest() int {
 		f.B.IsZero()&f.A.LexicographicallyLargest()
 }
 
-// Sgn0 returns the lowest bit value
+// Sgn0 returns the lowest bit value.
 func (f *fp2) Sgn0() int {
 	// if A = 0 return B.Sgn0  else A.Sgn0
 	a := f.A.IsZero()
@@ -98,7 +98,7 @@ func (f *fp2) FrobeniusMap(a *fp2) *fp2 {
 	return f.Conjugate(a)
 }
 
-// Conjugate computes the conjugation of this element
+// Conjugate computes the conjugation of this element.
 func (f *fp2) Conjugate(a *fp2) *fp2 {
 	f.A.Set(&a.A)
 	f.B.Neg(&a.B)
@@ -109,7 +109,7 @@ func (f *fp2) Conjugate(a *fp2) *fp2 {
 // multiply a + bu by u + 1, getting
 // au + a + bu^2 + bu
 // and because u^2 = -1, we get
-// (a - b) + (a + b)u
+// (a - b) + (a + b)u.
 func (f *fp2) MulByNonResidue(a *fp2) *fp2 {
 	var aa, bb fp
 	aa.Sub(&a.A, &a.B)
@@ -119,7 +119,7 @@ func (f *fp2) MulByNonResidue(a *fp2) *fp2 {
 	return f
 }
 
-// Square computes the square of this element
+// Square computes the square of this element.
 func (f *fp2) Square(arg *fp2) *fp2 {
 	var a, b, c fp
 
@@ -143,28 +143,28 @@ func (f *fp2) Square(arg *fp2) *fp2 {
 	return f
 }
 
-// Add performs field addition
+// Add performs field addition.
 func (f *fp2) Add(arg1, arg2 *fp2) *fp2 {
 	f.A.Add(&arg1.A, &arg2.A)
 	f.B.Add(&arg1.B, &arg2.B)
 	return f
 }
 
-// Double doubles specified element
+// Double doubles specified element.
 func (f *fp2) Double(a *fp2) *fp2 {
 	f.A.Double(&a.A)
 	f.B.Double(&a.B)
 	return f
 }
 
-// Sub performs field subtraction
+// Sub performs field subtraction.
 func (f *fp2) Sub(arg1, arg2 *fp2) *fp2 {
 	f.A.Sub(&arg1.A, &arg2.A)
 	f.B.Sub(&arg1.B, &arg2.B)
 	return f
 }
 
-// Mul computes Karatsuba multiplication
+// Mul computes Karatsuba multiplication.
 func (f *fp2) Mul(arg1, arg2 *fp2) *fp2 {
 	var v0, v1, t, a, b fp
 
@@ -203,19 +203,19 @@ func (f *fp2) Mul0(arg1 *fp2, arg2 *fp) *fp2 {
 	return f
 }
 
-// MulBy3b returns arg * 12 or 3 * b
+// MulBy3b returns arg * 12 or 3 * b.
 func (f *fp2) MulBy3b(arg *fp2) *fp2 {
 	return f.Mul(arg, &curveG23B)
 }
 
-// Neg performs field negation
+// Neg performs field negation.
 func (f *fp2) Neg(a *fp2) *fp2 {
 	f.A.Neg(&a.A)
 	f.B.Neg(&a.B)
 	return f
 }
 
-// Sqrt performs field square root
+// Sqrt performs field square root.
 func (f *fp2) Sqrt(a *fp2) (*fp2, int) {
 	// Algorithm 9, https://eprint.iacr.org/2012/685.pdf
 	// with constant time modifications.
@@ -315,21 +315,21 @@ func (f *fp2) Invert(arg *fp2) (*fp2, int) {
 }
 
 // CMove performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
+// selects arg1 if choice == 0 and arg2 if choice == 1.
 func (f *fp2) CMove(arg1, arg2 *fp2, choice int) *fp2 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	return f
 }
 
-// CNeg conditionally negates a if choice == 1
+// CNeg conditionally negates a if choice == 1.
 func (f *fp2) CNeg(a *fp2, choice int) *fp2 {
 	var t fp2
 	t.Neg(a)
 	return f.CMove(f, &t, choice)
 }
 
-func (f *fp2) pow(base *fp2, exp *[Limbs]uint64) *fp2 {
+func (f *fp2) pow(base *fp2, exp *[Limbs]uint64) {
 	res := (&fp2{}).SetOne()
 	tmp := (&fp2{}).SetZero()
 
@@ -340,5 +340,5 @@ func (f *fp2) pow(base *fp2, exp *[Limbs]uint64) *fp2 {
 			res.CMove(res, tmp, int(exp[i]>>j)&1)
 		}
 	}
-	return f.Set(res)
+	f.Set(res)
 }

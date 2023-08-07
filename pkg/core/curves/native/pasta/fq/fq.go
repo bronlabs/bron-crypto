@@ -8,21 +8,21 @@ package fq
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 type Fq fiat_pasta_fq_montgomery_domain_field_element
 
-// r = 2^256 mod p
+// r = 2^256 mod p.
 var r = &Fq{0x5b2b3e9cfffffffd, 0x992c350be3420567, 0xffffffffffffffff, 0x3fffffffffffffff}
 
-// r2 = 2^512 mod p
+// r2 = 2^512 mod p.
 var r2 = &Fq{0xfc9678ff0000000f, 0x67bb433d891a16e3, 0x7fae231004ccf590, 0x096d41af7ccfdaa9}
 
-// r3 = 2^768 mod p
+// r3 = 2^768 mod p.
 var r3 = &Fq{0x008b421c249dae4c, 0xe13bda50dba41326, 0x88fececb8e15cb63, 0x07dd97a06e6792c8}
 
 // generator = 5 mod p is a generator of the `p - 1` order multiplicative
@@ -32,7 +32,7 @@ var generator = &Fq{0x96bc8c8cffffffed, 0x74c2a54b49f7778e, 0xfffffffffffffffd, 
 var s = 32
 
 // modulus representation
-// p = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+// p = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001.
 var modulus = &Fq{0x8c46eb2100000001, 0x224698fc0994a8dd, 0x0000000000000000, 0x4000000000000000}
 
 var BiModulus = new(big.Int).SetBytes([]byte{
@@ -44,7 +44,7 @@ var BiModulus = new(big.Int).SetBytes([]byte{
 
 // Cmp returns -1 if fp < rhs
 // 0 if fp == rhs
-// 1 if fp > rhs
+// 1 if fp > rhs.
 func (fq *Fq) Cmp(rhs *Fq) int {
 	gt := 0
 	lt := 0
@@ -55,7 +55,7 @@ func (fq *Fq) Cmp(rhs *Fq) int {
 	return gt - lt
 }
 
-// Equal returns true if fp == rhs
+// Equal returns true if fp == rhs.
 func (fq *Fq) Equal(rhs *Fq) bool {
 	t := fq[0] ^ rhs[0]
 	t |= fq[1] ^ rhs[1]
@@ -64,7 +64,7 @@ func (fq *Fq) Equal(rhs *Fq) bool {
 	return t == 0
 }
 
-// IsZero returns true if fp == 0
+// IsZero returns true if fp == 0.
 func (fq *Fq) IsZero() bool {
 	t := fq[0]
 	t |= fq[1]
@@ -73,12 +73,12 @@ func (fq *Fq) IsZero() bool {
 	return t == 0
 }
 
-// IsOne returns true if fp == r
+// IsOne returns true if fp == r.
 func (fq *Fq) IsOne() bool {
 	return fq.Equal(r)
 }
 
-// Set fp == rhs
+// Set fp == rhs.
 func (fq *Fq) Set(rhs *Fq) *Fq {
 	fq[0] = rhs[0]
 	fq[1] = rhs[1]
@@ -87,7 +87,7 @@ func (fq *Fq) Set(rhs *Fq) *Fq {
 	return fq
 }
 
-// SetUint64 sets fp == rhs
+// SetUint64 sets fp == rhs.
 func (fq *Fq) SetUint64(rhs uint64) *Fq {
 	r := &fiat_pasta_fq_non_montgomery_domain_field_element{rhs, 0, 0, 0}
 	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(fq), r)
@@ -103,12 +103,12 @@ func (fq *Fq) SetBool(rhs bool) *Fq {
 	return fq
 }
 
-// SetOne fp == r
+// SetOne fp == r.
 func (fq *Fq) SetOne() *Fq {
 	return fq.Set(r)
 }
 
-// SetZero fp == 0
+// SetZero fp == 0.
 func (fq *Fq) SetZero() *Fq {
 	fq[0] = 0
 	fq[1] = 0
@@ -156,7 +156,7 @@ func (fq *Fq) SetBytesWide(input *[64]byte) *Fq {
 }
 
 // SetBytes attempts to convert a little endian byte representation
-// of a scalar into a `Fq`, failing if input is not canonical
+// of a scalar into a `Fq`, failing if input is not canonical.
 func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 	d0 := &Fq{
 		binary.LittleEndian.Uint64(input[:8]),
@@ -165,33 +165,33 @@ func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
 	if d0.Cmp(modulus) != -1 {
-		return nil, fmt.Errorf("invalid byte sequence")
+		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	fiat_pasta_fq_from_bytes((*[4]uint64)(fq), input)
 	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(fq), (*fiat_pasta_fq_non_montgomery_domain_field_element)(fq))
 	return fq, nil
 }
 
-// SetBigInt initializes an element from big.Int
-// The value is reduced by the modulus
+// SetBigInt initialises an element from big.Int
+// The value is reduced by the modulus.
 func (fq *Fq) SetBigInt(bi *big.Int) *Fq {
 	var buffer [32]byte
 	r := new(big.Int).Set(bi)
 	r.Mod(r, BiModulus)
 	r.FillBytes(buffer[:])
-	copy(buffer[:], internal.ReverseScalarBytes(buffer[:]))
+	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = fq.SetBytes(&buffer)
 	return fq
 }
 
-// SetRaw converts a raw array into a field element
+// SetRaw converts a raw array into a field element.
 func (fq *Fq) SetRaw(array *[4]uint64) *Fq {
 	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(fq), (*fiat_pasta_fq_non_montgomery_domain_field_element)(array))
 	return fq
 }
 
 // Bytes converts this element into a byte representation
-// in little endian byte order
+// in little endian byte order.
 func (fq *Fq) Bytes() [32]byte {
 	var output [32]byte
 	tv := &fiat_pasta_fq_non_montgomery_domain_field_element{}
@@ -200,20 +200,20 @@ func (fq *Fq) Bytes() [32]byte {
 	return output
 }
 
-// BigInt converts this element into the big.Int struct
+// BigInt converts this element into the big.Int struct.
 func (fq *Fq) BigInt() *big.Int {
 	buffer := fq.Bytes()
-	return new(big.Int).SetBytes(internal.ReverseScalarBytes(buffer[:]))
+	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
-// Double this element
+// Double this element.
 func (fq *Fq) Double(elem *Fq) *Fq {
 	delem := (*fiat_pasta_fq_montgomery_domain_field_element)(elem)
 	fiat_pasta_fq_add((*fiat_pasta_fq_montgomery_domain_field_element)(fq), delem, delem)
 	return fq
 }
 
-// Square this element
+// Square this element.
 func (fq *Fq) Square(elem *Fq) *Fq {
 	delem := (*fiat_pasta_fq_montgomery_domain_field_element)(elem)
 	fiat_pasta_fq_square((*fiat_pasta_fq_montgomery_domain_field_element)(fq), delem)
@@ -221,7 +221,7 @@ func (fq *Fq) Square(elem *Fq) *Fq {
 }
 
 // Sqrt this element, if it exists. If true, then value
-// is a square root. If false, value is a QNR
+// is a square root. If false, value is a QNR.
 func (fq *Fq) Sqrt(elem *Fq) (*Fq, bool) {
 	return fq.tonelliShanks(elem)
 }
@@ -244,8 +244,8 @@ func (fq *Fq) tonelliShanks(elem *Fq) (*Fq, bool) {
 		0x0000000000000000,
 		0x0000000020000000,
 	}
-	//c4 := generator
-	//c5 := new(Fq).pow(&generator, c2)
+	// c4 := generator
+	// c5 := new(Fq).pow(&generator, c2)
 	c5 := &Fq{
 		0x218077428c9942de,
 		0xcc49578921b60494,
@@ -280,18 +280,19 @@ func (fq *Fq) tonelliShanks(elem *Fq) (*Fq, bool) {
 }
 
 // Invert this element i.e. compute the multiplicative inverse
-// return false, zero if this element is zero
+// return false, zero if this element is zero.
 func (fq *Fq) Invert(elem *Fq) (*Fq, bool) {
 	// computes elem^(p - 2) mod p
 	exp := [4]uint64{
 		0x8c46eb20ffffffff,
 		0x224698fc0994a8dd,
 		0x0000000000000000,
-		0x4000000000000000}
+		0x4000000000000000,
+	}
 	return fq.pow(elem, exp), !elem.IsZero()
 }
 
-// Mul returns the result from multiplying this element by rhs
+// Mul returns the result from multiplying this element by rhs.
 func (fq *Fq) Mul(lhs, rhs *Fq) *Fq {
 	dlhs := (*fiat_pasta_fq_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fq_montgomery_domain_field_element)(rhs)
@@ -299,7 +300,7 @@ func (fq *Fq) Mul(lhs, rhs *Fq) *Fq {
 	return fq
 }
 
-// Sub returns the result from subtracting rhs from this element
+// Sub returns the result from subtracting rhs from this element.
 func (fq *Fq) Sub(lhs, rhs *Fq) *Fq {
 	dlhs := (*fiat_pasta_fq_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fq_montgomery_domain_field_element)(rhs)
@@ -307,7 +308,7 @@ func (fq *Fq) Sub(lhs, rhs *Fq) *Fq {
 	return fq
 }
 
-// Add returns the result from adding rhs to this element
+// Add returns the result from adding rhs to this element.
 func (fq *Fq) Add(lhs, rhs *Fq) *Fq {
 	dlhs := (*fiat_pasta_fq_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fq_montgomery_domain_field_element)(rhs)
@@ -315,14 +316,14 @@ func (fq *Fq) Add(lhs, rhs *Fq) *Fq {
 	return fq
 }
 
-// Neg returns negation of this element
+// Neg returns negation of this element.
 func (fq *Fq) Neg(elem *Fq) *Fq {
 	delem := (*fiat_pasta_fq_montgomery_domain_field_element)(elem)
 	fiat_pasta_fq_opp((*fiat_pasta_fq_montgomery_domain_field_element)(fq), delem)
 	return fq
 }
 
-// Exp exponentiates this element by exp
+// Exp exponentiates this element by exp.
 func (fq *Fq) Exp(base, exp *Fq) *Fq {
 	// convert exponent to integer form
 	tv := &fiat_pasta_fq_non_montgomery_domain_field_element{}
@@ -346,7 +347,7 @@ func (fq *Fq) pow(base *Fq, exp [4]uint64) *Fq {
 	return fq.Set(res)
 }
 
-// CMove selects lhs if choice == 0 and rhs if choice == 1
+// CMove selects lhs if choice == 0 and rhs if choice == 1.
 func (fq *Fq) CMove(lhs, rhs *Fq, choice int) *Fq {
 	dlhs := (*[4]uint64)(lhs)
 	drhs := (*[4]uint64)(rhs)
@@ -354,7 +355,7 @@ func (fq *Fq) CMove(lhs, rhs *Fq, choice int) *Fq {
 	return fq
 }
 
-// ToRaw converts this element into the a [4]uint64
+// ToRaw converts this element into the a [4]uint64.
 func (fq *Fq) ToRaw() [4]uint64 {
 	res := &fiat_pasta_fq_non_montgomery_domain_field_element{}
 	fiat_pasta_fq_from_montgomery(res, (*fiat_pasta_fq_montgomery_domain_field_element)(fq))

@@ -5,9 +5,9 @@ import (
 	"hash"
 	"math/big"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 )
 
 type Signature struct {
@@ -16,14 +16,14 @@ type Signature struct {
 	S curves.Scalar
 }
 
-// Normalize normalizes the signature to a "low S" form. In ECDSA, signatures are
+// Normalise normalises the signature to a "low S" form. In ECDSA, signatures are
 // of the form (r, s) where r and s are numbers lying in some finite
 // field. Both (r, s) and (r, -s) are valid signatures of the same message
 // so ECDSA does not have strong existential unforgeability
-// We normalize to the low S form which ensures that the s value
+// We normalise to the low S form which ensures that the s value
 // lies in the lower half of its range.
 // See <https://en.bitcoin.it/wiki/BIP_0062#Low_S_values_in_signatures>
-func (signature *Signature) Normalize() {
+func (signature *Signature) Normalise() {
 	if !signature.IsNormalized() {
 		signature.S = signature.S.Neg()
 		if signature.V != nil {
@@ -50,10 +50,11 @@ func (signature *Signature) IsNormalized() bool {
 // Definition of recovery id described here: https://en.bitcoin.it/wiki/Message_signing
 // Recovery process itself described in 4.1.6: http://www.secg.org/sec1-v2.pdf
 // Note that V here is the same as recovery Id is EIP-155.
-// Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalized signatures as invalid)
+// Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalised signatures as invalid).
 func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *big.Int
 
+	//nolint:gocritic // below is not a switch
 	if p, ok := bigR.(*curves.PointK256); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
@@ -83,12 +84,10 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 
 	switch rx.Cmp(subGroupOrder) {
 	case -1:
-		break
 	case 0:
 		return -1, errs.NewFailed("x coordinate of the signature is equal to subGroupOrder")
 	case 1:
 		recoveryId += 2
-		break
 	default:
 		return -1, errs.NewFailed("big int cmp failed, we should never be here")
 	}
@@ -127,8 +126,8 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if (*signature.V & 1) != 0 {
 		ryCompressed[0]++
 	}
-	affine := append(ryCompressed[:], rxBytes...)
-	bigR, err := curve.Point.FromAffineCompressed(affine[:])
+	affine := append(ryCompressed, rxBytes...)
+	bigR, err := curve.Point.FromAffineCompressed(affine)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate R")
 	}
@@ -201,30 +200,27 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	return nil
 }
 
-func HashToInt(hash []byte, curve *curves.Curve) (*big.Int, error) {
+func HashToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
 	ecdsaCurve, err := curve.ToEllipticCurve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
 	order := ecdsaCurve.Params().N
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get curve order")
-	}
 	orderBits := order.BitLen()
 	orderBytes := (orderBits + 7) / 8
-	if len(hash) > orderBytes {
-		hash = hash[:orderBytes]
+	if len(digest) > orderBytes {
+		digest = digest[:orderBytes]
 	}
 
-	ret := new(big.Int).SetBytes(hash)
-	excess := len(hash)*8 - orderBits
+	ret := new(big.Int).SetBytes(digest)
+	excess := len(digest)*8 - orderBits
 	if excess > 0 {
 		ret.Rsh(ret, uint(excess))
 	}
 	return ret, nil
 }
 
-func getPointCoordinates(point curves.Point) (x *big.Int, y *big.Int) {
+func getPointCoordinates(point curves.Point) (x, y *big.Int) {
 	affine := point.ToAffineUncompressed()
 	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
 }

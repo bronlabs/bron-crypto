@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
@@ -17,15 +19,17 @@ type Round1P2P struct {
 	Proof     *schnorr.Proof
 	PublicKey curves.Point
 }
-type Round2P2P = []ReceiversMaskedChoices
-type Round3P2P = []OtChallenge
-type Round4P2P = []OtChallengeResponse
-type Round5P2P = []ChallengeOpening
-type Round7P2P = [][KeyCount][DigestSize]byte
-type Round8P2P = [][DigestSize]byte
+type (
+	Round2P2P = []ReceiversMaskedChoices
+	Round3P2P = []OtChallenge
+	Round4P2P = []OtChallengeResponse
+	Round5P2P = []ChallengeOpening
+	Round7P2P = [][KeyCount][DigestSize]byte
+	Round8P2P = [][DigestSize]byte
+)
 
 // Round1ComputeAndZkpToPublicKey is the first phase of the protocol.
-// computes and stores public key and returns the schnorr proof. serialized / packed.
+// computes and stores public key and returns the schnorr proof. serialised / packed.
 // This implements step 1 of Protocol 7 of DKLs18, page 16.
 func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.Point, error) {
 	var err error
@@ -82,7 +86,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 }
 
 // Round3PadTransfer is the sender's "Pad Transfer" phase in OT; see steps 4 and 5 of page 16 of the paper.
-// Returns the challenges xi
+// Returns the challenges xi.
 func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []ReceiversMaskedChoices) ([]OtChallenge, error) {
 	var err error
 	challenge := make([]OtChallenge, sender.BatchSize)
@@ -91,7 +95,6 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 
 	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
 	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
-
 		if receiversMaskedChoice[i], err = sender.Curve.Point.FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
 			return nil, errs.WrapDeserializationFailed(err, "uncompress the point")
 		}
@@ -109,7 +112,6 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 		baseEncryptionKeyMaterial[1] = receiverChoiceMinusSenderPublicKey.Mul(sender.SecretKey)
 
 		for k := 0; k < KeyCount; k++ {
-
 			output, err := hashing.Hash(sha3.New256, sender.UniqueSessionId, []byte{byte(i)}, baseEncryptionKeyMaterial[k].ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapFailed(err, "creating one time pad encryption keys")
@@ -121,14 +123,18 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 			hashedKey[k] = sha3.Sum256(hashedKey[k][:])
 		}
 
-		challenge[i] = xorBytes(hashedKey[0], hashedKey[1])
+		current, err := bitstring.XorBytes(hashedKey[0][:], hashedKey[1][:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not xor bytes")
+		}
+		copy(challenge[i][:], current)
 	}
 	return challenge, nil
 }
 
 // Round4RespondToChallenge corresponds to initial round of the receiver's "Verify" phase; see step 6 of page 16 of the paper.
 // this is just the start of Verification. In this round, the receiver outputs "rho'", which the sender will check.
-func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) []OtChallengeResponse {
+func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) ([]OtChallengeResponse, error) {
 	// store to be used in future steps
 	receiver.SenderChallenge = challenge
 	// challengeResponses is Rho' in the paper.
@@ -138,16 +144,19 @@ func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) []Ot
 		hashedKey := sha3.Sum256(receiver.Output.OneTimePadDecryptionKey[i][:])
 		hashedKey = sha3.Sum256(hashedKey[:])
 		challengeResponses[i] = hashedKey
-		alternativeChallengeResponse := xorBytes(receiver.SenderChallenge[i], hashedKey)
-		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], challengeResponses[i][:], alternativeChallengeResponse[:])
+		alternativeChallengeResponse, err := bitstring.XorBytes(receiver.SenderChallenge[i][:], hashedKey[:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not xor bytes")
+		}
+		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], challengeResponses[i][:], alternativeChallengeResponse)
 	}
-	return challengeResponses
+	return challengeResponses, nil
 }
 
 // Round5Verify verifies the challenge response. If the verification passes, sender opens his challenges to the receiver.
 // See step 7 of page 16 of the paper.
 // Abort if Rho' != H(H(Rho^0)) in other words, if challengeResponse != H(H(encryption key 0)).
-// opening is H(encryption key)
+// opening is H(encryption key).
 func (sender *Sender) Round5Verify(challengeResponses []OtChallengeResponse) ([]ChallengeOpening, error) {
 	opening := make([]ChallengeOpening, sender.BatchSize)
 	for i := 0; i < sender.BatchSize; i++ {
@@ -183,8 +192,11 @@ func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) err
 		}
 		hashedKey0 := sha3.Sum256(challengeOpenings[i][0][:])
 		hashedKey1 := sha3.Sum256(challengeOpenings[i][1][:])
-		reconstructedChallenge := xorBytes(hashedKey0, hashedKey1)
-		if subtle.ConstantTimeCompare(reconstructedChallenge[:], receiver.SenderChallenge[i][:]) != 1 {
+		reconstructedChallenge, err := bitstring.XorBytes(hashedKey0[:], hashedKey1[:])
+		if err != nil {
+			return errs.WrapFailed(err, "could not xor bytes")
+		}
+		if subtle.ConstantTimeCompare(reconstructedChallenge, receiver.SenderChallenge[i][:]) != 1 {
 			return errs.NewVerificationFailed("sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
 		}
 	}
@@ -192,13 +204,13 @@ func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) err
 }
 
 // Round7Encrypt wraps an `Encrypt` operation on the Sender's underlying output from the random OT; see `Encrypt` below.
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT
+// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
 func (sender *Sender) Round7Encrypt(messages [][KeyCount][DigestSize]byte) ([][KeyCount][DigestSize]byte, error) {
 	return sender.Output.Encrypt(messages)
 }
 
 // Round8Decrypt wraps a `Decrypt` operation on the Receiver's underlying output from the random OT; see `Decrypt` below
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT
+// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
 func (receiver *Receiver) Round8Decrypt(ciphertext [][KeyCount][DigestSize]byte) ([][DigestSize]byte, error) {
 	return receiver.Output.Decrypt(ciphertext)
 }
@@ -214,7 +226,11 @@ func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyC
 
 	for i := 0; i < len(plaintexts); i++ {
 		for k := 0; k < KeyCount; k++ {
-			ciphertexts[i][k] = xorBytes(s.OneTimePadEncryptionKeys[i][k], plaintexts[i][k])
+			current, err := bitstring.XorBytes(s.OneTimePadEncryptionKeys[i][k][:], plaintexts[i][k][:])
+			if err != nil {
+				return nil, errs.WrapFailed(err, "could not xor bytes")
+			}
+			copy(ciphertexts[i][k][:], current)
 		}
 	}
 	return ciphertexts, nil
@@ -231,7 +247,11 @@ func (r *ReceiverOutput) Decrypt(ciphertexts [][KeyCount][DigestSize]byte) ([][D
 
 	for i := 0; i < len(ciphertexts); i++ {
 		choice := r.RandomChoiceBits[i]
-		plaintexts[i] = xorBytes(r.OneTimePadDecryptionKey[i], ciphertexts[i][choice])
+		current, err := bitstring.XorBytes(r.OneTimePadDecryptionKey[i][:], ciphertexts[i][choice][:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not xor bytes")
+		}
+		copy(plaintexts[i][:], current)
 	}
 	return plaintexts, nil
 }

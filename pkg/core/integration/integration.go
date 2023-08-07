@@ -3,14 +3,14 @@ package integration
 import (
 	"encoding/binary"
 	"encoding/json"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/types"
 	"hash"
 	"sort"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 )
 
 type Participant interface {
@@ -46,7 +46,7 @@ func (cs *CipherSuite) Validate() error {
 
 type CohortConfig struct {
 	CipherSuite  *CipherSuite
-	Protocol     protocol.Protocol
+	Protocol     protocols.Protocol
 	Threshold    int
 	TotalParties int
 	Participants []IdentityKey
@@ -66,7 +66,7 @@ func (c *CohortConfig) Validate() error {
 		return errs.WrapVerificationFailed(err, "ciphersuite is invalid")
 	}
 
-	if supported := protocol.Supported[c.Protocol]; !supported {
+	if supported := protocols.Supported[c.Protocol]; !supported {
 		return errs.NewInvalidArgument("protocol %s is not supported", c.Protocol)
 	}
 
@@ -86,7 +86,7 @@ func (c *CohortConfig) Validate() error {
 	}
 	participantHashSet, err := hashset.NewHashSet(c.Participants)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "could not construct hash set of participants")
 	}
 	c.participantHashSet = participantHashSet
 
@@ -121,7 +121,6 @@ func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	}
 	*c = result
 	return nil
-
 }
 
 func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {

@@ -41,10 +41,6 @@ docs: ## Apply copyright headers and re-build package-level documents
 gen-readme-docs:
 	@${DOCTOOLS} gomarkdoc --output '{{.Dir}}/README.md' ./...
 
-.PHONY: deflake
-deflake: ## Runs tests many times to detect flakes
-	${GO} test -count=1000 -short -timeout 0 ${TEST_CLAUSE} ./...
-
 .PHONY: fmt
 fmt:
 	${GO} fmt ./...
@@ -52,6 +48,7 @@ fmt:
 .PHONY: githooks
 githooks:
 	git config core.hooksPath .githooks
+	chmod +x .githooks/*
 
 .PHONY: lint
 lint:
@@ -62,6 +59,10 @@ lint:
 lint-fix:
 	${GO} vet ./...
 	golangci-lint run --fix
+
+.PHONY: deflake
+deflake: ## Runs tests many times to detect flakes
+	${GO} test -count=1000 -short -timeout 0 ${TEST_CLAUSE} ./...
 
 .PHONY: test
 test:
@@ -75,41 +76,9 @@ test-clean: ## Clear test cache and force all tests to be rerun
 test-long: ## Runs all tests, including long-running tests
 	${GO} test ${TEST_CLAUSE} ./...
 
-.PHONY: run-dkg-bls
-run-dkg-bls: ## Runs test of gennaro dkg w/ BLS signature
-	${GO} run test/dkg/bls/main.go
-
-.PHONY: run-dkg-ed25519
-run-dkg-ed25519: ## Runs test of gennaro dkg w/ ed25519 signature
-	${GO} run test/dkg/ed25519/main.go
-
-.PHONY: run-frost-dkg-bls
-run-frost-dkg-bls: ## Runs test of frost dkg w/ BLS signature
-	${GO} run test/frost_dkg/bls/main.go
-
-.PHONY: run-frost-dkg-ed25519
-run-frost-dkg-ed25519: ## Runs test of frost dkg w/ ed25519 signature
-	${GO} run test/frost_dkg/ed25519/main.go
-
-.PHONY: run-frost-dkg-ecdsa
-run-frost-dkg-ecdsa: ## Runs test of frost dkg w/ ecdsa signature
-	${GO} run test/frost_dkg/k256/main.go
-
-.PHONY: run-frost-full
-run-frost-full: ## Runs test of frost dkg w/ frost signature
-	${GO} run test/frost_dkg/frost/main.go
-
-.PHONY: run-verenc-elgamal
-run-verenc-elgamal: ## Runs test of el-gamal verifiable encryption
-	${GO} run test/verenc/elgamal/main.go
-
-.PHONY: run-accumulator-ecc
-run-accumulator-ecc: ## Runs test of cryptographic accumulator
-	${GO} run test/accumulator/ecc/main.go
-
-.PHONY: compare-bench
-compare-bench: ## Runs bench on master and the current branch and compares the result
-	bash scripts/perf-comp-local
+.PHONY: test-clean-long
+test-clean-long: ## Clear test cache and force all tests to be rerun
+	${GO} clean -testcache && ${GO} test -count=1 ${TEST_CLAUSE} ./...
 
 .PHONY: fuzz-test
 fuzz-test: ## build and run fuzz test

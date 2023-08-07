@@ -3,16 +3,17 @@ package test_utils
 import (
 	crand "crypto/rand"
 	"encoding/json"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"hash"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type TestIdentityKey struct {
@@ -26,9 +27,11 @@ var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.signer.PublicKey.Y
 }
+
 func (k *TestIdentityKey) Hash() [32]byte {
 	return sha3.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
 }
+
 func (k *TestIdentityKey) Sign(message []byte) []byte {
 	signature, err := k.signer.Sign(message)
 	if err != nil {
@@ -40,6 +43,7 @@ func (k *TestIdentityKey) Sign(message []byte) []byte {
 	}
 	return result
 }
+
 func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
 	cipherSuite := &integration.CipherSuite{
 		Curve: k.curve,
@@ -60,7 +64,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 }
 
 func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []integration.IdentityKey, err error) {
-	if err = cipherSuite.Validate(); err != nil {
+	if err := cipherSuite.Validate(); err != nil {
 		return nil, err
 	}
 	if n <= 0 {
@@ -94,7 +98,7 @@ func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar, op
 	}, nil
 }
 
-func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
+func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
 	if threshold > len(identities) {
 		return nil, errors.Errorf("invalid t=%d, n=%d", threshold, len(identities))
 	}
@@ -109,17 +113,17 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocol.Protocol
 		SignatureAggregators: aggregators,
 	}
 
-	if err = cohortConfig.Validate(); err != nil {
+	if err := cohortConfig.Validate(); err != nil {
 		return nil, err
 	}
 
 	return cohortConfig, nil
 }
 
-func MakeTranscripts(identities []integration.IdentityKey, label string) (transcripts []transcript.Transcript) {
-	transcripts = make([]transcript.Transcript, len(identities))
+func MakeTranscripts(identities []integration.IdentityKey, label string) (allTranscripts []transcripts.Transcript) {
+	allTranscripts = make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = merlin.NewTranscript(label)
+		allTranscripts[i] = merlin.NewTranscript(label)
 	}
-	return transcripts
+	return allTranscripts
 }

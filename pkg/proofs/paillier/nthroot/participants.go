@@ -1,11 +1,12 @@
 package nthroot
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const (
@@ -42,17 +43,14 @@ type Verifier struct {
 	state *VerifierState
 }
 
-func NewProver(bigN *big.Int, x *big.Int, y *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (prover *Prover, err error) {
-	if sessionId == nil || len(sessionId) == 0 {
+func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	return &Prover{
 		Participant: Participant{
@@ -68,17 +66,14 @@ func NewProver(bigN *big.Int, x *big.Int, y *big.Int, sessionId []byte, transcri
 	}, nil
 }
 
-func NewVerifier(bigN *big.Int, x *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if sessionId == nil || len(sessionId) == 0 {
+func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	return &Verifier{
 		Participant: Participant{

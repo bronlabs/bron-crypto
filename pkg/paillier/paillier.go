@@ -11,15 +11,15 @@
 //   - multiplying a plain value, a, and an encrypted value Enc(b), and obtaining Enc(a * b).
 //
 // The encrypted values are represented as big.Int and are serializable. This module also provides
-// JSON serialization for the PublicKey and the SecretKey.
+// JSON serialisation for the PublicKey and the SecretKey.
 package paillier
 
 import (
 	"encoding/json"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"math/big"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 type (
@@ -29,9 +29,9 @@ type (
 		N2 *big.Int // N² computed and cached to prevent re-computation.
 	}
 
-	// PublicKeyJson encapsulates the data that is serialized to JSON.
+	// PublicKeyJson encapsulates the data that is serialised to JSON.
 	// It is used internally and not for external use. Public so other pieces
-	// can use for serialization.
+	// can use for serialisation.
 	PublicKeyJson struct {
 		N *big.Int
 	}
@@ -44,9 +44,9 @@ type (
 		U       *big.Int // L((N + 1)^λ(N) mod N²)−1 mod N
 	}
 
-	// SecretKeyJson encapsulates the data that is serialized to JSON.
+	// SecretKeyJson encapsulates the data that is serialised to JSON.
 	// It is used internally and not for external use. Public so other pieces
-	// can use for serialization.
+	// can use for serialisation.
 	SecretKeyJson struct {
 		N, Lambda, Totient, U *big.Int
 	}
@@ -146,7 +146,11 @@ func NewSecretKey(p, q *big.Int) (*SecretKey, error) {
 // MarshalJSON converts the public key into json format.
 func (publicKey *PublicKey) MarshalJSON() ([]byte, error) {
 	data := PublicKeyJson{publicKey.N}
-	return json.Marshal(data)
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "json marshal failed")
+	}
+	return marshalled, nil
 }
 
 // UnmarshalJSON converts the json data into this public key.
@@ -204,7 +208,7 @@ func (publicKey *PublicKey) L(x *big.Int) (*big.Int, error) {
 	return b.Div(b, publicKey.N), nil
 }
 
-// NewPublicKey initializes a Paillier public key with a given n.
+// NewPublicKey initialises a Paillier public key with a given n.
 func NewPublicKey(n *big.Int) (*PublicKey, error) {
 	if n == nil {
 		return nil, errs.NewIsNil("n is nil")
@@ -236,7 +240,7 @@ func (publicKey *PublicKey) Add(lhsCipherText, rhsCipherText CipherText) (Cipher
 	return ctxt, nil
 }
 
-// SubPlain subtract homomorphically plain integer from cipher text
+// SubPlain subtract homomorphically plain integer from cipher text.
 func (publicKey *PublicKey) SubPlain(lhsCipherText, rhsPlain *big.Int) (CipherText, error) {
 	if lhsCipherText == nil || rhsPlain == nil {
 		return nil, errs.NewIsNil("one of the cipher texts in nil")
@@ -374,7 +378,11 @@ func (secretKey *SecretKey) MarshalJSON() ([]byte, error) {
 		secretKey.U,
 	}
 
-	return json.Marshal(data)
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "json marshalling failed")
+	}
+	return marshalled, nil
 }
 
 // UnmarshalJSON converts the json data into this secret key.

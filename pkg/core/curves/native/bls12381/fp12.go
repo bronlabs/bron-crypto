@@ -7,49 +7,49 @@ type fp12 struct {
 	A, B fp6
 }
 
-// SetFp creates an element from a lower field
+// SetFp creates an element from a lower field.
 func (f *fp12) SetFp(a *fp) *fp12 {
 	f.A.SetFp(a)
 	f.B.SetZero()
 	return f
 }
 
-// SetFp2 creates an element from a lower field
+// SetFp2 creates an element from a lower field.
 func (f *fp12) SetFp2(a *fp2) *fp12 {
 	f.A.SetFp2(a)
 	f.B.SetZero()
 	return f
 }
 
-// SetFp6 creates an element from a lower field
+// SetFp6 creates an element from a lower field.
 func (f *fp12) SetFp6(a *fp6) *fp12 {
 	f.A.Set(a)
 	f.B.SetZero()
 	return f
 }
 
-// Set copies the value `a`
+// Set copies the value `a`.
 func (f *fp12) Set(a *fp12) *fp12 {
 	f.A.Set(&a.A)
 	f.B.Set(&a.B)
 	return f
 }
 
-// SetZero fp6 to zero
+// SetZero fp6 to zero.
 func (f *fp12) SetZero() *fp12 {
 	f.A.SetZero()
 	f.B.SetZero()
 	return f
 }
 
-// SetOne fp6 to multiplicative identity element
+// SetOne fp6 to multiplicative identity element.
 func (f *fp12) SetOne() *fp12 {
 	f.A.SetOne()
 	f.B.SetZero()
 	return f
 }
 
-// Random generates a random field element
+// Random generates a random field element.
 func (f *fp12) Random(reader io.Reader) (*fp12, error) {
 	a, err := new(fp6).Random(reader)
 	if err != nil {
@@ -64,7 +64,7 @@ func (f *fp12) Random(reader io.Reader) (*fp12, error) {
 	return f, nil
 }
 
-// Square computes arg^2
+// Square computes arg^2.
 func (f *fp12) Square(arg *fp12) *fp12 {
 	var ab, apb, aTick, bTick, t fp6
 
@@ -85,7 +85,7 @@ func (f *fp12) Square(arg *fp12) *fp12 {
 	return f
 }
 
-// Invert computes this element's field inversion
+// Invert computes this element's field inversion.
 func (f *fp12) Invert(arg *fp12) (*fp12, int) {
 	var a, b, t fp6
 	a.Square(&arg.A)
@@ -102,21 +102,21 @@ func (f *fp12) Invert(arg *fp12) (*fp12, int) {
 	return f, wasInverted
 }
 
-// Add computes arg1+arg2
+// Add computes arg1+arg2.
 func (f *fp12) Add(arg1, arg2 *fp12) *fp12 {
 	f.A.Add(&arg1.A, &arg2.A)
 	f.B.Add(&arg1.B, &arg2.B)
 	return f
 }
 
-// Sub computes arg1-arg2
+// Sub computes arg1-arg2.
 func (f *fp12) Sub(arg1, arg2 *fp12) *fp12 {
 	f.A.Sub(&arg1.A, &arg2.A)
 	f.B.Sub(&arg1.B, &arg2.B)
 	return f
 }
 
-// Mul computes arg1*arg2
+// Mul computes arg1*arg2.
 func (f *fp12) Mul(arg1, arg2 *fp12) *fp12 {
 	var aa, bb, a2b2, a, b fp6
 
@@ -135,14 +135,14 @@ func (f *fp12) Mul(arg1, arg2 *fp12) *fp12 {
 	return f
 }
 
-// Neg computes the field negation
+// Neg computes the field negation.
 func (f *fp12) Neg(arg *fp12) *fp12 {
 	f.A.Neg(&arg.A)
 	f.B.Neg(&arg.B)
 	return f
 }
 
-// MulByABD computes arg * a * b * c
+// MulByABD computes arg * a * b * c.
 func (f *fp12) MulByABD(arg *fp12, a, b, d *fp2) *fp12 {
 	var aa, bb, aTick, bTick fp6
 	var bd fp2
@@ -165,7 +165,7 @@ func (f *fp12) MulByABD(arg *fp12, a, b, d *fp2) *fp12 {
 	return f
 }
 
-// Conjugate computes the field conjugation
+// Conjugate computes the field conjugation.
 func (f *fp12) Conjugate(arg *fp12) *fp12 {
 	f.A.Set(&arg.A)
 	f.B.Neg(&arg.B)
@@ -207,23 +207,23 @@ func (f *fp12) FrobeniusMap(arg *fp12) *fp12 {
 	return f
 }
 
-// Equal returns 1 if fp12 == rhs, 0 otherwise
+// Equal returns 1 if fp12 == rhs, 0 otherwise.
 func (f *fp12) Equal(rhs *fp12) int {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B)
 }
 
-// IsZero returns 1 if fp6 == 0, 0 otherwise
+// IsZero returns 1 if fp6 == 0, 0 otherwise.
 func (f *fp12) IsZero() int {
 	return f.A.IsZero() & f.B.IsZero()
 }
 
-// IsOne returns 1 if fp12 == 1, 0 otherwise
+// IsOne returns 1 if fp12 == 1, 0 otherwise.
 func (f *fp12) IsOne() int {
 	return f.A.IsOne() & f.B.IsZero()
 }
 
 // CMove performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
+// selects arg1 if choice == 0 and arg2 if choice == 1.
 func (f *fp12) CMove(arg1, arg2 *fp12, choice int) *fp12 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)

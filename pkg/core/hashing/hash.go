@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"math/bits"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 func I2OSP(b, n int) []byte {
@@ -53,7 +53,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// step 1
 	ell := lenInBytes / native.FieldBytes
 
-	//step 2
+	// step 2
 	if ell > 255 {
 		return nil, errs.NewInvalidArgument("ell > 25")
 	}
@@ -98,7 +98,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	return uniformBytes[:lenInBytes], nil
 }
 
-// TODO: make sure this outputs consistently with the curve implementation
+// TODO: make sure this outputs consistently with the curve implementation.
 func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, characteristic, extensionDegree, count int) ([][]*big.Int, error) {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.3
 
@@ -126,7 +126,6 @@ func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, cha
 			tv := uniformBytes[elmOffset : elmOffset+L]
 			// step 7
 			e[j] = new(big.Int).Mod(OS2IP(tv), big.NewInt(int64(characteristic)))
-
 		}
 		// step 8
 		u[i] = e
@@ -135,14 +134,14 @@ func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, cha
 	return u, nil
 }
 
-// TODO: make sure this outputs consistently with the curve implementation
+// TODO: make sure this outputs consistently with the curve implementation.
 func HashToCurve(curve curves.Curve, mapToCurve func(curves.Scalar) curves.Point, message []byte) (curves.Point, error) {
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-10#name-encoding-byte-strings-to-ell
 	// Needs curve profile, a method to clear cofactor afterwards etc.
-	return nil, errors.New("not implemented")
+	return nil, errs.NewFailed("not implemented")
 }
 
-// Hash iteratively writes all the inputs to the given hash function and returns the result
+// Hash iteratively writes all the inputs to the given hash function and returns the result.
 func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	H := h()
 	for _, x := range xs {
@@ -155,7 +154,7 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	return digest, nil
 }
 
-// FiatShamir computes the challenge scalar writing all inputs to the hash and creating a digest
+// FiatShamir computes the challenge scalar writing all inputs to the hash and creating a digest.
 func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
 	for _, x := range xs {
 		if x == nil {
@@ -203,7 +202,7 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 // and https://signal.org/docs/specifications/xeddsa/#hash-functions
 // for more details.
 // This uses the KDF function similar to X3DH for each `value`
-// But changes the key just like XEdDSA where the prefix bytes change by a single bit
+// But changes the key just like XEdDSA where the prefix bytes change by a single bit.
 func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	// Don't accept any nil arguments
 	for _, x := range xs {
@@ -235,7 +234,7 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 
 // ByteSub is a constant time algorithm for subtracting
 // 1 from the array as if it were a big number.
-// 0 is considered a wrap which resets to 0xFF
+// 0 is considered a wrap which resets to 0xFF.
 func byteSub(b []byte) {
 	m := byte(1)
 	for i := 0; i < len(b); i++ {

@@ -1,11 +1,11 @@
 package sample
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
 type Participant struct {
@@ -42,7 +42,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	}
 	presentParticipantHashSet, err := hashset.NewHashSet(presentParticipants)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not construct present participant hash set")
 	}
 	_, found := presentParticipantHashSet.Get(identityKey)
 	if !found {
@@ -55,7 +55,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if len(seeds) == 0 {
 		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
 	}
-	allParticipants := make([]integration.IdentityKey, len(seeds))
+	allParticipants := make([]integration.IdentityKey, len(seeds)+1)
 	i := 0
 	for participant, sharedSeed := range seeds {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
@@ -75,8 +75,8 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		allParticipants[i] = participant
 		i++
 	}
-	// i won't be in seeds
-	allParticipants = append(allParticipants, identityKey)
+	// i won't be in seeds, and i is already incremented
+	allParticipants[len(seeds)] = identityKey
 
 	// if you pass presentParticipants to below, sharing ids will be different
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, allParticipants)

@@ -10,8 +10,8 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	mod "github.com/copperexchange/crypto-primitives-go/pkg/core"
+	mod "github.com/copperexchange/knox-primitives/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 )
 
 func BenchmarkK256(b *testing.B) {
@@ -298,11 +298,11 @@ func (s *BenchScalar) CurveName() string {
 }
 
 func (s *BenchScalar) Bytes() []byte {
-	return internal.ReverseScalarBytes(s.value.Bytes())
+	return bitstring.ReverseBytes(s.value.Bytes())
 }
 
 func (s *BenchScalar) SetBytes(bytes []byte) (Scalar, error) {
-	value := new(big.Int).SetBytes(internal.ReverseScalarBytes(bytes))
+	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
 	value.Mod(value, btcec.S256().N)
 	return &BenchScalar{
 		value,
@@ -310,7 +310,7 @@ func (s *BenchScalar) SetBytes(bytes []byte) (Scalar, error) {
 }
 
 func (s *BenchScalar) SetBytesWide(bytes []byte) (Scalar, error) {
-	value := new(big.Int).SetBytes(internal.ReverseScalarBytes(bytes))
+	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
 	value.Mod(value, btcec.S256().N)
 	return &BenchScalar{
 		value,

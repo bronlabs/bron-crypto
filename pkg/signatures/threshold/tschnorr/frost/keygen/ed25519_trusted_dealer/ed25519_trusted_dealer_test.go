@@ -8,11 +8,11 @@ import (
 	"hash"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
-	trusted_dealer "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
+	trusted_dealer "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -78,7 +78,7 @@ func Test_happyPath(t *testing.T) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
-		Protocol:             protocol.FROST,
+		Protocol:             protocols.FROST,
 		Threshold:            2,
 		TotalParties:         3,
 		Participants:         []integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey},

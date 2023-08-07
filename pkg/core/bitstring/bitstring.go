@@ -1,0 +1,59 @@
+package bitstring
+
+import "github.com/copperexchange/knox-primitives/pkg/core/errs"
+
+// SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
+// it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
+func SelectBit(vector []byte, index int) byte {
+	// the bitwise tricks index >> 3 == index // 8 and index & 0x07 == index % 8 are designed to avoid CPU division.
+	return vector[index>>3] >> (index & 0x07) & 0x01
+}
+
+// XorBytesInPlace computes out[i] = in[0][i] XOR in[1][i] XOR ...
+func XorBytesInPlace(out []byte, in ...[]byte) error {
+	if n := copy(out, in[0]); n != len(out) {
+		return errs.NewInvalidArgument("XORing slices of different length")
+	}
+	for idx := 1; idx < len(in); idx++ {
+		if len(in[idx]) != len(out) {
+			return errs.NewInvalidArgument("XORing slices of different length")
+		}
+		for i := 0; i < len(out); i++ {
+			out[i] ^= in[idx][i]
+		}
+	}
+	return nil
+}
+
+func ReverseBytes(inBytes []byte) []byte {
+	outBytes := make([]byte, len(inBytes))
+
+	for i, j := 0, len(inBytes)-1; j >= 0; i, j = i+1, j-1 {
+		outBytes[i] = inBytes[j]
+	}
+
+	return outBytes
+}
+
+// XorBytes computes in[0][i] XOR in[1][i] XOR ... in a new slice.
+func XorBytes(in ...[]byte) ([]byte, error) {
+	out := make([]byte, len(in[0]))
+	if err := XorBytesInPlace(out, in...); err != nil {
+		return nil, errs.WrapFailed(err, "xoring bytes")
+	}
+	return out, nil
+}
+
+// IntToByteArray converts from int to byte array.
+func IntToByteArray(i int) [4]byte {
+	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
+}
+
+// BoolToByte converts a boolean to a byte.
+func BoolToByte(b bool) byte {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}

@@ -1,8 +1,8 @@
 package tecdsa
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
 type Shard struct {

@@ -1,29 +1,39 @@
 package tecdsa
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	dkls23 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
-	lindell17 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dkls23 "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
+	lindell17 "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
 )
 
 type Round1Broadcast = agreeonrandom.Round1Broadcast
 
-type Round2Broadcast = dkls23.Round1Broadcast
-type Round2P2P = dkls23.Round1P2P
+type (
+	Round2Broadcast = dkls23.Round1Broadcast
+	Round2P2P       = dkls23.Round1P2P
+)
 
-type Round3Broadcast = dkls23.Round2Broadcast
-type Round3P2P = dkls23.Round2P2P
+type (
+	Round3Broadcast = dkls23.Round2Broadcast
+	Round3P2P       = dkls23.Round2P2P
+)
 
-type Round4P2P = dkls23.Round3P2P
-type Round4Broadcast = lindell17.Round1Broadcast
+type (
+	Round4P2P       = dkls23.Round3P2P
+	Round4Broadcast = lindell17.Round1Broadcast
+)
 
-type Round5P2P = dkls23.Round4P2P
-type Round5Broadcast = lindell17.Round2Broadcast
+type (
+	Round5P2P       = dkls23.Round4P2P
+	Round5Broadcast = lindell17.Round2Broadcast
+)
 
-type Round6P2P = dkls23.Round5P2P
-type Round6Broadcast = lindell17.Round3Broadcast
+type (
+	Round6P2P       = dkls23.Round5P2P
+	Round6Broadcast = lindell17.Round3Broadcast
+)
 
 type Round7P2P = lindell17.Round4P2P
 

@@ -2,16 +2,17 @@ package dkg
 
 import (
 	"crypto/sha256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
 const (
@@ -462,10 +463,8 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 	return commitments.Open(commitmentHashFunc, message, commitment, witness)
 }
 
-func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcript.Transcript) (proof *dlog.Proof, err error) {
-	if err := transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed()); err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
+	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)
@@ -490,10 +489,8 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 	return proof, nil
 }
 
-func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcript.Transcript) (err error) {
-	if err := transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed()); err != nil {
-		return errs.WrapFailed(err, "cannot write to transcript")
-	}
+func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
+	transcript.AppendMessage([]byte("bigQTwin"), bigQTwin.ToAffineCompressed())
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)

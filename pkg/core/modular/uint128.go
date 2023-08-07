@@ -18,7 +18,10 @@ func New(lo, hi uint64) Uint128 {
 }
 
 // Zero|Min are zero-valued uint128.
-var Min, Zero = New(0, 0), New(0, 0)
+var (
+	Min  = New(0, 0)
+	Zero = New(0, 0)
+)
 
 // Max is the largest possible uint128 value.
 var Max = New(math.MaxUint64, math.MaxUint64)
@@ -95,10 +98,10 @@ func (u Uint128) Mul(v Uint128) Uint128 {
 
 // Lsh returns u<<n.
 func (u Uint128) Lsh(n uint) Uint128 {
-	Lo_nLeq64 := uint64(u.Lo << n)
-	Hi_nLeq64 := uint64(u.Hi<<n | u.Lo>>(64-n))
+	Lo_nLeq64 := (u.Lo << n)
+	Hi_nLeq64 := (u.Hi<<n | u.Lo>>(64-n))
 	Lo_nGt64 := uint64(0)
-	Hi_nGt64 := uint64(u.Lo << (n - 64))
+	Hi_nGt64 := (u.Lo << (n - 64))
 	if n > 64 {
 		return Uint128{Lo_nGt64, Hi_nGt64}
 	} else {
@@ -108,9 +111,9 @@ func (u Uint128) Lsh(n uint) Uint128 {
 
 // Rsh returns u>>n.
 func (u Uint128) Rsh(n uint) (s Uint128) {
-	s_Lo_nLeq64 := uint64(u.Lo>>n | u.Hi<<(64-n))
-	s_Hi_nLeq64 := uint64(u.Hi >> n)
-	s_Lo_nGt64 := uint64(u.Hi >> (n - 64))
+	s_Lo_nLeq64 := (u.Lo>>n | u.Hi<<(64-n))
+	s_Hi_nLeq64 := (u.Hi >> n)
+	s_Lo_nGt64 := (u.Hi >> (n - 64))
 	s_Hi_nGt64 := uint64(0)
 	if n > 64 {
 		s.Lo = s_Lo_nGt64
@@ -119,7 +122,7 @@ func (u Uint128) Rsh(n uint) (s Uint128) {
 		s.Lo = s_Lo_nLeq64
 		s.Hi = s_Hi_nLeq64
 	}
-	return
+	return s
 }
 
 // PutBytes stores u in b in little-endian order. It panics if len(b) < 16.

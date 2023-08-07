@@ -5,40 +5,43 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	"hash"
+	"io"
 	"math"
+	"math/rand"
 	"strings"
 	"testing"
 
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/test_utils"
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
-
-	"hash"
-	"io"
-	"math/rand"
-
 	"golang.org/x/crypto/sha3"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
-var maxParticipants = 10
-var maxNumberOfPreSignatures = 100
+var (
+	maxParticipants          = 10
+	maxNumberOfPreSignatures = 100
+)
 
 // we assume that input curves and hash functions are valid
-var allCurves = []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()}
-var allHashes = []func() hash.Hash{sha3.New256, sha512.New, sha256.New}
+var (
+	allCurves = []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()}
+	allHashes = []func() hash.Hash{sha3.New256, sha512.New, sha256.New}
+)
 
 // Fuzz test for the FROST protocol (DKG + interactive signing)
 // This test makes following assumptions:
@@ -73,7 +76,7 @@ func FuzzFrostDkgInteractiveSigning(f *testing.F) {
 		h := allHashes[hashIndex%len(allHashes)]
 
 		identities, cohortConfig, _, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
-		interactiveSigning(t, signingKeyShares, publicKeyShares, threshold, identities, cohortConfig, message)
+		doInteractiveSigning(t, signingKeyShares, publicKeyShares, threshold, identities, cohortConfig, message)
 		fmt.Println("OK")
 	})
 }
@@ -113,13 +116,14 @@ func FuzzFrostDkgNonInteractiveSigning(f *testing.F) {
 
 		identities, cohortConfig, participants, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
 
-		preSignatureBatch, privateNoncePairsOfAllParties := generatePreSignatures(t, cohortConfig, identities, tau, random, participants)
-		nonInteractiveSigning(t, signingKeyShares, publicKeyShares, cohortConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, random, participants, message)
+		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, cohortConfig, identities, tau, random, participants)
+		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, cohortConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, random, participants, message)
 		fmt.Println("OK")
 	})
 }
 
-func interactiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, threshold int, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, message string) {
+func doInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, threshold int, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, message string) {
+	t.Helper()
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
 		shards = append(shards, &frost.Shard{
@@ -176,7 +180,8 @@ func interactiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeySh
 	}
 }
 
-func nonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, preSignatureBatch []*noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
+func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, preSignatureBatch []*noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
+	t.Helper()
 	var shards []*frost.Shard
 	var err error
 	for i := range signingKeyShares {
@@ -186,7 +191,7 @@ func nonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKe
 		})
 	}
 
-	cosigners := make([]*noninteractive.NonInteractiveCosigner, cohortConfig.TotalParties)
+	cosigners := make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
 		cosigners[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], identities, cohortConfig, random)
 		require.NoError(t, err)
@@ -215,7 +220,8 @@ func nonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKe
 	require.Len(t, signatureHashSet, 1)
 }
 
-func generatePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair) {
+func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair) {
+	t.Helper()
 	pregenParticipants := make([]*noninteractive.PreGenParticipant, cohortConfig.TotalParties)
 	var err error
 	for i, identity := range identities {
@@ -246,6 +252,7 @@ func generatePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig,
 }
 
 func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*threshold.SigningKeyShare, []*threshold.PublicKeyShares) {
+	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  h,
@@ -267,7 +274,7 @@ func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuz
 		identities = append(identities, identity)
 	}
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {
@@ -286,6 +293,7 @@ func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuz
 	require.NoError(t, err)
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		if publicKeyShare == nil {
 			require.Error(t, fmt.Errorf("public key share is nil"))
@@ -308,9 +316,7 @@ func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuz
 	}
 	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
 	require.NoError(t, err)
-	if shamirDealer == nil {
-		require.Error(t, fmt.Errorf("shamir dealer is nil"))
-	}
+	require.NotNil(t, shamirDealer)
 	shamirShares := make([]*shamir.Share, len(participants))
 	for i := 0; i < len(participants); i++ {
 		shamirShares[i] = &shamir.Share{

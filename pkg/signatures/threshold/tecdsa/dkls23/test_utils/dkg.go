@@ -4,12 +4,13 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 	"github.com/pkg/errors"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 )
 
 func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
@@ -26,7 +27,7 @@ func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfi
 
 	for i, identity := range identities {
 		var prng io.Reader
-		if prngs != nil && prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader

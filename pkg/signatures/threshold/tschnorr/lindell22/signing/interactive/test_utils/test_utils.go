@@ -2,15 +2,17 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
+
 	"github.com/pkg/errors"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[integration.IdentityKey]*threshold.SigningKeyShare, transcripts []transcript.Transcript) (participants []*interactive.Cosigner, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[integration.IdentityKey]*threshold.SigningKeyShare, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
 	if len(identities) < cohortConfig.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
 	}
@@ -21,7 +23,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
 		}
-		participants[i], err = interactive.NewCosigner(identity, sid, identities, shards[identity], cohortConfig, transcripts[i], prng)
+		participants[i], err = interactive.NewCosigner(identity, sid, identities, shards[identity], cohortConfig, allTranscripts[i], prng)
 		if err != nil {
 			return nil, err
 		}

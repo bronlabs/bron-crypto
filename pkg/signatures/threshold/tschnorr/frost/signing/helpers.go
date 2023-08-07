@@ -1,13 +1,13 @@
 package signing_helpers
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
 
 func ProducePartialSignature(
@@ -71,7 +71,7 @@ func ProducePartialSignature(
 
 	dealer, err := shamir.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not initialize shamir methods")
+		return nil, errs.WrapFailed(err, "could not initialise shamir methods")
 	}
 	presentPartyShamirIds := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {

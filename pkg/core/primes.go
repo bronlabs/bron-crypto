@@ -8,16 +8,17 @@ package core
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 // GenerateSafePrime creates a prime number `p`
-// where (`p`-1)/2 is also prime with at least `bits`
+// where (`p`-1)/2 is also prime with at least `bits`.
 var GenerateSafePrime = func(bits uint) (*big.Int, error) {
 	if bits < 3 {
-		return nil, fmt.Errorf("safe prime size must be at least 3-bits")
+		return nil, errs.NewFailed("safe prime size must be at least 3-bits")
 	}
 
 	var p *big.Int
@@ -29,7 +30,7 @@ var GenerateSafePrime = func(bits uint) (*big.Int, error) {
 		// and the Safe prime is 1024
 		p, err = rand.Prime(rand.Reader, int(bits)-1)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "reading from crand")
 		}
 		p.Add(p.Lsh(p, 1), One)
 

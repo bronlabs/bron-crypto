@@ -1,6 +1,4 @@
-module github.com/copperexchange/crypto-primitives-go
-
-// replace github.com/copperexchange/crypto-primitives-go => ./
+module github.com/copperexchange/knox-primitives
 
 go 1.20
 

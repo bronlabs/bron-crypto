@@ -3,10 +3,10 @@ package dkg
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 type Participant struct {

@@ -1,13 +1,13 @@
-package transcript
+package transcripts
 
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 )
 
 type Transcript interface {
-	AppendMessage(label, message []byte) error
+	AppendMessage(label, message []byte)
 	AppendScalars(label []byte, scalars ...curves.Scalar)
 	AppendPoints(label []byte, points ...curves.Point)
 	ExtractBytes(label []byte, outLen int) []byte

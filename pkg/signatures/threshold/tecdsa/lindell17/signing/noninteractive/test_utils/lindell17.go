@@ -2,27 +2,28 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
-func MakeTranscripts(label string, identities []integration.IdentityKey) []transcript.Transcript {
-	transcripts := make([]transcript.Transcript, len(identities))
+func MakeTranscripts(label string, identities []integration.IdentityKey) []transcripts.Transcript {
+	allTranscripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = merlin.NewTranscript(label)
+		allTranscripts[i] = merlin.NewTranscript(label)
 	}
 
-	return transcripts
+	return allTranscripts
 }
 
-func MakePreGenParticipants(tau int, identities []integration.IdentityKey, sid []byte, cohort *integration.CohortConfig, transcripts []transcript.Transcript) (participants []*noninteractive.PreGenParticipant, err error) {
+func MakePreGenParticipants(tau int, identities []integration.IdentityKey, sid []byte, cohort *integration.CohortConfig, allTranscripts []transcripts.Transcript) (participants []*noninteractive.PreGenParticipant, err error) {
 	prng := crand.Reader
 	parties := make([]*noninteractive.PreGenParticipant, len(identities))
 	for i := range identities {
-		parties[i], err = noninteractive.NewPreGenParticipant(sid, transcripts[i], identities[i], cohort, tau, prng)
+		parties[i], err = noninteractive.NewPreGenParticipant(sid, allTranscripts[i], identities[i], cohort, tau, prng)
 		if err != nil {
 			return nil, err
 		}

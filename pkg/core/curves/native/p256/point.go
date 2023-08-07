@@ -3,9 +3,9 @@ package p256
 import (
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/p256/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/p256/fp"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 	p256PointSswuParams   native.SswuParams
 )
 
-func P256PointNew() *native.EllipticPoint {
+func PointNew() *native.EllipticPoint {
 	return &native.EllipticPoint{
 		X:          fp.P256FpNew(),
 		Y:          fp.P256FpNew(),
@@ -28,13 +28,13 @@ func P256PointNew() *native.EllipticPoint {
 func p256PointParamsInit() {
 	// How these values were derived
 	// left for informational purposes
-	//params := elliptic.P256().Params()
-	//a := big.NewInt(-3)
-	//a.Mod(a, params.P)
-	//capA := fp.P256FpNew().SetBigInt(a)
-	//capB := fp.P256FpNew().SetBigInt(params.B)
-	//gx := fp.P256FpNew().SetBigInt(params.Gx)
-	//gy := fp.P256FpNew().SetBigInt(params.Gy)
+	// params := elliptic.P256().Params()
+	// a := big.NewInt(-3)
+	// a.Mod(a, params.P)
+	// capA := fp.P256FpNew().SetBigInt(a)
+	// capB := fp.P256FpNew().SetBigInt(params.B)
+	// gx := fp.P256FpNew().SetBigInt(params.Gx)
+	// gy := fp.P256FpNew().SetBigInt(params.Gy)
 
 	p256PointParams = native.EllipticPointParams{
 		A:       fp.P256FpNew().SetRaw(&[native.FieldLimbs]uint64{0xfffffffffffffffc, 0x00000003ffffffff, 0x0000000000000000, 0xfffffffc00000004}),
@@ -112,9 +112,9 @@ func (k p256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.Ellipt
 		u = native.ExpandMsgXof(hash, msg, dst, 96)
 	}
 	var buf [64]byte
-	copy(buf[:48], internal.ReverseScalarBytes(u[:48]))
+	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
 	u0 := fp.P256FpNew().SetBytesWide(&buf)
-	copy(buf[:48], internal.ReverseScalarBytes(u[48:]))
+	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
 	u1 := fp.P256FpNew().SetBytesWide(&buf)
 
 	q0x, q0y := sswuParams.Osswu3mod4(u0)
@@ -131,7 +131,7 @@ func (k p256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.Ellipt
 	return nil
 }
 
-func (k p256PointArithmetic) Double(out, arg *native.EllipticPoint) {
+func (p256PointArithmetic) Double(out, arg *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 6)
 	var xx, yy, zz, xy2, yz2, xz2, bzz, bzz3 [native.FieldLimbs]uint64
@@ -193,7 +193,7 @@ func (k p256PointArithmetic) Double(out, arg *native.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k p256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
+func (p256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 4).
 	var xx, yy, zz, zz3, bxz, bxz3 [native.FieldLimbs]uint64
@@ -278,7 +278,7 @@ func (k p256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 }
 
 func (k p256PointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
-	affine := P256PointNew()
+	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.P256FpNew().Square(affine.Y)
 	rhs := fp.P256FpNew()
@@ -286,7 +286,7 @@ func (k p256PointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
 	return lhs.Equal(rhs) == 1
 }
 
-func (k p256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
+func (p256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	var wasInverted int
 	var zero, x, y, z [native.FieldLimbs]uint64
 	f := arg.X.Arithmetic
@@ -308,7 +308,7 @@ func (k p256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (k p256PointArithmetic) RhsEq(out, x *native.Field) {
+func (p256PointArithmetic) RhsEq(out, x *native.Field) {
 	// Elliptic curve equation for p256 is: y^2 = x^3 ax + b
 	out.Square(x)
 	out.Mul(out, x)

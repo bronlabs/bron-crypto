@@ -2,13 +2,13 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"github.com/pkg/errors"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
 func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
@@ -19,7 +19,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	participants = make([]*gennaro.Participant, cohortConfig.TotalParties)
 	for i, identity := range identities {
 		var prng io.Reader
-		if prngs != nil && prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader
@@ -29,6 +29,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity, cohortConfig, prng, nil)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	return participants, nil

@@ -2,15 +2,17 @@ package noninteractive
 
 import (
 	"bytes"
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
-	"golang.org/x/crypto/sha3"
 	"strconv"
+
+	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
 type Round1Broadcast struct {
@@ -23,9 +25,7 @@ type Round2Broadcast struct {
 	BigRWitness []commitments.Witness
 }
 
-var (
-	commitmentHashFunc = sha3.New256
-)
+var commitmentHashFunc = sha3.New256
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
@@ -139,35 +139,38 @@ func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broa
 
 func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
 	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	return commitments.Commit(commitmentHashFunc, commitmentMessage)
+	c, w, err := commitments.Commit(commitmentHashFunc, commitmentMessage)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not commit the message")
+	}
+	return c, w, nil
 }
 
 func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curves.Point, bigRCommitment commitments.Commitment, bigRWitness commitments.Witness) error {
 	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	return commitments.Open(commitmentHashFunc, commitmentMessage, bigRCommitment, bigRWitness)
+	if err := commitments.Open(commitmentHashFunc, commitmentMessage, bigRCommitment, bigRWitness); err != nil {
+		return errs.WrapVerificationFailed(err, "commitment could not be opened")
+	}
+	return nil
 }
 
-func proveDlog(sid []byte, transcript transcript.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point) (proof *dlog.Proof, err error) {
+func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point) (proof *dlog.Proof, err error) {
 	curveName := k.CurveName()
 	curve, err := curves.GetCurveByName(curveName)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
-	if err := transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i))); err != nil {
-		return nil, errs.NewFailed("cannot write to transcript")
-	}
-	if err := transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed()); err != nil {
-		return nil, errs.NewFailed("cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i)))
+	transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed())
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not construct provererr")
 	}
 
 	proof, statement, err := prover.Prove(k)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "prove operation failed")
 	}
 	if !bigR.Equal(statement) {
 		return nil, errs.NewFailed("invalid proof statement")
@@ -176,18 +179,17 @@ func proveDlog(sid []byte, transcript transcript.Transcript, i int, party integr
 	return proof, nil
 }
 
-func verifyDlogProof(sid []byte, transcript transcript.Transcript, i int, party integration.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
+func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
 	curveName := bigR.CurveName()
 	curve, err := curves.GetCurveByName(curveName)
 	if err != nil {
 		return errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
-	if err := transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i))); err != nil {
-		return errs.NewFailed("cannot write to transcript")
+	transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i)))
+	transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed())
+	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+		return errs.WrapVerificationFailed(err, "dlog verify failed")
 	}
-	if err := transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed()); err != nil {
-		return errs.NewFailed("cannot write to transcript")
-	}
-	return dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript)
+	return nil
 }

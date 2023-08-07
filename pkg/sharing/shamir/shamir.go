@@ -3,9 +3,9 @@ package shamir
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type Share struct {
@@ -93,7 +93,11 @@ func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, e
 	if len(identities) > s.Total {
 		return nil, errs.NewInvalidArgument("too many identities")
 	}
-	return sharing.LagrangeCoefficients(s.Curve, identities)
+	lambdas, err := sharing.LagrangeCoefficients(s.Curve, identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not ocmpute lagrange coefficients")
+	}
+	return lambdas, nil
 }
 
 func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
@@ -149,7 +153,7 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	return s.interpolatePoint(xs, ys, s.Curve.Scalar.Zero())
 }
 
-// TODO: evaluate without interpolation via fft based techniques
+// TODO: evaluate without interpolation via fft based techniques.
 func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
 	result := s.Curve.Scalar.Zero()
 	for i, xi := range xs {

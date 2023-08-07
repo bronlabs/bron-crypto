@@ -3,13 +3,13 @@ package pedersen
 import (
 	"fmt"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type Round1Broadcast struct {
@@ -21,8 +21,10 @@ type Round1P2P struct {
 	Xij curves.Scalar
 }
 
-const DkgLabel = "COPPER-PEDERSEN-DKG-V1-"
-const ShamirIdLabel = "Pedersen DKG shamir id parameter"
+const (
+	DkgLabel      = "COPPER-PEDERSEN-DKG-V1-"
+	ShamirIdLabel = "Pedersen DKG shamir id parameter"
+)
 
 func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
 	if p.round != 1 {
@@ -65,10 +67,8 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 			shares[shamirIndex] = nil
 		}
 	}
-	a_i0 = nil
 
 	p.round++
-
 	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
@@ -91,80 +91,80 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 	}
 
 	for senderShamirId := 1; senderShamirId <= p.CohortConfig.TotalParties; senderShamirId++ {
-		if senderShamirId != p.MyShamirId {
-			senderIdentityKey, exists := p.shamirIdToIdentityKey[senderShamirId]
-			if !exists {
-				return nil, nil, errs.NewMissing("can't find identity key of shamir id %d", senderShamirId)
-			}
-			broadcastedMessageFromSender, exists := round1outputBroadcast[senderIdentityKey]
-			if !exists {
-				return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with shamir id %d", senderShamirId)
-			}
-			if broadcastedMessageFromSender.DlogProof == nil {
-				return nil, nil, errs.NewMissing("do not have the dlog proof for shamir id %d", senderShamirId)
-			}
-
-			senderCommitmentVector := broadcastedMessageFromSender.Ci
-			senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
-
-			if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
-				edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
-				if !ok {
-					return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", senderShamirId)
-				}
-				// Since the honest behavior is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
-				// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
-				// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
-				// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
-				if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
-					return nil, nil, errs.NewIdentifiableAbort("shamir id %d tries to contribute a small group element to the public key", senderShamirId)
-				}
-			}
-
-			transcript := merlin.NewTranscript(DkgLabel)
-			transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
-				return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (shamir id: %d)", senderShamirId)
-			}
-
-			p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey]
-			if !exists {
-				return nil, nil, errs.NewMissing("did not get a p2p message from sender with shamir id %d", senderShamirId)
-			}
-			receivedSecretKeyShare := p2pMessageFromSender.Xij
-			receivedShare := &feldman.Share{
-				Id:    p.MyShamirId,
-				Value: receivedSecretKeyShare,
-			}
-			if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
-				return nil, nil, errs.WrapIdentifiableAbort(err, "abort from feldman (shamir id: %d)", senderShamirId)
-			}
-
-			partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
-			derivedPartialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.Point.Identity()
-			iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
-			C_lks := make([]curves.Point, p.CohortConfig.Threshold)
-			for k := 0; k < p.CohortConfig.Threshold; k++ {
-				exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
-				iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId).Exp(exp)
-				C_lk := senderCommitmentVector[k]
-				iToKs[k] = iToK
-				C_lks[k] = C_lk
-			}
-			derivedPartialPublicKeyShare, err := p.CohortConfig.CipherSuite.Curve.MultiScalarMult(iToKs, C_lks)
-			if err != nil {
-				return nil, nil, errs.NewFailed("couldn't derive partial public key share")
-			}
-			if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
-				return nil, nil, errs.NewFailed("shares received from shamir id %d is inconsistent", senderShamirId)
-			}
-
-			secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.Xij)
-			publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)
-			commitmentVectors[senderShamirId] = senderCommitmentVector
-
-			round1outputP2P[senderIdentityKey] = nil
+		if senderShamirId == p.MyShamirId {
+			continue
 		}
+		senderIdentityKey, exists := p.shamirIdToIdentityKey[senderShamirId]
+		if !exists {
+			return nil, nil, errs.NewMissing("can't find identity key of shamir id %d", senderShamirId)
+		}
+		broadcastedMessageFromSender, exists := round1outputBroadcast[senderIdentityKey]
+		if !exists {
+			return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with shamir id %d", senderShamirId)
+		}
+		if broadcastedMessageFromSender.DlogProof == nil {
+			return nil, nil, errs.NewMissing("do not have the dlog proof for shamir id %d", senderShamirId)
+		}
+
+		senderCommitmentVector := broadcastedMessageFromSender.Ci
+		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
+
+		if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
+			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
+			if !ok {
+				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with shamirId %d did not have a valid commitment to her local secret.", senderShamirId)
+			}
+			// Since the honest behaviour is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
+			// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
+			// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
+			// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
+			if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
+				return nil, nil, errs.NewIdentifiableAbort("shamir id %d tries to contribute a small group element to the public key", senderShamirId)
+			}
+		}
+
+		transcript := merlin.NewTranscript(DkgLabel)
+		transcript.AppendMessage([]byte(ShamirIdLabel), []byte(fmt.Sprintf("%d", senderShamirId)))
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
+			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (shamir id: %d)", senderShamirId)
+		}
+
+		p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey]
+		if !exists {
+			return nil, nil, errs.NewMissing("did not get a p2p message from sender with shamir id %d", senderShamirId)
+		}
+		receivedSecretKeyShare := p2pMessageFromSender.Xij
+		receivedShare := &feldman.Share{
+			Id:    p.MyShamirId,
+			Value: receivedSecretKeyShare,
+		}
+		if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
+			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from feldman (shamir id: %d)", senderShamirId)
+		}
+
+		partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
+		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
+		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
+		for k := 0; k < p.CohortConfig.Threshold; k++ {
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MyShamirId).Exp(exp)
+			C_lk := senderCommitmentVector[k]
+			iToKs[k] = iToK
+			C_lks[k] = C_lk
+		}
+		derivedPartialPublicKeyShare, err := p.CohortConfig.CipherSuite.Curve.MultiScalarMult(iToKs, C_lks)
+		if err != nil {
+			return nil, nil, errs.NewFailed("couldn't derive partial public key share")
+		}
+		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
+			return nil, nil, errs.NewFailed("shares received from shamir id %d is inconsistent", senderShamirId)
+		}
+
+		secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.Xij)
+		publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)
+		commitmentVectors[senderShamirId] = senderCommitmentVector
+
+		round1outputP2P[senderIdentityKey] = nil
 	}
 
 	publicKeySharesMap, err := ConstructPublicKeySharesMap(p.CohortConfig, commitmentVectors, p.shamirIdToIdentityKey)
@@ -200,7 +200,7 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 		Y_j := cohort.CipherSuite.Curve.Point.Identity()
 		for _, C_l := range commitmentVectors {
 			jToKs := make([]curves.Scalar, cohort.Threshold)
-			jkC_lk := cohort.CipherSuite.Curve.Point.Identity()
+			// TODO: add simultaneous scalar exp
 			for k := 0; k < cohort.Threshold; k++ {
 				exp := cohort.CipherSuite.Curve.Scalar.New(k)
 				jToK := cohort.CipherSuite.Curve.Scalar.New(j).Exp(exp)

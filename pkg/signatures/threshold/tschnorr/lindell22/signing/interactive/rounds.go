@@ -2,17 +2,19 @@ package interactive
 
 import (
 	"bytes"
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
 type Round1Broadcast struct {
@@ -20,14 +22,12 @@ type Round1Broadcast struct {
 }
 
 type Round2Broadcast struct {
+	BigRProof   *dlog.Proof
 	BigR        curves.Point
 	BigRWitness commitments.Witness
-	BigRProof   *dlog.Proof
 }
 
-var (
-	commitmentHashFunc = sha3.New256
-)
+var commitmentHashFunc = sha3.New256
 
 func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
@@ -102,7 +102,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 		theirBigRWitness := in.BigRWitness
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR, p.pid(identity), p.sid, p.state.bigS, p.state.theirBigRCommitment[identity], theirBigRWitness); err != nil {
+		if err := openCommitment(theirBigR, pid(identity), p.sid, p.state.bigS, p.state.theirBigRCommitment[identity], theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
@@ -163,7 +163,7 @@ func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *edd
 	}, nil
 }
 
-func (p *Cosigner) pid(identityKey integration.IdentityKey) []byte {
+func pid(identityKey integration.IdentityKey) []byte {
 	return identityKey.PublicKey().ToAffineCompressed()
 }
 
@@ -186,28 +186,37 @@ func (p *Cosigner) toAdditiveShare(share curves.Scalar) (additiveShare curves.Sc
 		Id:    p.myShamirId,
 		Value: share,
 	}
-	return shamirShare.ToAdditive(shamirIndices)
+	additiveShare, err = shamirShare.ToAdditive(shamirIndices)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert shamir share to additive")
+	}
+	return additiveShare, nil
 }
 
-func commit(bigR curves.Point, pid []byte, sid []byte, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	message := bytes.Join([][]byte{bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	return commitments.Commit(commitmentHashFunc, message)
+	c, w, err := commitments.Commit(commitmentHashFunc, message)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not commit")
+	}
+	return c, w, nil
 }
 
-func openCommitment(bigR curves.Point, pid []byte, sid []byte, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
+func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
 	message := bytes.Join([][]byte{bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	return commitments.Open(commitmentHashFunc, message, commitment, witness)
+	if err := commitments.Open(commitmentHashFunc, message, commitment, witness); err != nil {
+		return errs.WrapVerificationFailed(err, "couldn't open")
+	}
+	return nil
 }
 
-func dlogProve(x curves.Scalar, bigR curves.Point, sid []byte, bigS []byte, transcript transcript.Transcript) (proof *dlog.Proof, err error) {
+func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
 	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	if err := transcript.AppendMessage([]byte("bigS"), bigS); err != nil {
-		return nil, errs.NewFailed("cannot append to transcript")
-	}
+	transcript.AppendMessage([]byte("bigS"), bigS)
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
@@ -223,14 +232,15 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid []byte, bigS []byte, tran
 	return proof, nil
 }
 
-func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid []byte, bigS []byte, transcript transcript.Transcript) (err error) {
+func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid, bigS []byte, transcript transcripts.Transcript) (err error) {
 	curve, err := curves.GetCurveByName(bigR.CurveName())
 	if err != nil {
 		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	if err := transcript.AppendMessage([]byte("bigS"), bigS); err != nil {
-		return errs.NewFailed("cannot append to transcript")
+	transcript.AppendMessage([]byte("bigS"), bigS)
+	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+		return errs.WrapVerificationFailed(err, "dlog proof failed")
 	}
-	return dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript)
+	return nil
 }

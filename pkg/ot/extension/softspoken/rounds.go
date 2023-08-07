@@ -3,9 +3,9 @@ package softspoken
 import (
 	"crypto/rand"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 // Round1Output is the receiver's PUBLIC output of round1 of OTe/COTe, to be sent to the Sender.
@@ -23,10 +23,11 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 ) (extPackedChoices *ExtPackedChoices, // x_i ∈ [ξ']bits
 	oTeReceiverOutput *OTeReceiverOutput, // v_x ∈ [ξ][ω][κ]bits
 	round1Output *Round1Output, // u_i ∈ [κ][ξ']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
-	err error) {
+	err error,
+) {
 	round1Output = &Round1Output{}
 
-	// Sanitize inputs
+	// Sanitise inputs
 	if oTeInputChoices == nil {
 		return nil, nil, nil, errs.NewInvalidArgument("nil (oTeInputChoices) in input arguments of Round1ExtendAndProveConsistency")
 	}
@@ -41,13 +42,13 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	extOptions := &ExtOptions{}
 	for i := 0; i < Kappa; i++ {
 		// k^i_0 --(PRG)--> t^i_0
-		err = PRG(receiver.uniqueSessionId[:], receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:],
+		err = PRG(receiver.uniqueSessionId, receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:],
 			extOptions[0][i][:])
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 		// k^i_1 --(PRG)--> t^i_1
-		err = PRG(receiver.uniqueSessionId[:], receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:],
+		err = PRG(receiver.uniqueSessionId, receiver.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:],
 			extOptions[1][i][:])
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
@@ -74,7 +75,7 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	receiver.ComputeChallengeResponse(extPackedChoices, extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
-	t_j := transposeBooleanMatrix(extOptions[0]) // t_j ∈ [ξ'][κ]bits
+	t_j := transposeBooleanMatrix(&extOptions[0]) // t_j ∈ [ξ'][κ]bits
 	// (T&R.2) Hash ξ rows of t_j using the index as salt (drop ξ' - ξ rows, used for consistency check)
 	oTeReceiverOutput = &OTeReceiverOutput{}
 	err = HashSalted(&receiver.uniqueSessionId, t_j[:], oTeReceiverOutput[:])
@@ -101,7 +102,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
 	InputOpts []COTeInputOpt, // Input opts (α) ∈ [ξ]curve.Scalar. Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutputs []COTeSenderOutput, round2Output *Round2Output, err error) {
-	// Sanitize inputs
+	// Sanitise inputs
 	if round1Output == nil {
 		return nil, nil, nil, errs.NewInvalidArgument("nil (round1Output) in input arguments of Round2ExtendAndCheckConsistency")
 	}
@@ -110,9 +111,11 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	extChosenOpt := ExtDeltaOpt{}
 	for i := 0; i < Kappa; i++ {
 		// This is the core expansion of the OT: k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
-		PRG(sender.uniqueSessionId[:],
+		if err := PRG(sender.uniqueSessionId,
 			sender.baseOtSeeds.OneTimePadDecryptionKey[i][:],
-			extChosenOpt[i][:])
+			extChosenOpt[i][:]); err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "prg failed")
+		}
 	}
 
 	// (Ext.4) Compute q_i = Δ_i • u_i + t_i (constant time)
@@ -128,9 +131,9 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 		}
 	}
 
-	// (T&R.1, T&R.3) Transpose and Randomize the correlations (q^i -> v_0 and q^i+Δ -> v_1)
+	// (T&R.1, T&R.3) Transpose and Randomise the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and q^i+Δ -> q_j+Δ
-	extCorrelationsTransposed := transposeBooleanMatrix(extCorrelations) // q_j ∈ [ξ'][κ]bits
+	extCorrelationsTransposed := transposeBooleanMatrix(&extCorrelations) // q_j ∈ [ξ'][κ]bits
 	var extCorrelationsTransposedPlusDelta [Zeta][KappaBytes]byte
 	for i := 0; i < KappaBytes; i++ {
 		Delta := sender.baseOtSeeds.PackedRandomChoiceBits[i]
@@ -138,7 +141,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 			extCorrelationsTransposedPlusDelta[j][i] = extCorrelationsTransposed[j][i] ^ Delta
 		}
 	}
-	// (T&R.3) Randomize by hashing the first ξ rows of q_j and q_j+Δ (drop ξ' - ξ rows, used for consistency check)
+	// (T&R.3) Randomise by hashing the first ξ rows of q_j and q_j+Δ (drop ξ' - ξ rows, used for consistency check)
 	oTeSenderOutput = &OTeSenderOutput{}
 	err = HashSalted(&sender.uniqueSessionId, extCorrelationsTransposed[:Zeta], oTeSenderOutput[0][:])
 	if err != nil {
@@ -219,7 +222,7 @@ func (receiver *Receiver) Round3Derandomize(
 	extPackedChoices *ExtPackedChoices,
 	oTeReceiverOutput *OTeReceiverOutput,
 ) (cOTeReceiverOutput []COTeReceiverOutput, err error) {
-	// Sanitize input
+	// Sanitise input
 	if (round2Output == nil) || (extPackedChoices == nil) || (oTeReceiverOutput == nil) {
 		return nil, errs.NewInvalidArgument("nil in input arguments of Round3Derandomize")
 	}
@@ -257,8 +260,8 @@ func (receiver *Receiver) Round3Derandomize(
 // -------------------------------------------------------------------------- //
 // ---------------------------- INDIVIDUAL STEPS ---------------------------- //
 // -------------------------------------------------------------------------- //
-// (Check.2) Compute the challenge response ẋ, ṫ^i ∀i∈[κ]
-func (receiver *Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedChoices, extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
+// (Check.2) Compute the challenge response ẋ, ṫ^i ∀i∈[κ].
+func (*Receiver) ComputeChallengeResponse(extPackedChoices *ExtPackedChoices, extOptions *ExtOptions, challenge *Challenge, challengeResponse *ChallengeResponse) {
 	// 		ẋ = x̂_{m+1} ...
 	copy(challengeResponse.x_val[:], extPackedChoices[ZetaBytes:ZetaBytes+SigmaBytes])
 	// 		                ... + Σ{j=1}^{m} χ_j • x̂_j
@@ -366,7 +369,7 @@ func (sender *Sender) ComputeDerandomizeMaskForcedReuse(
 }
 
 // (Derand.2) Derandomize using the mask (τ) to obtain the COTe receiver output (z_B).
-// (constant time)
+// (constant time).
 func (receiver *Receiver) Derandomize(
 	oTeReceiverOutput *OTeReceiverOutput,
 	derandomizeMask *DerandomizeMask,
@@ -383,7 +386,7 @@ func (receiver *Receiver) Derandomize(
 			}
 			v_x_NegCurve = v_x_NegCurve.Neg()
 			v_x_curve_corr = derandomizeMask[j][k].Add(v_x_NegCurve)
-			if bits.SelectBit(extPackChoices[:], j) != 0 {
+			if bitstring.SelectBit(extPackChoices[:], j) != 0 {
 				// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 				cOTeReceiverOutput[j][k] = v_x_curve_corr
 			} else {

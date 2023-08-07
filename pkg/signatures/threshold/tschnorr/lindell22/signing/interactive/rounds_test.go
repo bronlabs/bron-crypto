@@ -4,17 +4,19 @@ import (
 	nativeEddsa "crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/sha512"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	integration_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive/test_utils"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive/test_utils"
 )
 
 func Test_SanityCheck(t *testing.T) {
@@ -77,7 +79,7 @@ func Test_HappyPath(t *testing.T) {
 	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocol.LINDELL22, identities, th, identities)
+	cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, th, identities)
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(cohort, prng)

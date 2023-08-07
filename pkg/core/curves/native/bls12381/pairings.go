@@ -27,7 +27,7 @@ func (c *coefficients) CMove(arg1, arg2 *coefficients, choice int) *coefficients
 	return c
 }
 
-// AddPair adds a pair of points to be paired
+// AddPair adds a pair of points to be paired.
 func (e *Engine) AddPair(g1 *G1, g2 *G2) *Engine {
 	var p pair
 	p.g1.ToAffine(g1)
@@ -38,14 +38,14 @@ func (e *Engine) AddPair(g1 *G1, g2 *G2) *Engine {
 	return e
 }
 
-// AddPairInvG1 adds a pair of points to be paired. G1 point is negated
+// AddPairInvG1 adds a pair of points to be paired. G1 point is negated.
 func (e *Engine) AddPairInvG1(g1 *G1, g2 *G2) *Engine {
 	var p G1
 	p.Neg(g1)
 	return e.AddPair(&p, g2)
 }
 
-// AddPairInvG2 adds a pair of points to be paired. G2 point is negated
+// AddPairInvG2 adds a pair of points to be paired. G2 point is negated.
 func (e *Engine) AddPairInvG2(g1 *G1, g2 *G2) *Engine {
 	var p G2
 	p.Neg(g2)

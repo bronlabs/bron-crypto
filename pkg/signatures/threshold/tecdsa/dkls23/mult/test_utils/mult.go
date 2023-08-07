@@ -4,13 +4,13 @@ import (
 	"io"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/mult"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
 )
 
-func MakeMultParticipants(t *testing.T, cipherSuite *integration.CipherSuite, baseOtReceiverOutput *vsot.ReceiverOutput, baseOtSenderOutput *vsot.SenderOutput, alicePrng io.Reader, bobPrng io.Reader, aliceSid []byte, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
+func MakeMultParticipants(t *testing.T, cipherSuite *integration.CipherSuite, baseOtReceiverOutput *vsot.ReceiverOutput, baseOtSenderOutput *vsot.SenderOutput, alicePrng, bobPrng io.Reader, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
 	t.Helper()
 
 	alice, err = mult.NewAlice(cipherSuite.Curve, baseOtReceiverOutput, aliceSid, alicePrng, nil)

@@ -10,11 +10,13 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
-var p256FqInitonce sync.Once
-var p256FqParams native.FieldParams
+var (
+	p256FqInitonce sync.Once
+	p256FqParams   native.FieldParams
+)
 
 func P256FqNew() *native.Field {
 	return &native.Field{
@@ -43,45 +45,45 @@ func getP256FqParams() *native.FieldParams {
 }
 
 // p256FqArithmetic is a struct with all the methods needed for working
-// in mod q
+// in mod q.
 type p256FqArithmetic struct{}
 
-// ToMontgomery converts this field to montgomery form
-func (f p256FqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// ToMontgomery converts this field to montgomery form.
+func (p256FqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
-// FromMontgomery converts this field from montgomery form
-func (f p256FqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// FromMontgomery converts this field from montgomery form.
+func (p256FqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Neg performs modular negation
-func (f p256FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
+// Neg performs modular negation.
+func (p256FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Square performs modular square
-func (f p256FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
+// Square performs modular square.
+func (p256FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Mul performs modular multiplication
-func (f p256FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Mul performs modular multiplication.
+func (p256FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Add performs modular addition
-func (f p256FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Add performs modular addition.
+func (p256FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sub performs modular subtraction
-func (f p256FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Sub performs modular subtraction.
+func (p256FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sqrt performs modular square root
+// Sqrt performs modular square root.
 func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
@@ -143,7 +145,7 @@ func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint
 	Selectznz(out, uint1(*wasSquare), out, &z)
 }
 
-// Invert performs modular inverse
+// Invert performs modular inverse.
 func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://briansmith.org/ecc-inversion-addition-chains-01#p256_field_inversion
@@ -265,29 +267,29 @@ func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]
 	Selectznz(out, uint1(*wasInverted), out, &tmp)
 }
 
-// FromBytes converts a little endian byte array into a field element
-func (f p256FqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
+// FromBytes converts a little endian byte array into a field element.
+func (p256FqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
-// ToBytes converts a field element to a little endian byte array
-func (f p256FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
+// ToBytes converts a field element to a little endian byte array.
+func (p256FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
-func (f p256FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
+// selects arg1 if choice == 0 and arg2 if choice == 1.
+func (p256FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }
 
 // generator = 7 mod q is a generator of the `q - 1` order multiplicative
 // subgroup, or in other words a primitive element of the field.
-// generator^t where t * 2^s + 1 = q
+// generator^t where t * 2^s + 1 = q.
 var generator = &[native.FieldLimbs]uint64{0x55eb74ab1949fac9, 0xd5af25406e5aaa5d, 0x0000000000000001, 0x00000006fffffff9}
 
 // s satisfies the equation 2^s * t = q - 1 with t odd.
 var s = 4
 
-// rootOfUnity
+// rootOfUnity.
 var rootOfUnity = &[native.FieldLimbs]uint64{0x0592d7fbb41e6602, 0x1546cad004378daf, 0xba807ace842a3dfc, 0xffc97f062a770992}

@@ -1,15 +1,16 @@
 package lpdl
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const (
@@ -22,7 +23,7 @@ type Participant struct {
 	bigQ       curves.Point
 	round      int
 	sessionId  []byte
-	transcript transcript.Transcript
+	transcript transcripts.Transcript
 	prng       io.Reader
 }
 
@@ -36,7 +37,6 @@ type State struct {
 
 type VerifierState struct {
 	State
-	cPrime              *paillier.CipherText
 	cDoublePrimeWitness commitments.Witness
 	bigQPrime           curves.Point
 	cHat                commitments.Commitment
@@ -65,17 +65,14 @@ type Prover struct {
 	state       *ProverState
 }
 
-func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if sessionId == nil || len(sessionId) == 0 {
+func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	curve, err := curves.GetCurveByName(bigQ.CurveName())
 	if err != nil {
@@ -115,17 +112,14 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}, nil
 }
 
-func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (verifier *Prover, err error) {
-	if sessionId == nil || len(sessionId) == 0 {
+func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {

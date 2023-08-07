@@ -3,15 +3,17 @@ package lpdl_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -113,7 +115,7 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	xLow, err := curve.NewScalar().SetBigInt(xLowInt)
 	require.NoError(t, err)
 	bigQLow := curve.ScalarBaseMult(xLow)
-	xLowEncrypted, r, err := pk.Encrypt(xLow.BigInt())
+	xLowEncrypted, _, err := pk.Encrypt(xLow.BigInt())
 	require.NoError(t, err)
 
 	xHighInt, err := randomIntOutRangeHigh(q, prng)

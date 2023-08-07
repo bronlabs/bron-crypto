@@ -4,12 +4,11 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken/test_utils"
-
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken/test_utils"
 )
 
 var curveInstances = []*curves.Curve{

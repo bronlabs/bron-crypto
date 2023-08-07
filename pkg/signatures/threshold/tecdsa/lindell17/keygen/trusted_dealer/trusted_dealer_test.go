@@ -3,14 +3,15 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -30,7 +31,7 @@ func Test_HappyPath(t *testing.T) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
-		Protocol:             protocol.LINDELL17,
+		Protocol:             protocols.LINDELL17,
 		Threshold:            2,
 		TotalParties:         3,
 		Participants:         []integration.IdentityKey{alice, bob, charlie},

@@ -1,9 +1,10 @@
 package test_utils
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core"
 	"math/big"
 	"sync"
+
+	"github.com/copperexchange/knox-primitives/pkg/core"
 )
 
 type SafePrimeMocker struct {

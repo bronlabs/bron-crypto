@@ -3,15 +3,14 @@ package pedersen
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 type Share = shamir.Share
 
-// Dealer Verifiable Secret Sharing Scheme
+// Dealer Verifiable Secret Sharing Scheme.
 type Dealer struct {
 	Threshold, Total int
 	Curve            *curves.Curve
@@ -32,13 +31,12 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 
 	x := curve.Scalar.New(share.Id)
 	i := curve.Scalar.One()
-	rhs := commitments[0].Identity()
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
 		is[j] = i
 	}
-	rhs, err = curve.MultiScalarMult(is[1:], commitments[1:])
+	rhs, err := curve.MultiScalarMult(is[1:], commitments[1:])
 	if err != nil {
 		return errs.WrapFailed(err, "multiscalarmult failed")
 	}
@@ -55,7 +53,7 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 	}
 }
 
-// Output contains all the data from calling Split
+// Output contains all the data from calling Split.
 type Output struct {
 	Blinding                        curves.Scalar
 	BlindingShares, SecretShares    []*Share
@@ -63,7 +61,7 @@ type Output struct {
 	Generator                       curves.Point
 }
 
-// NewDealer creates a new pedersen VSS
+// NewDealer creates a new pedersen VSS.
 func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	if total < threshold {
 		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
@@ -88,21 +86,21 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	return &Dealer{threshold, total, curve, generator}, nil
 }
 
-// Split creates the verifiers, blinding and shares
+// Split creates the verifiers, blinding and shares.
 func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 	// generate a random blinding factor
 	blinding := pd.Curve.Scalar.Random(prng)
 
-	shamir := shamir.Dealer{
+	shamirDealer := shamir.Dealer{
 		Threshold: pd.Threshold,
 		Total:     pd.Total,
 		Curve:     pd.Curve,
 	}
 	// split the secret into shares
-	shares, poly := shamir.GeneratePolynomialAndShares(secret, prng)
+	shares, poly := shamirDealer.GeneratePolynomialAndShares(secret, prng)
 
 	// split the blinding into shares
-	blindingShares, polyBlinding := shamir.GeneratePolynomialAndShares(blinding, prng)
+	blindingShares, polyBlinding := shamirDealer.GeneratePolynomialAndShares(blinding, prng)
 
 	// Generate the verifiable commitments to the polynomial for the shares
 	blindedCommitments := make([]curves.Point, pd.Threshold)
@@ -123,7 +121,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 }
 
 func (pd Dealer) LagrangeCoefficients(shares map[int]*Share) (map[int]curves.Scalar, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: pd.Threshold,
 		Total:     pd.Total,
 		Curve:     pd.Curve,
@@ -132,23 +130,35 @@ func (pd Dealer) LagrangeCoefficients(shares map[int]*Share) (map[int]curves.Sca
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
-	return shamir.LagrangeCoefficients(identities)
+	lambdas, err := shamirDealer.LagrangeCoefficients(identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
+	}
+	return lambdas, nil
 }
 
 func (pd Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: pd.Threshold,
 		Total:     pd.Total,
 		Curve:     pd.Curve,
 	}
-	return shamir.Combine(shares...)
+	result, err := shamirDealer.Combine(shares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine shares")
+	}
+	return result, nil
 }
 
 func (pd Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: pd.Threshold,
 		Total:     pd.Total,
 		Curve:     pd.Curve,
 	}
-	return shamir.CombinePoints(shares...)
+	result, err := shamirDealer.CombinePoints(shares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine points")
+	}
+	return result, nil
 }

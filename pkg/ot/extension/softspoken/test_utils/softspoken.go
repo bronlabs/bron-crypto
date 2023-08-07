@@ -4,19 +4,20 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 )
 
 // ------------------------------ BASE OTs ---------------------------------- //
 // RunSoftspokenBaseOT is a utility function encapsulating the entire process of
 // running a base OT, so that other tests can use it / bootstrap themselves.
-// As a black box, this function uses randomized inputs, and does:
+// As a black box, this function uses randomised inputs, and does:
 //
 //	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
@@ -70,11 +71,9 @@ func RunSoftspokenOTe(t *testing.T,
 	require.NoError(t, err)
 
 	// Run OTe
-	_, oTeReceiverOutput, round1Output, err :=
-		receiver.Round1ExtendAndProveConsistency(choices)
+	_, oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
 	require.NoError(t, err)
-	oTeSenderOutput, _, _, err :=
-		sender.Round2ExtendAndCheckConsistency(round1Output, nil)
+	oTeSenderOutput, _, _, err := sender.Round2ExtendAndCheckConsistency(round1Output, nil)
 	require.NoError(t, err)
 	require.NoError(t, err)
 	return oTeSenderOutput, oTeReceiverOutput, nil
@@ -94,7 +93,7 @@ func CheckSoftspokenOTeOutputs(t *testing.T,
 	// Check OTe results
 	for i := len(oTeReceiverOutput); i < Zeta; i++ {
 		// Check that v_x = v_1 • x + v_0 • (1-x)
-		if bits.SelectBit(choices[:], i) != 0 {
+		if bitstring.SelectBit(choices[:], i) != 0 {
 			require.Equal(t, oTeSenderOutput[1][i], oTeReceiverOutput[i])
 		} else {
 			require.Equal(t, oTeSenderOutput[0][i], oTeReceiverOutput[i])
@@ -113,7 +112,7 @@ func CheckSoftspokenOTeOutputs(t *testing.T,
 //	 s.t. z_A + z_B = x • α
 //
 // If useForcedReuse: use a single OTe batch for all the inputOpt batches.
-// NOTE: it should only be used by setting L=1 in "participants.go"
+// NOTE: it should only be used by setting L=1 in "participants.go".
 func RunSoftspokenCOTe(t *testing.T,
 	useForcedReuse bool,
 	curve *curves.Curve,
@@ -132,11 +131,9 @@ func RunSoftspokenCOTe(t *testing.T,
 	require.NoError(t, err)
 
 	// Run COTe
-	extPackedChoices, oTeReceiverOutput, round1Output, err :=
-		receiver.Round1ExtendAndProveConsistency(choices)
+	extPackedChoices, oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
 	require.NoError(t, err)
-	_, cOTeSenderOutputs, round2Output, err :=
-		sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+	_, cOTeSenderOutputs, round2Output, err := sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
 	require.NoError(t, err)
 	cOTeReceiverOutputs, err = receiver.Round3Derandomize(round2Output, extPackedChoices, oTeReceiverOutput)
 	require.NoError(t, err)
@@ -149,6 +146,7 @@ func GenerateSoftspokenRandomInputs(t *testing.T, inputBatchLen int, curve *curv
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
 	inputOpts []softspoken.COTeInputOpt, // sender's input, the InputOpt α
 ) {
+	t.Helper()
 	choices = softspoken.OTeInputChoices{}
 	_, err := rand.Read(choices[:])
 	require.NoError(t, err)
@@ -183,7 +181,7 @@ func CheckSoftspokenCOTeOutputs(t *testing.T,
 	// Check correlation in COTe results
 	for batchIndex := 0; batchIndex < inputBatchLen; batchIndex++ {
 		for i := 0; i < softspoken.Zeta; i++ {
-			x := bits.SelectBit(choices[:], i)
+			x := bitstring.SelectBit(choices[:], i)
 			for k := 0; k < softspoken.OTeWidth; k++ {
 				// Check each correlation z_A = x • α - z_B
 				z_A := cOTeSenderOutputs[batchIndex][i][k]

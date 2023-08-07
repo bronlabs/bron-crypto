@@ -14,61 +14,69 @@ import (
 	"io"
 	"math/big"
 	"sync"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
-var ed25519SubGroupOrderOnce sync.Once
-var ed25519SubGroupOrder *big.Int
+// The probability of returning true for a randomly chosen
+// non-prime is at most (1/4)^n. 64 is a widely used standard
+// that is more than sufficient.
+const millerRabinRounds = 64
+
+var (
+	ed25519SubGroupOrder     *big.Int
+	ed25519SubGroupOrderOnce sync.Once
+)
 
 // Field is a finite field.
-type Field struct {
-	*big.Int
-}
+type (
+	Field struct {
+		*big.Int
+	}
+	// Element is a group element within a finite field.
+	Element struct {
+		Modulus *Field   `json:"modulus"`
+		Value   *big.Int `json:"value"`
+	}
+	// ElementJSON is used in JSON<>Element conversions.
+	// For years, big.Int hasn't properly supported JSON unmarshaling
+	// https://github.com/golang/go/issues/28154
+	ElementJSON struct {
+		Modulus string `json:"modulus"`
+		Value   string `json:"value"`
+	}
+)
 
-// Element is a group element within a finite field.
-type Element struct {
-	Modulus *Field   `json:"modulus"`
-	Value   *big.Int `json:"value"`
-}
-
-// ElementJSON is used in JSON<>Element conversions.
-// For years, big.Int hasn't properly supported JSON unmarshaling
-// https://github.com/golang/go/issues/28154
-type ElementJSON struct {
-	Modulus string `json:"modulus"`
-	Value   string `json:"value"`
-}
-
-// Marshal Element to JSON
+// Marshal Element to JSON.
 func (x *Element) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ElementJSON{
+	marshalled, err := json.Marshal(ElementJSON{
 		Modulus: x.Modulus.String(),
 		Value:   x.Value.String(),
 	})
+	if err != nil {
+		return nil, errs.WrapFailed(err, "marshalling x failed")
+	}
+	return marshalled, nil
 }
 
 func (x *Element) UnmarshalJSON(bytes []byte) error {
 	var e ElementJSON
-	err := json.Unmarshal(bytes, &e)
-	if err != nil {
-		return err
+	if err := json.Unmarshal(bytes, &e); err != nil {
+		return errs.WrapDeserializationFailed(err, "could not json unmarshal")
 	}
 	// Convert the strings to big.Ints
 	modulus, ok := new(big.Int).SetString(e.Modulus, 10)
 	if !ok {
-		return fmt.Errorf("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
+		return errs.NewDeserializationFailed("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
 	}
 	x.Modulus = &Field{modulus}
 	x.Value, ok = new(big.Int).SetString(e.Value, 10)
 	if !ok {
-		return fmt.Errorf("failed to unmarshal value string '%v' to big.Int", e.Value)
+		return errs.NewDeserializationFailed("failed to unmarshal value string '%v' to big.Int", e.Value)
 	}
 	return nil
 }
-
-// The probability of returning true for a randomly chosen
-// non-prime is at most ¼ⁿ. 64 is a widely used standard
-// that is more than sufficient.
-const millerRabinRounds = 64
 
 // New is a constructor for a Field.
 func NewField(modulus *big.Int) *Field {
@@ -89,7 +97,7 @@ func newElement(field *Field, value *big.Int) *Element {
 	return &Element{field, value}
 }
 
-// IsValid returns whether or not the value is within [0, modulus)
+// IsValid returns whether or not the value is within [0, modulus).
 func (f Field) IsValid(value *big.Int) bool {
 	// value < modulus && value >= 0
 	return value.Cmp(f.Int) < 0 && value.Sign() >= 0
@@ -117,25 +125,26 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	// in case the value is used in
 	// Scalar multiplications with points
 	if f.Int.Cmp(Ed25519Order()) == 0 {
-		scalar := NewEd25519Scalar()
-		randInt, err = scalar.RandomWithReader(r)
+		scalar := &ScalarEd25519{}
+		s := scalar.Random(r)
+		randInt = new(big.Int).SetBytes(bitstring.ReverseBytes(s.Bytes()))
 	} else {
 		// Read a random integer within the field. This is defined as [0, max) so we don't need to
 		// explicitly check it is within the field. If it is not, NewElement will panic anyways.
 		randInt, err = rand.Int(r, f.Int)
 	}
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not get random element")
 	}
 	return newElement(&f, randInt), nil
 }
 
-// ElementFromBytes initializes a new field element from big-endian bytes
+// ElementFromBytes initialises a new field element from big-endian bytes.
 func (f Field) ElementFromBytes(bytes []byte) *Element {
 	return newElement(&f, new(big.Int).SetBytes(bytes))
 }
 
-// ReducedElementFromBytes initializes a new field element from big-endian bytes and reduces it by
+// ReducedElementFromBytes initialises a new field element from big-endian bytes and reduces it by
 // the modulus of the field.
 //
 // WARNING: If this is used with cryptographic constructions which rely on a uniform distribution of
@@ -147,11 +156,11 @@ func (f Field) ElementFromBytes(bytes []byte) *Element {
 // for the input bytes is: {0, 1, 2, 3, 4}. What is the distribution of the output values produced
 // by this function?
 //
-//   ReducedElementFromBytes(0) => 0
-//   ReducedElementFromBytes(1) => 1
-//   ReducedElementFromBytes(2) => 2
-//   ReducedElementFromBytes(3) => 0
-//   ReducedElementFromBytes(4) => 1
+//	ReducedElementFromBytes(0) => 0
+//	ReducedElementFromBytes(1) => 1
+//	ReducedElementFromBytes(2) => 2
+//	ReducedElementFromBytes(3) => 0
+//	ReducedElementFromBytes(4) => 1
 //
 // For a value space V and random value v, a uniform distribution is defined as P[V = v] = 1/|V|
 // where |V| is to the order of the field. Using the results from above, we see that P[v = 0] = 2/5,
@@ -170,7 +179,7 @@ func (x Element) Field() *Field {
 	return x.Modulus
 }
 
-// Add returns the sum x+y
+// Add returns the sum x+y.
 func (x Element) Add(y *Element) *Element {
 	x.validateFields(y)
 
@@ -179,7 +188,7 @@ func (x Element) Add(y *Element) *Element {
 	return newElement(x.Modulus, sum)
 }
 
-// Sub returns the difference x-y
+// Sub returns the difference x-y.
 func (x Element) Sub(y *Element) *Element {
 	x.validateFields(y)
 
@@ -188,14 +197,14 @@ func (x Element) Sub(y *Element) *Element {
 	return newElement(x.Modulus, difference)
 }
 
-// Neg returns the field negation
+// Neg returns the field negation.
 func (x Element) Neg() *Element {
 	z := new(big.Int).Neg(x.Value)
 	z.Mod(z, x.Modulus.Int)
 	return newElement(x.Modulus, z)
 }
 
-// Mul returns the product x*y
+// Mul returns the product x*y.
 func (x Element) Mul(y *Element) *Element {
 	x.validateFields(y)
 
@@ -204,7 +213,7 @@ func (x Element) Mul(y *Element) *Element {
 	return newElement(x.Modulus, product)
 }
 
-// Div returns the quotient x/y
+// Div returns the quotient x/y.
 func (x Element) Div(y *Element) *Element {
 	x.validateFields(y)
 
@@ -214,7 +223,7 @@ func (x Element) Div(y *Element) *Element {
 	return newElement(x.Modulus, quotient)
 }
 
-// Pow computes x^y reduced by the modulus
+// Pow computes x^y reduced by the modulus.
 func (x Element) Pow(y *Element) *Element {
 	x.validateFields(y)
 
@@ -229,17 +238,17 @@ func (x Element) Sqrt() *Element {
 	return newElement(x.Modulus, new(big.Int).ModSqrt(x.Value, x.Modulus.Int))
 }
 
-// BigInt returns value as a big.Int
+// BigInt returns value as a big.Int.
 func (x Element) BigInt() *big.Int {
 	return x.Value
 }
 
-// Bytes returns the value as bytes
+// Bytes returns the value as bytes.
 func (x Element) Bytes() []byte {
 	return x.BigInt().Bytes()
 }
 
-// IsEqual returns x == y
+// IsEqual returns x == y.
 func (x Element) IsEqual(y *Element) bool {
 	if !x.isEqualFields(y) {
 		return false
@@ -248,7 +257,7 @@ func (x Element) IsEqual(y *Element) bool {
 	return x.Value.Cmp(y.Value) == 0
 }
 
-// Clone returns a new copy of the element
+// Clone returns a new copy of the element.
 func (x Element) Clone() *Element {
 	return x.Modulus.ElementFromBytes(x.Bytes())
 }

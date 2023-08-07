@@ -3,13 +3,15 @@ package nthroot_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/nthroot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {

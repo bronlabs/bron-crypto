@@ -1,19 +1,20 @@
 package dkg
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lp"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 var _ lindell17.Participant = (*Participant)(nil)
@@ -52,7 +53,7 @@ type Participant struct {
 	cohortConfig      *integration.CohortConfig
 	idKeyToShamirId   map[integration.IdentityKey]int
 	sessionId         []byte
-	transcript        transcript.Transcript
+	transcript        transcripts.Transcript
 	prng              io.Reader
 
 	round int
@@ -76,7 +77,7 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.cohortConfig
 }
 
-func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcript.Transcript) (participant *Participant, err error) {
+func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcripts.Transcript) (participant *Participant, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -95,10 +96,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 

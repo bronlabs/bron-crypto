@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	vsot_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/mult"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/mult/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	vsot_test_utils "github.com/copperexchange/knox-primitives/pkg/ot/base/vsot/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult/test_utils"
 )
 
 func TestMultiplicationHappyPath(t *testing.T) {

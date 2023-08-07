@@ -3,19 +3,19 @@ package mult
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type Alice struct {
 	prng            io.Reader
 	sender          *softspoken.Sender
 	Curve           *curves.Curve
-	transcript      transcript.Transcript
+	transcript      transcripts.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
@@ -28,7 +28,7 @@ type Bob struct {
 	prng            io.Reader
 	receiver        *softspoken.Receiver
 	Curve           *curves.Curve
-	transcript      transcript.Transcript
+	transcript      transcripts.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
 
@@ -41,7 +41,7 @@ type Bob struct {
 	extendedPackedChoices *softspoken.ExtPackedChoices
 }
 
-func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Alice, error) {
+func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -54,7 +54,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
 	forcedReuse := true
 	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
@@ -74,7 +74,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	}, nil
 }
 
-func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcript.Transcript) (*Bob, error) {
+func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -87,7 +87,7 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
 	forcedReuse := true
 	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
@@ -107,11 +107,9 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 	}, nil
 }
 
-func generateGadgetVector(curve *curves.Curve, transcript transcript.Transcript) (gadget [Xi]curves.Scalar, err error) {
+func generateGadgetVector(curve *curves.Curve, transcript transcripts.Transcript) (gadget [Xi]curves.Scalar, err error) {
 	gadget = [Xi]curves.Scalar{}
-	if err := transcript.AppendMessage([]byte("gadget vector"), []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR")); err != nil {
-		return gadget, errs.WrapFailed(err, "could not write to transcript")
-	}
+	transcript.AppendMessage([]byte("gadget vector"), []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes := transcript.ExtractBytes([]byte("gadget"), KappaBytes)
 		gadget[i], err = curve.Scalar.SetBytes(bytes)

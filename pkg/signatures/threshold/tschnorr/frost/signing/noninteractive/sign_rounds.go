@@ -1,15 +1,15 @@
 package noninteractive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	signing_helpers "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
 
-func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
+func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
 	if message == nil {
 		return nil, errs.NewIsNil("message is empty")
 	}
@@ -32,17 +32,16 @@ func (nic *NonInteractiveCosigner) ProducePartialSignature(message []byte) (*fro
 		nic.aggregationParameter,
 		message,
 	)
-
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
 	return partialSignature, nil
 }
 
-func (nic *NonInteractiveCosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToShamirId, message, nic.aggregationParameter)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not initialize signature aggregator")
+		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
 	signature, err := aggregator.Aggregate(partialSignatures)
 	if err != nil {

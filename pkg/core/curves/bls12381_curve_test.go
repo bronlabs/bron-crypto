@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/bls12381"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/bls12381"
 )
 
 func TestScalarBls12381G1Random(t *testing.T) {
@@ -128,7 +128,7 @@ func TestScalarBls12381G1Add(t *testing.T) {
 	require.NotNil(t, fifteen)
 	expected := bls12381G1.Scalar.New(15)
 	require.Equal(t, expected.Cmp(fifteen), 0)
-	qq := bls12381.Bls12381FqNew()
+	qq := bls12381.FqNew()
 	n := new(big.Int).Set(qq.Params.BiModulus)
 	n.Sub(n, big.NewInt(3))
 
@@ -143,7 +143,7 @@ func TestScalarBls12381G1Sub(t *testing.T) {
 	bls12381G1 := BLS12381G1()
 	nine := bls12381G1.Scalar.New(9)
 	six := bls12381G1.Scalar.New(6)
-	qq := bls12381.Bls12381FqNew()
+	qq := bls12381.FqNew()
 	n := new(big.Int).Set(qq.Params.BiModulus)
 	n.Sub(n, big.NewInt(3))
 
@@ -162,7 +162,7 @@ func TestScalarBls12381G1Mul(t *testing.T) {
 	six := bls12381G1.Scalar.New(6)
 	actual := nine.Mul(six)
 	require.Equal(t, actual.Cmp(bls12381G1.Scalar.New(54)), 0)
-	qq := bls12381.Bls12381FqNew()
+	qq := bls12381.FqNew()
 	n := new(big.Int).Set(qq.Params.BiModulus)
 	n.Sub(n, big.NewInt(1))
 	upper, err := bls12381G1.Scalar.SetBigInt(n)

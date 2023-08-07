@@ -4,15 +4,17 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -103,7 +105,7 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 	return new(big.Int).Add(x, q), nil // x >= q
 }
 
-func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
+func doProof(x *big.Int, xEncrypted paillier.CipherText, r, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
 	appLabel := "Range"
 
 	verifierTranscript := merlin.NewTranscript(appLabel)

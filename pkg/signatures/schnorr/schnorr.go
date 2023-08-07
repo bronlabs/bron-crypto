@@ -2,12 +2,12 @@ package schnorr
 
 import (
 	"encoding/json"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
 )
 
 type PrivateKey struct {

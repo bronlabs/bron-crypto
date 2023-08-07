@@ -3,14 +3,13 @@ package setup
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type Participant struct {
@@ -29,10 +28,9 @@ type Participant struct {
 }
 
 type State struct {
-	r_i           curves.Scalar
 	receivedSeeds map[integration.IdentityKey]commitments.Commitment
 	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
-	transcript    transcript.Transcript
+	transcript    transcripts.Transcript
 }
 
 type committedSeedContribution struct {
@@ -41,7 +39,7 @@ type committedSeedContribution struct {
 	witness    commitments.Witness
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcript.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -61,7 +59,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	}
 	participantHashSet, err := hashset.NewHashSet(participants)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not construct participant hash set")
 	}
 	_, found := participantHashSet.Get(identityKey)
 	if !found {

@@ -1,15 +1,16 @@
 package softspoken
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 // TransposeBooleanMatrix transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
-func transposeBooleanMatrix(inputMatrix [Kappa][ZetaPrimeBytes]byte) [ZetaPrime][KappaBytes]byte {
+func transposeBooleanMatrix(inputMatrix *[Kappa][ZetaPrimeBytes]byte) [ZetaPrime][KappaBytes]byte {
 	outputMatrix := [ZetaPrime][KappaBytes]byte{}
 	for rowByte := 0; rowByte < KappaBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
@@ -40,8 +41,8 @@ func HashSalted(
 		return errs.NewInvalidArgument("HashSalted: invalid input size")
 	}
 	for i := 0; i < Zeta; i++ {
-		hash := sha3.NewCShake256((*uniqueSessionId)[:], []byte("Copper_Softspoken_COTe"))
-		idx_bytes := bits.IntToByteArray(i)
+		hash := sha3.NewCShake256((*uniqueSessionId), []byte("Copper_Softspoken_COTe"))
+		idx_bytes := bitstring.IntToByteArray(i)
 		if _, err := hash.Write(idx_bytes[:]); err != nil {
 			return errs.WrapFailed(err, "writing index into HashSalted")
 		}
@@ -62,11 +63,11 @@ func HashSalted(
 
 // PRG generates a pseudorandom bit matrix of size [η]×[κ]bits from seeds of
 // size [κ]×[κ], expanding each κ-bit seed to L bits (where L=l*κ for some l ∈ ℕ).
-func PRG(uniqueSessionId []byte, seed []byte, bufferOut []byte) (err error) {
+func PRG(uniqueSessionId, seed, bufferOut []byte) (err error) {
 	if (len(seed) != KappaBytes) || (len(bufferOut) != ZetaPrimeBytes) {
 		return errs.NewInvalidArgument("PRG: invalid input size")
 	}
-	shake := sha3.NewCShake256(uniqueSessionId[:], []byte("Copper_Softspoken_COTe"))
+	shake := sha3.NewCShake256(uniqueSessionId, []byte("Copper_Softspoken_COTe"))
 	if _, err = shake.Write(seed); err != nil {
 		return errs.WrapFailed(err, "writing seed into shake for PRG extension")
 	}

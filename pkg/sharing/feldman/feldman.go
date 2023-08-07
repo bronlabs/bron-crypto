@@ -3,10 +3,9 @@ package feldman
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 type Share = shamir.Share
@@ -65,12 +64,12 @@ func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curve
 	if secret.IsZero() {
 		return nil, nil, errs.NewIsZero("secret is nil")
 	}
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
-	shares, poly := shamir.GeneratePolynomialAndShares(secret, prng)
+	shares, poly := shamirDealer.GeneratePolynomialAndShares(secret, prng)
 	commitments = make([]curves.Point, f.Threshold)
 	for i := range commitments {
 		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
@@ -79,7 +78,7 @@ func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curve
 }
 
 func (f Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
@@ -88,23 +87,35 @@ func (f Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, er
 	for _, xi := range shares {
 		identities = append(identities, xi.Id)
 	}
-	return shamir.LagrangeCoefficients(identities)
+	lambdas, err := shamirDealer.LagrangeCoefficients(identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
+	}
+	return lambdas, nil
 }
 
 func (f Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
-	return shamir.Combine(shares...)
+	result, err := shamirDealer.Combine(shares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine shares")
+	}
+	return result, nil
 }
 
 func (f Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	shamir := &shamir.Dealer{
+	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
-	return shamir.CombinePoints(shares...)
+	result, err := shamirDealer.CombinePoints(shares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine points")
+	}
+	return result, nil
 }

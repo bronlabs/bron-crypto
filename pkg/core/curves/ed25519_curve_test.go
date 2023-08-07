@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 )
 
 func TestScalarEd25519Random(t *testing.T) {
@@ -279,13 +279,13 @@ func TestPointEd25519Set(t *testing.T) {
 	require.True(t, iden.IsIdentity())
 	xBytes, _ := hex.DecodeString("1ad5258f602d56c9b2a7259560c72c695cdcd6fd31e2a4c0fe536ecdd3366921")
 	yBytes, _ := hex.DecodeString("5866666666666666666666666666666666666666666666666666666666666666")
-	x := new(big.Int).SetBytes(internal.ReverseScalarBytes(xBytes))
-	y := new(big.Int).SetBytes(internal.ReverseScalarBytes(yBytes))
+	x := new(big.Int).SetBytes(bitstring.ReverseBytes(xBytes))
+	y := new(big.Int).SetBytes(bitstring.ReverseBytes(yBytes))
 	newPoint, err := ed25519.Point.Set(x, y)
 	require.NoError(t, err)
 	require.NotEqualf(t, iden, newPoint, "after setting valid x and y, the point should NOT be identity point")
 
-	emptyX := new(big.Int).SetBytes(internal.ReverseScalarBytes([]byte{}))
+	emptyX := new(big.Int).SetBytes(bitstring.ReverseBytes([]byte{}))
 	identityPoint, err := ed25519.Point.Set(emptyX, y)
 	require.NoError(t, err)
 	require.Equalf(t, iden, identityPoint, "When x is empty, the point will be identity")
@@ -390,6 +390,7 @@ func TestPointEd25519SumOfProducts(t *testing.T) {
 		new(ScalarEd25519).New(12),
 	}
 	curve, err := GetCurveByName(ED25519Name)
+	require.NoError(t, err)
 	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)

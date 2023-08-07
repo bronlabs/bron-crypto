@@ -3,8 +3,8 @@ package test_utils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 )
 
 func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (participants []*noninteractive.PreGenParticipant, err error) {

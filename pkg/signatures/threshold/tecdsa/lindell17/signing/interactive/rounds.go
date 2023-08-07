@@ -3,14 +3,14 @@ package interactive
 import (
 	"crypto/sha256"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing"
-	dlog "github.com/copperexchange/crypto-primitives-go/pkg/zkp/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing"
 )
 
 type Round1OutputP2P struct {
@@ -32,9 +32,7 @@ type Round4OutputP2P struct {
 	C3 paillier.CipherText
 }
 
-var (
-	commitmentHashFunc = sha256.New
-)
+var commitmentHashFunc = sha256.New
 
 func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P, err error) {
 	if primaryCosigner.round != 1 {
@@ -44,7 +42,11 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(primaryCosigner.prng)
 	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
-	bigR1CommitmentMessage := append(append(primaryCosigner.sessionId[:], primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...), primaryCosigner.state.bigR1.ToAffineCompressed()...)
+	bigR1CommitmentMessage := append(
+		append(primaryCosigner.sessionId,
+			primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...),
+		primaryCosigner.state.bigR1.ToAffineCompressed()...,
+	)
 	bigR1Commitment, bigR1Witness, err := commitments.Commit(commitmentHashFunc, bigR1CommitmentMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to R1")
@@ -68,7 +70,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(secondaryCosigner.prng)
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
-	bigR2ProofSessionId := append(secondaryCosigner.sessionId[:], secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
 	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
@@ -93,13 +95,13 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", primaryCosigner.round)
 	}
 
-	bigR2ProofSessionId := append(primaryCosigner.sessionId[:], primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR2ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
 	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId := append(primaryCosigner.sessionId[:], primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
 	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR1ProofSessionId, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
@@ -132,13 +134,13 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", secondaryCosigner.round)
 	}
 
-	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId[:], secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
+	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
 	err = commitments.Open(commitmentHashFunc, bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R1 commitment")
 	}
 
-	bigR1ProofSessionId := append(secondaryCosigner.sessionId[:], secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR1ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
 	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId, nil); err != nil { // TODO: clone transcript
 		return nil, errs.WrapFailed(err, "cannot verify R1 dlog proof")
 	}
@@ -200,8 +202,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	}
 	sDoublePrime := k1Inv.Mul(sPrime)
 
-	var v *int
-	v = new(int)
+	v := new(int)
 	*v, err = ecdsa.CalculateRecoveryId(primaryCosigner.state.bigR)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute recovery id")
@@ -212,7 +213,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 		R: primaryCosigner.state.r,
 		S: sDoublePrime,
 	}
-	signature.Normalize()
+	signature.Normalise()
 	if err := ecdsa.Verify(signature, primaryCosigner.cohortConfig.CipherSuite.Hash, primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
 	}

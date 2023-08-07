@@ -1,14 +1,14 @@
 package lindell17
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
 const (
-	// Threshold Lindell 2017 threshold (always 2)
+	// Threshold Lindell 2017 threshold (always 2).
 	Threshold = 2
 )
 

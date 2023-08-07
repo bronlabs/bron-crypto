@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"testing"
 
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/sample"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
 )
 
-func doSetup(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
+func doSetup(curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
 	participants, err := test_utils.MakeSetupParticipants(curve, identities)
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	allPairwiseSeeds, err := doSetup(t, curve, allIdentities)
+	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
@@ -125,7 +126,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	allPairwiseSeeds, err := doSetup(t, curve, allIdentities)
+	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
@@ -191,7 +192,7 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]
 
-	allPairwiseSeeds, _ := doSetup(t, curve, allIdentities)
+	allPairwiseSeeds, _ := doSetup(curve, allIdentities)
 	aliceSeed := allPairwiseSeeds[0]
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]

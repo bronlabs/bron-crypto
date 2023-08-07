@@ -1,8 +1,8 @@
 package hashset
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/types"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 )
 
 type HashSet[T types.Hashable] struct {

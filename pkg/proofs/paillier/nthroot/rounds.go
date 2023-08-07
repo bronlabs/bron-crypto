@@ -2,8 +2,9 @@ package nthroot
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 type Round1Output struct {

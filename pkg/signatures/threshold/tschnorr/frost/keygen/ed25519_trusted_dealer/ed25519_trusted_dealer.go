@@ -4,13 +4,13 @@ import (
 	"crypto/ed25519"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
@@ -21,7 +21,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	if cohortConfig.CipherSuite.Curve.Name != curves.ED25519Name {
 		return nil, errs.NewInvalidArgument("curve not supported")
 	}
-	if cohortConfig.Protocol != protocol.FROST {
+	if cohortConfig.Protocol != protocols.FROST {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 	curve := curves.ED25519()

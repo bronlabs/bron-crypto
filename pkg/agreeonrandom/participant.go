@@ -3,13 +3,12 @@ package agreeonrandom
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type Participant struct {
@@ -23,11 +22,11 @@ type Participant struct {
 }
 
 type State struct {
-	transcript transcript.Transcript
+	transcript transcripts.Transcript
 	r_i        curves.Scalar
 }
 
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcript.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -44,7 +43,7 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 	}
 	presentParticipantHashSet, err := hashset.NewHashSet(participants)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "couldn't construct hashset of participants")
 	}
 	_, found := presentParticipantHashSet.Get(identityKey)
 	if !found {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
 func TestG1IsOnCurve(t *testing.T) {
@@ -193,19 +193,19 @@ func TestG1Sub(t *testing.T) {
 
 func TestG1Mul(t *testing.T) {
 	g := new(G1).Generator()
-	a := Bls12381FqNew().SetRaw(&[native.FieldLimbs]uint64{
+	a := FqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0x2b568297a56da71c,
 		0xd8c39ecb0ef375d1,
 		0x435c38da67bfbf96,
 		0x8088a05026b659b2,
 	})
-	b := Bls12381FqNew().SetRaw(&[native.FieldLimbs]uint64{
+	b := FqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0x785fdd9b26ef8b85,
 		0xc997f25837695c18,
 		0x4c8dbc39e7b756c1,
 		0x70d9b6cc6d87df20,
 	})
-	c := Bls12381FqNew().Mul(a, b)
+	c := FqNew().Mul(a, b)
 	t1 := new(G1).Generator()
 	t1.Mul(t1, a)
 	t1.Mul(t1, b)
@@ -252,14 +252,14 @@ func TestG1MulByX(t *testing.T) {
 	// multiplying by `x` a point in G1 is the same as multiplying by
 	// the equivalent scalar.
 	generator := new(G1).Generator()
-	x := Bls12381FqNew().SetUint64(paramX)
+	x := FqNew().SetUint64(paramX)
 	x.Neg(x)
 	lhs := new(G1).Mul(generator, x)
 	rhs := new(G1).MulByX(generator)
 	require.Equal(t, 1, lhs.Equal(rhs))
 
 	pt := new(G1).Generator()
-	s := Bls12381FqNew().SetUint64(42)
+	s := FqNew().SetUint64(42)
 	pt.Mul(pt, s)
 	lhs.Mul(pt, x)
 	rhs.MulByX(pt)
@@ -316,8 +316,8 @@ func TestG1ClearCofactor(t *testing.T) {
 
 	// in BLS12-381 the cofactor in G1 can be
 	// cleared multiplying by (1-x)
-	hEff := Bls12381FqNew().SetOne()
-	hEff.Add(hEff, Bls12381FqNew().SetUint64(paramX))
+	hEff := FqNew().SetOne()
+	hEff.Add(hEff, FqNew().SetUint64(paramX))
 	point.Mul(&point, hEff)
 	require.Equal(t, 1, clearedPoint.Equal(&point))
 }
@@ -389,11 +389,11 @@ func TestSumOfProducts(t *testing.T) {
 	var b [64]byte
 	h0, _ := new(G1).Random(crand.Reader)
 	_, _ = crand.Read(b[:])
-	s := Bls12381FqNew().SetBytesWide(&b)
+	s := FqNew().SetBytesWide(&b)
 	_, _ = crand.Read(b[:])
-	sTilde := Bls12381FqNew().SetBytesWide(&b)
+	sTilde := FqNew().SetBytesWide(&b)
 	_, _ = crand.Read(b[:])
-	c := Bls12381FqNew().SetBytesWide(&b)
+	c := FqNew().SetBytesWide(&b)
 
 	lhs := new(G1).Mul(h0, s)
 	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*native.Field{s})
@@ -401,7 +401,7 @@ func TestSumOfProducts(t *testing.T) {
 
 	u := new(G1).Mul(h0, s)
 	uTilde := new(G1).Mul(h0, sTilde)
-	sHat := Bls12381FqNew().Mul(c, s)
+	sHat := FqNew().Mul(c, s)
 	sHat.Sub(sTilde, sHat)
 
 	rhs.Mul(u, c)

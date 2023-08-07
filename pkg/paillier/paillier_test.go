@@ -4,16 +4,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"log"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
 )
 
 var (
@@ -200,6 +200,7 @@ type lcmTest struct {
 }
 
 func runTestLcm(t *testing.T, testArgs []lcmTest) {
+	t.Helper()
 	for _, arg := range testArgs {
 		a, err := paillier.Lcm(arg.x, arg.y)
 		if err != nil && arg.err == nil {
@@ -600,7 +601,7 @@ func TestAddErrorConditions(t *testing.T) {
 	pk, err := paillier.NewPublicKey(N)
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y         *big.Int
 		expectedPass bool
 	}{
@@ -638,14 +639,13 @@ func TestAddErrorConditions(t *testing.T) {
 			require.True(t, errs.IsIsNil(err))
 		}
 	}
-
 }
 
 func TestSubPlain(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(128)
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y, expected int
 	}{
 		{x: 1, y: 1, expected: 0},
@@ -662,6 +662,7 @@ func TestSubPlain(t *testing.T) {
 			zEncrypted, err := pk.SubPlain(encryptedX, big.NewInt(int64(test.y)))
 			require.NoError(t, err)
 			z, err := sk.Decrypt(zEncrypted)
+			require.NoError(t, err)
 			require.Equal(t, z.Int64(), int64(test.expected))
 		})
 	}
@@ -680,7 +681,7 @@ func TestAdd(t *testing.T) {
 	z := new(big.Int).Add(N, N)
 	z.Add(z, core.One)
 
-	var tests = []struct {
+	tests := []struct {
 		pk             *paillier.PublicKey
 		x, y, expected *big.Int
 	}{
@@ -715,7 +716,7 @@ func TestMulErrorConditions(t *testing.T) {
 	pk, err := paillier.NewPublicKey(N)
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y            *big.Int
 		expectedPass    bool
 		expectedErrFunc func(error) bool
@@ -751,7 +752,7 @@ func TestMulErrorConditions(t *testing.T) {
 			require.NoError(t, err)
 		} else {
 			println(err.Error())
-			//require.True(t, errs.IsInvalidArgument(err))
+			// require.True(t, errs.IsInvalidArgument(err))
 		}
 	}
 }
@@ -770,7 +771,7 @@ func TestMul(t *testing.T) {
 	require.Nil(t, err)
 	alpha.Add(alpha, core.One)
 
-	var tests = []struct {
+	tests := []struct {
 		pk *paillier.PublicKey
 		// Note: these values are in reverse-order from the order passed in as args
 		c, a, expected *big.Int
@@ -794,10 +795,12 @@ func TestMul(t *testing.T) {
 		{pk, NminusOne, core.Two, alpha},      // (N-1)² = N² - 2N - 1 ≡ -2N -1 (N²)
 
 		// large number test: WorlframAlpha test case
-		{newPk,
+		{
+			newPk,
 			internal.B10("11659564086467828628"),
 			internal.B10("57089538512338875950"),
-			internal.B10("1487259371808822575685230766372478858208831958946972")},
+			internal.B10("1487259371808822575685230766372478858208831958946972"),
+		},
 	}
 	// All the tests!
 	for _, test := range tests {
@@ -836,7 +839,7 @@ func TestEncryptErrorConditions(t *testing.T) {
 	pk, err := paillier.NewPublicKey(N)
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		msg, r          *big.Int
 		expectedPass    bool
 		expectedErrFunc func(error) bool
@@ -871,7 +874,7 @@ func TestEncryptErrorConditions(t *testing.T) {
 	// Fail if N is nil
 	pk = &paillier.PublicKey{N: nil, N2: nil}
 	_, _, err = pk.Encrypt(core.One)
-	require.Contains(t, err.Error(), "arguments cannot be nil")
+	require.True(t, errs.HasIsNil(err))
 }
 
 // Tests that each invocation of Encrypt() produces a distinct output
@@ -901,7 +904,7 @@ func TestEncryptKnownAnswers(t *testing.T) {
 	z9, err := paillier.NewPublicKey(big.NewInt(3))
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		m, r, expected *big.Int // m,r inputs
 	}{
 		// All operations below mod 9
@@ -939,7 +942,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 	// A fake secret key, but good enough to test parameter validation
 	sk := &paillier.SecretKey{PublicKey: *pk, Lambda: NplusOne, Totient: NplusOne, U: NplusOne}
 
-	var tests = []struct {
+	tests := []struct {
 		c               *big.Int
 		expectedPass    bool
 		expectedErrFunc func(error) bool

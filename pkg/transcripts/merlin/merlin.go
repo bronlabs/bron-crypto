@@ -6,23 +6,24 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
 	"github.com/mimoo/StrobeGo/strobe"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
 const (
-	merlinProtocolLabel    string          = "Merlin v1.1"
-	domainSeparatorLabel   string          = "<@>"
-	Type                   transcript.Type = "Merlin"
-	securityParameter      int             = 256
-	maxUnhashedMessageSize int             = 100 * 1024 * 1024 // Messages beyond this size (100MB) are hashed.
+	merlinProtocolLabel    string           = "Merlin v1.1"
+	domainSeparatorLabel   string           = "<@>"
+	Type                   transcripts.Type = "Merlin"
+	securityParameter      int              = 256
+	maxUnhashedMessageSize int              = 100 * 1024 * 1024 // Messages beyond this size (100MB) are hashed.
 )
 
 var hashConstructor = sha256.New // Hash function used to hash messages longer than maxUnhashedMessage bytes.
 
-var _ transcript.Transcript = (*Transcript)(nil)
+var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
 	s strobe.Strobe
@@ -39,26 +40,26 @@ func NewTranscript(appLabel string) *Transcript {
 }
 
 // Clone returns a copy of the transcript.
-func (t *Transcript) Clone() transcript.Transcript {
+func (t *Transcript) Clone() transcripts.Transcript {
 	s := t.s.Clone()
 	return &Transcript{s: *s}
 }
 
-func (t *Transcript) Type() transcript.Type {
+func (*Transcript) Type() transcripts.Type {
 	return Type
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
 // AppendMessage adds the message to the transcript with the supplied label. Messages
 // of length greater than 100 MB must be hashed.
-func (t *Transcript) AppendMessage(label, message []byte) error {
+func (t *Transcript) AppendMessage(label, message []byte) {
 	// AdditionalData[label || le32(len(message))]
 	t.s.AD(true, appendSizeToLabel(label, len(message)))
 	// If the message is longer than 100 MB, it must be hashed.
 	if len(message) > maxUnhashedMessageSize {
 		h := hashConstructor() // Create a local hash function.
 		if _, err := h.Write(message); err != nil {
-			return errs.WrapFailed(err, "failed to hash message for Merlin transcript")
+			panic(errs.WrapFailed(err, "failed to hash message for Merlin transcript"))
 		}
 		// AdditionalData[h(message)]
 		t.s.AD(false, h.Sum(nil))
@@ -66,39 +67,38 @@ func (t *Transcript) AppendMessage(label, message []byte) error {
 		// AdditionalData[message]
 		t.s.AD(false, message)
 	}
-	return nil
 }
 
-// AppendScalars appends a vector of scalars to the transcript, serializing each scalar
+// AppendScalars appends a vector of scalars to the transcript, serialising each scalar
 // with the label=label_i. If the vector's length is 1, label is used directly.
 func (t *Transcript) AppendScalars(label []byte, scalars ...curves.Scalar) {
 	if len(scalars) == 1 {
-		_ = t.AppendMessage([]byte("curve_name"), []byte(scalars[0].CurveName()))
-		_ = t.AppendMessage(label, scalars[0].Bytes())
+		t.AppendMessage([]byte("curve_name"), []byte(scalars[0].CurveName()))
+		t.AppendMessage(label, scalars[0].Bytes())
 	}
 	for i, scalar := range scalars {
-		_ = t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(scalar.CurveName()))
-		_ = t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), scalar.Bytes())
+		t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(scalar.CurveName()))
+		t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), scalar.Bytes())
 	}
 }
 
-// AppendPoints appends a vector of points to the transcript, serializing each
+// AppendPoints appends a vector of points to the transcript, serialising each
 // point to the compressed affine form, with the label=label_i. If the vector's length
 // is 1, label is used directly.
 func (t *Transcript) AppendPoints(label []byte, points ...curves.Point) {
 	if len(points) == 1 {
-		_ = t.AppendMessage([]byte("curve_name"), []byte(points[0].CurveName()))
-		_ = t.AppendMessage(label, points[0].ToAffineCompressed())
+		t.AppendMessage([]byte("curve_name"), []byte(points[0].CurveName()))
+		t.AppendMessage(label, points[0].ToAffineCompressed())
 	}
 	for i, point := range points {
-		_ = t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(point.CurveName()))
-		_ = t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), point.ToAffineCompressed())
+		t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(point.CurveName()))
+		t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), point.ToAffineCompressed())
 	}
 }
 
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
 // The label parameter is metadata about the challenge, and is also appended to
-// the transcript. More derails on "Transcript Protocols" section of Merlin.tool
+// the transcript. More derails on "Transcript Protocols" section of Merlin.tool.
 func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
 	// AdditionalData[label || le32(outLen)]
 	t.s.AD(true, appendSizeToLabel(label, outLen))
@@ -124,7 +124,7 @@ func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
 // avoids the downsides of fully deterministic generation.
 
 // The transcript PRNG has a different type, to make it impossible to accidentally
-// rekey the public transcript, or use an RNG before it has been finalized.
+// rekey the public transcript, or use an RNG before it has been finalised.
 type prngReader struct {
 	t *Transcript
 }
@@ -136,7 +136,10 @@ type prngReader struct {
 //   - 32 bytes of entropy from an external RNG arbitrarily chosen.
 func (t *Transcript) NewReader(witnessLabel, witness []byte, rng io.Reader) (io.Reader, error) {
 	// 1. Create a secret clone of the public transcript state
-	prng := t.Clone().(*Transcript)
+	prng, ok := t.Clone().(*Transcript)
+	if !ok {
+		return nil, errs.NewInvalidType("not a Transcript")
+	}
 	// 2. Rekey with witness data
 	//	  STROBE: KEY[label || LE32(witness.len())](witness);
 	prng.s.AD(true, appendSizeToLabel(witnessLabel, len(witness)))
@@ -171,5 +174,5 @@ func appendSizeToLabel(label []byte, outLen int) (labelAndSize []byte) {
 	sizeBuffer := make([]byte, 4)
 	binary.LittleEndian.PutUint32(sizeBuffer[0:], uint32(outLen))
 	labelAndSize = append(label, sizeBuffer...)
-	return
+	return labelAndSize
 }

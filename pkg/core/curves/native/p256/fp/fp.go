@@ -10,11 +10,13 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
-var p256FpInitonce sync.Once
-var p256FpParams native.FieldParams
+var (
+	p256FpInitonce sync.Once
+	p256FpParams   native.FieldParams
+)
 
 func P256FpNew() *native.Field {
 	return &native.Field{
@@ -32,7 +34,8 @@ func p256FpParamsInit() {
 		R3:      [native.FieldLimbs]uint64{0xfffffffd0000000a, 0xffffffedfffffff7, 0x00000005fffffffc, 0x0000001800000001},
 		Modulus: [native.FieldLimbs]uint64{0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001},
 		BiModulus: new(big.Int).SetBytes([]byte{
-			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
+			0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		}),
 	}
 }
 
@@ -42,45 +45,45 @@ func getP256FpParams() *native.FieldParams {
 }
 
 // p256FpArithmetic is a struct with all the methods needed for working
-// in mod q
+// in mod q.
 type p256FpArithmetic struct{}
 
-// ToMontgomery converts this field to montgomery form
-func (f p256FpArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// ToMontgomery converts this field to montgomery form.
+func (p256FpArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
-// FromMontgomery converts this field from montgomery form
-func (f p256FpArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// FromMontgomery converts this field from montgomery form.
+func (p256FpArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Neg performs modular negation
-func (f p256FpArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
+// Neg performs modular negation.
+func (p256FpArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Square performs modular square
-func (f p256FpArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
+// Square performs modular square.
+func (p256FpArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Mul performs modular multiplication
-func (f p256FpArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Mul performs modular multiplication.
+func (p256FpArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Add performs modular addition
-func (f p256FpArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Add performs modular addition.
+func (p256FpArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sub performs modular subtraction
-func (f p256FpArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Sub performs modular subtraction.
+func (p256FpArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sqrt performs modular square root
+// Sqrt performs modular square root.
 func (f p256FpArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
 	// Use p = 3 mod 4 by Euler's criterion means
 	// arg^((p+1)/4 mod p
@@ -99,7 +102,7 @@ func (f p256FpArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint
 	Selectznz(out, uint1(*wasSquare), out, &t)
 }
 
-// Invert performs modular inverse
+// Invert performs modular inverse.
 func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
 	// Fermat's Little Theorem
 	// a ^ (p - 2) mod p
@@ -152,18 +155,18 @@ func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]
 	Selectznz(out, uint1(*wasInverted), out, &r)
 }
 
-// FromBytes converts a little endian byte array into a field element
-func (f p256FpArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
+// FromBytes converts a little endian byte array into a field element.
+func (p256FpArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
-// ToBytes converts a field element to a little endian byte array
-func (f p256FpArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
+// ToBytes converts a field element to a little endian byte array.
+func (p256FpArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
-func (f p256FpArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
+// selects arg1 if choice == 0 and arg2 if choice == 1.
+func (p256FpArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }

@@ -8,23 +8,24 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 // EllipticPointHashType is to indicate which expand operation is used
-// for hash to curve operations
+// for hash to curve operations.
 type EllipticPointHashType uint
 
 // EllipticPointHashName is to indicate the hash function is used
-// for hash to curve operations
+// for hash to curve operations.
 type EllipticPointHashName uint
 
 const (
-	// XMD - use ExpandMsgXmd
+	// XMD - use ExpandMsgXmd.
 	XMD EllipticPointHashType = iota
-	// XOF - use ExpandMsgXof
+	// XOF - use ExpandMsgXof.
 	XOF
 )
 
@@ -39,7 +40,7 @@ const (
 	SHAKE256
 )
 
-// EllipticPoint represents a Weierstrauss elliptic curve point
+// EllipticPoint represents a Weierstrauss elliptic curve point.
 type EllipticPoint struct {
 	X          *Field
 	Y          *Field
@@ -50,7 +51,7 @@ type EllipticPoint struct {
 
 // EllipticPointParams are the Weierstrauss curve parameters
 // such as the name, the coefficients the generator point,
-// and the prime bit size
+// and the prime bit size.
 type EllipticPointParams struct {
 	Name    string
 	A       *Field
@@ -69,27 +70,27 @@ type EllipticPointHasher struct {
 	xof      sha3.ShakeHash
 }
 
-// Name returns the hash name for this hasher
+// Name returns the hash name for this hasher.
 func (e *EllipticPointHasher) Name() string {
 	return e.name.String()
 }
 
-// Type returns the hash type for this hasher
+// Type returns the hash type for this hasher.
 func (e *EllipticPointHasher) Type() EllipticPointHashType {
 	return e.hashType
 }
 
-// Xmd returns the hash method for ExpandMsgXmd
+// Xmd returns the hash method for ExpandMsgXmd.
 func (e *EllipticPointHasher) Xmd() hash.Hash {
 	return e.xmd
 }
 
-// Xof returns the hash method for ExpandMsgXof
+// Xof returns the hash method for ExpandMsgXof.
 func (e *EllipticPointHasher) Xof() sha3.ShakeHash {
 	return e.xof
 }
 
-// EllipticPointHasherSha256 creates a point hasher that uses Sha256
+// EllipticPointHasherSha256 creates a point hasher that uses Sha256.
 func EllipticPointHasherSha256() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHA256,
@@ -98,7 +99,7 @@ func EllipticPointHasherSha256() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherSha512 creates a point hasher that uses Sha512
+// EllipticPointHasherSha512 creates a point hasher that uses Sha512.
 func EllipticPointHasherSha512() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHA512,
@@ -107,7 +108,7 @@ func EllipticPointHasherSha512() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherSha3256 creates a point hasher that uses Sha3256
+// EllipticPointHasherSha3256 creates a point hasher that uses Sha3256.
 func EllipticPointHasherSha3256() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHA3_256,
@@ -116,7 +117,7 @@ func EllipticPointHasherSha3256() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherSha3384 creates a point hasher that uses Sha3384
+// EllipticPointHasherSha3384 creates a point hasher that uses Sha3384.
 func EllipticPointHasherSha3384() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHA3_384,
@@ -125,7 +126,7 @@ func EllipticPointHasherSha3384() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherSha3512 creates a point hasher that uses Sha3512
+// EllipticPointHasherSha3512 creates a point hasher that uses Sha3512.
 func EllipticPointHasherSha3512() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHA3_512,
@@ -134,7 +135,7 @@ func EllipticPointHasherSha3512() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherBlake2b creates a point hasher that uses Blake2b
+// EllipticPointHasherBlake2b creates a point hasher that uses Blake2b.
 func EllipticPointHasherBlake2b() *EllipticPointHasher {
 	h, _ := blake2b.New(64, []byte{})
 	return &EllipticPointHasher{
@@ -144,7 +145,7 @@ func EllipticPointHasherBlake2b() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherShake128 creates a point hasher that uses Shake128
+// EllipticPointHasherShake128 creates a point hasher that uses Shake128.
 func EllipticPointHasherShake128() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHAKE128,
@@ -153,7 +154,7 @@ func EllipticPointHasherShake128() *EllipticPointHasher {
 	}
 }
 
-// EllipticPointHasherShake256 creates a point hasher that uses Shake256
+// EllipticPointHasherShake256 creates a point hasher that uses Shake256.
 func EllipticPointHasherShake256() *EllipticPointHasher {
 	return &EllipticPointHasher{
 		name:     SHAKE128,
@@ -163,7 +164,7 @@ func EllipticPointHasherShake256() *EllipticPointHasher {
 }
 
 // EllipticPointArithmetic are the methods that specific curves
-// need to implement for higher abstractions to wrap the point
+// need to implement for higher abstractions to wrap the point.
 type EllipticPointArithmetic interface {
 	// Hash a byte sequence to the curve using the specified hasher
 	// and dst and store the result in out
@@ -213,35 +214,35 @@ func (n EllipticPointHashName) String() string {
 }
 
 // Random creates a random point on the curve
-// from the specified reader
+// from the specified reader.
 func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
 	var seed [WideFieldBytes]byte
 	n, err := reader.Read(seed[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "random could not read from stream")
+		return nil, errs.WrapFailed(err, "random could not read from stream")
 	}
 	if n != WideFieldBytes {
-		return nil, fmt.Errorf("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
+		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
 	}
 	dst := []byte(fmt.Sprintf("%s_XMD:SHA-256_SSWU_RO_", p.Params.Name))
 	err = p.Arithmetic.Hash(p, EllipticPointHasherSha256(), seed[:], dst)
 	if err != nil {
-		return nil, errors.Wrap(err, "ecc hash failed")
+		return nil, errs.WrapFailed(err, "ecc hash failed")
 	}
 	return p, nil
 }
 
-// Hash uses the hasher to map bytes to a valid point
+// Hash uses the hasher to map bytes to a valid point.
 func (p *EllipticPoint) Hash(bytes []byte, hasher *EllipticPointHasher) (*EllipticPoint, error) {
 	dst := []byte(fmt.Sprintf("%s_%s:%s_SSWU_RO_", p.Params.Name, hasher.hashType, hasher.name))
 	err := p.Arithmetic.Hash(p, hasher, bytes, dst)
 	if err != nil {
-		return nil, errors.Wrap(err, "hash failed")
+		return nil, errs.WrapFailed(err, "hash failed")
 	}
 	return p, nil
 }
 
-// Identity returns the identity point
+// Identity returns the identity point.
 func (p *EllipticPoint) Identity() *EllipticPoint {
 	p.X.SetZero()
 	p.Y.SetZero()
@@ -249,7 +250,7 @@ func (p *EllipticPoint) Identity() *EllipticPoint {
 	return p
 }
 
-// Generator returns the base point for the curve
+// Generator returns the base point for the curve.
 func (p *EllipticPoint) Generator() *EllipticPoint {
 	p.X.Set(p.Params.Gx)
 	p.Y.Set(p.Params.Gy)
@@ -257,40 +258,40 @@ func (p *EllipticPoint) Generator() *EllipticPoint {
 	return p
 }
 
-// IsIdentity returns true if this point is at infinity
+// IsIdentity returns true if this point is at infinity.
 func (p *EllipticPoint) IsIdentity() bool {
 	return p.Z.IsZero() == 1
 }
 
-// Double this point
+// Double this point.
 func (p *EllipticPoint) Double(point *EllipticPoint) *EllipticPoint {
 	p.Set(point)
 	p.Arithmetic.Double(p, point)
 	return p
 }
 
-// Neg negates this point
+// Neg negates this point.
 func (p *EllipticPoint) Neg(point *EllipticPoint) *EllipticPoint {
 	p.Set(point)
 	p.Y.Neg(p.Y)
 	return p
 }
 
-// Add adds the two points
+// Add adds the two points.
 func (p *EllipticPoint) Add(lhs, rhs *EllipticPoint) *EllipticPoint {
 	p.Set(lhs)
 	p.Arithmetic.Add(p, lhs, rhs)
 	return p
 }
 
-// Sub subtracts the two points
+// Sub subtracts the two points.
 func (p *EllipticPoint) Sub(lhs, rhs *EllipticPoint) *EllipticPoint {
 	p.Set(lhs)
 	p.Arithmetic.Add(p, lhs, new(EllipticPoint).Neg(rhs))
 	return p
 }
 
-// Mul multiplies this point by the input scalar
+// Mul multiplies this point by the input scalar.
 func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *Field) *EllipticPoint {
 	bytes := scalar.Bytes()
 	precomputed := [16]*EllipticPoint{}
@@ -334,7 +335,7 @@ func (p *EllipticPoint) Equal(rhs *EllipticPoint) int {
 	return (e1 & e2) | (^e1 & ^e2)&x1.Equal(&x2)&y1.Equal(&y2)
 }
 
-// Set copies clone into p
+// Set copies clone into p.
 func (p *EllipticPoint) Set(clone *EllipticPoint) *EllipticPoint {
 	p.X = new(Field).Set(clone.X)
 	p.Y = new(Field).Set(clone.Y)
@@ -344,17 +345,17 @@ func (p *EllipticPoint) Set(clone *EllipticPoint) *EllipticPoint {
 	return p
 }
 
-// BigInt returns the x and y as big.Ints in affine
+// BigInt returns the x and y as big.Ints in affine.
 func (p *EllipticPoint) BigInt() (x, y *big.Int) {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
 	x = t.X.BigInt()
 	y = t.Y.BigInt()
-	return
+	return x, y
 }
 
 // SetBigInt creates a point from affine x, y
-// and returns the point if it is on the curve
+// and returns the point if it is on the curve.
 func (p *EllipticPoint) SetBigInt(x, y *big.Int) (*EllipticPoint, error) {
 	xx := &Field{
 		Params:     p.Params.Gx.Params,
@@ -375,31 +376,31 @@ func (p *EllipticPoint) SetBigInt(x, y *big.Int) (*EllipticPoint, error) {
 	pp.Y = yy.CMove(yy, zero, isIdentity)
 	pp.Z = one.CMove(one, zero, isIdentity)
 	if !p.Arithmetic.IsOnCurve(pp) && isIdentity == 0 {
-		return nil, fmt.Errorf("invalid coordinates")
+		return nil, errs.NewInvalidCoordinates("set big int")
 	}
 	return p.Set(pp), nil
 }
 
-// GetX returns the affine X coordinate
+// GetX returns the affine X coordinate.
 func (p *EllipticPoint) GetX() *Field {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
 	return t.X
 }
 
-// GetY returns the affine Y coordinate
+// GetY returns the affine Y coordinate.
 func (p *EllipticPoint) GetY() *Field {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
 	return t.Y
 }
 
-// IsOnCurve determines if this point represents a valid curve point
+// IsOnCurve determines if this point represents a valid curve point.
 func (p *EllipticPoint) IsOnCurve() bool {
 	return p.Arithmetic.IsOnCurve(p)
 }
 
-// ToAffine converts the point into affine coordinates
+// ToAffine converts the point into affine coordinates.
 func (p *EllipticPoint) ToAffine(clone *EllipticPoint) *EllipticPoint {
 	p.Arithmetic.ToAffine(p, clone)
 	return p
@@ -413,7 +414,7 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*Field)
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	if len(points) != len(scalars) {
-		return nil, fmt.Errorf("length mismatch")
+		return nil, errs.NewIncorrectCount("#points != #scalars")
 	}
 
 	bucketSize := 1 << W

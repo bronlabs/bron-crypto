@@ -2,18 +2,19 @@ package dkg_test
 
 import (
 	"crypto/sha256"
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	gennaro_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	lindell17_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	gennaro_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	lindell17_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -29,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.FROST, identities, 2, identities)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities)
 	require.NoError(t, err)
@@ -53,7 +54,7 @@ func Test_HappyPath(t *testing.T) {
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_test_utils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
-	transcripts := make([]transcript.Transcript, len(identities))
+	transcripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
 		transcripts[i] = merlin.NewTranscript("Lindell 2017 DKG")
 	}

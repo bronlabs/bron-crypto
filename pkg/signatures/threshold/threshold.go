@@ -1,9 +1,9 @@
 package threshold
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 type SigningKeyShare struct {
@@ -55,4 +55,4 @@ type PublicKeyShares struct {
 // 		return errors.New("public key shares can't be combined to the entire public key")
 // 	}
 // 	return nil
-// }
+// }.

@@ -13,30 +13,29 @@ package core
 import (
 	crand "crypto/rand"
 	"crypto/subtle"
-	"fmt"
 	"math/big"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 var (
-	// Zero is additive identity in the set of integers
+	// Zero is additive identity in the set of integers.
 	Zero = big.NewInt(0)
 
-	// One is the multiplicative identity in the set of integers
+	// One is the multiplicative identity in the set of integers.
 	One = big.NewInt(1)
 
-	// Two is the odd prime
+	// Two is the odd prime.
 	Two = big.NewInt(2)
 )
 
-// ConstantTimeEqByte determines if a, b have identical byte serialization
+// ConstantTimeEqByte determines if a, b have identical byte serialisation
 // and signs. It uses the crypto/subtle package to get a constant time comparison
 // over byte representations. Return value is a byte which may be
 // useful in bitwise operations. Returns 0x1 if the two values have the
 // identical sign and byte representation; 0x0 otherwise.
 func ConstantTimeEqByte(a, b *big.Int) byte {
-	if a == nil && a == b {
+	if a == nil && b == nil {
 		return 1
 	}
 	if a == nil || b == nil {
@@ -62,7 +61,7 @@ func ConstantTimeEqByte(a, b *big.Int) byte {
 	return sameBytes & sameSign
 }
 
-// ConstantTimeEq determines if a, b have identical byte serialization
+// ConstantTimeEq determines if a, b have identical byte serialisation
 // and uses the crypto/subtle package to get a constant time comparison
 // over byte representations.
 func ConstantTimeEq(a, b *big.Int) bool {
@@ -70,10 +69,10 @@ func ConstantTimeEq(a, b *big.Int) bool {
 }
 
 // In determines ring membership before modular reduction: x ∈ Z_m
-// returns nil if 0 ≤ x < m
+// returns nil if 0 ≤ x < m.
 func In(x, m *big.Int) error {
 	if AnyNil(x, m) {
-		return internal.ErrNilArguments
+		return errs.NewIsNil("one of the arguments")
 	}
 	// subtle doesn't support constant time big.Int compare
 	// just use big.Cmp for now
@@ -81,13 +80,13 @@ func In(x, m *big.Int) error {
 	if x.Cmp(Zero) != -1 && x.Cmp(m) == -1 {
 		return nil
 	}
-	return internal.ErrZmMembership
+	return errs.NewIsZero("zero")
 }
 
-// Add (modular addition): z = x+y (modulo m)
+// Add (modular addition): z = x+y (modulo m).
 func Add(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 	z := new(big.Int).Add(x, y)
 	// Compute the residue if one is specified, otherwise
@@ -98,10 +97,10 @@ func Add(x, y, m *big.Int) (*big.Int, error) {
 	return z, nil
 }
 
-// Mul (modular multiplication): z = x*y (modulo m)
+// Mul (modular multiplication): z = x*y (modulo m).
 func Mul(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 	z := new(big.Int).Mul(x, y)
 
@@ -113,19 +112,19 @@ func Mul(x, y, m *big.Int) (*big.Int, error) {
 	return z, nil
 }
 
-// Exp (modular exponentiation): z = x^y (modulo m)
+// Exp (modular exponentiation): z = x^y (modulo m).
 func Exp(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 	// This wrapper looks silly, but it makes the calling code read more consistently.
 	return new(big.Int).Exp(x, y, m), nil
 }
 
-// Neg (modular negation): z = -x (modulo m)
+// Neg (modular negation): z = -x (modulo m).
 func Neg(x, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, m) {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 	z := new(big.Int).Neg(x)
 	z.Mod(z, m)
@@ -135,11 +134,11 @@ func Neg(x, m *big.Int) (*big.Int, error) {
 // Inv (modular inverse): returns y such that xy = 1 (modulo m).
 func Inv(x, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, m) {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 	z := new(big.Int).ModInverse(x, m)
 	if z == nil {
-		return nil, fmt.Errorf("cannot compute the multiplicative inverse")
+		return nil, errs.NewFailed("cannot compute the multiplicative inverse")
 	}
 	return z, nil
 }
@@ -147,7 +146,7 @@ func Inv(x, m *big.Int) (*big.Int, error) {
 // Rand generates a cryptographically secure random integer in the range: 1 < r < m.
 func Rand(m *big.Int) (*big.Int, error) {
 	if m == nil {
-		return nil, internal.ErrNilArguments
+		return nil, errs.NewIsNil("one of the arguments")
 	}
 
 	// Select a random element, but not zero or one
@@ -158,7 +157,7 @@ func Rand(m *big.Int) (*big.Int, error) {
 	for {
 		result, err := crand.Int(crand.Reader, m)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "couldn't read from crand")
 		}
 
 		if result.Cmp(One) == 1 { // result > 1
@@ -167,7 +166,7 @@ func Rand(m *big.Int) (*big.Int, error) {
 	}
 }
 
-// AnyNil determines if any of values are nil
+// AnyNil determines if any of values are nil.
 func AnyNil(values ...*big.Int) bool {
 	for _, x := range values {
 		if x == nil {

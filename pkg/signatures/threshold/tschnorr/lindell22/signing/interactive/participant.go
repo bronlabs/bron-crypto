@@ -1,15 +1,16 @@
 package interactive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/lindell22"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const (
@@ -25,7 +26,6 @@ type state struct {
 	bigRWitness commitments.Witness
 
 	theirBigRCommitment map[integration.IdentityKey]commitments.Commitment
-	theirBigR           map[integration.IdentityKey]curves.Point
 }
 
 type Cosigner struct {
@@ -39,7 +39,7 @@ type Cosigner struct {
 	identityKeyToShamirId map[integration.IdentityKey]int
 	sid                   []byte
 	round                 int
-	transcript            transcript.Transcript
+	transcript            transcripts.Transcript
 	prng                  io.Reader
 
 	state *state
@@ -66,7 +66,7 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants []integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, cohortConfig *integration.CohortConfig, transcript transcript.Transcript, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants []integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sid, sessionParticipants, mySigningKeyShare, cohortConfig); err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
@@ -74,9 +74,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	if err := transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid); err != nil {
-		return nil, errs.WrapFailed(nil, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
 
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	cosigner := &Cosigner{
@@ -85,25 +83,21 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		mySigningKeyShare:     mySigningKeyShare,
 		identityKeyToShamirId: identityKeyToShamirId,
 		cohortConfig:          cohortConfig,
-		sid:                   sid[:],
+		sid:                   sid,
 		transcript:            transcript,
 		sessionParticipants:   sessionParticipants,
 		round:                 1,
 		prng:                  prng,
 		state:                 &state{},
 	}
-
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate lagrange coefficient")
-	}
-	cosigner.state.pid = cosigner.pid(myIdentityKey)
+	cosigner.state.pid = pid(myIdentityKey)
 	cosigner.state.bigS = cosigner.bigS()
 
 	return cosigner, nil
 }
 
 func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, signingKeyShare *threshold.SigningKeyShare, cohortConfig *integration.CohortConfig) error {
-	if sid == nil || len(sid) == 0 {
+	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := cohortConfig.Validate(); err != nil {

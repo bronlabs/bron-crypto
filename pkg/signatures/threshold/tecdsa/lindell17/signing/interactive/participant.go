@@ -1,14 +1,15 @@
 package interactive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const (
@@ -16,16 +17,19 @@ const (
 	transcriptSessionIdLabel = "COPPER_KNOX_LINDELL2017_INTERACTIVE_SIGN_SESSION_ID"
 )
 
-var _ lindell17.Participant = (*PrimaryCosigner)(nil)
-var _ lindell17.Participant = (*SecondaryCosigner)(nil)
+var (
+	_ lindell17.Participant = (*PrimaryCosigner)(nil)
+	_ lindell17.Participant = (*SecondaryCosigner)(nil)
+)
 
 type Cosigner struct {
 	lindell17.Participant
 
-	prng          io.Reader
+	prng io.Reader
+	// My Cohort config
 	cohortConfig  *integration.CohortConfig
 	sessionId     []byte
-	transcript    transcript.Transcript
+	transcript    transcripts.Transcript
 	myIdentityKey integration.IdentityKey
 	myShamirId    int
 	myShard       *lindell17.Shard
@@ -51,7 +55,6 @@ type PrimaryCosigner struct {
 type SecondaryCosignerState struct {
 	bigR1Commitment commitments.Commitment
 	k2              curves.Scalar
-	r               curves.Scalar
 	bigR2           curves.Point
 }
 
@@ -84,7 +87,7 @@ func (cosigner *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
+func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -100,15 +103,13 @@ func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentity
 	if secondaryIdentityKey == nil {
 		return nil, errs.NewIsNil("primary identity key is nil")
 	}
-	if sessionId == nil || len(sessionId) == 0 {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	if err := transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId); err != nil {
-		return nil, errs.WrapFailed(nil, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	primaryCosigner = &PrimaryCosigner{
@@ -133,7 +134,7 @@ func NewPrimaryCosigner(myIdentityKey integration.IdentityKey, secondaryIdentity
 	return primaryCosigner, nil
 }
 
-func NewSecondaryCosigner(myIdentityKey integration.IdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcript.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
+func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -149,15 +150,13 @@ func NewSecondaryCosigner(myIdentityKey integration.IdentityKey, primaryIdentity
 	if primaryIdentityKey == nil {
 		return nil, errs.NewIsNil("primary identity key is nil")
 	}
-	if sessionId == nil || len(sessionId) == 0 {
+	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	if err := transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId); err != nil {
-		return nil, errs.WrapFailed(nil, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
 	_, keyToId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	return &SecondaryCosigner{

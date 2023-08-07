@@ -2,18 +2,19 @@ package signing
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
 	"hash"
 	"io"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
-// CalcLagrangeCoefficients computes Lagrange coefficient for shamirId1 and shamirId2
+// CalcLagrangeCoefficients computes Lagrange coefficient for shamirId1 and shamirId2.
 func CalcLagrangeCoefficients(shamirId1, shamirId2, n int, curve *curves.Curve) (lambda1, lambda2 curves.Scalar, err error) {
 	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
 	if err != nil {
@@ -29,7 +30,7 @@ func CalcLagrangeCoefficients(shamirId1, shamirId2, n int, curve *curves.Curve) 
 	return lambda1, lambda2, nil
 }
 
-// CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2
+// CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
 func CalcC3(lambda1, lambda2, k2, mPrime, r, share curves.Scalar, q *big.Int, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
 	k2Inv, err := k2.Invert()
 	if err != nil {
@@ -38,9 +39,6 @@ func CalcC3(lambda1, lambda2, k2, mPrime, r, share curves.Scalar, q *big.Int, pk
 
 	// c1 = Enc(ρq + k2^(-1) * m')
 	c1Plain := k2Inv.Mul(mPrime).BigInt()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get curve order")
-	}
 	qSquared := new(big.Int).Mul(q, q)
 	rho, err := crand.Int(prng, qSquared)
 	if err != nil {

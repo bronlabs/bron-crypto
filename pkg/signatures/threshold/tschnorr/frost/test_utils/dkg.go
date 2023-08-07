@@ -1,10 +1,12 @@
 package test_utils
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/pedersen/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen/test_utils"
 )
 
-var MakeDkgParticipants = test_utils.MakeParticipants
-var DoDkgRound1 = test_utils.DoDkgRound1
-var MapDkgRound1OutputsToRound2Inputs = test_utils.MapDkgRound1OutputsToRound2Inputs
-var DoDkgRound2 = test_utils.DoDkgRound2
+var (
+	MakeDkgParticipants               = test_utils.MakeParticipants
+	DoDkgRound1                       = test_utils.DoDkgRound1
+	MapDkgRound1OutputsToRound2Inputs = test_utils.MapDkgRound1OutputsToRound2Inputs
+	DoDkgRound2                       = test_utils.DoDkgRound2
+)

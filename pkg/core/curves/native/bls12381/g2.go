@@ -1,14 +1,12 @@
 package bls12381
 
 import (
-	"fmt"
 	"io"
 	"math/big"
 
-	"github.com/pkg/errors"
-
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 var (
@@ -319,7 +317,7 @@ var (
 		},
 		{
 			A: fp{
-				000000000000000000,
+				0x00000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -447,7 +445,7 @@ var (
 		},
 	}
 
-	// 1 / ((u+1) ^ ((q-1)/3))
+	// 1 / ((u+1) ^ ((q-1)/3)).
 	psiCoeffX = fp2{
 		A: fp{},
 		B: fp{
@@ -459,7 +457,7 @@ var (
 			0x14e56d3f1564853a,
 		},
 	}
-	// 1 / ((u+1) ^ (p-1)/2)
+	// 1 / ((u+1) ^ (p-1)/2).
 	psiCoeffY = fp2{
 		A: fp{
 			0x3e2f585da55c9ad1,
@@ -479,7 +477,7 @@ var (
 		},
 	}
 
-	// 1 / 2 ^ ((q-1)/3)
+	// 1 / 2 ^ ((q-1)/3).
 	psi2CoeffX = fp2{
 		A: fp{
 			0xcd03c9e48671f071,
@@ -493,28 +491,27 @@ var (
 	}
 )
 
-// G2 is a point in g2
+// G2 is a point in g2.
 type G2 struct {
 	x, y, z fp2
 }
 
 // Random creates a random point on the curve
-// from the specified reader
+// from the specified reader.
 func (g2 *G2) Random(reader io.Reader) (*G2, error) {
 	var seed [native.WideFieldBytes]byte
 	n, err := reader.Read(seed[:])
-
 	if err != nil {
-		return nil, errors.Wrap(err, "random could not read from stream")
+		return nil, errs.WrapFailed(err, "random could not read from stream")
 	}
 	if n != native.WideFieldBytes {
-		return nil, fmt.Errorf("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
+		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
 	}
 	dst := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
 	return g2.Hash(native.EllipticPointHasherSha256(), seed[:], dst), nil
 }
 
-// Hash uses the hasher to map bytes to a valid point
+// Hash uses the hasher to map bytes to a valid point.
 func (g2 *G2) Hash(hash *native.EllipticPointHasher, msg, dst []byte) *G2 {
 	var u []byte
 	var u0, u1 fp2
@@ -528,13 +525,13 @@ func (g2 *G2) Hash(hash *native.EllipticPointHasher, msg, dst []byte) *G2 {
 	}
 
 	var buf [96]byte
-	copy(buf[:64], internal.ReverseScalarBytes(u[:64]))
+	copy(buf[:64], bitstring.ReverseBytes(u[:64]))
 	u0.A.SetBytesWide(&buf)
-	copy(buf[:64], internal.ReverseScalarBytes(u[64:128]))
+	copy(buf[:64], bitstring.ReverseBytes(u[64:128]))
 	u0.B.SetBytesWide(&buf)
-	copy(buf[:64], internal.ReverseScalarBytes(u[128:192]))
+	copy(buf[:64], bitstring.ReverseBytes(u[128:192]))
 	u1.A.SetBytesWide(&buf)
-	copy(buf[:64], internal.ReverseScalarBytes(u[192:]))
+	copy(buf[:64], bitstring.ReverseBytes(u[192:]))
 	u1.B.SetBytesWide(&buf)
 
 	r0.sswu(&u0)
@@ -545,7 +542,7 @@ func (g2 *G2) Hash(hash *native.EllipticPointHasher, msg, dst []byte) *G2 {
 	return g2.ClearCofactor(g2)
 }
 
-// Identity returns the identity point
+// Identity returns the identity point.
 func (g2 *G2) Identity() *G2 {
 	g2.x.SetZero()
 	g2.y.SetOne()
@@ -553,7 +550,7 @@ func (g2 *G2) Identity() *G2 {
 	return g2
 }
 
-// Generator returns the base point
+// Generator returns the base point.
 func (g2 *G2) Generator() *G2 {
 	g2.x.Set(&g2x)
 	g2.y.Set(&g2y)
@@ -561,12 +558,12 @@ func (g2 *G2) Generator() *G2 {
 	return g2
 }
 
-// IsIdentity returns true if this point is at infinity
+// IsIdentity returns true if this point is at infinity.
 func (g2 *G2) IsIdentity() int {
 	return g2.z.IsZero()
 }
 
-// IsOnCurve determines if this point represents a valid curve point
+// IsOnCurve determines if this point represents a valid curve point.
 func (g2 *G2) IsOnCurve() int {
 	// Y^2 Z = X^3 + b Z^3
 	var lhs, rhs, t fp2
@@ -583,7 +580,7 @@ func (g2 *G2) IsOnCurve() int {
 	return lhs.Equal(&rhs)
 }
 
-// InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise
+// InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise.
 func (g2 *G2) InCorrectSubgroup() int {
 	var t G2
 	t.multiply(g2, &fqModulusBytes)
@@ -635,14 +632,14 @@ func (g2 *G2) Add(arg1, arg2 *G2) *G2 {
 	return g2
 }
 
-// Sub subtracts the two points
+// Sub subtracts the two points.
 func (g2 *G2) Sub(arg1, arg2 *G2) *G2 {
 	var t G2
 	t.Neg(arg2)
 	return g2.Add(arg1, &t)
 }
 
-// Double this point
+// Double this point.
 func (g2 *G2) Double(a *G2) *G2 {
 	// Algorithm 9, https://eprint.iacr.org/2015/1060.pdf
 	var t0, t1, t2, x3, y3, z3 fp2
@@ -673,7 +670,7 @@ func (g2 *G2) Double(a *G2) *G2 {
 	return g2
 }
 
-// Mul multiplies this point by the input scalar
+// Mul multiplies this point by the input scalar.
 func (g2 *G2) Mul(a *G2, s *native.Field) *G2 {
 	bytes := s.Bytes()
 	return g2.multiply(a, &bytes)
@@ -700,7 +697,7 @@ func (g2 *G2) multiply(a *G2, bytes *[native.FieldBytes]byte) *G2 {
 	return g2.Set(&p)
 }
 
-// MulByX multiplies by BLS X using double and add
+// MulByX multiplies by BLS X using double and add.
 func (g2 *G2) MulByX(a *G2) *G2 {
 	// Skip first bit since its always zero
 	var s, t, r G2
@@ -738,14 +735,14 @@ func (g2 *G2) ClearCofactor(a *G2) *G2 {
 	return g2.Set(&pt)
 }
 
-// Neg negates this point
+// Neg negates this point.
 func (g2 *G2) Neg(a *G2) *G2 {
 	g2.Set(a)
 	g2.y.CNeg(&a.y, -(a.IsIdentity() - 1))
 	return g2
 }
 
-// Set copies a into g2
+// Set copies a into g2.
 func (g2 *G2) Set(a *G2) *G2 {
 	g2.x.Set(&a.x)
 	g2.y.Set(&a.y)
@@ -753,17 +750,17 @@ func (g2 *G2) Set(a *G2) *G2 {
 	return g2
 }
 
-// BigInt returns the x and y as big.Ints in affine
-func (g2 *G2) BigInt() (x, y *big.Int) {
+// BigInt returns the x and y as big.Ints in affine.
+func (*G2) BigInt() (x, y *big.Int) {
 	var t G2
 	out := t.ToUncompressed()
 	x = new(big.Int).SetBytes(out[:WideFieldBytes])
 	y = new(big.Int).SetBytes(out[WideFieldBytes:])
-	return
+	return x, y
 }
 
 // SetBigInt creates a point from affine x, y
-// and returns the point if it is on the curve
+// and returns the point if it is on the curve.
 func (g2 *G2) SetBigInt(x, y *big.Int) (*G2, error) {
 	var tt [DoubleWideFieldBytes]byte
 
@@ -776,15 +773,15 @@ func (g2 *G2) SetBigInt(x, y *big.Int) (*G2, error) {
 	return g2.FromUncompressed(&tt)
 }
 
-// ToCompressed serializes this element into compressed form.
+// ToCompressed serialises this element into compressed form.
 func (g2 *G2) ToCompressed() [WideFieldBytes]byte {
 	var out [WideFieldBytes]byte
 	var t G2
 	t.ToAffine(g2)
 	xABytes := t.x.A.Bytes()
 	xBBytes := t.x.B.Bytes()
-	copy(out[:FieldBytes], internal.ReverseScalarBytes(xBBytes[:]))
-	copy(out[FieldBytes:], internal.ReverseScalarBytes(xABytes[:]))
+	copy(out[:FieldBytes], bitstring.ReverseBytes(xBBytes[:]))
+	copy(out[FieldBytes:], bitstring.ReverseBytes(xABytes[:]))
 	isInfinity := byte(g2.IsIdentity())
 	// Compressed flag
 	out[0] |= 1 << 7
@@ -805,22 +802,22 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	sortFlag := int((input[0] >> 5) & 1)
 
 	if compressedFlag != 1 {
-		return nil, errors.New("compressed flag must be set")
+		return nil, errs.NewFailed("compressed flag must be set")
 	}
 
 	if infinityFlag == 1 {
 		return g2.Identity(), nil
 	}
 
-	copy(xB[:], internal.ReverseScalarBytes(input[:FieldBytes]))
-	copy(xA[:], internal.ReverseScalarBytes(input[FieldBytes:]))
+	copy(xB[:], bitstring.ReverseBytes(input[:FieldBytes]))
+	copy(xA[:], bitstring.ReverseBytes(input[FieldBytes:]))
 	// Mask away the flag bits
 	xB[FieldBytes-1] &= 0x1F
 	_, validA := xFp.A.SetBytes(&xA)
 	_, validB := xFp.B.SetBytes(&xB)
 
 	if validA&validB != 1 {
-		return nil, errors.New("invalid bytes - not in field")
+		return nil, errs.NewFailed("invalid bytes - not in field")
 	}
 
 	// Recover a y-coordinate given x by y = sqrt(x^3 + 4)
@@ -828,9 +825,8 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	yFp.Mul(&yFp, &xFp)
 	yFp.Add(&yFp, &curveG2B)
 
-	_, wasSquare := yFp.Sqrt(&yFp)
-	if wasSquare != 1 {
-		return nil, errors.New("point is not on the curve")
+	if _, wasSquare := yFp.Sqrt(&yFp); wasSquare != 1 {
+		return nil, errs.NewFailed("point is not on the curve")
 	}
 
 	yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
@@ -838,24 +834,24 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	p.y.Set(&yFp)
 	p.z.SetOne()
 	if p.InCorrectSubgroup() == 0 {
-		return nil, errors.New("point is not in correct subgroup")
+		return nil, errs.NewFailed("point is not in correct subgroup")
 	}
 	return g2.Set(&p), nil
 }
 
-// ToUncompressed serializes this element into uncompressed form.
+// ToUncompressed serialises this element into uncompressed form.
 func (g2 *G2) ToUncompressed() [DoubleWideFieldBytes]byte {
 	var out [DoubleWideFieldBytes]byte
 	var t G2
 	t.ToAffine(g2)
 	bytes := t.x.B.Bytes()
-	copy(out[:FieldBytes], internal.ReverseScalarBytes(bytes[:]))
+	copy(out[:FieldBytes], bitstring.ReverseBytes(bytes[:]))
 	bytes = t.x.A.Bytes()
-	copy(out[FieldBytes:WideFieldBytes], internal.ReverseScalarBytes(bytes[:]))
+	copy(out[FieldBytes:WideFieldBytes], bitstring.ReverseBytes(bytes[:]))
 	bytes = t.y.B.Bytes()
-	copy(out[WideFieldBytes:WideFieldBytes+FieldBytes], internal.ReverseScalarBytes(bytes[:]))
+	copy(out[WideFieldBytes:WideFieldBytes+FieldBytes], bitstring.ReverseBytes(bytes[:]))
 	bytes = t.y.A.Bytes()
-	copy(out[WideFieldBytes+FieldBytes:], internal.ReverseScalarBytes(bytes[:]))
+	copy(out[WideFieldBytes+FieldBytes:], bitstring.ReverseBytes(bytes[:]))
 	isInfinity := byte(g2.IsIdentity())
 	out[0] |= (1 << 6) & -isInfinity
 	return out
@@ -872,32 +868,32 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 		return g2.Identity(), nil
 	}
 
-	copy(t[:], internal.ReverseScalarBytes(input[:FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
 	// Mask away top bits
 	t[FieldBytes-1] &= 0x1F
 
 	_, valid := b.SetBytes(&t)
 	if valid == 0 {
-		return nil, errors.New("invalid bytes - x.B not in field")
+		return nil, errs.NewFailed("invalid bytes - x.B not in field")
 	}
-	copy(t[:], internal.ReverseScalarBytes(input[FieldBytes:WideFieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:WideFieldBytes]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
-		return nil, errors.New("invalid bytes - x.A not in field")
+		return nil, errs.NewFailed("invalid bytes - x.A not in field")
 	}
 
 	p.x.B.Set(&b)
 	p.x.A.Set(&a)
 
-	copy(t[:], internal.ReverseScalarBytes(input[WideFieldBytes:WideFieldBytes+FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[WideFieldBytes:WideFieldBytes+FieldBytes]))
 	_, valid = b.SetBytes(&t)
 	if valid == 0 {
-		return nil, errors.New("invalid bytes - y.B not in field")
+		return nil, errs.NewFailed("invalid bytes - y.B not in field")
 	}
-	copy(t[:], internal.ReverseScalarBytes(input[FieldBytes+WideFieldBytes:]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytes+WideFieldBytes:]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
-		return nil, errors.New("invalid bytes - y.A not in field")
+		return nil, errs.NewFailed("invalid bytes - y.A not in field")
 	}
 
 	p.y.B.Set(&b)
@@ -905,15 +901,15 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 	p.z.SetOne()
 
 	if p.IsOnCurve() == 0 {
-		return nil, errors.New("point is not on the curve")
+		return nil, errs.NewFailed("point is not on the curve")
 	}
 	if p.InCorrectSubgroup() == 0 {
-		return nil, errors.New("point is not in correct subgroup")
+		return nil, errs.NewFailed("point is not in correct subgroup")
 	}
 	return g2.Set(&p), nil
 }
 
-// ToAffine converts the point into affine coordinates
+// ToAffine converts the point into affine coordinates.
 func (g2 *G2) ToAffine(a *G2) *G2 {
 	var wasInverted int
 	var zero, x, y, z fp2
@@ -927,14 +923,14 @@ func (g2 *G2) ToAffine(a *G2) *G2 {
 	return g2
 }
 
-// GetX returns the affine X coordinate
+// GetX returns the affine X coordinate.
 func (g2 *G2) GetX() *fp2 {
 	var t G2
 	t.ToAffine(g2)
 	return &t.x
 }
 
-// GetY returns the affine Y coordinate
+// GetY returns the affine Y coordinate.
 func (g2 *G2) GetY() *fp2 {
 	var t G2
 	t.ToAffine(g2)
@@ -960,7 +956,7 @@ func (g2 *G2) Equal(rhs *G2) int {
 	return (e1 & e2) | (^e1 & ^e2)&x1.Equal(&x2)&y1.Equal(&y2)
 }
 
-// CMove sets g2 = arg1 if choice == 0 and g2 = arg2 if choice == 1
+// CMove sets g2 = arg1 if choice == 0 and g2 = arg2 if choice == 1.
 func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
 	g2.x.CMove(&arg1.x, &arg2.x, choice)
 	g2.y.CMove(&arg1.y, &arg2.y, choice)
@@ -977,7 +973,7 @@ func (g2 *G2) SumOfProducts(points []*G2, scalars []*native.Field) (*G2, error) 
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	var sum G2
 	if len(points) != len(scalars) {
-		return nil, fmt.Errorf("length mismatch")
+		return nil, errs.NewInvalidLength("length mismatch")
 	}
 
 	bucketSize := 1 << W
@@ -1048,7 +1044,7 @@ func (g2 *G2) psi2(a *G2) *G2 {
 	return g2
 }
 
-func (g2 *G2) sswu(u *fp2) *G2 {
+func (g2 *G2) sswu(u *fp2) {
 	/// simplified swu map for q = 9 mod 16 where AB == 0
 	// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-11.html>
 	var tv1, tv2, x1, x2, gx1, gx2, x, y, y2, t fp2
@@ -1086,10 +1082,9 @@ func (g2 *G2) sswu(u *fp2) *G2 {
 	g2.x.Set(&x)
 	g2.y.Set(&y)
 	g2.z.SetOne()
-	return g2
 }
 
-func (g2 *G2) isogenyMap(a *G2) *G2 {
+func (g2 *G2) isogenyMap(a *G2) {
 	const Degree = 4
 	var xs [Degree]fp2
 	xs[0].SetOne()
@@ -1111,10 +1106,9 @@ func (g2 *G2) isogenyMap(a *G2) *G2 {
 	g2.y.Mul(&g2.y, &yNum)
 	g2.y.Mul(&g2.y, &a.y)
 	g2.z.SetOne()
-	return g2
 }
 
-func computeKFp2(xxs []fp2, k []fp2) fp2 {
+func computeKFp2(xxs, k []fp2) fp2 {
 	var xx, t fp2
 	for i := range k {
 		xx.Add(&xx, t.Mul(&xxs[i], &k[i]))

@@ -4,10 +4,11 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/knox/dkg/tecdsa"
 	"github.com/pkg/errors"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/knox/dkg/tecdsa"
 )
 
 func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*tecdsa.Participant, err error) {
@@ -19,7 +20,7 @@ func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfi
 
 	for i, identity := range identities {
 		var prng io.Reader
-		if prngs != nil && prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader

@@ -1,6 +1,6 @@
 package native
 
-// IsogenyParams are the parameters needed to map from an isogeny to the main curve
+// IsogenyParams are the parameters needed to map from an isogeny to the main curve.
 type IsogenyParams struct {
 	XNum [][FieldLimbs]uint64
 	XDen [][FieldLimbs]uint64
@@ -8,7 +8,7 @@ type IsogenyParams struct {
 	YDen [][FieldLimbs]uint64
 }
 
-// Map from the isogeny curve to the main curve using the parameters
+// Map from the isogeny curve to the main curve using the parameters.
 func (p *IsogenyParams) Map(xIn, yIn *Field) (x, y *Field) {
 	var xNum, xDen, yNum, yDen, tv [FieldLimbs]uint64
 	var wasInverted int
@@ -49,7 +49,7 @@ func (p *IsogenyParams) Map(xIn, yIn *Field) (x, y *Field) {
 	yIn.Arithmetic.Mul(&tv, &yNum, &yDen)
 	yIn.Arithmetic.Selectznz(&y.Value, &y.Value, &tv, wasInverted)
 	yIn.Arithmetic.Mul(&y.Value, &y.Value, &yIn.Value)
-	return
+	return x, y
 }
 
 func computeIsoK(out *[FieldLimbs]uint64, xxs, k *[][FieldLimbs]uint64, f FieldArithmetic) {

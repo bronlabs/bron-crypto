@@ -3,11 +3,11 @@ package mult
 import (
 	"fmt"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/bits"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 )
 
 type Round1Output = softspoken.Round1Output
@@ -32,7 +32,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 			// constant time branching, because we'll add if even if we don't need it
 			addedCurrent := bob.BTilde[i].Add(bob.gadget[j])
 			originalCurrent := bob.BTilde[i]
-			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
+			if bitstring.SelectBit(bob.Beta[:], j) == 0x01 {
 				bob.BTilde[i] = addedCurrent
 			} else {
 				bob.BTilde[i] = originalCurrent
@@ -40,10 +40,8 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 		}
 	}
 
-	// TODO: get rid of pointer stuff, because otherwise cannot take address
 	// step 1.3
-	x := softspoken.OTeInputChoices(bob.Beta)
-	extPackedChoices, cOTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1ExtendAndProveConsistency(&x)
+	extPackedChoices, cOTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1ExtendAndProveConsistency(&bob.Beta)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob step 1.3")
 	}
@@ -73,8 +71,8 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// TODO: get rid of pointer stuff
 	// step 2.4
 	x := []softspoken.COTeInputOpt{}
-	for _, a := range alpha {
-		x = append(x, a)
+	for i := range &alpha {
+		x = append(x, alpha[i])
 	}
 	_, cOTeSenderOutputs, cOTeRound2Output, err := alice.sender.Round2ExtendAndCheckConsistency(round1output, x)
 	if err != nil {
@@ -109,9 +107,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	u := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		u[i] = chiTilde[i].Mul(alice.aTilde[i]).Add(chiHat[i].Mul(alice.aHat[i]))
-		if err := alice.transcript.AppendMessage([]byte(fmt.Sprintf("u_%d", i)), u[i].Bytes()); err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not append u_i")
-		}
+		alice.transcript.AppendMessage([]byte(fmt.Sprintf("u_%d", i)), u[i].Bytes())
 	}
 	alice.transcript.AppendScalars([]byte("u"), u[:]...)
 
@@ -128,7 +124,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.10
 	toBeHashed := []byte{}
 	toBeHashed = append(toBeHashed, alice.uniqueSessionId...)
-	for _, element := range r {
+	for _, element := range &r {
 		toBeHashed = append(toBeHashed, element.Bytes()...)
 	}
 	rTilde := alice.Curve.Scalar.Hash(toBeHashed)
@@ -137,9 +133,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.11
 	for i := 0; i < L; i++ {
 		alice.gammaA[i] = a[i].Sub(alice.aTilde[i])
-		if err := alice.transcript.AppendMessage([]byte(fmt.Sprintf("Gamma_A_%d", i)), alice.gammaA[i].Bytes()); err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not append Gamma_A_i")
-		}
+		alice.transcript.AppendMessage([]byte(fmt.Sprintf("Gamma_A_%d", i)), alice.gammaA[i].Bytes())
 	}
 	alice.transcript.AppendScalars([]byte("Gamma_A"), alice.gammaA[:]...)
 
@@ -201,7 +195,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 			// constant time branching
 			addedCurrent := current.Add(round2output.U[i])
 			originalCurrent := current
-			if bits.SelectBit(bob.Beta[:], j) == 0x01 {
+			if bitstring.SelectBit(bob.Beta[:], j) == 0x01 {
 				current = addedCurrent
 			} else {
 				current = originalCurrent
@@ -214,7 +208,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	}
 	rhs := []byte{}
 	rhs = append(rhs, bob.uniqueSessionId...)
-	for _, element := range rTildeBElements {
+	for _, element := range &rTildeBElements {
 		rhs = append(rhs, element.Bytes()...)
 	}
 	rTildeB := bob.Curve.Scalar.Hash(rhs)
@@ -234,5 +228,4 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	}
 	bob.transcript.AppendScalars([]byte("Gamma_A"), round2output.GammaA[:]...)
 	return output, nil
-
 }

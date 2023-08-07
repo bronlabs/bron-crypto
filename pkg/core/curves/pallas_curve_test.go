@@ -8,12 +8,13 @@ package curves
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fp"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/pasta/fq"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/pasta/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/pasta/fq"
 )
 
 func TestPointPallasAddDoubleMul(t *testing.T) {
@@ -101,6 +102,7 @@ func TestPointPallasSerialize(t *testing.T) {
 		require.Equal(t, len(cmprs), 32)
 		retC, err := new(Ep).FromAffineCompressed(cmprs)
 		require.NoError(t, err)
+		fmt.Println(pt, retC)
 		require.True(t, pt.Equal(retC))
 
 		un := pt.ToAffineUncompressed()

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/additive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
 	"github.com/stretchr/testify/require"
 	"gonum.org/v1/gonum/stat/combin"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/additive"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 func TestSplitAndCombine(t *testing.T) {
@@ -52,9 +53,10 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 
 			allValidSetsOfShamirIndices := [][]int{}
 			for i := 0; i <= total-threshold; i++ {
-				for _, c := range combin.Combinations(total, threshold+i) {
-					allValidSetsOfShamirIndices = append(allValidSetsOfShamirIndices, c)
-				}
+				allValidSetsOfShamirIndices = append(
+					allValidSetsOfShamirIndices,
+					combin.Combinations(total, threshold+i)...,
+				)
 			}
 			for _, indices := range allValidSetsOfShamirIndices {
 				identities := make([]int, len(indices))

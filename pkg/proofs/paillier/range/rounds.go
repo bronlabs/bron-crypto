@@ -3,15 +3,14 @@ package paillierrange
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
 )
 
-var (
-	hashFunc = sha256.New
-)
+var hashFunc = sha256.New
 
 type Round1Output struct {
 	EsidCommitment commitments.Commitment
@@ -57,7 +56,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sid) and send to P
-	esidMessage := append(verifier.state.e.Bytes()[:], verifier.sid...)
+	esidMessage := append(verifier.state.e.Bytes(), verifier.sid...)
 	esidCommitment, esidWitness, err := commitments.Commit(hashFunc, esidMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sid")
@@ -147,7 +146,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	esidMessage := append(input.E.Bytes()[:], prover.sid...)
+	esidMessage := append(input.E.Bytes(), prover.sid...)
 	err = commitments.Open(hashFunc, esidMessage, prover.state.esidCommitment, input.EsidWitness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
@@ -169,21 +168,22 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 			// 4.ii. if ei == 1
 			xPlusW1 := new(big.Int).Add(prover.x, prover.state.w1[i])
 			xPlusW2 := new(big.Int).Add(prover.x, prover.state.w2[i])
-			if prover.inSecondThird(xPlusW1) {
+			switch {
+			case prover.inSecondThird(xPlusW1):
 				// 4.ii. if (x + w1) in l-2l range set zi = (1, x + w1i, r * r1i mod N)
 				zetOne[i] = &ZetOne{
 					J:        1,
 					XPlusWj:  xPlusW1,
 					RTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r1[i]), prover.sk.N),
 				}
-			} else if prover.inSecondThird(xPlusW2) {
+			case prover.inSecondThird(xPlusW2):
 				// 4.ii. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					J:        2,
 					XPlusWj:  xPlusW2,
 					RTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r2[i]), prover.sk.N),
 				}
-			} else {
+			default:
 				return nil, errs.NewFailed("something went wrong")
 			}
 		}
@@ -212,6 +212,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
+			//nolint:gocritic // Cmp not a method of c1. False positive.
 			if (*c1).Cmp(verifier.state.c1[i]) != 0 {
 				return errs.NewVerificationFailed("fail")
 			}
@@ -219,11 +220,13 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
+			//nolint:gocritic // Cmp not a method of c2. False positive.
 			if (*c2).Cmp(verifier.state.c2[i]) != 0 {
 				return errs.NewVerificationFailed("failed")
 			}
 			if !((verifier.inFirstThird(z.W1) && verifier.inSecondThird(z.W2)) ||
 				(verifier.inFirstThird(z.W2) && verifier.inSecondThird(z.W1))) {
+
 				return errs.NewVerificationFailed("failed")
 			}
 		} else {
@@ -249,6 +252,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 				}
 			}
 
+			//nolint:gocritic // Cmp not a method of cCheck. False positive.
 			if (*cCheck).Cmp(c) != 0 || !verifier.inSecondThird(wi) {
 				return errs.NewVerificationFailed("failed")
 			}
@@ -273,13 +277,9 @@ func (p *Participant) inSecondThird(v *big.Int) bool {
 }
 
 func (p *Participant) randomIntInFirstThird() (*big.Int, error) {
-	return crand.Int(p.prng, p.l)
-}
-
-func (p *Participant) randomIntInSecondThird() (*big.Int, error) {
-	v, err := p.randomIntInFirstThird()
+	n, err := crand.Int(p.prng, p.l)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "reading crand int failed")
 	}
-	return new(big.Int).Add(v, p.l), nil
+	return n, nil
 }

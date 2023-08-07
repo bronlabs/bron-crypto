@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 )
 
 func TestExpandMessageXmd(t *testing.T) {

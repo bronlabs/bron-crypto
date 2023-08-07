@@ -14,8 +14,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
 func TestFpSetOne(t *testing.T) {
@@ -320,7 +320,7 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 		e := new(big.Int).SetBytes(tv2[:])
 		e.Mod(e, params.BiModulus)
 
-		tv := internal.ReverseScalarBytes(tv2[:])
+		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)
 		a := K256FpNew().SetBytesWide(&tv2)
 		require.Equal(t, 0, e.Cmp(a.BigInt()))

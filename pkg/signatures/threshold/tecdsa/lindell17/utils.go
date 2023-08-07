@@ -2,17 +2,20 @@ package lindell17
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"io"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
-func GetPointCoordinates(point curves.Point) (x *big.Int, y *big.Int) {
+// TODO: remove.
+func GetPointCoordinates(point curves.Point) (x, y *big.Int) {
 	affine := point.ToAffineUncompressed()
 	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
 }
 
+// TODO: remove.
 func GetCurveOrder(curve *curves.Curve) (*big.Int, error) {
 	ec, err := curve.ToEllipticCurve()
 	if err == nil {
@@ -28,6 +31,7 @@ func GetCurveOrder(curve *curves.Curve) (*big.Int, error) {
 	return new(big.Int).Add(minusOne.BigInt(), big.NewInt(1)), nil
 }
 
+// TODO: the same as hash to int.
 func DigestToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
 	order, err := GetCurveOrder(curve)
 	if err != nil {
@@ -47,8 +51,8 @@ func DigestToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
 	return ret, nil
 }
 
-// DecomposeInQThirds splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
-func DecomposeInQThirds(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, i int, err error) {
+// DecomposeInQThirds splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
+func DecomposeInQThirds(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, i int, err error) {
 	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
 		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.CurveName())
@@ -93,45 +97,46 @@ func DecomposeInQThirds(scalar curves.Scalar, prng io.Reader) (xPrime curves.Sca
 	return xPrime, xDoublePrime, i, nil
 }
 
-// DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3)
-func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime curves.Scalar, xDoublePrime curves.Scalar, err error) {
-	if inEighteenth(0, 3, scalar) {
+// DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
+func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, err error) {
+	switch {
+	case inEighteenth(0, 3, scalar):
 		xPrime, err = randomInEighteenth(9, 10, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else if inEighteenth(3, 6, scalar) {
+	case inEighteenth(3, 6, scalar):
 		xPrime, err = randomInEighteenth(10, 11, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else if inEighteenth(6, 9, scalar) {
+	case inEighteenth(6, 9, scalar):
 		xPrime, err = randomInEighteenth(11, 12, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else if inEighteenth(9, 12, scalar) {
+	case inEighteenth(9, 12, scalar):
 		xPrime, err = randomInEighteenth(6, 7, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else if inEighteenth(12, 15, scalar) {
+	case inEighteenth(12, 15, scalar):
 		xPrime, err = randomInEighteenth(7, 8, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else if inEighteenth(15, 18, scalar) {
+	case inEighteenth(15, 18, scalar):
 		xPrime, err = randomInEighteenth(8, 9, scalar.CurveName(), prng)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
-	} else {
+	default:
 		return nil, nil, errs.NewFailed("oops")
 	}
 
@@ -145,7 +150,7 @@ func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (
 	return xPrime, xDoublePrime, nil
 }
 
-// IsInSecondThird check if scalar s: q/3 <= s < 2q/3 (q being subgroup order)
+// IsInSecondThird check if scalar s: q/3 <= s < 2q/3 (q being subgroup order).
 func IsInSecondThird(scalar curves.Scalar) bool {
 	curve, err := curves.GetCurveByName(scalar.CurveName())
 	if err != nil {
@@ -160,7 +165,7 @@ func IsInSecondThird(scalar curves.Scalar) bool {
 	return scalar.BigInt().Cmp(l) >= 0 && scalar.BigInt().Cmp(twoL) < 0
 }
 
-func inEighteenth(lowBoundInclusive int64, highBoundExclusive int64, x curves.Scalar) bool {
+func inEighteenth(lowBoundInclusive, highBoundExclusive int64, x curves.Scalar) bool {
 	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {
 		return false
@@ -175,14 +180,14 @@ func inEighteenth(lowBoundInclusive int64, highBoundExclusive int64, x curves.Sc
 	return x.BigInt().Cmp(l) >= 0 && x.BigInt().Cmp(h) < 0
 }
 
-func randomInEighteenth(lowBoundInclusive int64, highBoundExclusive int64, curveName string, prng io.Reader) (curves.Scalar, error) {
+func randomInEighteenth(lowBoundInclusive, highBoundExclusive int64, curveName string, prng io.Reader) (curves.Scalar, error) {
 	curve, err := curves.GetCurveByName(curveName)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCurve(err, "could not get curve")
 	}
 	order, err := GetCurveOrder(curve)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCurve(err, "could not get curve order")
 	}
 
 	l := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(lowBoundInclusive)), big.NewInt(17)), big.NewInt(18))
@@ -190,13 +195,13 @@ func randomInEighteenth(lowBoundInclusive int64, highBoundExclusive int64, curve
 
 	x, err := crand.Int(prng, new(big.Int).Sub(h, l))
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not get random number")
 	}
 	x = new(big.Int).Add(l, x)
 
 	xScalar, err := curve.NewScalar().SetBigInt(x)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not set big int")
 	}
 
 	return xScalar, nil

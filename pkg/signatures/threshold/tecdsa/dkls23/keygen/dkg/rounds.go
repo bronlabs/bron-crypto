@@ -1,12 +1,12 @@
 package dkg
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	zeroSetup "github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/setup"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 )
 
 type Round1Broadcast = gennaro.Round1Broadcast
@@ -126,9 +126,13 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 }
 
 func (p *Participant) Round4(round3output map[integration.IdentityKey]Round3P2P) (map[integration.IdentityKey]Round4P2P, error) {
+	var err error
 	baseOTP2P := map[integration.IdentityKey]vsot.Round4P2P{}
 	for identity, receiver := range p.BaseOTReceiverParties {
-		baseOTP2P[identity] = receiver.Round4RespondToChallenge(round3output[identity])
+		baseOTP2P[identity], err = receiver.Round4RespondToChallenge(round3output[identity])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "receiver round 4 vsot")
+		}
 	}
 	return baseOTP2P, nil
 }

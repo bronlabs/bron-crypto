@@ -3,12 +3,13 @@ package commitments_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 var h = sha256.New
@@ -42,10 +43,14 @@ type entry struct {
 var testResults = []entry{
 	{[]byte("This is a test message"), nil, nil, nil},
 	{[]byte("short msg"), nil, nil, nil},
-	{[]byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
-		nil, nil, nil},
-	{[]byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-		nil, nil, nil},
+	{
+		[]byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
+		nil, nil, nil,
+	},
+	{
+		[]byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
+		nil, nil, nil,
+	},
 	// msg = \epsilon (empty string)
 	{[]byte{}, nil, nil, nil},
 	// msg == nil
@@ -92,16 +97,15 @@ func TestCommmitProducesDistinctCommitments(t *testing.T) {
 
 	// Check the pre-computed commitments for uniquness
 	for _, entry := range testResults {
-
 		// Slices cannot be used as hash keys, so we need to copy into
 		// an array. Oh, go-lang.
 		cee := make([]byte, h().Size())
 		copy(cee[:], entry.commit)
 
-		serialized := hex.EncodeToString(cee)
+		serialised := hex.EncodeToString(cee)
 		// Ensure each commit is unique
-		require.NotContainsf(t, seen, serialized, "duplicate commit found: %v", cee)
-		seen[serialized] = true
+		require.NotContainsf(t, seen, serialised, "duplicate commit found: %v", cee)
+		seen[serialised] = true
 	}
 }
 
@@ -125,11 +129,11 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 		cee := make([]byte, h().Size())
 		copy(cee[:], []byte(c))
 
-		serialized := hex.EncodeToString(cee)
+		serialised := hex.EncodeToString(cee)
 
 		// Ensure each commit is unique
-		require.NotContainsf(t, seen, serialized, "duplicate commit found: %v", cee)
-		seen[serialized] = true
+		require.NotContainsf(t, seen, serialised, "duplicate commit found: %v", cee)
+		seen[serialised] = true
 	}
 }
 
@@ -158,9 +162,9 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 		require.NoError(t, err)
 
 		// Ensure each nonce is unique
-		serialized := hex.EncodeToString(dee)
-		require.NotContainsf(t, seen, serialized, "duplicate nonce found: %v", dee)
-		seen[serialized] = true
+		serialised := hex.EncodeToString(dee)
+		require.NotContainsf(t, seen, serialised, "duplicate nonce found: %v", dee)
+		seen[serialised] = true
 	}
 }
 

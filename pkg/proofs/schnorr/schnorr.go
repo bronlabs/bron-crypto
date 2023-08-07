@@ -3,26 +3,26 @@ package schnorr
 import (
 	"crypto/rand"
 
-	"github.com/pkg/errors"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
-const domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
-const basepointLabel = "basepoint"
-const rLabel = "R"
-const statementLabel = "statement"
-const uniqueSessionIdLabel = "unique session id"
-const digestLabel = "digest"
+const (
+	domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
+	basepointLabel        = "basepoint"
+	rLabel                = "R"
+	statementLabel        = "statement"
+	uniqueSessionIdLabel  = "unique session id"
+	digestLabel           = "digest"
+)
 
 type Prover struct {
-	BasePoint       curves.Point
 	uniqueSessionId []byte
-	transcript      transcript.Transcript
+	transcript      transcripts.Transcript
+	BasePoint       curves.Point
 }
 
 // Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,
@@ -35,12 +35,12 @@ type Proof struct {
 type Statement = curves.Point
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
-func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcript.Transcript) (*Prover, error) {
+func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript) (*Prover, error) {
 	if basePoint == nil {
 		return nil, errs.NewInvalidArgument("basepoint can't be nil")
 	}
 	if basePoint.IsIdentity() {
-		return nil, errors.New("basepoint is identity")
+		return nil, errs.NewIsIdentity("basepoint is identity")
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(domainSeparationLabel)
@@ -53,7 +53,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 }
 
 // Prove generates and returns a Schnorr proof, given the scalar witness `x`.
-// in the process, it will actually also construct the statement (just one curve mult in this case)
+// in the process, it will actually also construct the statement (just one curve mult in this case).
 func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	var err error
 	result := &Proof{}
@@ -82,7 +82,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 }
 
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
-func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript transcript.Transcript) error {
+func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript transcripts.Transcript) error {
 	if transcript == nil {
 		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}

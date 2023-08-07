@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	integration_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 )
 
 func Test_NonInteractiveSignHappyPath(t *testing.T) {
@@ -45,7 +46,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, lindell17.Threshold, identities)
+			cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")

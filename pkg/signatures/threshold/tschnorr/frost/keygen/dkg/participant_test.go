@@ -5,10 +5,10 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
@@ -56,7 +56,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:          cipherSuite,
-		Protocol:             protocol.FROST,
+		Protocol:             protocols.FROST,
 		Threshold:            2,
 		TotalParties:         2,
 		Participants:         identityKeys,

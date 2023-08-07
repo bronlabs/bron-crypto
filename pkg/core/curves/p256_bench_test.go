@@ -17,7 +17,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core"
 )
 
 func BenchmarkP256(b *testing.B) {
@@ -456,7 +456,7 @@ func (p *BenchPointP256) Random(reader io.Reader) Point {
 func (p *BenchPointP256) Hash(inputs ...[]byte) Point {
 	curve := elliptic.P256().Params()
 
-	var domain = []byte("P256_XMD:SHA-256_SSWU_RO_")
+	domain := []byte("P256_XMD:SHA-256_SSWU_RO_")
 	uniformBytes, _ := expandMsgXmd(sha256.New(), bytes.Join(inputs, nil), domain, 96)
 
 	u0 := new(big.Int).SetBytes(uniformBytes[:48])

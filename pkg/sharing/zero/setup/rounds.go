@@ -1,15 +1,16 @@
 package setup
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
-// size should match zero.LambdaBytes
+// size should match zero.LambdaBytes.
 var h = sha3.New256
 
 type Round1P2P struct {
@@ -119,7 +120,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2P2P
 		if !exists {
 			return nil, errs.NewMissing("what I contributed to the participant with sharing id %d is missing", sharingId)
 		}
-		orderedAppendedSeeds := []byte{}
+		var orderedAppendedSeeds []byte
 		if p.MySharingId < sharingId {
 			orderedAppendedSeeds = append(myContributedSeed.seed, message.Message...)
 		} else {

@@ -4,14 +4,14 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	dkls23 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
-	lindell17 "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	dkls23 "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
+	lindell17 "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 const DKGLabel = "COPPER_KNOX_DKG_TECDSA-"
@@ -28,7 +28,7 @@ type Participant struct {
 	Backup          *lindell17.Participant
 	Shard           *Shard
 
-	transcript transcript.Transcript
+	transcript transcripts.Transcript
 	prng       io.Reader
 	round      int
 }

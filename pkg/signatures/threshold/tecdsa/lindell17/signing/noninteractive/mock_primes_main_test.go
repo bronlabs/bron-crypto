@@ -1,9 +1,10 @@
 package noninteractive_test
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"os"
 	"testing"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 )
 
 func TestMain(m *testing.M) {

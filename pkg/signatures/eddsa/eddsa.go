@@ -6,10 +6,10 @@ import (
 	"hash"
 	"reflect"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/pkg/errors"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 type Signature struct {
@@ -31,7 +31,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
 	if len(RSerialized)+len(zSerialized) != signatureSize {
-		return serializedSignature[:], errs.NewDeserializationFailed("serialized signature is too large")
+		return serializedSignature, errs.NewDeserializationFailed("serialised signature is too large")
 	}
 	serializedSignature = append(serializedSignature, RSerialized...)
 	serializedSignature = append(serializedSignature, zSerialized...)
@@ -56,7 +56,7 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		if reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
 			serializedSignature, err := signature.MarshalBinary()
 			if err != nil {
-				return errs.WrapDeserializationFailed(err, "could not serialize signature to binary")
+				return errs.WrapDeserializationFailed(err, "could not serialise signature to binary")
 			}
 			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
 				return errs.NewVerificationFailed("could not verify frost signature using ed25519 verifier")
@@ -64,29 +64,12 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 		}
 		return nil
 	} else {
-		challengeHasher := hashFunction()
-		if _, err := challengeHasher.Write(signature.R.ToAffineCompressed()); err != nil {
-			return errors.Wrapf(err, "could not write R to challenge hasher")
-		}
-		if _, err := challengeHasher.Write(publicKey.ToAffineCompressed()); err != nil {
-			return errors.Wrapf(err, "could not write public key to challenge hasher")
-		}
-		if _, err := challengeHasher.Write(message); err != nil {
-			return errors.Wrapf(err, "could not write the message to challenge hasher")
-		}
-		challengeDigest := challengeHasher.Sum(nil)
-		var setBytesFunc func([]byte) (curves.Scalar, error)
-		switch len(challengeDigest) {
-		case native.WideFieldBytes:
-			setBytesFunc = curve.Scalar.SetBytesWide
-		case native.FieldBytes:
-			setBytesFunc = curve.Scalar.SetBytes
-		default:
-			return errs.NewDeserializationFailed("challenge digest is %d which is neither 64 nor 32", len(challengeDigest))
-		}
-		c, err := setBytesFunc(challengeDigest)
+		c, err := hashing.FiatShamir(&integration.CipherSuite{
+			Curve: curve,
+			Hash:  hashFunction,
+		}, signature.R.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 		if err != nil {
-			return errs.WrapDeserializationFailed(err, "converting hash to c failed")
+			return errs.WrapDeserializationFailed(err, "fiat shamir failed")
 		}
 
 		zG := curve.ScalarBaseMult(signature.Z)

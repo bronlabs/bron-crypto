@@ -3,17 +3,16 @@ package lpdl
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
-	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
 	"math/big"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 )
 
-var (
-	hashFunc = sha256.New
-)
+var hashFunc = sha256.New
 
 type Round1Output struct {
 	RangeVerifierOutput    *paillierrange.Round1Output
@@ -64,9 +63,12 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}
 	cPrime, err := verifier.pk.Add(acEnc, bEnc)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot perform homomorphic addition")
+	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	cDoublePrimeMessage := append(verifier.state.a.Bytes()[:], verifier.state.b.Bytes()...)
+	cDoublePrimeMessage := append(verifier.state.a.Bytes(), verifier.state.b.Bytes()...)
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(hashFunc, cDoublePrimeMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to a and b")
@@ -87,7 +89,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round1()
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "range verifier round 1")
 	}
 
 	// 1.iv sends c' and c'' to P
@@ -128,7 +130,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeProverOutput, err := prover.rangeProver.Round2(input.RangeVerifierOutput)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "range prover round 2")
 	}
 
 	prover.round += 2
@@ -148,7 +150,7 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(input.RangeProverOutput)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "range verifier round 3")
 	}
 
 	// 3. decommit c'' revealing a, b
@@ -166,7 +168,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	cDoublePrimeMessage := append(input.A.Bytes()[:], input.B.Bytes()...)
+	cDoublePrimeMessage := append(input.A.Bytes(), input.B.Bytes()...)
 	if err := commitments.Open(hashFunc, cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
@@ -179,7 +181,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 
 	rangeProverOutput, err := prover.rangeProver.Round4(input.RangeVerifierOutput)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "range prover round 4")
 	}
 
 	// 4. decommit c^ revealing Q^
@@ -207,7 +209,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 	err = verifier.rangeVerifier.Round5(input.RangeProverOutput)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "range verifier round 5")
 	}
 
 	verifier.round += 2

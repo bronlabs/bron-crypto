@@ -10,11 +10,13 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
-var k256FqInitonce sync.Once
-var k256FqParams native.FieldParams
+var (
+	k256FqInitonce sync.Once
+	k256FqParams   native.FieldParams
+)
 
 func K256FqNew() *native.Field {
 	return &native.Field{
@@ -31,7 +33,8 @@ func k256FqParamsInit() {
 		R3:      [native.FieldLimbs]uint64{0x7bc0cfe0e9ff41ed, 0x0017648444d4322c, 0xb1b31347f1d0b2da, 0x555d800c18ef116d},
 		Modulus: [native.FieldLimbs]uint64{0xbfd25e8cd0364141, 0xbaaedce6af48a03b, 0xfffffffffffffffe, 0xffffffffffffffff},
 		BiModulus: new(big.Int).SetBytes([]byte{
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41},
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
+		},
 		),
 	}
 }
@@ -42,45 +45,45 @@ func getK256FqParams() *native.FieldParams {
 }
 
 // k256FqArithmetic is a struct with all the methods needed for working
-// in mod q
+// in mod q.
 type k256FqArithmetic struct{}
 
-// ToMontgomery converts this field to montgomery form
-func (f k256FqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// ToMontgomery converts this field to montgomery form.
+func (k256FqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
-// FromMontgomery converts this field from montgomery form
-func (f k256FqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// FromMontgomery converts this field from montgomery form.
+func (k256FqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Neg performs modular negation
-func (f k256FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
+// Neg performs modular negation.
+func (k256FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Square performs modular square
-func (f k256FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
+// Square performs modular square.
+func (k256FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Mul performs modular multiplication
-func (f k256FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Mul performs modular multiplication.
+func (k256FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Add performs modular addition
-func (f k256FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Add performs modular addition.
+func (k256FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sub performs modular subtraction
-func (f k256FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Sub performs modular subtraction.
+func (k256FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sqrt performs modular square root
+// Sqrt performs modular square root.
 func (f k256FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
@@ -99,8 +102,8 @@ func (f k256FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint
 		0xffffffffffffffff,
 		0x01ffffffffffffff,
 	}
-	//c4 := generator
-	//c5 := new(Fq).pow(generator, c2)
+	// c4 := generator
+	// c5 := new(Fq).pow(generator, c2)
 	c5 := [native.FieldLimbs]uint64{0x944cf2a220910e04, 0x815c829c780589f4, 0x55980b07bc222113, 0xc702b0d248825b36}
 	var z, t, b, c, tv [native.FieldLimbs]uint64
 
@@ -142,7 +145,7 @@ func (f k256FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint
 	Selectznz(out, uint1(*wasSquare), out, &z)
 }
 
-// Invert performs modular inverse
+// Invert performs modular inverse.
 func (f k256FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://briansmith.org/ecc-inversion-addition-chains-01#secp256k1_scalar_inversion
@@ -259,25 +262,25 @@ func (f k256FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]
 	Selectznz(out, uint1(*wasInverted), out, &tmp)
 }
 
-// FromBytes converts a little endian byte array into a field element
-func (f k256FqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
+// FromBytes converts a little endian byte array into a field element.
+func (k256FqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
-// ToBytes converts a field element to a little endian byte array
-func (f k256FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
+// ToBytes converts a field element to a little endian byte array.
+func (k256FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
-func (f k256FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
+// selects arg1 if choice == 0 and arg2 if choice == 1.
+func (k256FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }
 
 // generator = 7 mod q is a generator of the `q - 1` order multiplicative
 // subgroup, or in other words a primitive element of the field.
-// generator^t where t * 2^s + 1 = q
+// generator^t where t * 2^s + 1 = q.
 var generator = &[native.FieldLimbs]uint64{0xc13f6a264e843739, 0xe537f5b135039e5d, 0x0000000000000008, 0x0000000000000000}
 
 // s satisfies the equation 2^s * t = q - 1 with t odd.

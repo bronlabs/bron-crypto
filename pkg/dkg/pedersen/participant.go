@@ -3,11 +3,10 @@ package pedersen
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 )
 
 var _ integration.Participant = (*Participant)(nil)
@@ -15,11 +14,9 @@ var _ integration.Participant = (*Participant)(nil)
 type Participant struct {
 	prng io.Reader
 
-	MyIdentityKey      integration.IdentityKey
-	MyShamirId         int
-	UniqueSessionId    []byte
-	myPartialPublicKey curves.Point
-	secretKeyShare     curves.Scalar
+	MyIdentityKey   integration.IdentityKey
+	MyShamirId      int
+	UniqueSessionId []byte
 
 	CohortConfig          *integration.CohortConfig
 	shamirIdToIdentityKey map[int]integration.IdentityKey
@@ -41,7 +38,6 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 type State struct {
-	r_i         curves.Scalar
 	shareVector []*feldman.Share
 	commitments []curves.Point
 }

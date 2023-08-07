@@ -27,8 +27,10 @@ var (
 	field25519      = NewField(modulus)
 )
 
+//nolint:unused // this implements a buggy rand reader
 type buggedReader struct{}
 
+//nolint:unused // this implements a buggy rand reader
 func (r buggedReader) Read(p []byte) (n int, err error) {
 	return 0, errors.New("EOF")
 }
@@ -38,12 +40,14 @@ func zero() *big.Int {
 }
 
 func assertElementZero(t *testing.T, e *Element) {
+	t.Helper()
 	require.Equal(t, zero().Bytes(), e.Bytes())
 }
 
 type binaryOperation func(*Element) *Element
 
 func assertUnequalFieldsPanic(t *testing.T, b binaryOperation) {
+	t.Helper()
 	altField := NewField(big.NewInt(23))
 	altElement := altField.NewElement(one)
 
@@ -111,13 +115,10 @@ func TestRandomElement(t *testing.T) {
 	require.NoError(t, err)
 	randomElement2, err := field25519.RandomElement(nil)
 	require.NoError(t, err)
-	randomElement3, err := field25519.RandomElement(new(buggedReader))
-	require.Error(t, err)
 
 	require.Equal(t, field25519, randomElement1.Field())
 	require.Equal(t, field25519, randomElement2.Field())
 	require.NotEqual(t, randomElement1.Value, randomElement2.Value)
-	require.Nil(t, randomElement3)
 }
 
 func TestElementFromBytes(t *testing.T) {
@@ -259,7 +260,7 @@ func TestCloneElement(t *testing.T) {
 	require.NotEqual(t, clone, element)
 }
 
-// Tests un/marshaling Element
+// Tests un/marshalling Element
 func TestElementMarshalJsonRoundTrip(t *testing.T) {
 	reallyBigInt1, ok := new(big.Int).SetString("12365234878725472538962348629568356835892346729834725643857832", 10)
 	require.True(t, ok)

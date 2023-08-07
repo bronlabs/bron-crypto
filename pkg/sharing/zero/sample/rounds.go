@@ -1,8 +1,8 @@
 package sample
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
 func (p *Participant) Sample() (zero.Sample, error) {

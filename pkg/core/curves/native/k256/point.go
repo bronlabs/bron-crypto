@@ -3,9 +3,9 @@ package k256
 import (
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/k256/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/k256/fp"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 	k256PointIsogenyParams   native.IsogenyParams
 )
 
-func K256PointNew() *native.EllipticPoint {
+func PointNew() *native.EllipticPoint {
 	return &native.EllipticPoint{
 		X:          fp.K256FpNew(),
 		Y:          fp.K256FpNew(),
@@ -255,9 +255,9 @@ func (k k256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.Ellipt
 		u = native.ExpandMsgXof(hash, msg, dst, 96)
 	}
 	var buf [64]byte
-	copy(buf[:48], internal.ReverseScalarBytes(u[:48]))
+	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
 	u0 := fp.K256FpNew().SetBytesWide(&buf)
-	copy(buf[:48], internal.ReverseScalarBytes(u[48:]))
+	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
 	u1 := fp.K256FpNew().SetBytesWide(&buf)
 
 	r0x, r0y := sswuParams.Osswu3mod4(u0)
@@ -276,7 +276,7 @@ func (k k256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.Ellipt
 	return nil
 }
 
-func (k k256PointArithmetic) Double(out, arg *native.EllipticPoint) {
+func (k256PointArithmetic) Double(out, arg *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 9)
 	var yy, zz, xy2, bzz, bzz3, bzz9 [native.FieldLimbs]uint64
@@ -320,7 +320,7 @@ func (k k256PointArithmetic) Double(out, arg *native.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k k256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
+func (k256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 7).
 	var xx, yy, zz, nXxYy, nYyZz, nXxZz [native.FieldLimbs]uint64
@@ -408,7 +408,7 @@ func (k k256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 }
 
 func (k k256PointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
-	affine := K256PointNew()
+	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.K256FpNew().Square(affine.Y)
 	rhs := fp.K256FpNew()
@@ -416,7 +416,7 @@ func (k k256PointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
 	return lhs.Equal(rhs) == 1
 }
 
-func (k k256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
+func (k256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	var wasInverted int
 	var zero, x, y, z [native.FieldLimbs]uint64
 	f := arg.X.Arithmetic
@@ -438,7 +438,7 @@ func (k k256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (k k256PointArithmetic) RhsEq(out, x *native.Field) {
+func (k256PointArithmetic) RhsEq(out, x *native.Field) {
 	// Elliptic curve equation for secp256k1 is: y^2 = x^3 + 7
 	out.Square(x)
 	out.Mul(out, x)

@@ -8,7 +8,7 @@ type fp6 struct {
 	A, B, C fp2
 }
 
-// Set fp6 = a
+// Set fp6 = a.
 func (f *fp6) Set(a *fp6) *fp6 {
 	f.A.Set(&a.A)
 	f.B.Set(&a.B)
@@ -16,7 +16,7 @@ func (f *fp6) Set(a *fp6) *fp6 {
 	return f
 }
 
-// SetFp creates an element from a lower field
+// SetFp creates an element from a lower field.
 func (f *fp6) SetFp(a *fp) *fp6 {
 	f.A.SetFp(a)
 	f.B.SetZero()
@@ -24,7 +24,7 @@ func (f *fp6) SetFp(a *fp) *fp6 {
 	return f
 }
 
-// SetFp2 creates an element from a lower field
+// SetFp2 creates an element from a lower field.
 func (f *fp6) SetFp2(a *fp2) *fp6 {
 	f.A.Set(a)
 	f.B.SetZero()
@@ -32,7 +32,7 @@ func (f *fp6) SetFp2(a *fp2) *fp6 {
 	return f
 }
 
-// SetZero fp6 to zero
+// SetZero fp6 to zero.
 func (f *fp6) SetZero() *fp6 {
 	f.A.SetZero()
 	f.B.SetZero()
@@ -40,7 +40,7 @@ func (f *fp6) SetZero() *fp6 {
 	return f
 }
 
-// SetOne fp6 to multiplicative identity element
+// SetOne fp6 to multiplicative identity element.
 func (f *fp6) SetOne() *fp6 {
 	f.A.SetOne()
 	f.B.SetZero()
@@ -48,7 +48,7 @@ func (f *fp6) SetOne() *fp6 {
 	return f
 }
 
-// Random generates a random field element
+// Random generates a random field element.
 func (f *fp6) Random(reader io.Reader) (*fp6, error) {
 	a, err := new(fp2).Random(reader)
 	if err != nil {
@@ -68,7 +68,7 @@ func (f *fp6) Random(reader io.Reader) (*fp6, error) {
 	return f, nil
 }
 
-// Add computes arg1+arg2
+// Add computes arg1+arg2.
 func (f *fp6) Add(arg1, arg2 *fp6) *fp6 {
 	f.A.Add(&arg1.A, &arg2.A)
 	f.B.Add(&arg1.B, &arg2.B)
@@ -76,12 +76,12 @@ func (f *fp6) Add(arg1, arg2 *fp6) *fp6 {
 	return f
 }
 
-// Double computes arg1+arg1
+// Double computes arg1+arg1.
 func (f *fp6) Double(arg *fp6) *fp6 {
 	return f.Add(arg, arg)
 }
 
-// Sub computes arg1-arg2
+// Sub computes arg1-arg2.
 func (f *fp6) Sub(arg1, arg2 *fp6) *fp6 {
 	f.A.Sub(&arg1.A, &arg2.A)
 	f.B.Sub(&arg1.B, &arg2.B)
@@ -89,7 +89,7 @@ func (f *fp6) Sub(arg1, arg2 *fp6) *fp6 {
 	return f
 }
 
-// Mul computes arg1*arg2
+// Mul computes arg1*arg2.
 func (f *fp6) Mul(arg1, arg2 *fp6) *fp6 {
 	var aa, bb, cc, s, t1, t2, t3 fp2
 
@@ -126,7 +126,7 @@ func (f *fp6) Mul(arg1, arg2 *fp6) *fp6 {
 	return f
 }
 
-// MulByB scales this field by a scalar in the B coefficient
+// MulByB scales this field by a scalar in the B coefficient.
 func (f *fp6) MulByB(arg *fp6, b *fp2) *fp6 {
 	var bB, t1, t2 fp2
 	bB.Mul(&arg.B, b)
@@ -146,7 +146,7 @@ func (f *fp6) MulByB(arg *fp6, b *fp2) *fp6 {
 	return f
 }
 
-// MulByAB scales this field by scalars in the A and B coefficients
+// MulByAB scales this field by scalars in the A and B coefficients.
 func (f *fp6) MulByAB(arg *fp6, a, b *fp2) *fp6 {
 	var aA, bB, t1, t2, t3 fp2
 
@@ -234,7 +234,7 @@ func (f *fp6) FrobeniusMap(arg *fp6) *fp6 {
 	return f
 }
 
-// Square computes fp6^2
+// Square computes fp6^2.
 func (f *fp6) Square(arg *fp6) *fp6 {
 	var s0, s1, s2, s3, s4, ab, bc fp2
 
@@ -263,7 +263,7 @@ func (f *fp6) Square(arg *fp6) *fp6 {
 	return f
 }
 
-// Invert computes this element's field inversion
+// Invert computes this element's field inversion.
 func (f *fp6) Invert(arg *fp6) (*fp6, int) {
 	var a, b, c, s, t fp2
 
@@ -307,7 +307,7 @@ func (f *fp6) Invert(arg *fp6) (*fp6, int) {
 	return f, wasInverted
 }
 
-// Neg computes the field negation
+// Neg computes the field negation.
 func (f *fp6) Neg(arg *fp6) *fp6 {
 	f.A.Neg(&arg.A)
 	f.B.Neg(&arg.B)
@@ -315,23 +315,23 @@ func (f *fp6) Neg(arg *fp6) *fp6 {
 	return f
 }
 
-// IsZero returns 1 if fp6 == 0, 0 otherwise
+// IsZero returns 1 if fp6 == 0, 0 otherwise.
 func (f *fp6) IsZero() int {
 	return f.A.IsZero() & f.B.IsZero() & f.C.IsZero()
 }
 
-// IsOne returns 1 if fp6 == 1, 0 otherwise
+// IsOne returns 1 if fp6 == 1, 0 otherwise.
 func (f *fp6) IsOne() int {
 	return f.A.IsOne() & f.B.IsZero() & f.B.IsZero()
 }
 
-// Equal returns 1 if fp6 == rhs, 0 otherwise
+// Equal returns 1 if fp6 == rhs, 0 otherwise.
 func (f *fp6) Equal(rhs *fp6) int {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B) & f.C.Equal(&rhs.C)
 }
 
 // CMove performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
+// selects arg1 if choice == 0 and arg2 if choice == 1.
 func (f *fp6) CMove(arg1, arg2 *fp6, choice int) *fp6 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)

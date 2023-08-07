@@ -1,12 +1,13 @@
 package trusted_dealer
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/feldman"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
 func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*threshold.SigningKeyShare, error) {
@@ -14,7 +15,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
-	if cohortConfig.Protocol != protocol.LINDELL22 {
+	if cohortConfig.Protocol != protocols.LINDELL22 {
 		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol)
 	}
 

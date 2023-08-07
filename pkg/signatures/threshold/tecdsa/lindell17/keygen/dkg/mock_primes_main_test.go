@@ -1,7 +1,7 @@
 package dkg_test
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"os"
 	"testing"
 )

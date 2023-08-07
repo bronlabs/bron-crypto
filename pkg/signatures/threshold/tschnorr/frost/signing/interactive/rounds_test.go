@@ -12,19 +12,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-
-	agreeonrandom_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
 func doDkg(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
@@ -115,7 +115,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 	return nil
 }
 
-func testHappyPath(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -161,7 +161,7 @@ func TestSignEmptyMessage(t *testing.T) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -188,7 +188,7 @@ func TestSignEmptyMessage(t *testing.T) {
 	}
 }
 
-func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -235,6 +235,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 	require.NoError(t, err)
 	r2InBeta := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsBeta, r1OutBeta)
 	partialSignaturesBeta, err := test_utils.DoInteractiveSignRound2(participantsBeta, r2InBeta, message)
+	require.NoError(t, err)
 
 	// smuggle previous round partial signature
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
@@ -244,7 +245,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocol.Protocol,
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
-func testRandomPartialSignature(t *testing.T, protocol protocol.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -305,7 +306,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testHappyPath(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+					testHappyPath(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 				})
 			}
 		}
@@ -334,7 +335,7 @@ func TestRunProfile(t *testing.T) {
 		h = sha512.New
 	}
 	for i := 0; i < 1000; i++ {
-		testHappyPath(t, protocol.FROST, curve, h, th, n, []byte("Hello World!"))
+		testHappyPath(t, protocols.FROST, curve, h, th, n, []byte("Hello World!"))
 	}
 }
 
@@ -357,7 +358,7 @@ func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Abort when Alice try to use random partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testPreviousPartialSignatureReuse(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
+					testPreviousPartialSignatureReuse(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}
@@ -383,7 +384,7 @@ func TestShouldAbortOnRandomPartialSignature(t *testing.T) {
 				boundedThresholdConfig := thresholdConfig
 				t.Run(fmt.Sprintf("Abort when Alice try to resuse previous partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testRandomPartialSignature(t, protocol.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
+					testRandomPartialSignature(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}

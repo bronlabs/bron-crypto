@@ -1,11 +1,11 @@
 package softspoken
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type Receiver struct {
@@ -17,7 +17,7 @@ type Receiver struct {
 	uniqueSessionId []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
-	transcript transcript.Transcript
+	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
@@ -35,7 +35,7 @@ type Sender struct {
 	uniqueSessionId []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
-	transcript transcript.Transcript
+	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
 	curve *curves.Curve
@@ -49,7 +49,7 @@ type Sender struct {
 func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
 	uniqueSessionId []byte,
-	transcript transcript.Transcript,
+	transcript transcripts.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
@@ -60,7 +60,7 @@ func NewCOtReceiver(
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
 	return &Receiver{
 		baseOtSeeds:     baseOtResults,
 		uniqueSessionId: uniqueSessionId,
@@ -75,7 +75,7 @@ func NewCOtReceiver(
 func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
 	uniqueSessionId []byte,
-	transcript transcript.Transcript,
+	transcript transcripts.Transcript,
 	curve *curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {
@@ -86,7 +86,7 @@ func NewCOtSender(
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId[:])
+	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
 	return &Sender{
 		baseOtSeeds:     baseOtResults,
 		uniqueSessionId: uniqueSessionId,

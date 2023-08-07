@@ -6,10 +6,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// OversizeDstSalt is the salt used to hash a dst over MaxDstLen
+// OversizeDstSalt is the salt used to hash a dst over MaxDstLen.
 var OversizeDstSalt = []byte("H2C-OVERSIZE-DST-")
 
-// MaxDstLen the max size for dst in hash to curve
+// MaxDstLen the max size for dst in hash to curve.
 const MaxDstLen = 255
 
 func getDomainXmd(h hash.Hash, domain []byte) []byte {

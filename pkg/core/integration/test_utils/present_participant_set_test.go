@@ -3,12 +3,13 @@ package test_utils
 import (
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 // TODO: we can't check generic is nil at the moment unless we use reflection. Hopefully in future Go update we can do that
@@ -23,9 +24,11 @@ func TestCheckDuplicateParticipantByPubkey(t *testing.T) {
 		Hash:  sha3.New256,
 	}
 	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	require.NoError(t, err)
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	require.NoError(t, err)
 	_, err = hashset.NewHashSet([]integration.IdentityKey{identityAlice, identityBob})
-	assert.True(t, errs.IsDuplicate(err))
+	require.True(t, errs.IsDuplicate(err))
 }
 
 func TestCheckExistIdentity(t *testing.T) {
@@ -34,12 +37,14 @@ func TestCheckExistIdentity(t *testing.T) {
 		Hash:  sha3.New256,
 	}
 	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	require.NoError(t, err)
 	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
+	require.NoError(t, err)
 	s, err := hashset.NewHashSet([]integration.IdentityKey{identityAlice})
-	assert.NoError(t, err)
-	assert.True(t, s.Size() == 1)
+	require.NoError(t, err)
+	require.True(t, s.Size() == 1)
 	_, found := s.Get(identityAlice)
-	assert.True(t, found)
+	require.True(t, found)
 	_, found = s.Get(identityBob)
-	assert.False(t, found)
+	require.False(t, found)
 }

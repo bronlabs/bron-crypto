@@ -1,9 +1,9 @@
 package frost
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
 type Participant interface {
@@ -11,10 +11,12 @@ type Participant interface {
 	IsSignatureAggregator() bool
 }
 
-type SigningKeyShare = threshold.SigningKeyShare
-type PublicKeyShares = threshold.PublicKeyShares
+type (
+	SigningKeyShare = threshold.SigningKeyShare
+	PublicKeyShares = threshold.PublicKeyShares
+)
 
-// TODO: Refactor and use this
+// TODO: Refactor and use this.
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares

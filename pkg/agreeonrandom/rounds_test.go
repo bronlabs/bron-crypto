@@ -3,17 +3,18 @@ package agreeonrandom_test
 import (
 	crand "crypto/rand"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
-	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
+
+	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
+	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 )
 
 func doRoundsWithMockR1Output(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) []byte {
@@ -64,6 +65,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 }
 
 func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
+	t.Helper()
 	var randomErr error
 	// eventually duplicate pubkey will cause failed to generate unique random
 	for i := 0; i < 10; i++ {
@@ -73,8 +75,11 @@ func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 		}
 
 		identityAlice, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		require.NoError(t, err)
 		identityBob, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		require.NoError(t, err)
 		identityCharlie, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{2}), nil)
+		require.NoError(t, err)
 		identities := []integration.IdentityKey{identityAlice, identityBob, identityCharlie}
 		_, err = test_utils.ProduceSharedRandomValue(curve, identities)
 		if err != nil {
@@ -86,13 +91,13 @@ func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 }
 
 func TestDuplicatePubkeys(t *testing.T) {
-	t.Helper()
+	t.Parallel()
 	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
-		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", curve.Name), func(t *testing.T) {
+		boundedCurve := curve
+		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", boundedCurve.Name), func(t *testing.T) {
 			t.Parallel()
-			testDuplicatePubKeys(t, curve)
+			testDuplicatePubKeys(t, boundedCurve)
 		})
-
 	}
 }
 

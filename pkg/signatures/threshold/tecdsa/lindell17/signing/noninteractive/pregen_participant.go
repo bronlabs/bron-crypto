@@ -1,14 +1,15 @@
 package noninteractive
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/commitments"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 type preGenParticipantState struct {
@@ -17,7 +18,6 @@ type preGenParticipantState struct {
 	bigRWitness []commitments.Witness
 
 	theirBigRCommitments []map[integration.IdentityKey]commitments.Commitment
-	theirBigR            []map[integration.IdentityKey]curves.Point
 }
 
 type PreGenParticipant struct {
@@ -28,7 +28,7 @@ type PreGenParticipant struct {
 	tau           int
 	cohortConfig  *integration.CohortConfig
 	sid           []byte
-	transcript    transcript.Transcript
+	transcript    transcripts.Transcript
 	round         int
 	prng          io.Reader
 
@@ -38,9 +38,11 @@ type PreGenParticipant struct {
 func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
 	return p.myIdentityKey
 }
+
 func (p *PreGenParticipant) GetShamirId() int {
 	return p.myShamirId
 }
+
 func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
 	return p.cohortConfig
 }
@@ -59,7 +61,7 @@ const (
 	transcriptSessionIdLabel = "Lindell2017_PreGen_SessionId"
 )
 
-func NewPreGenParticipant(sid []byte, transcript transcript.Transcript, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -69,16 +71,13 @@ func NewPreGenParticipant(sid []byte, transcript transcript.Transcript, myIdenti
 	if tau <= 0 {
 		return nil, errs.NewInvalidArgument("tau is non-positive")
 	}
-	if sid == nil || len(sid) == 0 {
+	if len(sid) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sid)
 	}
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	err = transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to transcript")
-	}
+	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
 
 	return &PreGenParticipant{
 		myIdentityKey: myIdentityKey,

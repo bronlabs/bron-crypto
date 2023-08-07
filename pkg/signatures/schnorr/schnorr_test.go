@@ -8,11 +8,12 @@ import (
 	"hash"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/schnorr"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -67,12 +68,12 @@ func Test_CanJsonMarshalAndUnmarshal(t *testing.T) {
 	signature, err := signer.Sign(message)
 	require.NoError(t, err)
 
-	marshaled, err := json.Marshal(signature)
+	marshalled, err := json.Marshal(signature)
 	require.NoError(t, err)
-	require.Greater(t, len(marshaled), 0)
+	require.Greater(t, len(marshalled), 0)
 
 	var unmarshaled *schnorr.Signature
-	err = json.Unmarshal(marshaled, &unmarshaled)
+	err = json.Unmarshal(marshalled, &unmarshaled)
 	require.NoError(t, err)
 	require.Equal(t, signature, unmarshaled)
 }

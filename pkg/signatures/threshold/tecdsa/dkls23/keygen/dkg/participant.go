@@ -3,15 +3,15 @@ package dkg
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
-	zeroSetup "github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero/setup"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/dkls23"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 const DkgLabel = "COPPER_DKLS23_DKG-"
@@ -38,7 +38,7 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.GennaroParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcript.Transcript) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}

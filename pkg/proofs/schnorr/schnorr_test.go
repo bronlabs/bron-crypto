@@ -3,13 +3,13 @@ package schnorr
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 func TestZKPOverMultipleCurves(t *testing.T) {
@@ -38,6 +38,7 @@ func TestZKPOverMultipleCurves(t *testing.T) {
 		})
 	}
 }
+
 func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 	t.Parallel()
 	uniqueSessionId := sha3.Sum256([]byte("random seed"))

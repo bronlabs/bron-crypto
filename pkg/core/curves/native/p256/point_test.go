@@ -6,17 +6,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/p256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native/p256/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/p256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native/p256/fp"
 )
 
 func TestP256PointArithmetic_Double(t *testing.T) {
-	g := p256.P256PointNew().Generator()
-	pt1 := p256.P256PointNew().Double(g)
-	pt2 := p256.P256PointNew().Add(g, g)
-	pt3 := p256.P256PointNew().Mul(g, fp.P256FpNew().SetUint64(2))
+	g := p256.PointNew().Generator()
+	pt1 := p256.PointNew().Double(g)
+	pt2 := p256.PointNew().Add(g, g)
+	pt3 := p256.PointNew().Mul(g, fp.P256FpNew().SetUint64(2))
 
 	e1 := pt1.Equal(pt2)
 	e2 := pt1.Equal(pt3)
@@ -28,7 +28,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 
 func TestP256PointArithmetic_Hash(t *testing.T) {
 	var b [32]byte
-	sc, err := p256.P256PointNew().Hash(b[:], native.EllipticPointHasherSha256())
+	sc, err := p256.PointNew().Hash(b[:], native.EllipticPointHasherSha256())
 	sc1 := curves.P256().NewIdentityPoint().Hash(b[:])
 	fmt.Printf("%v\n", sc1)
 

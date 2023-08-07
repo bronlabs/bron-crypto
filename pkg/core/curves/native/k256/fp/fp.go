@@ -10,11 +10,13 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
 )
 
-var k256FpInitonce sync.Once
-var k256FpParams native.FieldParams
+var (
+	k256FpInitonce sync.Once
+	k256FpParams   native.FieldParams
+)
 
 func K256FpNew() *native.Field {
 	return &native.Field{
@@ -42,45 +44,45 @@ func getK256FpParams() *native.FieldParams {
 }
 
 // k256FpArithmetic is a struct with all the methods needed for working
-// in mod p
+// in mod p.
 type k256FpArithmetic struct{}
 
-// ToMontgomery converts this field to montgomery form
-func (f k256FpArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// ToMontgomery converts this field to montgomery form.
+func (k256FpArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
-// FromMontgomery converts this field from montgomery form
-func (f k256FpArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// FromMontgomery converts this field from montgomery form.
+func (k256FpArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Neg performs modular negation
-func (f k256FpArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
+// Neg performs modular negation.
+func (k256FpArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Square performs modular square
-func (f k256FpArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
+// Square performs modular square.
+func (k256FpArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
-// Mul performs modular multiplication
-func (f k256FpArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Mul performs modular multiplication.
+func (k256FpArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Add performs modular addition
-func (f k256FpArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Add performs modular addition.
+func (k256FpArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sub performs modular subtraction
-func (f k256FpArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Sub performs modular subtraction.
+func (k256FpArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
-// Sqrt performs modular square root
+// Sqrt performs modular square root.
 func (f k256FpArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
 	// p is congruent to 3 mod 4 we can compute
 	// sqrt using elem^(p+1)/4 mod p
@@ -100,7 +102,7 @@ func (f k256FpArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint
 	f.Selectznz(out, out, &s, *wasSquare)
 }
 
-// Invert performs modular inverse
+// Invert performs modular inverse.
 func (f k256FpArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
 	// The binary representation of (p - 2) has 5 groups of 1s, with lengths in
 	// { 1, 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each group:
@@ -156,18 +158,18 @@ func (f k256FpArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]
 	f.Selectznz(out, out, &s, *wasInverted)
 }
 
-// FromBytes converts a little endian byte array into a field element
-func (f k256FpArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
+// FromBytes converts a little endian byte array into a field element.
+func (k256FpArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
-// ToBytes converts a field element to a little endian byte array
-func (f k256FpArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
+// ToBytes converts a field element to a little endian byte array.
+func (k256FpArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
-func (f k256FpArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
+// selects arg1 if choice == 0 and arg2 if choice == 1.
+func (k256FpArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }

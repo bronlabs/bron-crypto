@@ -1,13 +1,13 @@
 package aggregation
 
 import (
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/hashing"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/shamir"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/eddsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 )
 
 type SignatureAggregator struct {
@@ -86,7 +86,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	return aggregator, nil
 }
 
-// TODO: condense/simplify
+// TODO: condense/simplify.
 func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
 	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
@@ -129,7 +129,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	if sa.HasIdentifiableAbort() {
 		shamirConfig, err := shamir.NewDealer(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not initialize shamir config")
+			return nil, errs.WrapFailed(err, "could not initialise shamir config")
 		}
 
 		shamirIDs := make([]int, len(sa.SessionParticipants))

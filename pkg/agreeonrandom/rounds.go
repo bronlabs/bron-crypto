@@ -3,10 +3,10 @@ package agreeonrandom
 import (
 	"fmt"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
 type Round1Broadcast struct {
@@ -22,7 +22,6 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	return &Round1Broadcast{
 		Ri: p.state.r_i,
 	}, nil
-
 }
 
 func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) ([]byte, error) {

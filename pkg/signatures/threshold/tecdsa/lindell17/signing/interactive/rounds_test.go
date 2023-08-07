@@ -6,18 +6,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	gennaro_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/dkg/gennaro/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/ecdsa"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	lindell17_dkg_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/interactive"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	gennaro_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	lindell17_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/interactive"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -32,7 +33,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")
@@ -83,7 +84,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, lindell17.Threshold, identities)
+	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 	require.NoError(t, err)
 
 	alice := 0
@@ -110,6 +111,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 	for _, c := range supportedCurves {
 		curve := c
 		t.Run(fmt.Sprintf("curve: %s", curve.Name), func(t *testing.T) {
+			t.Parallel()
 			cipherSuite := &integration.CipherSuite{
 				Curve: curve,
 				Hash:  sha256.New,
@@ -119,7 +121,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			require.NoError(t, err)
 			alice, bob, charlie := identities[0], identities[1], identities[2]
 
-			cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+			cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")
@@ -157,14 +159,14 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
 			require.NoError(t, err)
 
-			t.Run("signature should be normalized", func(t *testing.T) {
+			t.Run("signature should be normalised", func(t *testing.T) {
 				t.Parallel()
 				signatureCopy := &ecdsa.Signature{
 					R: signature.R,
 					S: signature.S,
 					V: signature.V,
 				}
-				signatureCopy.Normalize()
+				signatureCopy.Normalise()
 				require.Zero(t, signatureCopy.S.Cmp(signature.S))
 			})
 
@@ -244,7 +246,7 @@ func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortCo
 	return shards
 }
 
-func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice int, bob int, message []byte) (signature *ecdsa.Signature) {
+func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice, bob int, message []byte) (signature *ecdsa.Signature) {
 	t.Helper()
 
 	primary, err := interactive.NewPrimaryCosigner(identities[alice], identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)

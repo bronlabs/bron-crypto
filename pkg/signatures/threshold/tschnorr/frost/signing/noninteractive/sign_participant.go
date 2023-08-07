@@ -3,19 +3,17 @@ package noninteractive
 import (
 	"io"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/datastructures/hashset"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
 
-var _ frost.Participant = (*NonInteractiveCosigner)(nil)
+var _ frost.Participant = (*Cosigner)(nil)
 
-type NonInteractiveCosigner struct {
+type Cosigner struct {
 	prng io.Reader
 
 	PreSignatures                *PreSignatureBatch
@@ -35,19 +33,19 @@ type NonInteractiveCosigner struct {
 	aggregationParameter *aggregation.SignatureAggregatorParameters
 }
 
-func (nic *NonInteractiveCosigner) GetIdentityKey() integration.IdentityKey {
+func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return nic.MyIdentityKey
 }
 
-func (nic *NonInteractiveCosigner) GetShamirId() int {
+func (nic *Cosigner) GetShamirId() int {
 	return nic.MyShamirId
 }
 
-func (nic *NonInteractiveCosigner) GetCohortConfig() *integration.CohortConfig {
+func (nic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 	return nic.CohortConfig
 }
 
-func (nic *NonInteractiveCosigner) IsSignatureAggregator() bool {
+func (nic *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range nic.CohortConfig.SignatureAggregators {
 		if signatureAggregator.PublicKey().Equal(nic.MyIdentityKey.PublicKey()) {
 			return true
@@ -60,7 +58,7 @@ func NewNonInteractiveCosigner(
 	identityKey integration.IdentityKey, shard *frost.Shard,
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
 	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader,
-) (*NonInteractiveCosigner, error) {
+) (*Cosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -86,7 +84,7 @@ func NewNonInteractiveCosigner(
 	}
 	presentPartiesHashSet, err := hashset.NewHashSet(presentParties)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not construct present participant hash set")
 	}
 	if presentPartiesHashSet.Size() <= 0 {
 		return nil, errs.NewInvalidArgument("no party is present")
@@ -130,7 +128,7 @@ func NewNonInteractiveCosigner(
 		E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
 	}
 
-	return &NonInteractiveCosigner{
+	return &Cosigner{
 		prng:                         prng,
 		PreSignatures:                preSignatureBatch,
 		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,

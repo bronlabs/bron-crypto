@@ -105,7 +105,7 @@ func TestArithmetic(t *testing.T) {
 		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
 		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
 		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
-		//checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
+		// checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
 		checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
 	}
 }

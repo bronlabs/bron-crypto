@@ -12,7 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 var (
@@ -99,9 +100,9 @@ func TestIn(t *testing.T) {
 	y, _ := new(big.Int).SetString("32168432167132168106409840321684604654063138460840123871234181628904319728058", 10)
 	N := new(big.Int).Mul(x, y)  // N = xy
 	NN := new(big.Int).Mul(N, N) // N^2 = N*N = x^2y^2
-	errMember := internal.ErrZmMembership
+	errMember := errs.NewIsZero("zero")
 
-	var tests = []struct {
+	tests := []struct {
 		x        *big.Int
 		m        *big.Int
 		expected error
@@ -156,7 +157,13 @@ func TestIn(t *testing.T) {
 	// All the tests!
 	for _, test := range tests {
 		actual := In(test.x, test.m)
-		require.Equal(t, test.expected, actual)
+		if test.expected != nil && actual != nil {
+			require.Equal(t, test.expected.Error(), actual.Error())
+		} else if test.expected == nil {
+			require.Nil(t, actual)
+		} else {
+			require.Fail(t, "text.expected is nil but not actual")
+		}
 	}
 }
 
@@ -166,7 +173,7 @@ func TestAdd(t *testing.T) {
 	sumXyModn, err := Add(x, y, n)
 	require.Nil(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y, m, expected *big.Int // inputs: x,y,m
 	}{
 		// Small number tests
@@ -211,7 +218,6 @@ func TestAddInvariants(t *testing.T) {
 	for _, x := range inputs {
 		for _, y := range inputs {
 			for _, m := range moduli {
-
 				// Addition is commutative
 				z0, err := Add(x, y, m)
 				require.NoError(t, err)
@@ -241,7 +247,7 @@ func TestMul(t *testing.T) {
 	// Pre-compute some values
 	xyModm := new(big.Int).Mod(xy, m)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y, m, expected *big.Int // inputs: x,y,m
 	}{
 		// Small number tests
@@ -299,7 +305,7 @@ func TestMulInvariants(t *testing.T) {
 
 // Tests modular negation with known answers
 func TestNeg(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		x, m, e *big.Int
 	}{
 		{big.NewInt(1), big.NewInt(7), big.NewInt(6)},
@@ -334,7 +340,7 @@ func TestNeg(t *testing.T) {
 }
 
 func TestNegInvariants(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		x, m, e *big.Int
 	}{
 		{big.NewInt(0), big.NewInt(7), big.NewInt(0)},
@@ -402,6 +408,7 @@ func TestRandDistinctWithLargeModulus(t *testing.T) {
 
 // Calls sampleFunc() n times and asserts that the lower 64B of each output are unique.
 func testUnique(t *testing.T, iterations int, sampleFunc func() *big.Int) {
+	t.Helper()
 	// For simplicity, we test only the lower 64B of each nonce. This is sufficient
 	// to prove uniqueness and go-lang doesn't hash slices (no slices in maps)
 	const size = 256 / 8
@@ -443,7 +450,7 @@ func TestRandNotZeroNotOne(t *testing.T) {
 func TestRand_NilModulusErrors(t *testing.T) {
 	r, err := Rand(nil)
 	require.Nil(t, r)
-	require.Contains(t, err.Error(), internal.ErrNilArguments.Error())
+	require.Contains(t, err.Error(), errs.NewIsNil("one of the arguments").Error())
 }
 
 // Double-inverse is the identity function in fields
@@ -530,7 +537,7 @@ func Benchmark_rand1024(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N1024) // nolint
+		Rand(N1024)
 	}
 }
 
@@ -540,7 +547,7 @@ func BenchmarkRand1024(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N1024) // nolint
+		Rand(N1024)
 	}
 }
 
@@ -550,7 +557,7 @@ func Benchmark_rand256(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N256) // nolint
+		Rand(N256)
 	}
 }
 
@@ -560,6 +567,6 @@ func BenchmarkRandStar256(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N256) // nolint
+		Rand(N256)
 	}
 }

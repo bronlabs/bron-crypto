@@ -2,16 +2,17 @@ package test_utils
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold"
-	"github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17"
-	lindell17_dkg "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript"
-	"github.com/pkg/errors"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	lindell17_dkg "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/pkg/errors"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, transcripts []transcript.Transcript, prngs []io.Reader) (participants []*lindell17_dkg.Participant, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, allTranscripts []transcripts.Transcript, prngs []io.Reader) (participants []*lindell17_dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -24,9 +25,9 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		} else {
 			prng = crand.Reader
 		}
-		var transcript transcript.Transcript
-		if transcripts != nil && transcripts[i] != nil {
-			transcript = transcripts[i]
+		var transcript transcripts.Transcript
+		if allTranscripts != nil && allTranscripts[i] != nil {
+			transcript = allTranscripts[i]
 		}
 
 		if !cohortConfig.IsInCohort(identity) {

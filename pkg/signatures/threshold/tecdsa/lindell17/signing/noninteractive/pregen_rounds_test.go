@@ -3,13 +3,15 @@ package noninteractive_test
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration/test_utils"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/protocol"
-	lin17_noninteractive_test_utils "github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	lin17_noninteractive_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 )
 
 func Test_PreGenHappyPath(t *testing.T) {
@@ -30,7 +32,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 	identities, err := test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := test_utils.MakeCohort(cipherSuite, protocol.LINDELL17, identities, threshold, identities)
+	cohort, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, threshold, identities)
 	require.NoError(t, err)
 
 	transcripts := lin17_noninteractive_test_utils.MakeTranscripts(transcriptAppLabel, identities)

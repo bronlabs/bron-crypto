@@ -21,8 +21,10 @@ type mockReader struct {
 	seed  []byte
 }
 
-var mockRngInitonce sync.Once
-var mockRng mockReader
+var (
+	mockRngInitonce sync.Once
+	mockRng         mockReader
+)
 
 func newMockReader() {
 	mockRng.index = 0

@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"crypto/subtle"
-	"fmt"
 	"io"
 	"math/big"
 	"reflect"
@@ -19,9 +18,9 @@ import (
 	"filippo.io/edwards25519/field"
 	"github.com/bwesterb/go-ristretto"
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
-	"github.com/pkg/errors"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 type ScalarEd25519 struct {
@@ -32,19 +31,23 @@ type PointEd25519 struct {
 	value *edwards25519.Point
 }
 
-var scOne, _ = edwards25519.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-var scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
+var (
+	scOne, _   = edwards25519.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
+)
 
 func (s *ScalarEd25519) Random(prng io.Reader) Scalar {
 	if prng == nil {
 		panic("prng in nil")
 	}
 	var seed [64]byte
-	_, _ = prng.Read(seed[:])
+	if _, err := prng.Read(seed[:]); err != nil {
+		panic(err)
+	}
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarEd25519) Hash(inputs ...[]byte) Scalar {
+func (*ScalarEd25519) Hash(inputs ...[]byte) Scalar {
 	v := new(ristretto.Scalar).Derive(bytes.Join(inputs, nil))
 	var data [32]byte
 	v.BytesInto(&data)
@@ -55,13 +58,13 @@ func (s *ScalarEd25519) Hash(inputs ...[]byte) Scalar {
 	return &ScalarEd25519{value}
 }
 
-func (s *ScalarEd25519) Zero() Scalar {
+func (*ScalarEd25519) Zero() Scalar {
 	return &ScalarEd25519{
 		value: edwards25519.NewScalar(),
 	}
 }
 
-func (s *ScalarEd25519) One() Scalar {
+func (*ScalarEd25519) One() Scalar {
 	return &ScalarEd25519{
 		value: edwards25519.NewScalar().Set(scOne),
 	}
@@ -92,7 +95,7 @@ func (s *ScalarEd25519) IsEven() bool {
 	return s.value.Bytes()[0]&1 == 0
 }
 
-func (s *ScalarEd25519) New(input int) Scalar {
+func (*ScalarEd25519) New(input int) Scalar {
 	var data [64]byte
 	i := input
 	if input < 0 {
@@ -229,9 +232,9 @@ func (s *ScalarEd25519) Neg() Scalar {
 	}
 }
 
-func (s *ScalarEd25519) SetBigInt(x *big.Int) (Scalar, error) {
+func (*ScalarEd25519) SetBigInt(x *big.Int) (Scalar, error) {
 	if x == nil {
-		return nil, fmt.Errorf("invalid value")
+		return nil, errs.NewDeserializationFailed("invalid value")
 	}
 
 	bi25519, _ := new(big.Int).SetString("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED", 16)
@@ -243,14 +246,14 @@ func (s *ScalarEd25519) SetBigInt(x *big.Int) (Scalar, error) {
 	}
 	value, err := edwards25519.NewScalar().SetCanonicalBytes(rBuf[:])
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes failed")
 	}
 	return &ScalarEd25519{value}, nil
 }
 
 func (s *ScalarEd25519) BigInt() *big.Int {
 	var ret big.Int
-	buf := internal.ReverseScalarBytes(s.value.Bytes())
+	buf := bitstring.ReverseBytes(s.value.Bytes())
 	return ret.SetBytes(buf)
 }
 
@@ -260,38 +263,38 @@ func (s *ScalarEd25519) Bytes() []byte {
 
 // SetBytesCanonical takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long and must be a reduced bytes.
-func (s *ScalarEd25519) SetBytesCanonical(input []byte) (Scalar, error) {
+func (*ScalarEd25519) SetBytesCanonical(input []byte) (Scalar, error) {
 	if len(input) != 32 {
-		return nil, fmt.Errorf("invalid byte sequence")
+		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	value, err := edwards25519.NewScalar().SetCanonicalBytes(input)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
 	}
 	return &ScalarEd25519{value}, nil
 }
 
 // SetBytesWide takes input a 64-byte long byte array, reduce it and return an ed25519 scalar.
 // It uses SetUniformBytes of fillipo.io/edwards25519 - https://github.com/FiloSottile/edwards25519/blob/v1.0.0-rc.1/scalar.go#L85
-// If bytes is not of the right length, it returns nil and an error
-func (s *ScalarEd25519) SetBytesWide(bytes []byte) (Scalar, error) {
-	value, err := edwards25519.NewScalar().SetUniformBytes(bytes)
+// If bytes is not of the right length, it returns nil and an error.
+func (*ScalarEd25519) SetBytesWide(input []byte) (Scalar, error) {
+	value, err := edwards25519.NewScalar().SetUniformBytes(input)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
 	}
 	return &ScalarEd25519{value}, nil
 }
 
-func isReduced(bytes []byte) bool {
-	if len(bytes) != 32 {
+func isReduced(bytes_ []byte) bool {
+	if len(bytes_) != 32 {
 		return false
 	}
 
 	for i := 32 - 1; i >= 0; i-- {
 		switch {
-		case bytes[i] > scMinusOne[i]:
+		case bytes_[i] > scMinusOne[i]:
 			return false
-		case bytes[i] < scMinusOne[i]:
+		case bytes_[i] < scMinusOne[i]:
 			return true
 		}
 	}
@@ -300,28 +303,28 @@ func isReduced(bytes []byte) bool {
 
 // SetBytes takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long.
-func (s *ScalarEd25519) SetBytes(input []byte) (result Scalar, err error) {
+func (*ScalarEd25519) SetBytes(input []byte) (result Scalar, err error) {
 	if len(input) != 32 {
-		return nil, fmt.Errorf("invalid byte sequence")
+		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
-	value := new(edwards25519.Scalar)
+	var value *edwards25519.Scalar
 	if isReduced(input) {
 		value, err = edwards25519.NewScalar().SetCanonicalBytes(input)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
 		}
 	} else {
 		var wideBytes [64]byte
 		copy(wideBytes[:], input[:])
 		value, err = edwards25519.NewScalar().SetUniformBytes(wideBytes[:])
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
 		}
 	}
 	return &ScalarEd25519{value}, nil
 }
 
-func (s *ScalarEd25519) CurveName() string {
+func (*ScalarEd25519) CurveName() string {
 	return ED25519Name
 }
 
@@ -338,11 +341,11 @@ func (s *ScalarEd25519) MarshalBinary() ([]byte, error) {
 func (s *ScalarEd25519) UnmarshalBinary(input []byte) error {
 	sc, err := scalarUnmarshalBinary(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "scalar unmarshal binary failed")
 	}
 	ss, ok := sc.(*ScalarEd25519)
 	if !ok {
-		return fmt.Errorf("invalid scalar")
+		return errs.NewInvalidType("invalid scalar")
 	}
 	s.value = ss.value
 	return nil
@@ -355,11 +358,11 @@ func (s *ScalarEd25519) MarshalText() ([]byte, error) {
 func (s *ScalarEd25519) UnmarshalText(input []byte) error {
 	sc, err := scalarUnmarshalText(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "scalar unmarshal binary failed")
 	}
 	ss, ok := sc.(*ScalarEd25519)
 	if !ok {
-		return fmt.Errorf("invalid scalar")
+		return errs.NewInvalidType("invalid scalar")
 	}
 	s.value = ss.value
 	return nil
@@ -369,7 +372,7 @@ func (s *ScalarEd25519) GetEdwardsScalar() *edwards25519.Scalar {
 	return edwards25519.NewScalar().Set(s.value)
 }
 
-func (s *ScalarEd25519) SetEdwardsScalar(sc *edwards25519.Scalar) *ScalarEd25519 {
+func (*ScalarEd25519) SetEdwardsScalar(sc *edwards25519.Scalar) *ScalarEd25519 {
 	return &ScalarEd25519{value: edwards25519.NewScalar().Set(sc)}
 }
 
@@ -380,15 +383,15 @@ func (s *ScalarEd25519) MarshalJSON() ([]byte, error) {
 func (s *ScalarEd25519) UnmarshalJSON(input []byte) error {
 	curve, err := GetCurveByName(s.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errs.WrapDeserializationFailed(err, "json unmarshal failed")
 	}
 	sc, err := curve.NewScalarFromJSON(input)
 	if err != nil {
-		return errors.Wrap(err, "could not extract a scalar from json")
+		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarEd25519)
 	if !ok {
-		return errors.New("invalid type")
+		return errs.NewFailed("invalid type")
 	}
 	s.value = S.value
 	return nil
@@ -400,7 +403,7 @@ func (p *PointEd25519) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointEd25519) Hash(inputs ...[]byte) Point {
+func (*PointEd25519) Hash(inputs ...[]byte) Point {
 	/// Perform hashing to the group using the Elligator2 map
 	///
 	/// See https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#section-6.7.1
@@ -415,13 +418,13 @@ func (p *PointEd25519) Hash(inputs ...[]byte) Point {
 	return toEdwards(m1, signBit)
 }
 
-func (p *PointEd25519) Identity() Point {
+func (*PointEd25519) Identity() Point {
 	return &PointEd25519{
 		value: edwards25519.NewIdentityPoint(),
 	}
 }
 
-func (p *PointEd25519) Generator() Point {
+func (*PointEd25519) Generator() Point {
 	return &PointEd25519{
 		value: edwards25519.NewGeneratorPoint(),
 	}
@@ -431,7 +434,7 @@ func (p *PointEd25519) IsIdentity() bool {
 	return p.Equal(p.Identity())
 }
 
-func (p *PointEd25519) IsNegative() bool {
+func (*PointEd25519) IsNegative() bool {
 	// Negative points don't really exist in ed25519
 	return false
 }
@@ -445,7 +448,7 @@ func (p *PointEd25519) Double() Point {
 	return &PointEd25519{value: edwards25519.NewIdentityPoint().Add(p.value, p.value)}
 }
 
-func (p *PointEd25519) Scalar() Scalar {
+func (*PointEd25519) Scalar() Scalar {
 	return new(ScalarEd25519).Zero()
 }
 
@@ -495,11 +498,11 @@ func (p *PointEd25519) Mul(rhs Scalar) Point {
 // is a function for mangling the bits of a (formerly
 // mathematically well-defined) "scalar" and multiplying it to produce a
 // public key.
-func (p *PointEd25519) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *ScalarEd25519) (*PointEd25519, error) {
+func (*PointEd25519) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *ScalarEd25519) (*PointEd25519, error) {
 	data := rhs.value.Bytes()
 	s, err := edwards25519.NewScalar().SetBytesWithClamping(data[:])
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
 	}
 	value := edwards25519.NewIdentityPoint().ScalarBaseMult(s)
 	return &PointEd25519{value}, nil
@@ -550,7 +553,7 @@ func (p *PointEd25519) Set(x, y *big.Int) (Point, error) {
 // sets r according to Section 4.3 of draft-irtf-cfrg-ristretto255-decaf448-00,
 // and returns r and 0.
 func sqrtRatio(u, v *ed.FieldElement) (r *ed.FieldElement, wasSquare bool) {
-	var sqrtM1 = ed.FieldElement{
+	sqrtM1 := ed.FieldElement{
 		533094393274173, 2016890930128738, 18285341111199,
 		134597186663265, 1486323764102114,
 	}
@@ -580,7 +583,7 @@ func sqrtRatio(u, v *ed.FieldElement) (r *ed.FieldElement, wasSquare bool) {
 }
 
 // cselect sets v to a if cond == 1, and to b if cond == 0.
-func cselect(v, a, b *ed.FieldElement, cond bool) *ed.FieldElement {
+func cselect(v, a, b *ed.FieldElement, cond bool) {
 	const mask64Bits uint64 = (1 << 64) - 1
 
 	m := uint64(0)
@@ -593,7 +596,6 @@ func cselect(v, a, b *ed.FieldElement, cond bool) *ed.FieldElement {
 	v[2] = (m & a[2]) | (^m & b[2])
 	v[3] = (m & a[3]) | (^m & b[3])
 	v[4] = (m & a[4]) | (^m & b[4])
-	return v
 }
 
 func (p *PointEd25519) ToAffineCompressed() []byte {
@@ -611,39 +613,39 @@ func (p *PointEd25519) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (p *PointEd25519) FromAffineCompressed(inBytes []byte) (Point, error) {
+func (*PointEd25519) FromAffineCompressed(inBytes []byte) (Point, error) {
 	pt, err := edwards25519.NewIdentityPoint().SetBytes(inBytes)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapDeserializationFailed(err, "set bytes method failed")
 	}
 	return &PointEd25519{value: pt}, nil
 }
 
-func (p *PointEd25519) FromAffineUncompressed(inBytes []byte) (Point, error) {
+func (*PointEd25519) FromAffineUncompressed(inBytes []byte) (Point, error) {
 	if len(inBytes) != 64 {
-		return nil, fmt.Errorf("invalid byte sequence")
+		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	if bytes.Equal(inBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		return &PointEd25519{value: edwards25519.NewIdentityPoint()}, nil
 	}
 	x, err := new(field.Element).SetBytes(inBytes[:32])
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCoordinates(err, "x")
 	}
 	y, err := new(field.Element).SetBytes(inBytes[32:])
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidCoordinates(err, "y")
 	}
 	z := new(field.Element).One()
 	t := new(field.Element).Multiply(x, y)
 	value, err := edwards25519.NewIdentityPoint().SetExtendedCoordinates(x, y, z, t)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapDeserializationFailed(err, "set extended coordinates")
 	}
 	return &PointEd25519{value}, nil
 }
 
-func (p *PointEd25519) CurveName() string {
+func (*PointEd25519) CurveName() string {
 	return ED25519Name
 }
 
@@ -653,14 +655,14 @@ func multiScalarMultEd25519(scalars []Scalar, points []Point) (Point, error) {
 	for i, sc := range scalars {
 		s, err := edwards25519.NewScalar().SetCanonicalBytes(sc.Bytes())
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
 		}
 		nScalars[i] = s
 	}
 	for i, pt := range points {
 		pp, ok := pt.(*PointEd25519)
 		if !ok {
-			return nil, errors.Errorf("invalid point type %s, expected PointEd25519", reflect.TypeOf(pt).Name())
+			return nil, errs.NewFailed("invalid point type %s, expected PointEd25519", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = pp.value
 	}
@@ -668,73 +670,85 @@ func multiScalarMultEd25519(scalars []Scalar, points []Point) (Point, error) {
 	return &PointEd25519{value: pt}, nil
 }
 
-func (p *PointEd25519) VarTimeDoubleScalarBaseMult(a Scalar, A Point, b Scalar) (Point, error) {
+func (*PointEd25519) VarTimeDoubleScalarBaseMult(a Scalar, A Point, b Scalar) (Point, error) {
 	AA, ok := A.(*PointEd25519)
 	if !ok {
-		return nil, errors.Errorf("A is %s, expected PointEd25519", reflect.TypeOf(A).Name())
+		return nil, errs.NewFailed("A is %s, expected PointEd25519", reflect.TypeOf(A).Name())
 	}
 	aa, ok := a.(*ScalarEd25519)
 	if !ok {
-		return nil, errors.Errorf("a is %s, expected PointEd25519", reflect.TypeOf(a).Name())
+		return nil, errs.NewFailed("a is %s, expected PointEd25519", reflect.TypeOf(a).Name())
 	}
 	bb, ok := b.(*ScalarEd25519)
 	if !ok {
-		return nil, errors.Errorf("b is %s, expected PointEd25519", reflect.TypeOf(b).Name())
+		return nil, errs.NewFailed("b is %s, expected PointEd25519", reflect.TypeOf(b).Name())
 	}
 	value := edwards25519.NewIdentityPoint().VarTimeDoubleScalarBaseMult(aa.value, AA.value, bb.value)
 	return &PointEd25519{value}, nil
 }
 
 func (p *PointEd25519) MarshalBinary() ([]byte, error) {
-	return pointMarshalBinary(p)
+	point, err := pointMarshalBinary(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "marshal to point failed")
+	}
+	return point, nil
 }
 
 func (p *PointEd25519) UnmarshalBinary(input []byte) error {
 	pt, err := pointUnmarshalBinary(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*PointEd25519)
 	if !ok {
-		return fmt.Errorf("invalid point")
+		return errs.NewInvalidType("invalid point")
 	}
 	p.value = ppt.value
 	return nil
 }
 
 func (p *PointEd25519) MarshalText() ([]byte, error) {
-	return pointMarshalText(p)
+	t, err := pointMarshalText(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "marshal to text failed")
+	}
+	return t, nil
 }
 
 func (p *PointEd25519) UnmarshalText(input []byte) error {
 	pt, err := pointUnmarshalText(input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*PointEd25519)
 	if !ok {
-		return fmt.Errorf("invalid point")
+		return errs.NewInvalidType("invalid point")
 	}
 	p.value = ppt.value
 	return nil
 }
 
 func (p *PointEd25519) MarshalJSON() ([]byte, error) {
-	return pointMarshalJson(p)
+	point, err := pointMarshalJson(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "marshal to json failed")
+	}
+	return point, nil
 }
 
 func (p *PointEd25519) UnmarshalJSON(input []byte) error {
 	curve, err := GetCurveByName(p.CurveName())
 	if err != nil {
-		return errors.WithStack(err)
+		return errs.WrapDeserializationFailed(err, "json unmarshal failed")
 	}
 	pt, err := curve.NewPointFromJSON(input)
 	if err != nil {
-		return errors.Wrap(err, "could not extract a point from json")
+		return errs.WrapDeserializationFailed(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointEd25519)
 	if !ok {
-		return errors.New("invalid type")
+		return errs.NewFailed("invalid type")
 	}
 	p.value = P.value
 	return nil
@@ -744,7 +758,7 @@ func (p *PointEd25519) GetEdwardsPoint() *edwards25519.Point {
 	return edwards25519.NewIdentityPoint().Set(p.value)
 }
 
-func (p *PointEd25519) SetEdwardsPoint(pt *edwards25519.Point) *PointEd25519 {
+func (*PointEd25519) SetEdwardsPoint(pt *edwards25519.Point) *PointEd25519 {
 	return &PointEd25519{value: edwards25519.NewIdentityPoint().Set(pt)}
 }
 
@@ -819,11 +833,13 @@ func elligatorEncode(r0 *ed.FieldElement) *ed.FieldElement {
 		486662, 0, 0, 0, 0,
 	}
 	// montgomeryANeg is equal to -486662.
-	montgomeryANeg := &ed.FieldElement{2251799813198567,
+	montgomeryANeg := &ed.FieldElement{
+		2251799813198567,
 		2251799813685247,
 		2251799813685247,
 		2251799813685247,
-		2251799813685247}
+		2251799813685247,
+	}
 	t := new(ed.FieldElement)
 	one := new(ed.FieldElement).SetOne()
 	// 2r^2

@@ -3,9 +3,10 @@ package test_utils
 import (
 	crand "crypto/rand"
 	"fmt"
-	"github.com/copperexchange/crypto-primitives-go/pkg/agreeonrandom"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/integration"
+
+	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
 func ProduceSharedRandomValue(curve *curves.Curve, identities []integration.IdentityKey) ([]byte, error) {

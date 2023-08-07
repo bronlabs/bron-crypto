@@ -3,9 +3,9 @@ package test_utils
 import (
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
-	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
-	"github.com/copperexchange/crypto-primitives-go/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 )
 
 // RunVSOT is a utility function used _only_ during various tests.
@@ -16,32 +16,35 @@ func RunVSOT(t *testing.T, curve *curves.Curve, batchSize int, uniqueSessionId [
 	t.Helper()
 	receiver, err := vsot.NewReceiver(curve, batchSize, uniqueSessionId, nil)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run VSOT")
 	}
 	sender, err := vsot.NewSender(curve, batchSize, uniqueSessionId, nil)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run VSOT")
 	}
 	proof, publicKey, err := sender.Round1ComputeAndZkpToPublicKey()
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 1 in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "sender round 1 in run VSOT")
 	}
 	receiversMaskedChoice, err := receiver.Round2VerifySchnorrAndPadTransfer(publicKey, proof)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "receiver round 2 in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "receiver round 2 in run VSOT")
 	}
 	challenge, err := sender.Round3PadTransfer(receiversMaskedChoice)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 3 in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "sender round 3 in run VSOT")
 	}
-	challengeResponse := receiver.Round4RespondToChallenge(challenge)
+	challengeResponse, err := receiver.Round4RespondToChallenge(challenge)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "receiver round 4 in run VSOT")
+	}
 	challengeOpenings, err := sender.Round5Verify(challengeResponse)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 5 in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "sender round 5 in run VSOT")
 	}
 	err = receiver.Round6Verify(challengeOpenings)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "receiver round 6 in run simplest OT")
+		return nil, nil, errs.WrapFailed(err, "receiver round 6 in run VSOT")
 	}
 	return sender.Output, receiver.Output, nil
 }

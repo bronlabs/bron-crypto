@@ -8,21 +8,21 @@ package fp
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
-	"github.com/copperexchange/crypto-primitives-go/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 type Fp fiat_pasta_fp_montgomery_domain_field_element
 
-// r = 2^256 mod p
+// r = 2^256 mod p.
 var r = &Fp{0x34786d38fffffffd, 0x992c350be41914ad, 0xffffffffffffffff, 0x3fffffffffffffff}
 
-// r2 = 2^512 mod p
+// r2 = 2^512 mod p.
 var r2 = &Fp{0x8c78ecb30000000f, 0xd7d30dbd8b0de0e7, 0x7797a99bc3c95d18, 0x096d41af7b9cb714}
 
-// r3 = 2^768 mod p
+// r3 = 2^768 mod p.
 var r3 = &Fp{0xf185a5993a9e10f9, 0xf6a68f3b6ac5b1d1, 0xdf8d1014353fd42c, 0x2ae309222d2d9910}
 
 // generator = 5 mod p is a generator of the `p - 1` order multiplicative
@@ -32,7 +32,7 @@ var generator = &Fp{0xa1a55e68ffffffed, 0x74c2a54b4f4982f3, 0xfffffffffffffffd, 
 var s = 32
 
 // modulus representation
-// p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
+// p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001.
 var modulus = &Fp{0x992d30ed00000001, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000}
 
 var biModulus = new(big.Int).SetBytes([]byte{
@@ -44,7 +44,7 @@ var biModulus = new(big.Int).SetBytes([]byte{
 
 // Cmp returns -1 if fp < rhs
 // 0 if fp == rhs
-// 1 if fp > rhs
+// 1 if fp > rhs.
 func (fp *Fp) Cmp(rhs *Fp) int {
 	gt := 0
 	lt := 0
@@ -55,7 +55,7 @@ func (fp *Fp) Cmp(rhs *Fp) int {
 	return gt - lt
 }
 
-// Equal returns true if fp == rhs
+// Equal returns true if fp == rhs.
 func (fp *Fp) Equal(rhs *Fp) bool {
 	t := fp[0] ^ rhs[0]
 	t |= fp[1] ^ rhs[1]
@@ -64,7 +64,7 @@ func (fp *Fp) Equal(rhs *Fp) bool {
 	return t == 0
 }
 
-// IsZero returns true if fp == 0
+// IsZero returns true if fp == 0.
 func (fp *Fp) IsZero() bool {
 	t := fp[0]
 	t |= fp[1]
@@ -73,7 +73,7 @@ func (fp *Fp) IsZero() bool {
 	return t == 0
 }
 
-// IsOne returns true if fp == R
+// IsOne returns true if fp == R.
 func (fp *Fp) IsOne() bool {
 	return fp.Equal(r)
 }
@@ -84,7 +84,7 @@ func (fp *Fp) IsOdd() bool {
 	return tv[0]&0x01 == 0x01
 }
 
-// Set fp == rhs
+// Set fp == rhs.
 func (fp *Fp) Set(rhs *Fp) *Fp {
 	fp[0] = rhs[0]
 	fp[1] = rhs[1]
@@ -93,7 +93,7 @@ func (fp *Fp) Set(rhs *Fp) *Fp {
 	return fp
 }
 
-// SetUint64 sets fp == rhs
+// SetUint64 sets fp == rhs.
 func (fp *Fp) SetUint64(rhs uint64) *Fp {
 	r := &fiat_pasta_fp_non_montgomery_domain_field_element{rhs, 0, 0, 0}
 	fiat_pasta_fp_to_montgomery((*fiat_pasta_fp_montgomery_domain_field_element)(fp), r)
@@ -109,12 +109,12 @@ func (fp *Fp) SetBool(rhs bool) *Fp {
 	return fp
 }
 
-// SetOne fp == R
+// SetOne fp == R.
 func (fp *Fp) SetOne() *Fp {
 	return fp.Set(r)
 }
 
-// SetZero fp == 0
+// SetZero fp == 0.
 func (fp *Fp) SetZero() *Fp {
 	fp[0] = 0
 	fp[1] = 0
@@ -162,7 +162,7 @@ func (fp *Fp) SetBytesWide(input *[64]byte) *Fp {
 }
 
 // SetBytes attempts to convert a little endian byte representation
-// of a scalar into a `Fp`, failing if input is not canonical
+// of a scalar into a `Fp`, failing if input is not canonical.
 func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 	d0 := &Fp{
 		binary.LittleEndian.Uint64(input[:8]),
@@ -171,33 +171,33 @@ func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
 	if d0.Cmp(modulus) != -1 {
-		return nil, fmt.Errorf("invalid byte sequence")
+		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	fiat_pasta_fp_from_bytes((*[4]uint64)(fp), input)
 	fiat_pasta_fp_to_montgomery((*fiat_pasta_fp_montgomery_domain_field_element)(fp), (*fiat_pasta_fp_non_montgomery_domain_field_element)(fp))
 	return fp, nil
 }
 
-// SetBigInt initializes an element from big.Int
-// The value is reduced by the modulus
+// SetBigInt initialises an element from big.Int
+// The value is reduced by the modulus.
 func (fp *Fp) SetBigInt(bi *big.Int) *Fp {
 	var buffer [32]byte
 	r := new(big.Int).Set(bi)
 	r.Mod(r, biModulus)
 	r.FillBytes(buffer[:])
-	copy(buffer[:], internal.ReverseScalarBytes(buffer[:]))
+	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = fp.SetBytes(&buffer)
 	return fp
 }
 
-// SetRaw converts a raw array into a field element
+// SetRaw converts a raw array into a field element.
 func (fp *Fp) SetRaw(array *[4]uint64) *Fp {
 	fiat_pasta_fp_to_montgomery((*fiat_pasta_fp_montgomery_domain_field_element)(fp), (*fiat_pasta_fp_non_montgomery_domain_field_element)(array))
 	return fp
 }
 
 // Bytes converts this element into a byte representation
-// in little endian byte order
+// in little endian byte order.
 func (fp *Fp) Bytes() [32]byte {
 	var output [32]byte
 	tv := new(fiat_pasta_fp_non_montgomery_domain_field_element)
@@ -206,20 +206,20 @@ func (fp *Fp) Bytes() [32]byte {
 	return output
 }
 
-// BigInt converts this element into the big.Int struct
+// BigInt converts this element into the big.Int struct.
 func (fp *Fp) BigInt() *big.Int {
 	buffer := fp.Bytes()
-	return new(big.Int).SetBytes(internal.ReverseScalarBytes(buffer[:]))
+	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
-// Double this element
+// Double this element.
 func (fp *Fp) Double(elem *Fp) *Fp {
 	delem := (*fiat_pasta_fp_montgomery_domain_field_element)(elem)
 	fiat_pasta_fp_add((*fiat_pasta_fp_montgomery_domain_field_element)(fp), delem, delem)
 	return fp
 }
 
-// Square this element
+// Square this element.
 func (fp *Fp) Square(elem *Fp) *Fp {
 	delem := (*fiat_pasta_fp_montgomery_domain_field_element)(elem)
 	fiat_pasta_fp_square((*fiat_pasta_fp_montgomery_domain_field_element)(fp), delem)
@@ -227,7 +227,7 @@ func (fp *Fp) Square(elem *Fp) *Fp {
 }
 
 // Sqrt this element, if it exists. If true, then value
-// is a square root. If false, value is a QNR
+// is a square root. If false, value is a QNR.
 func (fp *Fp) Sqrt(elem *Fp) (*Fp, bool) {
 	return fp.tonelliShanks(elem)
 }
@@ -286,18 +286,19 @@ func (fp *Fp) tonelliShanks(elem *Fp) (*Fp, bool) {
 }
 
 // Invert this element i.e. compute the multiplicative inverse
-// return false, zero if this element is zero
+// return false, zero if this element is zero.
 func (fp *Fp) Invert(elem *Fp) (*Fp, bool) {
 	// computes elem^(p - 2) mod p
 	exp := [4]uint64{
 		0x992d30ecffffffff,
 		0x224698fc094cf91b,
 		0x0000000000000000,
-		0x4000000000000000}
+		0x4000000000000000,
+	}
 	return fp.pow(elem, exp), !elem.IsZero()
 }
 
-// Mul returns the result from multiplying this element by rhs
+// Mul returns the result from multiplying this element by rhs.
 func (fp *Fp) Mul(lhs, rhs *Fp) *Fp {
 	dlhs := (*fiat_pasta_fp_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fp_montgomery_domain_field_element)(rhs)
@@ -305,7 +306,7 @@ func (fp *Fp) Mul(lhs, rhs *Fp) *Fp {
 	return fp
 }
 
-// Sub returns the result from subtracting rhs from this element
+// Sub returns the result from subtracting rhs from this element.
 func (fp *Fp) Sub(lhs, rhs *Fp) *Fp {
 	dlhs := (*fiat_pasta_fp_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fp_montgomery_domain_field_element)(rhs)
@@ -313,7 +314,7 @@ func (fp *Fp) Sub(lhs, rhs *Fp) *Fp {
 	return fp
 }
 
-// Add returns the result from adding rhs to this element
+// Add returns the result from adding rhs to this element.
 func (fp *Fp) Add(lhs, rhs *Fp) *Fp {
 	dlhs := (*fiat_pasta_fp_montgomery_domain_field_element)(lhs)
 	drhs := (*fiat_pasta_fp_montgomery_domain_field_element)(rhs)
@@ -321,14 +322,14 @@ func (fp *Fp) Add(lhs, rhs *Fp) *Fp {
 	return fp
 }
 
-// Neg returns negation of this element
+// Neg returns negation of this element.
 func (fp *Fp) Neg(elem *Fp) *Fp {
 	delem := (*fiat_pasta_fp_montgomery_domain_field_element)(elem)
 	fiat_pasta_fp_opp((*fiat_pasta_fp_montgomery_domain_field_element)(fp), delem)
 	return fp
 }
 
-// Exp exponentiates this element by exp
+// Exp exponentiates this element by exp.
 func (fp *Fp) Exp(base, exp *Fp) *Fp {
 	// convert exponent to integer form
 	tv := &fiat_pasta_fp_non_montgomery_domain_field_element{}
@@ -352,7 +353,7 @@ func (fp *Fp) pow(base *Fp, exp [4]uint64) *Fp {
 	return fp.Set(res)
 }
 
-// CMove selects lhs if choice == 0 and rhs if choice == 1
+// CMove selects lhs if choice == 0 and rhs if choice == 1.
 func (fp *Fp) CMove(lhs, rhs *Fp, choice int) *Fp {
 	dlhs := (*[4]uint64)(lhs)
 	drhs := (*[4]uint64)(rhs)
@@ -360,7 +361,7 @@ func (fp *Fp) CMove(lhs, rhs *Fp, choice int) *Fp {
 	return fp
 }
 
-// ToRaw converts this element into the a [4]uint64
+// ToRaw converts this element into the a [4]uint64.
 func (fp *Fp) ToRaw() [4]uint64 {
 	res := &fiat_pasta_fp_non_montgomery_domain_field_element{}
 	fiat_pasta_fp_from_montgomery(res, (*fiat_pasta_fp_montgomery_domain_field_element)(fp))

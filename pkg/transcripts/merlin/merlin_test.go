@@ -5,8 +5,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/copperexchange/crypto-primitives-go/pkg/transcript/merlin"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 func TestSimpleTranscript(t *testing.T) {

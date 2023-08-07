@@ -14,7 +14,7 @@
 // ============================= FUNCTIONALITIES ============================ //
 //
 // OBLIVIOUS TRANSFER (OT)
-// At high level, a single 1-out-of-2 OT realizes this functionality:
+// At high level, a single 1-out-of-2 OT realises this functionality:
 //
 //	┌------┐                      ┌------------------┐               ┌--------┐
 //	|      |                      |                  |               |        |
@@ -27,7 +27,7 @@
 // s.t. DeltaOpt = Opt_{Choice} = Opt_0 • (1-Choice) + Opt_1 • Choice
 //
 // CORRELATED OBLIVIOUS TRANSFER (COT)
-// In contrast, a single "Correlated" OT realizes tbe following functionality:
+// In contrast, a single "Correlated" OT realises tbe following functionality:
 //
 //	┌------┐                      ┌------------------┐               ┌--------┐
 //	|      |                      |                  |               |        |
@@ -137,7 +137,7 @@
 //  2. S: (u,ẋ,ṫ)---(Round2)--->(v_0,v_1)         [Ext.1, Ext.2, Ext.4, Check.1*, T&R.1, T&R.3, Check.3]
 package softspoken
 
-import "github.com/copperexchange/crypto-primitives-go/pkg/core/curves"
+import "github.com/copperexchange/knox-primitives/pkg/core/curves"
 
 const (
 	// ------------------------ CONFIGURABLE PARAMETERS --------------------- //
@@ -164,16 +164,16 @@ const (
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
 	// Zeta (ξ) is the batch size in bits used in the COTe protocol. For DKLS23,
 	// ξ = l_OTe (κ + 2s), where s is their statistical security parameter. For
-	// convenience, we set s = σ
+	// convenience, we set s = σ.
 	Zeta = lOTe * (Kappa + 2*Sigma)
 
 	// ZetaPrime (ξ') is the bit-length of pseudorandom seed expansions.
 	ZetaPrime = Zeta + Sigma
 
-	// number of blocks of size Sigma in the output batch
+	// number of blocks of size Sigma in the output batch.
 	M = Zeta / Sigma
 
-	// Equivalents in Bytes
+	// Equivalents in Bytes.
 	KappaBytes     = Kappa >> 3     // KappaBytes (κ) is the computational security parameter in bytes
 	ZetaBytes      = Zeta >> 3      // ZetaBytes (ξ) is the batch size in bytes.
 	SigmaBytes     = Sigma >> 3     // SigmaBytes (σ) is the statistical security parameter in bytes
@@ -187,29 +187,29 @@ type (
 	OTeInputChoices = [ZetaBytes]byte
 
 	// OTeSenderOutput (v_0, v_1) ∈ [2][ξ][ω][κ]bits is the output of the sender in
-	// the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram above)
+	// the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram above).
 	OTeSenderOutput = [2][Zeta][OTeWidth][KappaBytes]byte
 
 	// OTeReceiverOutput (v_x) ∈ [ξ][ω][κ]bits is the output of the receiver in the
-	// OTe protocol ("DeltaOpt" in the diagram above)
+	// OTe protocol ("DeltaOpt" in the diagram above).
 	OTeReceiverOutput = [Zeta][OTeWidth][KappaBytes]byte
 
 	// ------------------------- (Correlated) COTe -------------------------- //
-	// COTeInputOpt (α) ∈ [ξ][ω]curve.Scalar is the input of the sender in the COTe protocol (InputOpt)
+	// COTeInputOpt (α) ∈ [ξ][ω]curve.Scalar is the input of the sender in the COTe protocol (InputOpt).
 	COTeInputOpt = [Zeta][OTeWidth]curves.Scalar
 
-	// DerandomizeMask (τ) ∈ [ξ][ω]curve.Scalar is the correlation mask
+	// DerandomizeMask (τ) ∈ [ξ][ω]curve.Scalar is the correlation mask.
 	DerandomizeMask [Zeta][OTeWidth]curves.Scalar
 
 	// COTeSenderOutput (z_A) ∈ [ξ][ω]curve.Scalar is the output of the sender in
-	// the COTe protocol, ("Correlation" in the diagram above)
+	// the COTe protocol, ("Correlation" in the diagram above).
 	COTeSenderOutput = [Zeta][OTeWidth]curves.Scalar
 
-	// COTeReceiverOutput (z_B) ∈ [ξ][ω]curve.Scalar is the output of the receiver in the COTe protocol (DeltaOpt)
+	// COTeReceiverOutput (z_B) ∈ [ξ][ω]curve.Scalar is the output of the receiver in the COTe protocol (DeltaOpt).
 	COTeReceiverOutput = [Zeta][OTeWidth]curves.Scalar
 
 	// ---------------------------- EXTENSION ------------------------------- //
-	// ExpansionMask (u^i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs
+	// ExpansionMask (u^i) ∈ [κ][ξ']bits is the expanded and masked PRG outputs.
 	ExpansionMask [Kappa][ZetaPrimeBytes]byte
 
 	// ExtPackedChoices (x_i) ∈ [ξ']bits are the choice bits for the OTe filled with σ random values.
@@ -221,8 +221,8 @@ type (
 	// ExtDeltaOpt (t^i_{Δ_i}) ∈ [κ][ξ']bits are the extended (via a PRG) baseOT deltaOpts.
 	ExtDeltaOpt [Kappa][ZetaPrimeBytes]byte
 
-	// ExtCorrelations (q_i) ∈ [κ][ξ']bits are the extended correlations, q^i = Δ_i • x + t^i
-	ExtCorrelations [Kappa][ZetaPrimeBytes]byte
+	// ExtCorrelations (q_i) ∈ [κ][ξ']bits are the extended correlations, q^i = Δ_i • x + t^i.
+	ExtCorrelations = [Kappa][ZetaPrimeBytes]byte
 
 	// ------------------------ CONSISTENCY CHECK --------------------------- //
 	// Challenge (χ_i) ∈ [M]×[σ]bits is the random challenge for the consistency check.
