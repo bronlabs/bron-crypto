@@ -80,7 +80,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	R.ComputeChallengeResponse(extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
-	t_j := bitstring.TransposeBooleanMatrix(extOptions[0][:]) // t_j ∈ [η'][κ]bits
+	t_j := bitstring.TransposePackedBits(extOptions[0][:]) // t_j ∈ [η'][κ]bits
 	// (T&R.2) Hash η rows of t_j using the index as salt (drop η' - η rows, used for consistency check)
 	oTeReceiverOutput = make(OTeReceiverOutput, LOTe)
 	err = HashSalted(R.sid, t_j[:eta], oTeReceiverOutput)
@@ -154,8 +154,8 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 
 	// (T&R.1, T&R.3) Transpose and Randomize the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
-	extCorrelationsTransposed := bitstring.TransposeBooleanMatrix(extCorrelations[:]) // q_j ∈ [η'][κ]bits
-	extCorrelationsTransposedPlusDelta := make([][]byte, eta)                         // q_j+Δ ∈ [η][κ]bits
+	extCorrelationsTransposed := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
+	extCorrelationsTransposedPlusDelta := make([][]byte, eta)                      // q_j+Δ ∈ [η][κ]bits
 	for j := 0; j < eta; j++ {
 		extCorrelationsTransposedPlusDelta[j] = make([]byte, KappaBytes)
 	}

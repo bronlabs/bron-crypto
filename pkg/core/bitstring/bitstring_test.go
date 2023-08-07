@@ -39,39 +39,73 @@ func TestXorBytesNew(t *testing.T) {
 	require.Equal(t, []byte{0x03, 0x07, 0x0B, 0x00}, out)
 }
 
-func TestIntToByteArray(t *testing.T) {
+func TestIntToByteArrayBE(t *testing.T) {
 	// int8
 	for i := int8(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i)}, bitstring.ToByteArray[int8](i))
+		require.Equal(t, []byte{byte(i)}, bitstring.ToByteArrayBE(i))
 	}
 	// uint16
 	for i := uint16(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, byte(i)}, bitstring.ToByteArray[uint16](i))
+		require.Equal(t, []byte{0x00, byte(i)}, bitstring.ToByteArrayBE(i))
 	}
 	for i := uint16(256); i < 356; i++ {
-		require.Equal(t, []byte{0x01, byte(i - 256)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x01, byte(i - 256)}, bitstring.ToByteArrayBE(i))
 	}
 	// int32
 	for i := int32(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArrayBE(i))
 	}
 	for i := int32(65536); i < 65636; i++ {
-		require.Equal(t, []byte{0x00, 0x01, 0x00, byte(i - 65536)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x00, 0x01, 0x00, byte(i - 65536)}, bitstring.ToByteArrayBE(i))
 	}
 	for i := int32(16777216); i < 16777316; i++ {
-		require.Equal(t, []byte{0x01, 0x00, 0x00, byte(i - 16777216)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x01, 0x00, 0x00, byte(i - 16777216)}, bitstring.ToByteArrayBE(i))
 	}
 	// uint64
 	for i := uint64(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArrayBE(i))
 	}
 	for i := uint64(4294967296); i < 4294967396; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, byte(i - 4294967296)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, byte(i - 4294967296)}, bitstring.ToByteArrayBE(i))
 	}
 	for i := uint64(281474976710656); i < 281474976710756; i++ {
-		require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i - 281474976710656)}, bitstring.ToByteArray(i))
+		require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i - 281474976710656)}, bitstring.ToByteArrayBE(i))
 	}
 
+}
+
+func TestIntToByteArrayLE(t *testing.T) {
+	// int8
+	for i := int8(0); i < 100; i++ {
+		require.Equal(t, []byte{byte(i)}, bitstring.ToByteArrayLE(i))
+	}
+	// uint16
+	for i := uint16(0); i < 100; i++ {
+		require.Equal(t, []byte{byte(i), 0x00}, bitstring.ToByteArrayLE(i))
+	}
+	for i := uint16(256); i < 356; i++ {
+		require.Equal(t, []byte{byte(i - 256), 0x01}, bitstring.ToByteArrayLE(i))
+	}
+	// int32
+	for i := int32(0); i < 100; i++ {
+		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+	}
+	for i := int32(65536); i < 65636; i++ {
+		require.Equal(t, []byte{byte(i - 65536), 0x00, 0x01, 0x00}, bitstring.ToByteArrayLE(i))
+	}
+	for i := int32(16777216); i < 16777316; i++ {
+		require.Equal(t, []byte{byte(i - 16777216), 0x00, 0x00, 0x01}, bitstring.ToByteArrayLE(i))
+	}
+	// uint64
+	for i := uint64(0); i < 100; i++ {
+		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+	}
+	for i := uint64(4294967296); i < 4294967396; i++ {
+		require.Equal(t, []byte{byte(i - 4294967296), 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+	}
+	for i := uint64(281474976710656); i < 281474976710756; i++ {
+		require.Equal(t, []byte{byte(i - 281474976710656), 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00}, bitstring.ToByteArrayLE(i))
+	}
 }
 
 func TestBoolTo(t *testing.T) {
@@ -95,7 +129,7 @@ func TestTransposeBooleanMatrix(t *testing.T) {
 		{0x71, 0x93, 0xB5, 0xD7, 0xF9, 0x1B},
 		{0x81, 0xA3, 0xC5, 0xE7, 0x09, 0x2B},
 	}
-	transposedMatrix := bitstring.TransposeBooleanMatrix(inputMatrix)
+	transposedMatrix := bitstring.TransposePackedBits(inputMatrix)
 	for i := 0; i < len(inputMatrix); i++ {
 		for j := 0; j < len(transposedMatrix); j++ {
 			// Check that the bit at position i in the jth row of the input matrix.

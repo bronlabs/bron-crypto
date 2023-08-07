@@ -1,8 +1,7 @@
 package bitstring
 
 import (
-	"bytes"
-	"encoding/binary"
+	"reflect"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
@@ -49,11 +48,24 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// ToByteArray converts from any integer type to a byte array (big-endian).
-func ToByteArray[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, i)
-	return buf.Bytes()
+// ToByteArrayBE converts from any integer type to a byte array (big-endian).
+func ToByteArrayBE[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
+	typeByteSize := uint(reflect.TypeOf(i).Size())
+	arr := make([]byte, typeByteSize)
+	for j := uint(0); j < typeByteSize; j++ { // higher bytes first
+		arr[j] = byte(i >> ((typeByteSize - 1 - j) << 3))
+	}
+	return arr
+}
+
+// ToByteArrayLE converts from any integer type to a byte array (little-endian).
+func ToByteArrayLE[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
+	typeByteSize := uint(reflect.TypeOf(i).Size())
+	arr := make([]byte, typeByteSize)
+	for j := uint(0); j < typeByteSize; j++ { // lower bytes first
+		arr[j] = byte(i >> (j << 3))
+	}
+	return arr
 }
 
 // BoolTo converts a boolean to any chosen type.
@@ -65,10 +77,10 @@ func BoolTo[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int6
 	}
 }
 
-// TransposeBooleanMatrix transposes a 2D matrix of "packed" bits (represented in
+// TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
-func TransposeBooleanMatrix(inputMatrix [][]byte) [][]byte {
+func TransposePackedBits(inputMatrix [][]byte) [][]byte {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
 	if nRowsInput%8 != 0 {
@@ -81,7 +93,7 @@ func TransposeBooleanMatrix(inputMatrix [][]byte) [][]byte {
 	for i := 0; i < nRowsOutput; i++ {
 		transposedMatrix[i] = make([]byte, nColsOutputBytes)
 	}
-	// Transpose the matrix
+	// Actually transpose the matrix bits
 	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
 			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
