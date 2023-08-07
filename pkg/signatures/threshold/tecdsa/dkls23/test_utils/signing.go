@@ -26,7 +26,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	participants = make([]*interactive.Cosigner, cohortConfig.Threshold)
 	for i, identity := range identities {
 		var prng io.Reader
-		if len(prngs) == 0 || prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader
