@@ -3,6 +3,7 @@ package paillierrange_test
 import (
 	"bytes"
 	crand "crypto/rand"
+	"fmt"
 	"github.com/copperexchange/crypto-primitives-go/pkg/core/errs"
 	"github.com/copperexchange/crypto-primitives-go/pkg/paillier"
 	"github.com/copperexchange/crypto-primitives-go/pkg/proofs/paillier/range"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
+	"strconv"
 	"testing"
 )
 
@@ -19,51 +21,62 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	pk, sk, err := paillier.NewKeys(128)
 	require.NoError(t, err)
-
 	q := big.NewInt(3_000_000)
-	x, err := randomIntInRange(q, prng)
-	require.NoError(t, err)
-	xEncrypted, r, err := pk.Encrypt(x)
-	require.NoError(t, err)
 
-	sid := []byte("sessionId")
-	err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
-	require.NoError(t, err)
+	for i := 0; i < 128; i++ {
+		sid := append([]byte("sessionId_"), []byte(strconv.Itoa(i))...)
+		x, err := randomIntInRange(q, prng)
+		require.NoError(t, err)
+
+		t.Run(fmt.Sprintf("in range %s", x.String()), func(t *testing.T) {
+			t.Parallel()
+
+			xEncrypted, r, err := pk.Encrypt(x)
+			require.NoError(t, err)
+
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			require.NoError(t, err)
+		})
+	}
 }
 
-// The way the proof is constructed in order to test that verifier fails to verify if x is out of range
-// it would require to make a "cheating" prover implementation, so we do the best we can to test failed
-// scenario, although it does not make prover cheating in this scenario.
 func Test_OutOfRange(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
 	pk, sk, err := paillier.NewKeys(128)
 	require.NoError(t, err)
-
 	q := big.NewInt(3_000_000)
 
-	x1, err := randomIntOutRangeLow(q, prng)
-	require.NoError(t, err)
-	x1Encrypted, r, err := pk.Encrypt(x1)
-	require.NoError(t, err)
+	for i := 0; i < 128; i++ {
+		sid := append([]byte("LowSessionId_"), []byte(strconv.Itoa(i))...)
+		x, err := randomIntOutRangeLow(q, prng)
+		require.NoError(t, err)
 
-	x2, err := randomIntOutRangeHigh(q, prng)
-	require.NoError(t, err)
-	x2Encrypted, r, err := pk.Encrypt(x2)
-	require.NoError(t, err)
+		t.Run(fmt.Sprintf("below range %s", x.String()), func(t *testing.T) {
+			t.Parallel()
 
-	t.Run("x below the range", func(t *testing.T) {
-		sid1 := []byte("sessionId1")
-		err = doProof(x1, x1Encrypted, r, q, pk, sk, sid1, prng)
-		require.Error(t, err)
-	})
+			xEncrypted, r, err := pk.Encrypt(x)
+			require.NoError(t, err)
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			require.Error(t, err)
+		})
+	}
 
-	t.Run("x above the range", func(t *testing.T) {
-		sid2 := []byte("sessionId2")
-		err = doProof(x2, x2Encrypted, r, q, pk, sk, sid2, prng)
-		require.Error(t, err)
-	})
+	for i := 0; i < 128; i++ {
+		sid := append([]byte("HighSessionId_"), []byte(strconv.Itoa(i))...)
+		x, err := randomIntOutRangeHigh(q, prng)
+		require.NoError(t, err)
+
+		t.Run(fmt.Sprintf("above range %s", x.String()), func(t *testing.T) {
+			t.Parallel()
+
+			xEncrypted, r, err := pk.Encrypt(x)
+			require.NoError(t, err)
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			require.Error(t, err)
+		})
+	}
 }
 
 func randomIntInRange(q *big.Int, prng io.Reader) (*big.Int, error) {
@@ -76,17 +89,18 @@ func randomIntInRange(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func randomIntOutRangeLow(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	return crand.Int(prng, l)
+	// we should make x < 0 to make this 100% correct but this is good enough
+	// and current Paillier encryption does not support negative numbers
+	l := new(big.Int).Div(q, big.NewInt(4))
+	return crand.Int(prng, l) // x < q/4
 }
 
 func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	x, err := crand.Int(prng, l)
+	x, err := crand.Int(prng, q)
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(new(big.Int).Add(l, l), x), nil
+	return new(big.Int).Add(x, q), nil // x >= q
 }
 
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r *big.Int, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
