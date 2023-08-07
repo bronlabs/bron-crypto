@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
-// CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of ther other party
+// CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of ther other party.
 func CalcOtherPartyLagrangeCoefficient(otherPartyShamirId, myShamirId, n int, curve *curves.Curve) (curves.Scalar, error) {
 	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
 	if err != nil {
