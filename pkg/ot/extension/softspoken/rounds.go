@@ -206,7 +206,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// if forced reuse, use a single OTe batch (set idxOTe = 0)
-				idxOTe := l * bitstring.To[int](!S.useForcedReuse)
+				idxOTe := l * bitstring.BoolTo[int](!S.useForcedReuse)
 				// z_A_j = ECP(v_0_j)
 				cOTeSenderOutput[l][i][j], err = S.curve.Scalar.SetBytes(
 					oTeSenderOutput[0][idxOTe][i][j][:])
@@ -272,7 +272,7 @@ func (receiver *Receiver) Round3Derandomize(
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// if forced reuse, use a single OTe batch (set idxOTe = 0)
-				idxOTe := l * bitstring.To[int](!receiver.useForcedReuse)
+				idxOTe := l * bitstring.BoolTo[int](!receiver.useForcedReuse)
 				// ECP(v_x_j)
 				v_x_NegCurve, err = receiver.curve.Scalar.SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {

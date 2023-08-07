@@ -75,12 +75,12 @@ func TestIntToByteArray(t *testing.T) {
 }
 
 func TestBoolTo(t *testing.T) {
-	require.Equal(t, byte(0x00), bitstring.To[byte](false))
-	require.Equal(t, byte(0x01), bitstring.To[byte](true))
-	require.Equal(t, uint(0x00), bitstring.To[uint](false))
-	require.Equal(t, uint(0x01), bitstring.To[uint](true))
-	require.Equal(t, int(0x00), bitstring.To[int](false))
-	require.Equal(t, int(0x01), bitstring.To[int](true))
+	require.Equal(t, byte(0x00), bitstring.BoolTo[byte](false))
+	require.Equal(t, byte(0x01), bitstring.BoolTo[byte](true))
+	require.Equal(t, uint(0x00), bitstring.BoolTo[uint](false))
+	require.Equal(t, uint(0x01), bitstring.BoolTo[uint](true))
+	require.Equal(t, int(0x00), bitstring.BoolTo[int](false))
+	require.Equal(t, int(0x01), bitstring.BoolTo[int](true))
 }
 
 func TestTransposeBooleanMatrix(t *testing.T) {

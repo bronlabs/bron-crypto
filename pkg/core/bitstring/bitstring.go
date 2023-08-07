@@ -56,8 +56,8 @@ func ToByteArray[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 |
 	return buf.Bytes()
 }
 
-// To converts a boolean to any chosen type.
-func To[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](b bool) T {
+// BoolTo converts a boolean to any chosen type.
+func BoolTo[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](b bool) T {
 	if b {
 		return T(1)
 	} else {
