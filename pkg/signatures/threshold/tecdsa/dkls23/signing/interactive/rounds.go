@@ -256,7 +256,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	}, nil
 }
 
-// Aggregate computes the sum of partial signatures to get a valid signature. It also normalizes the signature to the low-s form as well as attaches the recovery id to the final signature.
+// Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
 func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[integration.IdentityKey]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
 	w := curve.Scalar.Zero()
