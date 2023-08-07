@@ -209,7 +209,6 @@ func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[inte
 }
 
 func RunDKG(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
-
 	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, err

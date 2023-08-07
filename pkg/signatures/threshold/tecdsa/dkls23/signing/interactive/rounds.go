@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"math/big"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -13,7 +15,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
-	"golang.org/x/crypto/sha3"
 )
 
 var h = sha3.New256
@@ -58,10 +59,14 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 			{
 				byte(ic.MyShamirId),
 				byte(ic.IdentityKeyToShamirId[participant]),
-			}, ic.UniqueSessionId,
+			},
+			ic.UniqueSessionId,
 			ic.state.R_i.ToAffineCompressed(),
 		}, []byte(""))
 		commitmentToInstanceKey, witness, err := commitments.Commit(h, toBeCommitted)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
+		}
 		ic.state.witnessesOfCommitmentToInstanceKey[participant] = witness
 
 		// step 1.3.2
@@ -144,7 +149,8 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 			GammaU_ij:                           gammaU_ij,
 			GammaV_ij:                           gammaV_ij,
 			Psi_ij:                              psi_ij,
-			WitnessOfTheCommitmentToInstanceKey: ic.state.witnessesOfCommitmentToInstanceKey[participant]}
+			WitnessOfTheCommitmentToInstanceKey: ic.state.witnessesOfCommitmentToInstanceKey[participant],
+		}
 	}
 	// step 2.7
 	return &Round2Broadcast{
@@ -183,7 +189,8 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 			{
 				byte(ic.IdentityKeyToShamirId[participant]),
 				byte(ic.MyShamirId),
-			}, ic.UniqueSessionId,
+			},
+			ic.UniqueSessionId,
 			ic.state.receivedR_i[participant].ToAffineCompressed(),
 		}, []byte(""))
 
@@ -301,7 +308,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 }
 
 // TODO: remove when curve interface is extended.
-func getPointCoordinates(point curves.Point) (x *big.Int, y *big.Int) {
+func getPointCoordinates(point curves.Point) (x, y *big.Int) {
 	affine := point.ToAffineUncompressed()
 	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
 }

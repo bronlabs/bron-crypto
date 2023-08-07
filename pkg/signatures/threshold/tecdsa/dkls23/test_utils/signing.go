@@ -4,13 +4,14 @@ import (
 	crand "crypto/rand"
 	"io"
 
+	"github.com/pkg/errors"
+
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/signing/interactive"
-	"github.com/pkg/errors"
 )
 
 func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, prngs []io.Reader) (participants []*interactive.Cosigner, err error) {
@@ -25,7 +26,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	participants = make([]*interactive.Cosigner, cohortConfig.Threshold)
 	for i, identity := range identities {
 		var prng io.Reader
-		if prngs != nil && prngs[i] != nil {
+		if len(prngs) == 0 || prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader
@@ -167,18 +168,21 @@ func RunInteractiveSign(cohortConfig *integration.CohortConfig, identities []int
 	mappedPartialSignatures := MapPartialSignatures(identities, partialSignatures)
 	var producedSignatures []*ecdsa.Signature
 	for _, participant := range participants {
-		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
-			signature, err := interactive.Aggregate(participant.CohortConfig.CipherSuite, participant.Shard.SigningKeyShare.PublicKey, mappedPartialSignatures, message)
-			producedSignatures = append(producedSignatures, signature)
-			if err != nil {
-				return err
-			}
-			err = ecdsa.Verify(signature, cohortConfig.CipherSuite.Hash, participant.Shard.SigningKeyShare.PublicKey, message)
-			if err != nil {
-				return err
-			}
+		//TODO: test for signature aggregator
+		if !cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
+			continue
+		}
+		signature, err := interactive.Aggregate(participant.CohortConfig.CipherSuite, participant.Shard.SigningKeyShare.PublicKey, mappedPartialSignatures, message)
+		producedSignatures = append(producedSignatures, signature)
+		if err != nil {
+			return err
+		}
+		err = ecdsa.Verify(signature, cohortConfig.CipherSuite.Hash, participant.Shard.SigningKeyShare.PublicKey, message)
+		if err != nil {
+			return err
 		}
 	}
+
 	if len(producedSignatures) == 0 {
 		return errs.NewFailed("no signatures produced")
 	}

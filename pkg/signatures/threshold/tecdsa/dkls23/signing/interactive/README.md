@@ -45,7 +45,7 @@ This protocol is symmetric: In every round, all parties do the same thing.
 1. Round 1:
     1. Compute inversion mask $phi_i \leftarrow \mathbb{Z}_q$
     2. Compute instance key $r_i \leftarrow \mathbb{Z}_q$
-    3. Compute commitment to instance key: $R_i = r_i \cdot G$
+    3. Compute $R_i = r_i \cdot G$
     3. For all present parties p_j:
         1. $c, w = Commit(p_i, p_j, sid, R_i)$ where `c` is the commitment and `w` the witness. Store `w`.
         2. Run first round of `RVOLE` as bob and record the output as `multiplicationOutput`.

@@ -50,7 +50,6 @@ type Multiplication struct {
 
 type state struct {
 	phi_i                              curves.Scalar
-	zeta_i                             curves.Scalar
 	sk_i                               curves.Scalar
 	r_i                                curves.Scalar
 	R_i                                curves.Point

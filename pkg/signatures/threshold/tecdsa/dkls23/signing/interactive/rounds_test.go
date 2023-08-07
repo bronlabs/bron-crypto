@@ -9,15 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
+	"gonum.org/v1/gonum/stat/combin"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/test_utils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/stat/combin"
 )
 
 func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
