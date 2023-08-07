@@ -39,10 +39,13 @@ type Cosigner struct {
 }
 
 type SubProtocols struct {
+	// use to get the secret key msak (zeta_i)
 	zeroShareSampling *sample.Participant
-	multiplication    map[integration.IdentityKey]*Multiplication
+	// pairwise multiplication protocol ie. each party acts as alice and bob against every party
+	multiplication map[integration.IdentityKey]*Multiplication
 }
 
+// Corresponding participant objects for pairwise multiplication subprotocols.
 type Multiplication struct {
 	Alice *mult.Alice
 	Bob   *mult.Bob
@@ -83,6 +86,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
+// NewCosigner constructs the interactive DKLs23 cosigner.
 func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, shard *dkls23.Shard, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")

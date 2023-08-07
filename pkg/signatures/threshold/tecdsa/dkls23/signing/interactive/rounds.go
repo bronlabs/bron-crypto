@@ -69,7 +69,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 		}
 
 		// step 1.3.3
-		ic.state.Chi_i[participant] = ic.subprotocols.multiplication[participant].Bob.BTilde[0]
+		ic.state.Chi_i[participant] = ic.subprotocols.multiplication[participant].Bob.BTilde[0] // this is effectively bob's input to the multiplication protocol
 		if ic.subprotocols.multiplication[participant].Bob.BTilde[0].Cmp(ic.subprotocols.multiplication[participant].Bob.BTilde[1]) != 0 {
 			return nil, nil, errs.WrapFailed(err, "bob's input is not compatible with forced reuse")
 		}
@@ -152,7 +152,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 }
 
 func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
-	recomputedPublicKey := ic.state.pk_i // Zeta should cancel out
+	recomputedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
 	R := ic.state.R_i
 	phiPsi := ic.state.phi_i
 	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
@@ -256,6 +256,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	}, nil
 }
 
+// Aggregate computes the sum of partial signatures to get a valid signature. It also normalizes the signature to the low-s form as well as attaches the recovery id to the final signature.
 func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[integration.IdentityKey]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
 	w := curve.Scalar.Zero()
