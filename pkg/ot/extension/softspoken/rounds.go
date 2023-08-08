@@ -206,10 +206,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
 	for batchIndex := 0; batchIndex < len(round2Output.derandomizeMasks); batchIndex++ {
 		for i := 0; i < Zeta; i++ {
-			for k := 0; k < OTeWidth; k++ {
-				sender.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
-					round2Output.derandomizeMasks[batchIndex][i][k].Bytes())
-			}
+			sender.transcript.AppendScalars([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[batchIndex][i][:]...)
 		}
 	}
 
@@ -231,10 +228,7 @@ func (receiver *Receiver) Round3Derandomize(
 	L := len(round2Output.derandomizeMasks) // Number of reuses of the output OTe batch.
 	for batchIndex := 0; batchIndex < L; batchIndex++ {
 		for i := 0; i < Zeta; i++ {
-			for k := 0; k < OTeWidth; k++ {
-				receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
-					round2Output.derandomizeMasks[batchIndex][i][k].Bytes())
-			}
+			receiver.transcript.AppendScalars([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[batchIndex][i][:]...)
 		}
 	}
 
