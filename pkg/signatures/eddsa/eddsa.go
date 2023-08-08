@@ -59,7 +59,7 @@ func Verify(curve *curves.Curve, hashFunction func() hash.Hash, signature *Signa
 				return errs.WrapDeserializationFailed(err, "could not serialise signature to binary")
 			}
 			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
-				return errs.NewVerificationFailed("could not verify frost signature using ed25519 verifier")
+				return errs.NewVerificationFailed("could not verify schnorr signature using ed25519 verifier")
 			}
 		}
 		return nil
