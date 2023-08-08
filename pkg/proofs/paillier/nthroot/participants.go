@@ -50,7 +50,7 @@ func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Tra
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	return &Prover{
 		Participant: Participant{
@@ -73,7 +73,7 @@ func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Tran
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	return &Verifier{
 		Participant: Participant{

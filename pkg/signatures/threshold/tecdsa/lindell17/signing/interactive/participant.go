@@ -109,7 +109,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	primaryCosigner = &PrimaryCosigner{
@@ -156,7 +156,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	_, keyToId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	return &SecondaryCosigner{

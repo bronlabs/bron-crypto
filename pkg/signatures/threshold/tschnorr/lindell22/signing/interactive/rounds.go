@@ -170,7 +170,7 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript 
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
+	transcript.AppendMessage(transcriptDLogSLabel, bigS)
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
@@ -192,7 +192,7 @@ func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid, bigS []byte, tra
 		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
+	transcript.AppendMessage(transcriptDLogSLabel, bigS)
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog proof failed")
 	}

@@ -42,7 +42,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	dealt := dealer.Split(a_i0, p.prng)
 
 	proverTranscript := merlin.NewTranscript(DlogProofLabel)
-	proverTranscript.AppendMessage([]byte("shamir id"), []byte(fmt.Sprintf("%d", p.MyShamirId)))
+	proverTranscript.AppendMessage("shamir id", []byte(fmt.Sprintf("%d", p.MyShamirId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
@@ -181,7 +181,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		}
 
 		transcript := merlin.NewTranscript(DlogProofLabel)
-		transcript.AppendMessage([]byte("shamir id"), []byte(fmt.Sprintf("%d", senderShamirId)))
+		transcript.AppendMessage("shamir id", []byte(fmt.Sprintf("%d", senderShamirId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (shamir id: %d)", senderShamirId)
 		}

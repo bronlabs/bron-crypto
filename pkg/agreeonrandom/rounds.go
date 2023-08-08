@@ -36,9 +36,9 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
 	for i, sidFromI := range sortRandomnessContributions {
-		p.state.transcript.AppendMessage([]byte(fmt.Sprintf("sid contribution from %d", i)), sidFromI)
+		p.state.transcript.AppendMessage(fmt.Sprintf("sid contribution from %d", i), sidFromI)
 	}
-	randomValue := p.state.transcript.ExtractBytes([]byte("session id"), zero.LambdaBytes)
+	randomValue := p.state.transcript.ExtractBytes("session id", zero.LambdaBytes)
 	p.round++
 	return randomValue, nil
 }

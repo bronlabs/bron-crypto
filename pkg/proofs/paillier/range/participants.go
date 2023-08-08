@@ -62,7 +62,7 @@ func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x, r *big.
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	// 2.i. computes l = ceil(q/3)
 	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)
@@ -93,7 +93,7 @@ func NewVerifier(t int, q *big.Int, sid []byte, pk *paillier.PublicKey, xEncrypt
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	// 1.i. computes l = ceil(q/3)
 	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)

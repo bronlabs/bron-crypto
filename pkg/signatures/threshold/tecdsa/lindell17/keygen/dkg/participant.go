@@ -96,7 +96,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
 
 	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 

@@ -7,11 +7,11 @@ import (
 )
 
 type Transcript interface {
-	AppendMessage(label, message []byte)
-	AppendScalars(label []byte, scalars ...curves.Scalar)
-	AppendPoints(label []byte, points ...curves.Point)
-	ExtractBytes(label []byte, outLen int) []byte
-	NewReader(witnessLabel, witness []byte, prng io.Reader) (io.Reader, error)
+	AppendMessage(label string, message []byte)
+	AppendScalars(label string, scalars ...curves.Scalar)
+	AppendPoints(label string, points ...curves.Point)
+	ExtractBytes(label string, outLen int) []byte
+	NewReader(label string, witness []byte, prng io.Reader) (io.Reader, error)
 	Clone() Transcript
 	Type() Type
 }

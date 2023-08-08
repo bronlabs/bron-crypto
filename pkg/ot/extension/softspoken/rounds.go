@@ -63,13 +63,13 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 
 	// (*)(Fiat-Shamir): Append the expansionMask to the transcript
 	for i := 0; i < Kappa; i++ {
-		receiver.transcript.AppendMessage([]byte("OTe_expansionMask"), round1Output.expansionMask[i][:])
+		receiver.transcript.AppendMessage("OTe_expansionMask", round1Output.expansionMask[i][:])
 	}
 
 	// (Check.1) Generate the challenge (χ) using Fiat-Shamir heuristic
 	challengeFiatShamir := &Challenge{}
 	for i := 0; i < M; i++ {
-		copy(challengeFiatShamir[i][:], receiver.transcript.ExtractBytes([]byte("OTe_challenge_Chi"), SigmaBytes))
+		copy(challengeFiatShamir[i][:], receiver.transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes))
 	}
 	// (Check.2) Compute ẋ and ṫ
 	receiver.ComputeChallengeResponse(extPackedChoices, extOptions, challengeFiatShamir, &round1Output.challengeResponse)
@@ -84,9 +84,9 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	receiver.transcript.AppendMessage([]byte("OTe_challengeResponse_x_val"), round1Output.challengeResponse.x_val[:])
+	receiver.transcript.AppendMessage("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		receiver.transcript.AppendMessage([]byte("OTe_challengeResponse_t_val"), round1Output.challengeResponse.t_val[i][:])
+		receiver.transcript.AppendMessage("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 	return extPackedChoices, oTeReceiverOutput, round1Output, nil
 }
@@ -154,13 +154,13 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 
 	// (*)(Fiat-Shamir): Append the expansionMask to the transcript
 	for i := 0; i < Kappa; i++ {
-		sender.transcript.AppendMessage([]byte("OTe_expansionMask"), round1Output.expansionMask[i][:])
+		sender.transcript.AppendMessage("OTe_expansionMask", round1Output.expansionMask[i][:])
 	}
 
 	// (Check.1) Generate the challenge (χ) using Fiat-Shamir heuristic
 	challengeFiatShamir := &Challenge{}
 	for i := 0; i < M; i++ {
-		copy(challengeFiatShamir[i][:], sender.transcript.ExtractBytes([]byte("OTe_challenge_Chi"), SigmaBytes))
+		copy(challengeFiatShamir[i][:], sender.transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes))
 	}
 	// (Check.3) Check the consistency of the challenge response computing q^i
 	err = sender.CheckConsistency(challengeFiatShamir, &round1Output.challengeResponse, &extCorrelations)
@@ -169,9 +169,9 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	sender.transcript.AppendMessage([]byte("OTe_challengeResponse_x_val"), round1Output.challengeResponse.x_val[:])
+	sender.transcript.AppendMessage("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		sender.transcript.AppendMessage([]byte("OTe_challengeResponse_t_val"), round1Output.challengeResponse.t_val[i][:])
+		sender.transcript.AppendMessage("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 
 	// Return OTe and avoid derandomizing if the input opts are not provided
@@ -206,7 +206,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
 	for batchIndex := 0; batchIndex < len(round2Output.derandomizeMasks); batchIndex++ {
 		for i := 0; i < Zeta; i++ {
-			sender.transcript.AppendScalars([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[batchIndex][i][:]...)
+			sender.transcript.AppendScalars("OTe_derandomizeMask", round2Output.derandomizeMasks[batchIndex][i][:]...)
 		}
 	}
 
@@ -228,7 +228,7 @@ func (receiver *Receiver) Round3Derandomize(
 	L := len(round2Output.derandomizeMasks) // Number of reuses of the output OTe batch.
 	for batchIndex := 0; batchIndex < L; batchIndex++ {
 		for i := 0; i < Zeta; i++ {
-			receiver.transcript.AppendScalars([]byte("OTe_derandomizeMask"), round2Output.derandomizeMasks[batchIndex][i][:]...)
+			receiver.transcript.AppendScalars("OTe_derandomizeMask", round2Output.derandomizeMasks[batchIndex][i][:]...)
 		}
 	}
 
