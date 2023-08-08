@@ -11,11 +11,17 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
+
+const (
+	commitmentDomainRLabel = "Lindell2022InteractiveSignR"
+	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS"
+)
+
+var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment commitments.Commitment
@@ -26,8 +32,6 @@ type Round2Broadcast struct {
 	BigR        curves.Point
 	BigRWitness commitments.Witness
 }
-
-var commitmentHashFunc = sha3.New256
 
 func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
@@ -100,9 +104,10 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 
 		theirBigR := in.BigR
 		theirBigRWitness := in.BigRWitness
+		theirPid := identity.PublicKey().ToAffineCompressed()
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR, pid(identity), p.sid, p.state.bigS, p.state.theirBigRCommitment[identity], theirBigRWitness); err != nil {
+		if err := openCommitment(theirBigR, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[identity], theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
@@ -126,7 +131,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 	}
 
 	// 3.iii. compute additive share d_i'
-	dPrime, err := p.toAdditiveShare(p.mySigningKeyShare.Share)
+	dPrime, err := signing.ToAdditiveShare(p.mySigningKeyShare.Share, p.myShamirId, p.sessionParticipants, p.identityKeyToShamirId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
@@ -141,69 +146,18 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 	}, nil
 }
 
-func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *eddsa.Signature, err error) {
-	if partialSignatures == nil || len(partialSignatures) < 2 {
-		return nil, errs.NewFailed("not enough partial signatures")
-	}
-
-	r := partialSignatures[0].R.Identity()
-	s := partialSignatures[0].S.New(0)
-	for _, partialSignature := range partialSignatures {
-		// 1.a compute Rsum
-		r = r.Add(partialSignature.R)
-
-		// 1.b compute Ssum
-		s = s.Add(partialSignature.S)
-	}
-
-	// 2. return (Rsum, Ssum) as signature
-	return &eddsa.Signature{
-		R: r,
-		Z: s,
-	}, nil
-}
-
-func pid(identityKey integration.IdentityKey) []byte {
-	return identityKey.PublicKey().ToAffineCompressed()
-}
-
-func (p *Cosigner) bigS() []byte {
-	sortedIdentities := integration.SortIdentityKeys(p.sessionParticipants)
-	var bigS []byte
-	for _, identity := range sortedIdentities {
-		bigS = append(bigS, identity.PublicKey().ToAffineCompressed()...)
-	}
-
-	return bigS
-}
-
-func (p *Cosigner) toAdditiveShare(share curves.Scalar) (additiveShare curves.Scalar, err error) {
-	shamirIndices := make([]int, p.cohortConfig.Threshold)
-	for i, identity := range p.sessionParticipants {
-		shamirIndices[i] = p.identityKeyToShamirId[identity]
-	}
-	shamirShare := &shamir.Share{
-		Id:    p.myShamirId,
-		Value: share,
-	}
-	additiveShare, err = shamirShare.ToAdditive(shamirIndices)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert shamir share to additive")
-	}
-	return additiveShare, nil
-}
-
 func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	message := bytes.Join([][]byte{bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	c, w, err := commitments.Commit(commitmentHashFunc, message)
+	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
+	commitment, witness, err = commitments.Commit(commitmentHashFunc, message)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not commit")
+		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
-	return c, w, nil
+
+	return commitment, witness, nil
 }
 
 func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	message := bytes.Join([][]byte{bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
+	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
 	if err := commitments.Open(commitmentHashFunc, message, commitment, witness); err != nil {
 		return errs.WrapVerificationFailed(err, "couldn't open")
 	}
@@ -216,7 +170,7 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript 
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte("bigS"), bigS)
+	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
@@ -238,7 +192,7 @@ func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid, bigS []byte, tra
 		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte("bigS"), bigS)
+	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog proof failed")
 	}

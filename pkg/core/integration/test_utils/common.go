@@ -1,6 +1,7 @@
 package test_utils
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"encoding/json"
 	"hash"
@@ -120,10 +121,24 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protoco
 	return cohortConfig, nil
 }
 
-func MakeTranscripts(identities []integration.IdentityKey, label string) (allTranscripts []transcripts.Transcript) {
+func MakeTranscripts(label string, identities []integration.IdentityKey) (allTranscripts []transcripts.Transcript) {
 	allTranscripts = make([]transcripts.Transcript, len(identities))
 	for i := range identities {
 		allTranscripts[i] = merlin.NewTranscript(label)
 	}
 	return allTranscripts
+}
+
+func TranscriptAtSameState(label string, allTranscripts []transcripts.Transcript) bool {
+	for i := 0; i < len(allTranscripts); i++ {
+		l := allTranscripts[i].ExtractBytes([]byte(label), 32)
+		for j := i + 1; j < len(allTranscripts); j++ {
+			r := allTranscripts[j].ExtractBytes([]byte(label), 32)
+			if !bytes.Equal(l, r) {
+				return false
+			}
+		}
+	}
+
+	return true
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive/test_utils"
 )
 
@@ -84,9 +84,9 @@ func Test_HappyPath(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(cohort, prng)
 	require.NoError(t, err)
-	publicKey := shards[identities[0]].PublicKey
+	publicKey := shards[identities[0]].SigningKeyShare.PublicKey
 
-	transcripts := integration_test_utils.MakeTranscripts(identities, "Lindell 2022 Interactive Sign")
+	transcripts := integration_test_utils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
 	participants, err := test_utils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := interactive.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 

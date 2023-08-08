@@ -6,13 +6,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[integration.IdentityKey]*threshold.SigningKeyShare, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[integration.IdentityKey]*lindell22.Shard, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
 	if len(identities) < cohortConfig.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
 	}
