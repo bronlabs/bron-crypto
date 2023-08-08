@@ -9,13 +9,13 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, myShamirId int, participants []integration.IdentityKey, identityKeyToShamirId map[integration.IdentityKey]int) (curves.Scalar, error) {
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId map[integration.IdentityKey]int) (curves.Scalar, error) {
 	shamirIndices := make([]int, len(participants))
 	for i, identity := range participants {
-		shamirIndices[i] = identityKeyToShamirId[identity]
+		shamirIndices[i] = identityKeyToSharingId[identity]
 	}
 	share := &shamir.Share{
-		Id:    myShamirId,
+		Id:    mySharingId,
 		Value: shamirShare,
 	}
 	additiveShare, err := share.ToAdditive(shamirIndices)

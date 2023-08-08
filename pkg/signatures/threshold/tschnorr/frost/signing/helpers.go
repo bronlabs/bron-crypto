@@ -16,13 +16,13 @@ func ProducePartialSignature(
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
 	D_alpha, E_alpha map[integration.IdentityKey]curves.Point,
-	shamirIdToIdentityKey map[int]integration.IdentityKey,
-	identityKeyToShamirId map[integration.IdentityKey]int,
+	sharingIdToIdentityKey map[int]integration.IdentityKey,
+	identityKeyToSharingId map[integration.IdentityKey]int,
 	aggregationParameter *aggregation.SignatureAggregatorParameters,
 	message []byte,
 ) (*frost.PartialSignature, error) {
 	cohortConfig := participant.GetCohortConfig()
-	myShamirId := participant.GetShamirId()
+	mySharingId := participant.GetSharingId()
 	R := cohortConfig.CipherSuite.Curve.Point.Identity()
 	r_i := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 
@@ -34,18 +34,18 @@ func ProducePartialSignature(
 
 	R_js := map[integration.IdentityKey]curves.Point{}
 	for _, participant := range sessionParticipants {
-		shamirId := identityKeyToShamirId[participant]
-		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(shamirId)}, message, combinedDsAndEs)
-		if shamirId == myShamirId {
+		sharingId := identityKeyToSharingId[participant]
+		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
+		if sharingId == mySharingId {
 			r_i = r_j
 		}
 		D_j, exists := D_alpha[participant]
 		if !exists {
-			return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", shamirId)
+			return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", sharingId)
 		}
 		E_j, exists := E_alpha[participant]
 		if !exists {
-			return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", shamirId)
+			return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", sharingId)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
@@ -69,16 +69,16 @@ func ProducePartialSignature(
 		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 	}
 
-	presentPartyShamirIds := make([]int, len(sessionParticipants))
+	presentPartySharingIds := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
-		presentPartyShamirIds[i] = identityKeyToShamirId[sessionParticipants[i]]
+		presentPartySharingIds[i] = identityKeyToSharingId[sessionParticipants[i]]
 	}
 
 	shamirShare := &shamir.Share{
-		Id:    participant.GetShamirId(),
+		Id:    participant.GetSharingId(),
 		Value: signingKeyShare.Share,
 	}
-	additiveShare, err := shamirShare.ToAdditive(presentPartyShamirIds)
+	additiveShare, err := shamirShare.ToAdditive(presentPartySharingIds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get my additive share")
 	}

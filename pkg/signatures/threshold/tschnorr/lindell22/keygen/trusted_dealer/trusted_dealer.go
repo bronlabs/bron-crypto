@@ -35,16 +35,16 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
 	publicKeySharesMap := make(map[integration.IdentityKey]curves.Point)
-	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		publicKeySharesMap[identityKey] = curve.ScalarBaseMult(shamirShares[shamirId-1].Value)
+	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+		publicKeySharesMap[identityKey] = curve.ScalarBaseMult(shamirShares[sharingId-1].Value)
 	}
 
 	shards := make(map[integration.IdentityKey]*lindell22.Shard)
-	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share := shamirShares[shamirId-1].Value
+	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+		share := shamirShares[sharingId-1].Value
 		shards[identityKey] = &lindell22.Shard{
 			SigningKeyShare: &threshold.SigningKeyShare{
 				Share:     share,

@@ -32,16 +32,16 @@ type state struct {
 type Cosigner struct {
 	lindell22.Participant
 	myIdentityKey     integration.IdentityKey
-	myShamirId        int
+	mySharingId       int
 	mySigningKeyShare *threshold.SigningKeyShare
 
-	cohortConfig          *integration.CohortConfig
-	sessionParticipants   []integration.IdentityKey
-	identityKeyToShamirId map[integration.IdentityKey]int
-	sid                   []byte
-	round                 int
-	transcript            transcripts.Transcript
-	prng                  io.Reader
+	cohortConfig           *integration.CohortConfig
+	sessionParticipants    []integration.IdentityKey
+	identityKeyToSharingId map[integration.IdentityKey]int
+	sid                    []byte
+	round                  int
+	transcript             transcripts.Transcript
+	prng                   io.Reader
 
 	state *state
 }
@@ -50,8 +50,8 @@ func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return p.myIdentityKey
 }
 
-func (p *Cosigner) GetShamirId() int {
-	return p.myShamirId
+func (p *Cosigner) GetSharingId() int {
+	return p.mySharingId
 }
 
 func (p *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -79,19 +79,19 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)
-	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 
 	cosigner := &Cosigner{
-		myIdentityKey:         myIdentityKey,
-		myShamirId:            myShamirId,
-		mySigningKeyShare:     myShard.SigningKeyShare,
-		identityKeyToShamirId: identityKeyToShamirId,
-		cohortConfig:          cohortConfig,
-		sid:                   sid,
-		transcript:            transcript,
-		sessionParticipants:   sessionParticipants,
-		round:                 1,
-		prng:                  prng,
+		myIdentityKey:          myIdentityKey,
+		mySharingId:            mySharingId,
+		mySigningKeyShare:      myShard.SigningKeyShare,
+		identityKeyToSharingId: identityKeyToSharingId,
+		cohortConfig:           cohortConfig,
+		sid:                    sid,
+		transcript:             transcript,
+		sessionParticipants:    sessionParticipants,
+		round:                  1,
+		prng:                   prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

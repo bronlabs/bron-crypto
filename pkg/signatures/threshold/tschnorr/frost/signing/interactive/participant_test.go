@@ -97,8 +97,8 @@ func Test_CanInitialize(t *testing.T) {
 	for _, party := range []*Cosigner{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
-		require.Len(t, party.ShamirIdToIdentityKey, 2)
+		require.Len(t, party.SharingIdToIdentityKey, 2)
 		require.NotNil(t, party.Shard)
 	}
-	require.NotEqual(t, alice.MyShamirId, bob.MyShamirId)
+	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
 }

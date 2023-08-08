@@ -12,12 +12,12 @@ type Cosigner struct {
 	lindell17.Participant
 
 	myIdentityKey       integration.IdentityKey
-	myShamirId          int
+	mySharingId         int
 	myShard             *lindell17.Shard
 	myPreSignatureBatch *lindell17.PreSignatureBatch
 
 	theirIdentityKey integration.IdentityKey
-	theirShamirId    int
+	theirSharingId   int
 
 	preSignatureIndex int
 	cohortConfig      *integration.CohortConfig
@@ -28,8 +28,8 @@ func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return p.myIdentityKey
 }
 
-func (p *Cosigner) GetShamirId() int {
-	return p.myShamirId
+func (p *Cosigner) GetSharingId() int {
+	return p.mySharingId
 }
 
 func (p *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -59,16 +59,16 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
 	}
 
-	_, keyToId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
-	theirShamirId := keyToId[participantIdentity]
+	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	theirSharingId := keyToId[participantIdentity]
 
 	return &Cosigner{
 		myIdentityKey:       myIdentityKey,
-		myShamirId:          myShamirId,
+		mySharingId:         mySharingId,
 		myShard:             myShard,
 		myPreSignatureBatch: myPreSignatureBatch,
 		theirIdentityKey:    participantIdentity,
-		theirShamirId:       theirShamirId,
+		theirSharingId:      theirSharingId,
 		preSignatureIndex:   preSignatureIndex,
 		cohortConfig:        cohortConfig,
 		prng:                prng,

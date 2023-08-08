@@ -15,7 +15,7 @@ import (
 
 type Participant interface {
 	GetIdentityKey() IdentityKey
-	GetShamirId() int
+	GetSharingId() int
 	GetCohortConfig() *CohortConfig
 }
 
