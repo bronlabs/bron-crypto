@@ -71,8 +71,7 @@ func RunSoftspokenOTe(t *testing.T,
 	require.NoError(t, err)
 
 	// Run OTe
-	oTeReceiverOutput, round1Output, err :=
-		receiver.Round1ExtendAndProveConsistency(choices)
+	oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
 	require.NoError(t, err)
 	oTeSenderOutput, _, _, err := sender.Round2ExtendAndCheckConsistency(round1Output, nil)
 	require.NoError(t, err)
@@ -134,11 +133,9 @@ func RunSoftspokenCOTe(t *testing.T,
 	require.NoError(t, err)
 
 	// Run COTe
-	oTeReceiverOutput, round1Output, err :=
-		receiver.Round1ExtendAndProveConsistency(choices)
+	oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
 	require.NoError(t, err)
-	_, cOTeSenderOutput, round2Output, err :=
-		sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+	_, cOTeSenderOutput, round2Output, err := sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
 	require.NoError(t, err)
 	cOTeReceiverOutput, err = receiver.Round3Derandomize(round2Output, oTeReceiverOutput)
 	require.NoError(t, err)

@@ -26,10 +26,10 @@ func HashSalted(sid []byte, bufferIn [][]byte,
 			}
 			hash := sha3.NewCShake256(sid, []byte("Copper_Softspoken_COTe"))
 			idx_bytes := bitstring.ToByteArrayBE[int](i) // Add the index as a prefix
-			if _, err := hash.Write(idx_bytes[:]); err != nil {
+			if _, err := hash.Write(idx_bytes); err != nil {
 				return errs.WrapFailed(err, "writing index into HashSalted")
 			}
-			if _, err := hash.Write(bufferIn[l*Xi+i][:]); err != nil {
+			if _, err := hash.Write(bufferIn[l*Xi+i]); err != nil {
 				return errs.WrapFailed(err, "writing input to HashSalted")
 			}
 			if _, err := hash.Read(flatBufferOut); err != nil {

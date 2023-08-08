@@ -36,25 +36,25 @@ const (
 	// ---------------------- NON-CONFIGURABLE PARAMETERS ------------------- //
 	// Xi (ξ) is the batch size in bits used in the COTe protocol. For DKLS23,
 	// ξ = LOTe (κ + 2s), where s is their statistical security parameter. For
-	// convenience, we set s = σ
+	// convenience, we set s = σ.
 	Xi = (Kappa + 2*Sigma)
 
 	// N is the number of options in the OT, N = 2 for 1-out-of-2-OT.
 	N = 2
 
-	// SET DYNAMICALY TO ALLOW VARIABLE-SIZE INPUTS
+	// SET DYNAMICALLY TO ALLOW VARIABLE-SIZE INPUTS
 	// LOTe is the number of ξ×ω×κ-bit batches after in the expansion. For "Forced Reuse"
 	// (as in DKLS23), it is instead the number of reuses of the output OTe batch.
 	// LOTe = ...
 
 	// eta (η) is the OT expansion size without the statistical redundancy.
-	// Eta = LOTe*ξ
+	// Eta = LOTe*ξ.
 
 	// etaPrime (η') is the full OT expansion size. EtaPrime = LOTe*ξ + σ
-	// EtaPrime = Eta + σ
+	// EtaPrime = Eta + σ.
 
 	// M is the number of consistency check challenges. M = η/σ
-	// M = eta/Sigma
+	// M = eta/Sigma.
 
 	// BYTES
 	KappaBytes = Kappa >> 3 // KappaBytes (κ) is the computational security parameter in bytes
@@ -63,40 +63,40 @@ const (
 )
 
 type (
-	// --------------------------- (Random) OTe ----------------------------- //
+	// --------------------------- (Random) OTe ----------------------------- //.
 
 	// OTeInputChoices (x_i) ∈ [LOTe][ξ]bits are the input choice bits for the OTe
-	// ("Choice" in the diagram)
+	// ("Choice" in the diagram).
 	OTeInputChoices = [][XiBytes]byte
 
 	// OTeSenderOutput (v_0, v_1) ∈ [N][LOTe][ξ][ω][κ]bits is the output of the
-	// sender in the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram)
+	// sender in the OTe protocol ("InputOpt1" & "InputOpt2" in the diagram).
 	OTeSenderOutput = [N][][Xi][ROTeWidth][KappaBytes]byte
 
 	// OTeReceiverOutput (v_x) ∈ [LOTe][ξ][ω][κ]bits is the output of the receiver
-	// in the OTe protocol ("DeltaOpt" in the diagram)
+	// in the OTe protocol ("DeltaOpt" in the diagram).
 	OTeReceiverOutput = [][Xi][ROTeWidth][KappaBytes]byte
 
-	// ----------------------- (Correlated OTe) COTe ------------------------ //
+	// ----------------------- (Correlated OTe) COTe ------------------------ //.
 
 	// COTeInputOpt (α) ∈ [L][ξ][ω]curve.Scalar is the sender input to COTe
-	// protocol ("InputOpt" in the diagram)
+	// protocol ("InputOpt" in the diagram).
 	COTeInputOpt = [][Xi][ROTeWidth]curves.Scalar
 
-	// DerandomizeMask (τ) ∈ [L][ξ][ω]curve.Scalar is the correlation mask
+	// DerandomizeMask (τ) ∈ [L][ξ][ω]curve.Scalar is the correlation mask.
 	DerandomizeMask [][Xi][ROTeWidth]curves.Scalar
 
 	// COTeSenderOutput (z_A) ∈ [L][ξ][ω]curve.Scalar is the output of the sender
-	// in the COTe protocol, ("Correlation" in the diagram above)
+	// in the COTe protocol, ("Correlation" in the diagram above).
 	COTeSenderOutput = [][Xi][ROTeWidth]curves.Scalar
 
 	// COTeReceiverOutput (z_B) ∈ [L][ξ][ω]curve.Scalar is the receiver output
-	// in the COTe protocol ("DeltaOpt" in the diagram above)
+	// in the COTe protocol ("DeltaOpt" in the diagram above).
 	COTeReceiverOutput = [][Xi][ROTeWidth]curves.Scalar
 
-	// ---------------------------- EXTENSION ------------------------------- //
+	// ---------------------------- EXTENSION ------------------------------- //.
 
-	// ExpansionMask (u^i) ∈ [κ][η']bits is the expanded and masked PRG outputs
+	// ExpansionMask (u^i) ∈ [κ][η']bits is the expanded and masked PRG outputs.
 	ExpansionMask [Kappa][]byte
 
 	// ExtPackedChoices (x_i) ∈ [η']bits are the choice bits for the OTe filled with σ random values.
@@ -108,7 +108,7 @@ type (
 	// ExtDeltaOpt (t^i_{Δ_i}) ∈ [κ][η']bits are the extended (via a PRG) baseOT deltaOpts.
 	ExtDeltaOpt [Kappa][]byte
 
-	// ExtCorrelations (q_i) ∈ [κ][η']bits are the extended correlations, q^i = Δ_i • x + t^i
+	// ExtCorrelations (q_i) ∈ [κ][η']bits are the extended correlations, q^i = Δ_i • x + t^i.
 	ExtCorrelations [Kappa][]byte
 
 	// ------------------------ CONSISTENCY CHECK --------------------------- //

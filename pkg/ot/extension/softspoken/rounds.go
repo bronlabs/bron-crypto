@@ -24,10 +24,11 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	oTeInputChoices OTeInputChoices, // x_i ∈ [LOTe][ξ]bits
 ) (oTeReceiverOutput OTeReceiverOutput, // v_x ∈ [LOTe][ξ][ω][κ]bits
 	round1Output *Round1Output, // u_i ∈ [κ][η']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
-	err error) {
+	err error,
+) {
 	round1Output = &Round1Output{}
 
-	// Sanitize inputs and compute sizes
+	// Sanitise inputs and compute sizes
 	LOTe := len(oTeInputChoices) // Number of ξ×ω×κ-bit output OTe batches
 	if LOTe == 0 {
 		return nil, nil, errs.NewInvalidArgument("nil (oTeInputChoices) in input arguments of Round1ExtendAndProveConsistency")
@@ -107,7 +108,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
 	InputOpts COTeInputOpt, // Input opts (α) ∈ [L][ξ][ω]curve.Scalar. Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutput COTeSenderOutput, round2Output *Round2Output, err error) {
-	// Sanitize inputs, compute sizes and allocate outputs
+	// Sanitise inputs, compute sizes and allocate outputs
 	if round1Output == nil {
 		return nil, nil, nil, errs.NewInvalidArgument("nil (round1Output) in input arguments of Round2 of COTe")
 	}
@@ -152,7 +153,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 		}
 	}
 
-	// (T&R.1, T&R.3) Transpose and Randomize the correlations (q^i -> v_0 and q^i+Δ -> v_1)
+	// (T&R.1, T&R.3) Transpose and Randomise the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
 	extCorrelationsTransposed := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
 	extCorrelationsTransposedPlusDelta := make([][]byte, eta)                      // q_j+Δ ∈ [η][κ]bits
@@ -165,12 +166,12 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 			extCorrelationsTransposedPlusDelta[j][i] = extCorrelationsTransposed[j][i] ^ Delta
 		}
 	}
-	// (T&R.3) Randomize by hashing the first η rows of q_j and q_j+Δ (drop η' - η = σ rows)
-	err = HashSalted(S.sid, extCorrelationsTransposed[:eta], oTeSenderOutput[0][:])
+	// (T&R.3) Randomise by hashing the first η rows of q_j and q_j+Δ (drop η' - η = σ rows)
+	err = HashSalted(S.sid, extCorrelationsTransposed[:eta], oTeSenderOutput[0])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.3)")
 	}
-	err = HashSalted(S.sid, extCorrelationsTransposedPlusDelta[:eta], oTeSenderOutput[1][:])
+	err = HashSalted(S.sid, extCorrelationsTransposedPlusDelta[:eta], oTeSenderOutput[1])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.3)")
 	}
@@ -239,19 +240,19 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 }
 
 // Round3Derandomize uses the derandomization mask to derandomize the COTe output.
-func (receiver *Receiver) Round3Derandomize(
+func (R *Receiver) Round3Derandomize(
 	round2Output *Round2Output,
 	oTeReceiverOutput OTeReceiverOutput,
 ) (cOTeReceiverOutput COTeReceiverOutput, err error) {
-	// Sanitize input, compute sizes and allocate outputs
+	// Sanitise input, compute sizes and allocate outputs
 	if (round2Output == nil) || (len(oTeReceiverOutput) == 0) {
 		return nil, errs.NewInvalidArgument("nil in input arguments of Round3Derandomize")
 	}
-	LOTe := len(oTeReceiverOutput)                // Number of ξ×ω×κ-bit OTe batches
-	L := len(round2Output.derandMask)             // Number of ξ×ω-scalar COTe batches
-	if (receiver.useForcedReuse) && (LOTe != 1) { // Forced reuse: reuse a single OTe batch
+	LOTe := len(oTeReceiverOutput)         // Number of ξ×ω×κ-bit OTe batches
+	L := len(round2Output.derandMask)      // Number of ξ×ω-scalar COTe batches
+	if (R.useForcedReuse) && (LOTe != 1) { // Forced reuse: reuse a single OTe batch
 		return nil, errs.NewInvalidArgument("oTeReceiverOutput batch length (L=%d) should be 1 (Forced Reuse)", LOTe)
-	} else if (!receiver.useForcedReuse) && (L != LOTe) { // No forced reuse: get L different OTe batches
+	} else if (!R.useForcedReuse) && (L != LOTe) { // No forced reuse: get L different OTe batches
 		return nil, errs.NewInvalidArgument("oTeReceiverOutput and derandMask lengths don't match (%d != %d) ", LOTe, L)
 	}
 	cOTeReceiverOutput = make(COTeReceiverOutput, L)
@@ -260,7 +261,7 @@ func (receiver *Receiver) Round3Derandomize(
 	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				receiver.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
+				R.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
 					round2Output.derandMask[l][i][j].Bytes())
 			}
 		}
@@ -272,15 +273,15 @@ func (receiver *Receiver) Round3Derandomize(
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// if forced reuse, use a single OTe batch (set idxOTe = 0)
-				idxOTe := l * bitstring.BoolTo[int](!receiver.useForcedReuse)
+				idxOTe := l * bitstring.BoolTo[int](!R.useForcedReuse)
 				// ECP(v_x_j)
-				v_x_NegCurve, err = receiver.curve.Scalar.SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
+				v_x_NegCurve, err = R.curve.Scalar.SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {
 					return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.2)")
 				}
 				v_x_NegCurve = v_x_NegCurve.Neg()
 				v_x_curve_corr = round2Output.derandMask[l][i][j].Add(v_x_NegCurve)
-				if bitstring.SelectBit(receiver.extPackedChoices[:], idxOTe*Xi+i) != 0 {
+				if bitstring.SelectBit(R.extPackedChoices[:], idxOTe*Xi+i) != 0 {
 					// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 					cOTeReceiverOutput[l][i][j] = v_x_curve_corr
 				} else {
@@ -312,14 +313,14 @@ func (receiver *Receiver) Round3Derandomize(
 // We employ the Fiat-Shamir heuristic, appending u_i to the transcript and
 // generating the challenge (χ) from the transcript.
 
-// WitnessCommitment (*)(Fiat-Shamir) Appends the expansionMask to the transcript
+// WitnessCommitment (*)(Fiat-Shamir) Appends the expansionMask to the transcript.
 func WitnessCommitment(t transcripts.Transcript, expansionMask *ExpansionMask) {
 	for i := 0; i < Kappa; i++ {
-		t.AppendMessage([]byte("OTe_expansionMask"), expansionMask[i][:])
+		t.AppendMessage([]byte("OTe_expansionMask"), expansionMask[i])
 	}
 }
 
-// GenerateChallenge (*)(Fiat-Shamir) Generates the challenge (χ) using Fiat-Shamir heuristic
+// GenerateChallenge (*)(Fiat-Shamir) Generates the challenge (χ) using Fiat-Shamir heuristic.
 func GenerateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, M)
 	for i := 0; i < M; i++ {
@@ -328,15 +329,15 @@ func GenerateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
 	return challengeFiatShamir
 }
 
-// ComputeChallengeResponse (Check.2) Computes the challenge response ẋ, ṫ^i ∀i∈[κ]
-func (receiver *Receiver) ComputeChallengeResponse(extOptions *ExtOptions, challenge Challenge, challengeResponse *ChallengeResponse) {
+// ComputeChallengeResponse (Check.2) Computes the challenge response ẋ, ṫ^i ∀i∈[κ].
+func (R *Receiver) ComputeChallengeResponse(extOptions *ExtOptions, challenge Challenge, challengeResponse *ChallengeResponse) {
 	M := len(challenge)         // M = η/σ
 	etaBytes := (M * Sigma) / 8 // η = M*σ
 	// 		ẋ = x̂_{m+1} ...
-	copy(challengeResponse.x_val[:], receiver.extPackedChoices[etaBytes:etaBytes+SigmaBytes])
+	copy(challengeResponse.x_val[:], R.extPackedChoices[etaBytes:etaBytes+SigmaBytes])
 	// 		                ... + Σ{j=1}^{m} χ_j • x̂_j
 	for j := 0; j < M; j++ {
-		x_hat_j := receiver.extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
+		x_hat_j := R.extPackedChoices[j*SigmaBytes : (j+1)*SigmaBytes]
 		Chi_j := challenge[j][:]
 		for k := 0; k < SigmaBytes; k++ {
 			challengeResponse.x_val[k] ^= (Chi_j[k] & x_hat_j[k])
@@ -358,7 +359,7 @@ func (receiver *Receiver) ComputeChallengeResponse(extOptions *ExtOptions, chall
 }
 
 // VerifyChallengeResponse (Check.3) checks the consistency of the extension.
-func (sender *Sender) VerifyChallengeResponse(
+func (S *Sender) VerifyChallengeResponse(
 	challenge Challenge,
 	challengeResponse *ChallengeResponse,
 	extCorrelations *ExtCorrelations,
@@ -382,7 +383,7 @@ func (sender *Sender) VerifyChallengeResponse(
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		for k := 0; k < SigmaBytes; k++ {
 			qi_sum = challengeResponse.t_val[i][k] ^ challengeResponse.x_val[k]
-			if sender.baseOtSeeds.RandomChoiceBits[i] != 0 {
+			if S.baseOtSeeds.RandomChoiceBits[i] != 0 {
 				q_expected = qi_sum
 			} else {
 				q_expected = challengeResponse.t_val[i][k]

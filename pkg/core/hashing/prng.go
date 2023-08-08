@@ -1,8 +1,9 @@
 package hashing
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 const (
@@ -13,13 +14,13 @@ const (
 
 // PRG generates a pseudorandom bit sequence of byteLength bits from seeds of
 // size [κ], expanding each κ-bit seed to byteLength*8 bits. sid is used as a salt.
-func PRG(sid []byte, seed []byte, byteLength int) (bufferOut []byte, err error) {
+func PRG(sid, seed []byte, byteLength int) (bufferOut []byte, err error) {
 	bufferOut = make([]byte, byteLength)
 	if len(seed) != KappaBytes {
 		return nil, errs.NewInvalidArgument("invalid seed length (%d, should be %d)", len(seed), KappaBytes)
 	}
 	// Use the uniqueSessionId as the "domain separator", and the seed as the input
-	shake := sha3.NewCShake256(sid[:], []byte("Copper_Knox_PRG"))
+	shake := sha3.NewCShake256(sid, []byte("Copper_Knox_PRG"))
 	if _, err = shake.Write(seed); err != nil {
 		return nil, errs.WrapFailed(err, "writing seed into shake for PRG extension")
 	}

@@ -71,7 +71,6 @@ func TestIntToByteArrayBE(t *testing.T) {
 	for i := uint64(281474976710656); i < 281474976710756; i++ {
 		require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i - 281474976710656)}, bitstring.ToByteArrayBE(i))
 	}
-
 }
 
 func TestIntToByteArrayLE(t *testing.T) {
