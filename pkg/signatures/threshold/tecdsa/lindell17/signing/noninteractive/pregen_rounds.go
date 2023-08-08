@@ -161,7 +161,7 @@ func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integ
 		return nil, errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
-	transcript.AppendMessage("tau", []byte(strconv.Itoa(i)))
+	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
@@ -186,7 +186,7 @@ func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party
 		return errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
-	transcript.AppendMessage("tau", []byte(strconv.Itoa(i)))
+	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog verify failed")

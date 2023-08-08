@@ -12,7 +12,7 @@ import (
 
 func TestSimpleTranscript(t *testing.T) {
 	mt := merlin.NewTranscript("test protocol")
-	mt.AppendMessage("some label", []byte("some data"))
+	mt.AppendMessages("some label", []byte("some data"))
 
 	cBytes := mt.ExtractBytes("challenge", 32)
 	cHex := fmt.Sprintf("%x", cBytes)
@@ -25,7 +25,7 @@ func TestSimpleTranscript(t *testing.T) {
 
 func TestComplexTranscript(t *testing.T) {
 	tr := merlin.NewTranscript("test protocol")
-	tr.AppendMessage("step1", []byte("some data"))
+	tr.AppendMessages("step1", []byte("some data"))
 
 	data := make([]byte, 1024)
 	for i := range data {
@@ -35,8 +35,8 @@ func TestComplexTranscript(t *testing.T) {
 	var chlBytes []byte
 	for i := 0; i < 32; i++ {
 		chlBytes = tr.ExtractBytes("challenge", 32)
-		tr.AppendMessage("bigdata", data)
-		tr.AppendMessage("challengedata", chlBytes)
+		tr.AppendMessages("bigdata", data)
+		tr.AppendMessages("challengedata", chlBytes)
 	}
 
 	expectedChlHex := "30bce6b150411d5ad51dd231a2d96d1ea886664e58e09dd7a5730a09f554a7d4"
@@ -61,10 +61,10 @@ func TestTranscriptPRNG(t *testing.T) {
 	witness2 := []byte("Witness data 2")
 
 	// t1 will have commitment 1 and t2, t3, t4 will gave same commitment
-	t1.AppendMessage("com", comm1)
-	t2.AppendMessage("com", comm2)
-	t3.AppendMessage("com", comm2)
-	t4.AppendMessage("com", comm2)
+	t1.AppendMessages("com", comm1)
+	t2.AppendMessages("com", comm2)
+	t3.AppendMessages("com", comm2)
+	t4.AppendMessages("com", comm2)
 
 	// t1, t2 will have same witness data
 	// t3, t4 will have same witness data

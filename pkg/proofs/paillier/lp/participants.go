@@ -54,7 +54,7 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	return &Verifier{
 		Participant: Participant{
@@ -76,7 +76,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage(transcriptSessionIdLabel, sessionId)
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	return &Prover{
 		Participant: Participant{

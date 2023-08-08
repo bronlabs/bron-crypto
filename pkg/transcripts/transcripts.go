@@ -7,7 +7,7 @@ import (
 )
 
 type Transcript interface {
-	AppendMessage(label string, message []byte)
+	AppendMessages(label string, message ...[]byte)
 	AppendScalars(label string, scalars ...curves.Scalar)
 	AppendPoints(label string, points ...curves.Point)
 	ExtractBytes(label string, outLen int) []byte

@@ -74,8 +74,8 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage(transcriptSessionIdLabel, sid)
-	transcript.AppendMessage(transcriptTauLabel, []byte(strconv.Itoa(tau)))
+	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)

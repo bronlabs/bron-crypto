@@ -63,7 +63,7 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 
 	// (*)(Fiat-Shamir): Append the expansionMask to the transcript
 	for i := 0; i < Kappa; i++ {
-		receiver.transcript.AppendMessage("OTe_expansionMask", round1Output.expansionMask[i][:])
+		receiver.transcript.AppendMessages("OTe_expansionMask", round1Output.expansionMask[i][:])
 	}
 
 	// (Check.1) Generate the challenge (χ) using Fiat-Shamir heuristic
@@ -84,9 +84,9 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	receiver.transcript.AppendMessage("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
+	receiver.transcript.AppendMessages("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		receiver.transcript.AppendMessage("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
+		receiver.transcript.AppendMessages("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 	return extPackedChoices, oTeReceiverOutput, round1Output, nil
 }
@@ -154,7 +154,7 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 
 	// (*)(Fiat-Shamir): Append the expansionMask to the transcript
 	for i := 0; i < Kappa; i++ {
-		sender.transcript.AppendMessage("OTe_expansionMask", round1Output.expansionMask[i][:])
+		sender.transcript.AppendMessages("OTe_expansionMask", round1Output.expansionMask[i][:])
 	}
 
 	// (Check.1) Generate the challenge (χ) using Fiat-Shamir heuristic
@@ -169,9 +169,9 @@ func (sender *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	sender.transcript.AppendMessage("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
+	sender.transcript.AppendMessages("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		sender.transcript.AppendMessage("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
+		sender.transcript.AppendMessages("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 
 	// Return OTe and avoid derandomizing if the input opts are not provided

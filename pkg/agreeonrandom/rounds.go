@@ -1,8 +1,6 @@
 package agreeonrandom
 
 import (
-	"fmt"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -35,9 +33,7 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
-	for i, sidFromI := range sortRandomnessContributions {
-		p.state.transcript.AppendMessage(fmt.Sprintf("sid contribution from %d", i), sidFromI)
-	}
+	p.state.transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
 	randomValue := p.state.transcript.ExtractBytes("session id", zero.LambdaBytes)
 	p.round++
 	return randomValue, nil

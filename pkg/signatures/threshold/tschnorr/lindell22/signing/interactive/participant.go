@@ -75,7 +75,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage(transcriptSessionIdLabel, sid)
+	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)

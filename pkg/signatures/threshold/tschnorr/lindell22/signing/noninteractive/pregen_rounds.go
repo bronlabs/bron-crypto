@@ -171,8 +171,8 @@ func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage(transcriptDLogSLabel, bigS)
-	transcript.AppendMessage(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
 
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
@@ -195,8 +195,8 @@ func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, presigIndex int, sid,
 		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage(transcriptDLogSLabel, bigS)
-	transcript.AppendMessage(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot verify commitment")
 	}

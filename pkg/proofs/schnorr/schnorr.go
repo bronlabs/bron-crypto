@@ -70,7 +70,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
 	p.transcript.AppendPoints(rLabel, R)
 	p.transcript.AppendPoints(statementLabel, statement)
-	p.transcript.AppendMessage(uniqueSessionIdLabel, p.uniqueSessionId)
+	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
 	digest := p.transcript.ExtractBytes(digestLabel, native.FieldBytes)
 
 	result.C, err = curve.Scalar.SetBytes(digest)
@@ -109,7 +109,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	transcript.AppendPoints(basepointLabel, basePoint)
 	transcript.AppendPoints(rLabel, R)
 	transcript.AppendPoints(statementLabel, statement)
-	transcript.AppendMessage(uniqueSessionIdLabel, uniqueSessionId)
+	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
 	digest := transcript.ExtractBytes(digestLabel, native.FieldBytes)
 
 	computedChallenge, err := curve.Scalar.SetBytes(digest)

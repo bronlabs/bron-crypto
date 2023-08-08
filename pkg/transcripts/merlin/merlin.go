@@ -35,7 +35,7 @@ func NewTranscript(appLabel string) *Transcript {
 	t := Transcript{
 		s: strobe.InitStrobe(merlinProtocolLabel, securityParameter),
 	}
-	t.AppendMessage(domainSeparatorLabel, []byte(appLabel))
+	t.AppendMessages(domainSeparatorLabel, []byte(appLabel))
 	return &t
 }
 
@@ -52,7 +52,17 @@ func (*Transcript) Type() transcripts.Type {
 // -------------------------- WRITE/READ OPS -------------------------------- //
 // AppendMessage adds the message to the transcript with the supplied label. Messages
 // of length greater than 100 MB must be hashed.
-func (t *Transcript) AppendMessage(label string, message []byte) {
+func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
+	if len(messages) == 1 {
+		t.appendMessage(label, messages[0])
+	} else {
+		for i, message := range messages {
+			t.appendMessage(fmt.Sprintf("%s_%d", label, i), message)
+		}
+	}
+}
+
+func (t *Transcript) appendMessage(label string, message []byte) {
 	// AdditionalData[label || le32(len(message))]
 	t.s.AD(true, appendSizeToLabel([]byte(label), len(message)))
 	// If the message is longer than 100 MB, it must be hashed.
@@ -73,12 +83,12 @@ func (t *Transcript) AppendMessage(label string, message []byte) {
 // with the label=label_i. If the vector's length is 1, label is used directly.
 func (t *Transcript) AppendScalars(label string, scalars ...curves.Scalar) {
 	if len(scalars) == 1 {
-		t.AppendMessage("curve_name", []byte(scalars[0].CurveName()))
-		t.AppendMessage(label, scalars[0].Bytes())
+		t.AppendMessages("curve_name", []byte(scalars[0].CurveName()))
+		t.AppendMessages(label, scalars[0].Bytes())
 	}
 	for i, scalar := range scalars {
-		t.AppendMessage(fmt.Sprintf("curve_name_%d", i), []byte(scalar.CurveName()))
-		t.AppendMessage(fmt.Sprintf("%s_%d", label, i), scalar.Bytes())
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(scalar.CurveName()))
+		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), scalar.Bytes())
 	}
 }
 
@@ -87,12 +97,12 @@ func (t *Transcript) AppendScalars(label string, scalars ...curves.Scalar) {
 // is 1, label is used directly.
 func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 	if len(points) == 1 {
-		t.AppendMessage("curve_name", []byte(points[0].CurveName()))
-		t.AppendMessage(label, points[0].ToAffineCompressed())
+		t.AppendMessages("curve_name", []byte(points[0].CurveName()))
+		t.AppendMessages(label, points[0].ToAffineCompressed())
 	}
 	for i, point := range points {
-		t.AppendMessage(fmt.Sprintf("curve_name_%d", i), []byte(point.CurveName()))
-		t.AppendMessage(fmt.Sprintf("%s_%d", label, i), point.ToAffineCompressed())
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(point.CurveName()))
+		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), point.ToAffineCompressed())
 	}
 }
 

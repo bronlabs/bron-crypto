@@ -124,7 +124,7 @@ func NewSender(curve *curves.Curve, batchSize int, uniqueSessionId []byte, trans
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
-	transcript.AppendMessage("VSOT Sender", uniqueSessionId)
+	transcript.AppendMessages("VSOT Sender", uniqueSessionId)
 	return &Sender{
 		Output:          &SenderOutput{},
 		Curve:           curve,
@@ -145,7 +145,7 @@ func NewReceiver(curve *curves.Curve, batchSize int, uniqueSessionId []byte, tra
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
-	transcript.AppendMessage("session_id", uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
 
 	receiver := &Receiver{
 		Output:          &ReceiverOutput{},
@@ -161,7 +161,7 @@ func NewReceiver(curve *curves.Curve, batchSize int, uniqueSessionId []byte, tra
 	}
 	// Unpack into Choice bits
 	receiver.initChoice()
-	transcript.AppendMessage("VSOT Receiver", uniqueSessionId)
+	transcript.AppendMessages("VSOT Receiver", uniqueSessionId)
 	return receiver, nil
 }
 
