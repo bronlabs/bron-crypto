@@ -69,7 +69,7 @@ func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return ic.MyIdentityKey
 }
 
-func (ic *Cosigner) GetShamirId() int {
+func (ic *Cosigner) GetSharingId() int {
 	return ic.MyShamirId
 }
 
@@ -94,8 +94,8 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte("DKLs23 Interactive Signing"), uniqueSessionId)
-	tprng, err := transcript.NewReader([]byte("witness"), shard.SigningKeyShare.Share.Bytes(), prng)
+	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
+	tprng, err := transcript.NewReader("witness", shard.SigningKeyShare.Share.Bytes(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
 	}
