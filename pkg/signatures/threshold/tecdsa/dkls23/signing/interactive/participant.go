@@ -106,10 +106,12 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i]]
 	}
 
+	// step 0.2
 	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
+	// step 0.3
 	multipliers := make(map[integration.IdentityKey]*Multiplication, len(sessionParticipants))
 	for _, participant := range sessionParticipants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {

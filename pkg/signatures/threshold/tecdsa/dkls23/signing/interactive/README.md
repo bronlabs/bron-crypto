@@ -39,7 +39,7 @@ This protocol is symmetric: In every round, all parties do the same thing.
 
 0. Init:
     1. DKG
-    2. Zero sahre sampling seed.
+    2. Zero share sampling seed.
     3. Compute COTe.Setup (init S&R in SoftspokenOT with [ $\kappa \times$ BaseOT] seeds) and construct pairwise multiplication instances.
 
 1. Round 1:

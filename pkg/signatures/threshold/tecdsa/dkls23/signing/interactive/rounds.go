@@ -55,7 +55,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 		}
 
 		// step 1.3.1
-		message := computeCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[participant], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
+		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[participant], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
 		commitmentToInstanceKey, witness, err := commitments.Commit(h, message)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
@@ -152,7 +152,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 }
 
 func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
-	recomputedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
+	refreshedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
 	R := ic.state.R_i
 	phiPsi := ic.state.phi_i
 	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
@@ -178,7 +178,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.1.3
-		supposedlyCommittedMessage := computeCommitmentMessage(ic.IdentityKeyToShamirId[participant], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
+		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[participant], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
 		if err := commitments.Open(
 			h,
 			supposedlyCommittedMessage,
@@ -214,7 +214,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 			return nil, errs.NewIdentifiableAbort("failed second check")
 		}
 
-		recomputedPublicKey = recomputedPublicKey.Add(pk_j)
+		refreshedPublicKey = refreshedPublicKey.Add(pk_j)
 		// We're partially evaluating what we need for future steps inside of this loop
 		cu_ij := ic.state.cU_i[participant]
 		cv_ij := ic.state.cV_i[participant]
@@ -225,7 +225,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	}
 
 	// step 3.2
-	if !recomputedPublicKey.Equal(ic.Shard.SigningKeyShare.PublicKey) {
+	if !refreshedPublicKey.Equal(ic.Shard.SigningKeyShare.PublicKey) {
 		return nil, errs.NewFailed("recomputed public key is wrong")
 	}
 
@@ -293,7 +293,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	return sigma, nil
 }
 
-func computeCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId, R_i []byte) []byte {
+func prepareCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId, R_i []byte) []byte {
 	return bytes.Join(
 		[][]byte{
 			{
