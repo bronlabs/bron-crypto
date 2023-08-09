@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
@@ -66,8 +67,8 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants []integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
-	if err := validateInputs(sid, sessionParticipants, mySigningKeyShare, cohortConfig); err != nil {
+func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants []integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
+	if err := validateInputs(sid, sessionParticipants, myShard, cohortConfig); err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 
@@ -76,11 +77,14 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	}
 	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
 
+	pid := myIdentityKey.PublicKey().ToAffineCompressed()
+	bigS := signing.BigS(cohortConfig.Participants)
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+
 	cosigner := &Cosigner{
 		myIdentityKey:         myIdentityKey,
 		myShamirId:            myShamirId,
-		mySigningKeyShare:     mySigningKeyShare,
+		mySigningKeyShare:     myShard.SigningKeyShare,
 		identityKeyToShamirId: identityKeyToShamirId,
 		cohortConfig:          cohortConfig,
 		sid:                   sid,
@@ -88,15 +92,16 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		sessionParticipants:   sessionParticipants,
 		round:                 1,
 		prng:                  prng,
-		state:                 &state{},
+		state: &state{
+			pid:  pid,
+			bigS: bigS,
+		},
 	}
-	cosigner.state.pid = pid(myIdentityKey)
-	cosigner.state.bigS = cosigner.bigS()
 
 	return cosigner, nil
 }
 
-func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, signingKeyShare *threshold.SigningKeyShare, cohortConfig *integration.CohortConfig) error {
+func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, shard *lindell22.Shard, cohortConfig *integration.CohortConfig) error {
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -109,10 +114,10 @@ func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, s
 	if cohortConfig.PreSignatureComposer != nil {
 		return errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if signingKeyShare == nil {
+	if shard == nil || shard.SigningKeyShare == nil {
 		return errs.NewVerificationFailed("shard is nil")
 	}
-	if err := signingKeyShare.Validate(); err != nil {
+	if err := shard.SigningKeyShare.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "could not validate signing key share")
 	}
 	if sessionParticipants == nil {

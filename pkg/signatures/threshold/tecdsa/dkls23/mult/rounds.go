@@ -1,8 +1,6 @@
 package mult
 
 import (
-	"fmt"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
@@ -103,7 +101,6 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	u := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		u[i] = chiTilde[i].Mul(alice.aTilde[i]).Add(chiHat[i].Mul(alice.aHat[i]))
-		alice.transcript.AppendMessage([]byte(fmt.Sprintf("u_%d", i)), u[i].Bytes())
 	}
 	alice.transcript.AppendScalars([]byte("u"), u[:]...)
 
@@ -129,7 +126,6 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.11
 	for i := 0; i < L; i++ {
 		alice.gammaA[i] = a[i].Sub(alice.aTilde[i])
-		alice.transcript.AppendMessage([]byte(fmt.Sprintf("Gamma_A_%d", i)), alice.gammaA[i].Bytes())
 	}
 	alice.transcript.AppendScalars([]byte("Gamma_A"), alice.gammaA[:]...)
 
