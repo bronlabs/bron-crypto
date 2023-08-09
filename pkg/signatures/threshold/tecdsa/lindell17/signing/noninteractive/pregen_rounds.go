@@ -162,7 +162,7 @@ func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integ
 	}
 
 	transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i)))
-	transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed())
+	transcript.AppendPoints([]byte("pid"), party.PublicKey())
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct provererr")
@@ -187,7 +187,7 @@ func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party
 	}
 
 	transcript.AppendMessage([]byte("tau"), []byte(strconv.Itoa(i)))
-	transcript.AppendMessage([]byte("pid"), party.PublicKey().ToAffineCompressed())
+	transcript.AppendPoints([]byte("pid"), party.PublicKey())
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog verify failed")
 	}

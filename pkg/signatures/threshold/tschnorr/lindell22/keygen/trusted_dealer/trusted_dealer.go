@@ -1,6 +1,8 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -10,7 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*threshold.SigningKeyShare, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*lindell22.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -34,12 +36,25 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
-	shards := make(map[integration.IdentityKey]*threshold.SigningKeyShare)
+
+	publicKeySharesMap := make(map[integration.IdentityKey]curves.Point)
+	for shamirId, identityKey := range shamirIdsToIdentityKeys {
+		publicKeySharesMap[identityKey] = curve.ScalarBaseMult(shamirShares[shamirId-1].Value)
+	}
+
+	shards := make(map[integration.IdentityKey]*lindell22.Shard)
 	for shamirId, identityKey := range shamirIdsToIdentityKeys {
 		share := shamirShares[shamirId-1].Value
-		shards[identityKey] = &threshold.SigningKeyShare{
-			Share:     share,
-			PublicKey: schnorrPublicKey,
+		shards[identityKey] = &lindell22.Shard{
+			SigningKeyShare: &threshold.SigningKeyShare{
+				Share:     share,
+				PublicKey: schnorrPublicKey,
+			},
+			PublicKeyShares: &threshold.PublicKeyShares{
+				Curve:     curve,
+				PublicKey: schnorrPublicKey,
+				SharesMap: publicKeySharesMap,
+			},
 		}
 	}
 

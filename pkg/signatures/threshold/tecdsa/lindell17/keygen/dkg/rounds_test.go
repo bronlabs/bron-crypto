@@ -96,17 +96,8 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()
-
-		data := make([][]byte, len(identities))
-		for i := range identities {
-			data[i] = transcripts[i].ExtractBytes([]byte("gimme something"), 128)
-		}
-
-		for i := 0; i < len(data); i++ {
-			for j := i + 1; j < len(data); j++ {
-				require.Equal(t, data[i], data[j])
-			}
-		}
+		ok := test_utils.TranscriptAtSameState("gimme something", transcripts)
+		require.True(t, ok)
 	})
 
 	t.Run("each signing share is different", func(t *testing.T) {

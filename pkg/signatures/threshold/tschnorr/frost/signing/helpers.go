@@ -69,26 +69,22 @@ func ProducePartialSignature(
 		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 	}
 
-	dealer, err := shamir.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not initialise shamir methods")
-	}
 	presentPartyShamirIds := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
 		presentPartyShamirIds[i] = identityKeyToShamirId[sessionParticipants[i]]
 	}
-	lagrangeCoefficients, err := dealer.LagrangeCoefficients(presentPartyShamirIds)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
-	}
 
-	lambda_i, exists := lagrangeCoefficients[myShamirId]
-	if !exists {
-		return nil, errs.NewMissing("could not find my lagrange coefficient")
+	shamirShare := &shamir.Share{
+		Id:    participant.GetShamirId(),
+		Value: signingKeyShare.Share,
+	}
+	additiveShare, err := shamirShare.ToAdditive(presentPartyShamirIds)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get my additive share")
 	}
 
 	eiri := e_i.Mul(r_i)
-	lambda_isic := lambda_i.Mul(signingKeyShare.Share.Mul(c))
+	lambda_isic := additiveShare.Mul(c)
 	z_i := d_i.Add(eiri.Add(lambda_isic))
 
 	if participant.IsSignatureAggregator() {
