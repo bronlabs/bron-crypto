@@ -155,16 +155,16 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 
 	k2 := secondaryCosigner.state.k2
 	shamirShare := &shamir.Share{
-		Id:    secondaryCosigner.myShamirId,
+		Id:    secondaryCosigner.mySharingId,
 		Value: secondaryCosigner.myShard.SigningKeyShare.Share,
 	}
-	additiveShare, err := shamirShare.ToAdditive([]int{secondaryCosigner.myShamirId, secondaryCosigner.primaryShamirId})
+	additiveShare, err := shamirShare.ToAdditive([]int{secondaryCosigner.mySharingId, secondaryCosigner.primarySharingId})
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
 	paillierPublicKey := secondaryCosigner.myShard.PaillierPublicKeys[secondaryCosigner.primaryIdentityKey]
 	cKey := secondaryCosigner.myShard.PaillierEncryptedShares[secondaryCosigner.primaryIdentityKey]
-	primaryLagrangeCoefficient, err := signing.CalcOtherPartyLagrangeCoefficient(secondaryCosigner.primaryShamirId, secondaryCosigner.myShamirId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
+	primaryLagrangeCoefficient, err := signing.CalcOtherPartyLagrangeCoefficient(secondaryCosigner.primarySharingId, secondaryCosigner.mySharingId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}

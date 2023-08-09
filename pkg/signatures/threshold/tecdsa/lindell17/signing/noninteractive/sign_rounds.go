@@ -20,15 +20,15 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	cKey := p.myShard.PaillierEncryptedShares[p.theirIdentityKey]
 	k2 := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].K
 	shamirShare := &shamir.Share{
-		Id:    p.myShamirId,
+		Id:    p.mySharingId,
 		Value: p.myShard.SigningKeyShare.Share,
 	}
-	additiveShare, err := shamirShare.ToAdditive([]int{p.myShamirId, p.theirShamirId})
+	additiveShare, err := shamirShare.ToAdditive([]int{p.mySharingId, p.theirSharingId})
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
 
-	theirLambda, err := signing.CalcOtherPartyLagrangeCoefficient(p.theirShamirId, p.myShamirId, p.cohortConfig.TotalParties, p.cohortConfig.CipherSuite.Curve)
+	theirLambda, err := signing.CalcOtherPartyLagrangeCoefficient(p.theirSharingId, p.mySharingId, p.cohortConfig.TotalParties, p.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}

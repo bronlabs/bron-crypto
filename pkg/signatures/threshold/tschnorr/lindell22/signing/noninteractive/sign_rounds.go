@@ -25,7 +25,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// 3.iii. compute additive share d_i' = lambda_i * share
-	dPrime, err := signing.ToAdditiveShare(c.myShard.SigningKeyShare.Share, c.myShamirId, c.sessionParticipants, c.identityKeyToShamirId)
+	dPrime, err := signing.ToAdditiveShare(c.myShard.SigningKeyShare.Share, c.mySharingId, c.sessionParticipants, c.identityKeyToSharingId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}

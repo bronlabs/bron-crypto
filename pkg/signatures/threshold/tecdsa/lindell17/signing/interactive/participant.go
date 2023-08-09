@@ -31,7 +31,7 @@ type Cosigner struct {
 	sessionId     []byte
 	transcript    transcripts.Transcript
 	myIdentityKey integration.IdentityKey
-	myShamirId    int
+	mySharingId   int
 	myShard       *lindell17.Shard
 	round         int
 }
@@ -48,7 +48,7 @@ type PrimaryCosigner struct {
 	Cosigner
 
 	secondaryIdentityKey integration.IdentityKey
-	secondaryShamirId    int
+	secondarySharingId   int
 	state                *PrimaryCosignerState
 }
 
@@ -62,7 +62,7 @@ type SecondaryCosigner struct {
 	Cosigner
 
 	primaryIdentityKey integration.IdentityKey
-	primaryShamirId    int
+	primarySharingId   int
 	state              *SecondaryCosignerState
 }
 
@@ -70,8 +70,8 @@ func (cosigner *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return cosigner.myIdentityKey
 }
 
-func (cosigner *Cosigner) GetShamirId() int {
-	return cosigner.myShamirId
+func (cosigner *Cosigner) GetSharingId() int {
+	return cosigner.mySharingId
 }
 
 func (cosigner *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -111,11 +111,11 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	}
 	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
-	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	primaryCosigner = &PrimaryCosigner{
 		Cosigner: Cosigner{
 			myIdentityKey: myIdentityKey,
-			myShamirId:    myShamirId,
+			mySharingId:   mySharingId,
 			myShard:       myShard,
 			cohortConfig:  cohortConfig,
 			sessionId:     sessionId,
@@ -124,7 +124,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 			round:         1,
 		},
 		secondaryIdentityKey: secondaryIdentityKey,
-		secondaryShamirId:    identityKeyToShamirId[secondaryIdentityKey],
+		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey],
 		state:                &PrimaryCosignerState{},
 	}
 	if !primaryCosigner.IsSignatureAggregator() {
@@ -158,11 +158,11 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	}
 	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
 
-	_, keyToId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	return &SecondaryCosigner{
 		Cosigner: Cosigner{
 			myIdentityKey: myIdentityKey,
-			myShamirId:    myShamirId,
+			mySharingId:   mySharingId,
 			myShard:       myShard,
 			cohortConfig:  cohortConfig,
 			sessionId:     sessionId,
@@ -171,7 +171,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 			round:         1,
 		},
 		primaryIdentityKey: primaryIdentityKey,
-		primaryShamirId:    keyToId[primaryIdentityKey],
+		primarySharingId:   keyToId[primaryIdentityKey],
 		state:              &SecondaryCosignerState{},
 	}, nil
 }
