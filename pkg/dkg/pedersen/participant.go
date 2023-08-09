@@ -15,11 +15,11 @@ type Participant struct {
 	prng io.Reader
 
 	MyIdentityKey   integration.IdentityKey
-	MyShamirId      int
+	MySharingId     int
 	UniqueSessionId []byte
 
-	CohortConfig          *integration.CohortConfig
-	shamirIdToIdentityKey map[int]integration.IdentityKey
+	CohortConfig           *integration.CohortConfig
+	sharingIdToIdentityKey map[int]integration.IdentityKey
 
 	round int
 	state *State
@@ -29,8 +29,8 @@ func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.MyIdentityKey
 }
 
-func (p *Participant) GetShamirId() int {
-	return p.MyShamirId
+func (p *Participant) GetSharingId() int {
+	return p.MySharingId
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
@@ -53,7 +53,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		prng:            prng,
 		CohortConfig:    cohortConfig,
 	}
-	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
+	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	result.round = 1
 	return result, nil
 }

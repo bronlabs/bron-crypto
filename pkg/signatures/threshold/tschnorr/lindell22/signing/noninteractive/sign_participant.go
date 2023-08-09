@@ -12,22 +12,22 @@ type Cosigner struct {
 	lindell22.Participant
 
 	myIdentityKey  integration.IdentityKey
-	myShamirId     int
+	mySharingId    int
 	myShard        *lindell22.Shard
 	myPreSignature *lindell22.PreSignature
 
-	identityKeyToShamirId map[integration.IdentityKey]int
-	sessionParticipants   []integration.IdentityKey
-	cohortConfig          *integration.CohortConfig
-	prng                  io.Reader
+	identityKeyToSharingId map[integration.IdentityKey]int
+	sessionParticipants    []integration.IdentityKey
+	cohortConfig           *integration.CohortConfig
+	prng                   io.Reader
 }
 
 func (c *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return c.myIdentityKey
 }
 
-func (c *Cosigner) GetShamirId() int {
-	return c.myShamirId
+func (c *Cosigner) GetSharingId() int {
+	return c.mySharingId
 }
 
 func (c *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -48,16 +48,16 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
 	}
 
-	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 	return &Cosigner{
-		myIdentityKey:         myIdentityKey,
-		myShamirId:            myShamirId,
-		myShard:               myShard,
-		myPreSignature:        preSignatureBatch.PreSignatures[preSignatureIndex],
-		identityKeyToShamirId: identityKeyToShamirId,
-		sessionParticipants:   sessionParticipants,
-		cohortConfig:          cohortConfig,
-		prng:                  prng,
+		myIdentityKey:          myIdentityKey,
+		mySharingId:            mySharingId,
+		myShard:                myShard,
+		myPreSignature:         preSignatureBatch.PreSignatures[preSignatureIndex],
+		identityKeyToSharingId: identityKeyToSharingId,
+		sessionParticipants:    sessionParticipants,
+		cohortConfig:           cohortConfig,
+		prng:                   prng,
 	}, nil
 }
 

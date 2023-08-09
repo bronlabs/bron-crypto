@@ -47,11 +47,11 @@ type State struct {
 type Participant struct {
 	lindell17.Participant
 	myIdentityKey     integration.IdentityKey
-	myShamirId        int
+	mySharingId        int
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToShamirId   map[integration.IdentityKey]int
+	idKeyToSharingId   map[integration.IdentityKey]int
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
@@ -69,8 +69,8 @@ func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.myIdentityKey
 }
 
-func (p *Participant) GetShamirId() int {
-	return p.myShamirId
+func (p *Participant) GetSharingId() int {
+	return p.mySharingId
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
@@ -96,17 +96,17 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	_, idKeyToShamirId, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, idKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
-		myShamirId:        myShamirId,
+		mySharingId:        mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
 		cohortConfig:      cohortConfig,
-		idKeyToShamirId:   idKeyToShamirId,
+		idKeyToSharingId:   idKeyToSharingId,
 		sessionId:         sessionId,
 		transcript:        transcript,
 		prng:              prng,

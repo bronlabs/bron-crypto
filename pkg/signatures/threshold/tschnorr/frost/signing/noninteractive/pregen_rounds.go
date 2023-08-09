@@ -65,15 +65,15 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 	for i := 0; i < p.Tau; i++ {
 		preSignature := make(PreSignature, len(p.CohortConfig.Participants))
 		for j, participant := range p.CohortConfig.Participants {
-			senderShamirId := j + 1
+			senderSharingId := j + 1
 			message, exists := round1output[participant]
 			if !exists {
-				return nil, nil, errs.NewMissing("did not receive any message from shamir id %d", senderShamirId)
+				return nil, nil, errs.NewMissing("did not receive any message from sharing id %d", senderSharingId)
 			}
 			participantAttestedCommitmentAtThisIndex := message.Commitments[i]
 			participantAttestedCommitmentAtThisIndex.Attestor = participant
 			if err := participantAttestedCommitmentAtThisIndex.Validate(p.CohortConfig); err != nil {
-				return nil, nil, errs.WrapVerificationFailed(err, "invalid attestation for presignature index %d by party shamir id %d", i, senderShamirId)
+				return nil, nil, errs.WrapVerificationFailed(err, "invalid attestation for presignature index %d by party sharing id %d", i, senderSharingId)
 			}
 			preSignature[j] = message.Commitments[i]
 		}

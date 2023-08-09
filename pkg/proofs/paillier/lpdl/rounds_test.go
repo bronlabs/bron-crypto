@@ -207,8 +207,8 @@ func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText,
 	}
 
 	label := "gimme, gimme"
-	proverBytes := proverTranscript.ExtractBytes([]byte(label), 128)
-	verifierBytes := verifierTranscript.ExtractBytes([]byte(label), 128)
+	proverBytes := proverTranscript.ExtractBytes(label, 128)
+	verifierBytes := verifierTranscript.ExtractBytes(label, 128)
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

@@ -42,5 +42,5 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, alice)
 
-	require.NotEqual(t, alice.GetShamirId(), bob.GetShamirId())
+	require.NotEqual(t, alice.GetSharingId(), bob.GetSharingId())
 }

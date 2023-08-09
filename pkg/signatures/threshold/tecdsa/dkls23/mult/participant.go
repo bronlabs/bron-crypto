@@ -54,7 +54,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
 	forcedReuse := true
 	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
@@ -87,7 +87,7 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
 	forcedReuse := true
 	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
 	if err != nil {
@@ -109,9 +109,9 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 
 func generateGadgetVector(curve *curves.Curve, transcript transcripts.Transcript) (gadget [Xi]curves.Scalar, err error) {
 	gadget = [Xi]curves.Scalar{}
-	transcript.AppendMessage([]byte("gadget vector"), []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
+	transcript.AppendMessages("gadget vector", []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
-		bytes := transcript.ExtractBytes([]byte("gadget"), KappaBytes)
+		bytes := transcript.ExtractBytes("gadget", KappaBytes)
 		gadget[i], err = curve.Scalar.SetBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")

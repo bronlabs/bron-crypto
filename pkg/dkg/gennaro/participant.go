@@ -23,11 +23,11 @@ type Participant struct {
 	prng io.Reader
 
 	MyIdentityKey integration.IdentityKey
-	MyShamirId    int
+	MySharingId   int
 
-	CohortConfig          *integration.CohortConfig
-	UniqueSessionId       []byte
-	shamirIdToIdentityKey map[int]integration.IdentityKey
+	CohortConfig           *integration.CohortConfig
+	UniqueSessionId        []byte
+	sharingIdToIdentityKey map[int]integration.IdentityKey
 
 	H curves.Point
 
@@ -39,8 +39,8 @@ func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.MyIdentityKey
 }
 
-func (p *Participant) GetShamirId() int {
-	return p.MyShamirId
+func (p *Participant) GetSharingId() int {
+	return p.MySharingId
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
@@ -79,7 +79,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		round:           1,
 		UniqueSessionId: uniqueSessionId,
 	}
-	result.shamirIdToIdentityKey, _, result.MyShamirId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
-	transcript.AppendMessage([]byte("Gennaro DKG Session"), uniqueSessionId)
+	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
+	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	return result, nil
 }
