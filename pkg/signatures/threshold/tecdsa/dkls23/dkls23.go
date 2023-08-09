@@ -1,6 +1,7 @@
 package dkls23
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
@@ -29,4 +30,10 @@ type Shard struct {
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
 	PairwiseBaseOTs *hashmap.HashMap[integration.IdentityKey, *BaseOTConfig]
+}
+
+type PartialSignature struct {
+	Ui curves.Scalar
+	Wi curves.Scalar
+	Ri curves.Point
 }

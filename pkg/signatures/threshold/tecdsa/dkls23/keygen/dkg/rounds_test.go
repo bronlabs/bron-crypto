@@ -41,7 +41,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeParticipants(curve, cohortConfig, identities, nil)
+	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
@@ -251,7 +251,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeParticipants(curve, cohortConfig, identities, nil)
+	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil)
 	participants[0].ZeroSamplingParty.UniqueSessionId = []byte("invalid sid")
 	participants[0].GennaroParty.UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
