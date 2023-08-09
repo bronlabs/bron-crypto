@@ -47,12 +47,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
 	results := map[integration.IdentityKey]*frost.SigningKeyShare{}
 
-	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share := shamirShares[shamirId-1].Value
+	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+		share := shamirShares[sharingId-1].Value
 		results[identityKey] = &frost.SigningKeyShare{
 			Share:     share,
 			PublicKey: publicKey,

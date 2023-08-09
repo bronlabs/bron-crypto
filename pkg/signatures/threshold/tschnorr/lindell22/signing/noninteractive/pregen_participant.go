@@ -33,7 +33,7 @@ type PreGenParticipant struct {
 	lindell22.Participant
 
 	myIdentityKey integration.IdentityKey
-	myShamirId    int
+	mySharingId   int
 
 	cohortConfig *integration.CohortConfig
 	tau          int
@@ -49,8 +49,8 @@ func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
 	return p.myIdentityKey
 }
 
-func (p *PreGenParticipant) GetShamirId() int {
-	return p.myShamirId
+func (p *PreGenParticipant) GetSharingId() int {
+	return p.mySharingId
 }
 
 func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
@@ -74,16 +74,16 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
-	transcript.AppendMessage([]byte(transcriptTauLabel), []byte(strconv.Itoa(tau)))
+	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)
-	_, _, myShamirId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, _, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
 
 	return &PreGenParticipant{
 		myIdentityKey: myIdentityKey,
-		myShamirId:    myShamirId,
+		mySharingId:   mySharingId,
 		cohortConfig:  cohortConfig,
 		tau:           tau,
 		sid:           sid,

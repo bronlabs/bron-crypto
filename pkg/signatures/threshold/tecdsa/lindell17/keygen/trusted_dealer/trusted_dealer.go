@@ -23,15 +23,15 @@ const (
 )
 
 func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration.IdentityKey]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
-	shamirIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
 	// verify private key
 	feldmanShares := make([]*feldman.Share, len(shards))
 	for i := range feldmanShares {
-		shamirId := i + 1
+		sharingId := i + 1
 		feldmanShares[i] = &feldman.Share{
-			Id:    shamirId,
-			Value: shards[shamirIdToIdentity[shamirId]].SigningKeyShare.Share,
+			Id:    sharingId,
+			Value: shards[sharingIdToIdentity[sharingId]].SigningKeyShare.Share,
 		}
 	}
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
@@ -126,10 +126,10 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 	shards := make(map[integration.IdentityKey]*lindell17.Shard)
-	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share := shamirShares[shamirId-1].Value
+	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+		share := shamirShares[sharingId-1].Value
 		shards[identityKey] = &lindell17.Shard{
 			SigningKeyShare: &threshold.SigningKeyShare{
 				Share:     share,
@@ -141,13 +141,13 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	// generate Paillier key pairs and encrypt share
-	for _, identityKey := range shamirIdsToIdentityKeys {
+	for _, identityKey := range sharingIdsToIdentityKeys {
 		paillierPublicKey, paillierSecretKey, err := paillier.NewKeys(paillierPrimeBitLength)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
 		}
 		shards[identityKey].PaillierSecretKey = paillierSecretKey
-		for _, otherIdentityKey := range shamirIdsToIdentityKeys {
+		for _, otherIdentityKey := range sharingIdsToIdentityKeys {
 			if identityKey != otherIdentityKey {
 				shards[otherIdentityKey].PaillierPublicKeys[identityKey] = paillierPublicKey
 				shards[otherIdentityKey].PaillierEncryptedShares[identityKey], _, err = paillierPublicKey.Encrypt(shards[identityKey].SigningKeyShare.Share.BigInt())

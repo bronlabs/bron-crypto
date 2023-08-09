@@ -58,7 +58,7 @@ func NewCOtReceiver(
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Receiver{
 		baseOtSeeds:    baseOtResults,
 		sid:            uniqueSessionId,
@@ -80,7 +80,7 @@ func NewCOtSender(
 	if transcript == nil {
 		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
-	transcript.AppendMessage([]byte("session_id"), uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Sender{
 		baseOtSeeds:    baseOtResults,
 		sid:            uniqueSessionId,

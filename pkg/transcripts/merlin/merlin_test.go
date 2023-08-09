@@ -12,9 +12,9 @@ import (
 
 func TestSimpleTranscript(t *testing.T) {
 	mt := merlin.NewTranscript("test protocol")
-	mt.AppendMessage([]byte("some label"), []byte("some data"))
+	mt.AppendMessages("some label", []byte("some data"))
 
-	cBytes := mt.ExtractBytes([]byte("challenge"), 32)
+	cBytes := mt.ExtractBytes("challenge", 32)
 	cHex := fmt.Sprintf("%x", cBytes)
 	expectedHex := "aa57b4786a83baba7ed4ad21ac2fa9a76542358b32cd0eac24b05ea353f1d9b2"
 
@@ -25,7 +25,7 @@ func TestSimpleTranscript(t *testing.T) {
 
 func TestComplexTranscript(t *testing.T) {
 	tr := merlin.NewTranscript("test protocol")
-	tr.AppendMessage([]byte("step1"), []byte("some data"))
+	tr.AppendMessages("step1", []byte("some data"))
 
 	data := make([]byte, 1024)
 	for i := range data {
@@ -34,9 +34,9 @@ func TestComplexTranscript(t *testing.T) {
 
 	var chlBytes []byte
 	for i := 0; i < 32; i++ {
-		chlBytes = tr.ExtractBytes([]byte("challenge"), 32)
-		tr.AppendMessage([]byte("bigdata"), data)
-		tr.AppendMessage([]byte("challengedata"), chlBytes)
+		chlBytes = tr.ExtractBytes("challenge", 32)
+		tr.AppendMessages("bigdata", data)
+		tr.AppendMessages("challengedata", chlBytes)
 	}
 
 	expectedChlHex := "30bce6b150411d5ad51dd231a2d96d1ea886664e58e09dd7a5730a09f554a7d4"
@@ -61,23 +61,23 @@ func TestTranscriptPRNG(t *testing.T) {
 	witness2 := []byte("Witness data 2")
 
 	// t1 will have commitment 1 and t2, t3, t4 will gave same commitment
-	t1.AppendMessage([]byte("com"), comm1)
-	t2.AppendMessage([]byte("com"), comm2)
-	t3.AppendMessage([]byte("com"), comm2)
-	t4.AppendMessage([]byte("com"), comm2)
+	t1.AppendMessages("com", comm1)
+	t2.AppendMessages("com", comm2)
+	t3.AppendMessages("com", comm2)
+	t4.AppendMessages("com", comm2)
 
 	// t1, t2 will have same witness data
 	// t3, t4 will have same witness data
-	r1, err := t1.NewReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
+	r1, err := t1.NewReader("witness", witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r2, err := t2.NewReader([]byte("witness"), witness1, rand.New(rand.NewSource(0)))
+	r2, err := t2.NewReader("witness", witness1, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r3, err := t3.NewReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
+	r3, err := t3.NewReader("witness", witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 
-	r4, err := t4.NewReader([]byte("witness"), witness2, rand.New(rand.NewSource(0)))
+	r4, err := t4.NewReader("witness", witness2, rand.New(rand.NewSource(0)))
 	require.NoError(t, err)
 	var (
 		s1 = make([]byte, 32)

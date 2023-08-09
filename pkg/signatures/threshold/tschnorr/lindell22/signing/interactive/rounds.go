@@ -131,7 +131,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 	}
 
 	// 3.iii. compute additive share d_i'
-	dPrime, err := signing.ToAdditiveShare(p.mySigningKeyShare.Share, p.myShamirId, p.sessionParticipants, p.identityKeyToShamirId)
+	dPrime, err := signing.ToAdditiveShare(p.mySigningKeyShare.Share, p.mySharingId, p.sessionParticipants, p.identityKeyToSharingId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
@@ -170,7 +170,7 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript 
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
@@ -192,7 +192,7 @@ func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid, bigS []byte, tra
 		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
 	}
 
-	transcript.AppendMessage([]byte(transcriptDLogSLabel), bigS)
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog proof failed")
 	}

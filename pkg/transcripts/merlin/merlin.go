@@ -35,7 +35,7 @@ func NewTranscript(appLabel string) *Transcript {
 	t := Transcript{
 		s: strobe.InitStrobe(merlinProtocolLabel, securityParameter),
 	}
-	t.AppendMessage([]byte(domainSeparatorLabel), []byte(appLabel))
+	t.AppendMessages(domainSeparatorLabel, []byte(appLabel))
 	return &t
 }
 
@@ -52,9 +52,19 @@ func (*Transcript) Type() transcripts.Type {
 // -------------------------- WRITE/READ OPS -------------------------------- //
 // AppendMessage adds the message to the transcript with the supplied label. Messages
 // of length greater than 100 MB must be hashed.
-func (t *Transcript) AppendMessage(label, message []byte) {
+func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
+	if len(messages) == 1 {
+		t.appendMessage(label, messages[0])
+	} else {
+		for i, message := range messages {
+			t.appendMessage(fmt.Sprintf("%s_%d", label, i), message)
+		}
+	}
+}
+
+func (t *Transcript) appendMessage(label string, message []byte) {
 	// AdditionalData[label || le32(len(message))]
-	t.s.AD(true, appendSizeToLabel(label, len(message)))
+	t.s.AD(true, appendSizeToLabel([]byte(label), len(message)))
 	// If the message is longer than 100 MB, it must be hashed.
 	if len(message) > maxUnhashedMessageSize {
 		h := hashConstructor() // Create a local hash function.
@@ -71,37 +81,37 @@ func (t *Transcript) AppendMessage(label, message []byte) {
 
 // AppendScalars appends a vector of scalars to the transcript, serialising each scalar
 // with the label=label_i. If the vector's length is 1, label is used directly.
-func (t *Transcript) AppendScalars(label []byte, scalars ...curves.Scalar) {
+func (t *Transcript) AppendScalars(label string, scalars ...curves.Scalar) {
 	if len(scalars) == 1 {
-		t.AppendMessage([]byte("curve_name"), []byte(scalars[0].CurveName()))
-		t.AppendMessage(label, scalars[0].Bytes())
+		t.AppendMessages("curve_name", []byte(scalars[0].CurveName()))
+		t.AppendMessages(label, scalars[0].Bytes())
 	}
 	for i, scalar := range scalars {
-		t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(scalar.CurveName()))
-		t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), scalar.Bytes())
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(scalar.CurveName()))
+		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), scalar.Bytes())
 	}
 }
 
 // AppendPoints appends a vector of points to the transcript, serialising each
 // point to the compressed affine form, with the label=label_i. If the vector's length
 // is 1, label is used directly.
-func (t *Transcript) AppendPoints(label []byte, points ...curves.Point) {
+func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 	if len(points) == 1 {
-		t.AppendMessage([]byte("curve_name"), []byte(points[0].CurveName()))
-		t.AppendMessage(label, points[0].ToAffineCompressed())
+		t.AppendMessages("curve_name", []byte(points[0].CurveName()))
+		t.AppendMessages(label, points[0].ToAffineCompressed())
 	}
 	for i, point := range points {
-		t.AppendMessage([]byte(fmt.Sprintf("curve_name_%d", i)), []byte(point.CurveName()))
-		t.AppendMessage([]byte(fmt.Sprintf("%s_%d", label, i)), point.ToAffineCompressed())
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(point.CurveName()))
+		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), point.ToAffineCompressed())
 	}
 }
 
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
 // The label parameter is metadata about the challenge, and is also appended to
 // the transcript. More derails on "Transcript Protocols" section of Merlin.tool.
-func (t *Transcript) ExtractBytes(label []byte, outLen int) []byte {
+func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
 	// AdditionalData[label || le32(outLen)]
-	t.s.AD(true, appendSizeToLabel(label, outLen))
+	t.s.AD(true, appendSizeToLabel([]byte(label), outLen))
 	// Call the unterlying PRF function to fill a buffer with random bytes.
 	outBytes := t.s.PRF(outLen)
 	return outBytes
@@ -134,7 +144,7 @@ type prngReader struct {
 //   - The witness data (the secret data that allows you to efficiently verify
 //     the veracity of the statement that will use the PRNG randomness).
 //   - 32 bytes of entropy from an external RNG arbitrarily chosen.
-func (t *Transcript) NewReader(witnessLabel, witness []byte, rng io.Reader) (io.Reader, error) {
+func (t *Transcript) NewReader(label string, witness []byte, rng io.Reader) (io.Reader, error) {
 	// 1. Create a secret clone of the public transcript state
 	prng, ok := t.Clone().(*Transcript)
 	if !ok {
@@ -142,7 +152,7 @@ func (t *Transcript) NewReader(witnessLabel, witness []byte, rng io.Reader) (io.
 	}
 	// 2. Rekey with witness data
 	//	  STROBE: KEY[label || LE32(witness.len())](witness);
-	prng.s.AD(true, appendSizeToLabel(witnessLabel, len(witness)))
+	prng.s.AD(true, appendSizeToLabel([]byte(label), len(witness)))
 	prng.s.KEY(witness)
 	// 3. Rekey with 32 bytes of entropy from an external RNG
 	var keyBytes [32]byte // 256 bits

@@ -84,14 +84,14 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	}
 
 	// step 2.6
-	chiTildeTranscript := alice.transcript.ExtractBytes([]byte("transcript state for Chi tilde"), native.WideFieldBytes)
+	chiTildeTranscript := alice.transcript.ExtractBytes("transcript state for Chi tilde", native.WideFieldBytes)
 	chiTilde := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiTilde[i] = alice.Curve.Scalar.Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
 	}
 
 	// step 2.7
-	chiHatTranscript := alice.transcript.ExtractBytes([]byte("transcript state for Chi hat"), native.WideFieldBytes)
+	chiHatTranscript := alice.transcript.ExtractBytes("transcript state for Chi hat", native.WideFieldBytes)
 	chiHat := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiHat[i] = alice.Curve.Scalar.Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
@@ -102,7 +102,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	for i := 0; i < L; i++ {
 		u[i] = chiTilde[i].Mul(alice.aTilde[i]).Add(chiHat[i].Mul(alice.aHat[i]))
 	}
-	alice.transcript.AppendScalars([]byte("u"), u[:]...)
+	alice.transcript.AppendScalars("u", u[:]...)
 
 	// step 2.9
 	r := [Xi]curves.Scalar{}
@@ -121,13 +121,13 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 		toBeHashed = append(toBeHashed, element.Bytes()...)
 	}
 	rTilde := alice.Curve.Scalar.Hash(toBeHashed)
-	alice.transcript.AppendScalars([]byte("rTilde"), rTilde)
+	alice.transcript.AppendScalars("rTilde", rTilde)
 
 	// step 2.11
 	for i := 0; i < L; i++ {
 		alice.gammaA[i] = a[i].Sub(alice.aTilde[i])
 	}
-	alice.transcript.AppendScalars([]byte("Gamma_A"), alice.gammaA[:]...)
+	alice.transcript.AppendScalars("Gamma_A", alice.gammaA[:]...)
 
 	// step 2.12
 	output := &OutputShares{}
@@ -163,21 +163,21 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	}
 
 	// step 2.3
-	chiTildeTranscript := bob.transcript.ExtractBytes([]byte("transcript state for Chi tilde"), native.WideFieldBytes)
+	chiTildeTranscript := bob.transcript.ExtractBytes("transcript state for Chi tilde", native.WideFieldBytes)
 	chiTilde := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiTilde[i] = bob.Curve.Scalar.Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
 	}
 
 	// step 2.4
-	chiHatTranscript := bob.transcript.ExtractBytes([]byte("transcript state for Chi hat"), native.WideFieldBytes)
+	chiHatTranscript := bob.transcript.ExtractBytes("transcript state for Chi hat", native.WideFieldBytes)
 	chiHat := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiHat[i] = bob.Curve.Scalar.Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
 	}
 
 	// According to spec, Alice would have generated u right after producing chiTilde and chiHat
-	bob.transcript.AppendScalars([]byte("u"), round2output.U[:]...)
+	bob.transcript.AppendScalars("u", round2output.U[:]...)
 
 	// step 2.5
 	rTildeBElements := [Xi]curves.Scalar{}
@@ -208,7 +208,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	if rTildeB.Cmp(round2output.RTilde) != 0 {
 		return nil, errs.NewVerificationFailed("bob round 3 rtilde check")
 	}
-	bob.transcript.AppendScalars([]byte("rTilde"), rTildeB)
+	bob.transcript.AppendScalars("rTilde", rTildeB)
 
 	// step 2.7
 	output = &OutputShares{}
@@ -218,6 +218,6 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 			output[i] = output[i].Add(bob.gadget[0][j].Mul(zTildeB[i][j]))
 		}
 	}
-	bob.transcript.AppendScalars([]byte("Gamma_A"), round2output.GammaA[:]...)
+	bob.transcript.AppendScalars("Gamma_A", round2output.GammaA[:]...)
 	return output, nil
 }

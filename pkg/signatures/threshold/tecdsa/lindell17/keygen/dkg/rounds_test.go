@@ -128,7 +128,7 @@ func Test_HappyPath(t *testing.T) {
 		shamirShares := make([]*shamir.Share, len(lindellParticipants))
 		for i := 0; i < len(lindellParticipants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    lindellParticipants[i].GetShamirId(),
+				Id:    lindellParticipants[i].GetSharingId(),
 				Value: signingKeyShares[i].Share,
 			}
 		}

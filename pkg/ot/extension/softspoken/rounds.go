@@ -90,9 +90,9 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	R.transcript.AppendMessage([]byte("OTe_challengeResponse_x_val"), round1Output.challengeResponse.x_val[:])
+	R.transcript.AppendMessages("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		R.transcript.AppendMessage([]byte("OTe_challengeResponse_t_val"), round1Output.challengeResponse.t_val[i][:])
+		R.transcript.AppendMessages("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 	return oTeReceiverOutput, round1Output, nil
 }
@@ -190,9 +190,9 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	}
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	S.transcript.AppendMessage([]byte("OTe_challengeResponse_x_val"), round1Output.challengeResponse.x_val[:])
+	S.transcript.AppendMessages("OTe_challengeResponse_x_val", round1Output.challengeResponse.x_val[:])
 	for i := 0; i < Kappa; i++ {
-		S.transcript.AppendMessage([]byte("OTe_challengeResponse_t_val"), round1Output.challengeResponse.t_val[i][:])
+		S.transcript.AppendMessages("OTe_challengeResponse_t_val", round1Output.challengeResponse.t_val[i][:])
 	}
 
 	// Return OTe and avoid derandomizing if the input opts are not provided
@@ -235,7 +235,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				S.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
+				S.transcript.AppendMessages("OTe_derandomizeMask",
 					round2Output.derandMask[l][i][j].Bytes())
 			}
 		}
@@ -266,7 +266,7 @@ func (R *Receiver) Round3Derandomize(
 	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				R.transcript.AppendMessage([]byte("OTe_derandomizeMask"),
+				R.transcript.AppendMessages("OTe_derandomizeMask",
 					round2Output.derandMask[l][i][j].Bytes())
 			}
 		}
@@ -326,7 +326,7 @@ func (R *Receiver) Round3Derandomize(
 // WitnessCommitment (*)(Fiat-Shamir) Appends the expansionMask to the transcript.
 func WitnessCommitment(t transcripts.Transcript, expansionMask *ExpansionMask) {
 	for i := 0; i < Kappa; i++ {
-		t.AppendMessage([]byte("OTe_expansionMask"), expansionMask[i])
+		t.AppendMessages("OTe_expansionMask", expansionMask[i])
 	}
 }
 
@@ -334,7 +334,7 @@ func WitnessCommitment(t transcripts.Transcript, expansionMask *ExpansionMask) {
 func GenerateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, M)
 	for i := 0; i < M; i++ {
-		copy(challengeFiatShamir[i][:], t.ExtractBytes([]byte("OTe_challenge_Chi"), SigmaBytes))
+		copy(challengeFiatShamir[i][:], t.ExtractBytes("OTe_challenge_Chi", SigmaBytes))
 	}
 	return challengeFiatShamir
 }

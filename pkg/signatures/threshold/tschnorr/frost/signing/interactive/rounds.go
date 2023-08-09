@@ -50,8 +50,8 @@ func (ic *Cosigner) Round2(round1output map[integration.IdentityKey]*Round1Broad
 		ic.Shard.SigningKeyShare,
 		ic.state.d_i, ic.state.e_i,
 		D_alpha, E_alpha,
-		ic.ShamirIdToIdentityKey,
-		ic.IdentityKeyToShamirId,
+		ic.SharingIdToIdentityKey,
+		ic.IdentityKeyToSharingId,
 		ic.state.aggregation,
 		message,
 	)
@@ -68,7 +68,7 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[integration.
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToShamirId, message, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToSharingId, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
@@ -90,27 +90,27 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output map[integration.Id
 	E_alpha = map[integration.IdentityKey]curves.Point{}
 
 	for _, senderIdentityKey := range ic.SessionParticipants {
-		shamirId, exists := ic.IdentityKeyToShamirId[senderIdentityKey]
+		sharingId, exists := ic.IdentityKeyToSharingId[senderIdentityKey]
 		if !exists {
 			return nil, nil, errs.NewMissing("sender identity key is not found")
 		}
 		receivedMessage, exists := round1output[senderIdentityKey]
 		if !exists {
-			return nil, nil, errs.NewMissing("do not have a message from shamir id %d", shamirId)
+			return nil, nil, errs.NewMissing("do not have a message from sharing id %d", sharingId)
 		}
 		D_i := receivedMessage.Di
 		if D_i.IsIdentity() {
-			return nil, nil, errs.NewMissing("D_i of shamir id %d is at infinity", shamirId)
+			return nil, nil, errs.NewMissing("D_i of sharing id %d is at infinity", sharingId)
 		}
 		if !D_i.IsOnCurve() {
-			return nil, nil, errs.NewMissing("D_i of shamir id %d is not on curve", shamirId)
+			return nil, nil, errs.NewMissing("D_i of sharing id %d is not on curve", sharingId)
 		}
 		E_i := receivedMessage.Ei
 		if E_i.IsIdentity() {
-			return nil, nil, errs.NewIsIdentity("E_i of shamir id %d is at infinity", shamirId)
+			return nil, nil, errs.NewIsIdentity("E_i of sharing id %d is at infinity", sharingId)
 		}
 		if !E_i.IsOnCurve() {
-			return nil, nil, errs.NewNotOnCurve("E_i of shamir id %d is not on curve", shamirId)
+			return nil, nil, errs.NewNotOnCurve("E_i of sharing id %d is not on curve", sharingId)
 		}
 
 		D_alpha[senderIdentityKey] = D_i
