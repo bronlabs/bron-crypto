@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -67,21 +68,21 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitment := make([]map[integration.IdentityKey]commitments.Commitment, p.tau)
+	theirBigRCommitment := make([]*hashmap.HashMap[integration.IdentityKey, commitments.Commitment], p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitment[i] = make(map[integration.IdentityKey]commitments.Commitment)
+		theirBigRCommitment[i] = hashmap.NewHashMap[integration.IdentityKey, commitments.Commitment]()
 		for _, identity := range p.cohortConfig.Participants {
-			in, ok := input[identity]
+			in, ok := input.Get(identity)
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
-			theirBigRCommitment[i][identity] = in.BigRCommitment[i]
+			theirBigRCommitment[i].Put(identity, in.BigRCommitment[i])
 		}
 
 		// 1. compute proof of dlog knowledge of R
@@ -102,16 +103,16 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broa
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input *hashmap.HashMap[integration.IdentityKey, *Round2Broadcast]) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
-	BigR := make([]map[integration.IdentityKey]curves.Point, p.tau)
+	BigR := make([]*hashmap.HashMap[integration.IdentityKey, curves.Point], p.tau)
 	for i := 0; i < p.tau; i++ {
-		BigR[i] = make(map[integration.IdentityKey]curves.Point)
+		BigR[i] = hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
 		for _, identity := range p.cohortConfig.Participants {
-			in, ok := input[identity]
+			in, ok := input.Get(identity)
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
@@ -121,7 +122,11 @@ func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broa
 			theirPid := identity.PublicKey().ToAffineCompressed()
 
 			// 1. verify commitment
-			if err := openCommitment(theirBigR, i, p.tau, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[i][identity], theirBigRWitness); err != nil {
+			theirBigRCommitment, exists := p.state.theirBigRCommitment[i].Get(identity)
+			if !exists {
+				return nil, errs.NewIdentifiableAbort("no commitment from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			}
+			if err := openCommitment(theirBigR, i, p.tau, theirPid, p.sid, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
 				return nil, errs.WrapFailed(err, "cannot open R commitment")
 			}
 
@@ -129,7 +134,7 @@ func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broa
 			if err := dlogVerifyProof(in.BigRProof[i], theirBigR, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
 				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
-			BigR[i][identity] = theirBigR
+			BigR[i].Put(identity, theirBigR)
 		}
 	}
 
