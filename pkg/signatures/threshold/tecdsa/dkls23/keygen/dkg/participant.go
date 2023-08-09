@@ -69,7 +69,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}
 	}
-	transcript.AppendMessage([]byte("DKLs23 DKG Participant"), uniqueSessionId)
+	transcript.AppendMessages("DKLs23 DKG Participant", uniqueSessionId)
 	return &Participant{
 		MyIdentityKey:         identityKey,
 		GennaroParty:          gennaroParty,

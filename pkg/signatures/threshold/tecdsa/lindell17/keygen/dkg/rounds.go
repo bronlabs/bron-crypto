@@ -464,7 +464,7 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 }
 
 func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
-	transcript.AppendPoints([]byte("bigQTwin"), bigQTwin)
+	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)
@@ -490,7 +490,7 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 }
 
 func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
-	transcript.AppendPoints([]byte("bigQTwin"), bigQTwin)
+	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curveName := bigQ.CurveName()
 	curve, err := curves.GetCurveByName(curveName)

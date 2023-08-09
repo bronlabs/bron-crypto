@@ -67,11 +67,11 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	k := curve.Scalar.Random(rand.Reader)
 	R := p.BasePoint.Mul(k)
 
-	p.transcript.AppendPoints([]byte(basepointLabel), p.BasePoint)
-	p.transcript.AppendPoints([]byte(rLabel), R)
-	p.transcript.AppendPoints([]byte(statementLabel), statement)
-	p.transcript.AppendMessage([]byte(uniqueSessionIdLabel), p.uniqueSessionId)
-	digest := p.transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
+	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
+	p.transcript.AppendPoints(rLabel, R)
+	p.transcript.AppendPoints(statementLabel, statement)
+	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
+	digest := p.transcript.ExtractBytes(digestLabel, native.FieldBytes)
 
 	result.C, err = curve.Scalar.SetBytes(digest)
 	if err != nil {
@@ -106,11 +106,11 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	xc := statement.Mul(proof.C.Neg())
 	R := gs.Add(xc)
 
-	transcript.AppendPoints([]byte(basepointLabel), basePoint)
-	transcript.AppendPoints([]byte(rLabel), R)
-	transcript.AppendPoints([]byte(statementLabel), statement)
-	transcript.AppendMessage([]byte(uniqueSessionIdLabel), uniqueSessionId)
-	digest := transcript.ExtractBytes([]byte(digestLabel), native.FieldBytes)
+	transcript.AppendPoints(basepointLabel, basePoint)
+	transcript.AppendPoints(rLabel, R)
+	transcript.AppendPoints(statementLabel, statement)
+	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
+	digest := transcript.ExtractBytes(digestLabel, native.FieldBytes)
 
 	computedChallenge, err := curve.Scalar.SetBytes(digest)
 	if err != nil {

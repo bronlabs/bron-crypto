@@ -72,7 +72,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	curve, err := curves.GetCurveByName(bigQ.CurveName())
 	if err != nil {
@@ -119,7 +119,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sessionId)
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	curve, err := curves.GetCurveByName(x.CurveName())
 	if err != nil {

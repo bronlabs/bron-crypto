@@ -80,6 +80,6 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		UniqueSessionId: uniqueSessionId,
 	}
 	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
-	transcript.AppendMessage([]byte("Gennaro DKG Session"), uniqueSessionId)
+	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	return result, nil
 }

@@ -73,7 +73,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if transcript == nil {
 		transcript = merlin.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
 	}
-	transcript.AppendMessage([]byte("zero share sampling setup"), uniqueSessionId)
+	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
 
 	return &Participant{
 		prng:                   prng,

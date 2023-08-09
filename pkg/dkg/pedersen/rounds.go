@@ -45,7 +45,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	p.state.commitments = commitments
 
 	transcript := merlin.NewTranscript(DkgLabel)
-	transcript.AppendMessage([]byte(SharingIdLabel), []byte(fmt.Sprintf("%d", p.MySharingId)))
+	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
@@ -124,7 +124,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 		}
 
 		transcript := merlin.NewTranscript(DkgLabel)
-		transcript.AppendMessage([]byte(SharingIdLabel), []byte(fmt.Sprintf("%d", senderSharingId)))
+		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (sharing id: %d)", senderSharingId)
 		}

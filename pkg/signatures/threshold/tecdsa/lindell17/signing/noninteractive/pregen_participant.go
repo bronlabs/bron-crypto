@@ -77,7 +77,7 @@ func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdent
 	if transcript == nil {
 		transcript = merlin.NewTranscript(transcriptAppLabel)
 	}
-	transcript.AppendMessage([]byte(transcriptSessionIdLabel), sid)
+	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	return &PreGenParticipant{
 		myIdentityKey: myIdentityKey,
