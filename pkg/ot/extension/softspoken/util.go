@@ -1,9 +1,10 @@
 package softspoken
 
 import (
+	"strconv"
+
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
@@ -25,11 +26,7 @@ func HashSalted(sid []byte, bufferIn [][]byte,
 				return errs.NewInvalidArgument("input slice bit-size is not Kappa")
 			}
 			hash := sha3.NewCShake256(sid, []byte("Copper_Softspoken_COTe"))
-			idx_bytes, err := bitstring.ToBytesBE(i) // Add the index as a prefix
-			if err != nil {
-				return errs.WrapFailed(err, "converting index to bytes")
-			}
-			if _, err := hash.Write(idx_bytes); err != nil {
+			if _, err := hash.Write([]byte(strconv.Itoa(i))); err != nil {
 				return errs.WrapFailed(err, "writing index into HashSalted")
 			}
 			if _, err := hash.Write(bufferIn[l*Xi+i]); err != nil {

@@ -1,9 +1,6 @@
 package bitstring
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
@@ -47,26 +44,6 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 		return nil, errs.WrapFailed(err, "xoring bytes")
 	}
 	return out, nil
-}
-
-// ToBytesBE converts from any integer type to a byte array (big-endian).
-func ToBytesBE(data any) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, data)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "converting to bytes")
-	}
-	return buf.Bytes(), nil
-}
-
-// ToBytesLE converts from any integer type to a byte array (little-endian).
-func ToBytesLE(data any) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, data)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "converting to bytes")
-	}
-	return buf.Bytes(), nil
 }
 
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
