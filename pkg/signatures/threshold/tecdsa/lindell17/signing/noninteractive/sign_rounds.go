@@ -2,6 +2,7 @@ package noninteractive
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing"
@@ -18,8 +19,16 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	paillierPublicKey := p.myShard.PaillierPublicKeys[p.theirIdentityKey]
 	cKey := p.myShard.PaillierEncryptedShares[p.theirIdentityKey]
 	k2 := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].K
-	share := p.myShard.SigningKeyShare.Share
-	lambda1, lambda2, err := signing.CalcLagrangeCoefficients(p.theirShamirId, p.myShamirId, p.cohortConfig.TotalParties, p.cohortConfig.CipherSuite.Curve)
+	shamirShare := &shamir.Share{
+		Id:    p.mySharingId,
+		Value: p.myShard.SigningKeyShare.Share,
+	}
+	additiveShare, err := shamirShare.ToAdditive([]int{p.mySharingId, p.theirSharingId})
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive my additive share")
+	}
+
+	theirLambda, err := signing.CalcOtherPartyLagrangeCoefficient(p.theirSharingId, p.mySharingId, p.cohortConfig.TotalParties, p.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
@@ -33,7 +42,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// c3 = Enc_pk(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := signing.CalcC3(lambda1, lambda2, k2, mPrime, r, share, q, paillierPublicKey, cKey, p.prng)
+	c3, err := signing.CalcC3(theirLambda, k2, mPrime, r, additiveShare, q, paillierPublicKey, cKey, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}

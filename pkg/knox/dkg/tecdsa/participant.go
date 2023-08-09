@@ -37,8 +37,8 @@ func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.MyIdentityKey
 }
 
-func (p *Participant) GetShamirId() int {
-	return p.Main.GetShamirId()
+func (p *Participant) GetSharingId() int {
+	return p.Main.GetSharingId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {

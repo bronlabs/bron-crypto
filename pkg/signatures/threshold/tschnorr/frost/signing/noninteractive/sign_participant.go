@@ -20,13 +20,13 @@ type Cosigner struct {
 	FirstUnusedPreSignatureIndex int
 
 	MyIdentityKey integration.IdentityKey
-	MyShamirId    int
+	MySharingId   int
 	Shard         *frost.Shard
 
-	CohortConfig          *integration.CohortConfig
-	SessionParticipants   []integration.IdentityKey
-	ShamirIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToShamirId map[integration.IdentityKey]int
+	CohortConfig           *integration.CohortConfig
+	SessionParticipants    []integration.IdentityKey
+	SharingIdToIdentityKey map[int]integration.IdentityKey
+	IdentityKeyToSharingId map[integration.IdentityKey]int
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
@@ -37,8 +37,8 @@ func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return nic.MyIdentityKey
 }
 
-func (nic *Cosigner) GetShamirId() int {
-	return nic.MyShamirId
+func (nic *Cosigner) GetSharingId() int {
+	return nic.MySharingId
 }
 
 func (nic *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -75,7 +75,7 @@ func NewNonInteractiveCosigner(
 		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
 	}
 
-	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
+	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 
 	for i, participant := range presentParties {
 		if participant == nil {
@@ -103,7 +103,7 @@ func NewNonInteractiveCosigner(
 	}
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
-		myAttestedCommitment := (*preSignature)[myShamirId-1]
+		myAttestedCommitment := (*preSignature)[mySharingId-1]
 		curve, err := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
 		if err != nil {
 			return nil, errs.WrapInvalidCurve(err, "no such curve")
@@ -133,11 +133,11 @@ func NewNonInteractiveCosigner(
 		PreSignatures:                preSignatureBatch,
 		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,
 		MyIdentityKey:                identityKey,
-		MyShamirId:                   myShamirId,
+		MySharingId:                  mySharingId,
 		Shard:                        shard,
 		CohortConfig:                 cohortConfig,
-		ShamirIdToIdentityKey:        shamirIdToIdentityKey,
-		IdentityKeyToShamirId:        identityKeyToShamirId,
+		SharingIdToIdentityKey:       sharingIdToIdentityKey,
+		IdentityKeyToSharingId:       identityKeyToSharingId,
 		SessionParticipants:          presentParties,
 		myPrivateNoncePairs:          privateNoncePairs,
 		aggregationParameter: &aggregation.SignatureAggregatorParameters{

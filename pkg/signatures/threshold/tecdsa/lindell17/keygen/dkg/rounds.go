@@ -116,7 +116,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 		p.state.theirBigQCommitment[identity] = input[identity].BigQCommitment
 	}
@@ -157,7 +157,7 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		// 3.i. open commitments
@@ -251,7 +251,7 @@ func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast)
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		p.state.theirPaillierPublicKeys[identity] = input[identity].PaillierPublicKey
@@ -318,7 +318,7 @@ func (p *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (outp
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		round5Outputs[identity] = new(Round5P2P)
@@ -352,7 +352,7 @@ func (p *Participant) Round6(input map[integration.IdentityKey]*Round5P2P) (outp
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		round6Outputs[identity] = new(Round6P2P)
@@ -386,7 +386,7 @@ func (p *Participant) Round7(input map[integration.IdentityKey]*Round6P2P) (outp
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		round7Outputs[identity] = new(Round7P2P)
@@ -418,7 +418,7 @@ func (p *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shar
 			continue
 		}
 		if input[identity] == nil {
-			return nil, errs.NewFailed("no input from participant with shamir id %d", p.idKeyToShamirId[identity])
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		err = p.state.lpVerifiers[identity].Round5(input[identity].LpRound4Output)

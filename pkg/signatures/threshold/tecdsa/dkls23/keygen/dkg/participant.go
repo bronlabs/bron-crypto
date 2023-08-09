@@ -30,8 +30,8 @@ func (p *Participant) GetIdentityKey() integration.IdentityKey {
 	return p.GennaroParty.GetIdentityKey()
 }
 
-func (p *Participant) GetShamirId() int {
-	return p.GennaroParty.GetShamirId()
+func (p *Participant) GetSharingId() int {
+	return p.GennaroParty.GetSharingId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {

@@ -147,10 +147,10 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 	return nil
 }
 
-// We require that attested commitments within a presignature are sorted by the shamir id of the attestor.
+// We require that attested commitments within a presignature are sorted by the sharing id of the attestor.
 func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) {
-	_, identityKeyToShamirId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
-		return identityKeyToShamirId[attestedCommitments[i].Attestor] < identityKeyToShamirId[attestedCommitments[j].Attestor]
+		return identityKeyToSharingId[attestedCommitments[i].Attestor] < identityKeyToSharingId[attestedCommitments[j].Attestor]
 	})
 }

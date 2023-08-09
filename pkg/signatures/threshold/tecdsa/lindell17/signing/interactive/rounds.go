@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing"
@@ -153,10 +154,17 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	k2 := secondaryCosigner.state.k2
-	share := secondaryCosigner.myShard.SigningKeyShare.Share
+	shamirShare := &shamir.Share{
+		Id:    secondaryCosigner.mySharingId,
+		Value: secondaryCosigner.myShard.SigningKeyShare.Share,
+	}
+	additiveShare, err := shamirShare.ToAdditive([]int{secondaryCosigner.mySharingId, secondaryCosigner.primarySharingId})
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not derive my additive share")
+	}
 	paillierPublicKey := secondaryCosigner.myShard.PaillierPublicKeys[secondaryCosigner.primaryIdentityKey]
 	cKey := secondaryCosigner.myShard.PaillierEncryptedShares[secondaryCosigner.primaryIdentityKey]
-	lambda1, lambda2, err := signing.CalcLagrangeCoefficients(secondaryCosigner.primaryShamirId, secondaryCosigner.myShamirId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
+	primaryLagrangeCoefficient, err := signing.CalcOtherPartyLagrangeCoefficient(secondaryCosigner.primarySharingId, secondaryCosigner.mySharingId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
@@ -170,7 +178,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	// c3 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := signing.CalcC3(lambda1, lambda2, k2, mPrime, r, share, q, paillierPublicKey, cKey, secondaryCosigner.prng)
+	c3, err := signing.CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q, paillierPublicKey, cKey, secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}

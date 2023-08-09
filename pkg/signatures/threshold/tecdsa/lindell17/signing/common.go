@@ -14,24 +14,21 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
-// CalcLagrangeCoefficients computes Lagrange coefficient for shamirId1 and shamirId2.
-func CalcLagrangeCoefficients(shamirId1, shamirId2, n int, curve *curves.Curve) (lambda1, lambda2 curves.Scalar, err error) {
+// CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of there other party.
+func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, curve *curves.Curve) (curves.Scalar, error) {
 	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot create shamir dealer")
+		return nil, errs.WrapFailed(err, "cannot create shamir dealer")
 	}
-	coefficients, err := dealer.LagrangeCoefficients([]int{shamirId1, shamirId2})
+	coefficients, err := dealer.LagrangeCoefficients([]int{otherPartySharingId, mySharingId})
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
+		return nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
 	}
-	lambda1 = coefficients[shamirId1]
-	lambda2 = coefficients[shamirId2]
-
-	return lambda1, lambda2, nil
+	return coefficients[otherPartySharingId], nil
 }
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
-func CalcC3(lambda1, lambda2, k2, mPrime, r, share curves.Scalar, q *big.Int, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
+func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *big.Int, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
 	k2Inv, err := k2.Invert()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot invert k2")
@@ -55,7 +52,7 @@ func CalcC3(lambda1, lambda2, k2, mPrime, r, share curves.Scalar, q *big.Int, pk
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic multiplication failed")
 	}
-	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(lambda2).Mul(share).BigInt())
+	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(additiveShare).BigInt())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c2")
 	}

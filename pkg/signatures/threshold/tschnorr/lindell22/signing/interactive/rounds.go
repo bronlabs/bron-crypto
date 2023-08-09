@@ -131,7 +131,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 	}
 
 	// 3.iii. compute additive share d_i'
-	dPrime, err := signing.ToAdditiveShare(p.mySigningKeyShare.Share, p.myShamirId, p.sessionParticipants, p.identityKeyToShamirId)
+	dPrime, err := signing.ToAdditiveShare(p.mySigningKeyShare.Share, p.mySharingId, p.sessionParticipants, p.identityKeyToSharingId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}

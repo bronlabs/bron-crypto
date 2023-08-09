@@ -16,13 +16,13 @@ type Cosigner struct {
 	prng io.Reader
 
 	MyIdentityKey integration.IdentityKey
-	MyShamirId    int
+	MySharingId   int
 	Shard         *frost.Shard
 
-	CohortConfig          *integration.CohortConfig
-	ShamirIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToShamirId map[integration.IdentityKey]int
-	SessionParticipants   []integration.IdentityKey
+	CohortConfig           *integration.CohortConfig
+	SharingIdToIdentityKey map[int]integration.IdentityKey
+	IdentityKeyToSharingId map[integration.IdentityKey]int
+	SessionParticipants    []integration.IdentityKey
 
 	round int
 	state *State
@@ -32,8 +32,8 @@ func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
 	return ic.MyIdentityKey
 }
 
-func (ic *Cosigner) GetShamirId() int {
-	return ic.MyShamirId
+func (ic *Cosigner) GetSharingId() int {
+	return ic.MySharingId
 }
 
 func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -97,7 +97,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.ShamirIdToIdentityKey, cosigner.IdentityKeyToShamirId, cosigner.MyShamirId = integration.DeriveSharingIds(identityKey, cosigner.CohortConfig.Participants)
+	cosigner.SharingIdToIdentityKey, cosigner.IdentityKeyToSharingId, cosigner.MySharingId = integration.DeriveSharingIds(identityKey, cosigner.CohortConfig.Participants)
 
 	cosigner.round = 1
 	return cosigner, nil
