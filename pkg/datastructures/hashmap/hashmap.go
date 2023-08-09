@@ -5,14 +5,14 @@ import (
 )
 
 type HashMap[K types.Hashable, T any] struct {
-	keys   map[[32]byte]types.Hashable
-	values map[[32]byte]T
+	keys   map[[types.HASH_KEY_SIZE]byte]types.Hashable
+	values map[[types.HASH_KEY_SIZE]byte]T
 }
 
 func NewHashMap[K types.Hashable, T any]() *HashMap[K, T] {
 	return &HashMap[K, T]{
-		keys:   make(map[[32]byte]types.Hashable),
-		values: make(map[[32]byte]T),
+		keys:   make(map[[types.HASH_KEY_SIZE]byte]types.Hashable),
+		values: make(map[[types.HASH_KEY_SIZE]byte]T),
 	}
 }
 
@@ -38,17 +38,19 @@ func (m *HashMap[K, T]) Put(key types.Hashable, value T) {
 	if key == nil {
 		return
 	}
-	m.keys[key.Hash()] = key
-	m.values[key.Hash()] = value
+	keyHash := key.Hash()
+	m.keys[keyHash] = key
+	m.values[keyHash] = value
 }
 
 func (m *HashMap[K, T]) Remove(key types.Hashable) {
-	delete(m.keys, key.Hash())
-	delete(m.values, key.Hash())
+	keyHash := key.Hash()
+	delete(m.keys, keyHash)
+	delete(m.values, keyHash)
 }
 
 func (m *HashMap[K, T]) Clear() {
-	m.values = make(map[[32]byte]T)
+	m.values = make(map[[types.HASH_KEY_SIZE]byte]T)
 }
 
 func (m *HashMap[K, T]) Keys() []K {

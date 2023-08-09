@@ -4,8 +4,6 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
-
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"

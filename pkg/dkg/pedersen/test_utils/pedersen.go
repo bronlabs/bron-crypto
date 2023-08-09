@@ -68,10 +68,7 @@ func MapDkgRound1OutputsToRound2Inputs(participants []*pedersen.Participant, rou
 		round2UnicastInputs[i] = hashmap.NewHashMap[integration.IdentityKey, *pedersen.Round1P2P]()
 		for j := range participants {
 			if j != i {
-				output, exists := round1UnicastOutputs[j].Get(participants[i].GetIdentityKey())
-				if !exists {
-					panic("round1UnicastOutputs should have all participants")
-				}
+				output, _ := round1UnicastOutputs[j].Get(participants[i].GetIdentityKey())
 				round2UnicastInputs[i].Put(participants[j].GetIdentityKey(), output)
 			}
 		}
