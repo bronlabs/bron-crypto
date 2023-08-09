@@ -1,7 +1,8 @@
 package bitstring
 
 import (
-	"reflect"
+	"bytes"
+	"encoding/binary"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
@@ -48,33 +49,24 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// ToByteArrayBE converts from any integer type to a byte array (big-endian).
-func ToByteArrayBE[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
-	typeByteSize := uint(reflect.TypeOf(i).Size())
-	arr := make([]byte, typeByteSize)
-	for j := uint(0); j < typeByteSize; j++ { // higher bytes first
-		arr[j] = byte(i >> ((typeByteSize - 1 - j) << 3))
+// ToBytesBE converts from any integer type to a byte array (big-endian).
+func ToBytesBE(data any) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, data)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "converting to bytes")
 	}
-	return arr
+	return buf.Bytes(), nil
 }
 
-// ToByteArrayLE converts from any integer type to a byte array (little-endian).
-func ToByteArrayLE[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](i T) []byte {
-	typeByteSize := uint(reflect.TypeOf(i).Size())
-	arr := make([]byte, typeByteSize)
-	for j := uint(0); j < typeByteSize; j++ { // lower bytes first
-		arr[j] = byte(i >> (j << 3))
+// ToBytesLE converts from any integer type to a byte array (little-endian).
+func ToBytesLE(data any) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.LittleEndian, data)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "converting to bytes")
 	}
-	return arr
-}
-
-// BoolTo converts a boolean to any chosen type.
-func BoolTo[T int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](b bool) T {
-	if b {
-		return T(1)
-	} else {
-		return T(0)
-	}
+	return buf.Bytes(), nil
 }
 
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in

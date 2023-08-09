@@ -42,78 +42,105 @@ func TestXorBytesNew(t *testing.T) {
 func TestIntToByteArrayBE(t *testing.T) {
 	// int8
 	for i := int8(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i)}, res)
 	}
 	// uint16
 	for i := uint16(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, byte(i)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, byte(i)}, res)
 	}
 	for i := uint16(256); i < 356; i++ {
-		require.Equal(t, []byte{0x01, byte(i - 256)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x01, byte(i - 256)}, res)
 	}
 	// int32
 	for i := int32(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, 0x00, 0x00, byte(i)}, res)
 	}
 	for i := int32(65536); i < 65636; i++ {
-		require.Equal(t, []byte{0x00, 0x01, 0x00, byte(i - 65536)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, 0x01, 0x00, byte(i - 65536)}, res)
 	}
 	for i := int32(16777216); i < 16777316; i++ {
-		require.Equal(t, []byte{0x01, 0x00, 0x00, byte(i - 16777216)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x01, 0x00, 0x00, byte(i - 16777216)}, res)
 	}
 	// uint64
 	for i := uint64(0); i < 100; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i)}, res)
 	}
 	for i := uint64(4294967296); i < 4294967396; i++ {
-		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, byte(i - 4294967296)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, byte(i - 4294967296)}, res)
 	}
 	for i := uint64(281474976710656); i < 281474976710756; i++ {
-		require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i - 281474976710656)}, bitstring.ToByteArrayBE(i))
+		res, err := bitstring.ToBytesBE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, byte(i - 281474976710656)}, res)
 	}
 }
 
 func TestIntToByteArrayLE(t *testing.T) {
 	// int8
 	for i := int8(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i)}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i)}, res)
 	}
 	// uint16
 	for i := uint16(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i), 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i), 0x00}, res)
 	}
 	for i := uint16(256); i < 356; i++ {
-		require.Equal(t, []byte{byte(i - 256), 0x01}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i - 256), 0x01}, res)
 	}
 	// int32
 	for i := int32(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00}, res)
 	}
 	for i := int32(65536); i < 65636; i++ {
-		require.Equal(t, []byte{byte(i - 65536), 0x00, 0x01, 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i - 65536), 0x00, 0x01, 0x00}, res)
 	}
 	for i := int32(16777216); i < 16777316; i++ {
-		require.Equal(t, []byte{byte(i - 16777216), 0x00, 0x00, 0x01}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i - 16777216), 0x00, 0x00, 0x01}, res)
 	}
 	// uint64
 	for i := uint64(0); i < 100; i++ {
-		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, res)
 	}
 	for i := uint64(4294967296); i < 4294967396; i++ {
-		require.Equal(t, []byte{byte(i - 4294967296), 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i - 4294967296), 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, res)
 	}
 	for i := uint64(281474976710656); i < 281474976710756; i++ {
-		require.Equal(t, []byte{byte(i - 281474976710656), 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00}, bitstring.ToByteArrayLE(i))
+		res, err := bitstring.ToBytesLE(i)
+		require.NoError(t, err)
+		require.Equal(t, []byte{byte(i - 281474976710656), 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00}, res)
 	}
-}
-
-func TestBoolTo(t *testing.T) {
-	require.Equal(t, byte(0x00), bitstring.BoolTo[byte](false))
-	require.Equal(t, byte(0x01), bitstring.BoolTo[byte](true))
-	require.Equal(t, uint(0x00), bitstring.BoolTo[uint](false))
-	require.Equal(t, uint(0x01), bitstring.BoolTo[uint](true))
-	require.Equal(t, int(0x00), bitstring.BoolTo[int](false))
-	require.Equal(t, int(0x01), bitstring.BoolTo[int](true))
 }
 
 func TestTransposeBooleanMatrix(t *testing.T) {

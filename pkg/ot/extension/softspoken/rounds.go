@@ -203,11 +203,16 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	// (Derand.1) Compute the derandomization mask τ and the output correlation z_A
 	cOTeSenderOutput = make(COTeSenderOutput, L)
 	round2Output = &Round2Output{derandMask: make(DerandomizeMask, L)}
+	var idxOTe int
 	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				// if forced reuse, use a single OTe batch (set idxOTe = 0)
-				idxOTe := l * bitstring.BoolTo[int](!S.useForcedReuse)
+				// if forced reuse, use always the first OTe batch (idxOTe = 0)
+				if S.useForcedReuse {
+					idxOTe = 0
+				} else {
+					idxOTe = l
+				}
 				// z_A_j = ECP(v_0_j)
 				cOTeSenderOutput[l][i][j], err = S.curve.Scalar.SetBytes(
 					oTeSenderOutput[0][idxOTe][i][j][:])
@@ -269,11 +274,16 @@ func (R *Receiver) Round3Derandomize(
 
 	// (Derand.2) Apply derandomization Mask to the ROTe output
 	var v_x_NegCurve, v_x_curve_corr curves.Scalar
+	var idxOTe int
 	for l := 0; l < L; l++ {
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				// if forced reuse, use a single OTe batch (set idxOTe = 0)
-				idxOTe := l * bitstring.BoolTo[int](!R.useForcedReuse)
+				// if forced reuse, use always the first OTe batch (idxOTe = 0)
+				if R.useForcedReuse {
+					idxOTe = 0
+				} else {
+					idxOTe = l
+				}
 				// ECP(v_x_j)
 				v_x_NegCurve, err = R.curve.Scalar.SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {

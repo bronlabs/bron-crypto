@@ -187,10 +187,15 @@ func CheckSoftspokenCOTeOutputs(t *testing.T,
 	require.Equal(t, len(cOTeSenderOutputs), L)
 	require.Equal(t, len(cOTeReceiverOutputs), L)
 	// Check correlation in COTe results
+	var idxOTe int
 	for l := 0; l < L; l++ {
 		for i := 0; i < softspoken.Xi; i++ {
-			// if forced reuse, use a single OTe batch (set idxOTe = 0)
-			idxOTe := l * bitstring.BoolTo[int](!useForcedReuse)
+			// if forced reuse, use always the first OTe batch (idxOTe = 0)
+			if useForcedReuse {
+				idxOTe = 0
+			} else {
+				idxOTe = l
+			}
 			x := bitstring.SelectBit(choices[idxOTe][:], i)
 			for k := 0; k < softspoken.ROTeWidth; k++ {
 				// Check each correlation z_A = x • α - z_B

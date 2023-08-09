@@ -25,7 +25,10 @@ func HashSalted(sid []byte, bufferIn [][]byte,
 				return errs.NewInvalidArgument("input slice bit-size is not Kappa")
 			}
 			hash := sha3.NewCShake256(sid, []byte("Copper_Softspoken_COTe"))
-			idx_bytes := bitstring.ToByteArrayBE[int](i) // Add the index as a prefix
+			idx_bytes, err := bitstring.ToBytesBE(i) // Add the index as a prefix
+			if err != nil {
+				return errs.WrapFailed(err, "converting index to bytes")
+			}
 			if _, err := hash.Write(idx_bytes); err != nil {
 				return errs.WrapFailed(err, "writing index into HashSalted")
 			}
