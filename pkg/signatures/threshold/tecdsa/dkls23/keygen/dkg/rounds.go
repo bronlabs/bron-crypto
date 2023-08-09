@@ -100,10 +100,10 @@ func (p *Participant) Round2(round1outputBroadcast *hashmap.HashMap[integration.
 			return nil, nil, errs.NewFailed("vsot round output missing")
 		}
 		baseOTP2PMsg, err := receiver.Round2VerifySchnorrAndPadTransfer(output.PublicKey, output.Proof)
-		baseOTP2P.Put(identity, baseOTP2PMsg)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "vsot as receiver for identity %x", identity.PublicKey().ToAffineCompressed())
 		}
+		baseOTP2P.Put(identity, baseOTP2PMsg)
 	}
 	p2pOutput := hashmap.NewHashMap[integration.IdentityKey, *Round2P2P]()
 	for identity, message := range zeroSamplingP2P.GetMap() {
