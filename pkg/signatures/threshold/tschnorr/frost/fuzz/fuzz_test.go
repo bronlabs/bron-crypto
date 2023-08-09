@@ -9,7 +9,6 @@ import (
 	"io"
 	"math"
 	"math/rand"
-	"strings"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -21,6 +20,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -36,8 +36,8 @@ import (
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
 var (
-	maxParticipants          = 10
-	maxNumberOfPreSignatures = 100
+	maxParticipants          = 5
+	maxNumberOfPreSignatures = 10
 )
 
 // we assume that input curves and hash functions are valid
@@ -53,7 +53,7 @@ var (
 // 3. threshold is between 2 and n
 // 4. randomSeed is a valid int64
 // Returns 1 if the fuzzer does not find a bug, 0 if inputs is not valid, panic if it finds a bug
-func FuzzFrostDkgInteractiveSigning(f *testing.F) {
+func FuzzInteractiveSigning(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz := fuzz.NewFromGoFuzz(data).NilChance(0.05) // 5% chance of generating nil inputs
 		var curveIndex int
@@ -84,7 +84,7 @@ func FuzzFrostDkgInteractiveSigning(f *testing.F) {
 	})
 }
 
-func FuzzFrostDkgNonInteractiveSigning(f *testing.F) {
+func FuzzNonInteractiveSigning(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz := fuzz.NewFromGoFuzz(data).NilChance(0.05) // 5% chance of generating nil inputs
 		var curveIndex int
@@ -111,7 +111,10 @@ func FuzzFrostDkgNonInteractiveSigning(f *testing.F) {
 		n = random.Intn(maxParticipants-2) + 2                      // n is between 2 and 10
 		threshold = random.Intn(int(math.Max(float64(n-2), 1))) + 2 // threshold is between 2 and n
 		tau = random.Intn(maxNumberOfPreSignatures) + 2
-		firstUnusedPreSignatureIndex = random.Intn(tau) + 2
+		firstUnusedPreSignatureIndex = firstUnusedPreSignatureIndex % tau
+		if firstUnusedPreSignatureIndex < 0 {
+			firstUnusedPreSignatureIndex = -firstUnusedPreSignatureIndex
+		}
 
 		fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "threshold: ", threshold, "randomSeed: ", randomSeed, "firstUnusedPreSignatureIndex: ", firstUnusedPreSignatureIndex, "message: ", message, "tau: ", tau)
 		curve := allCurves[curveIndex%len(allCurves)]
@@ -278,11 +281,19 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, identities, threshold, identities)
-	require.NoError(t, err)
+	if err != nil {
+		if errs.IsDuplicate(err) {
+			t.SkipNow()
+		} else {
+			require.NoError(t, err)
+		}
+	}
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate identity keys") {
+		if errs.IsDuplicate(err) {
 			t.SkipNow()
+		} else {
+			require.NoError(t, err)
 		}
 	}
 	require.NoError(t, err)
