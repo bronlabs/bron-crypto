@@ -315,7 +315,7 @@ func prepareCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId,
 			uniqueSessionId,
 			R_i,
 		},
-		[]byte(""),
+		nil,
 	)
 }
 
