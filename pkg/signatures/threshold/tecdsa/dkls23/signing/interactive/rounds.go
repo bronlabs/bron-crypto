@@ -41,6 +41,9 @@ type Round2Broadcast struct {
 }
 
 func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
+	if ic.round != 1 {
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
+	}
 	// step 1.1
 	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
 	// step 1.2
@@ -80,6 +83,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 			MultiplicationOutput:    multiplicationOutput,
 		}
 	}
+	ic.round++
 	// step 1.4
 	return &Round1Broadcast{
 		R_i: ic.state.R_i,
@@ -87,6 +91,9 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 }
 
 func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
+	if ic.round != 2 {
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
+	}
 	// step 2.1
 	zeta_i, err := ic.subprotocols.zeroShareSampling.Sample()
 	if err != nil {
@@ -145,6 +152,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 			WitnessOfTheCommitmentToInstanceKey: ic.state.witnessesOfCommitmentToInstanceKey[participant],
 		}
 	}
+	ic.round++
 	// step 2.7
 	return &Round2Broadcast{
 		PK_i: ic.state.pk_i,
@@ -152,6 +160,9 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 }
 
 func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
+	if ic.round != 3 {
+		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
+	}
 	refreshedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
 	R := ic.state.R_i
 	phiPsi := ic.state.phi_i
@@ -248,6 +259,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	}
 	w_i := digest.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
 
+	ic.round++
 	// step 3.7
 	return &dkls23.PartialSignature{
 		Ui: u_i,
