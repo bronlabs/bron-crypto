@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 )
 
-func MakeParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
+func MakeDkgParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -203,6 +203,50 @@ func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[inte
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	return shards, nil
+}
+
+func RunDKG(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
+	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoDkgRound1(participants)
+	if err != nil {
+		return nil, err
+	}
+
+	r2InsB, r2InsU := MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2OutsB, r2OutsU, err := DoDkgRound2(participants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, err
+	}
+
+	r3InsB, r3InsU := MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	r3OutsU, err := DoDkgRound3(participants, r3InsB, r3InsU)
+	if err != nil {
+		return nil, err
+	}
+
+	r4InsU := MapDkgRound3OutputsToRound4Inputs(participants, r3OutsU)
+	r4OutsU, err := DoDkgRound4(participants, r4InsU)
+	if err != nil {
+		return nil, err
+	}
+
+	r5InsU := MapDkgRound4OutputsToRound5Inputs(participants, r4OutsU)
+	r5OutsU, err := DoDkgRound5(participants, r5InsU)
+	if err != nil {
+		return nil, err
+	}
+
+	r6InsU := MapDkgRound5OutputsToRound6Inputs(participants, r5OutsU)
+	shards, err = DoDkgRound6(participants, r6InsU)
+	if err != nil {
+		return nil, err
 	}
 
 	return shards, nil
