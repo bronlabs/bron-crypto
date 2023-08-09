@@ -135,7 +135,8 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curv
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i]].Equal(curve.ScalarBaseMult(share.Share)))
+		keyShare, _ := allPublicKeyShares[i].SharesMap.Get(allIdentities[i])
+		require.True(t, keyShare.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
 	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, tau)
@@ -170,7 +171,8 @@ func TestSignNilMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i]].Equal(curve.ScalarBaseMult(share.Share)))
+		keyShare, _ := allPublicKeyShares[i].SharesMap.Get(allIdentities[i])
+		require.True(t, keyShare.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
 	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, 5)

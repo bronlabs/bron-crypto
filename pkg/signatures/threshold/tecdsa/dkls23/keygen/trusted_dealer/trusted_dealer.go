@@ -3,6 +3,8 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -15,7 +17,7 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*dkls23.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (*hashmap.HashMap[integration.IdentityKey, *dkls23.Shard], error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -55,25 +57,25 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	results := map[integration.IdentityKey]*dkls23.Shard{}
+	results := hashmap.NewHashMap[integration.IdentityKey, *dkls23.Shard]()
 
-	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		share := shamirShares[sharingId-1].Value
-		results[identityKey] = &dkls23.Shard{
+	for shamirId, identityKey := range shamirIdsToIdentityKeys {
+		share := shamirShares[shamirId-1].Value
+		results.Put(identityKey, &dkls23.Shard{
 			SigningKeyShare: &dkls23.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
 			},
 			// Not currently supported
 			PublicKeyShares: nil,
-			PairwiseSeeds:   dkls23.PairwiseSeeds{},
-		}
+			PairwiseSeeds:   zero.NewPairwiseSeeds(),
+		})
 	}
 
-	for identityKey := range results {
-		for otherIdentityKey := range results {
+	for _, identityKey := range results.Keys() {
+		for _, otherIdentityKey := range results.Keys() {
 			if identityKey.PublicKey().Equal(otherIdentityKey.PublicKey()) {
 				continue
 			}
@@ -81,7 +83,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 			if _, err := crand.Read(randomSeed[:]); err != nil {
 				return nil, errs.WrapFailed(err, "could not produce random seed")
 			}
-			results[identityKey].PairwiseSeeds[otherIdentityKey] = randomSeed
+			shard, exists := results.Get(identityKey)
+			if !exists {
+				return nil, errs.NewInvalidArgument("shard not found")
+			}
+			shard.PairwiseSeeds.Put(otherIdentityKey, randomSeed)
 		}
 	}
 	return results, nil

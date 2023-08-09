@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
@@ -15,7 +16,7 @@ type SignatureAggregator struct {
 	PublicKey              curves.Point
 	MyIdentityKey          integration.IdentityKey
 	SessionParticipants    []integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
 	PublicKeyShares        *frost.PublicKeyShares
 	Message                []byte
 
@@ -29,12 +30,12 @@ func (sa *SignatureAggregator) HasIdentifiableAbort() bool {
 type SignatureAggregatorParameters struct {
 	Z_i     curves.Scalar
 	R       curves.Point
-	R_js    map[integration.IdentityKey]curves.Point
-	D_alpha map[integration.IdentityKey]curves.Point
-	E_alpha map[integration.IdentityKey]curves.Point
+	R_js    *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	D_alpha *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	E_alpha *hashmap.HashMap[integration.IdentityKey, curves.Point]
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToSharingId map[integration.IdentityKey]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int], message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -47,7 +48,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if len(sessionParticipants) == 0 {
 		return nil, errs.NewIncorrectCount("must provide the list of the sharing ids of session participants")
 	}
-	if len(identityKeyToSharingId) != cohortConfig.TotalParties {
+	if identityKeyToSharingId.Size() != cohortConfig.TotalParties {
 		return nil, errs.NewIncorrectCount("don't have enough mapping for shamir to identity keys as we have parties")
 	}
 	if shard == nil {
@@ -79,7 +80,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		parameters:             parameters,
 	}
 	if aggregator.HasIdentifiableAbort() {
-		if len(aggregator.parameters.R_js) != len(sessionParticipants) {
+		if aggregator.parameters.R_js.Size() != len(sessionParticipants) {
 			return nil, errs.NewIncorrectCount("identifiable abort is enabled and the size of Rjs and S is not equal.")
 		}
 	}
@@ -87,41 +88,55 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 }
 
 // TODO: condense/simplify.
-func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
-	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
+func (sa *SignatureAggregator) Aggregate(partialSignatures *hashmap.HashMap[integration.IdentityKey, *frost.PartialSignature]) (*eddsa.Signature, error) {
+	if sa.parameters.D_alpha.Size() != len(sa.SessionParticipants) {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
 	}
-	if len(sa.parameters.E_alpha) != len(sa.SessionParticipants) {
+	if sa.parameters.E_alpha.Size() != len(sa.SessionParticipants) {
 		return nil, errs.NewIncorrectCount("length of E_alpha is not equal to S")
 	}
 	// This is for TS-SUF-4 in case aggregator was the one computing the R
 	// for identifiable abort, you need R_js
-	recomputedR_js := map[integration.IdentityKey]curves.Point{}
+	recomputedR_js := hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
 	if sa.parameters.R == nil {
 		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point.Identity()
 		combinedDsAndEs := []byte{}
 		for _, presentParty := range sa.SessionParticipants {
-			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[presentParty].ToAffineCompressed()...)
+			d_alpha, exists := sa.parameters.D_alpha.Get(presentParty)
+			if !exists {
+				return nil, errs.NewMissing("could not find D_alpha for j=%d", presentParty)
+			}
+			combinedDsAndEs = append(combinedDsAndEs, d_alpha.ToAffineCompressed()...)
 		}
 		for _, presentParty := range sa.SessionParticipants {
-			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.E_alpha[presentParty].ToAffineCompressed()...)
+			e_alpha, exists := sa.parameters.E_alpha.Get(presentParty)
+			if !exists {
+				return nil, errs.NewMissing("could not find E_alpha for j=%d", presentParty)
+			}
+			combinedDsAndEs = append(combinedDsAndEs, e_alpha.ToAffineCompressed()...)
 		}
 
 		for _, jIdentityKey := range sa.SessionParticipants {
-			j := sa.IdentityKeyToSharingId[jIdentityKey]
-
+			j, exists := sa.IdentityKeyToSharingId.Get(jIdentityKey)
+			if !exists {
+				return nil, errs.NewMissing("could not find j for jIdentityKey=%s", jIdentityKey)
+			}
 			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
-			D_j, exists := sa.parameters.D_alpha[jIdentityKey]
+			D_j, exists := sa.parameters.D_alpha.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", j)
 			}
-			E_j, exists := sa.parameters.E_alpha[jIdentityKey]
+			E_j, exists := sa.parameters.E_alpha.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", j)
 			}
 
-			recomputedR_js[jIdentityKey] = D_j.Add(E_j.Mul(r_j))
-			sa.parameters.R = sa.parameters.R.Add(recomputedR_js[jIdentityKey])
+			recomputedR_js.Put(jIdentityKey, D_j.Add(E_j.Mul(r_j)))
+			R_js, exists := sa.parameters.R_js.Get(jIdentityKey)
+			if !exists {
+				return nil, errs.NewMissing("could not find R_js for j=%d", j)
+			}
+			sa.parameters.R = sa.parameters.R.Add(R_js)
 		}
 		sa.parameters.R_js = recomputedR_js
 	}
@@ -132,15 +147,15 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 			return nil, errs.WrapFailed(err, "could not initialise shamir config")
 		}
 
-		sharingIDs := make([]int, len(sa.SessionParticipants))
+		shamirIDs := make([]int, len(sa.SessionParticipants))
 		for i, party := range sa.SessionParticipants {
 			var ok bool
-			sharingIDs[i], ok = sa.IdentityKeyToSharingId[party]
+			shamirIDs[i], ok = sa.IdentityKeyToSharingId.Get(party)
 			if !ok {
 				return nil, errs.NewMissing("could not find sharing id for the party")
 			}
 		}
-		lagrangeCoefficients, err := shamirConfig.LagrangeCoefficients(sharingIDs)
+		lagrangeCoefficients, err := shamirConfig.LagrangeCoefficients(shamirIDs)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 		}
@@ -156,11 +171,11 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		}
 
 		for _, jIdentityKey := range sa.SessionParticipants {
-			j, exists := sa.IdentityKeyToSharingId[jIdentityKey]
+			j, exists := sa.IdentityKeyToSharingId.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)
 			}
-			Y_j, exists := sa.PublicKeyShares.SharesMap[jIdentityKey]
+			Y_j, exists := sa.PublicKeyShares.SharesMap.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find public key share of sharing id %d", j)
 			}
@@ -169,12 +184,12 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 				return nil, errs.NewMissing("could not find lagrange coefficient of sharing id %d", j)
 			}
 
-			partialSignature, exists := partialSignatures[jIdentityKey]
+			partialSignature, exists := partialSignatures.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find partial signature from sharing id %d", j)
 			}
 
-			R_j, exists := sa.parameters.R_js[jIdentityKey]
+			R_j, exists := sa.parameters.R_js.Get(jIdentityKey)
 			if !exists {
 				return nil, errs.NewMissing("could not find R_j for j=%d", j)
 			}
@@ -190,7 +205,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	}
 
 	z := sa.CohortConfig.CipherSuite.Curve.Scalar.Zero()
-	for _, partialSignature := range partialSignatures {
+	for _, partialSignature := range partialSignatures.GetMap() {
 		z = z.Add(partialSignature.Zi)
 	}
 

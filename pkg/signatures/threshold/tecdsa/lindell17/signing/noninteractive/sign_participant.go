@@ -60,7 +60,10 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 	}
 
 	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
-	theirSharingId := keyToId[participantIdentity]
+	theirSharingId, exists := keyToId.Get(participantIdentity)
+	if !exists {
+		return nil, errs.NewFailed("participant identity is not part of the cohort")
+	}
 
 	return &Cosigner{
 		myIdentityKey:       myIdentityKey,
