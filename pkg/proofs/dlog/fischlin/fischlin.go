@@ -91,7 +91,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	// step P.3
 	for i := 0; i < RBytes; i++ {
 		// step P.3.1
-		E_i := [][T]byte{}
+		E_i := [][TBytes]byte{}
 		solvedHash := false
 		for !solvedHash {
 			// step P.3.2
@@ -180,13 +180,13 @@ func allZero(xs []byte) bool {
 	return true
 }
 
-func sample(E_i [][T]byte, prng io.Reader) ([T]byte, error) {
-	e_i := [T]byte{}
+func sample(E_i [][TBytes]byte, prng io.Reader) ([TBytes]byte, error) {
+	e_i := [TBytes]byte{}
 	found := false
 SAMPLE:
 	for !found {
 		if _, err := prng.Read(e_i[:]); err != nil {
-			return [T]byte{}, errs.WrapFailed(err, "could not read random bytes")
+			return [TBytes]byte{}, errs.WrapFailed(err, "could not read random bytes")
 		}
 		for _, excluded := range E_i {
 			if excluded == e_i {
