@@ -13,11 +13,15 @@ import (
 
 const (
 	domainSeparationLabel = "COPPER_ZKPOK_DLOG_FISCHLIN-"
-	Lambda                = 128
-	L                     = 1
+	Lambda                = 256
+	L                     = 8
 	R                     = Lambda / L
-	// 3 is ceil(log(Lambda=128)). If you change the security paramter, you have to change this one as well.
-	T = 3 * L
+	T                     = 3 * L // 3 is ceil(log(LambdaBytes)). If you change the security paramter, you have to change this one as well.
+
+	LambdaBytes = Lambda / 8
+	LBytes      = L / 8
+	RBytes      = R / 8
+	TBytes      = T / 8
 )
 
 type Prover struct {
@@ -28,14 +32,14 @@ type Prover struct {
 }
 
 type Proof struct {
-	A [R]curves.Point
-	E [R]curves.Scalar
-	Z [R]curves.Point
+	A [RBytes]curves.Point
+	E [RBytes]curves.Scalar
+	Z [RBytes]curves.Scalar
 }
 
 type Statement = curves.Point
 
-// NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
+// NewProver generates a `Prover` object, ready to generate dlog proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Prover, error) {
 	if basePoint == nil {
 		return nil, errs.NewInvalidArgument("basepoint can't be nil")
@@ -58,28 +62,107 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 	}, nil
 }
 
-// func initializeShake(sid []byte, A [R]curves.Point) (sha3.ShakeHash, error) {
-// 	shake := sha3.NewCShake256(sid, []byte("unique session id"))
-// 	for _, A_i := range A {
-// 		if _, err := shake.Write(A_i.ToAffineCompressed()); err != nil {
-// 			return nil, errs.WrapFailed(err, "A_i write to shake")
-// 		}
-// 	}
-// 	return shake, nil
-// }
+// Prove proves knowledge of dlog of the statement, using Fischlin.
+func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
+	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
+	}
+	statement := p.BasePoint.Mul(x)
+	p.transcript.AppendPoints("statement", statement)
 
-func H(A [R]curves.Point, i int, e curves.Scalar, z curves.Point) [L]byte {
-	message := [R + 3][]byte{}
-	for i := 0; i < R; i++ {
+	tprng, err := p.transcript.NewReader("witness", x.Bytes(), p.prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not construct transcript based prng")
+	}
+
+	a := [RBytes]curves.Scalar{}
+	A := [RBytes]curves.Point{}
+	for i := 0; i < RBytes; i++ {
+		// step P.1
+		a[i] = curve.Scalar.Random(tprng)
+		// step P.2
+		A[i] = p.BasePoint.Mul(a[i])
+	}
+	e := [RBytes]curves.Scalar{}
+	z := [RBytes]curves.Scalar{}
+
+	// step P.3
+	for i := 0; i < RBytes; i++ {
+		// step P.3.1
+		E_i := [][T]byte{}
+		solvedHash := false
+		for !solvedHash {
+			// step P.3.2
+			e_i_bytes, err := sample(E_i, tprng)
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "sampling")
+			}
+			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
+			e_i := curve.Scalar.Hash(e_i_bytes[:])
+
+			// step P.3.3
+			z_i := a[i].Add(x.Mul(e_i))
+			// step P.3.4
+			hashResult, err := h(A, i, e_i, z_i)
+			// step P.3.5
+			if allZero(hashResult[:]) {
+				solvedHash = true
+				e[i] = e_i
+				z[i] = z_i
+			} else {
+				E_i = append(E_i, e_i_bytes)
+			}
+		}
+	}
+	// step P.4
+	return &Proof{
+		A: A,
+		E: e,
+		Z: z,
+	}, statement, nil
+}
+
+func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
+	for i := 0; i < RBytes; i++ {
+		e_i := proof.E[i]
+		z_i := proof.Z[i]
+		// step V.2.1
+		hashResult, err := h(proof.A, i, e_i, z_i)
+		if err != nil {
+			return errs.WrapFailed(err, "could not produce the hash result")
+		}
+		if !allZero(hashResult[:]) {
+			return errs.NewVerificationFailed("%d iteration not all zero", i)
+		}
+
+		// step V.2.2
+		Z_i := basePoint.Mul(z_i)
+		APrime := Z_i.Add(statement.Mul(e_i.Neg()))
+		if !APrime.Equal(proof.A[i]) {
+			return errs.NewVerificationFailed("invalid response for iteration %d", i)
+		}
+	}
+	// step V.3
+	return nil
+}
+
+// h is the hash used in the PoW.
+func h(A [RBytes]curves.Point, i int, e, z curves.Scalar) ([LBytes]byte, error) {
+	message := [RBytes + 3][]byte{}
+	for i := 0; i < RBytes; i++ {
 		message[i] = A[i].ToAffineCompressed()
 	}
-	message[R] = []byte{byte(i)}
-	message[R+1] = e.Bytes()
-	message[R+2] = z.ToAffineCompressed()
-	hashed, _ := hashing.Hash(sha3.New256, message[:]...)
-	output := [L]byte{}
-	copy(output[:], hashed[:L])
-	return output
+	message[RBytes] = []byte{byte(i)}
+	message[RBytes+1] = e.Bytes()
+	message[RBytes+2] = z.Bytes()
+	hashed, err := hashing.Hash(sha3.New256, message[:]...)
+	if err != nil {
+		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
+	}
+	output := [LBytes]byte{}
+	copy(output[:], hashed[:LBytes])
+	return output, nil
 }
 
 func allZero(xs []byte) bool {
@@ -107,73 +190,4 @@ SAMPLE:
 		found = true
 	}
 	return e_i, nil
-}
-
-func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
-	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
-	}
-	statement := p.BasePoint.Mul(x)
-	p.transcript.AppendPoints("statement", statement)
-
-	tprng, err := p.transcript.NewReader("witness", x.Bytes(), p.prng)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct transcript based prng")
-	}
-
-	a := [R]curves.Scalar{}
-	A := [R]curves.Point{}
-	for i := 0; i < R; i++ {
-		a[i] = curve.Scalar.Random(tprng)
-		A[i] = p.BasePoint.Mul(a[i])
-	}
-	e := [R]curves.Scalar{}
-	z := [R]curves.Point{}
-
-	for i := 0; i < R; i++ {
-		E_i := [][T]byte{}
-		solvedHash := false
-		for !solvedHash {
-			e_i_bytes, err := sample(E_i, tprng)
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "sampling")
-			}
-			e_i := curve.Scalar.Hash(e_i_bytes[:])
-
-			z_i := a[i].Add(x.Mul(e_i))
-			Z_i := p.BasePoint.Mul(z_i)
-			hashResult := H(A, i, e_i, Z_i)
-			if allZero(hashResult[:]) {
-				solvedHash = true
-				e[i] = e_i
-				z[i] = Z_i
-			} else {
-				E_i = append(E_i, e_i_bytes)
-			}
-		}
-	}
-
-	return &Proof{
-		A: A,
-		E: e,
-		Z: z,
-	}, statement, nil
-}
-
-func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
-	for i := 0; i < R; i++ {
-		e_i := proof.E[i]
-		Z_i := proof.Z[i]
-		hashResult := H(proof.A, i, e_i, Z_i)
-		if !allZero(hashResult[:]) {
-			return errs.NewVerificationFailed("%d iteration not all zero", i)
-		}
-
-		APrime := Z_i.Add(statement.Mul(e_i.Neg()))
-		if !APrime.Equal(proof.A[i]) {
-			return errs.NewVerificationFailed("invalid response for iteration %d", i)
-		}
-	}
-	return nil
 }

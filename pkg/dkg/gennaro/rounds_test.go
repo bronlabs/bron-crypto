@@ -21,7 +21,7 @@ import (
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
