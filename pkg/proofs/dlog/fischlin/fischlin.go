@@ -25,6 +25,8 @@ const (
 	TBytes      = T / 8
 )
 
+type Statement = curves.Point
+
 type Prover struct {
 	uniqueSessionId []byte
 	transcript      transcripts.Transcript
@@ -32,13 +34,15 @@ type Prover struct {
 	BasePoint       curves.Point
 }
 
+func (*Prover) IsUC() bool {
+	return true
+}
+
 type Proof struct {
 	A [RBytes]curves.Point
 	E [RBytes]curves.Scalar
 	Z [RBytes]curves.Scalar
 }
-
-type Statement = curves.Point
 
 // NewProver generates a `Prover` object, ready to generate dlog proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Prover, error) {
