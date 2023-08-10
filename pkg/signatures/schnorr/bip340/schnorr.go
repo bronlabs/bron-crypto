@@ -30,8 +30,10 @@ type Signature struct {
 	S curves.Scalar
 }
 
-const AUX_SIZE = 32
-const A_SIZE = 32
+const (
+	AUX_SIZE = 32
+	A_SIZE   = 32
+)
 
 var (
 	auxHashLabel       = "BIP0340/aux"
@@ -256,8 +258,8 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 	rightPoints := make([]curves.Point, 2*size)
 	for i, publicKey := range publickeys {
 		// 1. Generate u-1 random integers a2...u in the range 1...n-1.
-		transcript.AppendMessage([]byte("batch-verify"), bytes.Join([][]byte{publickeys[i].Y.ToAffineCompressed(), messages[i], signatures[i].R.Bytes(), signatures[i].S.Bytes()}, nil))
-		a, err := curve.Scalar.SetBytes(transcript.ExtractBytes([]byte("batch-verify"), A_SIZE))
+		transcript.AppendMessages("batch-verify", publickeys[i].Y.ToAffineCompressed(), messages[i], signatures[i].R.Bytes(), signatures[i].S.Bytes())
+		a, err := curve.Scalar.SetBytes(transcript.ExtractBytes("batch-verify", A_SIZE))
 		if err != nil {
 			return errs.WrapFailed(err, "failed to set bytes for a_i")
 		}
