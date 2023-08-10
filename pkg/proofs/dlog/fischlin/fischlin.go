@@ -105,7 +105,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 			// step P.3.3
 			z_i := a[i].Add(x.Mul(e_i))
 			// step P.3.4
-			hashResult, err := h(A, i, e_i, z_i)
+			hashResult, err := h(A, i, e_i, z_i, p.uniqueSessionId)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "could not do the PoW hash")
 			}
@@ -127,12 +127,13 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	}, statement, nil
 }
 
+// Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform
 func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
-	for i := 0; i < R; i++ {
+	for i := 0; i < RBytes; i++ {
 		e_i := proof.E[i]
 		z_i := proof.Z[i]
 		// step V.2.1
-		hashResult, err := h(proof.A, i, e_i, z_i)
+		hashResult, err := h(proof.A, i, e_i, z_i, uniqueSessionId)
 		if err != nil {
 			return errs.WrapFailed(err, "could not produce the hash result")
 		}
@@ -152,14 +153,15 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 }
 
 // h is the hash used in the PoW.
-func h(A [RBytes]curves.Point, i int, e, z curves.Scalar) ([LBytes]byte, error) {
-	message := [RBytes + 3][]byte{}
+func h(A [RBytes]curves.Point, i int, e, z curves.Scalar, sid []byte) ([LBytes]byte, error) {
+	message := [RBytes + 4][]byte{}
 	for j := 0; j < RBytes; j++ {
 		message[j] = A[j].ToAffineCompressed()
 	}
 	message[RBytes] = []byte{byte(i)}
 	message[RBytes+1] = e.Bytes()
 	message[RBytes+2] = z.Bytes()
+	message[RBytes+3] = sid
 	hashed, err := hashing.Hash(sha3.New256, message[:]...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
