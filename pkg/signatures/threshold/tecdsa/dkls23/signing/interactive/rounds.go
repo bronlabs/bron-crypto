@@ -58,7 +58,11 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 		}
 
 		// step 1.3.1
-		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[participant], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
+		sharingId, exists := ic.IdentityKeyToSharingId.Get(participant)
+		if !exists {
+			return nil, nil, errs.NewInvalidArgument("participant %s is not in the sharing", participant)
+		}
+		message := prepareCommitmentMessage(ic.MySharing, sharingId, ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
 		commitmentToInstanceKey, witness, err := commitments.Commit(h, message)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
@@ -101,7 +105,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 	}
 	// step 2.2
 	myShamirShare := &shamir.Share{
-		Id:    ic.MyShamirId,
+		Id:    ic.MySharing,
 		Value: ic.Shard.SigningKeyShare.Share,
 	}
 	myAdditiveShare, err := myShamirShare.ToAdditive(ic.sessionShamirIDs)
@@ -189,7 +193,11 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.1.3
-		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[participant], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
+		sharingId, exists := ic.IdentityKeyToSharingId.Get(participant)
+		if !exists {
+			return nil, errs.NewMissing("don't have sharing id")
+		}
+		supposedlyCommittedMessage := prepareCommitmentMessage(sharingId, ic.MySharing, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
 		if err := commitments.Open(
 			h,
 			supposedlyCommittedMessage,
@@ -305,12 +313,12 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	return sigma, nil
 }
 
-func prepareCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId, R_i []byte) []byte {
+func prepareCommitmentMessage(mySharing, theOtherSharing int, uniqueSessionId, R_i []byte) []byte {
 	return bytes.Join(
 		[][]byte{
 			{
-				byte(myShamirId),
-				byte(theOtherShamirId),
+				byte(mySharing),
+				byte(theOtherSharing),
 			},
 			uniqueSessionId,
 			R_i,

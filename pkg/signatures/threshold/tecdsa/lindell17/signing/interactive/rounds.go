@@ -162,8 +162,14 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
-	paillierPublicKey := secondaryCosigner.myShard.PaillierPublicKeys[secondaryCosigner.primaryIdentityKey]
-	cKey := secondaryCosigner.myShard.PaillierEncryptedShares[secondaryCosigner.primaryIdentityKey]
+	paillierPublicKey, exists := secondaryCosigner.myShard.PaillierPublicKeys.Get(secondaryCosigner.primaryIdentityKey)
+	if !exists {
+		return nil, errs.NewFailed("could not find Paillier public key for primary identity key")
+	}
+	cKey, exists := secondaryCosigner.myShard.PaillierEncryptedShares.Get(secondaryCosigner.primaryIdentityKey)
+	if !exists {
+		return nil, errs.NewFailed("could not find Paillier encrypted share for primary identity key")
+	}
 	primaryLagrangeCoefficient, err := signing.CalcOtherPartyLagrangeCoefficient(secondaryCosigner.primarySharingId, secondaryCosigner.mySharingId, secondaryCosigner.cohortConfig.TotalParties, secondaryCosigner.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")

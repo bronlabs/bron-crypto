@@ -3,6 +3,7 @@ package noninteractive
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	signing_helpers "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing"
@@ -38,7 +39,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	return partialSignature, nil
 }
 
-func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures *hashmap.HashMap[integration.IdentityKey, *frost.PartialSignature]) (*eddsa.Signature, error) {
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")

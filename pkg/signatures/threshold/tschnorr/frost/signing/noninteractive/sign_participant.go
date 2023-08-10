@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
@@ -26,7 +27,7 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    []integration.IdentityKey
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
@@ -116,16 +117,16 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alpha := map[integration.IdentityKey]curves.Point{}
-	E_alpha := map[integration.IdentityKey]curves.Point{}
+	D_alpha := hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
+	E_alpha := hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
 		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
 		if !found {
 			continue
 		}
-		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
-		E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
+		D_alpha.Put(attestedCommitment.Attestor, attestedCommitment.D)
+		E_alpha.Put(attestedCommitment.Attestor, attestedCommitment.E)
 	}
 
 	return &Cosigner{

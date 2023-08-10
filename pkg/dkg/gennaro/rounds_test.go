@@ -46,7 +46,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
+		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -120,7 +120,9 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB)
 
 	// smuggle previous value
-	r3InsB[attackerIndex][identities[1]].Commitments = r2InsB[attackerIndex][identities[1]].BlindedCommitments
+	r2InsBe, _ := r2InsB[attackerIndex].Get(identities[1])
+	r3InsBe, _ := r3InsB[attackerIndex].Get(identities[1])
+	r3InsBe.Commitments = r2InsBe.BlindedCommitments
 	_, _, err = test_utils.DoDkgRound3(participants, r3InsB)
 	require.True(t, errs.IsIdentifiableAbort(err))
 }
@@ -203,8 +205,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
 		require.NoError(t, err)
 		r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
-		for identity := range r3Ins[attackerIndex] {
-			r3Ins[attackerIndex][identity].A_i0Proof = proof
+		for identity := range r3Ins[attackerIndex].GetMap() {
+			r3In, _ := r3Ins[attackerIndex].Get(identity)
+			r3In.A_i0Proof = proof
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)
@@ -217,8 +220,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
 		require.NoError(t, err)
 		r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
-		for identity := range r3Ins[attackerIndex] {
-			r3Ins[attackerIndex][identity].A_i0Proof = proof
+		for identity := range r3Ins[attackerIndex].GetMap() {
+			r3In, _ := r3Ins[attackerIndex].Get(identity)
+			r3In.A_i0Proof = proof
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)

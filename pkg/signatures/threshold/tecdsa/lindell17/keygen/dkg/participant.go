@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"io"
 	"math/big"
 
@@ -30,28 +31,28 @@ type State struct {
 	myRPrime          *big.Int
 	myRDoublePrime    *big.Int
 
-	theirBigQCommitment          map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime               map[integration.IdentityKey]curves.Point
-	theirBigQDoublePrime         map[integration.IdentityKey]curves.Point
-	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
-	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+	theirBigQCommitment          *hashmap.HashMap[integration.IdentityKey, commitments.Commitment]
+	theirBigQPrime               *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	theirBigQDoublePrime         *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	theirPaillierPublicKeys      *hashmap.HashMap[integration.IdentityKey, *paillier.PublicKey]
+	theirPaillierEncryptedShares *hashmap.HashMap[integration.IdentityKey, paillier.CipherText]
 
-	lpProvers                map[integration.IdentityKey]*lp.Prover
-	lpVerifiers              map[integration.IdentityKey]*lp.Verifier
-	lpdlPrimeProvers         map[integration.IdentityKey]*lpdl.Prover
-	lpdlPrimeVerifiers       map[integration.IdentityKey]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[integration.IdentityKey]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[integration.IdentityKey]*lpdl.Verifier
+	lpProvers                *hashmap.HashMap[integration.IdentityKey, *lp.Prover]
+	lpVerifiers              *hashmap.HashMap[integration.IdentityKey, *lp.Verifier]
+	lpdlPrimeProvers         *hashmap.HashMap[integration.IdentityKey, *lpdl.Prover]
+	lpdlPrimeVerifiers       *hashmap.HashMap[integration.IdentityKey, *lpdl.Verifier]
+	lpdlDoublePrimeProvers   *hashmap.HashMap[integration.IdentityKey, *lpdl.Prover]
+	lpdlDoublePrimeVerifiers *hashmap.HashMap[integration.IdentityKey, *lpdl.Verifier]
 }
 
 type Participant struct {
 	lindell17.Participant
 	myIdentityKey     integration.IdentityKey
-	mySharingId        int
+	mySharingId       int
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId   map[integration.IdentityKey]int
+	idKeyToSharingId  *hashmap.HashMap[integration.IdentityKey, int]
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
@@ -102,11 +103,11 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
-		mySharingId:        mySharingId,
+		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
 		cohortConfig:      cohortConfig,
-		idKeyToSharingId:   idKeyToSharingId,
+		idKeyToSharingId:  idKeyToSharingId,
 		sessionId:         sessionId,
 		transcript:        transcript,
 		prng:              prng,

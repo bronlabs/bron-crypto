@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 )
 
@@ -16,7 +17,7 @@ type Cosigner struct {
 	myShard        *lindell22.Shard
 	myPreSignature *lindell22.PreSignature
 
-	identityKeyToSharingId map[integration.IdentityKey]int
+	identityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
 	sessionParticipants    []integration.IdentityKey
 	cohortConfig           *integration.CohortConfig
 	prng                   io.Reader

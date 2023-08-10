@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -22,16 +23,20 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration.IdentityKey]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
+func verifyShards(cohortConfig *integration.CohortConfig, shards *hashmap.HashMap[integration.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
 	// verify private key
-	feldmanShares := make([]*feldman.Share, len(shards))
+	feldmanShares := make([]*feldman.Share, shards.Size())
 	for i := range feldmanShares {
 		sharingId := i + 1
+		share, exists := shards.Get(sharingIdToIdentity[sharingId])
+		if !exists {
+			return errs.NewVerificationFailed("missing shard")
+		}
 		feldmanShares[i] = &feldman.Share{
 			Id:    sharingId,
-			Value: shards[sharingIdToIdentity[sharingId]].SigningKeyShare.Share,
+			Value: share.SigningKeyShare.Share,
 		}
 	}
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
@@ -55,19 +60,22 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 	if !publicKey.Equal(recoveredPublicKey) {
 		return errs.NewVerificationFailed("recovered ECDSA public key is invalid")
 	}
-	for _, shard := range shards {
+	for _, shard := range shards.GetMap() {
 		if !shard.SigningKeyShare.PublicKey.Equal(publicKey) {
 			return errs.NewVerificationFailed("shard has invalid public key")
 		}
 	}
 
 	// verify Paillier encryption of shards
-	for myIdentityKey, myShard := range shards {
+	for myIdentityKey, myShard := range shards.GetMap() {
 		myShare := myShard.SigningKeyShare.Share.BigInt()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
-		for _, theirShard := range shards {
+		for _, theirShard := range shards.GetMap() {
 			if myShard != theirShard {
-				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
+				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
+				if !exists {
+					return errs.NewVerificationFailed("missing encrypted share")
+				}
 				theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 				if err != nil {
 					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
@@ -82,7 +90,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 	return nil
 }
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*lindell17.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (*hashmap.HashMap[integration.IdentityKey, *lindell17.Shard], error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -127,17 +135,17 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
-	shards := make(map[integration.IdentityKey]*lindell17.Shard)
+	shards := hashmap.NewHashMap[integration.IdentityKey, *lindell17.Shard]()
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
-		shards[identityKey] = &lindell17.Shard{
+		shards.Put(identityKey, &lindell17.Shard{
 			SigningKeyShare: &threshold.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
 			},
-			PaillierPublicKeys:      make(map[integration.IdentityKey]*paillier.PublicKey),
-			PaillierEncryptedShares: make(map[integration.IdentityKey]paillier.CipherText),
-		}
+			PaillierPublicKeys:      hashmap.NewHashMap[integration.IdentityKey, *paillier.PublicKey](),
+			PaillierEncryptedShares: hashmap.NewHashMap[integration.IdentityKey, paillier.CipherText](),
+		})
 	}
 
 	// generate Paillier key pairs and encrypt share
@@ -146,14 +154,23 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
 		}
-		shards[identityKey].PaillierSecretKey = paillierSecretKey
+		shard, exists := shards.Get(identityKey)
+		if !exists {
+			return nil, errs.NewInvalidArgument("shard for identity key %s does not exist", identityKey)
+		}
+		shard.PaillierSecretKey = paillierSecretKey
 		for _, otherIdentityKey := range sharingIdsToIdentityKeys {
+			otherShard, exists := shards.Get(otherIdentityKey)
+			if !exists {
+				return nil, errs.NewInvalidArgument("shard for identity key %s does not exist", otherIdentityKey)
+			}
 			if identityKey != otherIdentityKey {
-				shards[otherIdentityKey].PaillierPublicKeys[identityKey] = paillierPublicKey
-				shards[otherIdentityKey].PaillierEncryptedShares[identityKey], _, err = paillierPublicKey.Encrypt(shards[identityKey].SigningKeyShare.Share.BigInt())
+				otherShard.PaillierPublicKeys.Put(identityKey, paillierPublicKey)
+				encrypt, _, err := paillierPublicKey.Encrypt(shard.SigningKeyShare.Share.BigInt())
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot encrypt share with paillier")
 				}
+				otherShard.PaillierEncryptedShares.Put(identityKey, encrypt)
 			}
 		}
 	}

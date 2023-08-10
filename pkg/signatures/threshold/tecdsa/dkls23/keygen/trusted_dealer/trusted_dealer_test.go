@@ -69,11 +69,11 @@ func Test_HappyPath(t *testing.T) {
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
-	require.Len(t, shards, cohortConfig.TotalParties)
+	require.Equal(t, shards.Size(), cohortConfig.TotalParties)
 
 	t.Run("all signing key shares are valid", func(t *testing.T) {
 		t.Parallel()
-		for _, shard := range shards {
+		for _, shard := range shards.GetMap() {
 			err = shard.SigningKeyShare.Validate()
 			require.NoError(t, err)
 		}
@@ -82,7 +82,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all public keys are the same", func(t *testing.T) {
 		t.Parallel()
 		publicKeys := map[curves.Point]bool{}
-		for _, shard := range shards {
+		for _, shard := range shards.GetMap() {
 			if _, exists := publicKeys[shard.SigningKeyShare.PublicKey]; !exists {
 				publicKeys[shard.SigningKeyShare.PublicKey] = true
 			}
@@ -98,9 +98,10 @@ func Test_HappyPath(t *testing.T) {
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, n)
 		for i := 0; i < 3; i++ {
+			shard, _ := shards.Get(identities[i])
 			shamirShares[i] = &shamir.Share{
 				Id:    i + 1,
-				Value: shards[identities[i]].SigningKeyShare.Share,
+				Value: shard.SigningKeyShare.Share,
 			}
 		}
 
@@ -108,6 +109,7 @@ func Test_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 
 		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-		require.True(t, shards[identities[0]].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
+		shard, _ := shards.Get(identities[0])
+		require.True(t, shard.SigningKeyShare.PublicKey.Equal(derivedPublicKey))
 	})
 }
