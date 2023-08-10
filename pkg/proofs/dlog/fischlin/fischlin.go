@@ -17,7 +17,7 @@ const (
 	Lambda                = 256
 	L                     = 8
 	R                     = Lambda / L
-	T                     = 3 * L // 3 is ceil(log(LambdaBytes)). If you change the security parameter, you have to change this one as well.
+	T                     = 3 * L // 3 is ceil(log(Lambda)). If you change the security parameter, you have to change this one as well.
 
 	LambdaBytes = Lambda / 8
 	LBytes      = L / 8
