@@ -127,7 +127,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	}, statement, nil
 }
 
-// Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform
+// Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform.
 func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
 	for i := 0; i < RBytes; i++ {
 		e_i := proof.E[i]
