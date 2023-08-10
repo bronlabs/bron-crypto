@@ -1,3 +1,4 @@
+// TODO: Move to core/polynomial
 package sharing
 
 import (
@@ -11,6 +12,10 @@ type Polynomial struct {
 	Coefficients []curves.Scalar
 }
 
+func (p *Polynomial) Degree() int {
+	return len(p.Coefficients) - 1
+}
+
 func (p *Polynomial) NewPolynomial(intercept curves.Scalar, degree int, prng io.Reader) *Polynomial {
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
@@ -21,7 +26,7 @@ func (p *Polynomial) NewPolynomial(intercept curves.Scalar, degree int, prng io.
 }
 
 func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
-	degree := len(p.Coefficients) - 1
+	degree := p.Degree()
 	out := p.Coefficients[degree].Clone()
 	for i := degree - 1; i >= 0; i-- {
 		out = out.Mul(x).Add(p.Coefficients[i])
@@ -29,17 +34,17 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	return out
 }
 
-func LagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves.Scalar, error) {
-	xs := make(map[int]curves.Scalar, len(identities))
-	for _, xi := range identities {
-		xs[xi] = curve.Scalar.New(xi)
+func LagrangeCoefficients(curve *curves.Curve, xs []int) (map[int]curves.Scalar, error) {
+	xsScalar := make(map[int]curves.Scalar, len(xs))
+	for _, xi := range xs {
+		xsScalar[xi] = curve.Scalar.New(xi)
 	}
 
-	result := make(map[int]curves.Scalar, len(identities))
-	for i, xi := range xs {
+	result := make(map[int]curves.Scalar, len(xs))
+	for i, xi := range xsScalar {
 		num := curve.Scalar.One()
 		den := curve.Scalar.One()
-		for j, xj := range xs {
+		for j, xj := range xsScalar {
 			if i == j {
 				continue
 			}
@@ -51,6 +56,50 @@ func LagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves
 			return nil, errs.NewDivisionByZero("divide by zero")
 		}
 		result[i] = num.Div(den)
+	}
+	return result, nil
+}
+
+func Interpolate(curve *curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
+	result := curve.Scalar.Zero()
+	for i, xi := range xs {
+		num := curve.Scalar.One()
+		den := curve.Scalar.One()
+		for j, xj := range xs {
+			if i == j {
+				continue
+			}
+			num = num.Mul(xj.Sub(evaluateAt))
+			den = den.Mul(xj.Sub(xi))
+		}
+		if den.IsZero() {
+			return nil, errs.NewDivisionByZero("divide by zero")
+		}
+		result = result.Add(ys[i].Mul(num.Div(den)))
+	}
+	return result, nil
+}
+
+func InterpolateInTheExponent(curve *curves.Curve, xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
+	coefficients := make([]curves.Scalar, len(xs))
+	for i, xi := range xs {
+		num := curve.Scalar.One()
+		den := curve.Scalar.One()
+		for j, xj := range xs {
+			if i == j {
+				continue
+			}
+			num = num.Mul(xj.Sub(evaluateAt))
+			den = den.Mul(xj.Sub(xi))
+		}
+		if den.IsZero() {
+			return nil, errs.NewDivisionByZero("divide by zero")
+		}
+		coefficients[i] = num.Div(den)
+	}
+	result, err := curve.MultiScalarMult(coefficients, ys)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "MSM failed")
 	}
 	return result, nil
 }
