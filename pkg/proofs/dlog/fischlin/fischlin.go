@@ -3,12 +3,13 @@ package fischlin
 import (
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 	Lambda                = 256
 	L                     = 8
 	R                     = Lambda / L
-	T                     = 3 * L // 3 is ceil(log(LambdaBytes)). If you change the security paramter, you have to change this one as well.
+	T                     = 3 * L // 3 is ceil(log(LambdaBytes)). If you change the security parameter, you have to change this one as well.
 
 	LambdaBytes = Lambda / 8
 	LBytes      = L / 8
@@ -53,7 +54,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 	if transcript == nil {
 		transcript = merlin.NewTranscript(domainSeparationLabel)
 	}
-	transcript.AppendMessages("Randomized Fischlin proof", uniqueSessionId)
+	transcript.AppendMessages("Randomised Fischlin proof", uniqueSessionId)
 	return &Prover{
 		BasePoint:       basePoint,
 		uniqueSessionId: uniqueSessionId,
@@ -105,6 +106,9 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 			z_i := a[i].Add(x.Mul(e_i))
 			// step P.3.4
 			hashResult, err := h(A, i, e_i, z_i)
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "could not do the PoW hash")
+			}
 			// step P.3.5
 			if allZero(hashResult[:]) {
 				solvedHash = true
@@ -124,7 +128,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 }
 
 func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
-	for i := 0; i < RBytes; i++ {
+	for i := 0; i < R; i++ {
 		e_i := proof.E[i]
 		z_i := proof.Z[i]
 		// step V.2.1
@@ -150,8 +154,8 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 // h is the hash used in the PoW.
 func h(A [RBytes]curves.Point, i int, e, z curves.Scalar) ([LBytes]byte, error) {
 	message := [RBytes + 3][]byte{}
-	for i := 0; i < RBytes; i++ {
-		message[i] = A[i].ToAffineCompressed()
+	for j := 0; j < RBytes; j++ {
+		message[j] = A[j].ToAffineCompressed()
 	}
 	message[RBytes] = []byte{byte(i)}
 	message[RBytes+1] = e.Bytes()
