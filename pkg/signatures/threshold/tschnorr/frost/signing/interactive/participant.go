@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
@@ -21,7 +22,7 @@ type Cosigner struct {
 
 	CohortConfig           *integration.CohortConfig
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
 	SessionParticipants    []integration.IdentityKey
 
 	round int

@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"io"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*lindell22.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (*hashmap.HashMap[integration.IdentityKey, *lindell22.Shard], error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -37,15 +38,15 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	publicKeySharesMap := make(map[integration.IdentityKey]curves.Point)
+	publicKeySharesMap := hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		publicKeySharesMap[identityKey] = curve.ScalarBaseMult(shamirShares[sharingId-1].Value)
+		publicKeySharesMap.Put(identityKey, curve.ScalarBaseMult(shamirShares[sharingId-1].Value))
 	}
 
-	shards := make(map[integration.IdentityKey]*lindell22.Shard)
+	shards := hashmap.NewHashMap[integration.IdentityKey, *lindell22.Shard]()
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
-		shards[identityKey] = &lindell22.Shard{
+		shards.Put(identityKey, &lindell22.Shard{
 			SigningKeyShare: &threshold.SigningKeyShare{
 				Share:     share,
 				PublicKey: schnorrPublicKey,
@@ -55,7 +56,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 				PublicKey: schnorrPublicKey,
 				SharesMap: publicKeySharesMap,
 			},
-		}
+		})
 	}
 
 	return shards, nil

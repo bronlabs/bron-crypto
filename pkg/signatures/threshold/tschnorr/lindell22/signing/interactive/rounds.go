@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
@@ -61,18 +62,18 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *Cosigner) Round2(input map[integration.IdentityKey]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Cosigner) Round2(input *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	p.state.theirBigRCommitment = make(map[integration.IdentityKey]commitments.Commitment)
+	p.state.theirBigRCommitment = hashmap.NewHashMap[integration.IdentityKey, commitments.Commitment]()
 	for _, identity := range p.sessionParticipants {
-		in, ok := input[identity]
+		in, ok := input.Get(identity)
 		if !ok {
 			return nil, errs.NewIdentifiableAbort("no input from participant")
 		}
-		p.state.theirBigRCommitment[identity] = in.BigRCommitment
+		p.state.theirBigRCommitment.Put(identity, in.BigRCommitment)
 	}
 
 	// 1. compute proof of dlog knowledge of R
@@ -90,14 +91,14 @@ func (p *Cosigner) Round2(input map[integration.IdentityKey]*Round1Broadcast) (o
 	}, nil
 }
 
-func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (p *Cosigner) Round3(input *hashmap.HashMap[integration.IdentityKey, *Round2Broadcast], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
 	bigR := p.cohortConfig.CipherSuite.Curve.NewIdentityPoint()
 	for _, identity := range p.sessionParticipants {
-		in, ok := input[identity]
+		in, ok := input.Get(identity)
 		if !ok {
 			return nil, errs.NewIdentifiableAbort("no input from participant")
 		}
@@ -107,7 +108,11 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 		theirPid := identity.PublicKey().ToAffineCompressed()
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[identity], theirBigRWitness); err != nil {
+		theirBigRCommitment, exists := p.state.theirBigRCommitment.Get(identity)
+		if !exists {
+			return nil, errs.NewIdentifiableAbort("no commitment from participant")
+		}
+		if err := openCommitment(theirBigR, theirPid, p.sid, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

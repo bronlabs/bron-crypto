@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 )
@@ -140,16 +141,16 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	return copied
 }
 
-func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityKey]int, mySharingId int) {
+func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId *hashmap.HashMap[IdentityKey, int], mySharingId int) {
 	identityKeys = SortIdentityKeys(identityKeys)
 	idToKey = make(map[int]IdentityKey)
-	keyToId = make(map[IdentityKey]int)
+	keyToId = hashmap.NewHashMap[IdentityKey, int]()
 	mySharingId = -1
 
 	for sharingIdMinusOne, identityKey := range identityKeys {
 		sharingId := sharingIdMinusOne + 1
 		idToKey[sharingId] = identityKey
-		keyToId[identityKey] = sharingId
+		keyToId.Put(identityKey, sharingId)
 		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
 			mySharingId = sharingId
 		}

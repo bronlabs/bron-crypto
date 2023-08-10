@@ -27,8 +27,10 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 
-	aliceSeeds := zero.PairwiseSeeds{bobIdentityKey: sharedSeed}
-	bobSeeds := zero.PairwiseSeeds{aliceIdentityKey: sharedSeed}
+	aliceSeeds := zero.NewPairwiseSeeds()
+	aliceSeeds.Put(bobIdentityKey, sharedSeed)
+	bobSeeds := zero.NewPairwiseSeeds()
+	bobSeeds.Put(aliceIdentityKey, sharedSeed)
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	require.NoError(t, err)
 
@@ -41,7 +43,7 @@ func Test_CanInitialize(t *testing.T) {
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
-		require.Len(t, party.IdentityKeyToSharingId, 2)
+		require.Equal(t, party.IdentityKeyToSharingId.Size(), 2)
 		require.Len(t, party.PresentParticipants, 2)
 	}
 	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
