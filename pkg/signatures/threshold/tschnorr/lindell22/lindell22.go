@@ -24,7 +24,7 @@ type Shard struct {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR map[integration.IdentityKey]curves.Point
+	BigR map[integration.IdentityHash]curves.Point
 }
 
 type PreSignatureBatch struct {

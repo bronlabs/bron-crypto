@@ -54,13 +54,13 @@ func DoInteractiveSignRound1(participants []*interactive_signing.Cosigner) (roun
 	return round1Outputs, nil
 }
 
-func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_signing.Cosigner, round1Outputs []*interactive_signing.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast) {
-	round2Inputs = make([]map[integration.IdentityKey]*interactive_signing.Round1Broadcast, len(participants))
+func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_signing.Cosigner, round1Outputs []*interactive_signing.Round1Broadcast) (round2Inputs []map[integration.IdentityHash]*interactive_signing.Round1Broadcast) {
+	round2Inputs = make([]map[integration.IdentityHash]*interactive_signing.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityKey]*interactive_signing.Round1Broadcast)
+		round2Inputs[i] = make(map[integration.IdentityHash]*interactive_signing.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2Inputs[i][participants[j].MyIdentityKey] = round1Outputs[j]
+				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
 			}
 		}
 	}
@@ -68,7 +68,7 @@ func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive_s
 	return round2Inputs
 }
 
-func DoInteractiveSignRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[integration.IdentityKey]*interactive_signing.Round1Broadcast, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+func DoInteractiveSignRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[integration.IdentityHash]*interactive_signing.Round1Broadcast, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round2(round2Inputs[i], message)
@@ -80,10 +80,10 @@ func DoInteractiveSignRound2(participants []*interactive_signing.Cosigner, round
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []integration.IdentityKey, partialSignatures []*frost.PartialSignature) map[integration.IdentityKey]*frost.PartialSignature {
-	result := make(map[integration.IdentityKey]*frost.PartialSignature)
+func MapPartialSignatures(identities []integration.IdentityKey, partialSignatures []*frost.PartialSignature) map[integration.IdentityHash]*frost.PartialSignature {
+	result := make(map[integration.IdentityHash]*frost.PartialSignature)
 	for i, identity := range identities {
-		result[identity] = partialSignatures[i]
+		result[identity.Hash()] = partialSignatures[i]
 	}
 
 	return result

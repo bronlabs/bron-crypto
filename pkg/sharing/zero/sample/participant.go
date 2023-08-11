@@ -1,6 +1,8 @@
 package sample
 
 import (
+	"encoding/hex"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -15,15 +17,15 @@ type Participant struct {
 	PresentParticipants []integration.IdentityKey
 	UniqueSessionId     []byte
 
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[integration.IdentityHash]int
 
 	Seeds zero.PairwiseSeeds
 
 	round int
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
-	if curve == nil {
+func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
+	if cohortConfig.CipherSuite.Curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
 	if identityKey == nil {
@@ -55,10 +57,12 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if len(seeds) == 0 {
 		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
 	}
-	allParticipants := make([]integration.IdentityKey, len(seeds)+1)
-	i := 0
+	err = checkSeedMatch(cohortConfig.Participants, seeds)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "seeds do not match participants")
+	}
 	for participant, sharedSeed := range seeds {
-		if participant.PublicKey().Equal(identityKey.PublicKey()) {
+		if participant == identityKey.Hash() {
 			return nil, errs.NewInvalidArgument("found a shared seed with myself")
 		}
 		foundAnyNonZeroByte := false
@@ -71,20 +75,15 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		if !foundAnyNonZeroByte {
 			return nil, errs.NewInvalidArgument("found a shared seed with all zero bytes")
 		}
-
-		allParticipants[i] = participant
-		i++
 	}
-	// i won't be in seeds, and i is already incremented
-	allParticipants[len(seeds)] = identityKey
 
 	// if you pass presentParticipants to below, sharing ids will be different
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, allParticipants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
 	return &Participant{
-		Curve:                  curve,
+		Curve:                  cohortConfig.CipherSuite.Curve,
 		MyIdentityKey:          identityKey,
 		MySharingId:            mySharingId,
 		UniqueSessionId:        uniqueSessionId,
@@ -93,4 +92,23 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		round:                  1,
 		Seeds:                  seeds,
 	}, nil
+}
+
+func checkSeedMatch(participants []integration.IdentityKey, seeds zero.PairwiseSeeds) error {
+	if len(participants) != len(seeds)+1 {
+		return errs.NewFailed("number of participants and seeds do not match")
+	}
+	for seedKey := range seeds {
+		found := false
+		for _, idKey := range participants {
+			if seedKey == idKey.Hash() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errs.NewFailed("seed for participant %s is missing", hex.EncodeToString(seedKey[:]))
+		}
+	}
+	return nil
 }

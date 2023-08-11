@@ -60,7 +60,7 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 	}
 
 	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
-	theirSharingId := keyToId[participantIdentity]
+	theirSharingId := keyToId[participantIdentity.Hash()]
 
 	return &Cosigner{
 		myIdentityKey:       myIdentityKey,

@@ -10,6 +10,6 @@ const LambdaBytes = native.FieldBytes
 
 type Seed = [LambdaBytes]byte
 
-type PairwiseSeeds = map[integration.IdentityKey]Seed
+type PairwiseSeeds = map[integration.IdentityHash]Seed
 
 type Sample curves.Scalar

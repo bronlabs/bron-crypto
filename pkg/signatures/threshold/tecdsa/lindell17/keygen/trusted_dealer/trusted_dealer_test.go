@@ -72,7 +72,7 @@ func Test_HappyPath(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			shamirShares[i] = &shamir.Share{
 				Id:    i + 1,
-				Value: shards[identities[i]].SigningKeyShare.Share,
+				Value: shards[identities[i].Hash()].SigningKeyShare.Share,
 			}
 		}
 
@@ -80,7 +80,7 @@ func Test_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 
 		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-		require.True(t, shards[identities[0]].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
+		require.True(t, shards[identities[0].Hash()].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
 	})
 
 	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {

@@ -21,15 +21,15 @@ type Participant struct {
 	MySharingId     int
 	Participants    []integration.IdentityKey
 
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[integration.IdentityHash]int
 
 	state *State
 	round int
 }
 
 type State struct {
-	receivedSeeds map[integration.IdentityKey]commitments.Commitment
-	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
+	receivedSeeds map[integration.IdentityHash]commitments.Commitment
+	sentSeeds     map[integration.IdentityHash]*committedSeedContribution
 	transcript    transcripts.Transcript
 }
 
@@ -85,8 +85,8 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},
-			sentSeeds:     map[integration.IdentityKey]*committedSeedContribution{},
+			receivedSeeds: map[integration.IdentityHash]commitments.Commitment{},
+			sentSeeds:     map[integration.IdentityHash]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil

@@ -124,7 +124,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 			round:         1,
 		},
 		secondaryIdentityKey: secondaryIdentityKey,
-		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey],
+		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey.Hash()],
 		state:                &PrimaryCosignerState{},
 	}
 	if !primaryCosigner.IsSignatureAggregator() {
@@ -171,7 +171,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 			round:         1,
 		},
 		primaryIdentityKey: primaryIdentityKey,
-		primarySharingId:   keyToId[primaryIdentityKey],
+		primarySharingId:   keyToId[primaryIdentityKey.Hash()],
 		state:              &SecondaryCosignerState{},
 	}, nil
 }

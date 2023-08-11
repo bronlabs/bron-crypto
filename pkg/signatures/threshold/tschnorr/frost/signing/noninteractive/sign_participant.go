@@ -26,7 +26,7 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    []integration.IdentityKey
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[integration.IdentityHash]int
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
@@ -116,16 +116,16 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alpha := map[integration.IdentityKey]curves.Point{}
-	E_alpha := map[integration.IdentityKey]curves.Point{}
+	D_alpha := map[integration.IdentityHash]curves.Point{}
+	E_alpha := map[integration.IdentityHash]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
 		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
 		if !found {
 			continue
 		}
-		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
-		E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
+		D_alpha[attestedCommitment.Attestor.Hash()] = attestedCommitment.D
+		E_alpha[attestedCommitment.Attestor.Hash()] = attestedCommitment.E
 	}
 
 	return &Cosigner{

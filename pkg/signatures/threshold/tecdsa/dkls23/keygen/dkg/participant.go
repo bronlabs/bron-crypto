@@ -20,8 +20,8 @@ type Participant struct {
 	MyIdentityKey         integration.IdentityKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   map[integration.IdentityKey]*vsot.Sender
-	BaseOTReceiverParties map[integration.IdentityKey]*vsot.Receiver
+	BaseOTSenderParties   map[integration.IdentityHash]*vsot.Sender
+	BaseOTReceiverParties map[integration.IdentityHash]*vsot.Receiver
 
 	Shard *dkls23.Shard
 }
@@ -53,18 +53,18 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[integration.IdentityKey]*vsot.Sender, len(cohortConfig.Participants)-1)
-	receivers := make(map[integration.IdentityKey]*vsot.Receiver, len(cohortConfig.Participants)-1)
+	senders := make(map[integration.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
+	receivers := make(map[integration.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
 	for _, participant := range cohortConfig.Participants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
 		// 256 should be replaced with kappa once ot extensions are here
-		senders[participant], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

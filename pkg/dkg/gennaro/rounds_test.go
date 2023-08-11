@@ -120,7 +120,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB)
 
 	// smuggle previous value
-	r3InsB[attackerIndex][identities[1]].Commitments = r2InsB[attackerIndex][identities[1]].BlindedCommitments
+	r3InsB[attackerIndex][identities[1].Hash()].Commitments = r2InsB[attackerIndex][identities[1].Hash()].BlindedCommitments
 	_, _, err = test_utils.DoDkgRound3(participants, r3InsB)
 	require.True(t, errs.IsIdentifiableAbort(err))
 }

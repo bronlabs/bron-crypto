@@ -57,26 +57,26 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("rounds mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitments := make([]map[integration.IdentityKey]commitments.Commitment, p.tau)
+	theirBigRCommitments := make([]map[integration.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitments[i] = make(map[integration.IdentityKey]commitments.Commitment)
+		theirBigRCommitments[i] = make(map[integration.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
 			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
-			in, ok := input[identity]
+			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewFailed("no input from all participants")
 			}
 
-			theirBigRCommitments[i][identity] = in.BigRCommitment[i]
+			theirBigRCommitments[i][identity.Hash()] = in.BigRCommitment[i]
 		}
 
 		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myIdentityKey, p.state.k[i], p.state.bigR[i])
@@ -95,32 +95,32 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broa
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broadcast) (preSignatureBatch *lindell17.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input map[integration.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell17.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("rounds mismatch %d != 3", p.round)
 	}
 
-	commonBigR := make([]map[integration.IdentityKey]curves.Point, p.tau)
+	commonBigR := make([]map[integration.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
-		commonBigR[i] = make(map[integration.IdentityKey]curves.Point)
+		commonBigR[i] = make(map[integration.IdentityHash]curves.Point)
 
 		for _, identity := range p.cohortConfig.Participants {
 			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
-			in, ok := input[identity]
+			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewFailed("no input from all participants")
 			}
 
-			if err := openCommitment(p.sid, i, identity, in.BigR[i], p.state.theirBigRCommitments[i][identity], in.BigRWitness[i]); err != nil {
+			if err := openCommitment(p.sid, i, identity, in.BigR[i], p.state.theirBigRCommitments[i][identity.Hash()], in.BigRWitness[i]); err != nil {
 				return nil, errs.WrapFailed(err, "cannot open commitment to R")
 			}
 			if err := verifyDlogProof(p.sid, p.transcript.Clone(), i, identity, in.BigR[i], in.BigRProof[i]); err != nil {
 				return nil, errs.WrapFailed(err, "cannot verify dlog R proof")
 			}
 
-			commonBigR[i][identity] = in.BigR[i].Mul(p.state.k[i])
+			commonBigR[i][identity.Hash()] = in.BigR[i].Mul(p.state.k[i])
 		}
 	}
 

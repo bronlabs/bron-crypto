@@ -143,7 +143,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	r3InsU[attackerIndex][identities[1]].Xij = curve.Scalar.Hash(uniqueSessionId)
+	r3InsU[attackerIndex][identities[1].Hash()].Xij = curve.Scalar.Hash(uniqueSessionId)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err))

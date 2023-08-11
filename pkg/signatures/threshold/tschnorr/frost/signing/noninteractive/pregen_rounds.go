@@ -44,14 +44,14 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
+func (p *PreGenParticipant) Round2(round1output map[integration.IdentityHash]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}
-	if _, exists := round1output[p.MyIdentityKey]; exists {
+	if _, exists := round1output[p.MyIdentityKey.Hash()]; exists {
 		return nil, nil, errs.NewFailed("message found whose sender is me")
 	}
-	round1output[p.MyIdentityKey] = &Round1Broadcast{
+	round1output[p.MyIdentityKey.Hash()] = &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	}
@@ -66,7 +66,7 @@ func (p *PreGenParticipant) Round2(round1output map[integration.IdentityKey]*Rou
 		preSignature := make(PreSignature, len(p.CohortConfig.Participants))
 		for j, participant := range p.CohortConfig.Participants {
 			senderSharingId := j + 1
-			message, exists := round1output[participant]
+			message, exists := round1output[participant.Hash()]
 			if !exists {
 				return nil, nil, errs.NewMissing("did not receive any message from sharing id %d", senderSharingId)
 			}

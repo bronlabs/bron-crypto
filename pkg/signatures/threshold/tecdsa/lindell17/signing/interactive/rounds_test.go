@@ -45,11 +45,11 @@ func Test_HappyPath(t *testing.T) {
 	require.Len(t, shards, cohortConfig.TotalParties)
 
 	sessionId := []byte("TestSession")
-	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice], cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob], cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
@@ -68,7 +68,7 @@ func Test_HappyPath(t *testing.T) {
 	signature, err := primary.Round5(r4, message)
 	require.NoError(t, err)
 
-	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob.Hash()].SigningKeyShare.PublicKey, message)
 	require.NoError(t, err)
 }
 
@@ -133,11 +133,11 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			require.Len(t, shards, cohortConfig.TotalParties)
 
 			sessionId := []byte("TestSession")
-			primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice], cohortConfig, sessionId, nil, crand.Reader)
+			primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, primary)
 			require.NoError(t, err)
 
-			secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob], cohortConfig, sessionId, nil, crand.Reader)
+			secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, secondary)
 			require.NoError(t, err)
 
@@ -156,7 +156,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			signature, err := primary.Round5(r4, message)
 			require.NoError(t, err)
 
-			err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
+			err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob.Hash()].SigningKeyShare.PublicKey, message)
 			require.NoError(t, err)
 
 			t.Run("signature should be normalised", func(t *testing.T) {
@@ -174,7 +174,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 				t.Parallel()
 				recoveredPublicKey, err := ecdsa.RecoverPublicKey(signature, cipherSuite.Hash, message)
 				require.NoError(t, err)
-				require.True(t, recoveredPublicKey.Equal(shards[alice].SigningKeyShare.PublicKey))
+				require.True(t, recoveredPublicKey.Equal(shards[alice.Hash()].SigningKeyShare.PublicKey))
 			})
 		})
 	}
