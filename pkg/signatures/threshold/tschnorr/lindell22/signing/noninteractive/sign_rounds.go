@@ -11,11 +11,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	k := c.myPreSignature.K
 	bigRSum := c.cohortConfig.CipherSuite.Curve.NewIdentityPoint()
 	for _, identity := range c.sessionParticipants {
-		bigR, exists := c.myPreSignature.BigR.Get(identity)
-		if !exists {
-			return nil, errs.NewMissing("could not find bigR for participant %s", identity)
-		}
-		bigRSum = bigRSum.Add(bigR)
+		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity])
 	}
 
 	// 3.ii. compute e = H(Rsum || pk || || message)

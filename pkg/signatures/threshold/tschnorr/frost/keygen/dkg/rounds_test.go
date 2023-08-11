@@ -72,7 +72,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -138,7 +138,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)

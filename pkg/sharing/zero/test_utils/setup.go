@@ -6,7 +6,6 @@ import (
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 )
@@ -26,10 +25,10 @@ func MakeSetupParticipants(curve *curves.Curve, identities []integration.Identit
 	return participants, nil
 }
 
-func DoSetupRound1(participants []*setup.Participant) (round2Outputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P], err error) {
-	round2Outputs = make([]*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P], len(participants))
+func DoSetupRound1(participants []*setup.Participant) (round2Outputs []map[integration.IdentityKey]*setup.Round1P2P, err error) {
+	round2Outputs = make([]map[integration.IdentityKey]*setup.Round1P2P, len(participants))
 	for i, participant := range participants {
-		round2Outputs[i] = hashmap.NewHashMap[integration.IdentityKey, *setup.Round1P2P]()
+		round2Outputs[i] = make(map[integration.IdentityKey]*setup.Round1P2P)
 		round2Outputs[i], err = participant.Round1()
 		if err != nil {
 			return nil, err
@@ -38,22 +37,21 @@ func DoSetupRound1(participants []*setup.Participant) (round2Outputs []*hashmap.
 	return round2Outputs, nil
 }
 
-func MapSetupRound1OutputsToRound2Inputs(participants []*setup.Participant, round2Outputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P]) (round3Inputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P]) {
-	round3Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P], len(participants))
+func MapSetupRound1OutputsToRound2Inputs(participants []*setup.Participant, round2Outputs []map[integration.IdentityKey]*setup.Round1P2P) (round3Inputs []map[integration.IdentityKey]*setup.Round1P2P) {
+	round3Inputs = make([]map[integration.IdentityKey]*setup.Round1P2P, len(participants))
 	for i := range participants {
-		round3Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *setup.Round1P2P]()
+		round3Inputs[i] = make(map[integration.IdentityKey]*setup.Round1P2P)
 		for j := range participants {
 			if j != i {
-				output, _ := round2Outputs[j].Get(participants[i].MyIdentityKey)
-				round3Inputs[i].Put(participants[j].MyIdentityKey, output)
+				round3Inputs[i][participants[j].MyIdentityKey] = round2Outputs[j][participants[i].MyIdentityKey]
 			}
 		}
 	}
 	return round3Inputs
 }
 
-func DoSetupRound2(participants []*setup.Participant, round3Inputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round1P2P]) (round3Outputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P], err error) {
-	round3Outputs = make([]*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P], len(participants))
+func DoSetupRound2(participants []*setup.Participant, round3Inputs []map[integration.IdentityKey]*setup.Round1P2P) (round3Outputs []map[integration.IdentityKey]*setup.Round2P2P, err error) {
+	round3Outputs = make([]map[integration.IdentityKey]*setup.Round2P2P, len(participants))
 	for i, participant := range participants {
 		round3Outputs[i], err = participant.Round2(round3Inputs[i])
 		if err != nil {
@@ -63,21 +61,20 @@ func DoSetupRound2(participants []*setup.Participant, round3Inputs []*hashmap.Ha
 	return round3Outputs, nil
 }
 
-func MapSetupRound2OutputsToRound3Inputs(participants []*setup.Participant, round3Outputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P]) (round4Inputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P]) {
-	round4Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P], len(participants))
+func MapSetupRound2OutputsToRound3Inputs(participants []*setup.Participant, round3Outputs []map[integration.IdentityKey]*setup.Round2P2P) (round4Inputs []map[integration.IdentityKey]*setup.Round2P2P) {
+	round4Inputs = make([]map[integration.IdentityKey]*setup.Round2P2P, len(participants))
 	for i := range participants {
-		round4Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *setup.Round2P2P]()
+		round4Inputs[i] = make(map[integration.IdentityKey]*setup.Round2P2P)
 		for j := range participants {
 			if j != i {
-				output, _ := round3Outputs[j].Get(participants[i].MyIdentityKey)
-				round4Inputs[i].Put(participants[j].MyIdentityKey, output)
+				round4Inputs[i][participants[j].MyIdentityKey] = round3Outputs[j][participants[i].MyIdentityKey]
 			}
 		}
 	}
 	return round4Inputs
 }
 
-func DoSetupRound3(participants []*setup.Participant, round4Inputs []*hashmap.HashMap[integration.IdentityKey, *setup.Round2P2P]) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
+func DoSetupRound3(participants []*setup.Participant, round4Inputs []map[integration.IdentityKey]*setup.Round2P2P) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
 	allPairwiseSeeds = make([]zero.PairwiseSeeds, len(participants))
 	for i, participant := range participants {
 		allPairwiseSeeds[i], err = participant.Round3(round4Inputs[i])

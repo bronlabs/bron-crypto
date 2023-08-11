@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
@@ -23,15 +22,15 @@ type Cosigner struct {
 	prng io.Reader
 
 	MyIdentityKey integration.IdentityKey
-	MySharing     int
+	MyShamirId    int
 	Shard         *dkls23.Shard
 
-	UniqueSessionId        []byte
-	CohortConfig           *integration.CohortConfig
-	SharingToIdentityKey   map[int]integration.IdentityKey
-	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
-	SessionParticipants    []integration.IdentityKey
-	sessionShamirIDs       []int
+	UniqueSessionId       []byte
+	CohortConfig          *integration.CohortConfig
+	ShamirIdToIdentityKey map[int]integration.IdentityKey
+	IdentityKeyToShamirId map[integration.IdentityKey]int
+	SessionParticipants   []integration.IdentityKey
+	sessionShamirIDs      []int
 
 	transcript   transcripts.Transcript
 	subprotocols *SubProtocols
@@ -71,7 +70,7 @@ func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
 }
 
 func (ic *Cosigner) GetSharingId() int {
-	return ic.MySharing
+	return ic.MyShamirId
 }
 
 func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
@@ -101,14 +100,10 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
 	}
 
-	shamirIdToIdentityKey, identityKeyToSharing, mySharing := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, len(sessionParticipants))
-	var exists bool
 	for i := 0; i < len(sessionParticipants); i++ {
-		sessionShamirIDs[i], exists = identityKeyToSharing.Get(sessionParticipants[i])
-		if !exists {
-			return nil, errs.NewFailed("identity key %x not found in identityKeyToSharing", sessionParticipants[i].PublicKey().ToAffineCompressed())
-		}
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i]]
 	}
 
 	// step 0.2
@@ -122,15 +117,11 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
-		pairwiseBaseOT, exists := shard.PairwiseBaseOTs.Get(participant)
-		if !exists {
-			return nil, errs.NewFailed("pairwise base OT not found for participant %x", participant.PublicKey().ToAffineCompressed())
-		}
-		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, pairwiseBaseOT.AsReceiver, uniqueSessionId, prng, transcript.Clone())
+		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsReceiver, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, pairwiseBaseOT.AsSender, uniqueSessionId, prng, transcript.Clone())
+		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsSender, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
@@ -160,10 +151,10 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 			receivedCommitmentsToInstanceKey:   map[integration.IdentityKey]commitments.Commitment{},
 			receivedR_i:                        map[integration.IdentityKey]curves.Point{},
 		},
-		SharingToIdentityKey:   shamirIdToIdentityKey,
-		IdentityKeyToSharingId: identityKeyToSharing,
-		MySharing:              mySharing,
-		round:                  1,
+		ShamirIdToIdentityKey: shamirIdToIdentityKey,
+		IdentityKeyToShamirId: identityKeyToShamirId,
+		MyShamirId:            myShamirId,
+		round:                 1,
 	}
 
 	return cosigner, nil

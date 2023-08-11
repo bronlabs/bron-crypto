@@ -32,14 +32,14 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	r1OutsU, err := test_utils.DoSetupRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), len(identities)-1)
+		require.Len(t, out, len(identities)-1)
 	}
 
 	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
 	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
-		require.Equal(t, out.Size(), len(identities)-1)
+		require.Len(t, out, len(identities)-1)
 	}
 
 	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
@@ -48,7 +48,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 
 	// we have the right number of pairs
 	for i := range participants {
-		require.Equal(t, allPairwiseSeeds[i].Size(), len(identities)-1)
+		require.Len(t, allPairwiseSeeds[i], len(identities)-1)
 	}
 
 	// each pair of seeds for all parties match
@@ -57,8 +57,8 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 			if i == j {
 				continue
 			}
-			seedOfIFromJ, _ := allPairwiseSeeds[i].Get(participants[j].MyIdentityKey)
-			seedOfJFromI, _ := allPairwiseSeeds[j].Get(participants[i].MyIdentityKey)
+			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey]
+			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey]
 			require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 		}
 	}

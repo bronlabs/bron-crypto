@@ -88,9 +88,9 @@ func Test_happyPath(t *testing.T) {
 	signingKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, signingKeyShares)
-	require.Equal(t, signingKeyShares.Size(), cohortConfig.TotalParties)
+	require.Len(t, signingKeyShares, cohortConfig.TotalParties)
 
-	for _, signingKeyShare := range signingKeyShares.GetMap() {
+	for _, signingKeyShare := range signingKeyShares {
 		err = signingKeyShare.Validate()
 		require.NoError(t, err)
 	}

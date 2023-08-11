@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 )
 
@@ -35,13 +34,13 @@ func DoPreGenRound1(participants []*noninteractive.PreGenParticipant) (round1Out
 	return round1Outputs, nil
 }
 
-func MapPreGenRound1OutputsToRound2Inputs(participants []*noninteractive.PreGenParticipant, round1Outputs []*noninteractive.Round1Broadcast) (round2Inputs []*hashmap.HashMap[integration.IdentityKey, *noninteractive.Round1Broadcast]) {
-	round2Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *noninteractive.Round1Broadcast], len(participants))
+func MapPreGenRound1OutputsToRound2Inputs(participants []*noninteractive.PreGenParticipant, round1Outputs []*noninteractive.Round1Broadcast) (round2Inputs []map[integration.IdentityKey]*noninteractive.Round1Broadcast) {
+	round2Inputs = make([]map[integration.IdentityKey]*noninteractive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *noninteractive.Round1Broadcast]()
+		round2Inputs[i] = make(map[integration.IdentityKey]*noninteractive.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2Inputs[i].Put(participants[j].MyIdentityKey, round1Outputs[j])
+				round2Inputs[i][participants[j].MyIdentityKey] = round1Outputs[j]
 			}
 		}
 	}
@@ -49,7 +48,7 @@ func MapPreGenRound1OutputsToRound2Inputs(participants []*noninteractive.PreGenP
 	return round2Inputs
 }
 
-func DoPreGenRound2(participants []*noninteractive.PreGenParticipant, round2Inputs []*hashmap.HashMap[integration.IdentityKey, *noninteractive.Round1Broadcast]) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair, error) {
+func DoPreGenRound2(participants []*noninteractive.PreGenParticipant, round2Inputs []map[integration.IdentityKey]*noninteractive.Round1Broadcast) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair, error) {
 	var err error
 	preSignatures := make([]*noninteractive.PreSignatureBatch, len(participants))
 	privateNoncePairs := make([][]*noninteractive.PrivateNoncePair, len(participants))

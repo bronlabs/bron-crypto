@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -27,7 +26,7 @@ type state struct {
 	k                   []curves.Scalar
 	bigR                []curves.Point
 	bigRWitness         []commitments.Witness
-	theirBigRCommitment []*hashmap.HashMap[integration.IdentityKey, commitments.Commitment]
+	theirBigRCommitment []map[integration.IdentityKey]commitments.Commitment
 }
 
 type PreGenParticipant struct {

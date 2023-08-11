@@ -3,7 +3,6 @@ package lindell17
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
@@ -22,8 +21,8 @@ type Participant interface {
 type Shard struct {
 	SigningKeyShare         *threshold.SigningKeyShare
 	PaillierSecretKey       *paillier.SecretKey
-	PaillierPublicKeys      *hashmap.HashMap[integration.IdentityKey, *paillier.PublicKey]
-	PaillierEncryptedShares *hashmap.HashMap[integration.IdentityKey, paillier.CipherText]
+	PaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
+	PaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
 }
 
 type PartialSignature struct {
@@ -32,7 +31,7 @@ type PartialSignature struct {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	BigR map[integration.IdentityKey]curves.Point
 }
 
 type PreSignatureBatch struct {

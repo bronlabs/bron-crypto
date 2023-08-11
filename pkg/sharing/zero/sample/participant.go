@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
@@ -16,7 +15,7 @@ type Participant struct {
 	PresentParticipants []integration.IdentityKey
 	UniqueSessionId     []byte
 
-	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
+	IdentityKeyToSharingId map[integration.IdentityKey]int
 
 	Seeds zero.PairwiseSeeds
 
@@ -53,16 +52,12 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	if seeds == nil {
 		return nil, errs.NewInvalidArgument("seeds are nil")
 	}
-	if seeds.Size() == 0 {
+	if len(seeds) == 0 {
 		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
 	}
-	allParticipants := make([]integration.IdentityKey, seeds.Size()+1)
+	allParticipants := make([]integration.IdentityKey, len(seeds)+1)
 	i := 0
-	for _, participant := range seeds.Keys() {
-		sharedSeed, found := seeds.Get(participant)
-		if !found {
-			return nil, errs.NewInvalidArgument("could not find shared seed for participant")
-		}
+	for participant, sharedSeed := range seeds {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			return nil, errs.NewInvalidArgument("found a shared seed with myself")
 		}
@@ -81,7 +76,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		i++
 	}
 	// i won't be in seeds, and i is already incremented
-	allParticipants[seeds.Size()] = identityKey
+	allParticipants[len(seeds)] = identityKey
 
 	// if you pass presentParticipants to below, sharing ids will be different
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, allParticipants)

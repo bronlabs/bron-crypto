@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
@@ -23,13 +22,13 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *Participant) Round2(round1output *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) ([]byte, error) {
+func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) ([]byte, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	round1output.Put(p.MyIdentityKey, &Round1Broadcast{
+	round1output[p.MyIdentityKey] = &Round1Broadcast{
 		Ri: p.state.r_i,
-	})
+	}
 	sortRandomnessContributions, err := sortRandomnessContributions(round1output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
@@ -40,17 +39,17 @@ func (p *Participant) Round2(round1output *hashmap.HashMap[integration.IdentityK
 	return randomValue, nil
 }
 
-func sortRandomnessContributions(allIdentityKeysToRi *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) ([][]byte, error) {
-	identityKeys := make([]integration.IdentityKey, allIdentityKeysToRi.Size())
+func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
+	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
 	i := 0
-	for _, identityKey := range allIdentityKeysToRi.Keys() {
+	for identityKey := range allIdentityKeysToRi {
 		identityKeys[i] = identityKey
 		i++
 	}
 	identityKeys = integration.SortIdentityKeys(identityKeys)
-	sortedRVector := make([][]byte, allIdentityKeysToRi.Size())
+	sortedRVector := make([][]byte, len(allIdentityKeysToRi))
 	for i, identityKey := range identityKeys {
-		message, exists := allIdentityKeysToRi.Get(identityKey)
+		message, exists := allIdentityKeysToRi[identityKey]
 		if !exists {
 			return nil, errs.NewMissing("message couldn't be found")
 		}

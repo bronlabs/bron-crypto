@@ -84,8 +84,7 @@ func Test_HappyPath(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(cohort, prng)
 	require.NoError(t, err)
-	shard, _ := shards.Get(identities[0])
-	publicKey := shard.SigningKeyShare.PublicKey
+	publicKey := shards[identities[0]].SigningKeyShare.PublicKey
 
 	transcripts := integration_test_utils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
