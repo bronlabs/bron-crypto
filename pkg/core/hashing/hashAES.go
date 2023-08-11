@@ -50,8 +50,8 @@ func HashTMMO(input []byte) (digest []byte, err error) {
 		// 3.1.3) π(π(x[i])⊕i) - Apply the block cipher to the result of the XOR.
 		blockCipher.Encrypt(outputBlock, outputBlock)
 		// 3.1.4) π(π(x[i])⊕i)⊕π(x[i]) - XOR the two results of the block cipher.
-		for i := 0; i < BlockSize; i++ {
-			outputBlock[i] ^= permutedBlock[i]
+		for j := 0; i < BlockSize; j++ {
+			outputBlock[j] ^= permutedBlock[j]
 		}
 		// 3.2) Set the current block as the key for the next iteration.
 		// TODO: check if key is copied in the block cipher:
