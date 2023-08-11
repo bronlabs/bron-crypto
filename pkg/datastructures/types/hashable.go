@@ -1,9 +1,7 @@
 package types
 
-const HASH_KEY_SIZE = 32
-
 type Hashable interface {
-	Hash() [HASH_KEY_SIZE]byte
+	Hash() [32]byte
 }
 
 func Equals(a, b Hashable) bool {

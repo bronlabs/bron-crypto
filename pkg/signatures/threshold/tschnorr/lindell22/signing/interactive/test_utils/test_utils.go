@@ -6,13 +6,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards *hashmap.HashMap[integration.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[integration.IdentityKey]*lindell22.Shard, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
 	if len(identities) < cohortConfig.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
 	}
@@ -23,8 +22,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
 		}
-		shard, _ := shards.Get(identity)
-		participants[i], err = interactive.NewCosigner(identity, sid, identities, shard, cohortConfig, allTranscripts[i], prng)
+		participants[i], err = interactive.NewCosigner(identity, sid, identities, shards[identity], cohortConfig, allTranscripts[i], prng)
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +31,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 	return participants, nil
 }
 
-func DoRound1(participants []*interactive.Cosigner) (round2Inputs []*hashmap.HashMap[integration.IdentityKey, *interactive.Round1Broadcast], err error) {
+func DoRound1(participants []*interactive.Cosigner) (round2Inputs []map[integration.IdentityKey]*interactive.Round1Broadcast, err error) {
 	round1Outputs := make([]*interactive.Round1Broadcast, len(participants))
 	for i, participant := range participants {
 		round1Outputs[i], err = participant.Round1()
@@ -42,18 +40,18 @@ func DoRound1(participants []*interactive.Cosigner) (round2Inputs []*hashmap.Has
 		}
 	}
 
-	round2Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *interactive.Round1Broadcast], len(participants))
+	round2Inputs = make([]map[integration.IdentityKey]*interactive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *interactive.Round1Broadcast]()
+		round2Inputs[i] = make(map[integration.IdentityKey]*interactive.Round1Broadcast)
 		for j := range participants {
-			round2Inputs[i].Put(participants[j].GetIdentityKey(), round1Outputs[j])
+			round2Inputs[i][participants[j].GetIdentityKey()] = round1Outputs[j]
 		}
 	}
 
 	return round2Inputs, nil
 }
 
-func DoRound2(participants []*interactive.Cosigner, round2Inputs []*hashmap.HashMap[integration.IdentityKey, *interactive.Round1Broadcast]) (round3Inputs []*hashmap.HashMap[integration.IdentityKey, *interactive.Round2Broadcast], err error) {
+func DoRound2(participants []*interactive.Cosigner, round2Inputs []map[integration.IdentityKey]*interactive.Round1Broadcast) (round3Inputs []map[integration.IdentityKey]*interactive.Round2Broadcast, err error) {
 	round2Outputs := make([]*interactive.Round2Broadcast, len(participants))
 	for i, participant := range participants {
 		round2Outputs[i], err = participant.Round2(round2Inputs[i])
@@ -62,18 +60,18 @@ func DoRound2(participants []*interactive.Cosigner, round2Inputs []*hashmap.Hash
 		}
 	}
 
-	round3Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *interactive.Round2Broadcast], len(participants))
+	round3Inputs = make([]map[integration.IdentityKey]*interactive.Round2Broadcast, len(participants))
 	for i := range participants {
-		round3Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *interactive.Round2Broadcast]()
+		round3Inputs[i] = make(map[integration.IdentityKey]*interactive.Round2Broadcast)
 		for j := range participants {
-			round3Inputs[i].Put(participants[j].GetIdentityKey(), round2Outputs[j])
+			round3Inputs[i][participants[j].GetIdentityKey()] = round2Outputs[j]
 		}
 	}
 
 	return round3Inputs, nil
 }
 
-func DoRound3(participants []*interactive.Cosigner, round3Inputs []*hashmap.HashMap[integration.IdentityKey, *interactive.Round2Broadcast], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func DoRound3(participants []*interactive.Cosigner, round3Inputs []map[integration.IdentityKey]*interactive.Round2Broadcast, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	partialSignatures = make([]*lindell22.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3Inputs[i], message)

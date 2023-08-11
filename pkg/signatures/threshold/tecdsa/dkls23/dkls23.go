@@ -3,7 +3,6 @@ package dkls23
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -29,7 +28,7 @@ type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs *hashmap.HashMap[integration.IdentityKey, *BaseOTConfig]
+	PairwiseBaseOTs map[integration.IdentityKey]*BaseOTConfig
 }
 
 type PartialSignature struct {

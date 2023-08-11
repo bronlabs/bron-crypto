@@ -29,7 +29,7 @@ func Test_CanInitialize(t *testing.T) {
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
-		require.Equal(t, party.IdentityKeyToSharingId.Size(), 2)
+		require.Len(t, party.IdentityKeyToSharingId, 2)
 		require.Len(t, party.Participants, 2)
 		require.NotNil(t, party.state)
 		require.NotNil(t, party.state.transcript)

@@ -2,7 +2,6 @@ package dkg
 
 import (
 	"crypto/sha256"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -94,11 +93,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	p.state.myBigQWitness = bigQWitness
 
 	// some paranoid checks
-	share, exists := p.publicKeyShares.SharesMap.Get(p.myIdentityKey)
-	if !exists {
-		return nil, errs.NewFailed("cannot find share")
-	}
-	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQDoublePrime).Equal(share) {
+	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQDoublePrime).Equal(p.publicKeyShares.SharesMap[p.myIdentityKey]) {
 		return nil, errs.NewFailed("something went really wrong")
 	}
 
@@ -109,26 +104,21 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *Participant) Round2(input *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) (output *Round2Broadcast, err error) {
+func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", p.round)
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = hashmap.NewHashMap[integration.IdentityKey, commitments.Commitment]()
+	p.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
-		identityInput, found := input.Get(identity)
-		if !found {
-			sharingId, exists := p.idKeyToSharingId.Get(identity)
-			if !exists {
-				return nil, errs.NewFailed("cannot find sharing id for identity %s", identity)
-			}
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
-		p.state.theirBigQCommitment.Put(identity, identityInput.BigQCommitment)
+		p.state.theirBigQCommitment[identity] = input[identity].BigQCommitment
 	}
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
@@ -153,62 +143,41 @@ func (p *Participant) Round2(input *hashmap.HashMap[integration.IdentityKey, *Ro
 	}, nil
 }
 
-func (p *Participant) Round3(input *hashmap.HashMap[integration.IdentityKey, *Round2Broadcast]) (output *Round3Broadcast, err error) {
+func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast) (output *Round3Broadcast, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", p.round)
 	}
 
-	p.state.theirBigQPrime = hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
-	p.state.theirBigQDoublePrime = hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
+	p.state.theirBigQPrime = make(map[integration.IdentityKey]curves.Point)
+	p.state.theirBigQDoublePrime = make(map[integration.IdentityKey]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants {
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("cannot find sharing id for identity %s", identity)
-		}
 		if identity == p.myIdentityKey {
 			continue
 		}
-		identityInput, found := input.Get(identity)
-		if !found {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
 		// 3.i. open commitments
-		bigQComm, exists := p.state.theirBigQCommitment.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("cannot find commitment to (Q', Q'') for identity %s", identity)
-		}
-		if err := openCommitment(bigQComm, identityInput.BigQWitness, identityInput.BigQPrime, identityInput.BigQDoublePrime, p.sessionId, identity.PublicKey()); err != nil {
+		if err := openCommitment(p.state.theirBigQCommitment[identity], input[identity].BigQWitness, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, identity.PublicKey()); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open (Q', Q'') commitment")
 		}
 
 		dlogTranscript := p.transcript.Clone()
-		if err := dlogVerify(identityInput.BigQPrimeProof, identityInput.BigQPrime, identityInput.BigQDoublePrime, p.sessionId, dlogTranscript); err != nil {
+		if err := dlogVerify(input[identity].BigQPrimeProof, input[identity].BigQPrime, input[identity].BigQDoublePrime, p.sessionId, dlogTranscript); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
-		if err := dlogVerify(identityInput.BigQDoublePrimeProof, identityInput.BigQDoublePrime, identityInput.BigQPrime, p.sessionId, dlogTranscript); err != nil {
+		if err := dlogVerify(input[identity].BigQDoublePrimeProof, input[identity].BigQDoublePrime, input[identity].BigQPrime, p.sessionId, dlogTranscript); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
-		p.state.theirBigQPrime.Put(identity, identityInput.BigQPrime)
-		p.state.theirBigQDoublePrime.Put(identity, identityInput.BigQDoublePrime)
+		p.state.theirBigQPrime[identity] = input[identity].BigQPrime
+		p.state.theirBigQDoublePrime[identity] = input[identity].BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		bigQPrime, exists := p.state.theirBigQPrime.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("cannot find Q' for identity %s", identity)
-		}
-		bigQDoublePrime, exists := p.state.theirBigQDoublePrime.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("cannot find Q'' for identity %s", identity)
-		}
-		theirBigQ := bigQPrime.Mul(p.cohortConfig.CipherSuite.Curve.NewScalar().New(3)).Add(bigQDoublePrime)
-		share, exists := p.publicKeyShares.SharesMap.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("cannot find public key share for identity %s", identity)
-		}
-		if !theirBigQ.Equal(share) {
+		theirBigQ := p.state.theirBigQPrime[identity].Mul(p.cohortConfig.CipherSuite.Curve.NewScalar().New(3)).Add(p.state.theirBigQDoublePrime[identity])
+		if !theirBigQ.Equal(p.publicKeyShares.SharesMap[identity]) {
 			return nil, errs.NewIdentifiableAbort("invalid Q' or Q''")
 		}
 	}
@@ -233,29 +202,26 @@ func (p *Participant) Round3(input *hashmap.HashMap[integration.IdentityKey, *Ro
 
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
-	p.state.lpProvers = hashmap.NewHashMap[integration.IdentityKey, *lp.Prover]()
-	p.state.lpdlPrimeProvers = hashmap.NewHashMap[integration.IdentityKey, *lpdl.Prover]()
-	p.state.lpdlDoublePrimeProvers = hashmap.NewHashMap[integration.IdentityKey, *lpdl.Prover]()
+	p.state.lpProvers = make(map[integration.IdentityKey]*lp.Prover)
+	p.state.lpdlPrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
+	p.state.lpdlDoublePrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
 		paillierProofsTranscript := p.transcript.Clone()
-		proverLp, err := lp.NewProver(128, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpProvers[identity], err = lp.NewProver(128, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create LP prover")
 		}
-		p.state.lpProvers.Put(identity, proverLp)
-		proverLpdl, err := lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
-		p.state.lpdlPrimeProvers.Put(identity, proverLpdl)
-		proverLpdl, err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeProvers[identity], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers.Put(identity, proverLpdl)
 	}
 
 	// 3.v. broadcast (pk, ckey', ckey'')
@@ -267,270 +233,182 @@ func (p *Participant) Round3(input *hashmap.HashMap[integration.IdentityKey, *Ro
 	}, nil
 }
 
-func (p *Participant) Round4(input *hashmap.HashMap[integration.IdentityKey, *Round3Broadcast]) (output *hashmap.HashMap[integration.IdentityKey, *Round4P2P], err error) {
+func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast) (output map[integration.IdentityKey]*Round4P2P, err error) {
 	if p.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", p.round)
 	}
 
-	p.state.theirPaillierPublicKeys = hashmap.NewHashMap[integration.IdentityKey, *paillier.PublicKey]()
-	p.state.theirPaillierEncryptedShares = hashmap.NewHashMap[integration.IdentityKey, paillier.CipherText]()
+	p.state.theirPaillierPublicKeys = make(map[integration.IdentityKey]*paillier.PublicKey)
+	p.state.theirPaillierEncryptedShares = make(map[integration.IdentityKey]paillier.CipherText)
 
-	p.state.lpVerifiers = hashmap.NewHashMap[integration.IdentityKey, *lp.Verifier]()
-	p.state.lpdlPrimeVerifiers = hashmap.NewHashMap[integration.IdentityKey, *lpdl.Verifier]()
-	p.state.lpdlDoublePrimeVerifiers = hashmap.NewHashMap[integration.IdentityKey, *lpdl.Verifier]()
+	p.state.lpVerifiers = make(map[integration.IdentityKey]*lp.Verifier)
+	p.state.lpdlPrimeVerifiers = make(map[integration.IdentityKey]*lpdl.Verifier)
+	p.state.lpdlDoublePrimeVerifiers = make(map[integration.IdentityKey]*lpdl.Verifier)
 
-	round4Outputs := hashmap.NewHashMap[integration.IdentityKey, *Round4P2P]()
+	round4Outputs := make(map[integration.IdentityKey]*Round4P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant")
-		}
-		inputIdentity, exists := input.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
-		p.state.theirPaillierPublicKeys.Put(identity, inputIdentity.PaillierPublicKey)
-		theirCKeyPrime := inputIdentity.CKeyPrime
-		theirCKeyDoublePrime := inputIdentity.CKeyDoublePrime
+		p.state.theirPaillierPublicKeys[identity] = input[identity].PaillierPublicKey
+		theirCKeyPrime := input[identity].CKeyPrime
+		theirCKeyDoublePrime := input[identity].CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		theirPaillierPublicKey, exists := p.state.theirPaillierPublicKeys.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no Paillier public key for participant with sharing id %d", sharingId)
-		}
-		cKey1, err := theirPaillierPublicKey.Add(theirCKeyPrime, theirCKeyPrime)
+		cKey1, err := p.state.theirPaillierPublicKeys[identity].Add(theirCKeyPrime, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		cKey2, err := theirPaillierPublicKey.Add(cKey1, theirCKeyPrime)
+		cKey2, err := p.state.theirPaillierPublicKeys[identity].Add(cKey1, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		addedTheirPaillierPublicKey, err := theirPaillierPublicKey.Add(cKey2, theirCKeyDoublePrime)
+		p.state.theirPaillierEncryptedShares[identity], err = p.state.theirPaillierPublicKeys[identity].Add(cKey2, theirCKeyDoublePrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		p.state.theirPaillierEncryptedShares.Put(identity, addedTheirPaillierPublicKey)
+
 		// 4.ii. LP and LPDL continue
 		paillierProofsTranscript := p.transcript.Clone()
-		lpVerifier, err := lp.NewVerifier(128, theirPaillierPublicKey, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpVerifiers[identity], err = lp.NewVerifier(128, p.state.theirPaillierPublicKeys[identity], p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create P verifier")
 		}
-		p.state.lpVerifiers.Put(identity, lpVerifier)
-		theirBigQPrime, exists := p.state.theirBigQPrime.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no big q prime for participant with sharing id %d", sharingId)
-		}
-		lpdlNewVerifier, err := lpdl.NewVerifier(p.sessionId, theirPaillierPublicKey, theirBigQPrime, theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQPrime[identity], theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
-		p.state.lpdlPrimeVerifiers.Put(identity, lpdlNewVerifier)
-		theirBigQDoublePrime, exists := p.state.theirBigQDoublePrime.Get(identity)
-		lpdlVerifier, err := lpdl.NewVerifier(p.sessionId, theirPaillierPublicKey, theirBigQDoublePrime, theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
-		p.state.lpdlDoublePrimeVerifiers.Put(identity, lpdlVerifier)
+		p.state.lpdlDoublePrimeVerifiers[identity], err = lpdl.NewVerifier(p.sessionId, p.state.theirPaillierPublicKeys[identity], p.state.theirBigQDoublePrime[identity], theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
 
-		round4P2p := new(Round4P2P)
-		lpVerifier, exists = p.state.lpVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LP verifier for participant with sharing id %d", sharingId)
-		}
-		round4P2p.LpRound1Output, err = lpVerifier.Round1()
+		round4Outputs[identity] = new(Round4P2P)
+		round4Outputs[identity].LpRound1Output, err = p.state.lpVerifiers[identity].Round1()
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
 		}
-		lpdlPrimeVerifier, exists := p.state.lpdlPrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL verifier for participant with sharing id %d", sharingId)
-		}
-		round4P2p.LpdlPrimeRound1Output, err = lpdlPrimeVerifier.Round1()
+		round4Outputs[identity].LpdlPrimeRound1Output, err = p.state.lpdlPrimeVerifiers[identity].Round1()
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
 		}
-		lpdlDoublePrimeVerifier, exists := p.state.lpdlDoublePrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL verifier for participant with sharing id %d", sharingId)
-		}
-		round4P2p.LpdlDoublePrimeRound1Output, err = lpdlDoublePrimeVerifier.Round1()
+		round4Outputs[identity].LpdlDoublePrimeRound1Output, err = p.state.lpdlDoublePrimeVerifiers[identity].Round1()
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
 		}
-		round4Outputs.Put(identity, round4P2p)
 	}
 
 	p.round++
 	return round4Outputs, nil
 }
 
-func (p *Participant) Round5(input *hashmap.HashMap[integration.IdentityKey, *Round4P2P]) (output *hashmap.HashMap[integration.IdentityKey, *Round5P2P], err error) {
+func (p *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (output map[integration.IdentityKey]*Round5P2P, err error) {
 	if p.round != 5 {
 		return nil, errs.NewInvalidRound("%d != 5", p.round)
 	}
 
 	// 5. LP and LPDL continue
-	round5Outputs := hashmap.NewHashMap[integration.IdentityKey, *Round5P2P]()
+	round5Outputs := make(map[integration.IdentityKey]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant")
-		}
-		inputIdentity, exists := input.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
-		lpProver, exists := p.state.lpProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LP prover for participant with sharing id %d", sharingId)
-		}
-		lpdlPrimeProver, exists := p.state.lpdlPrimeProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-		lpdlDoublePrimeProver, exists := p.state.lpdlDoublePrimeProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-
-		round5P2p := new(Round5P2P)
-		round5P2p.LpRound2Output, err = lpProver.Round2(inputIdentity.LpRound1Output)
+		round5Outputs[identity] = new(Round5P2P)
+		round5Outputs[identity].LpRound2Output, err = p.state.lpProvers[identity].Round2(input[identity].LpRound1Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
 		}
-		round5P2p.LpdlPrimeRound2Output, err = lpdlPrimeProver.Round2(inputIdentity.LpdlPrimeRound1Output)
+		round5Outputs[identity].LpdlPrimeRound2Output, err = p.state.lpdlPrimeProvers[identity].Round2(input[identity].LpdlPrimeRound1Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
 		}
-		round5P2p.LpdlDoublePrimeRound2Output, err = lpdlDoublePrimeProver.Round2(inputIdentity.LpdlDoublePrimeRound1Output)
+		round5Outputs[identity].LpdlDoublePrimeRound2Output, err = p.state.lpdlDoublePrimeProvers[identity].Round2(input[identity].LpdlDoublePrimeRound1Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
 		}
-		round5Outputs.Put(identity, round5P2p)
 	}
 
 	p.round++
 	return round5Outputs, nil
 }
 
-func (p *Participant) Round6(input *hashmap.HashMap[integration.IdentityKey, *Round5P2P]) (output *hashmap.HashMap[integration.IdentityKey, *Round6P2P], err error) {
+func (p *Participant) Round6(input map[integration.IdentityKey]*Round5P2P) (output map[integration.IdentityKey]*Round6P2P, err error) {
 	if p.round != 6 {
 		return nil, errs.NewInvalidRound("%d != 6", p.round)
 	}
 
 	// 6. LP and LPDL continue
-	round6Outputs := hashmap.NewHashMap[integration.IdentityKey, *Round6P2P]()
+	round6Outputs := make(map[integration.IdentityKey]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant")
-		}
-		inputIdentity, exists := input.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
-		lpVerifier, exists := p.state.lpVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LP verifier for participant with sharing id %d", sharingId)
-		}
-		lpdlPrimeVerifier, exists := p.state.lpdlPrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL verifier for participant with sharing id %d", sharingId)
-		}
-		lpdlDoublePrimeVerifier, exists := p.state.lpdlDoublePrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL verifier for participant with sharing id %d", sharingId)
-		}
-
-		round6P2p := new(Round6P2P)
-		round6P2p.LpRound3Output, err = lpVerifier.Round3(inputIdentity.LpRound2Output)
+		round6Outputs[identity] = new(Round6P2P)
+		round6Outputs[identity].LpRound3Output, err = p.state.lpVerifiers[identity].Round3(input[identity].LpRound2Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
 		}
-		round6P2p.LpdlPrimeRound3Output, err = lpdlPrimeVerifier.Round3(inputIdentity.LpdlPrimeRound2Output)
+		round6Outputs[identity].LpdlPrimeRound3Output, err = p.state.lpdlPrimeVerifiers[identity].Round3(input[identity].LpdlPrimeRound2Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
 		}
-		round6P2p.LpdlDoublePrimeRound3Output, err = lpdlDoublePrimeVerifier.Round3(inputIdentity.LpdlDoublePrimeRound2Output)
+		round6Outputs[identity].LpdlDoublePrimeRound3Output, err = p.state.lpdlDoublePrimeVerifiers[identity].Round3(input[identity].LpdlDoublePrimeRound2Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
 		}
-		round6Outputs.Put(identity, round6P2p)
 	}
 
 	p.round++
 	return round6Outputs, nil
 }
 
-func (p *Participant) Round7(input *hashmap.HashMap[integration.IdentityKey, *Round6P2P]) (output *hashmap.HashMap[integration.IdentityKey, *Round7P2P], err error) {
+func (p *Participant) Round7(input map[integration.IdentityKey]*Round6P2P) (output map[integration.IdentityKey]*Round7P2P, err error) {
 	if p.round != 7 {
 		return nil, errs.NewInvalidRound("%d != 7", p.round)
 	}
 
 	// 7. LP and LPDL continue
-	round7Outputs := hashmap.NewHashMap[integration.IdentityKey, *Round7P2P]()
+	round7Outputs := make(map[integration.IdentityKey]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if identity == p.myIdentityKey {
 			continue
 		}
-
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant")
-		}
-		inputIdentity, exists := input.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
-		lpProver, exists := p.state.lpProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LP prover for participant with sharing id %d", sharingId)
-		}
-		lpdlPrimeProver, exists := p.state.lpdlPrimeProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-		lpdlDoublePrimeProver, exists := p.state.lpdlDoublePrimeProvers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-
-		round7P2p := new(Round7P2P)
-		round7P2p.LpRound4Output, err = lpProver.Round4(inputIdentity.LpRound3Output)
+		round7Outputs[identity] = new(Round7P2P)
+		round7Outputs[identity].LpRound4Output, err = p.state.lpProvers[identity].Round4(input[identity].LpRound3Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
 		}
-		round7P2p.LpdlPrimeRound4Output, err = lpdlPrimeProver.Round4(inputIdentity.LpdlPrimeRound3Output)
+		round7Outputs[identity].LpdlPrimeRound4Output, err = p.state.lpdlPrimeProvers[identity].Round4(input[identity].LpdlPrimeRound3Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
 		}
-		round7P2p.LpdlDoublePrimeRound4Output, err = lpdlDoublePrimeProver.Round4(inputIdentity.LpdlDoublePrimeRound3Output)
+		round7Outputs[identity].LpdlDoublePrimeRound4Output, err = p.state.lpdlDoublePrimeProvers[identity].Round4(input[identity].LpdlDoublePrimeRound3Output)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
 		}
-		round7Outputs.Put(identity, round7P2p)
 	}
 
 	p.round++
 	return round7Outputs, nil
 }
 
-func (p *Participant) Round8(input *hashmap.HashMap[integration.IdentityKey, *Round7P2P]) (shard *lindell17.Shard, err error) {
+func (p *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shard *lindell17.Shard, err error) {
 	if p.round != 8 {
 		return nil, errs.NewInvalidRound("%d != 8", p.round)
 	}
@@ -539,37 +417,19 @@ func (p *Participant) Round8(input *hashmap.HashMap[integration.IdentityKey, *Ro
 		if identity == p.myIdentityKey {
 			continue
 		}
-		sharingId, exists := p.idKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant")
-		}
-		inputIdentity, exists := input.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
+		if input[identity] == nil {
+			return nil, errs.NewFailed("no input from participant with sharing id %d", p.idKeyToSharingId[identity])
 		}
 
-		lpVerifier, exists := p.state.lpVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LP prover for participant with sharing id %d", sharingId)
-		}
-		lpdlPrimeVerifier, exists := p.state.lpdlPrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-		lpdlDoublePrimeVerifier, exists := p.state.lpdlDoublePrimeVerifiers.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("no LPDL prover for participant with sharing id %d", sharingId)
-		}
-
-		err = lpVerifier.Round5(inputIdentity.LpRound4Output)
+		err = p.state.lpVerifiers[identity].Round5(input[identity].LpRound4Output)
 		if err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "failed to verify valid Paillier public-key")
 		}
-		err = lpdlPrimeVerifier.Round5(inputIdentity.LpdlPrimeRound4Output)
+		err = p.state.lpdlPrimeVerifiers[identity].Round5(input[identity].LpdlPrimeRound4Output)
 		if err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "failed to verify encrypted dlog")
 		}
-		err = lpdlDoublePrimeVerifier.Round5(inputIdentity.LpdlDoublePrimeRound4Output)
+		err = p.state.lpdlDoublePrimeVerifiers[identity].Round5(input[identity].LpdlDoublePrimeRound4Output)
 		if err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "failed to verify encrypted dlog")
 		}

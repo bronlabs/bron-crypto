@@ -151,14 +151,6 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) {
 	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
-		sharingIdi, exists := identityKeyToSharingId.Get(attestedCommitments[i].Attestor)
-		if !exists {
-			return false
-		}
-		sharingIdj, exists := identityKeyToSharingId.Get(attestedCommitments[j].Attestor)
-		if !exists {
-			return false
-		}
-		return sharingIdi < sharingIdj
+		return identityKeyToSharingId[attestedCommitments[i].Attestor] < identityKeyToSharingId[attestedCommitments[j].Attestor]
 	})
 }

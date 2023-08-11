@@ -47,7 +47,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -112,7 +112,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -143,8 +143,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	identity, _ := r3InsU[attackerIndex].Get(identities[1])
-	identity.Xij = curve.Scalar.Hash(uniqueSessionId)
+	r3InsU[attackerIndex][identities[1]].Xij = curve.Scalar.Hash(uniqueSessionId)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err))
@@ -228,9 +227,8 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-		for identity := range r2InsU[attackerIndex].GetMap() {
-			attacker, _ := r2InsB[attackerIndex].Get(identity)
-			attacker.DlogProof = proof
+		for identity := range r2InsU[attackerIndex] {
+			r2InsB[attackerIndex][identity].DlogProof = proof
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
@@ -243,9 +241,8 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-		for _, identity := range r2InsU[attackerIndex].Keys() {
-			attacker, _ := r2InsB[attackerIndex].Get(identity)
-			attacker.DlogProof = proof
+		for identity := range r2InsU[attackerIndex] {
+			r2InsB[attackerIndex][identity].DlogProof = proof
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)

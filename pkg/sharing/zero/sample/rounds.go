@@ -18,14 +18,11 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		presentParticipantIdentityKey = append(presentParticipantIdentityKey, participant.PublicKey().ToAffineCompressed()...)
 	}
 	for _, participant := range p.PresentParticipants {
-		sharingId, exists := p.IdentityKeyToSharingId.Get(participant)
-		if !exists {
-			return nil, errs.NewFailed("could not find sharing id for participant %s", participant)
-		}
+		sharingId := p.IdentityKeyToSharingId[participant]
 		if sharingId == p.MySharingId {
 			continue
 		}
-		sharedSeed, exists := p.Seeds.Get(participant)
+		sharedSeed, exists := p.Seeds[participant]
 		if !exists {
 			return nil, errs.NewMissing("could not find shared seeds for sharing id %d", sharingId)
 		}

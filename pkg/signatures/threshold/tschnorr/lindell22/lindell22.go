@@ -3,7 +3,6 @@ package lindell22
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
@@ -25,7 +24,7 @@ type Shard struct {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	BigR map[integration.IdentityKey]curves.Point
 }
 
 type PreSignatureBatch struct {

@@ -61,8 +61,7 @@ func Test_SignHappyPath(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				shard, _ := shards.Get(identities[i])
-				cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, identities[:threshold], 0, batches[i], prng)
+				cosigner, err2 := noninteractive.NewCosigner(identities[i], shards[identities[i]], cohort, identities[:threshold], 0, batches[i], prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}
@@ -70,8 +69,7 @@ func Test_SignHappyPath(t *testing.T) {
 			signature, err := signing.Aggregate(partialSignatures...)
 			require.NoError(t, err)
 
-			shard, _ := shards.Get(identities[0])
-			err = eddsa.Verify(curve, hashFunc, signature, shard.SigningKeyShare.PublicKey, message)
+			err = eddsa.Verify(curve, hashFunc, signature, shards[identities[0]].SigningKeyShare.PublicKey, message)
 			require.NoError(t, err)
 		})
 	}

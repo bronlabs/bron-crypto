@@ -55,7 +55,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, shards)
-			require.Equal(t, shards.Size(), cohort.TotalParties)
+			require.Len(t, shards, cohort.TotalParties)
 
 			transcripts := test_utils.MakeTranscripts(transcriptAppLabel, identities)
 			participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
@@ -73,12 +73,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
 					t.Parallel()
 
-					shard, _ := shards.Get(identities[aliceIdx])
-					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
+					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx]], batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
 					require.NoError(t, err)
 
-					shard, _ = shards.Get(identities[bobIdx])
-					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
+					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx]], batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
 					require.NoError(t, err)
 
 					partialSignature, err := alice.ProducePartialSignature(message)
@@ -89,8 +87,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 
 					// signature is valid
 					for _, identity := range identities {
-						shard, _ := shards.Get(identity)
-						err := ecdsa.Verify(signature, cipherSuite.Hash, shard.SigningKeyShare.PublicKey, message)
+						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity].SigningKeyShare.PublicKey, message)
 						require.NoError(t, err)
 					}
 				})

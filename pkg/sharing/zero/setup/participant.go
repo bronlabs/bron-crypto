@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
@@ -22,15 +21,15 @@ type Participant struct {
 	MySharingId     int
 	Participants    []integration.IdentityKey
 
-	IdentityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]
+	IdentityKeyToSharingId map[integration.IdentityKey]int
 
 	state *State
 	round int
 }
 
 type State struct {
-	receivedSeeds *hashmap.HashMap[integration.IdentityKey, commitments.Commitment]
-	sentSeeds     *hashmap.HashMap[integration.IdentityKey, *committedSeedContribution]
+	receivedSeeds map[integration.IdentityKey]commitments.Commitment
+	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
 	transcript    transcripts.Transcript
 }
 
@@ -86,8 +85,8 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: hashmap.NewHashMap[integration.IdentityKey, commitments.Commitment](),
-			sentSeeds:     hashmap.NewHashMap[integration.IdentityKey, *committedSeedContribution](),
+			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},
+			sentSeeds:     map[integration.IdentityKey]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil

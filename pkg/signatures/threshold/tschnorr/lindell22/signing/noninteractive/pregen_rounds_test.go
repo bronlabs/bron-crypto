@@ -49,7 +49,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 			for p1 := range identities {
 				p1BigR := cipherSuite.Curve.ScalarBaseMult(batches[p1].PreSignatures[i].K)
 				for p2 := range identities {
-					p2BigR, _ := batches[p2].PreSignatures[i].BigR.Get(identities[p1])
+					p2BigR := batches[p2].PreSignatures[i].BigR[identities[p1]]
 					require.True(t, p1BigR.Equal(p2BigR))
 				}
 			}

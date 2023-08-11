@@ -48,8 +48,8 @@ func Test_PreGenHappyPath(t *testing.T) {
 		for i := 0; i < tau; i++ {
 			for p1 := 0; p1 < len(participants); p1++ {
 				for p2 := p1 + 1; p2 < len(participants); p2++ {
-					l, _ := batches[p1].PreSignatures[i].BigR.Get(participants[p2].GetIdentityKey())
-					r, _ := batches[p2].PreSignatures[i].BigR.Get(participants[p1].GetIdentityKey())
+					l := batches[p1].PreSignatures[i].BigR[participants[p2].GetIdentityKey()]
+					r := batches[p2].PreSignatures[i].BigR[participants[p1].GetIdentityKey()]
 					require.True(t, l.Equal(r))
 				}
 			}

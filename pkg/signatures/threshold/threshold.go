@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 )
 
 type SigningKeyShare struct {
@@ -43,7 +42,7 @@ func (s *SigningKeyShare) Validate() error {
 type PublicKeyShares struct {
 	Curve     *curves.Curve
 	PublicKey curves.Point
-	SharesMap *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	SharesMap map[integration.IdentityKey]curves.Point
 }
 
 // TODO: write down validation (lambda trick)
