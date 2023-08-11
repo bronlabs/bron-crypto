@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -148,7 +149,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		}
 		shards[identityKey].PaillierSecretKey = paillierSecretKey
 		for _, otherIdentityKey := range sharingIdsToIdentityKeys {
-			if identityKey != otherIdentityKey {
+			if !types.Equals(identityKey, otherIdentityKey) {
 				shards[otherIdentityKey].PaillierPublicKeys[identityKey] = paillierPublicKey
 				shards[otherIdentityKey].PaillierEncryptedShares[identityKey], _, err = paillierPublicKey.Encrypt(shards[identityKey].SigningKeyShare.Share.BigInt())
 				if err != nil {

@@ -90,7 +90,7 @@ func Test_HappyPath(t *testing.T) {
 			myShare := myShard.SigningKeyShare.Share.BigInt()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for _, theirShard := range shards {
-				if myShard != theirShard {
+				if myShard.PaillierSecretKey.N != theirShard.PaillierSecretKey.N && myShard.PaillierSecretKey.N2 != theirShard.PaillierSecretKey.N2 {
 					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 					require.NoError(t, err)

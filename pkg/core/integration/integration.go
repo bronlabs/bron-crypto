@@ -150,7 +150,7 @@ func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (id
 		sharingId := sharingIdMinusOne + 1
 		idToKey[sharingId] = identityKey
 		keyToId[identityKey] = sharingId
-		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+		if myIdentityKey != nil && types.Equals(identityKey, myIdentityKey) {
 			mySharingId = sharingId
 		}
 	}

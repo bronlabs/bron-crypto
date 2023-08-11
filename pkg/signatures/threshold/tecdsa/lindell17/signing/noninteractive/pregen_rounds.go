@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -67,7 +68,7 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broa
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitments[i] = make(map[integration.IdentityKey]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
-			if identity == p.myIdentityKey {
+			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
 			in, ok := input[identity]
@@ -104,7 +105,7 @@ func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broa
 		commonBigR[i] = make(map[integration.IdentityKey]curves.Point)
 
 		for _, identity := range p.cohortConfig.Participants {
-			if identity == p.myIdentityKey {
+			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
 			in, ok := input[identity]
