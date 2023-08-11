@@ -2,7 +2,6 @@ package noninteractive
 
 import (
 	"bytes"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	"strconv"
 
 	"golang.org/x/crypto/sha3"
@@ -11,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
