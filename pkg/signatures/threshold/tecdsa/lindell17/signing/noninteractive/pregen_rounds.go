@@ -2,6 +2,7 @@ package noninteractive
 
 import (
 	"bytes"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	"strconv"
 
 	"golang.org/x/crypto/sha3"
@@ -67,7 +68,7 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityKey]*Round1Broa
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitments[i] = make(map[integration.IdentityKey]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
-			if identity == p.myIdentityKey {
+			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
 			in, ok := input[identity]
@@ -104,7 +105,7 @@ func (p *PreGenParticipant) Round3(input map[integration.IdentityKey]*Round2Broa
 		commonBigR[i] = make(map[integration.IdentityKey]curves.Point)
 
 		for _, identity := range p.cohortConfig.Participants {
-			if identity == p.myIdentityKey {
+			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
 			in, ok := input[identity]

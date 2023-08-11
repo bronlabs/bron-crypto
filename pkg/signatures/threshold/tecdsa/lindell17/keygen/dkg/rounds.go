@@ -2,6 +2,7 @@ package dkg
 
 import (
 	"crypto/sha256"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -112,7 +113,7 @@ func (p *Participant) Round2(input map[integration.IdentityKey]*Round1Broadcast)
 	// 2. store commitments
 	p.state.theirBigQCommitment = make(map[integration.IdentityKey]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -153,7 +154,7 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -206,7 +207,7 @@ func (p *Participant) Round3(input map[integration.IdentityKey]*Round2Broadcast)
 	p.state.lpdlPrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[integration.IdentityKey]*lpdl.Prover)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		paillierProofsTranscript := p.transcript.Clone()
@@ -247,7 +248,7 @@ func (p *Participant) Round4(input map[integration.IdentityKey]*Round3Broadcast)
 
 	round4Outputs := make(map[integration.IdentityKey]*Round4P2P)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -314,7 +315,7 @@ func (p *Participant) Round5(input map[integration.IdentityKey]*Round4P2P) (outp
 	// 5. LP and LPDL continue
 	round5Outputs := make(map[integration.IdentityKey]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -348,7 +349,7 @@ func (p *Participant) Round6(input map[integration.IdentityKey]*Round5P2P) (outp
 	// 6. LP and LPDL continue
 	round6Outputs := make(map[integration.IdentityKey]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -382,7 +383,7 @@ func (p *Participant) Round7(input map[integration.IdentityKey]*Round6P2P) (outp
 	// 7. LP and LPDL continue
 	round7Outputs := make(map[integration.IdentityKey]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
@@ -414,7 +415,7 @@ func (p *Participant) Round8(input map[integration.IdentityKey]*Round7P2P) (shar
 	}
 
 	for _, identity := range p.cohortConfig.Participants {
-		if identity == p.myIdentityKey {
+		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
 		if input[identity] == nil {
