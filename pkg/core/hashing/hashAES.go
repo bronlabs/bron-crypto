@@ -2,37 +2,45 @@ package hashing
 
 import (
 	"crypto/aes"
-	"crypto/cipher"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 const (
-	// AesHashIV is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
-	AesHashIV = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
-	// AesBlockSize is the input/output size (in bytes) of the internal block cipher.
+	// HashIv is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
+	HashIv = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
+	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
 	AesBlockSize = aes.BlockSize
-	// AesKeySize is the key size (in bytes) for the internal block cipher.
+	// AesKeySize is the key size (in bytes) for the internal block cipher. Set to 32B (AES256).
 	AesKeySize = 2 * aes.BlockSize
 )
 
-// HashTMMOFixedIn (Section 7.4 of [GKWY20](https://eprint.iacr.org/2019/074.pdf)
-// is the Tweakable Matyas-Meyer-Oseas construction, using a block cipher (π) as
-// an ideal permutation. For an input x and with the following equation:
+// HashAes implements an extension of the Tweakable Matyas-Meyer-Oseas (TMMO)
+// construction (Section 7.4 of [GKWY20](https://eprint.iacr.org/2019/074.pdf),
+// using a block cipher (π) as an ideal permutation. With an input `x` of size a
+// single block of π, and an index `i` ∈ [1,2,...,L] (for an output with L blocks
+// of π), the TMMO construction is defined as:
 //
-//	TMMO^π (x,i) =  π(π(x)⊕i)⊕π(x)
+//	digest[i] = TMMO^π (x,i) = π(π(x)⊕i)⊕π(x) 				∀i∈[L]
 //
-// where i is the tweak, and π(x) is the block cipher, using as key the previous
-// output of the TMMO output (the IV for the first block), as prescribed by the
-// Matyas-Meyer-Oseas construction. We use AES256 as the block cipher, chained
-// using CTR mode to achieve inputs and outputs of size KeySize (32 bytes). The
-// hashIv is used as the initial key for the block cipher, and the sessionId is
-// used as random (but public) IV for the CTR mode.
-func HashTMMOFixedIn(input, hashIv []byte, outputBlockLength int) (digest []byte, err error) {
+// where π(x) is the block cipher (fixed-key AES, to leverage AES-NI instructions)
+// using as key the previous output of the TMMO output (the IV for the first block)
+// as prescribed by the Matyas-Meyer-Oseas construction. We use AES256 for π.
+// To allow variable-sized inputs, we:
+// (*) Chain the output we chain the TMMOs to each input block by XORing the
+// output of a block with the input of the next:
+//
+//			x̂[0] = x[0]
+//			x̂[1] = x[1] ⊕ TMMO^π(x̂[0],i),i)
+//			x̂[2] = x[2] ⊕ TMMO^π(x̂[1],i),i) ...
+//	     digest[i] = TMMO^π(x̂[L],i),i)
+//
+// (+) Pad the last input block with zeros if it doesn't fit the AES block.
+func HashAes(input, hashIv []byte, outputBlockLength int) (digest []byte, err error) {
 	// 1) Initialise the cipher with the initialization vector (iv) as key.
 	// If no iv is provided, use the hardcoded IV.
 	if len(hashIv) == 0 {
-		hashIv = []byte(AesHashIV)
+		hashIv = []byte(HashIv)
 	}
 	if len(hashIv) < AesKeySize {
 		return nil, errs.NewInvalidLength("iv length must be at least %d bytes", AesKeySize)
@@ -41,29 +49,48 @@ func HashTMMOFixedIn(input, hashIv []byte, outputBlockLength int) (digest []byte
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create block cipher")
 	}
-	// 2) Parse the input into blocks of the cipher's block size.
+	// 2) (+) Align the input into blocks of AesBlockSize bytes. Pad if unalligned.
 	inputLength := len(input)
-	if inputLength != AesBlockSize {
-		return nil, errs.NewInvalidLength("data length (%d) not equal to CTR Stream length (%d bytes)", inputLength, AesBlockSize)
+	inputBlockLength := (inputLength + AesBlockSize - 1) / AesBlockSize // ceil
+	if inputLength%AesBlockSize != 0 || inputBlockLength > 1 {
+		pad := make([]byte, inputLength%AesBlockSize)
+		input = append(input, pad...)
 	}
 	// Initialise intermediate values and output.
 	digest = make([]byte, outputBlockLength*AesBlockSize)
-	permutedBlock := make([]byte, AesBlockSize)
-	// 3) Loop over the blocks, applying the TMMO construction at each iteration
+	permutedOnceBlock := make([]byte, AesBlockSize) // Store π(x)
+	chainedInputBlock := make([]byte, AesBlockSize) // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
 	for i := 0; i < outputBlockLength; i++ {
 		outputBlock := digest[i*AesBlockSize : (i+1)*AesBlockSize]
-		// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
-		// 3.1.1) π(x) - Apply the block cipher to the current block.
-		blockCipher.Encrypt(permutedBlock, input)
-		// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
-		xorIndex(permutedBlock, outputBlock, int32(i+1))
-		// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
-		blockCipher.Encrypt(outputBlock, outputBlock)
-		// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
-		for j := 0; j < AesBlockSize; j++ {
-			outputBlock[j] ^= permutedBlock[j]
+		// (*) Loop over the input blocks.
+		for j := 0; j < inputBlockLength; j++ {
+			// (*) If the input `x` contains more than one block, we chain
+			// the TMMOs to each input block by XORing the output of a block
+			// with the input of the next: x̂[j] = x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+			inputBlock := input[j*AesBlockSize : (j+1)*AesBlockSize]
+			if j < inputBlockLength-1 {
+				for k := 0; k < AesBlockSize; k++ {
+					chainedInputBlock[k] = inputBlock[k] ^ outputBlock[k]
+				}
+				inputBlock = chainedInputBlock // Reference the auxiliary input block
+			}
+			// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
+			// 3.1.1) π(x) - Apply the block cipher to the current block.
+			blockCipher.Encrypt(permutedOnceBlock, inputBlock)
+			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
+			// For the index, we combine the output block index `i` (spelled in
+			// the TMMO) with the input block index `j`.
+			index := int32((j + 1) + i*inputBlockLength)
+			xorIndex(permutedOnceBlock, outputBlock, index)
+			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
+			blockCipher.Encrypt(outputBlock, outputBlock)
+			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
+			for k := 0; k < AesBlockSize; k++ {
+				outputBlock[k] ^= permutedOnceBlock[k]
+			}
 		}
-		// 3.2) Set the current block as the key for the next iteration.
+		// 3.2) Set the current output block as the key for the next iteration.
 		if i < outputBlockLength-1 {
 			blockCipher, err = aes.NewCipher(outputBlock)
 			if err != nil {
@@ -72,54 +99,6 @@ func HashTMMOFixedIn(input, hashIv []byte, outputBlockLength int) (digest []byte
 		}
 	}
 	return digest, nil
-}
-
-// EncryptAES256CTR encrypts the input using AES256 in CTR mode, with input and
-// output of size AesKeySize. It computes just two AES blocks of input-independent
-// CTR operations, avoiding the use of the Go `crypto/cipher` library and its
-// inefficiencies (see EncryptAES256CTRStream for more info). Note that this
-// implementation yields the same result as EncryptAES256CTRStream.
-func EncryptAES256CTR(input, output []byte, aesBlockCipher cipher.Block, iv []byte) (err error) {
-	if len(input) != AesKeySize || len(output) != AesKeySize {
-		return errs.NewInvalidLength("wrong input length")
-	}
-	if len(iv) == 0 {
-		iv = []byte(AesHashIV)
-	}
-	if aesBlockCipher.BlockSize() != AesBlockSize || len(iv) < AesBlockSize {
-		return errs.NewInvalidLength("wrong iv size")
-	}
-	// Initialise the counter with the iv, the empty output and the block cipher.
-	counter := make([]byte, AesBlockSize)
-	copy(counter, iv[:AesBlockSize])
-	// First AES CTR block (i=0)
-	aesBlockCipher.Encrypt(output[:AesBlockSize], counter)
-	// Second AES CTR block (i=1)
-	counter[AesBlockSize-1]++
-	aesBlockCipher.Encrypt(output[AesBlockSize:], counter)
-	// XOR the plaintext to get the ciphertext.
-	for j := 0; j < 2*AesBlockSize; j++ {
-		output[j] ^= input[j]
-	}
-	return nil
-}
-
-// EncryptAES256CTRStream encrypts the input using AES256 in CTR mode, with input
-// and output of size KeySize. It uses the Go `crypto/cipher` library to do so,
-// following the example in https://go.dev/src/crypto/cipher/example_test.go.
-// Internally, XORKeyStream computes the input-independent CTR operations in
-// chunks of 32 AES blocks (=512B), calling aes.Encrypt once for each chunk
-// (see ctr.refill() for more info).
-// Since we know the input and output size to be just 32 bytes (2 AES blocks),
-// this is highly inefficient, and thus we use the custom implementation above.
-// This function is kept for testing purposes only.
-func EncryptAES256CTRStream(input, output []byte, blockCipher cipher.Block, iv []byte) (err error) {
-	if len(input) != AesKeySize || len(output) != AesKeySize {
-		return errs.NewInvalidLength("wrong input length")
-	}
-	stream := cipher.NewCTR(blockCipher, iv)
-	stream.XORKeyStream(output, input)
-	return nil
 }
 
 // xorIndex xors the first 4 bytes of the block with the index.
