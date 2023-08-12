@@ -18,32 +18,61 @@ func TestHashTMMO(t *testing.T) {
 		"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
 	}
 	// Hardcode the expected outputs for the test inputs.
-	expectedOutputs := [][]byte{
-		{0x97, 0x7e, 0x07, 0xd5, 0x04, 0xb3, 0xad, 0xd6, 0xd1, 0x25, 0xcc, 0x5b, 0x7e, 0x5a, 0x69, 0xb7, 0x03, 0xaf, 0x9e, 0x5d, 0xaa, 0x51, 0x26, 0x80, 0xdd, 0xc6, 0x56, 0xc9, 0x8c, 0x83, 0xd4, 0xd0},
-		{0x97, 0x7e, 0x07, 0xd5, 0x04, 0xb3, 0xad, 0xd6, 0xd1, 0x25, 0xcc, 0x5b, 0x7e, 0x5a, 0x69, 0xb7, 0x03, 0xaf, 0x9e, 0x5d, 0xaa, 0x51, 0x26, 0x80, 0xdd, 0xc6, 0x56, 0xc9, 0x8c, 0x83, 0xd4, 0xd0},
-		{0x97, 0x7e, 0x07, 0xd5, 0x04, 0xb3, 0xad, 0xd6, 0xd1, 0x25, 0xcc, 0x5b, 0x7e, 0x5a, 0x69, 0xb7, 0x03, 0xaf, 0x9e, 0x5d, 0xaa, 0x51, 0x26, 0x80, 0xdd, 0xc6, 0x56, 0xc9, 0x8c, 0x83, 0xd4, 0xd0},
+	expectedDigests := [][]byte{
+		{0xbb, 0x55, 0x9f, 0xc6, 0x64, 0x46, 0x05, 0x8f, 0xb2, 0x9a, 0x16, 0xcb, 0x96, 0xeb, 0x13, 0x08, 0x4a, 0x16, 0x67, 0xba, 0x58, 0xd3, 0x15, 0x30, 0x91, 0x31, 0x88, 0x13, 0x0d, 0xb6, 0xca, 0x4c},
+		{0xbb, 0x55, 0x9f, 0xc6, 0x64, 0x46, 0x05, 0x8f, 0xb2, 0x9a, 0x16, 0xcb, 0x96, 0xeb, 0x13, 0x08, 0x4a, 0x16, 0x67, 0xba, 0x58, 0xd3, 0x15, 0x30, 0x91, 0x31, 0x88, 0x13, 0x0d, 0xb6, 0xca, 0x4c},
+		{0xbb, 0x55, 0x9f, 0xc6, 0x64, 0x46, 0x05, 0x8f, 0xb2, 0x9a, 0x16, 0xcb, 0x96, 0xeb, 0x13, 0x08, 0x4a, 0x16, 0x67, 0xba, 0x58, 0xd3, 0x15, 0x30, 0x91, 0x31, 0x88, 0x13, 0x0d, 0xb6, 0xca, 0x4c},
 	}
 	// Hash each input and compare the output with the expected output.
+	sessionId := []byte("ThisIsOne32BytesSessionIdExample")
 	for i, input := range testInputs {
-		output, err := hashing.HashTMMOFixedIn([]byte(input)[:hashing.AesKeySize], nil, nil, 1)
+		inputBytes := []byte(input)[:hashing.AesKeySize]
+		digest, err := hashing.HashTMMOFixedIn(inputBytes[:hashing.AesBlockSize], sessionId, 1)
 		require.NoError(t, err)
-		fmt.Printf("%x", output)
-		require.True(t, bytes.Equal(output, expectedOutputs[i]))
+		fmt.Printf("Final output: 0x%x\n", digest)
+		require.True(t, bytes.Equal(digest, expectedDigests[i]))
 	}
 }
 
-// TODO: fuzz this test
+// TODO: fuzz this test?
 func TestEncryptAES256CTRStream(t *testing.T) {
-	input := []byte("A123456789ABCDEF0123456789ABCDEF")
-	iv := []byte("s123456789ABCDEF")
-	key := []byte("d12345678900DEF01230567890ABCDEF")
-	outputFast := make([]byte, hashing.AesKeySize)
-	outputOrig := make([]byte, hashing.AesKeySize)
-	blockCipher, err := aes.NewCipher(key)
-	require.NoError(t, err)
-	err = hashing.EncryptAES256CTRStream(input, outputFast, blockCipher, iv)
-	require.NoError(t, err)
-	err = hashing.EncryptAES256CTR(input, outputOrig, blockCipher, iv)
-	require.NoError(t, err)
-	require.True(t, bytes.Equal(outputFast, outputOrig))
+	testInputs := [][]byte{
+		[]byte("A123456789ABCDEF0123456789ABCDEF"),
+		[]byte("B123456789ABCDEF0123456789ABCDEF"), // Change input
+		[]byte("A123456789ABCDEF0123456789ABCDEF"),
+	}
+	testIvs := [][]byte{
+		[]byte("A16ByteExampleIV"),
+		[]byte("A16ByteExampleIV"),
+		[]byte("Ofjakslcielfmd,s"), // Change IV
+	}
+	testKeys := [][]byte{
+		[]byte("OneExampleOfA32ByteAES256EncrKey"),
+		[]byte("TwoExampleOfA32ByteAES256EncrKey"),
+	}
+	l := len(testInputs)
+	outputsFast := make([][]byte, l*len(testKeys))
+	outputsOrig := make([][]byte, l*len(testKeys))
+	for k, key := range testKeys {
+		blockCipher, err := aes.NewCipher(key)
+		require.NoError(t, err)
+		for i, input := range testInputs {
+			outputsFast[k*l+i] = make([]byte, hashing.AesKeySize)
+			outputsOrig[k*l+i] = make([]byte, hashing.AesKeySize)
+
+			err = hashing.EncryptAES256CTRStream(input, outputsFast[k*l+i], blockCipher, testIvs[i])
+			require.NoError(t, err)
+			err = hashing.EncryptAES256CTR(input, outputsOrig[k*l+i], blockCipher, testIvs[i])
+			require.NoError(t, err)
+		}
+	}
+
+	for i := 0; i < l*len(testKeys); i++ {
+		// Both encryption algorithms should yield the same result for same key/iv/input.
+		require.True(t, bytes.Equal(outputsFast[i], outputsOrig[i]))
+		for j := i + 1; j < l*len(testKeys); j++ {
+			// Changing the
+			require.False(t, bytes.Equal(outputsFast[i], outputsFast[j]))
+		}
+	}
 }
