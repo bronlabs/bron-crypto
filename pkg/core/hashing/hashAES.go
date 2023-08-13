@@ -2,7 +2,9 @@ package hashing
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
@@ -99,6 +101,93 @@ func HashAes(input, hashIv []byte, outputBlockLength int) (digest []byte, err er
 		}
 	}
 	return digest, nil
+}
+
+type ExtendedTMMO struct {
+	outputBlockLength int
+	blockCipher       cipher.Block
+	hashIv            []byte
+	digest            []byte
+
+	// Auxiliary variables. Allocated once and used on every `Write`, thus this
+	// implementation is not thread-safe (only one thread per ExtendedTMMO).
+	permutedOnceBlock []byte // Store π(x)
+	chainedInputBlock []byte // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+}
+
+func NewHashAes(hashIv []byte, outputBlockLength int) (*ExtendedTMMO, error) {
+	if outputBlockLength < 1 {
+		return nil, errs.NewInvalidArgument("outputBlockLength must be at least 1")
+	}
+	// 1) Initialise the cipher with the initialization vector (iv) as key.
+	// If no iv is provided, use the hardcoded IV.
+	var internalHashIv []byte
+	if len(hashIv) == 0 {
+		internalHashIv = []byte(HashIv)
+	} else {
+		internalHashIv = make([]byte, len(hashIv))
+		copy(internalHashIv, hashIv) // Create our own copy of the hashIv
+	}
+	if len(internalHashIv) < AesKeySize {
+		return nil, errs.NewInvalidLength("iv length must be at least %d bytes", AesKeySize)
+	}
+	blockCipher, err := aes.NewCipher(internalHashIv[:AesKeySize])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create block cipher")
+	}
+	digest := make([]byte, outputBlockLength*AesBlockSize) // Store the final digest
+	permutedOnceBlock := make([]byte, AesBlockSize)        // Store π(x)
+	chainedInputBlock := make([]byte, AesBlockSize)        // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+	return &ExtendedTMMO{
+		outputBlockLength: outputBlockLength,
+		blockCipher:       blockCipher,
+		hashIv:            internalHashIv,
+		digest:            digest,
+		permutedOnceBlock: permutedOnceBlock,
+		chainedInputBlock: chainedInputBlock,
+	}, nil
+}
+
+// Size returns the number of bytes hashAes.Sum will return.
+func (h *ExtendedTMMO) Size() int {
+	return h.outputBlockLength * AesBlockSize
+}
+
+// BlockSize returns the hash's underlying block size. The Write method avoids
+// padding if all writes are a multiple of the block size.
+func (*ExtendedTMMO) BlockSize() int {
+	return AesBlockSize
+}
+
+// Reset resets the Hash to its initial state.
+func (h *ExtendedTMMO) Reset() {
+	blockCipher, err := aes.NewCipher(h.hashIv[:AesKeySize])
+	if err != nil {
+		panic("failed to create block cipher") // hash.Hash.Reset doesn't return error
+	}
+	h.blockCipher = blockCipher
+	bitstring.Memset(h.digest, byte(0))
+	bitstring.Memset(h.permutedOnceBlock, byte(0))
+	bitstring.Memset(h.chainedInputBlock, byte(0))
+}
+
+// Sum appends the current hash to b and returns the resulting slice.
+// It does not change the underlying hash state.
+func (h *ExtendedTMMO) Sum(b []byte) []byte {
+	if len(b) == 0 {
+		b = make([]byte, h.outputBlockLength*AesBlockSize)
+		copy(b, h.digest)
+		return b
+	} else {
+		return append(b, h.digest...)
+	}
+}
+
+// Write (via the embedded io.Writer interface) adds more data to the running hash.
+// It never returns an error.
+func Write(input []byte) (n int, err error) {
+	n = len(input)
+	return
 }
 
 // xorIndex xors the first 4 bytes of the block with the index.
