@@ -3,6 +3,7 @@ package hashing
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"hash"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -17,94 +18,34 @@ const (
 	AesKeySize = 2 * aes.BlockSize
 )
 
-// HashAes implements an extension of the Tweakable Matyas-Meyer-Oseas (TMMO)
-// construction (Section 7.4 of [GKWY20](https://eprint.iacr.org/2019/074.pdf),
-// using a block cipher (π) as an ideal permutation. With an input `x` of size a
-// single block of π, and an index `i` ∈ [1,2,...,L] (for an output with L blocks
-// of π), the TMMO construction is defined as:
-//
-//	digest[i] = TMMO^π (x,i) = π(π(x)⊕i)⊕π(x) 				∀i∈[L]
-//
-// where π(x) is the block cipher (fixed-key AES, to leverage AES-NI instructions)
-// using as key the previous output of the TMMO output (the IV for the first block)
-// as prescribed by the Matyas-Meyer-Oseas construction. We use AES256 for π.
-// To allow variable-sized inputs, we:
-// (*) Chain the output we chain the TMMOs to each input block by XORing the
-// output of a block with the input of the next:
-//
-//			x̂[0] = x[0]
-//			x̂[1] = x[1] ⊕ TMMO^π(x̂[0],i),i)
-//			x̂[2] = x[2] ⊕ TMMO^π(x̂[1],i),i) ...
-//	     digest[i] = TMMO^π(x̂[L],i),i)
-//
-// (+) Pad the last input block with zeros if it doesn't fit the AES block.
-func HashAes(input, hashIv []byte, outputBlockLength int) (digest []byte, err error) {
-	// 1) Initialise the cipher with the initialization vector (iv) as key.
-	// If no iv is provided, use the hardcoded IV.
-	if len(hashIv) == 0 {
-		hashIv = []byte(HashIv)
-	}
-	if len(hashIv) < AesKeySize {
-		return nil, errs.NewInvalidLength("iv length must be at least %d bytes", AesKeySize)
-	}
-	blockCipher, err := aes.NewCipher(hashIv[:AesKeySize])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create block cipher")
-	}
-	// 2) (+) Align the input into blocks of AesBlockSize bytes. Pad if unalligned.
-	inputLength := len(input)
-	inputBlockLength := (inputLength + AesBlockSize - 1) / AesBlockSize // ceil
-	if inputLength%AesBlockSize != 0 || inputBlockLength > 1 {
-		pad := make([]byte, inputLength%AesBlockSize)
-		input = append(input, pad...)
-	}
-	// Initialise intermediate values and output.
-	digest = make([]byte, outputBlockLength*AesBlockSize)
-	permutedOnceBlock := make([]byte, AesBlockSize) // Store π(x)
-	chainedInputBlock := make([]byte, AesBlockSize) // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
-	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
-	for i := 0; i < outputBlockLength; i++ {
-		outputBlock := digest[i*AesBlockSize : (i+1)*AesBlockSize]
-		// (*) Loop over the input blocks.
-		for j := 0; j < inputBlockLength; j++ {
-			// (*) If the input `x` contains more than one block, we chain
-			// the TMMOs to each input block by XORing the output of a block
-			// with the input of the next: x̂[j] = x[j] ⊕ TMMO^π(x̂[j-1],i),i)
-			inputBlock := input[j*AesBlockSize : (j+1)*AesBlockSize]
-			if j < inputBlockLength-1 {
-				for k := 0; k < AesBlockSize; k++ {
-					chainedInputBlock[k] = inputBlock[k] ^ outputBlock[k]
-				}
-				inputBlock = chainedInputBlock // Reference the auxiliary input block
-			}
-			// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
-			// 3.1.1) π(x) - Apply the block cipher to the current block.
-			blockCipher.Encrypt(permutedOnceBlock, inputBlock)
-			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
-			// For the index, we combine the output block index `i` (spelled in
-			// the TMMO) with the input block index `j`.
-			index := int32((j + 1) + i*inputBlockLength)
-			xorIndex(permutedOnceBlock, outputBlock, index)
-			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
-			blockCipher.Encrypt(outputBlock, outputBlock)
-			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
-			for k := 0; k < AesBlockSize; k++ {
-				outputBlock[k] ^= permutedOnceBlock[k]
-			}
-		}
-		// 3.2) Set the current output block as the key for the next iteration.
-		if i < outputBlockLength-1 {
-			blockCipher, err = aes.NewCipher(outputBlock)
-			if err != nil {
-				return nil, errs.WrapFailed(err, "failed to re-key block cipher")
-			}
-		}
-	}
-	return digest, nil
-}
+/*
+HashAes implements an extension of the Tweakable Matyas-Meyer-Oseas (TMMO)
+construction (Section 7.4 of [GKWY20](https://eprint.iacr.org/2019/074.pdf),
+using a block cipher (π) as an ideal permutation. With an input `x` of size a
+single block of π, and an index `i` ∈ [1,2,...,L] (for an output with L blocks
+of π), the TMMO construction is defined as:
 
-type ExtendedTMMO struct {
+	digest[i] = TMMO^π (x,i) = π(π(x)⊕i)⊕π(x) 				∀i∈[L]
+
+where π(x) is the block cipher (fixed-key AES, to leverage AES-NI instructions)
+using as key the previous output of the TMMO output (the IV for the first block)
+as prescribed by the Matyas-Meyer-Oseas construction. We use AES256 for π.
+To allow variable-sized inputs, we:
+A) Chain the output we chain the TMMOs to each input block by XORing the
+output of a block with the input of the next:
+
+			x̂[0] = x[0]
+			x̂[1] = x[1] ⊕ TMMO^π(x̂[0],i)
+			x̂[2] = x[2] ⊕ TMMO^π(x̂[1],i) ...
+	     digest[i] = TMMO^π(x̂[L],i),i)
+
+B) Pad the last input block with zeros if it doesn't fit the AES block.
+
+See the README.md for the full algorithm description.
+*/
+type HashAes struct {
 	outputBlockLength int
+	inputCount        int
 	blockCipher       cipher.Block
 	hashIv            []byte
 	digest            []byte
@@ -115,7 +56,7 @@ type ExtendedTMMO struct {
 	chainedInputBlock []byte // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
 }
 
-func NewHashAes(hashIv []byte, outputBlockLength int) (*ExtendedTMMO, error) {
+func NewHashAes(hashIv []byte, outputBlockLength int) (hash.Hash, error) {
 	if outputBlockLength < 1 {
 		return nil, errs.NewInvalidArgument("outputBlockLength must be at least 1")
 	}
@@ -135,11 +76,13 @@ func NewHashAes(hashIv []byte, outputBlockLength int) (*ExtendedTMMO, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create block cipher")
 	}
+	// 2) Initialise the digest and the auxiliary variables.
 	digest := make([]byte, outputBlockLength*AesBlockSize) // Store the final digest
 	permutedOnceBlock := make([]byte, AesBlockSize)        // Store π(x)
 	chainedInputBlock := make([]byte, AesBlockSize)        // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
-	return &ExtendedTMMO{
+	return &HashAes{
 		outputBlockLength: outputBlockLength,
+		inputCount:        0,
 		blockCipher:       blockCipher,
 		hashIv:            internalHashIv,
 		digest:            digest,
@@ -148,22 +91,76 @@ func NewHashAes(hashIv []byte, outputBlockLength int) (*ExtendedTMMO, error) {
 	}, nil
 }
 
+// Write (via the embedded io.Writer interface) adds more data to the running hash.
+// It never returns an error.
+func (h *HashAes) Write(input []byte) (n int, err error) {
+	// A) Align the input into blocks of AesBlockSize bytes. Pad if unalligned.
+	inputLength := len(input)
+	inputBlockLength := (inputLength + AesBlockSize - 1) / AesBlockSize // ceil
+	if inputLength%AesBlockSize != 0 || inputBlockLength > 1 {
+		pad := make([]byte, inputLength%AesBlockSize)
+		input = append(input, pad...)
+	}
+	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
+	for i := 0; i < h.outputBlockLength; i++ {
+		outputBlock := h.digest[i*AesBlockSize : (i+1)*AesBlockSize]
+		// B) Loop over the input blocks.
+		for j := 0; j < inputBlockLength; j++ {
+			// B) If the input `x` contains more than one block, we chain
+			// the TMMOs to each input block by XORing the output of a block
+			// with the input of the next: x̂[j] = x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+			inputBlock := input[j*AesBlockSize : (j+1)*AesBlockSize]
+			if (inputBlockLength > 1 && j > 0) || h.inputCount > 0 {
+				for k := 0; k < AesBlockSize; k++ {
+					h.chainedInputBlock[k] = inputBlock[k] ^ outputBlock[k]
+				}
+				inputBlock = h.chainedInputBlock // Reference the auxiliary input block
+			}
+			// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
+			// 3.1.1) π(x) - Apply the block cipher to the current block.
+			h.blockCipher.Encrypt(h.permutedOnceBlock, inputBlock)
+			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
+			// For the index, we combine the output block index `i` (spelled in
+			// the TMMO) with the input block index `j`.
+			index := int32((j + 1) + i*inputBlockLength)
+			xorIndex(h.permutedOnceBlock, outputBlock, index)
+			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
+			h.blockCipher.Encrypt(outputBlock, outputBlock)
+			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
+			for k := 0; k < AesBlockSize; k++ {
+				outputBlock[k] ^= h.permutedOnceBlock[k]
+			}
+		}
+		// 3.2) Refresh the key for the next iteration using the current block.
+		// Use half of the existing key to cover the 2 blocks of the key (AES256)
+		if i < h.outputBlockLength-1 {
+			h.blockCipher, err = aes.NewCipher(outputBlock)
+			if err != nil {
+				return i + 1, errs.WrapFailed(err, "failed to re-key block cipher")
+			}
+		}
+	}
+	h.inputCount++
+	return len(h.digest), nil
+}
+
 // Size returns the number of bytes hashAes.Sum will return.
-func (h *ExtendedTMMO) Size() int {
+func (h *HashAes) Size() int {
 	return h.outputBlockLength * AesBlockSize
 }
 
 // BlockSize returns the hash's underlying block size. The Write method avoids
 // padding if all writes are a multiple of the block size.
-func (*ExtendedTMMO) BlockSize() int {
+func (*HashAes) BlockSize() int {
 	return AesBlockSize
 }
 
 // Reset resets the Hash to its initial state.
-func (h *ExtendedTMMO) Reset() {
+func (h *HashAes) Reset() {
+	h.inputCount = 0
 	blockCipher, err := aes.NewCipher(h.hashIv[:AesKeySize])
 	if err != nil {
-		panic("failed to create block cipher") // hash.Hash.Reset doesn't return error
+		panic("failed to create block cipher") // panic because Reset doesn't return error
 	}
 	h.blockCipher = blockCipher
 	bitstring.Memset(h.digest, byte(0))
@@ -173,21 +170,17 @@ func (h *ExtendedTMMO) Reset() {
 
 // Sum appends the current hash to b and returns the resulting slice.
 // It does not change the underlying hash state.
-func (h *ExtendedTMMO) Sum(b []byte) []byte {
-	if len(b) == 0 {
-		b = make([]byte, h.outputBlockLength*AesBlockSize)
-		copy(b, h.digest)
-		return b
+func (h *HashAes) Sum(b []byte) (res []byte) {
+	l := len(b)
+	if l == 0 {
+		res = make([]byte, h.Size())
+		copy(res, h.digest)
 	} else {
-		return append(b, h.digest...)
+		res = make([]byte, l+h.Size())
+		copy(res[:l], b)
+		copy(res[l:], h.digest)
 	}
-}
-
-// Write (via the embedded io.Writer interface) adds more data to the running hash.
-// It never returns an error.
-func Write(input []byte) (n int, err error) {
-	n = len(input)
-	return
+	return res
 }
 
 // xorIndex xors the first 4 bytes of the block with the index.
