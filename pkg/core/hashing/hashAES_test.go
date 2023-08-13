@@ -16,7 +16,11 @@ func TestHashAes(t *testing.T) {
 		"He who controls the spice controls the universe.",
 		"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
 	}
-	testOutputLengths := []int{1, 2, 4}
+	testOutputLengths := []int{
+		1 * hashing.AesBlockSize,
+		2 * hashing.AesBlockSize,
+		4 * hashing.AesBlockSize,
+	}
 	// Hardcode the expected outputs for the test inputs.
 	expectedDigests := []string{
 		"\x1c\xa2\xbcX\xa256\xde8K[O\xf1\x1eP\xc6",
@@ -28,7 +32,7 @@ func TestHashAes(t *testing.T) {
 	for i, input := range testInputs {
 		inputBytes := []byte(input)
 		iv := sessionId
-		hash, err := hashing.NewHashAes(iv, testOutputLengths[i])
+		hash, err := hashing.NewHashAes(testOutputLengths[i], iv)
 		require.NoError(t, err)
 		n, err := hash.Write(inputBytes)
 		require.NoError(t, err)

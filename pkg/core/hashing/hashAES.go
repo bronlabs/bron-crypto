@@ -56,9 +56,12 @@ type HashAes struct {
 	chainedInputBlock []byte // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
 }
 
-func NewHashAes(hashIv []byte, outputBlockLength int) (hash.Hash, error) {
-	if outputBlockLength < 1 {
-		return nil, errs.NewInvalidArgument("outputBlockLength must be at least 1")
+// NewHashAes creates a new HashAes object to perform AES256-based hashing. It
+// requires outputLength (number of Bytes) multiple of AesBlockSize, and an
+// optional initialization vector of AesKeSize bytes.
+func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
+	if outputLength < AesBlockSize || outputLength%AesBlockSize != 0 {
+		return nil, errs.NewInvalidArgument("outputLength (%dB) must be a multiple of AesBlockSize (%dB)", outputLength, AesBlockSize)
 	}
 	// 1) Initialise the cipher with the initialization vector (iv) as key.
 	// If no iv is provided, use the hardcoded IV.
@@ -77,11 +80,11 @@ func NewHashAes(hashIv []byte, outputBlockLength int) (hash.Hash, error) {
 		return nil, errs.WrapFailed(err, "failed to create block cipher")
 	}
 	// 2) Initialise the digest and the auxiliary variables.
-	digest := make([]byte, outputBlockLength*AesBlockSize) // Store the final digest
-	permutedOnceBlock := make([]byte, AesBlockSize)        // Store π(x)
-	chainedInputBlock := make([]byte, AesBlockSize)        // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+	digest := make([]byte, outputLength)            // Store the final digest
+	permutedOnceBlock := make([]byte, AesBlockSize) // Store π(x)
+	chainedInputBlock := make([]byte, AesBlockSize) // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
 	return &HashAes{
-		outputBlockLength: outputBlockLength,
+		outputBlockLength: outputLength / AesBlockSize,
 		inputCount:        0,
 		blockCipher:       blockCipher,
 		hashIv:            internalHashIv,
