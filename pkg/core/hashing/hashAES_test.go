@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 )
 
 // TODO: run PRNG statistical tests on the output of this hash.
