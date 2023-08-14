@@ -18,7 +18,7 @@ import (
 )
 
 type TestIdentityKey struct {
-	curve  *curves.Curve
+	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
 }

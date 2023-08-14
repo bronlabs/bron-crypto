@@ -100,7 +100,7 @@ type Round2Output struct {
 // and derandomizes them (COTe only).
 func (sender *Sender) Round2ExtendAndCheckConsistency(
 	round1Output *Round1Output,
-	InputOpts []COTeInputOpt, // Input opts (α) ∈ [ξ]curve.Scalar. Set to nil for OTe.
+	InputOpts []COTeInputOpt, // Input opts (α) ∈ [ξ]curve.Scalar(). Set to nil for OTe.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutputs []COTeSenderOutput, round2Output *Round2Output, err error) {
 	// Sanitise inputs
 	if round1Output == nil {
@@ -327,12 +327,12 @@ func (sender *Sender) ComputeDerandomizeMask(
 	for j := 0; j < Zeta; j++ {
 		for k := 0; k < OTeWidth; k++ {
 			// z_A_j = ECP(v_0_j)
-			cOTeSenderOutput[j][k], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[0][j][k][:])
+			cOTeSenderOutput[j][k], err = sender.curve.Scalar().SetBytes(oTeSenderOutput[0][j][k][:])
 			if err != nil {
 				return errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
 			}
 			// τ_j = ECP(v_1_j) - z_A_j + α_j
-			derandomizeMask[j][k], err = sender.curve.Scalar.SetBytes(oTeSenderOutput[1][j][k][:])
+			derandomizeMask[j][k], err = sender.curve.Scalar().SetBytes(oTeSenderOutput[1][j][k][:])
 			if err != nil {
 				return errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
 			}
@@ -374,7 +374,7 @@ func (receiver *Receiver) Derandomize(
 	for j := 0; j < Zeta; j++ {
 		for k := 0; k < OTeWidth; k++ {
 			// ECP(v_x_j)
-			v_x_NegCurve, err = receiver.curve.Scalar.SetBytes(oTeReceiverOutput[j][k][:])
+			v_x_NegCurve, err = receiver.curve.Scalar().SetBytes(oTeReceiverOutput[j][k][:])
 			if err != nil {
 				return errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.1)")
 			}

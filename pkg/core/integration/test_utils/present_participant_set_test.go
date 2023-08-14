@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
@@ -20,12 +20,12 @@ import (
 
 func TestCheckDuplicateParticipantByPubkey(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.ED25519(),
+		Curve: edwards25519.New(),
 		Hash:  sha3.New256,
 	}
-	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	identityAlice, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{1}), nil)
 	require.NoError(t, err)
-	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	identityBob, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{1}), nil)
 	require.NoError(t, err)
 	_, err = hashset.NewHashSet([]integration.IdentityKey{identityAlice, identityBob})
 	require.True(t, errs.IsDuplicate(err))
@@ -33,12 +33,12 @@ func TestCheckDuplicateParticipantByPubkey(t *testing.T) {
 
 func TestCheckExistIdentity(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.ED25519(),
+		Curve: edwards25519.New(),
 		Hash:  sha3.New256,
 	}
-	identityAlice, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{1}), nil)
+	identityAlice, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{1}), nil)
 	require.NoError(t, err)
-	identityBob, err := MakeIdentity(cipherSuite, curves.ED25519().Scalar.Hash([]byte{2}), nil)
+	identityBob, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{2}), nil)
 	require.NoError(t, err)
 	s, err := hashset.NewHashSet([]integration.IdentityKey{identityAlice})
 	require.NoError(t, err)

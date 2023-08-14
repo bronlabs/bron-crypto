@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
@@ -51,7 +51,7 @@ func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]by
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
 
 	// step 1
-	ell := lenInBytes / native.FieldBytes
+	ell := lenInBytes / impl.FieldBytes
 
 	// step 2
 	if ell > 255 {
@@ -169,10 +169,10 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	switch len(digest) {
-	case native.FieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
-	case native.WideFieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
+	case impl.FieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar().SetBytes
+	case impl.WideFieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar().SetBytesWide
 	default:
 		return nil, errs.WrapDeserializationFailed(err, "digest length %d is not supported", len(digest))
 	}

@@ -4,14 +4,13 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
 	"github.com/stretchr/testify/require"
-
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 )
 
 func TestNewPoly(t *testing.T) {
-	curve := curves.BLS12381G1()
-	secret := curve.NewScalar().Hash([]byte("test"))
+	curve := bls12381.NewG1()
+	secret := curve.Scalar().Hash([]byte("test"))
 
 	poly := new(Polynomial).NewPolynomial(secret, 4, crand.Reader)
 	require.NotNil(t, poly)

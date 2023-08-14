@@ -23,8 +23,8 @@ func ProducePartialSignature(
 ) (*frost.PartialSignature, error) {
 	cohortConfig := participant.GetCohortConfig()
 	mySharingId := participant.GetSharingId()
-	R := cohortConfig.CipherSuite.Curve.Point.Identity()
-	r_i := cohortConfig.CipherSuite.Curve.Scalar.Zero()
+	R := cohortConfig.CipherSuite.Curve.Point().Identity()
+	r_i := cohortConfig.CipherSuite.Curve.Scalar().Zero()
 
 	combinedDsAndEs := []byte{}
 	for _, presentParty := range sessionParticipants {
@@ -35,7 +35,7 @@ func ProducePartialSignature(
 	R_js := map[integration.IdentityKey]curves.Point{}
 	for _, participant := range sessionParticipants {
 		sharingId := identityKeyToSharingId[participant]
-		r_j := cohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
+		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
 		if sharingId == mySharingId {
 			r_i = r_j
 		}

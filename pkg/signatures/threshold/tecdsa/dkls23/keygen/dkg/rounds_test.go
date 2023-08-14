@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
@@ -25,7 +27,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	batchSize := softspoken.Kappa
@@ -229,7 +231,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	})
 }
 
-func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -264,7 +266,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -278,7 +280,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -289,7 +291,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -303,7 +305,7 @@ func TestInvalidSid(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testInvalidSid(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})

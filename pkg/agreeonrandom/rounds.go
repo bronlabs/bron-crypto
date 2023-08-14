@@ -15,7 +15,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	p.state.r_i = p.Curve.Scalar.Random(p.prng)
+	p.state.r_i = p.Curve.Scalar().Random(p.prng)
 	p.round++
 	return &Round1Broadcast{
 		Ri: p.state.r_i,

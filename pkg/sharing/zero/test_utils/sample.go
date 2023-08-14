@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 )
 
-func MakeSampleParticipants(curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) (participants []*sample.Participant, err error) {
+func MakeSampleParticipants(curve curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)

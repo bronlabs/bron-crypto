@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	pedersenDkg "github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
@@ -33,7 +34,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
+	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 	dealer, err := pedersen.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.H)
 	if err != nil {
@@ -43,7 +44,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 
 	proverTranscript := merlin.NewTranscript(DlogProofLabel)
 	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, proverTranscript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
@@ -166,8 +167,8 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
-			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
+		if p.CohortConfig.CipherSuite.Curve.Name() == edwards25519.Name {
+			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*edwards25519.Point)
 			if !ok {
 				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with sharingId %d did not have a valid commitment to her local secret.", senderSharingId)
 			}
@@ -182,7 +183,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 
 		transcript := merlin.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (sharing id: %d)", senderSharingId)
 		}
 
@@ -190,8 +191,8 @@ func (p *Participant) Round3(round2output map[integration.IdentityKey]*Round2Bro
 		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 		for k := 0; k < p.CohortConfig.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MySharingId).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

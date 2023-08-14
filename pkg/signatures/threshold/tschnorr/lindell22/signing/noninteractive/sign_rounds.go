@@ -9,7 +9,7 @@ import (
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	k := c.myPreSignature.K
-	bigRSum := c.cohortConfig.CipherSuite.Curve.NewIdentityPoint()
+	bigRSum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
 	for _, identity := range c.sessionParticipants {
 		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity])
 	}
@@ -19,7 +19,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	if err != nil {
 		return nil, errs.NewFailed("cannot create message digest")
 	}
-	e, err := c.cohortConfig.CipherSuite.Curve.NewScalar().SetBytesWide(eBytes)
+	e, err := c.cohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot set scalar")
 	}

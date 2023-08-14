@@ -14,6 +14,8 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -21,7 +23,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/test_utils"
 )
 
-func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -57,7 +59,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curv
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.K256(), curves.P256()} {
+	for _, curve := range []curves.Curve{k256.New(), p256.New()} {
 		for _, h := range []func() hash.Hash{sha256.New, sha3.New256} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -71,7 +73,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, protocols.DKLS23, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 				})

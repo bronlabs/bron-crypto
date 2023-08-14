@@ -76,11 +76,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.iii. compute Q' = aQ + bQ
-	aScalar, err := verifier.state.curve.NewScalar().SetBigInt(verifier.state.a)
+	aScalar, err := verifier.state.curve.Scalar().SetBigInt(verifier.state.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
-	bScalar, err := verifier.state.curve.NewScalar().SetBigInt(verifier.state.b)
+	bScalar, err := verifier.state.curve.Scalar().SetBigInt(verifier.state.b)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
@@ -113,7 +113,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
-	alphaScalar, err := prover.state.curve.NewScalar().SetBigInt(prover.state.alpha)
+	alphaScalar, err := prover.state.curve.Scalar().SetBigInt(prover.state.alpha)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}

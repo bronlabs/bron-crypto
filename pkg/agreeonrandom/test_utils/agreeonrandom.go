@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
 
-func ProduceSharedRandomValue(curve *curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
+func ProduceSharedRandomValue(curve curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
 		participant, err := agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)

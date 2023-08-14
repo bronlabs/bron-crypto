@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -25,7 +27,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 
@@ -79,7 +81,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
@@ -103,14 +105,14 @@ func Test_HappyPathWithDkg(t *testing.T) {
 func Test_RecoveryIdCalculation(t *testing.T) {
 	t.Parallel()
 
-	supportedCurves := []*curves.Curve{
-		curves.P256(),
-		curves.K256(),
+	supportedCurves := []curves.Curve{
+		p256.New(),
+		k256.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		t.Run(fmt.Sprintf("curve: %s", curve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("curve: %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 			cipherSuite := &integration.CipherSuite{
 				Curve: curve,

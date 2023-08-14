@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -16,7 +16,7 @@ import (
 func Test_PreGenHappyPath(t *testing.T) {
 	t.Parallel()
 
-	curve := curves.K256()
+	curve := k256.New()
 	hashFunc := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

@@ -16,7 +16,7 @@ type Participant struct {
 	prng io.Reader
 
 	UniqueSessionId []byte
-	Curve           *curves.Curve
+	Curve           curves.Curve
 	MyIdentityKey   integration.IdentityKey
 	MySharingId     int
 	Participants    []integration.IdentityKey
@@ -39,7 +39,7 @@ type committedSeedContribution struct {
 	witness    commitments.Witness
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}

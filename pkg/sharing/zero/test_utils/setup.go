@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 )
 
-func MakeSetupParticipants(curve *curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
+func MakeSetupParticipants(curve curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
 	participants = make([]*setup.Participant, len(identities))
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {

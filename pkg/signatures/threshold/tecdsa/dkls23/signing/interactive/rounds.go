@@ -45,9 +45,9 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
 	// step 1.1
-	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
 	// step 1.2
-	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
@@ -166,8 +166,8 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 	refreshedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
 	R := ic.state.R_i
 	phiPsi := ic.state.phi_i
-	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
-	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
+	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
+	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
@@ -247,7 +247,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 
 	// step 3.6
 	xBigInt := getXCoordinate(R)
-	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar.SetBigInt(xBigInt)
+	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBigInt(xBigInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
@@ -271,9 +271,9 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
 func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[integration.IdentityKey]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
-	w := curve.Scalar.Zero()
-	u := curve.Scalar.Zero()
-	R := curve.Point.Identity()
+	w := curve.Scalar().Zero()
+	u := curve.Scalar().Zero()
+	R := curve.Point().Identity()
 	for _, partialSignature := range partialSignatures {
 		w = w.Add(partialSignature.Wi)
 		u = u.Add(partialSignature.Ui)
@@ -282,7 +282,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	xBigInt := getXCoordinate(R)
 
 	// step 4.2
-	rx, err := curve.Scalar.SetBigInt(xBigInt)
+	rx, err := curve.Scalar().SetBigInt(xBigInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}

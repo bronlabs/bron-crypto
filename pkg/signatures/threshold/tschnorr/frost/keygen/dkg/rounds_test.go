@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
@@ -31,14 +33,14 @@ func TestRunProfile(t *testing.T) {
 	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
 		t.Skip("skipping profiling test missing parameter")
 	}
-	var curve *curves.Curve
+	var curve curves.Curve
 	var h func() hash.Hash
 	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
 	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
 	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = curves.ED25519()
+		curve = edwards25519.New()
 	} else {
-		curve = curves.K256()
+		curve = k256.New()
 	}
 	if os.Getenv("PROFILE_HASH") == "SHA3" {
 		h = sha3.New256
@@ -50,7 +52,7 @@ func TestRunProfile(t *testing.T) {
 	}
 }
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -115,7 +117,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
 }
 
-func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -148,7 +150,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -162,7 +164,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -173,7 +175,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -187,7 +189,7 @@ func TestInvalidSid(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testInvalidSid(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})

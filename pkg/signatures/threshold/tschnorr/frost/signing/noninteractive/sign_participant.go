@@ -104,7 +104,7 @@ func NewNonInteractiveCosigner(
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[mySharingId-1]
-		curve, err := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
+		curve, err := myAttestedCommitment.D.Curve()
 		if err != nil {
 			return nil, errs.WrapInvalidCurve(err, "no such curve")
 		}

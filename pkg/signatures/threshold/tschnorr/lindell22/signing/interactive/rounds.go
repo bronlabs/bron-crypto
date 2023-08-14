@@ -39,7 +39,7 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1. choose a random k
-	k := p.cohortConfig.CipherSuite.Curve.NewScalar().Random(p.prng)
+	k := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 	// 2. compute R = k * G
 	bigR := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k)
@@ -95,7 +95,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
-	bigR := p.cohortConfig.CipherSuite.Curve.NewIdentityPoint()
+	bigR := p.cohortConfig.CipherSuite.Curve.Point().Identity()
 	for _, identity := range p.sessionParticipants {
 		in, ok := input[identity]
 		if !ok {
@@ -125,7 +125,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityKey]*Round2Broadcast, me
 	if err != nil {
 		return nil, errs.NewFailed("cannot create message digest")
 	}
-	e, err := p.cohortConfig.CipherSuite.Curve.NewScalar().SetBytesWide(eBytes)
+	e, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot set scalar")
 	}
@@ -165,13 +165,13 @@ func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitm
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
-	curve, err := curves.GetCurveByName(x.CurveName())
+	curve, err := x.Curve()
 	if err != nil {
-		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
-	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
 	}
@@ -187,13 +187,13 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript 
 }
 
 func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, sid, bigS []byte, transcript transcripts.Transcript) (err error) {
-	curve, err := curves.GetCurveByName(bigR.CurveName())
+	curve, err := bigR.Curve()
 	if err != nil {
-		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
-	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog proof failed")
 	}
 	return nil

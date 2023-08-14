@@ -20,7 +20,7 @@ type Receiver struct {
 	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
+	curve curves.Curve
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
@@ -38,7 +38,7 @@ type Sender struct {
 	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
+	curve curves.Curve
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
@@ -50,7 +50,7 @@ func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
 	uniqueSessionId []byte,
 	transcript transcripts.Transcript,
-	curve *curves.Curve,
+	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
 	// Validate parameters: L must be 1 for forced reuse
@@ -76,7 +76,7 @@ func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
 	uniqueSessionId []byte,
 	transcript transcripts.Transcript,
-	curve *curves.Curve,
+	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {
 	// L must be 1 for forced reuse

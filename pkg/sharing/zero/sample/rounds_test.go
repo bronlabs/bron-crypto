@@ -10,6 +10,8 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
@@ -17,7 +19,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
 )
 
-func doSetup(curve *curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
+func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
 	participants, err := test_utils.MakeSetupParticipants(curve, identities)
 	if err != nil {
 		return nil, err
@@ -42,7 +44,7 @@ func doSetup(curve *curves.Curve, identities []integration.IdentityKey) (allPair
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSample(t *testing.T, curve curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
 	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
 	require.NoError(t, err)
@@ -53,7 +55,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
-	sum := curve.Scalar.Zero()
+	sum := curve.Scalar().Zero()
 	for _, sample := range samples {
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
@@ -62,7 +64,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 
 	// test sum of all the shares but one doesn't add up to zero
 	for i := range samples {
-		sum = curve.Scalar.Zero()
+		sum = curve.Scalar().Zero()
 		for j, sample := range samples {
 			if i != j {
 				sum = sum.Add(sample)
@@ -72,7 +74,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSampleInvalidSid(t *testing.T, curve curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
 	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
 	participants[0].UniqueSessionId = []byte("invalid sid")
@@ -84,7 +86,7 @@ func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integrat
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
-	sum := curve.Scalar.Zero()
+	sum := curve.Scalar().Zero()
 	for _, sample := range samples {
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
@@ -92,7 +94,7 @@ func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integrat
 	require.False(t, sum.IsZero())
 }
 
-func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -117,7 +119,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	}
 }
 
-func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
+func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -144,11 +146,11 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				testHappyPath(t, boundedCurve, boundedN)
 			})
@@ -158,11 +160,11 @@ func Test_HappyPath(t *testing.T) {
 
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				testInvalidSid(t, boundedCurve, boundedN)
 			})
@@ -172,16 +174,16 @@ func TestInvalidSid(t *testing.T) {
 
 func Test_InvalidParticipants(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		boundedCurve := curve
-		t.Run(fmt.Sprintf("InvalidParticipants path with curve=%s", boundedCurve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("InvalidParticipants path with curve=%s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
 			testInvalidParticipants(t, boundedCurve)
 		})
 	}
 }
 
-func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
+func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -214,7 +216,7 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	require.NoError(t, err)
 	require.False(t, charlieSample.IsZero())
 
-	sum := curve.Scalar.Zero()
+	sum := curve.Scalar().Zero()
 	sum = sum.Add(aliceSample)
 	sum = sum.Add(bobSample)
 	sum = sum.Add(charlieSample)

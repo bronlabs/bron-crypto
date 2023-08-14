@@ -5,7 +5,8 @@ import (
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	dkls23 "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
@@ -49,7 +50,7 @@ func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integrati
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
-	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name && cohortConfig.CipherSuite.Curve.Name != curves.P256Name {
+	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
 		return nil, errs.NewInvalidCurve("only K256 and P256 curves are supported")
 	}
 	transcript := merlin.NewTranscript(DKGLabel)

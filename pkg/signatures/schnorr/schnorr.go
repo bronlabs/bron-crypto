@@ -5,6 +5,8 @@ import (
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
@@ -16,7 +18,7 @@ type PrivateKey struct {
 }
 
 type PublicKey struct {
-	Curve *curves.Curve
+	Curve curves.Curve
 	Y     curves.Point
 }
 
@@ -36,11 +38,11 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		return errs.WrapDeserializationFailed(err, "couldn't extract C and S field from input")
 	}
 
-	s.C, err = curves.Curve{}.NewScalarFromJSON(parsed.C)
+	s.C, err = curveutils.NewScalarFromJSON(parsed.C)
 	if err != nil {
 		return errs.WrapDeserializationFailed(err, "couldn't deserialize C")
 	}
-	s.S, err = curves.Curve{}.NewScalarFromJSON(parsed.S)
+	s.S, err = curveutils.NewScalarFromJSON(parsed.S)
 	if err != nil {
 		return errs.WrapDeserializationFailed(err, "couldn't deserialize S")
 	}
@@ -79,7 +81,7 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng 
 }
 
 func (s *Signer) Sign(message []byte) (*Signature, error) {
-	prover, err := dlog.NewProver(s.CipherSuite.Curve.Point.Generator(), message, nil)
+	prover, err := dlog.NewProver(s.CipherSuite.Curve.Point().Generator(), message, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct an internal prover")
 	}
@@ -93,12 +95,12 @@ func (s *Signer) Sign(message []byte) (*Signature, error) {
 	}, nil
 }
 
-func KeyGen(curve *curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateKey, error) {
+func KeyGen(curve curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateKey, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
 	if secret == nil {
-		secret = curve.Scalar.Random(prng)
+		secret = curve.Scalar().Random(prng)
 	}
 	publicKey := curve.ScalarBaseMult(secret)
 
@@ -125,8 +127,8 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 
-	if cipherSuite.Curve.Name == curves.ED25519Name {
-		edwardsPoint, ok := publicKey.Y.(*curves.PointEd25519)
+	if cipherSuite.Curve.Name() == edwards25519.Name {
+		edwardsPoint, ok := publicKey.Y.(*edwards25519.Point)
 		if !ok {
 			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
@@ -146,7 +148,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		S: signature.S,
 	}
 
-	if err := dlog.Verify(cipherSuite.Curve.Point.Generator(), publicKey.Y, proof, message, nil); err != nil {
+	if err := dlog.Verify(cipherSuite.Curve.Point().Generator(), publicKey.Y, proof, message, nil); err != nil {
 		return errs.NewVerificationFailed("couldn't verify underlying schnor proof")
 	}
 	return nil

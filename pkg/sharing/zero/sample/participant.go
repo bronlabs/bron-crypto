@@ -9,7 +9,7 @@ import (
 )
 
 type Participant struct {
-	Curve               *curves.Curve
+	Curve               curves.Curve
 	MyIdentityKey       integration.IdentityKey
 	MySharingId         int
 	PresentParticipants []integration.IdentityKey
@@ -22,7 +22,7 @@ type Participant struct {
 	round int
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}

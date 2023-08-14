@@ -22,7 +22,7 @@ import (
 //	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
 //	.             └---> S: k^i_0, k^i_1
-func RunSoftspokenBaseOT(t *testing.T, curve *curves.Curve, uniqueSessionId [vsot.DigestSize]byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
+func RunSoftspokenBaseOT(t *testing.T, curve curves.Curve, uniqueSessionId [vsot.DigestSize]byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
 	t.Helper()
 	senderOutput, receiverOutput, err := test_utils.RunVSOT(t, curve, softspoken.Zeta, uniqueSessionId[:])
 	if err != nil {
@@ -56,7 +56,7 @@ func CheckSoftspokenBaseOTOutputs(t *testing.T, baseOtSenderOutput *vsot.SenderO
 //		S:   ---┘                        └---> S: (v_0, v_1)
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
 func RunSoftspokenOTe(t *testing.T,
-	curve *curves.Curve,
+	curve curves.Curve,
 	uniqueSessionId []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
@@ -115,7 +115,7 @@ func CheckSoftspokenOTeOutputs(t *testing.T,
 // NOTE: it should only be used by setting L=1 in "participants.go".
 func RunSoftspokenCOTe(t *testing.T,
 	useForcedReuse bool,
-	curve *curves.Curve,
+	curve curves.Curve,
 	uniqueSessionId []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
@@ -142,7 +142,7 @@ func RunSoftspokenCOTe(t *testing.T,
 
 // GenerateSoftspokenRandomInputs generates random inputs for the SoftspokenOT
 // Correlated OT extension.
-func GenerateSoftspokenRandomInputs(t *testing.T, inputBatchLen int, curve *curves.Curve) (
+func GenerateSoftspokenRandomInputs(t *testing.T, inputBatchLen int, curve curves.Curve) (
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
 	inputOpts []softspoken.COTeInputOpt, // sender's input, the InputOpt α
 ) {
@@ -157,7 +157,7 @@ func GenerateSoftspokenRandomInputs(t *testing.T, inputBatchLen int, curve *curv
 	for batchIndex := 0; batchIndex < inputBatchLen; batchIndex++ {
 		for i := 0; i < softspoken.Zeta; i++ {
 			for k := 0; k < softspoken.OTeWidth; k++ {
-				inputOpts[batchIndex][i][k] = curve.Scalar.Random(rand.Reader)
+				inputOpts[batchIndex][i][k] = curve.Scalar().Random(rand.Reader)
 			}
 		}
 	}

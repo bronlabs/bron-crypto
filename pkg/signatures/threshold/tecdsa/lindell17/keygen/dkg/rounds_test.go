@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -24,7 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 
@@ -150,7 +150,7 @@ func Test_HappyPath(t *testing.T) {
 					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i]]
 					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare, err := cipherSuite.Curve.NewScalar().SetBigInt(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetBigInt(theirDecryptedSigningShareInt)
 					require.NoError(t, err)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}

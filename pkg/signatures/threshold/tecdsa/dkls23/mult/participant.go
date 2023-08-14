@@ -14,7 +14,7 @@ import (
 type Alice struct {
 	prng            io.Reader
 	sender          *softspoken.Sender
-	Curve           *curves.Curve
+	Curve           curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
@@ -27,7 +27,7 @@ type Alice struct {
 type Bob struct {
 	prng            io.Reader
 	receiver        *softspoken.Receiver
-	Curve           *curves.Curve
+	Curve           curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
 	gadget          [Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
@@ -41,7 +41,7 @@ type Bob struct {
 	extendedPackedChoices *softspoken.ExtPackedChoices
 }
 
-func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {
+func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -74,7 +74,7 @@ func NewAlice(curve *curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSes
 	}, nil
 }
 
-func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
+func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -107,12 +107,12 @@ func NewBob(curve *curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSession
 	}, nil
 }
 
-func generateGadgetVector(curve *curves.Curve, transcript transcripts.Transcript) (gadget [Xi]curves.Scalar, err error) {
+func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget [Xi]curves.Scalar, err error) {
 	gadget = [Xi]curves.Scalar{}
 	transcript.AppendMessages("gadget vector", []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes := transcript.ExtractBytes("gadget", KappaBytes)
-		gadget[i], err = curve.Scalar.SetBytes(bytes)
+		gadget[i], err = curve.Scalar().SetBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}
