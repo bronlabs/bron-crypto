@@ -22,11 +22,11 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Broadcast) ([]byte, error) {
+func (p *Participant) Round2(round1output map[integration.IdentityHash]*Round1Broadcast) ([]byte, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	round1output[p.MyIdentityKey] = &Round1Broadcast{
+	round1output[p.MyIdentityKey.Hash()] = &Round1Broadcast{
 		Ri: p.state.r_i,
 	}
 	sortRandomnessContributions, err := sortRandomnessContributions(round1output)
@@ -39,14 +39,14 @@ func (p *Participant) Round2(round1output map[integration.IdentityKey]*Round1Bro
 	return randomValue, nil
 }
 
-func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityKey]*Round1Broadcast) ([][]byte, error) {
-	identityKeys := make([]integration.IdentityKey, len(allIdentityKeysToRi))
+func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityHash]*Round1Broadcast) ([][]byte, error) {
+	identityKeys := make([]integration.IdentityHash, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
 		identityKeys[i] = identityKey
 		i++
 	}
-	identityKeys = integration.SortIdentityKeys(identityKeys)
+	identityKeys = integration.SortIdentityHashes(identityKeys)
 	sortedRVector := make([][]byte, len(allIdentityKeysToRi))
 	for i, identityKey := range identityKeys {
 		message, exists := allIdentityKeysToRi[identityKey]

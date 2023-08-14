@@ -59,8 +59,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 			if i == j {
 				continue
 			}
-			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey]
-			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey]
+			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey.Hash()]
+			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey.Hash()]
 			require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 		}
 	}

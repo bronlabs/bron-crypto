@@ -236,12 +236,12 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]map[integration.IdentityKey]*noninteractive.Round1Broadcast, len(participants))
+	round2Inputs := make([]map[integration.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityKey]*noninteractive.Round1Broadcast)
+		round2Inputs[i] = make(map[integration.IdentityHash]*noninteractive.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2Inputs[i][participants[j].MyIdentityKey] = round1Outputs[j]
+				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
 			}
 		}
 	}

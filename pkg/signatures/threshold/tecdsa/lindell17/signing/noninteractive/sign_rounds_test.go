@@ -75,10 +75,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
 					t.Parallel()
 
-					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx]], batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
+					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
 					require.NoError(t, err)
 
-					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx]], batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
+					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
 					require.NoError(t, err)
 
 					partialSignature, err := alice.ProducePartialSignature(message)
@@ -89,7 +89,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 
 					// signature is valid
 					for _, identity := range identities {
-						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity].SigningKeyShare.PublicKey, message)
+						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity.Hash()].SigningKeyShare.PublicKey, message)
 						require.NoError(t, err)
 					}
 				})

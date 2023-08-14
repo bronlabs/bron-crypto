@@ -9,15 +9,15 @@ import (
 )
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {
-	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey]
+	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
 
-	paillierPublicKey := p.myShard.PaillierPublicKeys[p.theirIdentityKey]
-	cKey := p.myShard.PaillierEncryptedShares[p.theirIdentityKey]
+	paillierPublicKey := p.myShard.PaillierPublicKeys[p.theirIdentityKey.Hash()]
+	cKey := p.myShard.PaillierEncryptedShares[p.theirIdentityKey.Hash()]
 	k2 := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].K
 	shamirShare := &shamir.Share{
 		Id:    p.mySharingId,
@@ -53,7 +53,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 }
 
 func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.Signature, err error) {
-	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey]
+	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
 	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {

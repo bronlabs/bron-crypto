@@ -30,7 +30,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (ic *Cosigner) Round2(round1output map[integration.IdentityKey]*Round1Broadcast, message []byte) (*frost.PartialSignature, error) {
+func (ic *Cosigner) Round2(round1output map[integration.IdentityHash]*Round1Broadcast, message []byte) (*frost.PartialSignature, error) {
 	if ic.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
 	}
@@ -64,7 +64,7 @@ func (ic *Cosigner) Round2(round1output map[integration.IdentityKey]*Round1Broad
 	return partialSignature, nil
 }
 
-func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityKey]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[integration.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
@@ -80,21 +80,21 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[integration.
 	return signature, nil
 }
 
-func (ic *Cosigner) processNonceCommitmentOnline(round1output map[integration.IdentityKey]*Round1Broadcast) (D_alpha, E_alpha map[integration.IdentityKey]curves.Point, err error) {
-	round1output[ic.MyIdentityKey] = &Round1Broadcast{
+func (ic *Cosigner) processNonceCommitmentOnline(round1output map[integration.IdentityHash]*Round1Broadcast) (D_alpha, E_alpha map[integration.IdentityHash]curves.Point, err error) {
+	round1output[ic.MyIdentityKey.Hash()] = &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	}
 
-	D_alpha = map[integration.IdentityKey]curves.Point{}
-	E_alpha = map[integration.IdentityKey]curves.Point{}
+	D_alpha = map[integration.IdentityHash]curves.Point{}
+	E_alpha = map[integration.IdentityHash]curves.Point{}
 
 	for _, senderIdentityKey := range ic.SessionParticipants {
-		sharingId, exists := ic.IdentityKeyToSharingId[senderIdentityKey]
+		sharingId, exists := ic.IdentityKeyToSharingId[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, nil, errs.NewMissing("sender identity key is not found")
 		}
-		receivedMessage, exists := round1output[senderIdentityKey]
+		receivedMessage, exists := round1output[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, nil, errs.NewMissing("do not have a message from sharing id %d", sharingId)
 		}
@@ -113,8 +113,8 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output map[integration.Id
 			return nil, nil, errs.NewNotOnCurve("E_i of sharing id %d is not on curve", sharingId)
 		}
 
-		D_alpha[senderIdentityKey] = D_i
-		E_alpha[senderIdentityKey] = E_i
+		D_alpha[senderIdentityKey.Hash()] = D_i
+		E_alpha[senderIdentityKey.Hash()] = E_i
 	}
 	return D_alpha, E_alpha, nil
 }

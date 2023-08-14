@@ -21,8 +21,8 @@ type Participant interface {
 type Shard struct {
 	SigningKeyShare         *threshold.SigningKeyShare
 	PaillierSecretKey       *paillier.SecretKey
-	PaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
-	PaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+	PaillierPublicKeys      map[integration.IdentityHash]*paillier.PublicKey
+	PaillierEncryptedShares map[integration.IdentityHash]paillier.CipherText
 }
 
 type PartialSignature struct {
@@ -31,7 +31,7 @@ type PartialSignature struct {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR map[integration.IdentityKey]curves.Point
+	BigR map[integration.IdentityHash]curves.Point
 }
 
 type PreSignatureBatch struct {

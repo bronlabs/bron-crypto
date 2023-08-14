@@ -17,7 +17,7 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*dkls23.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityHash]*dkls23.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -59,11 +59,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	results := map[integration.IdentityKey]*dkls23.Shard{}
+	results := map[integration.IdentityHash]*dkls23.Shard{}
 
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
-		results[identityKey] = &dkls23.Shard{
+		results[identityKey.Hash()] = &dkls23.Shard{
 			SigningKeyShare: &dkls23.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
@@ -76,7 +76,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	for identityKey := range results {
 		for otherIdentityKey := range results {
-			if identityKey.PublicKey().Equal(otherIdentityKey.PublicKey()) {
+			if identityKey == otherIdentityKey {
 				continue
 			}
 			randomSeed := [impl.FieldBytes]byte{}

@@ -28,7 +28,7 @@ type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs map[integration.IdentityKey]*BaseOTConfig
+	PairwiseBaseOTs map[integration.IdentityHash]*BaseOTConfig
 }
 
 type PartialSignature struct {

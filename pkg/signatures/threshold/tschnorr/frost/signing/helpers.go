@@ -15,9 +15,9 @@ func ProducePartialSignature(
 	sessionParticipants []integration.IdentityKey,
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
-	D_alpha, E_alpha map[integration.IdentityKey]curves.Point,
+	D_alpha, E_alpha map[integration.IdentityHash]curves.Point,
 	sharingIdToIdentityKey map[int]integration.IdentityKey,
-	identityKeyToSharingId map[integration.IdentityKey]int,
+	identityKeyToSharingId map[integration.IdentityHash]int,
 	aggregationParameter *aggregation.SignatureAggregatorParameters,
 	message []byte,
 ) (*frost.PartialSignature, error) {
@@ -28,29 +28,29 @@ func ProducePartialSignature(
 
 	combinedDsAndEs := []byte{}
 	for _, presentParty := range sessionParticipants {
-		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty].ToAffineCompressed()...)
-		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty].ToAffineCompressed()...)
+		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty.Hash()].ToAffineCompressed()...)
+		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty.Hash()].ToAffineCompressed()...)
 	}
 
-	R_js := map[integration.IdentityKey]curves.Point{}
+	R_js := map[integration.IdentityHash]curves.Point{}
 	for _, participant := range sessionParticipants {
-		sharingId := identityKeyToSharingId[participant]
+		sharingId := identityKeyToSharingId[participant.Hash()]
 		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
 		if sharingId == mySharingId {
 			r_i = r_j
 		}
-		D_j, exists := D_alpha[participant]
+		D_j, exists := D_alpha[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", sharingId)
 		}
-		E_j, exists := E_alpha[participant]
+		E_j, exists := E_alpha[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", sharingId)
 		}
 
 		R_j := D_j.Add(E_j.Mul(r_j))
 		R = R.Add(R_j)
-		R_js[participant] = R_j
+		R_js[participant.Hash()] = R_j
 	}
 	if R.IsIdentity() {
 		return nil, errs.NewIsIdentity("R is at infinity")
@@ -71,7 +71,7 @@ func ProducePartialSignature(
 
 	presentPartySharingIds := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
-		presentPartySharingIds[i] = identityKeyToSharingId[sessionParticipants[i]]
+		presentPartySharingIds[i] = identityKeyToSharingId[sessionParticipants[i].Hash()]
 	}
 
 	shamirShare := &shamir.Share{

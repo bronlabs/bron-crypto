@@ -73,11 +73,11 @@ func Test_CanInitialize(t *testing.T) {
 	identityKeysToSigningKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 
-	aliceSigningKeyShare, exists := identityKeysToSigningKeyShares[aliceIdentityKey]
+	aliceSigningKeyShare, exists := identityKeysToSigningKeyShares[aliceIdentityKey.Hash()]
 	require.True(t, exists)
 	require.NotNil(t, aliceSigningKeyShare)
 
-	bobSigningKeyShare, exists := identityKeysToSigningKeyShares[bobIdentityKey]
+	bobSigningKeyShare, exists := identityKeysToSigningKeyShares[bobIdentityKey.Hash()]
 	require.True(t, exists)
 	require.NotNil(t, bobSigningKeyShare)
 

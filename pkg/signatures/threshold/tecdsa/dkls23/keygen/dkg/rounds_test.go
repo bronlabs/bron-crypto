@@ -96,9 +96,9 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
-	shardsMap := make(map[integration.IdentityKey]*dkls23.Shard, len(shards))
+	shardsMap := make(map[integration.IdentityHash]*dkls23.Shard, len(shards))
 	for i, shard := range shards {
-		shardsMap[identities[i]] = shard
+		shardsMap[identities[i].Hash()] = shard
 	}
 
 	t.Run("each signing share is different", func(t *testing.T) {
@@ -148,8 +148,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 				if i == j {
 					continue
 				}
-				seedOfIFromJ := shards[i].PairwiseSeeds[participants[j].GetIdentityKey()]
-				seedOfJFromI := shards[j].PairwiseSeeds[participants[i].GetIdentityKey()]
+				seedOfIFromJ := shards[i].PairwiseSeeds[participants[j].GetIdentityKey().Hash()]
+				seedOfJFromI := shards[j].PairwiseSeeds[participants[i].GetIdentityKey().Hash()]
 				require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 			}
 		}
@@ -158,10 +158,10 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	t.Run("BaseOT encryption keys match", func(t *testing.T) {
 		t.Parallel()
 		for _, participant := range participants {
-			shard := shardsMap[participant.MyIdentityKey]
+			shard := shardsMap[participant.MyIdentityKey.Hash()]
 			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
 				meAsReceiver := myConfig.AsReceiver
-				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsSender
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsSender
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
@@ -170,7 +170,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					)
 				}
 				meAsSender := myConfig.AsSender
-				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsReceiver
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsReceiver
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
@@ -195,13 +195,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 
 		for _, participant := range participants {
-			shard := shardsMap[participant.MyIdentityKey]
+			shard := shardsMap[participant.MyIdentityKey.Hash()]
 			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
 				meAsReceiver := myConfig.AsReceiver
-				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsSender
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsSender
 
 				meAsSender := myConfig.AsSender
-				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey].AsReceiver
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsReceiver
 
 				for _, pair := range []struct {
 					Sender   *vsot.SenderOutput
