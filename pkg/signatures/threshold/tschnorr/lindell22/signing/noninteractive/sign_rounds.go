@@ -11,7 +11,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	k := c.myPreSignature.K
 	bigRSum := c.cohortConfig.CipherSuite.Curve.NewIdentityPoint()
 	for _, identity := range c.sessionParticipants {
-		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity])
+		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
 	}
 
 	// 3.ii. compute e = H(Rsum || pk || || message)

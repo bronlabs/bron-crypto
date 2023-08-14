@@ -42,9 +42,9 @@ func doSetup(curve *curves.Curve, identities []integration.IdentityKey) (allPair
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -53,7 +53,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
-	sum := curve.Scalar.Zero()
+	sum := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 	for _, sample := range samples {
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
@@ -62,7 +62,7 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 
 	// test sum of all the shares but one doesn't add up to zero
 	for i := range samples {
-		sum = curve.Scalar.Zero()
+		sum = cohortConfig.CipherSuite.Curve.Scalar.Zero()
 		for j, sample := range samples {
 			if i != j {
 				sum = sum.Add(sample)
@@ -72,9 +72,9 @@ func doSample(t *testing.T, curve *curves.Curve, identities []integration.Identi
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(curve, identities, seeds)
+	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	participants[0].UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
 	for _, participant := range participants {
@@ -84,7 +84,7 @@ func doSampleInvalidSid(t *testing.T, curve *curves.Curve, identities []integrat
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
-	sum := curve.Scalar.Zero()
+	sum := cohortConfig.CipherSuite.Curve.Scalar.Zero()
 	for _, sample := range samples {
 		require.False(t, sample.IsZero())
 		sum = sum.Add(sample)
@@ -100,6 +100,10 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	}
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite:  cipherSuite,
+		Participants: allIdentities,
+	}
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
@@ -112,7 +116,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSample(t, curve, identities, seeds)
+			doSample(t, cohortConfig, identities, seeds)
 		}
 	}
 }
@@ -127,6 +131,10 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite:  cipherSuite,
+		Participants: allIdentities,
+	}
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
@@ -137,7 +145,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, n int) {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSampleInvalidSid(t, curve, identities, seeds)
+			doSampleInvalidSid(t, cohortConfig, identities, seeds)
 		}
 	}
 }
@@ -200,9 +208,13 @@ func testInvalidParticipants(t *testing.T, curve *curves.Curve) {
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, allIdentities)
 	require.NoError(t, err)
 
-	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
-	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})
-	charlieParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, charlieIdentity, charlieSeed, []integration.IdentityKey{bobIdentity, charlieIdentity})
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite:  cipherSuite,
+		Participants: []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity},
+	}
+	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
+	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})
+	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity, charlieSeed, []integration.IdentityKey{bobIdentity, charlieIdentity})
 
 	aliceSample, err := aliceParticipant.Sample()
 	require.NoError(t, err)

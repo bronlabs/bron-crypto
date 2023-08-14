@@ -42,7 +42,7 @@ func (s *SigningKeyShare) Validate() error {
 type PublicKeyShares struct {
 	Curve     *curves.Curve
 	PublicKey curves.Point
-	SharesMap map[integration.IdentityKey]curves.Point
+	SharesMap map[integration.IdentityHash]curves.Point
 }
 
 // TODO: write down validation (lambda trick)

@@ -30,18 +30,18 @@ type State struct {
 	myRPrime          *big.Int
 	myRDoublePrime    *big.Int
 
-	theirBigQCommitment          map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime               map[integration.IdentityKey]curves.Point
-	theirBigQDoublePrime         map[integration.IdentityKey]curves.Point
-	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
-	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+	theirBigQCommitment          map[integration.IdentityHash]commitments.Commitment
+	theirBigQPrime               map[integration.IdentityHash]curves.Point
+	theirBigQDoublePrime         map[integration.IdentityHash]curves.Point
+	theirPaillierPublicKeys      map[integration.IdentityHash]*paillier.PublicKey
+	theirPaillierEncryptedShares map[integration.IdentityHash]paillier.CipherText
 
-	lpProvers                map[integration.IdentityKey]*lp.Prover
-	lpVerifiers              map[integration.IdentityKey]*lp.Verifier
-	lpdlPrimeProvers         map[integration.IdentityKey]*lpdl.Prover
-	lpdlPrimeVerifiers       map[integration.IdentityKey]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[integration.IdentityKey]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[integration.IdentityKey]*lpdl.Verifier
+	lpProvers                map[integration.IdentityHash]*lp.Prover
+	lpVerifiers              map[integration.IdentityHash]*lp.Verifier
+	lpdlPrimeProvers         map[integration.IdentityHash]*lpdl.Prover
+	lpdlPrimeVerifiers       map[integration.IdentityHash]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[integration.IdentityHash]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[integration.IdentityHash]*lpdl.Verifier
 }
 
 type Participant struct {
@@ -51,7 +51,7 @@ type Participant struct {
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId  map[integration.IdentityKey]int
+	idKeyToSharingId  map[integration.IdentityHash]int
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader

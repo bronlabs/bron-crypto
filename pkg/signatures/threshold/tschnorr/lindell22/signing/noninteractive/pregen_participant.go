@@ -26,7 +26,7 @@ type state struct {
 	k                   []curves.Scalar
 	bigR                []curves.Point
 	bigRWitness         []commitments.Witness
-	theirBigRCommitment []map[integration.IdentityKey]commitments.Commitment
+	theirBigRCommitment []map[integration.IdentityHash]commitments.Commitment
 }
 
 type PreGenParticipant struct {

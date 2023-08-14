@@ -28,7 +28,7 @@ type Cosigner struct {
 	UniqueSessionId       []byte
 	CohortConfig          *integration.CohortConfig
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToShamirId map[integration.IdentityKey]int
+	IdentityKeyToShamirId map[integration.IdentityHash]int
 	SessionParticipants   []integration.IdentityKey
 	sessionShamirIDs      []int
 
@@ -42,7 +42,7 @@ type SubProtocols struct {
 	// use to get the secret key msak (zeta_i)
 	zeroShareSampling *sample.Participant
 	// pairwise multiplication protocol ie. each party acts as alice and bob against every party
-	multiplication map[integration.IdentityKey]*Multiplication
+	multiplication map[integration.IdentityHash]*Multiplication
 }
 
 // Corresponding participant objects for pairwise multiplication subprotocols.
@@ -56,13 +56,13 @@ type state struct {
 	sk_i                               curves.Scalar
 	r_i                                curves.Scalar
 	R_i                                curves.Point
-	cU_i                               map[integration.IdentityKey]curves.Scalar
-	cV_i                               map[integration.IdentityKey]curves.Scalar
+	cU_i                               map[integration.IdentityHash]curves.Scalar
+	cV_i                               map[integration.IdentityHash]curves.Scalar
 	pk_i                               curves.Point
-	Chi_i                              map[integration.IdentityKey]curves.Scalar
-	witnessesOfCommitmentToInstanceKey map[integration.IdentityKey]commitments.Witness
-	receivedCommitmentsToInstanceKey   map[integration.IdentityKey]commitments.Commitment
-	receivedR_i                        map[integration.IdentityKey]curves.Point
+	Chi_i                              map[integration.IdentityHash]curves.Scalar
+	witnessesOfCommitmentToInstanceKey map[integration.IdentityHash]commitments.Witness
+	receivedCommitmentsToInstanceKey   map[integration.IdentityHash]commitments.Commitment
+	receivedR_i                        map[integration.IdentityHash]curves.Point
 }
 
 func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -103,29 +103,29 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
-		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i]]
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i].Hash()]
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 	// step 0.3
-	multipliers := make(map[integration.IdentityKey]*Multiplication, len(sessionParticipants))
+	multipliers := make(map[integration.IdentityHash]*Multiplication, len(sessionParticipants))
 	for _, participant := range sessionParticipants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
-		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsReceiver, uniqueSessionId, prng, transcript.Clone())
+		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsReceiver, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsSender, uniqueSessionId, prng, transcript.Clone())
+		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsSender, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		multipliers[participant] = &Multiplication{
+		multipliers[participant.Hash()] = &Multiplication{
 			Alice: alice,
 			Bob:   bob,
 		}
@@ -144,12 +144,12 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 			multiplication:    multipliers,
 		},
 		state: &state{
-			witnessesOfCommitmentToInstanceKey: map[integration.IdentityKey]commitments.Witness{},
-			Chi_i:                              map[integration.IdentityKey]curves.Scalar{},
-			cU_i:                               map[integration.IdentityKey]curves.Scalar{},
-			cV_i:                               map[integration.IdentityKey]curves.Scalar{},
-			receivedCommitmentsToInstanceKey:   map[integration.IdentityKey]commitments.Commitment{},
-			receivedR_i:                        map[integration.IdentityKey]curves.Point{},
+			witnessesOfCommitmentToInstanceKey: map[integration.IdentityHash]commitments.Witness{},
+			Chi_i:                              map[integration.IdentityHash]curves.Scalar{},
+			cU_i:                               map[integration.IdentityHash]curves.Scalar{},
+			cV_i:                               map[integration.IdentityHash]curves.Scalar{},
+			receivedCommitmentsToInstanceKey:   map[integration.IdentityHash]commitments.Commitment{},
+			receivedR_i:                        map[integration.IdentityHash]curves.Point{},
 		},
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
 		IdentityKeyToShamirId: identityKeyToShamirId,

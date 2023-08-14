@@ -26,7 +26,7 @@ type state struct {
 	bigR        curves.Point
 	bigRWitness commitments.Witness
 
-	theirBigRCommitment map[integration.IdentityKey]commitments.Commitment
+	theirBigRCommitment map[integration.IdentityHash]commitments.Commitment
 }
 
 type Cosigner struct {
@@ -37,7 +37,7 @@ type Cosigner struct {
 
 	cohortConfig           *integration.CohortConfig
 	sessionParticipants    []integration.IdentityKey
-	identityKeyToSharingId map[integration.IdentityKey]int
+	identityKeyToSharingId map[integration.IdentityHash]int
 	sid                    []byte
 	round                  int
 	transcript             transcripts.Transcript

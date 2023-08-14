@@ -27,15 +27,20 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 
-	aliceSeeds := zero.PairwiseSeeds{bobIdentityKey: sharedSeed}
-	bobSeeds := zero.PairwiseSeeds{aliceIdentityKey: sharedSeed}
+	aliceSeeds := zero.PairwiseSeeds{bobIdentityKey.Hash(): sharedSeed}
+	bobSeeds := zero.PairwiseSeeds{aliceIdentityKey.Hash(): sharedSeed}
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	require.NoError(t, err)
 
-	alice, err := NewParticipant(curve, uniqueSessionId, aliceIdentityKey, aliceSeeds, identities)
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite:  cipherSuite,
+		Participants: identities,
+	}
+
+	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey, aliceSeeds, identities)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, uniqueSessionId, bobIdentityKey, bobSeeds, identities)
+	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey, bobSeeds, identities)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {

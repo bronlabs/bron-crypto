@@ -21,7 +21,7 @@ type Cosigner struct {
 
 	CohortConfig           *integration.CohortConfig
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[integration.IdentityHash]int
 	SessionParticipants    []integration.IdentityKey
 
 	round int

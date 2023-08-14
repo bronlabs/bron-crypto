@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"encoding/hex"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
@@ -31,7 +32,7 @@ type Round4P2P = vsot.Round4P2P
 // Acting as sender
 type Round5P2P = vsot.Round5P2P
 
-func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Round1P2P, error) {
 	gennaroBroadcast, gennaroP2P, err := p.GennaroParty.Round1()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "gennaro round 1 failed")
@@ -40,7 +41,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "zero sampling round 1 failed")
 	}
-	baseOTP2P := map[integration.IdentityKey]*vsot.Round1P2P{}
+	baseOTP2P := map[integration.IdentityHash]*vsot.Round1P2P{}
 	for identity, party := range p.BaseOTSenderParties {
 		proof, publicKey, err := party.Round1ComputeAndZkpToPublicKey()
 		baseOTP2P[identity] = &vsot.Round1P2P{
@@ -48,11 +49,11 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 			PublicKey: publicKey,
 		}
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "vsot as sender for identity %x", identity.PublicKey().ToAffineCompressed())
+			return nil, nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 
-	p2pOutput := make(map[integration.IdentityKey]*Round1P2P, len(gennaroP2P))
+	p2pOutput := make(map[integration.IdentityHash]*Round1P2P, len(gennaroP2P))
 
 	for identity, message := range gennaroP2P {
 		p2pOutput[identity] = &Round1P2P{
@@ -64,10 +65,10 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityKey]*R
 	return gennaroBroadcast, p2pOutput, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
-	gennaroRound1outputP2P := map[integration.IdentityKey]*gennaro.Round1P2P{}
-	zeroSamplingRound1Output := map[integration.IdentityKey]*zeroSetup.Round1P2P{}
-	vsotRound1Output := map[integration.IdentityKey]*vsot.Round1P2P{}
+func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]*Round1Broadcast, round1outputP2P map[integration.IdentityHash]*Round1P2P) (*Round2Broadcast, map[integration.IdentityHash]*Round2P2P, error) {
+	gennaroRound1outputP2P := map[integration.IdentityHash]*gennaro.Round1P2P{}
+	zeroSamplingRound1Output := map[integration.IdentityHash]*zeroSetup.Round1P2P{}
+	vsotRound1Output := map[integration.IdentityHash]*vsot.Round1P2P{}
 	for identity, message := range round1outputP2P {
 		gennaroRound1outputP2P[identity] = message.Gennaro
 		zeroSamplingRound1Output[identity] = message.ZeroSampling
@@ -81,14 +82,14 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "zero sampling round 2 failed")
 	}
-	baseOTP2P := map[integration.IdentityKey]vsot.Round2P2P{}
+	baseOTP2P := map[integration.IdentityHash]vsot.Round2P2P{}
 	for identity, receiver := range p.BaseOTReceiverParties {
 		baseOTP2P[identity], err = receiver.Round2VerifySchnorrAndPadTransfer(vsotRound1Output[identity].PublicKey, vsotRound1Output[identity].Proof)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "vsot as receiver for identity %x", identity.PublicKey().ToAffineCompressed())
+			return nil, nil, errs.WrapFailed(err, "vsot as receiver for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
-	p2pOutput := make(map[integration.IdentityKey]*Round2P2P, len(zeroSamplingP2P))
+	p2pOutput := make(map[integration.IdentityHash]*Round2P2P, len(zeroSamplingP2P))
 	for identity, message := range zeroSamplingP2P {
 		p2pOutput[identity] = &Round2P2P{
 			ZeroSampling: message,
@@ -99,9 +100,9 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityKey]*
 	return gennaroBroadcast, p2pOutput, nil
 }
 
-func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P) (map[integration.IdentityKey]Round3P2P, error) {
-	zeroSamplingRound2Output := map[integration.IdentityKey]*zeroSetup.Round2P2P{}
-	vsotRound2Output := map[integration.IdentityKey]vsot.Round2P2P{}
+func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityHash]*Round2Broadcast, round2outputP2P map[integration.IdentityHash]*Round2P2P) (map[integration.IdentityHash]Round3P2P, error) {
+	zeroSamplingRound2Output := map[integration.IdentityHash]*zeroSetup.Round2P2P{}
+	vsotRound2Output := map[integration.IdentityHash]vsot.Round2P2P{}
 	for identity, message := range round2outputP2P {
 		zeroSamplingRound2Output[identity] = message.ZeroSampling
 		vsotRound2Output[identity] = message.VSOTReceiver
@@ -115,19 +116,19 @@ func (p *Participant) Round3(round2outputBroadcast map[integration.IdentityKey]*
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
-	baseOTP2P := map[integration.IdentityKey]vsot.Round3P2P{}
+	baseOTP2P := map[integration.IdentityHash]vsot.Round3P2P{}
 	for identity, sender := range p.BaseOTSenderParties {
 		baseOTP2P[identity], err = sender.Round3PadTransfer(vsotRound2Output[identity])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", identity.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 	return baseOTP2P, nil
 }
 
-func (p *Participant) Round4(round3output map[integration.IdentityKey]Round3P2P) (map[integration.IdentityKey]Round4P2P, error) {
+func (p *Participant) Round4(round3output map[integration.IdentityHash]Round3P2P) (map[integration.IdentityHash]Round4P2P, error) {
 	var err error
-	baseOTP2P := map[integration.IdentityKey]vsot.Round4P2P{}
+	baseOTP2P := map[integration.IdentityHash]vsot.Round4P2P{}
 	for identity, receiver := range p.BaseOTReceiverParties {
 		baseOTP2P[identity], err = receiver.Round4RespondToChallenge(round3output[identity])
 		if err != nil {
@@ -137,32 +138,32 @@ func (p *Participant) Round4(round3output map[integration.IdentityKey]Round3P2P)
 	return baseOTP2P, nil
 }
 
-func (p *Participant) Round5(round4output map[integration.IdentityKey]Round4P2P) (map[integration.IdentityKey]Round5P2P, error) {
+func (p *Participant) Round5(round4output map[integration.IdentityHash]Round4P2P) (map[integration.IdentityHash]Round5P2P, error) {
 	var err error
-	baseOTP2P := map[integration.IdentityKey]vsot.Round5P2P{}
+	baseOTP2P := map[integration.IdentityHash]vsot.Round5P2P{}
 	for identity, sender := range p.BaseOTSenderParties {
 		baseOTP2P[identity], err = sender.Round5Verify(round4output[identity])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", identity.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 	return baseOTP2P, nil
 }
 
-func (p *Participant) Round6(round5output map[integration.IdentityKey]Round5P2P) (*dkls23.Shard, error) {
+func (p *Participant) Round6(round5output map[integration.IdentityHash]Round5P2P) (*dkls23.Shard, error) {
 	for identity, receiver := range p.BaseOTReceiverParties {
 		if err := receiver.Round6Verify(round5output[identity]); err != nil {
-			return nil, errs.WrapFailed(err, "vsot as receiver for indentity %x", identity.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "vsot as receiver for indentity %x", hex.EncodeToString(identity[:]))
 		}
 	}
-	p.Shard.PairwiseBaseOTs = map[integration.IdentityKey]*dkls23.BaseOTConfig{}
+	p.Shard.PairwiseBaseOTs = map[integration.IdentityHash]*dkls23.BaseOTConfig{}
 	for _, identity := range p.GetCohortConfig().Participants {
 		if identity.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
 			continue
 		}
-		p.Shard.PairwiseBaseOTs[identity] = &dkls23.BaseOTConfig{
-			AsSender:   p.BaseOTSenderParties[identity].Output,
-			AsReceiver: p.BaseOTReceiverParties[identity].Output,
+		p.Shard.PairwiseBaseOTs[identity.Hash()] = &dkls23.BaseOTConfig{
+			AsSender:   p.BaseOTSenderParties[identity.Hash()].Output,
+			AsReceiver: p.BaseOTReceiverParties[identity.Hash()].Output,
 		}
 	}
 	// by now, it's fully computed

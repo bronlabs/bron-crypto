@@ -16,7 +16,7 @@ type Cosigner struct {
 	myShard        *lindell22.Shard
 	myPreSignature *lindell22.PreSignature
 
-	identityKeyToSharingId map[integration.IdentityKey]int
+	identityKeyToSharingId map[integration.IdentityHash]int
 	sessionParticipants    []integration.IdentityKey
 	cohortConfig           *integration.CohortConfig
 	prng                   io.Reader

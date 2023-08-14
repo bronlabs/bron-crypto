@@ -45,9 +45,9 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	return participants, nil
 }
 
-func DoInteractiveSignRound1(participants []*interactive.Cosigner) (round1OutputsBroadcast []*interactive.Round1Broadcast, round1OutputsP2P []map[integration.IdentityKey]*interactive.Round1P2P, err error) {
+func DoInteractiveSignRound1(participants []*interactive.Cosigner) (round1OutputsBroadcast []*interactive.Round1Broadcast, round1OutputsP2P []map[integration.IdentityHash]*interactive.Round1P2P, err error) {
 	round1OutputsBroadcast = make([]*interactive.Round1Broadcast, len(participants))
-	round1OutputsP2P = make([]map[integration.IdentityKey]*interactive.Round1P2P, len(participants))
+	round1OutputsP2P = make([]map[integration.IdentityHash]*interactive.Round1P2P, len(participants))
 	for i, participant := range participants {
 		round1OutputsBroadcast[i], round1OutputsP2P[i], err = participant.Round1()
 		if err != nil {
@@ -58,23 +58,23 @@ func DoInteractiveSignRound1(participants []*interactive.Cosigner) (round1Output
 	return round1OutputsBroadcast, round1OutputsP2P, nil
 }
 
-func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive.Cosigner, round1BroadcastOutputs []*interactive.Round1Broadcast, round1UnicastOutputs []map[integration.IdentityKey]*interactive.Round1P2P) (round2BroadcastInputs []map[integration.IdentityKey]*interactive.Round1Broadcast, round2UnicastInputs []map[integration.IdentityKey]*interactive.Round1P2P) {
-	round2BroadcastInputs = make([]map[integration.IdentityKey]*interactive.Round1Broadcast, len(participants))
+func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive.Cosigner, round1BroadcastOutputs []*interactive.Round1Broadcast, round1UnicastOutputs []map[integration.IdentityHash]*interactive.Round1P2P) (round2BroadcastInputs []map[integration.IdentityHash]*interactive.Round1Broadcast, round2UnicastInputs []map[integration.IdentityHash]*interactive.Round1P2P) {
+	round2BroadcastInputs = make([]map[integration.IdentityHash]*interactive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2BroadcastInputs[i] = make(map[integration.IdentityKey]*interactive.Round1Broadcast)
+		round2BroadcastInputs[i] = make(map[integration.IdentityHash]*interactive.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2BroadcastInputs[i][participants[j].GetIdentityKey()] = round1BroadcastOutputs[j]
+				round2BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round1BroadcastOutputs[j]
 			}
 		}
 	}
 
-	round2UnicastInputs = make([]map[integration.IdentityKey]*interactive.Round1P2P, len(participants))
+	round2UnicastInputs = make([]map[integration.IdentityHash]*interactive.Round1P2P, len(participants))
 	for i := range participants {
-		round2UnicastInputs[i] = make(map[integration.IdentityKey]*interactive.Round1P2P)
+		round2UnicastInputs[i] = make(map[integration.IdentityHash]*interactive.Round1P2P)
 		for j := range participants {
 			if j != i {
-				round2UnicastInputs[i][participants[j].GetIdentityKey()] = round1UnicastOutputs[j][participants[i].GetIdentityKey()]
+				round2UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round1UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
 			}
 		}
 	}
@@ -82,9 +82,9 @@ func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*interactive.C
 	return round2BroadcastInputs, round2UnicastInputs
 }
 
-func DoInteractiveSignRound2(participants []*interactive.Cosigner, round2BroadcastInputs []map[integration.IdentityKey]*interactive.Round1Broadcast, round2UnicastInputs []map[integration.IdentityKey]*interactive.Round1P2P) (round2BroadcastOutputs []*interactive.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*interactive.Round2P2P, err error) {
+func DoInteractiveSignRound2(participants []*interactive.Cosigner, round2BroadcastInputs []map[integration.IdentityHash]*interactive.Round1Broadcast, round2UnicastInputs []map[integration.IdentityHash]*interactive.Round1P2P) (round2BroadcastOutputs []*interactive.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityHash]*interactive.Round2P2P, err error) {
 	round2BroadcastOutputs = make([]*interactive.Round2Broadcast, len(participants))
-	round2UnicastOutputs = make([]map[integration.IdentityKey]*interactive.Round2P2P, len(participants))
+	round2UnicastOutputs = make([]map[integration.IdentityHash]*interactive.Round2P2P, len(participants))
 	for i := range participants {
 		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
@@ -94,22 +94,22 @@ func DoInteractiveSignRound2(participants []*interactive.Cosigner, round2Broadca
 	return round2BroadcastOutputs, round2UnicastOutputs, nil
 }
 
-func MapInteractiveSignRound2OutputsToRound3Inputs(participants []*interactive.Cosigner, round2BroadcastOutputs []*interactive.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityKey]*interactive.Round2P2P) (round3BroadcastInputs []map[integration.IdentityKey]*interactive.Round2Broadcast, round3UnicastInputs []map[integration.IdentityKey]*interactive.Round2P2P) {
-	round3BroadcastInputs = make([]map[integration.IdentityKey]*interactive.Round2Broadcast, len(participants))
+func MapInteractiveSignRound2OutputsToRound3Inputs(participants []*interactive.Cosigner, round2BroadcastOutputs []*interactive.Round2Broadcast, round2UnicastOutputs []map[integration.IdentityHash]*interactive.Round2P2P) (round3BroadcastInputs []map[integration.IdentityHash]*interactive.Round2Broadcast, round3UnicastInputs []map[integration.IdentityHash]*interactive.Round2P2P) {
+	round3BroadcastInputs = make([]map[integration.IdentityHash]*interactive.Round2Broadcast, len(participants))
 	for i := range participants {
-		round3BroadcastInputs[i] = make(map[integration.IdentityKey]*interactive.Round2Broadcast)
+		round3BroadcastInputs[i] = make(map[integration.IdentityHash]*interactive.Round2Broadcast)
 		for j := range participants {
 			if j != i {
-				round3BroadcastInputs[i][participants[j].GetIdentityKey()] = round2BroadcastOutputs[j]
+				round3BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round2BroadcastOutputs[j]
 			}
 		}
 	}
-	round3UnicastInputs = make([]map[integration.IdentityKey]*interactive.Round2P2P, len(participants))
+	round3UnicastInputs = make([]map[integration.IdentityHash]*interactive.Round2P2P, len(participants))
 	for i := range participants {
-		round3UnicastInputs[i] = make(map[integration.IdentityKey]*interactive.Round2P2P)
+		round3UnicastInputs[i] = make(map[integration.IdentityHash]*interactive.Round2P2P)
 		for j := range participants {
 			if j != i {
-				round3UnicastInputs[i][participants[j].GetIdentityKey()] = round2UnicastOutputs[j][participants[i].GetIdentityKey()]
+				round3UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round2UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
 			}
 		}
 	}
@@ -117,7 +117,7 @@ func MapInteractiveSignRound2OutputsToRound3Inputs(participants []*interactive.C
 	return round3BroadcastInputs, round3UnicastInputs
 }
 
-func DoInteractiveSignRound3(participants []*interactive.Cosigner, round3BroadcastInputs []map[integration.IdentityKey]*interactive.Round2Broadcast, round3UnicastInputs []map[integration.IdentityKey]*interactive.Round2P2P, message []byte) (partialSignatures []*dkls23.PartialSignature, err error) {
+func DoInteractiveSignRound3(participants []*interactive.Cosigner, round3BroadcastInputs []map[integration.IdentityHash]*interactive.Round2Broadcast, round3UnicastInputs []map[integration.IdentityHash]*interactive.Round2P2P, message []byte) (partialSignatures []*dkls23.PartialSignature, err error) {
 	partialSignatures = make([]*dkls23.PartialSignature, len(participants))
 	for i := range participants {
 		partialSignatures[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
@@ -129,10 +129,10 @@ func DoInteractiveSignRound3(participants []*interactive.Cosigner, round3Broadca
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []integration.IdentityKey, partialSignatures []*dkls23.PartialSignature) map[integration.IdentityKey]*dkls23.PartialSignature {
-	result := make(map[integration.IdentityKey]*dkls23.PartialSignature)
+func MapPartialSignatures(identities []integration.IdentityKey, partialSignatures []*dkls23.PartialSignature) map[integration.IdentityHash]*dkls23.PartialSignature {
+	result := make(map[integration.IdentityHash]*dkls23.PartialSignature)
 	for i, identity := range identities {
-		result[identity] = partialSignatures[i]
+		result[identity.Hash()] = partialSignatures[i]
 	}
 	return result
 }
