@@ -2,9 +2,9 @@ package threshold
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 )
 
 type SigningKeyShare struct {
@@ -26,8 +26,8 @@ func (s *SigningKeyShare) Validate() error {
 		return errs.NewNotOnCurve("public key is not on curve")
 	}
 
-	if s.PublicKey.CurveName() == curves.ED25519Name {
-		edwardsPoint, ok := s.PublicKey.(*curves.PointEd25519)
+	if s.PublicKey.CurveName() == edwards25519.Name {
+		edwardsPoint, ok := s.PublicKey.(*edwards25519.Point)
 		if !ok {
 			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
@@ -41,14 +41,14 @@ func (s *SigningKeyShare) Validate() error {
 }
 
 type PublicKeyShares struct {
-	Curve     *curves.Curve
+	Curve     curves.Curve
 	PublicKey curves.Point
-	SharesMap *hashmap.HashMap[integration.IdentityKey, curves.Point]
+	SharesMap map[integration.IdentityHash]curves.Point
 }
 
 // TODO: write down validation (lambda trick)
 // func (p *PublicKeyShares) Validate() error {
-// 	derivedPublicKey := p.Curve.Point.Identity()
+// 	derivedPublicKey := p.Curve.Point().Identity()
 // 	for _, share := range p.SharesMap {
 // 		derivedPublicKey = derivedPublicKey.Add(share)
 // 	}

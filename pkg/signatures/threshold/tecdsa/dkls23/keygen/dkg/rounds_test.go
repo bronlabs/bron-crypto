@@ -4,13 +4,14 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
@@ -26,7 +27,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	batchSize := softspoken.Kappa
@@ -47,35 +48,35 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
 	r3OutsU, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.NoError(t, err)
 	for _, out := range r3OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r4InsU := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3OutsU)
 	r4OutsU, err := test_utils.DoDkgRound4(participants, r4InsU)
 	require.NoError(t, err)
 	for _, out := range r4OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r5InsU := test_utils.MapDkgRound4OutputsToRound5Inputs(participants, r4OutsU)
 	r5OutsU, err := test_utils.DoDkgRound5(participants, r5InsU)
 	require.NoError(t, err)
 	for _, out := range r5OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r6InsU := test_utils.MapDkgRound5OutputsToRound6Inputs(participants, r5OutsU)
@@ -86,18 +87,18 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		require.NotNil(t, shard.SigningKeyShare)
 		require.NotNil(t, shard.PublicKeyShares)
 		require.NotNil(t, shard.PairwiseSeeds)
-		require.Equal(t, shard.PairwiseSeeds.Size(), len(cohortConfig.Participants)-1)
+		require.Len(t, shard.PairwiseSeeds, len(cohortConfig.Participants)-1)
 		require.NotNil(t, shard.PairwiseBaseOTs)
-		require.Equal(t, shard.PairwiseBaseOTs.Size(), len(cohortConfig.Participants)-1)
-		for _, baseOTConfig := range shard.PairwiseBaseOTs.GetMap() {
+		require.Len(t, shard.PairwiseBaseOTs, len(cohortConfig.Participants)-1)
+		for _, baseOTConfig := range shard.PairwiseBaseOTs {
 			require.NotNil(t, baseOTConfig)
 			require.NotNil(t, baseOTConfig.AsSender)
 			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
-	shardsMap := hashmap.NewHashMap[integration.IdentityKey, *dkls23.Shard]()
+	shardsMap := make(map[integration.IdentityHash]*dkls23.Shard, len(shards))
 	for i, shard := range shards {
-		shardsMap.Put(identities[i], shard)
+		shardsMap[identities[i].Hash()] = shard
 	}
 
 	t.Run("each signing share is different", func(t *testing.T) {
@@ -147,8 +148,8 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 				if i == j {
 					continue
 				}
-				seedOfIFromJ, _ := shards[i].PairwiseSeeds.Get(participants[j].GetIdentityKey())
-				seedOfJFromI, _ := shards[j].PairwiseSeeds.Get(participants[i].GetIdentityKey())
+				seedOfIFromJ := shards[i].PairwiseSeeds[participants[j].GetIdentityKey().Hash()]
+				seedOfJFromI := shards[j].PairwiseSeeds[participants[i].GetIdentityKey().Hash()]
 				require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 			}
 		}
@@ -157,12 +158,10 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	t.Run("BaseOT encryption keys match", func(t *testing.T) {
 		t.Parallel()
 		for _, participant := range participants {
-			shard, _ := shardsMap.Get(participant.MyIdentityKey)
-			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs.GetMap() {
+			shard := shardsMap[participant.MyIdentityKey.Hash()]
+			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
 				meAsReceiver := myConfig.AsReceiver
-				shard, _ := shardsMap.Get(counterPartyIdentity)
-				baseOt, _ := shard.PairwiseBaseOTs.Get(participant.MyIdentityKey)
-				senderCounterParty := baseOt.AsSender
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsSender
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
@@ -171,9 +170,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 					)
 				}
 				meAsSender := myConfig.AsSender
-				shard, _ = shardsMap.Get(counterPartyIdentity)
-				baseOt, _ = shard.PairwiseBaseOTs.Get(participant.MyIdentityKey)
-				receiverCounterParty := baseOt.AsReceiver
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsReceiver
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
@@ -198,17 +195,13 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 		}
 
 		for _, participant := range participants {
-			shard, _ := shardsMap.Get(participant.MyIdentityKey)
-			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs.GetMap() {
+			shard := shardsMap[participant.MyIdentityKey.Hash()]
+			for counterPartyIdentity, myConfig := range shard.PairwiseBaseOTs {
 				meAsReceiver := myConfig.AsReceiver
-				shard, _ := shardsMap.Get(counterPartyIdentity)
-				baseOt, _ := shard.PairwiseBaseOTs.Get(participant.MyIdentityKey)
-				senderCounterParty := baseOt.AsSender
+				senderCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsSender
 
 				meAsSender := myConfig.AsSender
-				shard, _ = shardsMap.Get(counterPartyIdentity)
-				baseOt, _ = shard.PairwiseBaseOTs.Get(participant.MyIdentityKey)
-				receiverCounterParty := baseOt.AsReceiver
+				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyIdentityKey.Hash()].AsReceiver
 
 				for _, pair := range []struct {
 					Sender   *vsot.SenderOutput
@@ -238,7 +231,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	})
 }
 
-func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold int, n int) {
+func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -259,7 +252,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
@@ -273,7 +266,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -287,7 +280,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -298,7 +291,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.K256(), curves.ED25519()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -312,7 +305,7 @@ func TestInvalidSid(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testInvalidSid(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})

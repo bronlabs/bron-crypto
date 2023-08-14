@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -21,27 +21,27 @@ import (
 
 func Test_SanityCheck(t *testing.T) {
 	hashFunc := sha512.New
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	prng := crand.Reader
 
 	message := []byte("Hello World!")
 
-	eddsaPrivateKey := curve.NewScalar().Random(prng)
+	eddsaPrivateKey := curve.Scalar().Random(prng)
 	dHashed, err := hashing.Hash(hashFunc, eddsaPrivateKey.Bytes())
 	require.NoError(t, err)
 
 	schnorrPrivateKeyBytes := dHashed[:32]
-	schnorrPrivateKey, err := curve.NewScalar().SetBytes(schnorrPrivateKeyBytes)
+	schnorrPrivateKey, err := curve.Scalar().SetBytes(schnorrPrivateKeyBytes)
 	require.NoError(t, err)
 	publicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
-	nonce := curve.NewScalar().Random(prng)
+	nonce := curve.Scalar().Random(prng)
 	bigR := curve.ScalarBaseMult(nonce)
 
 	eBytes, err := hashing.Hash(hashFunc, bigR.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 	require.NoError(t, err)
 
-	e, err := curve.NewScalar().SetBytesWide(eBytes)
+	e, err := curve.Scalar().SetBytesWide(eBytes)
 	require.NoError(t, err)
 
 	bigS := nonce.Add(e.Mul(schnorrPrivateKey))
@@ -64,7 +64,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	hashFunc := sha512.New
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	prng := crand.Reader
 	message := []byte("Hello World!")
 	th := 2
@@ -84,8 +84,7 @@ func Test_HappyPath(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(cohort, prng)
 	require.NoError(t, err)
-	shard, _ := shards.Get(identities[0])
-	publicKey := shard.SigningKeyShare.PublicKey
+	publicKey := shards[identities[0].Hash()].SigningKeyShare.PublicKey
 
 	transcripts := integration_test_utils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 

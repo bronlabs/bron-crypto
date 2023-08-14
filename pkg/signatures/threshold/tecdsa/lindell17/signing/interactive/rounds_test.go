@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -25,7 +27,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 
@@ -42,16 +44,14 @@ func Test_HappyPath(t *testing.T) {
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
-	require.Equal(t, shards.Size(), cohortConfig.TotalParties)
+	require.Len(t, shards, cohortConfig.TotalParties)
 
 	sessionId := []byte("TestSession")
-	shardAlice, _ := shards.Get(alice)
-	primary, err := interactive.NewPrimaryCosigner(alice, bob, shardAlice, cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	shardBob, _ := shards.Get(bob)
-	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shardBob, cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
@@ -70,8 +70,7 @@ func Test_HappyPath(t *testing.T) {
 	signature, err := primary.Round5(r4, message)
 	require.NoError(t, err)
 
-	shard, _ := shards.Get(bob)
-	err = ecdsa.Verify(signature, cipherSuite.Hash, shard.SigningKeyShare.PublicKey, message)
+	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob.Hash()].SigningKeyShare.PublicKey, message)
 	require.NoError(t, err)
 }
 
@@ -82,7 +81,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
@@ -106,14 +105,14 @@ func Test_HappyPathWithDkg(t *testing.T) {
 func Test_RecoveryIdCalculation(t *testing.T) {
 	t.Parallel()
 
-	supportedCurves := []*curves.Curve{
-		curves.P256(),
-		curves.K256(),
+	supportedCurves := []curves.Curve{
+		p256.New(),
+		k256.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		t.Run(fmt.Sprintf("curve: %s", curve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("curve: %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 			cipherSuite := &integration.CipherSuite{
 				Curve: curve,
@@ -133,16 +132,14 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, shards)
-			require.Equal(t, shards.Size(), cohortConfig.TotalParties)
+			require.Len(t, shards, cohortConfig.TotalParties)
 
 			sessionId := []byte("TestSession")
-			shardAlice, _ := shards.Get(alice)
-			primary, err := interactive.NewPrimaryCosigner(alice, bob, shardAlice, cohortConfig, sessionId, nil, crand.Reader)
+			primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, primary)
 			require.NoError(t, err)
 
-			shardBob, _ := shards.Get(bob)
-			secondary, err := interactive.NewSecondaryCosigner(bob, alice, shardBob, cohortConfig, sessionId, nil, crand.Reader)
+			secondary, err := interactive.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, secondary)
 			require.NoError(t, err)
 
@@ -161,8 +158,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			signature, err := primary.Round5(r4, message)
 			require.NoError(t, err)
 
-			shard, _ := shards.Get(bob)
-			err = ecdsa.Verify(signature, cipherSuite.Hash, shard.SigningKeyShare.PublicKey, message)
+			err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob.Hash()].SigningKeyShare.PublicKey, message)
 			require.NoError(t, err)
 
 			t.Run("signature should be normalised", func(t *testing.T) {
@@ -180,8 +176,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 				t.Parallel()
 				recoveredPublicKey, err := ecdsa.RecoverPublicKey(signature, cipherSuite.Hash, message)
 				require.NoError(t, err)
-				shard, _ := shards.Get(alice)
-				require.True(t, recoveredPublicKey.Equal(shard.SigningKeyShare.PublicKey))
+				require.True(t, recoveredPublicKey.Equal(shards[alice.Hash()].SigningKeyShare.PublicKey))
 			})
 		})
 	}
@@ -196,7 +191,7 @@ func doGennaroDkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConf
 	r1OutsB, r1OutsU, err := gennaro_dkg_test_utils.DoDkgRound1(gennaroParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := gennaro_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)

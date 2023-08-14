@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -28,14 +30,14 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 	prng := crand.Reader
 	transcriptAppLabel := "Lindell2017NonInteractiveSignTest"
 
-	supportedCurves := []*curves.Curve{
-		curves.P256(),
-		curves.K256(),
+	supportedCurves := []curves.Curve{
+		p256.New(),
+		k256.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 
 			cipherSuite := &integration.CipherSuite{
@@ -55,7 +57,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, shards)
-			require.Equal(t, shards.Size(), cohort.TotalParties)
+			require.Len(t, shards, cohort.TotalParties)
 
 			transcripts := test_utils.MakeTranscripts(transcriptAppLabel, identities)
 			participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
@@ -73,12 +75,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
 					t.Parallel()
 
-					shard, _ := shards.Get(identities[aliceIdx])
-					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
+					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], prng)
 					require.NoError(t, err)
 
-					shard, _ = shards.Get(identities[bobIdx])
-					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
+					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], prng)
 					require.NoError(t, err)
 
 					partialSignature, err := alice.ProducePartialSignature(message)
@@ -89,8 +89,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 
 					// signature is valid
 					for _, identity := range identities {
-						shard, _ := shards.Get(identity)
-						err := ecdsa.Verify(signature, cipherSuite.Hash, shard.SigningKeyShare.PublicKey, message)
+						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity.Hash()].SigningKeyShare.PublicKey, message)
 						require.NoError(t, err)
 					}
 				})

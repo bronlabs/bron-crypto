@@ -34,13 +34,13 @@ type (
 func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.Point, error) {
 	var err error
 	// Sample the secret key and compute the public key.
-	sender.SecretKey = sender.Curve.Scalar.Random(rand.Reader)
+	sender.SecretKey = sender.Curve.Scalar().Random(rand.Reader)
 	sender.PublicKey = sender.Curve.ScalarBaseMult(sender.SecretKey)
 
 	// Generate the ZKP proof.
 	// TODO: implement cloning
 	clonedTranscript := merlin.NewTranscript("VSOT")
-	prover, err := schnorr.NewProver(sender.Curve.NewGeneratorPoint(), sender.UniqueSessionId, clonedTranscript)
+	prover, err := schnorr.NewProver(sender.Curve.Generator(), sender.UniqueSessionId, clonedTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing schnorr prover")
 	}
@@ -56,14 +56,14 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.P
 func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *schnorr.Proof) ([]ReceiversMaskedChoices, error) {
 	receiver.SenderPublicKey = senderPublicKey
 	clonedTranscript := merlin.NewTranscript("VSOT")
-	if err := schnorr.Verify(receiver.Curve.NewGeneratorPoint(), senderPublicKey, proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
+	if err := schnorr.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "verifying schnorr proof in seed OT receiver round 2")
 	}
 
 	result := make([]ReceiversMaskedChoices, receiver.BatchSize)
 	receiver.Output.OneTimePadDecryptionKey = make([]OneTimePadDecryptionKey, receiver.BatchSize)
 	for i := 0; i < receiver.BatchSize; i++ {
-		a := receiver.Curve.Scalar.Random(rand.Reader)
+		a := receiver.Curve.Scalar().Random(rand.Reader)
 		// Computing `A := a . G + w . B` in constant time, by first computing option0 = a.G and option1 = a.G+B and then
 		// constant time choosing one of them by first assuming that the output is option0, and overwrite it if the choice bit is 1.
 
@@ -95,7 +95,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 
 	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
 	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
-		if receiversMaskedChoice[i], err = sender.Curve.Point.FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
+		if receiversMaskedChoice[i], err = sender.Curve.Point().FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
 			return nil, errs.WrapDeserializationFailed(err, "uncompress the point")
 		}
 	}

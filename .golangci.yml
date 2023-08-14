@@ -974,6 +974,8 @@ issues:
         - forcetypeassert
         - goerr113
         - nakedret
+        # TODO: ENABLE THIS
+        - wrapcheck
     # Exclude some revive messages
     - linters:
         - revive

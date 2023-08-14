@@ -10,13 +10,15 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
-func pregenHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold, n, tau int) {
+func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n, tau int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -68,7 +70,7 @@ func pregenHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thre
 
 func Test_PregenHappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for i, h := range []func() hash.Hash{sha512.New, sha3.New256} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -84,7 +86,7 @@ func Test_PregenHappyPath(t *testing.T) {
 					boundedTau := tau
 					t.Run(
 						fmt.Sprintf("running pregen for curve=%s and h_%d and t=%d and n=%d and tau=%d",
-							boundedCurve.Name, boundedI, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau),
+							boundedCurve.Name(), boundedI, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau),
 						func(t *testing.T) {
 							t.Parallel()
 							pregenHappyPath(t, boundedCurve, boundedH, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau)

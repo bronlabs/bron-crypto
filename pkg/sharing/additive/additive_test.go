@@ -9,18 +9,21 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/additive"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 func TestSplitAndCombine(t *testing.T) {
 	t.Parallel()
-	curve := curves.K256()
+	curve := k256.New()
 	dealer, err := additive.NewDealer(5, curve)
 	require.Nil(t, err)
 	require.NotNil(t, dealer)
 
-	secret := curve.Scalar.Hash([]byte("test"))
+	secret := curve.Scalar().Hash([]byte("test"))
 
 	shares, err := dealer.Split(secret, crand.Reader)
 	require.NoError(t, err)
@@ -37,15 +40,15 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 	t.Parallel()
 	total := 5
 	threshold := 3
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New(), p256.New()} {
 		boundedCurve := curve
-		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
 			shamirDealer, err := shamir.NewDealer(threshold, total, boundedCurve)
 			require.Nil(t, err)
 			require.NotNil(t, shamirDealer)
 
-			secret := boundedCurve.Scalar.Hash([]byte("2+2=5"))
+			secret := boundedCurve.Scalar().Hash([]byte("2+2=5"))
 
 			shamirShares, err := shamirDealer.Split(secret, crand.Reader)
 			require.NoError(t, err)

@@ -34,16 +34,16 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	return out
 }
 
-func LagrangeCoefficients(curve *curves.Curve, xs []int) (map[int]curves.Scalar, error) {
+func LagrangeCoefficients(curve curves.Curve, xs []int) (map[int]curves.Scalar, error) {
 	xsScalar := make(map[int]curves.Scalar, len(xs))
 	for _, xi := range xs {
-		xsScalar[xi] = curve.Scalar.New(xi)
+		xsScalar[xi] = curve.Scalar().New(xi)
 	}
 
 	result := make(map[int]curves.Scalar, len(xs))
 	for i, xi := range xsScalar {
-		num := curve.Scalar.One()
-		den := curve.Scalar.One()
+		num := curve.Scalar().One()
+		den := curve.Scalar().One()
 		for j, xj := range xsScalar {
 			if i == j {
 				continue
@@ -60,11 +60,11 @@ func LagrangeCoefficients(curve *curves.Curve, xs []int) (map[int]curves.Scalar,
 	return result, nil
 }
 
-func Interpolate(curve *curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result := curve.Scalar.Zero()
+func Interpolate(curve curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
+	result := curve.Scalar().Zero()
 	for i, xi := range xs {
-		num := curve.Scalar.One()
-		den := curve.Scalar.One()
+		num := curve.Scalar().One()
+		den := curve.Scalar().One()
 		for j, xj := range xs {
 			if i == j {
 				continue
@@ -80,11 +80,11 @@ func Interpolate(curve *curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.
 	return result, nil
 }
 
-func InterpolateInTheExponent(curve *curves.Curve, xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
+func InterpolateInTheExponent(curve curves.Curve, xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
 	coefficients := make([]curves.Scalar, len(xs))
 	for i, xi := range xs {
-		num := curve.Scalar.One()
-		den := curve.Scalar.One()
+		num := curve.Scalar().One()
+		den := curve.Scalar().One()
 		for j, xj := range xs {
 			if i == j {
 				continue

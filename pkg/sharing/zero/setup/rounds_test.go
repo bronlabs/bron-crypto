@@ -8,6 +8,8 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
@@ -15,7 +17,7 @@ import (
 
 var h = sha3.New256
 
-func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -32,14 +34,14 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 	r1OutsU, err := test_utils.DoSetupRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), len(identities)-1)
+		require.Len(t, out, len(identities)-1)
 	}
 
 	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
 	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
-		require.Equal(t, out.Size(), len(identities)-1)
+		require.Len(t, out, len(identities)-1)
 	}
 
 	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
@@ -48,7 +50,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 
 	// we have the right number of pairs
 	for i := range participants {
-		require.Equal(t, allPairwiseSeeds[i].Size(), len(identities)-1)
+		require.Len(t, allPairwiseSeeds[i], len(identities)-1)
 	}
 
 	// each pair of seeds for all parties match
@@ -57,8 +59,8 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 			if i == j {
 				continue
 			}
-			seedOfIFromJ, _ := allPairwiseSeeds[i].Get(participants[j].MyIdentityKey)
-			seedOfJFromI, _ := allPairwiseSeeds[j].Get(participants[i].MyIdentityKey)
+			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey.Hash()]
+			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey.Hash()]
 			require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 		}
 	}
@@ -66,11 +68,11 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 10} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				testHappyPath(t, boundedCurve, boundedN)
 			})

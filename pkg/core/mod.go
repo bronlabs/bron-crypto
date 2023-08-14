@@ -1,10 +1,3 @@
-//
-// Copyright Coinbase, Inc. All Rights Reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
-//
-// Package core contains convenience functions for modular arithmetic.
-
 // Package core contains a set of primitives, including but not limited to various
 // elliptic curves, hashes, and commitment schemes. These primitives are used internally
 // and can also be used independently on their own externally.

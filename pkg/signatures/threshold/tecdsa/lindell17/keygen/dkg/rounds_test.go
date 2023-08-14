@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -24,7 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 
@@ -41,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 	r1OutsB, r1OutsU, err := gennaro_dkg_test_utils.DoDkgRound1(gennaroParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := gennaro_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)
@@ -147,10 +147,10 @@ func Test_HappyPath(t *testing.T) {
 					myShard := shards[i]
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
-					theirEncryptedSigningShare, _ := theirShard.PaillierEncryptedShares.Get(identities[i])
+					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
 					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare, err := cipherSuite.Curve.NewScalar().SetBigInt(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetBigInt(theirDecryptedSigningShareInt)
 					require.NoError(t, err)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}

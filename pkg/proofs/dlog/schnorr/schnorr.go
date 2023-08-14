@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
@@ -62,22 +62,22 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	var err error
 	result := &Proof{}
 
-	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
+	curve, err := p.BasePoint.Curve()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
 	}
 
 	statement := p.BasePoint.Mul(x)
-	k := curve.Scalar.Random(rand.Reader)
+	k := curve.Scalar().Random(rand.Reader)
 	R := p.BasePoint.Mul(k)
 
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
 	p.transcript.AppendPoints(rLabel, R)
 	p.transcript.AppendPoints(statementLabel, statement)
 	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
-	digest := p.transcript.ExtractBytes(digestLabel, native.FieldBytes)
+	digest := p.transcript.ExtractBytes(digestLabel, impl.FieldBytes)
 
-	result.C, err = curve.Scalar.SetBytes(digest)
+	result.C, err = curve.Scalar().SetBytes(digest)
 	if err != nil {
 		return nil, nil, errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
 	}
@@ -97,7 +97,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 		return errs.NewInvalidArgument("basepoint is identity")
 	}
 
-	curve, err := curves.GetCurveByName(basePoint.CurveName())
+	curve, err := basePoint.Curve()
 	if err != nil {
 		return errs.WrapFailed(err, "could not get the curve by name")
 	}
@@ -114,9 +114,9 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	transcript.AppendPoints(rLabel, R)
 	transcript.AppendPoints(statementLabel, statement)
 	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
-	digest := transcript.ExtractBytes(digestLabel, native.FieldBytes)
+	digest := transcript.ExtractBytes(digestLabel, impl.FieldBytes)
 
-	computedChallenge, err := curve.Scalar.SetBytes(digest)
+	computedChallenge, err := curve.Scalar().SetBytes(digest)
 	if err != nil {
 		return errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
 	}

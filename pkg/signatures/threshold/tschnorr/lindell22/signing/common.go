@@ -4,20 +4,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId *hashmap.HashMap[integration.IdentityKey, int]) (curves.Scalar, error) {
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId map[integration.IdentityHash]int) (curves.Scalar, error) {
 	shamirIndices := make([]int, len(participants))
-	var exists bool
 	for i, identity := range participants {
-		shamirIndices[i], exists = identityKeyToSharingId.Get(identity)
-		if !exists {
-			return nil, errs.NewFailed("identity not found")
-		}
+		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]
 	}
 	share := &shamir.Share{
 		Id:    mySharingId,

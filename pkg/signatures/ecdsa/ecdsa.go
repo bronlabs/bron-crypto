@@ -6,6 +6,9 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 )
@@ -55,21 +58,21 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *big.Int
 
 	//nolint:gocritic // below is not a switch
-	if p, ok := bigR.(*curves.PointK256); ok {
+	if p, ok := bigR.(*k256.Point); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
-	} else if p, ok := bigR.(*curves.PointP256); ok {
+	} else if p, ok := bigR.(*p256.Point); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
 	} else {
 		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
 	}
 
-	curve, err := curves.GetCurveByName(bigR.CurveName())
+	curve, err := bigR.Curve()
 	if err != nil {
 		return -1, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return -1, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
@@ -101,11 +104,11 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
-	curve, err := curves.GetCurveByName(signature.R.CurveName())
+	curve, err := signature.R.Curve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.CurveName())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
@@ -127,7 +130,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		ryCompressed[0]++
 	}
 	affine := append(ryCompressed, rxBytes...)
-	bigR, err := curve.Point.FromAffineCompressed(affine)
+	bigR, err := curve.Point().FromAffineCompressed(affine)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate R")
 	}
@@ -142,7 +145,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get int from hash")
 	}
-	z, err := curve.NewScalar().SetBytes(zInt.Bytes())
+	z, err := curve.Scalar().SetBytes(zInt.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
@@ -156,11 +159,11 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 }
 
 func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Point, message []byte) error {
-	curve, err := curves.GetCurveByName(publicKey.CurveName())
+	curve, err := publicKey.Curve()
 	if err != nil {
 		return errs.WrapFailed(err, "could not get curve")
 	}
-	if curve.Name != curves.K256Name && curve.Name != curves.P256Name {
+	if curve.Name() != k256.Name && curve.Name() != p256.Name {
 		return errs.NewFailed("curve is not supported")
 	}
 	if !publicKey.IsOnCurve() {
@@ -184,7 +187,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		return errs.WrapFailed(err, "could not produce message digest")
 	}
 
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
@@ -200,8 +203,8 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	return nil
 }
 
-func HashToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
-	ecdsaCurve, err := curve.ToEllipticCurve()
+func HashToInt(digest []byte, curve curves.Curve) (*big.Int, error) {
+	ecdsaCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}

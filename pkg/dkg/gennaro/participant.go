@@ -75,7 +75,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		},
 		prng:            prng,
 		CohortConfig:    cohortConfig,
-		H:               cohortConfig.CipherSuite.Curve.Point.Hash([]byte(NothingUpMySleeve)),
+		H:               cohortConfig.CipherSuite.Curve.Point().Hash([]byte(NothingUpMySleeve)),
 		round:           1,
 		UniqueSessionId: uniqueSessionId,
 	}

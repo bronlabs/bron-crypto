@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
@@ -38,9 +37,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P], err error) {
+func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []map[integration.IdentityHash]*gennaro.Round1P2P, err error) {
 	round1BroadcastOutputs = make([]*gennaro.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]map[integration.IdentityHash]*gennaro.Round1P2P, len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -51,24 +50,23 @@ func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func MapDkgRound1OutputsToRound2Inputs(participants []*gennaro.Participant, round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P]) (round2BroadcastInputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1Broadcast], round2UnicastInputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P]) {
-	round2BroadcastInputs = make([]*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1Broadcast], len(participants))
+func MapDkgRound1OutputsToRound2Inputs(participants []*gennaro.Participant, round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []map[integration.IdentityHash]*gennaro.Round1P2P) (round2BroadcastInputs []map[integration.IdentityHash]*gennaro.Round1Broadcast, round2UnicastInputs []map[integration.IdentityHash]*gennaro.Round1P2P) {
+	round2BroadcastInputs = make([]map[integration.IdentityHash]*gennaro.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2BroadcastInputs[i] = hashmap.NewHashMap[integration.IdentityKey, *gennaro.Round1Broadcast]()
+		round2BroadcastInputs[i] = make(map[integration.IdentityHash]*gennaro.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2BroadcastInputs[i].Put(participants[j].GetIdentityKey(), round1BroadcastOutputs[j])
+				round2BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round1BroadcastOutputs[j]
 			}
 		}
 	}
 
-	round2UnicastInputs = make([]*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P], len(participants))
+	round2UnicastInputs = make([]map[integration.IdentityHash]*gennaro.Round1P2P, len(participants))
 	for i := range participants {
-		round2UnicastInputs[i] = hashmap.NewHashMap[integration.IdentityKey, *gennaro.Round1P2P]()
+		round2UnicastInputs[i] = make(map[integration.IdentityHash]*gennaro.Round1P2P)
 		for j := range participants {
 			if j != i {
-				output, _ := round1UnicastOutputs[j].Get(participants[i].GetIdentityKey())
-				round2UnicastInputs[i].Put(participants[j].GetIdentityKey(), output)
+				round2UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round1UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
 			}
 		}
 	}
@@ -76,7 +74,7 @@ func MapDkgRound1OutputsToRound2Inputs(participants []*gennaro.Participant, roun
 	return round2BroadcastInputs, round2UnicastInputs
 }
 
-func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1Broadcast], round2UnicastInputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round1P2P]) (round2Outputs []*gennaro.Round2Broadcast, err error) {
+func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []map[integration.IdentityHash]*gennaro.Round1Broadcast, round2UnicastInputs []map[integration.IdentityHash]*gennaro.Round1P2P) (round2Outputs []*gennaro.Round2Broadcast, err error) {
 	round2Outputs = make([]*gennaro.Round2Broadcast, len(participants))
 	for i := range participants {
 		round2Outputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -87,13 +85,13 @@ func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []*h
 	return round2Outputs, nil
 }
 
-func MapDkgRound2OutputsToRound3Inputs(participants []*gennaro.Participant, round3Outputs []*gennaro.Round2Broadcast) (round3Inputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round2Broadcast]) {
-	round3Inputs = make([]*hashmap.HashMap[integration.IdentityKey, *gennaro.Round2Broadcast], len(participants))
+func MapDkgRound2OutputsToRound3Inputs(participants []*gennaro.Participant, round3Outputs []*gennaro.Round2Broadcast) (round3Inputs []map[integration.IdentityHash]*gennaro.Round2Broadcast) {
+	round3Inputs = make([]map[integration.IdentityHash]*gennaro.Round2Broadcast, len(participants))
 	for i := range participants {
-		round3Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *gennaro.Round2Broadcast]()
+		round3Inputs[i] = make(map[integration.IdentityHash]*gennaro.Round2Broadcast)
 		for j := range participants {
 			if j != i {
-				round3Inputs[i].Put(participants[j].GetIdentityKey(), round3Outputs[j])
+				round3Inputs[i][participants[j].GetIdentityKey().Hash()] = round3Outputs[j]
 			}
 		}
 	}
@@ -101,7 +99,7 @@ func MapDkgRound2OutputsToRound3Inputs(participants []*gennaro.Participant, roun
 	return round3Inputs
 }
 
-func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []*hashmap.HashMap[integration.IdentityKey, *gennaro.Round2Broadcast]) (signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, err error) {
+func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []map[integration.IdentityHash]*gennaro.Round2Broadcast) (signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, err error) {
 	signingKeyShares = make([]*threshold.SigningKeyShare, len(participants))
 	publicKeyShares = make([]*threshold.PublicKeyShares, len(participants))
 	for i := range participants {

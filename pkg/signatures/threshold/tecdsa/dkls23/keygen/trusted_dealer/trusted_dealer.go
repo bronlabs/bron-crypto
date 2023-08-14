@@ -3,12 +3,12 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -17,29 +17,29 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (*hashmap.HashMap[integration.IdentityKey, *dkls23.Shard], error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityHash]*dkls23.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
-	if cohortConfig.CipherSuite.Curve.Name != curves.K256Name && cohortConfig.CipherSuite.Curve.Name != curves.P256Name {
-		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name)
+	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
+		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
 	}
 	if cohortConfig.Protocol != protocols.DKLS23 {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 
-	curve := curves.K256()
-	eCurve, err := curve.ToEllipticCurve()
+	curve := k256.New()
+	eCurve, err := curveutils.ToEllipticCurve(curve)
 	ecdsaPrivateKey, err := ecdsa.GenerateKey(eCurve, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
-	privateKey, err := curve.Scalar.SetBigInt(ecdsaPrivateKey.D)
+	privateKey, err := curve.Scalar().SetBigInt(ecdsaPrivateKey.D)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "could not convert go private key bytes to a knox scalar")
 	}
-	publicKey, err := curve.Point.Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "could not convert go public key bytes to a knox point")
 	}
@@ -57,37 +57,33 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (*hashmap.Ha
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	shamirIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	results := hashmap.NewHashMap[integration.IdentityKey, *dkls23.Shard]()
+	results := map[integration.IdentityHash]*dkls23.Shard{}
 
-	for shamirId, identityKey := range shamirIdsToIdentityKeys {
-		share := shamirShares[shamirId-1].Value
-		results.Put(identityKey, &dkls23.Shard{
+	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+		share := shamirShares[sharingId-1].Value
+		results[identityKey.Hash()] = &dkls23.Shard{
 			SigningKeyShare: &dkls23.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
 			},
 			// Not currently supported
 			PublicKeyShares: nil,
-			PairwiseSeeds:   zero.NewPairwiseSeeds(),
-		})
+			PairwiseSeeds:   dkls23.PairwiseSeeds{},
+		}
 	}
 
-	for _, identityKey := range results.Keys() {
-		for _, otherIdentityKey := range results.Keys() {
-			if identityKey.PublicKey().Equal(otherIdentityKey.PublicKey()) {
+	for identityKey := range results {
+		for otherIdentityKey := range results {
+			if identityKey == otherIdentityKey {
 				continue
 			}
-			randomSeed := [native.FieldBytes]byte{}
+			randomSeed := [impl.FieldBytes]byte{}
 			if _, err := crand.Read(randomSeed[:]); err != nil {
 				return nil, errs.WrapFailed(err, "could not produce random seed")
 			}
-			shard, exists := results.Get(identityKey)
-			if !exists {
-				return nil, errs.NewInvalidArgument("shard not found")
-			}
-			shard.PairwiseSeeds.Put(otherIdentityKey, randomSeed)
+			results[identityKey].PairwiseSeeds[otherIdentityKey] = randomSeed
 		}
 	}
 	return results, nil

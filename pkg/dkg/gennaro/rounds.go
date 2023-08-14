@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	pedersenDkg "github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
@@ -30,11 +30,11 @@ type Round2Broadcast struct {
 	A_i0Proof   *dlog.Proof
 }
 
-func (p *Participant) Round1() (*Round1Broadcast, *hashmap.HashMap[integration.IdentityKey, *Round1P2P], error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
+	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 	dealer, err := pedersen.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.H)
 	if err != nil {
@@ -44,7 +44,7 @@ func (p *Participant) Round1() (*Round1Broadcast, *hashmap.HashMap[integration.I
 
 	proverTranscript := merlin.NewTranscript(DlogProofLabel)
 	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, proverTranscript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
@@ -55,7 +55,7 @@ func (p *Participant) Round1() (*Round1Broadcast, *hashmap.HashMap[integration.I
 	}
 	prover.BasePoint = p.H
 
-	outboundP2PMessages := hashmap.NewHashMap[integration.IdentityKey, *Round1P2P]()
+	outboundP2PMessages := map[integration.IdentityHash]*Round1P2P{}
 	for sharingId, identityKey := range p.sharingIdToIdentityKey {
 		if sharingId == p.MySharingId {
 			continue
@@ -63,10 +63,10 @@ func (p *Participant) Round1() (*Round1Broadcast, *hashmap.HashMap[integration.I
 		sharingIndex := sharingId - 1
 		xij := dealt.SecretShares[sharingIndex].Value
 		xPrimeIJ := dealt.BlindingShares[sharingIndex].Value
-		outboundP2PMessages.Put(identityKey, &Round1P2P{
+		outboundP2PMessages[identityKey.Hash()] = &Round1P2P{
 			X_ij:      xij,
 			XPrime_ij: xPrimeIJ,
-		})
+		}
 		dealt.SecretShares[sharingIndex] = nil
 		dealt.BlindingShares[sharingIndex] = nil
 	}
@@ -83,7 +83,7 @@ func (p *Participant) Round1() (*Round1Broadcast, *hashmap.HashMap[integration.I
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast], round1outputP2P *hashmap.HashMap[integration.IdentityKey, *Round1P2P]) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]*Round1Broadcast, round1outputP2P map[integration.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -102,13 +102,13 @@ func (p *Participant) Round2(round1outputBroadcast *hashmap.HashMap[integration.
 		if !exists {
 			return nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}
-		broadcastedMessageFromSender, exists := round1outputBroadcast.Get(senderIdentityKey)
+		broadcastedMessageFromSender, exists := round1outputBroadcast[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("do not have broadcasted message of the sender with sharing id %d", senderSharingId)
 		}
 		senderBlindedCommitmentVector := broadcastedMessageFromSender.BlindedCommitments
 
-		p2pMessageFromSender, exists := round1outputP2P.Get(senderIdentityKey)
+		p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("did not get a p2p message from sender with sharing id %d", senderSharingId)
 		}
@@ -125,7 +125,7 @@ func (p *Participant) Round2(round1outputBroadcast *hashmap.HashMap[integration.
 		}
 
 		secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.X_ij)
-		round1outputP2P.Remove(senderIdentityKey)
+		round1outputP2P[senderIdentityKey.Hash()] = nil
 		receivedBlindedCommitmentVectors[senderSharingId] = senderBlindedCommitmentVector
 		partialPublicKeyShares[senderSharingId] = p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(p2pMessageFromSender.X_ij)
 	}
@@ -140,7 +140,7 @@ func (p *Participant) Round2(round1outputBroadcast *hashmap.HashMap[integration.
 	}, nil
 }
 
-func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityKey, *Round2Broadcast]) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
+func (p *Participant) Round3(round2output map[integration.IdentityHash]*Round2Broadcast) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
 	if p.round != 3 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -157,7 +157,7 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 		if !exists {
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}
-		broadcastedMessageFromSender, exists := round2output.Get(senderIdentityKey)
+		broadcastedMessageFromSender, exists := round2output[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with sharing id %d", senderSharingId)
 		}
@@ -167,8 +167,8 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
-			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
+		if p.CohortConfig.CipherSuite.Curve.Name() == edwards25519.Name {
+			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*edwards25519.Point)
 			if !ok {
 				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with sharingId %d did not have a valid commitment to her local secret.", senderSharingId)
 			}
@@ -183,7 +183,7 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 
 		transcript := merlin.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (sharing id: %d)", senderSharingId)
 		}
 
@@ -191,8 +191,8 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 		for k := 0; k < p.CohortConfig.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MySharingId).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk
@@ -213,10 +213,7 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't derive public key shares")
 	}
-	myPresumedPublicKeyShare, exists := publicKeySharesMap.Get(p.MyIdentityKey)
-	if !exists {
-		return nil, nil, errs.NewMissing("couldn't find my public key share")
-	}
+	myPresumedPublicKeyShare := publicKeySharesMap[p.MyIdentityKey.Hash()]
 	myPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(p.state.secretKeyShare)
 	if !myPublicKeyShare.Equal(myPresumedPublicKeyShare) {
 		return nil, nil, errs.NewFailed("did not calculate my public key share correctly")

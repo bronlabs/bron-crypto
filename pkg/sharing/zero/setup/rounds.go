@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
@@ -23,17 +22,14 @@ type Round2P2P struct {
 	Witness commitments.Witness
 }
 
-func (p *Participant) Round1() (*hashmap.HashMap[integration.IdentityKey, *Round1P2P], error) {
+func (p *Participant) Round1() (map[integration.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	output := hashmap.NewHashMap[integration.IdentityKey, *Round1P2P]()
+	output := map[integration.IdentityHash]*Round1P2P{}
 	for _, participant := range p.Participants {
-		sharingId, exists := p.IdentityKeyToSharingId.Get(participant)
-		if !exists {
-			return nil, errs.NewFailed("could not find sharing id for participant %s", participant)
-		}
+		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue
 		}
@@ -49,71 +45,65 @@ func (p *Participant) Round1() (*hashmap.HashMap[integration.IdentityKey, *Round
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with sharing id %d", sharingId)
 		}
-		p.state.sentSeeds.Put(participant, &committedSeedContribution{
+		p.state.sentSeeds[participant.Hash()] = &committedSeedContribution{
 			seed:       seedForThisParticipant,
 			commitment: commitment,
 			witness:    witness,
-		})
-		output.Put(participant, &Round1P2P{
+		}
+		output[participant.Hash()] = &Round1P2P{
 			Commitment: commitment,
-		})
+		}
 	}
 	p.round++
 	return output, nil
 }
 
-func (p *Participant) Round2(round1output *hashmap.HashMap[integration.IdentityKey, *Round1P2P]) (*hashmap.HashMap[integration.IdentityKey, *Round2P2P], error) {
+func (p *Participant) Round2(round1output map[integration.IdentityHash]*Round1P2P) (map[integration.IdentityHash]*Round2P2P, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	output := hashmap.NewHashMap[integration.IdentityKey, *Round2P2P]()
+	output := map[integration.IdentityHash]*Round2P2P{}
 	for _, participant := range p.Participants {
-		sharingId, exists := p.IdentityKeyToSharingId.Get(participant)
-		if !exists {
-			return nil, errs.NewFailed("could not find sharing id for participant %s", participant)
-		}
+		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round1output.Get(participant)
+		message, exists := round1output[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
 		if message.Commitment == nil {
 			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty commitment", sharingId)
 		}
-		p.state.receivedSeeds.Put(participant, message.Commitment)
-		contributed, exists := p.state.sentSeeds.Get(participant)
+		p.state.receivedSeeds[participant.Hash()] = message.Commitment
+		contributed, exists := p.state.sentSeeds[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("missing what I contributed to participant with sharing id %d", sharingId)
 		}
-		output.Put(participant, &Round2P2P{
+		output[participant.Hash()] = &Round2P2P{
 			Message: contributed.seed,
 			Witness: contributed.witness,
-		})
+		}
 	}
 	p.round++
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityKey, *Round2P2P]) (zero.PairwiseSeeds, error) {
+func (p *Participant) Round3(round2output map[integration.IdentityHash]*Round2P2P) (zero.PairwiseSeeds, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
-	pairwiseSeeds := zero.NewPairwiseSeeds()
+	pairwiseSeeds := zero.PairwiseSeeds{}
 	for _, participant := range p.Participants {
-		sharingId, exists := p.IdentityKeyToSharingId.Get(participant)
-		if !exists {
-			return nil, errs.NewFailed("could not find sharing id for participant %s", participant)
-		}
+		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue
 		}
-		message, exists := round2output.Get(participant)
+		message, exists := round2output[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
-		commitment, exists := p.state.receivedSeeds.Get(participant)
+		commitment, exists := p.state.receivedSeeds[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("do not have a commitment from participant with sharing id %d", sharingId)
 		}
@@ -126,7 +116,7 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 		if err := commitments.Open(h, message.Message, commitment, message.Witness); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "commitment from participant with sharing id %d can't be opened", sharingId)
 		}
-		myContributedSeed, exists := p.state.sentSeeds.Get(participant)
+		myContributedSeed, exists := p.state.sentSeeds[participant.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("what I contributed to the participant with sharing id %d is missing", sharingId)
 		}
@@ -142,7 +132,7 @@ func (p *Participant) Round3(round2output *hashmap.HashMap[integration.IdentityK
 		}
 		finalSeed := zero.Seed{}
 		copy(finalSeed[:], finalSeedBytes)
-		pairwiseSeeds.Put(participant, finalSeed)
+		pairwiseSeeds[participant.Hash()] = finalSeed
 	}
 	p.round++
 	return pairwiseSeeds, nil

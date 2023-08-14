@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 )
 
 type Round1Broadcast struct {
@@ -22,8 +21,8 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Commitments: make([]*AttestedCommitmentToNoncePair, p.Tau),
 	}
 	for j := 0; j < p.Tau; j++ {
-		dj := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
-		ej := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
+		dj := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		ej := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 		Dj := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(dj)
 		Ej := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ej)
 		message := Dj.ToAffineCompressed()
@@ -45,18 +44,18 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(round1output *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) (*PreSignatureBatch, []*PrivateNoncePair, error) {
+func (p *PreGenParticipant) Round2(round1output map[integration.IdentityHash]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}
-	if _, exists := round1output.Get(p.MyIdentityKey); exists {
+	if _, exists := round1output[p.MyIdentityKey.Hash()]; exists {
 		return nil, nil, errs.NewFailed("message found whose sender is me")
 	}
-	round1output.Put(p.MyIdentityKey, &Round1Broadcast{
+	round1output[p.MyIdentityKey.Hash()] = &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
-	})
-	if round1output.Size() != p.CohortConfig.TotalParties {
+	}
+	if len(round1output) != p.CohortConfig.TotalParties {
 		return nil, nil, errs.NewIncorrectCount("the number of received messages is not equal to total parties")
 	}
 
@@ -67,7 +66,7 @@ func (p *PreGenParticipant) Round2(round1output *hashmap.HashMap[integration.Ide
 		preSignature := make(PreSignature, len(p.CohortConfig.Participants))
 		for j, participant := range p.CohortConfig.Participants {
 			senderSharingId := j + 1
-			message, exists := round1output.Get(participant)
+			message, exists := round1output[participant.Hash()]
 			if !exists {
 				return nil, nil, errs.NewMissing("did not receive any message from sharing id %d", senderSharingId)
 			}

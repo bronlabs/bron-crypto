@@ -18,10 +18,12 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
@@ -40,7 +42,7 @@ var (
 
 // we assume that input curves and hash functions are valid
 var (
-	allCurves = []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()}
+	allCurves = []curves.Curve{edwards25519.New(), k256.New(), p256.New()}
 	allHashes = []func() hash.Hash{sha3.New256, sha512.New, sha256.New}
 )
 
@@ -234,12 +236,12 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]*hashmap.HashMap[integration.IdentityKey, *noninteractive.Round1Broadcast], len(participants))
+	round2Inputs := make([]map[integration.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = hashmap.NewHashMap[integration.IdentityKey, *noninteractive.Round1Broadcast]()
+		round2Inputs[i] = make(map[integration.IdentityHash]*noninteractive.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2Inputs[i].Put(participants[j].MyIdentityKey, round1Outputs[j])
+				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
 			}
 		}
 	}
@@ -252,7 +254,7 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 	return preSignatureBatch, privateNoncePairsOfAllParties
 }
 
-func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*threshold.SigningKeyShare, []*threshold.PublicKeyShares) {
+func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*threshold.SigningKeyShare, []*threshold.PublicKeyShares) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -267,7 +269,7 @@ func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte(secretValue)), &schnorr.Options{
+		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)), &schnorr.Options{
 			TranscriptPrefixes: [][]byte{[]byte(transcriptPrefixes)},
 			TranscriptSuffixes: [][]byte{[]byte(transcriptSuffixes)},
 		})

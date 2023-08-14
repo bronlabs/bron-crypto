@@ -1,7 +1,6 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -21,8 +20,8 @@ type Participant struct {
 	MyIdentityKey         integration.IdentityKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   *hashmap.HashMap[integration.IdentityKey, *vsot.Sender]
-	BaseOTReceiverParties *hashmap.HashMap[integration.IdentityKey, *vsot.Receiver]
+	BaseOTSenderParties   map[integration.IdentityHash]*vsot.Sender
+	BaseOTReceiverParties map[integration.IdentityHash]*vsot.Receiver
 
 	Shard *dkls23.Shard
 }
@@ -54,23 +53,21 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := hashmap.NewHashMap[integration.IdentityKey, *vsot.Sender]()
-	receivers := hashmap.NewHashMap[integration.IdentityKey, *vsot.Receiver]()
+	senders := make(map[integration.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
+	receivers := make(map[integration.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
 	for _, participant := range cohortConfig.Participants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
 		// 256 should be replaced with kappa once ot extensions are here
-		newSender, err := vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		senders.Put(participant, newSender)
-		newReceiver, err := vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}
-		receivers.Put(participant, newReceiver)
 	}
 	transcript.AppendMessages("DKLs23 DKG Participant", uniqueSessionId)
 	return &Participant{

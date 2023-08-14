@@ -11,16 +11,16 @@ import (
 type Share = shamir.Share
 
 func Verify(share *Share, commitments []curves.Point) (err error) {
-	curve, err := curves.GetCurveByName(commitments[0].CurveName())
+	curve, err := share.Value.Curve()
 	if err != nil {
-		return errs.WrapInvalidCurve(err, "no such curve: %s", commitments[0].CurveName())
+		return errs.WrapInvalidCurve(err, "no such curve: %s", curve.Name())
 	}
 	err = share.Validate(curve)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "share validation failed")
 	}
-	x := curve.Scalar.New(share.Id)
-	i := curve.Scalar.One()
+	x := curve.Scalar().New(share.Id)
+	i := curve.Scalar().One()
 
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
@@ -43,10 +43,10 @@ func Verify(share *Share, commitments []curves.Point) (err error) {
 
 type Dealer struct {
 	Threshold, Total int
-	Curve            *curves.Curve
+	Curve            curves.Curve
 }
 
-func NewDealer(threshold, total int, curve *curves.Curve) (*Dealer, error) {
+func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	if total < threshold {
 		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
 	}

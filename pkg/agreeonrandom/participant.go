@@ -14,7 +14,7 @@ import (
 type Participant struct {
 	prng io.Reader
 
-	Curve         *curves.Curve
+	Curve         curves.Curve
 	MyIdentityKey integration.IdentityKey
 
 	state *State
@@ -26,7 +26,7 @@ type State struct {
 	r_i        curves.Scalar
 }
 
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
@@ -18,7 +17,7 @@ type preGenParticipantState struct {
 	bigR        []curves.Point
 	bigRWitness []commitments.Witness
 
-	theirBigRCommitments []*hashmap.HashMap[integration.IdentityKey, commitments.Commitment]
+	theirBigRCommitments []map[integration.IdentityHash]commitments.Commitment
 }
 
 type PreGenParticipant struct {

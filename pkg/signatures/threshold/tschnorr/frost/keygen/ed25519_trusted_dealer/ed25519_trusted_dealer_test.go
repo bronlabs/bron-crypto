@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
@@ -18,7 +19,7 @@ import (
 )
 
 type identityKey struct {
-	curve  *curves.Curve
+	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
 }
@@ -46,7 +47,7 @@ func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message [
 
 func Test_happyPath(t *testing.T) {
 	t.Parallel()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	h := sha512.New
 
 	cipherSuite := &integration.CipherSuite{
@@ -88,9 +89,9 @@ func Test_happyPath(t *testing.T) {
 	signingKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, signingKeyShares)
-	require.Equal(t, signingKeyShares.Size(), cohortConfig.TotalParties)
+	require.Len(t, signingKeyShares, cohortConfig.TotalParties)
 
-	for _, signingKeyShare := range signingKeyShares.GetMap() {
+	for _, signingKeyShare := range signingKeyShares {
 		err = signingKeyShare.Validate()
 		require.NoError(t, err)
 	}

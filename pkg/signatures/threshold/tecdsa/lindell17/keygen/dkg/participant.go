@@ -1,7 +1,6 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	"io"
 	"math/big"
 
@@ -31,18 +30,18 @@ type State struct {
 	myRPrime          *big.Int
 	myRDoublePrime    *big.Int
 
-	theirBigQCommitment          *hashmap.HashMap[integration.IdentityKey, commitments.Commitment]
-	theirBigQPrime               *hashmap.HashMap[integration.IdentityKey, curves.Point]
-	theirBigQDoublePrime         *hashmap.HashMap[integration.IdentityKey, curves.Point]
-	theirPaillierPublicKeys      *hashmap.HashMap[integration.IdentityKey, *paillier.PublicKey]
-	theirPaillierEncryptedShares *hashmap.HashMap[integration.IdentityKey, paillier.CipherText]
+	theirBigQCommitment          map[integration.IdentityHash]commitments.Commitment
+	theirBigQPrime               map[integration.IdentityHash]curves.Point
+	theirBigQDoublePrime         map[integration.IdentityHash]curves.Point
+	theirPaillierPublicKeys      map[integration.IdentityHash]*paillier.PublicKey
+	theirPaillierEncryptedShares map[integration.IdentityHash]paillier.CipherText
 
-	lpProvers                *hashmap.HashMap[integration.IdentityKey, *lp.Prover]
-	lpVerifiers              *hashmap.HashMap[integration.IdentityKey, *lp.Verifier]
-	lpdlPrimeProvers         *hashmap.HashMap[integration.IdentityKey, *lpdl.Prover]
-	lpdlPrimeVerifiers       *hashmap.HashMap[integration.IdentityKey, *lpdl.Verifier]
-	lpdlDoublePrimeProvers   *hashmap.HashMap[integration.IdentityKey, *lpdl.Prover]
-	lpdlDoublePrimeVerifiers *hashmap.HashMap[integration.IdentityKey, *lpdl.Verifier]
+	lpProvers                map[integration.IdentityHash]*lp.Prover
+	lpVerifiers              map[integration.IdentityHash]*lp.Verifier
+	lpdlPrimeProvers         map[integration.IdentityHash]*lpdl.Prover
+	lpdlPrimeVerifiers       map[integration.IdentityHash]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[integration.IdentityHash]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[integration.IdentityHash]*lpdl.Verifier
 }
 
 type Participant struct {
@@ -52,7 +51,7 @@ type Participant struct {
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId  *hashmap.HashMap[integration.IdentityKey, int]
+	idKeyToSharingId  map[integration.IdentityHash]int
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader

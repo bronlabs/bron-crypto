@@ -69,7 +69,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 
 // Prove proves knowledge of dlog of the statement, using Fischlin.
 func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
-	curve, err := curves.GetCurveByName(p.BasePoint.CurveName())
+	curve, err := p.BasePoint.Curve()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
 	}
@@ -85,7 +85,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	A := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i] = curve.Scalar.Random(tprng)
+		a[i] = curve.Scalar().Random(tprng)
 		// step P.2
 		A[i] = p.BasePoint.Mul(a[i])
 	}
@@ -104,7 +104,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 				return nil, nil, errs.WrapFailed(err, "sampling")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
-			e_i := curve.Scalar.Hash(e_i_bytes[:])
+			e_i := curve.Scalar().Hash(e_i_bytes[:])
 
 			// step P.3.3
 			z_i := a[i].Add(x.Mul(e_i))

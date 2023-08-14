@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -20,7 +20,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	prng := crand.Reader
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
@@ -35,12 +35,10 @@ func Test_CanInitialize(t *testing.T) {
 	aliceIdx := 0
 	bobIdx := 1
 	sessionId := []byte("DummySession")
-	shard, _ := shards.Get(identities[aliceIdx])
-	alice, err := interactive.NewPrimaryCosigner(identities[aliceIdx], identities[bobIdx], shard, cohortConfig, sessionId, nil, prng)
+	alice, err := interactive.NewPrimaryCosigner(identities[aliceIdx], identities[bobIdx], shards[identities[aliceIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	shard, _ = shards.Get(identities[bobIdx])
-	bob, err := interactive.NewSecondaryCosigner(identities[bobIdx], identities[aliceIdx], shard, cohortConfig, sessionId, nil, prng)
+	bob, err := interactive.NewSecondaryCosigner(identities[bobIdx], identities[aliceIdx], shards[identities[bobIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
 

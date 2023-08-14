@@ -11,7 +11,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashmap"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -46,7 +45,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k
-		k[i] = p.cohortConfig.CipherSuite.Curve.NewScalar().Random(p.prng)
+		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 		// 2. compute R = k * G
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
@@ -68,21 +67,21 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input *hashmap.HashMap[integration.IdentityKey, *Round1Broadcast]) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitment := make([]*hashmap.HashMap[integration.IdentityKey, commitments.Commitment], p.tau)
+	theirBigRCommitment := make([]map[integration.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitment[i] = hashmap.NewHashMap[integration.IdentityKey, commitments.Commitment]()
+		theirBigRCommitment[i] = make(map[integration.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
-			in, ok := input.Get(identity)
+			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
-			theirBigRCommitment[i].Put(identity, in.BigRCommitment[i])
+			theirBigRCommitment[i][identity.Hash()] = in.BigRCommitment[i]
 		}
 
 		// 1. compute proof of dlog knowledge of R
@@ -103,16 +102,16 @@ func (p *PreGenParticipant) Round2(input *hashmap.HashMap[integration.IdentityKe
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input *hashmap.HashMap[integration.IdentityKey, *Round2Broadcast]) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input map[integration.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
-	BigR := make([]*hashmap.HashMap[integration.IdentityKey, curves.Point], p.tau)
+	BigR := make([]map[integration.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
-		BigR[i] = hashmap.NewHashMap[integration.IdentityKey, curves.Point]()
+		BigR[i] = make(map[integration.IdentityHash]curves.Point)
 		for _, identity := range p.cohortConfig.Participants {
-			in, ok := input.Get(identity)
+			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
@@ -122,11 +121,7 @@ func (p *PreGenParticipant) Round3(input *hashmap.HashMap[integration.IdentityKe
 			theirPid := identity.PublicKey().ToAffineCompressed()
 
 			// 1. verify commitment
-			theirBigRCommitment, exists := p.state.theirBigRCommitment[i].Get(identity)
-			if !exists {
-				return nil, errs.NewIdentifiableAbort("no commitment from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
-			}
-			if err := openCommitment(theirBigR, i, p.tau, theirPid, p.sid, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+			if err := openCommitment(theirBigR, i, p.tau, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[i][identity.Hash()], theirBigRWitness); err != nil {
 				return nil, errs.WrapFailed(err, "cannot open R commitment")
 			}
 
@@ -134,7 +129,7 @@ func (p *PreGenParticipant) Round3(input *hashmap.HashMap[integration.IdentityKe
 			if err := dlogVerifyProof(in.BigRProof[i], theirBigR, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
 				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
-			BigR[i].Put(identity, theirBigR)
+			BigR[i][identity.Hash()] = theirBigR
 		}
 	}
 
@@ -171,15 +166,15 @@ func openCommitment(bigR curves.Point, i, tau int, pid, sid, bigS []byte, commit
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
-	curve, err := curves.GetCurveByName(x.CurveName())
+	curve, err := x.Curve()
 	if err != nil {
-		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
 
-	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
 	}
@@ -195,14 +190,14 @@ func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []
 }
 
 func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (err error) {
-	curve, err := curves.GetCurveByName(bigR.CurveName())
+	curve, err := bigR.Curve()
 	if err != nil {
-		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
-	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot verify commitment")
 	}
 
