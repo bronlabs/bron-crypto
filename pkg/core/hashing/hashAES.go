@@ -45,15 +45,15 @@ See the README.md for the full algorithm description.
 */
 type HashAes struct {
 	outputBlockLength int
-	inputCount        int
+	counter           int
 	blockCipher       cipher.Block
 	hashIv            []byte
 	digest            []byte
 
 	// Auxiliary variables. Allocated once and used on every `Write`, thus this
 	// implementation is not thread-safe (only one thread per ExtendedTMMO).
-	permutedOnceBlock []byte // Store π(x)
-	chainedInputBlock []byte // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+	permutedOnceBlock []byte // Store π(x) on every iteration.
+	aesKey            []byte // Store the key on every iteration.
 }
 
 // NewHashAes creates a new HashAes object to perform AES256-based hashing. It
@@ -70,34 +70,35 @@ func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
 		internalHashIv = []byte(HashIv)
 	} else {
 		internalHashIv = make([]byte, len(hashIv))
-		copy(internalHashIv, hashIv) // Create our own copy of the hashIv
+		copy(internalHashIv, hashIv) // Create a copy of the hashIv for Reset
 	}
 	if len(internalHashIv) < AesKeySize {
 		return nil, errs.NewInvalidLength("iv length must be at least %d bytes", AesKeySize)
 	}
+	aesKey := make([]byte, AesKeySize)
+	copy(aesKey, internalHashIv[:AesKeySize])
 	blockCipher, err := aes.NewCipher(internalHashIv[:AesKeySize])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create block cipher")
 	}
 	// 2) Initialise the digest and the auxiliary variables.
-	digest := make([]byte, outputLength)            // Store the final digest
-	permutedOnceBlock := make([]byte, AesBlockSize) // Store π(x)
-	chainedInputBlock := make([]byte, AesBlockSize) // Store x[j] ⊕ TMMO^π(x̂[j-1],i),i)
+	digest := make([]byte, outputLength)
+	permutedOnceBlock := make([]byte, AesBlockSize)
 	return &HashAes{
 		outputBlockLength: outputLength / AesBlockSize,
-		inputCount:        0,
+		counter:           0,
 		blockCipher:       blockCipher,
 		hashIv:            internalHashIv,
 		digest:            digest,
 		permutedOnceBlock: permutedOnceBlock,
-		chainedInputBlock: chainedInputBlock,
+		aesKey:            aesKey,
 	}, nil
 }
 
 // Write (via the embedded io.Writer interface) adds more data to the running hash.
 // It never returns an error.
 func (h *HashAes) Write(input []byte) (n int, err error) {
-	// A) Align the input into blocks of AesBlockSize bytes. Pad if unalligned.
+	// A) Align the input into blocks of AesBlockSize bytes. Pad 0s if unalligned.
 	inputLength := len(input)
 	inputBlockLength := (inputLength + AesBlockSize - 1) / AesBlockSize // ceil
 	if inputLength%AesBlockSize != 0 || inputBlockLength > 1 {
@@ -107,43 +108,35 @@ func (h *HashAes) Write(input []byte) (n int, err error) {
 	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
 	for i := 0; i < h.outputBlockLength; i++ {
 		outputBlock := h.digest[i*AesBlockSize : (i+1)*AesBlockSize]
-		// B) Loop over the input blocks.
+		// 3.B) Loop over the input blocks.
 		for j := 0; j < inputBlockLength; j++ {
-			// B) If the input `x` contains more than one block, we chain
-			// the TMMOs to each input block by XORing the output of a block
-			// with the input of the next: x̂[j] = x[j] ⊕ TMMO^π(x̂[j-1],i),i)
-			inputBlock := input[j*AesBlockSize : (j+1)*AesBlockSize]
-			if (inputBlockLength > 1 && j > 0) || h.inputCount > 0 {
-				for k := 0; k < AesBlockSize; k++ {
-					h.chainedInputBlock[k] = inputBlock[k] ^ outputBlock[k]
-				}
-				inputBlock = h.chainedInputBlock // Reference the auxiliary input block
-			}
 			// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
+			inputBlock := input[j*AesBlockSize : (j+1)*AesBlockSize]
 			// 3.1.1) π(x) - Apply the block cipher to the current block.
 			h.blockCipher.Encrypt(h.permutedOnceBlock, inputBlock)
 			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
-			// For the index, we combine the output block index `i` (spelled in
-			// the TMMO) with the input block index `j`.
-			index := int32((j + 1) + i*inputBlockLength)
-			xorIndex(h.permutedOnceBlock, outputBlock, index)
+			// We increase a hash-level counter on each TMMO call and use it as index.
+			h.counter++
+			xorIndex(h.permutedOnceBlock, outputBlock, int32(h.counter))
 			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
 			h.blockCipher.Encrypt(outputBlock, outputBlock)
 			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
 			for k := 0; k < AesBlockSize; k++ {
 				outputBlock[k] ^= h.permutedOnceBlock[k]
 			}
-		}
-		// 3.2) Refresh the key for the next iteration using the current block.
-		// Use half of the existing key to cover the 2 blocks of the key (AES256)
-		if i < h.outputBlockLength-1 {
-			h.blockCipher, err = aes.NewCipher(outputBlock)
+			// 3.1.B) Refresh the AES256 key for the next iteration.
+			// 	key[1] = key[0] ⊕ key[1]
+			for k := AesBlockSize; k < AesKeySize; k++ {
+				h.aesKey[k] ^= h.aesKey[k-AesBlockSize]
+			}
+			// 	key[0] = TMMO^π(x,i)
+			copy(h.aesKey[:AesBlockSize], outputBlock)
+			h.blockCipher, err = aes.NewCipher(h.aesKey)
 			if err != nil {
 				return i + 1, errs.WrapFailed(err, "failed to re-key block cipher")
 			}
 		}
 	}
-	h.inputCount++
 	return len(h.digest), nil
 }
 
@@ -160,15 +153,15 @@ func (*HashAes) BlockSize() int {
 
 // Reset resets the Hash to its initial state.
 func (h *HashAes) Reset() {
-	h.inputCount = 0
-	blockCipher, err := aes.NewCipher(h.hashIv[:AesKeySize])
+	h.counter = 0
+	h.aesKey = h.hashIv[:AesKeySize]
+	blockCipher, err := aes.NewCipher(h.aesKey)
 	if err != nil {
 		panic("failed to create block cipher") // panic because Reset doesn't return error
 	}
 	h.blockCipher = blockCipher
 	bitstring.Memset(h.digest, byte(0))
 	bitstring.Memset(h.permutedOnceBlock, byte(0))
-	bitstring.Memset(h.chainedInputBlock, byte(0))
 }
 
 // Sum appends the current hash to b and returns the resulting slice.
