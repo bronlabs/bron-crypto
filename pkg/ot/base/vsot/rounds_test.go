@@ -9,14 +9,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot/test_utils"
 )
 
 func TestOtOnMultipleCurves(t *testing.T) {
 	t.Parallel()
-	curveInstances := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
+	curveInstances := []curves.Curve{
+		k256.New(),
+		p256.New(),
 	}
 	for _, curve := range curveInstances {
 		batchSize := 256

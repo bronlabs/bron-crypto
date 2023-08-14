@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -28,14 +30,14 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 	prng := crand.Reader
 	transcriptAppLabel := "Lindell2017NonInteractiveSignTest"
 
-	supportedCurves := []*curves.Curve{
-		curves.P256(),
-		curves.K256(),
+	supportedCurves := []curves.Curve{
+		p256.New(),
+		k256.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 
 			cipherSuite := &integration.CipherSuite{

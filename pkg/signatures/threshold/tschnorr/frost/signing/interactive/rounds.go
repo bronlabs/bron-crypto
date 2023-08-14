@@ -19,8 +19,8 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, error) {
 	if ic.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
-	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
-	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.d_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.e_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
 	ic.state.D_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.d_i)
 	ic.state.E_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.e_i)
 	ic.round++

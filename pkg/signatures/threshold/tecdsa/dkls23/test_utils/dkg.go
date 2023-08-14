@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 )
 
-func MakeDkgParticipants(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
+func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
@@ -208,7 +208,7 @@ func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[inte
 	return shards, nil
 }
 
-func RunDKG(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
+func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
 	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, err

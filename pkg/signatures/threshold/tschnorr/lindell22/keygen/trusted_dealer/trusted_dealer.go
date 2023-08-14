@@ -1,9 +1,10 @@
 package trusted_dealer
 
 import (
+	"io"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
-	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -22,7 +23,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
-	schnorrPrivateKey := curve.NewScalar().Random(prng)
+	schnorrPrivateKey := curve.Scalar().Random(prng)
 	schnorrPublicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)

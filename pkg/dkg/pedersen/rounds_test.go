@@ -16,6 +16,8 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -25,7 +27,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
-func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -89,7 +91,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, h func() hash.Hash, thresh
 	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
 }
 
-func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, threshold, n int) {
+func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -120,7 +122,7 @@ func testInvalidSid(t *testing.T, curve *curves.Curve, h func() hash.Hash, thres
 	require.Error(t, err)
 }
 
-func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -143,13 +145,13 @@ func testPreviousDkgRoundReuse(t *testing.T, curve *curves.Curve, hash func() ha
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	r3InsU[attackerIndex][identities[1].Hash()].Xij = curve.Scalar.Hash(uniqueSessionId)
+	r3InsU[attackerIndex][identities[1].Hash()].Xij = curve.Scalar().Hash(uniqueSessionId)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err))
 }
 
-func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -198,7 +200,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve *curves.Curve, hash func() h
 	require.NotEqual(t, alphaAliceDlogProof, betaAliceDlogProof)
 }
 
-func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -222,9 +224,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 
 	t.Run("proving something irrelevant", func(t *testing.T) {
 		t.Parallel()
-		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
+		prover, err := schnorr.NewProver(cipherSuite.Curve.Point().Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Random(prng))
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Random(prng))
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {
@@ -236,9 +238,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
-		prover, err := schnorr.NewProver(cipherSuite.Curve.Point.Generator(), []byte("sid"), nil)
+		prover, err := schnorr.NewProver(cipherSuite.Curve.Point().Generator(), []byte("sid"), nil)
 		require.NoError(t, err)
-		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar.Zero())
+		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Zero())
 		require.NoError(t, err)
 		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {
@@ -250,7 +252,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve *cu
 	})
 }
 
-func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() hash.Hash) {
+func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -281,7 +283,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve *curves.Curve, hash func() ha
 	require.True(t, strings.Contains(err.Error(), "dlog proof"))
 }
 
-func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
+func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -331,7 +333,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve *curves.Curve, hash func(
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -344,7 +346,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -356,7 +358,7 @@ func Test_HappyPath(t *testing.T) {
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -369,7 +371,7 @@ func TestInvalidSid(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testInvalidSid(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -380,7 +382,7 @@ func TestInvalidSid(t *testing.T) {
 
 func TestShouldAbortIfAliceReusesValueFromPreviousDkgRound(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -393,7 +395,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgRound(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testPreviousDkgRoundReuse(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -405,7 +407,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgRound(t *testing.T) {
 func TestShouldAbortIfAliceReusesValueFromPreviousDkgExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				tAlpha int
@@ -421,7 +423,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgExecution(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Abort test with curve=%s and hash=%s and (t1=%d,n1=%d), (t2=%d,n2=%d)", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.tAlpha, boundedThresholdConfig.nBeta, boundedThresholdConfig.tBeta, boundedThresholdConfig.nBeta), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Abort test with curve=%s and hash=%s and (t1=%d,n1=%d), (t2=%d,n2=%d)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.tAlpha, boundedThresholdConfig.nBeta, boundedThresholdConfig.tBeta, boundedThresholdConfig.nBeta), func(t *testing.T) {
 					t.Parallel()
 					testPreviousDkgExecutionReuse(t, boundedCurve, boundedHash, boundedThresholdConfig.tAlpha, boundedThresholdConfig.nAlpha, boundedThresholdConfig.tBeta, boundedThresholdConfig.nBeta)
 				})
@@ -433,7 +435,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgExecution(t *testing.T) {
 func TestAliceDlogProofIsUnique(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				threshold int
@@ -447,7 +449,7 @@ func TestAliceDlogProofIsUnique(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Alice DLOG proof is unique with curve=%s and hash=%s and (t=%d,n=%d)", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.threshold, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Alice DLOG proof is unique with curve=%s and hash=%s and (t=%d,n=%d)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.threshold, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testAliceDlogProofIsUnique(t, boundedCurve, boundedHash, boundedThresholdConfig.threshold, boundedThresholdConfig.n)
 				})
@@ -459,7 +461,7 @@ func TestAliceDlogProofIsUnique(t *testing.T) {
 func TestAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				threshold int
@@ -473,7 +475,7 @@ func TestAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Alice DLOG proof is unique with curve=%s and hash=%s and (t=%d,n=%d)", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.threshold, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Alice DLOG proof is unique with curve=%s and hash=%s and (t=%d,n=%d)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.threshold, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testAliceDlogProofStatementIsSameAsPartialPublicKey(t, boundedCurve, boundedHash, boundedThresholdConfig.threshold, boundedThresholdConfig.n)
 				})
@@ -485,12 +487,12 @@ func TestAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T) {
 func TestAbortOnRogueKeyAttack(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			boundedCurve := curve
 			boundedHash := h
 			boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-			t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
 				t.Parallel()
 				testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash)
 			})

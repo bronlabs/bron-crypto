@@ -18,6 +18,9 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -39,7 +42,7 @@ var (
 
 // we assume that input curves and hash functions are valid
 var (
-	allCurves = []*curves.Curve{curves.ED25519(), curves.K256(), curves.P256()}
+	allCurves = []curves.Curve{edwards25519.New(), k256.New(), p256.New()}
 	allHashes = []func() hash.Hash{sha3.New256, sha512.New, sha256.New}
 )
 
@@ -251,7 +254,7 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 	return preSignatureBatch, privateNoncePairsOfAllParties
 }
 
-func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*threshold.SigningKeyShare, []*threshold.PublicKeyShares) {
+func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*threshold.SigningKeyShare, []*threshold.PublicKeyShares) {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -266,7 +269,7 @@ func doDkg(t *testing.T, curve *curves.Curve, h func() hash.Hash, n int, fz *fuz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte(secretValue)), &schnorr.Options{
+		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)), &schnorr.Options{
 			TranscriptPrefixes: [][]byte{[]byte(transcriptPrefixes)},
 			TranscriptSuffixes: [][]byte{[]byte(transcriptSuffixes)},
 		})

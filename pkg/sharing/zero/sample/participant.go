@@ -11,7 +11,7 @@ import (
 )
 
 type Participant struct {
-	Curve               *curves.Curve
+	Curve               curves.Curve
 	MyIdentityKey       integration.IdentityKey
 	MySharingId         int
 	PresentParticipants []integration.IdentityKey
@@ -25,8 +25,8 @@ type Participant struct {
 }
 
 func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
-	if cohortConfig.CipherSuite.Curve == nil {
-		return nil, errs.NewInvalidArgument("curve is nil")
+	if err := cohortConfig.CipherSuite.Validate(); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")

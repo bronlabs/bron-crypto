@@ -40,7 +40,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", primaryCosigner.round)
 	}
 
-	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(primaryCosigner.prng)
+	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
 	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
 	bigR1CommitmentMessage := append(
@@ -68,11 +68,11 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
 
-	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().Random(secondaryCosigner.prng)
+	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
 	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
-	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
+	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -97,13 +97,13 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	bigR2ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
-	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
+	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
 	}
 
 	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
-	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.NewGeneratorPoint(), bigR1ProofSessionId, nil)
+	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR1ProofSessionId, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -117,7 +117,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 
 	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
 	bigRx, _ := lindell17.GetPointCoordinates(primaryCosigner.state.bigR)
-	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
+	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -142,13 +142,13 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	bigR1ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
-	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point.Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId, nil); err != nil { // TODO: clone transcript
+	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId, nil); err != nil { // TODO: clone transcript
 		return nil, errs.WrapFailed(err, "cannot verify R1 dlog proof")
 	}
 
 	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
 	bigRx, _ := lindell17.GetPointCoordinates(bigR)
-	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar.SetBigInt(bigRx)
+	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -199,7 +199,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}
-	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.NewScalar().SetBigInt(sPrimeInt)
+	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(sPrimeInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar value")
 	}

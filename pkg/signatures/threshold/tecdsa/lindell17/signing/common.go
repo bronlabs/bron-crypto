@@ -15,7 +15,7 @@ import (
 )
 
 // CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of there other party.
-func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, curve *curves.Curve) (curves.Scalar, error) {
+func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, curve curves.Curve) (curves.Scalar, error) {
 	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create shamir dealer")
@@ -70,7 +70,7 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *big.Int, pk 
 	return c3, nil
 }
 
-func MessageToScalar(hashFunc func() hash.Hash, curve *curves.Curve, message []byte) (curves.Scalar, error) {
+func MessageToScalar(hashFunc func() hash.Hash, curve curves.Curve, message []byte) (curves.Scalar, error) {
 	messageHash, err := hashing.Hash(hashFunc, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash message")
@@ -79,7 +79,7 @@ func MessageToScalar(hashFunc func() hash.Hash, curve *curves.Curve, message []b
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
 	}
-	mPrime, err := curve.NewScalar().SetBigInt(mPrimeInt)
+	mPrime, err := curve.Scalar().SetBigInt(mPrimeInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash to scalar")
 	}

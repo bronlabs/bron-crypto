@@ -8,6 +8,8 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -21,7 +23,7 @@ type PrivateKey struct {
 }
 
 type PublicKey struct {
-	Curve *curves.Curve
+	Curve curves.Curve
 	Y     curves.Point
 }
 
@@ -53,11 +55,11 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		return errs.WrapDeserializationFailed(err, "couldn't extract C and S field from input")
 	}
 
-	s.R, err = curves.Curve{}.NewScalarFromJSON(parsed.R)
+	s.R, err = curveutils.NewScalarFromJSON(parsed.R)
 	if err != nil {
 		return errs.WrapDeserializationFailed(err, "couldn't deserialize R")
 	}
-	s.S, err = curves.Curve{}.NewScalarFromJSON(parsed.S)
+	s.S, err = curveutils.NewScalarFromJSON(parsed.S)
 	if err != nil {
 		return errs.WrapDeserializationFailed(err, "couldn't deserialize S")
 	}
@@ -77,7 +79,7 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar) (*Sig
 	if err != nil {
 		return nil, errs.WrapFailed(err, "key generation failed")
 	}
-	if cipherSuite.Curve.Name != curves.K256Name {
+	if cipherSuite.Curve.Name() != k256.Name {
 		return nil, errs.NewInvalidArgument("only secp256k1 is supported")
 	}
 
@@ -120,7 +122,7 @@ func (s *Signer) Sign(m, aux []byte) (*Signature, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to hash nonce")
 	}
-	kPrime, err = s.PublicKey.Curve.Scalar.SetBytes(hashedNonce)
+	kPrime, err = s.PublicKey.Curve.Scalar().SetBytes(hashedNonce)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to unmarshal random bytes")
 	}
@@ -139,7 +141,7 @@ func (s *Signer) Sign(m, aux []byte) (*Signature, error) {
 
 	// 12. Let sig = bytes(R) || bytes((k + ed) mod n).
 	// instead of merging into one byte slice, we store the values separately
-	signatureR, err := s.PublicKey.Curve.Scalar.SetBytes(R.ToAffineCompressed()[1:])
+	signatureR, err := s.PublicKey.Curve.Scalar().SetBytes(R.ToAffineCompressed()[1:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to marshal signature R")
 	}
@@ -156,12 +158,12 @@ func (s *Signer) Sign(m, aux []byte) (*Signature, error) {
 }
 
 // GenerateChallenge returns the challenge value based on the provided inputs.
-func GenerateChallenge(curve *curves.Curve, r, p, m []byte) (curves.Scalar, error) {
+func GenerateChallenge(curve curves.Curve, r, p, m []byte) (curves.Scalar, error) {
 	hashedChallenge, err := taggedHash(challengeHashLabel, bytes.Join([][]byte{r, p, m}, nil))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to hash challenge")
 	}
-	rand, err := curve.Scalar.SetBytes(hashedChallenge)
+	rand, err := curve.Scalar().SetBytes(hashedChallenge)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to unmarshal random bytes")
 	}
@@ -177,7 +179,7 @@ func getEvenKey(prime curves.Scalar, P curves.Point) curves.Scalar {
 	}
 }
 
-func KeyGen(curve *curves.Curve, secret curves.Scalar) (*PrivateKey, error) {
+func KeyGen(curve curves.Curve, secret curves.Scalar) (*PrivateKey, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
@@ -205,13 +207,13 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 	if !publicKey.Y.IsOnCurve() {
 		return errs.NewInvalidArgument("public key is not on curve")
 	}
-	ec, err := curve.ToEllipticCurve()
+	ec, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to convert curve to elliptic curve")
 	}
 	// 1. Let P = lift_x(int(pk)); fail if that fails.
 	// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
-	P, err := curve.Point.FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
+	P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
 	if err != nil {
 		return errs.WrapFailed(err, "failed to lift x")
 	}
@@ -245,7 +247,7 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 	if transcript == nil {
 		transcript = merlin.NewTranscript("BIP0340")
 	}
-	ec, err := curve.ToEllipticCurve()
+	ec, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to convert curve to elliptic curve")
 	}
@@ -253,19 +255,19 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 	if size != len(messages) || size != len(signatures) {
 		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal")
 	}
-	left := curve.Scalar.Zero()
+	left := curve.Scalar().Zero()
 	rightScalars := make([]curves.Scalar, 2*size)
 	rightPoints := make([]curves.Point, 2*size)
 	for i, publicKey := range publickeys {
 		// 1. Generate u-1 random integers a2...u in the range 1...n-1.
 		transcript.AppendMessages("batch-verify", publickeys[i].Y.ToAffineCompressed(), messages[i], signatures[i].R.Bytes(), signatures[i].S.Bytes())
-		a, err := curve.Scalar.SetBytes(transcript.ExtractBytes("batch-verify", A_SIZE))
+		a, err := curve.Scalar().SetBytes(transcript.ExtractBytes("batch-verify", A_SIZE))
 		if err != nil {
 			return errs.WrapFailed(err, "failed to set bytes for a_i")
 		}
 		// 2. Let Pi = lift_x(int(pki)); fail if it fails.
 		// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
-		P, err := curve.Point.FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
+		P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
 		if err != nil {
 			return errs.WrapFailed(err, "failed to lift publicKey.Y")
 		}
@@ -283,7 +285,7 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 			return errs.WrapFailed(err, "failed to get e")
 		}
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		R, err := curve.Point.FromAffineCompressed(append([]byte{0x02}, r.Bytes()...))
+		R, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, r.Bytes()...))
 		if err != nil {
 			return errs.WrapFailed(err, "failed to lift r")
 		}
@@ -292,7 +294,7 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 			left = left.Add(s)
 
 			// 7.2 store a_i in right for multiScalaMult later
-			rightScalars[i] = curve.Scalar.One()
+			rightScalars[i] = curve.Scalar().One()
 			rightScalars[size+i] = e
 		} else {
 			// 7.3 add a_i*s_i to left

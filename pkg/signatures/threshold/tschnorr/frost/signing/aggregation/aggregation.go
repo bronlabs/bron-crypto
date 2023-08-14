@@ -98,7 +98,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	// for identifiable abort, you need R_js
 	recomputedR_js := map[integration.IdentityHash]curves.Point{}
 	if sa.parameters.R == nil {
-		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point.Identity()
+		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point().Identity()
 		combinedDsAndEs := []byte{}
 		for _, presentParty := range sa.SessionParticipants {
 			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[presentParty.Hash()].ToAffineCompressed()...)
@@ -110,7 +110,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		for _, jIdentityKey := range sa.SessionParticipants {
 			j := sa.IdentityKeyToSharingId[jIdentityKey.Hash()]
 
-			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar.Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
+			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
 			D_j, exists := sa.parameters.D_alpha[jIdentityKey.Hash()]
 			if !exists {
 				return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", j)
@@ -189,7 +189,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 		}
 	}
 
-	z := sa.CohortConfig.CipherSuite.Curve.Scalar.Zero()
+	z := sa.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 	for _, partialSignature := range partialSignatures {
 		z = z.Add(partialSignature.Zi)
 	}

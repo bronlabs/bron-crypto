@@ -18,6 +18,8 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -27,7 +29,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
-func doDkg(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {
 		return nil, nil, err
@@ -115,7 +117,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 	return nil
 }
 
-func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -150,7 +152,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curv
 
 func TestSignEmptyMessage(t *testing.T) {
 	t.Helper()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	h := sha3.New256
 
 	cipherSuite := &integration.CipherSuite{
@@ -188,7 +190,7 @@ func TestSignEmptyMessage(t *testing.T) {
 	}
 }
 
-func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -245,7 +247,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
-func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n int) {
+func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -282,7 +284,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	require.NoError(t, err)
 
 	// use random scalar
-	partialSignatures[maliciousParty].Zi = curve.Scalar.Random(crand.Reader)
+	partialSignatures[maliciousParty].Zi = curve.Scalar().Random(crand.Reader)
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
 	require.True(t, errs.IsIdentifiableAbort(err))
@@ -291,7 +293,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -304,7 +306,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 				})
@@ -320,14 +322,14 @@ func TestRunProfile(t *testing.T) {
 	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
 		t.Skip("skipping profiling test missing parameter")
 	}
-	var curve *curves.Curve
+	var curve curves.Curve
 	var h func() hash.Hash
 	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
 	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
 	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = curves.ED25519()
+		curve = edwards25519.New()
 	} else {
-		curve = curves.K256()
+		curve = k256.New()
 	}
 	if os.Getenv("PROFILE_HASH") == "SHA3" {
 		h = sha3.New256
@@ -342,7 +344,7 @@ func TestRunProfile(t *testing.T) {
 func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -356,7 +358,7 @@ func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Abort when Alice try to use random partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Abort when Alice try to use random partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testPreviousPartialSignatureReuse(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
@@ -368,7 +370,7 @@ func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 func TestShouldAbortOnRandomPartialSignature(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -382,7 +384,7 @@ func TestShouldAbortOnRandomPartialSignature(t *testing.T) {
 				boundedHash := h
 				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Abort when Alice try to resuse previous partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Run(fmt.Sprintf("Abort when Alice try to resuse previous partial signature at aggregation with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testRandomPartialSignature(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})

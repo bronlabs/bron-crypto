@@ -2,9 +2,10 @@ package dkg
 
 import (
 	"crypto/sha256"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
-	
+
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -179,7 +180,7 @@ func (p *Participant) Round3(input map[integration.IdentityHash]*Round2Broadcast
 		p.state.theirBigQDoublePrime[idHash] = input[idHash].BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		theirBigQ := p.state.theirBigQPrime[idHash].Mul(p.cohortConfig.CipherSuite.Curve.NewScalar().New(3)).Add(p.state.theirBigQDoublePrime[idHash])
+		theirBigQ := p.state.theirBigQPrime[idHash].Mul(p.cohortConfig.CipherSuite.Curve.Scalar().New(3)).Add(p.state.theirBigQDoublePrime[idHash])
 		if !theirBigQ.Equal(p.publicKeyShares.SharesMap[idHash]) {
 			return nil, errs.NewIdentifiableAbort("invalid Q' or Q''")
 		}
@@ -475,12 +476,11 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
-	curveName := bigQ.CurveName()
-	curve, err := curves.GetCurveByName(curveName)
+	curve, err := bigQ.Curve()
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curveName)
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	generator := curve.NewGeneratorPoint()
+	generator := curve.Generator()
 
 	prover, err := dlog.NewProver(generator, sid, transcript)
 	if err != nil {
@@ -501,12 +501,11 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
-	curveName := bigQ.CurveName()
-	curve, err := curves.GetCurveByName(curveName)
+	curve, err := bigQ.Curve()
 	if err != nil {
-		return errs.WrapInvalidCurve(err, "invalid curve %s", curveName)
+		return errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	generator := curve.NewGeneratorPoint()
+	generator := curve.Generator()
 
 	return dlog.Verify(generator, bigQ, proof, sid, transcript)
 }

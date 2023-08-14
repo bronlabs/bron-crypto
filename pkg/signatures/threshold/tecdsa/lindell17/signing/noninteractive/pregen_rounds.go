@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
@@ -39,7 +40,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		k[i] = p.cohortConfig.CipherSuite.Curve.NewScalar().Random(p.prng)
+		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
 		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myIdentityKey, bigR[i])
 		if err != nil {
@@ -157,14 +158,14 @@ func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curve
 
 func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point) (proof *dlog.Proof, err error) {
 	curveName := k.CurveName()
-	curve, err := curves.GetCurveByName(curveName)
+	curve, err := curveutils.GetCurveByName(curveName)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
-	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct provererr")
 	}
@@ -182,14 +183,14 @@ func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integ
 
 func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
 	curveName := bigR.CurveName()
-	curve, err := curves.GetCurveByName(curveName)
+	curve, err := curveutils.GetCurveByName(curveName)
 	if err != nil {
 		return errs.WrapFailed(err, "invalid curve %s", curveName)
 	}
 
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
-	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog verify failed")
 	}
 	return nil

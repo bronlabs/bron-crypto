@@ -45,7 +45,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k
-		k[i] = p.cohortConfig.CipherSuite.Curve.NewScalar().Random(p.prng)
+		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 		// 2. compute R = k * G
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
@@ -166,15 +166,15 @@ func openCommitment(bigR curves.Point, i, tau int, pid, sid, bigS []byte, commit
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
-	curve, err := curves.GetCurveByName(x.CurveName())
+	curve, err := x.Curve()
 	if err != nil {
-		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
 
-	prover, err := dlog.NewProver(curve.NewGeneratorPoint(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
 	}
@@ -190,14 +190,14 @@ func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []
 }
 
 func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (err error) {
-	curve, err := curves.GetCurveByName(bigR.CurveName())
+	curve, err := bigR.Curve()
 	if err != nil {
-		return errs.NewInvalidCurve("invalid curve %s", curve.Name)
+		return errs.NewInvalidCurve("invalid curve %s", curve.Name())
 	}
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
-	if err := dlog.Verify(curve.NewGeneratorPoint(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot verify commitment")
 	}
 

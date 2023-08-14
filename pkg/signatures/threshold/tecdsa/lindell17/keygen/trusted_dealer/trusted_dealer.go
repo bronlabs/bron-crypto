@@ -2,10 +2,13 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -49,7 +52,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 
 	// verify public key
 	recoveredPublicKey := cohortConfig.CipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
-	publicKey, err := cohortConfig.CipherSuite.Curve.Point.Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "invalid ECDSA public key")
 	}
@@ -93,11 +96,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
-	if curve.Name != curves.K256Name && curve.Name != curves.P256Name {
-		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name)
+	if curve.Name() != k256.Name && curve.Name() != p256.Name {
+		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
 	}
 
-	eCurve, err := curve.ToEllipticCurve()
+	eCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert knox curve to go curve")
 	}
@@ -107,12 +110,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
 
-	privateKey, err := curve.Scalar.SetBigInt(ecdsaPrivateKey.D)
+	privateKey, err := curve.Scalar().SetBigInt(ecdsaPrivateKey.D)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "could not convert go private key bytes to a knox scalar")
 	}
 
-	publicKey, err := curve.Point.Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "could not convert go public key bytes to a knox point")
 	}

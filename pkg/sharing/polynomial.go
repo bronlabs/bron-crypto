@@ -29,16 +29,16 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	return out
 }
 
-func LagrangeCoefficients(curve *curves.Curve, identities []int) (map[int]curves.Scalar, error) {
+func LagrangeCoefficients(curve curves.Curve, identities []int) (map[int]curves.Scalar, error) {
 	xs := make(map[int]curves.Scalar, len(identities))
 	for _, xi := range identities {
-		xs[xi] = curve.Scalar.New(xi)
+		xs[xi] = curve.Scalar().New(xi)
 	}
 
 	result := make(map[int]curves.Scalar, len(identities))
 	for i, xi := range xs {
-		num := curve.Scalar.One()
-		den := curve.Scalar.One()
+		num := curve.Scalar().One()
+		den := curve.Scalar().One()
 		for j, xj := range xs {
 			if i == j {
 				continue

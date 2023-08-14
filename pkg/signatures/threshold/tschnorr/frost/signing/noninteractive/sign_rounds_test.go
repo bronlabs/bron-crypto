@@ -17,6 +17,8 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -27,7 +29,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
-func doDkg(curve *curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {
 		return nil, nil, err
@@ -115,7 +117,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 	return nil
 }
 
-func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
+func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
 	t.Helper()
 
 	message := []byte("something")
@@ -152,7 +154,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve *curves.Curv
 
 func TestSignNilMessage(t *testing.T) {
 	t.Helper()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	hash := sha3.New256
 
 	cipherSuite := &integration.CipherSuite{
@@ -191,7 +193,7 @@ func TestSignNilMessage(t *testing.T) {
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, tau := range []int{2, 5} {
 				for firstUnusedPreSignatureIndex := 0; firstUnusedPreSignatureIndex < tau; firstUnusedPreSignatureIndex++ {
@@ -209,7 +211,7 @@ func TestHappyPath(t *testing.T) {
 						boundedThresholdConfig := thresholdConfig
 						boundedTau := tau
 						firstUnusedPreSignatureIndex := firstUnusedPreSignatureIndex
-						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and first unused pre signature index=%d", boundedCurve.Name, boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex), func(t *testing.T) {
+						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and first unused pre signature index=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex), func(t *testing.T) {
 							t.Parallel()
 							testHappyPath(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
 						})
@@ -227,14 +229,14 @@ func TestRunProfile(t *testing.T) {
 	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
 		t.Skip("skipping profiling test missing parameter")
 	}
-	var curve *curves.Curve
+	var curve curves.Curve
 	var h func() hash.Hash
 	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
 	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
 	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = curves.ED25519()
+		curve = edwards25519.New()
 	} else {
-		curve = curves.K256()
+		curve = k256.New()
 	}
 	if os.Getenv("PROFILE_HASH") == "SHA3" {
 		h = sha3.New256

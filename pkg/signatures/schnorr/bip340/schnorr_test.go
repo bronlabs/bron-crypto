@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
 )
@@ -148,11 +149,11 @@ func TestVector(t *testing.T) {
 		}
 		t.Run(fmt.Sprintf("vector test #%d", i), func(t *testing.T) {
 			cipherSuite := &integration.CipherSuite{
-				Curve: curves.K256(),
+				Curve: k256.New(),
 				Hash:  sha3.New256,
 			}
 			d, _ := hex.DecodeString(v.SecretKey)
-			secret, _ := curves.K256().Scalar.SetBytes(d)
+			secret, _ := k256.New().Scalar().SetBytes(d)
 			signer, err := bip340.NewSigner(cipherSuite, secret)
 			require.NoError(t, err)
 			require.NotNil(t, signer)
@@ -173,9 +174,9 @@ func TestVector(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("vector signature test #%d", i), func(t *testing.T) {
-			curve := curves.K256()
+			curve := k256.New()
 			publicKey, _ := hex.DecodeString(v.PublicKey)
-			Y, err := curve.Point.FromAffineCompressed(append([]byte{0x02}, publicKey...))
+			Y, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey...))
 			require.NoError(t, err)
 			signature, _ := hex.DecodeString(v.Signature)
 			msg, _ := hex.DecodeString(v.Message)
@@ -183,8 +184,8 @@ func TestVector(t *testing.T) {
 				Curve: curve,
 				Y:     Y,
 			}
-			R, _ := curve.Scalar.SetBytes(signature[:32])
-			S, _ := curve.Scalar.SetBytes(signature[32:64])
+			R, _ := curve.Scalar().SetBytes(signature[:32])
+			S, _ := curve.Scalar().SetBytes(signature[32:64])
 			err = bip340.Verify(&pk, msg, &bip340.Signature{
 				R: R,
 				S: S,
@@ -212,9 +213,9 @@ func TestVector(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("vector pubkey test #%d", i), func(t *testing.T) {
-			curve := curves.K256()
+			curve := k256.New()
 			publicKey, _ := hex.DecodeString(v.PublicKey)
-			_, err := curve.Point.FromAffineCompressed(append([]byte{0x02}, publicKey...))
+			_, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey...))
 			require.Error(t, err)
 		})
 	}
@@ -229,18 +230,18 @@ func Test_HappyPath(t *testing.T) {
 		sha3.New256,
 		sha512.New,
 	}
-	for _, curve := range []*curves.Curve{curves.K256()} {
+	for _, curve := range []curves.Curve{k256.New()} {
 		for i, h := range hs {
 			boundedCurve := curve
 			boundedH := h
-			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name, i), func(t *testing.T) {
+			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 				t.Parallel()
 				cipherSuite := &integration.CipherSuite{
 					Curve: boundedCurve,
 					Hash:  boundedH,
 				}
 				d, _ := hex.DecodeString("3ceae3c1107ec58d28895bec5e5a6cd20b629fbd97f8002afcab6b9de7bd7259")
-				secret, _ := curve.Scalar.SetBytes(d)
+				secret, _ := curve.Scalar().SetBytes(d)
 				signer, err := bip340.NewSigner(cipherSuite, secret)
 				require.NoError(t, err)
 				require.NotNil(t, signer)
@@ -267,19 +268,19 @@ func Test_HappyPath_BatchVerify(t *testing.T) {
 		sha512.New,
 	}
 	for i, h := range hs {
-		boundedCurve := curves.K256()
+		boundedCurve := k256.New()
 		boundedH := h
-		t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name, i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 			t.Parallel()
 			cipherSuite := &integration.CipherSuite{
 				Curve: boundedCurve,
 				Hash:  boundedH,
 			}
-			alice, err := bip340.NewSigner(cipherSuite, boundedCurve.Scalar.Random(crand.Reader))
+			alice, err := bip340.NewSigner(cipherSuite, boundedCurve.Scalar().Random(crand.Reader))
 			require.NoError(t, err)
 			require.NotNil(t, alice)
 			require.NotNil(t, alice.PublicKey)
-			bob, err := bip340.NewSigner(cipherSuite, boundedCurve.Scalar.Random(crand.Reader))
+			bob, err := bip340.NewSigner(cipherSuite, boundedCurve.Scalar().Random(crand.Reader))
 			require.NoError(t, err)
 			require.NotNil(t, bob)
 			require.NotNil(t, bob.PublicKey)
@@ -303,7 +304,7 @@ func BenchmarkVerify(b *testing.B) {
 		b.Skip("skipping test in short mode.")
 	}
 	batchSize := 10000
-	boundedCurve := curves.K256()
+	boundedCurve := k256.New()
 	boundedH := sha3.New256
 	cipherSuite := &integration.CipherSuite{
 		Curve: boundedCurve,
@@ -311,7 +312,7 @@ func BenchmarkVerify(b *testing.B) {
 	}
 	aux := make([]byte, 32)
 	_, _ = crand.Read(aux)
-	signer, _ := bip340.NewSigner(cipherSuite, boundedCurve.Scalar.Random(crand.Reader))
+	signer, _ := bip340.NewSigner(cipherSuite, boundedCurve.Scalar().Random(crand.Reader))
 	messages := make([][]byte, batchSize)
 	pubkeys := make([]*bip340.PublicKey, batchSize)
 	signatures := make([]*bip340.Signature, batchSize)
@@ -343,10 +344,10 @@ func Test_CanJsonMarshalAndUnmarshal(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha512.New,
 	}
-	signer, err := bip340.NewSigner(cipherSuite, curves.K256().Scalar.Random(crand.Reader))
+	signer, err := bip340.NewSigner(cipherSuite, k256.New().Scalar().Random(crand.Reader))
 	require.NoError(t, err)
 	require.NotNil(t, signer)
 	require.NotNil(t, signer.PublicKey)

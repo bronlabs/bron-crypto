@@ -7,13 +7,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken/test_utils"
 )
 
-var curveInstances = []*curves.Curve{
-	curves.K256(),
-	curves.P256(),
+var curveInstances = []curves.Curve{
+	k256.New(),
+	p256.New(),
 }
 
 func TestOTextension(t *testing.T) {

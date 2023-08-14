@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
@@ -31,7 +32,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar.Random(p.prng)
+	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
 	dealer, err := feldman.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
@@ -46,7 +47,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 
 	transcript := merlin.NewTranscript(DkgLabel)
 	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point.Generator(), p.UniqueSessionId, transcript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
@@ -109,8 +110,8 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		if p.CohortConfig.CipherSuite.Curve.Name == curves.ED25519Name {
-			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*curves.PointEd25519)
+		if p.CohortConfig.CipherSuite.Curve.Name() == edwards25519.Name {
+			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*edwards25519.Point)
 			if !ok {
 				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with sharingId %d did not have a valid commitment to her local secret.", senderSharingId)
 			}
@@ -125,7 +126,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 
 		transcript := merlin.NewTranscript(DkgLabel)
 		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (sharing id: %d)", senderSharingId)
 		}
 
@@ -146,8 +147,8 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
 		for k := 0; k < p.CohortConfig.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar.New(k)
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar.New(p.MySharingId).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk
@@ -197,13 +198,13 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[integration.IdentityHash]curves.Point, error) {
 	shares := map[integration.IdentityHash]curves.Point{}
 	for j, identityKey := range sharingIdToIdentityKey {
-		Y_j := cohort.CipherSuite.Curve.Point.Identity()
+		Y_j := cohort.CipherSuite.Curve.Point().Identity()
 		for _, C_l := range commitmentVectors {
 			jToKs := make([]curves.Scalar, cohort.Threshold)
 			// TODO: add simultaneous scalar exp
 			for k := 0; k < cohort.Threshold; k++ {
-				exp := cohort.CipherSuite.Curve.Scalar.New(k)
-				jToK := cohort.CipherSuite.Curve.Scalar.New(j).Exp(exp)
+				exp := cohort.CipherSuite.Curve.Scalar().New(k)
+				jToK := cohort.CipherSuite.Curve.Scalar().New(j).Exp(exp)
 				jToKs[k] = jToK
 			}
 			jkC_lk, err := cohort.CipherSuite.Curve.MultiScalarMult(jToKs, C_l)

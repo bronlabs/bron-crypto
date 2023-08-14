@@ -10,7 +10,7 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	sample := p.Curve.Scalar.Zero()
+	sample := p.Curve.Scalar().Zero()
 	// We need to sample a random value that is consistent with the seeds we received from the other participants.
 	// Because we want to enforce that we abort if participants don't agree on who's present in the sampling phase.
 	var presentParticipantIdentityKey []byte
@@ -26,7 +26,7 @@ func (p *Participant) Sample() (zero.Sample, error) {
 		if !exists {
 			return nil, errs.NewMissing("could not find shared seeds for sharing id %d", sharingId)
 		}
-		sampled := p.Curve.Scalar.Hash(p.UniqueSessionId, presentParticipantIdentityKey, sharedSeed[:])
+		sampled := p.Curve.Scalar().Hash(p.UniqueSessionId, presentParticipantIdentityKey, sharedSeed[:])
 		if p.MySharingId < sharingId {
 			sample = sample.Add(sampled)
 		} else {

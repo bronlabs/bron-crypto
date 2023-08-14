@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -16,7 +17,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	curve := curves.K256()
+	curve := k256.New()
 	h := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

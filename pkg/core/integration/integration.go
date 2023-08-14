@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
@@ -29,7 +30,7 @@ type IdentityKey interface {
 }
 
 type CipherSuite struct {
-	Curve *curves.Curve
+	Curve curves.Curve
 	Hash  func() hash.Hash
 }
 
@@ -129,7 +130,7 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	copied := append([]IdentityKey{}, identityKeys...)
 	sort.Slice(copied, func(i, j int) bool {
 		switch copied[i].PublicKey().CurveName() {
-		case curves.ED25519Name:
+		case edwards25519.Name:
 			iKey := binary.LittleEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
 			jKey := binary.LittleEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
 			return iKey < jKey
