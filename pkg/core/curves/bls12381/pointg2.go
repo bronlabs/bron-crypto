@@ -215,6 +215,7 @@ func (p *PointG2) Pairing(rhs curves.PairingPoint) curves.Scalar {
 func (PointG2) X() curves.Element {
 	return nil
 }
+
 func (PointG2) Y() curves.Element {
 	return nil
 }
@@ -222,12 +223,12 @@ func (PointG2) Y() curves.Element {
 // func (p *PointBls12381G2) X() *big.Int {
 // 	x := p.Value.ToUncompressed()
 // 	return new(big.Int).SetBytes(x[:bls12381impl.WideFieldBytes])
-// }
+// }.
 
 // func (p *PointBls12381G2) Y() *big.Int {
 // 	y := p.Value.ToUncompressed()
 // 	return new(big.Int).SetBytes(y[bls12381impl.WideFieldBytes:])
-// }
+// }.
 
 func (*PointG2) Modulus() *big.Int {
 	return modulus

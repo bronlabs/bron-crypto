@@ -133,7 +133,7 @@ func (pc PairingCurve) Gt() curves.Scalar {
 	return pc.GT_
 }
 
-func (PairingCurve) Pairing(pG1 curves.PairingPoint, pG2 curves.PairingPoint) curves.Scalar {
+func (PairingCurve) Pairing(pG1, pG2 curves.PairingPoint) curves.Scalar {
 	return pG1.Pairing(pG2)
 }
 

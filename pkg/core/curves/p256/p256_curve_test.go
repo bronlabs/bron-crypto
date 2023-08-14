@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestScalarRandom(t *testing.T) {

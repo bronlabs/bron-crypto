@@ -4,8 +4,9 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
 )
 
 func TestNewPoly(t *testing.T) {

@@ -5,11 +5,12 @@ import (
 	"io"
 	"math/big"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"golang.org/x/crypto/sha3"
 )
 
 var _ (curves.Scalar) = (*ScalarGt)(nil)

@@ -655,6 +655,7 @@ func (p *BenchPoint) CurveName() string {
 func (BenchPoint) X() curves.Element {
 	return nil
 }
+
 func (BenchPoint) Y() curves.Element {
 	return nil
 }

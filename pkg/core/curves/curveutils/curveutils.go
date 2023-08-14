@@ -28,7 +28,6 @@ func NewScalarFromJSON(data []byte) (curves.Scalar, error) {
 		return nil, errs.WrapInvalidCurve(err, "could not fetch curve")
 	}
 	return internal.NewScalarFromJSON(curve.Scalar().SetBytes, data)
-
 }
 
 // ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.

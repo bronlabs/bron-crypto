@@ -429,6 +429,7 @@ func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
 func (BenchPoint) X() curves.Element {
 	return nil
 }
+
 func (BenchPoint) Y() curves.Element {
 	return nil
 }

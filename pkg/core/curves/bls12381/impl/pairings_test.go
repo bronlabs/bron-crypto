@@ -4,8 +4,9 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
 
 func TestSinglePairing(t *testing.T) {

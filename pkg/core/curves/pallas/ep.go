@@ -4,10 +4,11 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"golang.org/x/crypto/blake2b"
 )
 
 type Ep struct {
@@ -67,7 +68,7 @@ func (p *Ep) Double(other *Ep) *Ep {
 	r := new(Ep)
 	// essentially paraphrased https://github.com/MinaProtocol/c-reference-signer/blob/master/crypto.c#L306-L337
 	a := new(fp.Fp).Square(other.x)
-	//nolint:govet // it produces a shadow error for b defined at the top. disabled for readability
+	
 	b := new(fp.Fp).Square(other.y)
 	c := new(fp.Fp).Square(b)
 	r.x = new(fp.Fp).Add(other.x, b)

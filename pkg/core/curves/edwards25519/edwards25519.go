@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	filippo "filippo.io/edwards25519"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )

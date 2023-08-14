@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/stretchr/testify/require"
 )
 
 type mockReader struct {

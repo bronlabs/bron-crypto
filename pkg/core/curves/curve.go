@@ -25,7 +25,7 @@ type PairingCurve interface {
 	G2() Curve
 	Gt() Scalar
 
-	Pairing(pG1 PairingPoint, pG2 PairingPoint) Scalar
+	Pairing(pG1, pG2 PairingPoint) Scalar
 	MultiPairing(...PairingPoint) Scalar
 }
 

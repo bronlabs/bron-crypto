@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
 
 func TestG2IsOnCurve(t *testing.T) {

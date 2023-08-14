@@ -10,6 +10,7 @@ import (
 	filippo "filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -375,6 +376,7 @@ func (p *Point) IsSmallOrder() bool {
 func (Point) X() curves.Element {
 	return nil
 }
+
 func (Point) Y() curves.Element {
 	return nil
 }

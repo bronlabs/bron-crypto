@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	secp256k1 "github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fq"

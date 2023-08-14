@@ -215,17 +215,18 @@ func (p *PointG1) Pairing(rhs curves.PairingPoint) curves.Scalar {
 func (PointG1) X() curves.Element {
 	return nil
 }
+
 func (PointG1) Y() curves.Element {
 	return nil
 }
 
 // func (p *PointBls12381G1) X() *big.Int {
 // 	return p.Value.GetX().BigInt()
-// }
+// }.
 
 // func (p *PointBls12381G1) Y() *big.Int {
 // 	return p.Value.GetY().BigInt()
-// }
+// }.
 
 func (*PointG1) Modulus() *big.Int {
 	return modulus
