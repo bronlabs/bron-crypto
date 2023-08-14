@@ -19,7 +19,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -122,7 +122,7 @@ func NewSender(curve curves.Curve, batchSize int, uniqueSessionId []byte, transc
 		return nil, errs.NewInvalidArgument("batch size should be a multiple of 8")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
 	transcript.AppendMessages("VSOT Sender", uniqueSessionId)
 	return &Sender{
@@ -143,7 +143,7 @@ func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, tran
 	}
 
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 

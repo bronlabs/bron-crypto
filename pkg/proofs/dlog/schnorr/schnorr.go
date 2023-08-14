@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -47,7 +47,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 		return nil, errs.NewIsIdentity("basepoint is identity")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(domainSeparationLabel)
+		transcript = hagrid.NewTranscript(domainSeparationLabel)
 	}
 	return &Prover{
 		BasePoint:       basePoint,
@@ -88,7 +88,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 // Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
 func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript transcripts.Transcript) error {
 	if transcript == nil {
-		transcript = merlin.NewTranscript(domainSeparationLabel)
+		transcript = hagrid.NewTranscript(domainSeparationLabel)
 	}
 	if basePoint == nil {
 		return errs.NewInvalidArgument("basepoint is nil")

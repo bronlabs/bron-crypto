@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type PrivateKey struct {
@@ -245,7 +245,7 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.CipherSuite, publickeys []*PublicKey, messages [][]byte, signatures []*Signature) error {
 	curve := cipherSuite.Curve
 	if transcript == nil {
-		transcript = merlin.NewTranscript("BIP0340")
+		transcript = hagrid.NewTranscript("BIP0340")
 	}
 	ec, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {

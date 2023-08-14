@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -72,7 +72,7 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 	}
 
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))

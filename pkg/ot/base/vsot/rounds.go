@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
@@ -39,7 +39,7 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.P
 
 	// Generate the ZKP proof.
 	// TODO: implement cloning
-	clonedTranscript := merlin.NewTranscript("VSOT")
+	clonedTranscript := hagrid.NewTranscript("VSOT")
 	prover, err := schnorr.NewProver(sender.Curve.Generator(), sender.UniqueSessionId, clonedTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing schnorr prover")
@@ -55,7 +55,7 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.P
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Protocol 7 (page 16) of the paper.
 func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *schnorr.Proof) ([]ReceiversMaskedChoices, error) {
 	receiver.SenderPublicKey = senderPublicKey
-	clonedTranscript := merlin.NewTranscript("VSOT")
+	clonedTranscript := hagrid.NewTranscript("VSOT")
 	if err := schnorr.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "verifying schnorr proof in seed OT receiver round 2")
 	}

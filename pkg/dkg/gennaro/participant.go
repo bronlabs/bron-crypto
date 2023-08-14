@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 // To get H for Pedersen commitments, we'll hash below to curve. We assume that It is not
@@ -63,7 +63,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_KNOX_GENNARO_DKG-")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_GENNARO_DKG-")
 	}
 	if len(uniqueSessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", uniqueSessionId)

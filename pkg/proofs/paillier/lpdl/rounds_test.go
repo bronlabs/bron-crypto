@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -171,13 +171,13 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
-	verifierTranscript := merlin.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
 	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := merlin.NewTranscript(transcriptLabel)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel)
 	prover, err := lpdl.NewProver(sessionId, sk, x, r, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err
