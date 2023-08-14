@@ -22,7 +22,7 @@ func (e Element) Value() curves.FieldValue {
 	return e.v.ToRaw()
 }
 
-func (e Element) Modulus() curves.FieldValue {
+func (Element) Modulus() curves.FieldValue {
 	return *fp.Modulus
 }
 

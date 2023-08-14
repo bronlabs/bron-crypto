@@ -238,7 +238,7 @@ func (p *Point) Y() curves.Element {
 }
 
 func (*Point) Params() *elliptic.CurveParams {
-	return K256Curve().Params()
+	return NewElliptic().Params()
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {

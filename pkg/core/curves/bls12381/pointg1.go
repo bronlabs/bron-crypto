@@ -171,7 +171,7 @@ func (*PointG1) CurveName() string {
 	return G1Name
 }
 
-func multiScalarMultBls12381G1(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func MultiScalarMultBls12381G1(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*bls12381impl.G1, len(points))
 	nScalars := make([]*impl.Field, len(scalars))
 	for i, pt := range points {
@@ -233,7 +233,11 @@ func (*PointG1) Modulus() *big.Int {
 }
 
 func (p *PointG1) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	result, err := internal.PointMarshalBinary(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal to binary")
+	}
+	return result, nil
 }
 
 func (p *PointG1) UnmarshalBinary(input []byte) error {
@@ -250,7 +254,11 @@ func (p *PointG1) UnmarshalBinary(input []byte) error {
 }
 
 func (p *PointG1) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	result, err := internal.PointMarshalText(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal to text")
+	}
+	return result, nil
 }
 
 func (p *PointG1) UnmarshalText(input []byte) error {
@@ -267,7 +275,11 @@ func (p *PointG1) UnmarshalText(input []byte) error {
 }
 
 func (p *PointG1) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	result, err := internal.PointMarshalJson(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal to json")
+	}
+	return result, nil
 }
 
 func (p *PointG1) UnmarshalJSON(input []byte) error {

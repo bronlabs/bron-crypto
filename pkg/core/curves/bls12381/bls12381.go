@@ -121,11 +121,11 @@ func (pc PairingCurve) Name() string {
 	return pc.Name_
 }
 
-func (pc PairingCurve) G1() curves.Curve {
+func (PairingCurve) G1() curves.Curve {
 	return bls12381g1
 }
 
-func (pc PairingCurve) G2() curves.Curve {
+func (PairingCurve) G2() curves.Curve {
 	return bls12381g2
 }
 

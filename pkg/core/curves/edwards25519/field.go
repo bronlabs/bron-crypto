@@ -14,6 +14,7 @@ type Element struct {
 	v *impl.Field
 }
 
+//nolint:revive // we don't care if impl shadows impl
 func (e *Element) impl() *impl.Field {
 	return e.v
 }
@@ -26,7 +27,7 @@ func (e Element) Modulus() curves.FieldValue {
 	return e.v.Params.Modulus
 }
 
-func (e Element) Clone() curves.Element {
+func (Element) Clone() curves.Element {
 	return nil
 }
 

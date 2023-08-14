@@ -173,10 +173,9 @@ func (m *MockReader) Read(p []byte) (n int, err error) {
 	limit := len(m.seed)
 	for i := range p {
 		p[i] = m.seed[m.index]
-		m.index += 1
+		m.index++
 		m.index %= limit
 	}
 	n = len(p)
-	err = nil
-	return
+	return n, nil
 }

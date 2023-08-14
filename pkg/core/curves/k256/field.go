@@ -15,6 +15,7 @@ type Element struct {
 	v *impl.Field
 }
 
+//nolint:revive // we don't care if impl shadows impl
 func (e *Element) impl() *impl.Field {
 	return e.v
 }

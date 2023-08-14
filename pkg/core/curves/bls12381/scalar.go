@@ -21,7 +21,11 @@ type Scalar struct {
 }
 
 func (s *Scalar) Curve() (curves.Curve, error) {
-	return s.Point().Curve()
+	curve, err := s.Point().Curve()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't get scalar curve")
+	}
+	return curve, nil
 }
 
 func (s *Scalar) CurveName() string {
@@ -305,7 +309,11 @@ func (s *Scalar) Order() *big.Int {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	result, err := internal.ScalarMarshalBinary(s)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal to binary")
+	}
+	return result, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
@@ -327,7 +335,11 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	result, err := internal.ScalarMarshalText(s)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal to text")
+	}
+	return result, nil
 }
 
 func (s *Scalar) UnmarshalText(input []byte) error {
@@ -353,7 +365,11 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
 	}
-	return internal.ScalarMarshalJson(curve.Name(), s)
+	result, err := internal.ScalarMarshalJson(curve.Name(), s)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't marshal json")
+	}
+	return result, nil
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {

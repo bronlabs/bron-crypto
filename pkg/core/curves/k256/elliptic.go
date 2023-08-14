@@ -34,7 +34,7 @@ func oldK256InitAll() {
 	oldK256.Name = Name
 }
 
-func K256Curve() *Koblitz256 {
+func NewElliptic() *Koblitz256 {
 	oldK256Initonce.Do(oldK256InitAll)
 	return &oldK256
 }

@@ -35,7 +35,7 @@ func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
 	err := errs.NewInvalidCurve("can't convert %s", c.Name())
 	switch c.Name() {
 	case k256.Name:
-		return k256.K256Curve(), nil
+		return k256.NewElliptic(), nil
 	case p256.Name:
 		return p256.NistP256Curve(), nil
 	default:
