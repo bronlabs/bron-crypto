@@ -168,10 +168,9 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 		PublicKey: publicKey,
 		SharesMap: publicKeySharesMap,
 	}
-	// TODO: Fix this.
-	// if err := publicKeyShares.Validate(); err != nil {
-	// 	return nil, nil, errors.Wrap(err, "couldn't verify public key shares")
-	// }
+	if err := publicKeyShares.Validate(p.CohortConfig); err != nil {
+		return nil, nil, errs.WrapVerificationFailed(err, "couldn't verify public key shares")
+	}
 
 	p.round++
 	return &threshold.SigningKeyShare{
