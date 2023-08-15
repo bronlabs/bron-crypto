@@ -19,10 +19,16 @@ const (
 	digestLabel           = "digest"
 )
 
+type Statement = curves.Point
+
 type Prover struct {
 	uniqueSessionId []byte
 	transcript      transcripts.Transcript
 	BasePoint       curves.Point
+}
+
+func (*Prover) IsUC() bool {
+	return false
 }
 
 // Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,
@@ -31,8 +37,6 @@ type Proof struct {
 	C curves.Scalar
 	S curves.Scalar
 }
-
-type Statement = curves.Point
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript) (*Prover, error) {

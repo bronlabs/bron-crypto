@@ -325,17 +325,21 @@ func BenchmarkVerify(b *testing.B) {
 		signatures[i] = signature
 	}
 	b.Run("SingleVerify", func(b *testing.B) {
-		for i := 0; i < batchSize; i++ {
-			err := bip340.Verify(pubkeys[i], messages[i], signatures[i])
-			if err != nil {
-				b.Fatal(err)
+		for n := 0; n < b.N; n++ {
+			for i := 0; i < batchSize; i++ {
+				err := bip340.Verify(pubkeys[i], messages[i], signatures[i])
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		}
 	})
 	b.Run("BatchVerify", func(b *testing.B) {
-		err := bip340.BatchVerify(nil, cipherSuite, pubkeys, messages, signatures)
-		if err != nil {
-			b.Fatal(err)
+		for n := 0; n < b.N; n++ {
+			err := bip340.BatchVerify(nil, cipherSuite, pubkeys, messages, signatures)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
 	})
 }
