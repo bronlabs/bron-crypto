@@ -130,11 +130,11 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	require.NoError(t, err)
 
 	aliceShard := shards[identities[aliceIdx].Hash()]
-	alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], crand.Reader)
+	alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	bobShard := shards[identities[bobIdx].Hash()]
-	bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], crand.Reader)
+	bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	partialSignature, err := alice.ProducePartialSignature(message)
