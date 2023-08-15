@@ -14,7 +14,7 @@ import (
 
 const (
 	domainSeparationLabel = "COPPER_ZKPOK_DLOG_FISCHLIN-"
-	Lambda                = 256
+	Lambda                = 128 // computational security paramter
 	L                     = 8
 	R                     = Lambda / L
 	T                     = 3 * L // 3 is ceil(log(Lambda)). If you change the security parameter, you have to change this one as well.
@@ -101,7 +101,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 			// step P.3.2
 			e_i_bytes, err := sample(E_i, tprng)
 			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "sampling")
+				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
 			e_i := curve.Scalar().Hash(e_i_bytes[:])
