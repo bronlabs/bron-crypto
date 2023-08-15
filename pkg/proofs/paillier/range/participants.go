@@ -6,6 +6,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -23,6 +24,8 @@ type Participant struct {
 	round int
 	sid   []byte
 	prng  io.Reader
+
+	_ helper_types.Incomparable
 }
 
 type ProverState struct {
@@ -31,6 +34,8 @@ type ProverState struct {
 	r1             []*big.Int
 	w2             []*big.Int
 	r2             []*big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Prover struct {
@@ -39,6 +44,8 @@ type Prover struct {
 	r     *big.Int
 	sk    *paillier.SecretKey
 	state *ProverState
+
+	_ helper_types.Incomparable
 }
 
 type VerifierState struct {
@@ -46,6 +53,8 @@ type VerifierState struct {
 	esidWitness commitments.Witness
 	c1          []paillier.CipherText
 	c2          []paillier.CipherText
+
+	_ helper_types.Incomparable
 }
 
 type Verifier struct {
@@ -53,6 +62,8 @@ type Verifier struct {
 	c     paillier.CipherText
 	pk    *paillier.PublicKey
 	state *VerifierState
+
+	_ helper_types.Incomparable
 }
 
 func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x, r *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {

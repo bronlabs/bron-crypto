@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const (
@@ -31,6 +32,8 @@ type Curve struct {
 	Sc curves.Scalar
 	P  curves.Point
 	ID string
+
+	_ helper_types.Incomparable
 }
 
 var _ (curves.PairingCurve) = (*PairingCurve)(nil)
@@ -40,6 +43,8 @@ type PairingCurve struct {
 	G2_   *Curve
 	GT_   curves.Scalar
 	Name_ string
+
+	_ helper_types.Incomparable
 }
 
 func bls12381g1Init() {
@@ -157,5 +162,5 @@ func (PairingCurve) MultiPairing(points ...curves.PairingPoint) curves.Scalar {
 	}
 
 	value := eng.Result()
-	return &ScalarGt{value}
+	return &ScalarGt{Value: value}
 }

@@ -6,12 +6,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 type PrivateNoncePair struct {
 	SmallD curves.Scalar
 	SmallE curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 type AttestedCommitmentToNoncePair struct {
@@ -19,6 +22,8 @@ type AttestedCommitmentToNoncePair struct {
 	D           curves.Point
 	E           curves.Point
 	Attestation []byte
+
+	_ helper_types.Incomparable
 }
 
 func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.CohortConfig) error {

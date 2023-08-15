@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	trusted_dealer "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
@@ -20,6 +21,8 @@ import (
 type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {

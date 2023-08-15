@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -22,6 +23,8 @@ type Alice struct {
 	aTilde [L]curves.Scalar // ã ∈ [L]ℤq is the vector of one-time pads of Alice
 	aHat   [L]curves.Scalar // â ∈ [L]ℤq is the vector of check values of Alice
 	gammaA [L]curves.Scalar // γ_A ∈ [L]ℤq is the derandomization mask of Alice
+
+	_ helper_types.Incomparable
 }
 
 type Bob struct {
@@ -39,6 +42,8 @@ type Bob struct {
 	BTilde                [L]curves.Scalar
 	oteReceiverOutput     *softspoken.OTeReceiverOutput
 	extendedPackedChoices *softspoken.ExtPackedChoices
+
+	_ helper_types.Incomparable
 }
 
 func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {

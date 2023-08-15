@@ -18,6 +18,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -57,6 +58,8 @@ type SenderOutput struct {
 	// These can be used to encrypt and send two messages to the receiver.
 	// Therefore, for readability they are called OneTimePadEncryptionKeys  in the code.
 	OneTimePadEncryptionKeys []OneTimePadEncryptionKeys
+
+	_ helper_types.Incomparable
 }
 
 // ReceiverOutput are the outputs that the receiver will obtain as a result of running the "random" OT protocol.
@@ -71,6 +74,8 @@ type ReceiverOutput struct {
 	// This value will be used to decrypt one of the messages sent by the sender.
 	// Therefore, for readability this is called OneTimePadDecryptionKey in the code.
 	OneTimePadDecryptionKey []OneTimePadDecryptionKey
+
+	_ helper_types.Incomparable
 }
 
 // Sender stores state for the "sender" role in OT. see Protocol 7 in Appendix A of DKLs18.
@@ -91,6 +96,8 @@ type Sender struct {
 
 	UniqueSessionId []byte
 	Transcript      transcripts.Transcript
+
+	_ helper_types.Incomparable
 }
 
 // Receiver stores state for the "receiver" role in OT. Protocol 7, Appendix A, of DKLs.
@@ -111,6 +118,8 @@ type Receiver struct {
 
 	UniqueSessionId []byte
 	Transcript      transcripts.Transcript
+
+	_ helper_types.Incomparable
 }
 
 // NewSender creates a new "sender" object, ready to participate in a _random_ verified simplest OT in the role of the sender.

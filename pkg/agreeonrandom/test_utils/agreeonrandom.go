@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 func ProduceSharedRandomValue(curve curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
@@ -59,10 +60,10 @@ func DoRound1(participants []*agreeonrandom.Participant) (round1Outputs []*agree
 	return round1Outputs, nil
 }
 
-func MapRound1OutputsToRound2Inputs(participants []*agreeonrandom.Participant, round1Outputs []*agreeonrandom.Round1Broadcast) (round2Inputs []map[integration.IdentityHash]*agreeonrandom.Round1Broadcast) {
-	round2Inputs = make([]map[integration.IdentityHash]*agreeonrandom.Round1Broadcast, len(participants))
+func MapRound1OutputsToRound2Inputs(participants []*agreeonrandom.Participant, round1Outputs []*agreeonrandom.Round1Broadcast) (round2Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast) {
+	round2Inputs = make([]map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityHash]*agreeonrandom.Round1Broadcast)
+		round2Inputs[i] = make(map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast)
 		for j := range participants {
 			if j != i {
 				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
@@ -72,7 +73,7 @@ func MapRound1OutputsToRound2Inputs(participants []*agreeonrandom.Participant, r
 	return round2Inputs
 }
 
-func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[integration.IdentityHash]*agreeonrandom.Round1Broadcast) (results [][]byte, err error) {
+func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast) (results [][]byte, err error) {
 	results = make([][]byte, len(participants))
 	for i, participant := range participants {
 		results[i], err = participant.Round2(round2Inputs[i])

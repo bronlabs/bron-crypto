@@ -14,12 +14,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Point) = (*Point)(nil)
 
 type Point struct {
 	Value *filippo.Point
+
+	_ helper_types.Incomparable
 }
 
 func (Point) Curve() (curves.Curve, error) {
@@ -121,7 +124,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		value := filippo.NewIdentityPoint().ScalarMult(r.Value, p.Value)
-		return &Point{value}
+		return &Point{Value: value}
 	} else {
 		panic("rhs in not ScalarEd25519")
 	}
@@ -138,7 +141,7 @@ func (*Point) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *Scalar) (
 		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
 	}
 	value := filippo.NewIdentityPoint().ScalarBaseMult(s)
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (p *Point) Equal(rhs curves.Point) bool {
@@ -275,7 +278,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "set extended coordinates")
 	}
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {

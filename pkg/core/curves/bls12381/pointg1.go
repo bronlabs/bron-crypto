@@ -11,12 +11,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.PairingPoint) = (*PointG1)(nil)
 
 type PointG1 struct {
 	Value *bls12381impl.G1
+
+	_ helper_types.Incomparable
 }
 
 func (PointG1) Curve() (curves.Curve, error) {
@@ -70,7 +73,7 @@ func (p *PointG1) IsOnCurve() bool {
 }
 
 func (p *PointG1) Double() curves.Point {
-	return &PointG1{new(bls12381impl.G1).Double(p.Value)}
+	return &PointG1{Value: new(bls12381impl.G1).Double(p.Value)}
 }
 
 func (*PointG1) Scalar() curves.Scalar {
@@ -81,7 +84,7 @@ func (*PointG1) Scalar() curves.Scalar {
 }
 
 func (p *PointG1) Neg() curves.Point {
-	return &PointG1{new(bls12381impl.G1).Neg(p.Value)}
+	return &PointG1{Value: new(bls12381impl.G1).Neg(p.Value)}
 }
 
 func (p *PointG1) Add(rhs curves.Point) curves.Point {
@@ -90,7 +93,7 @@ func (p *PointG1) Add(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*PointG1)
 	if ok {
-		return &PointG1{new(bls12381impl.G1).Add(p.Value, r.Value)}
+		return &PointG1{Value: new(bls12381impl.G1).Add(p.Value, r.Value)}
 	} else {
 		panic("rhs is not PointBls12381G1")
 	}
@@ -102,7 +105,7 @@ func (p *PointG1) Sub(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*PointG1)
 	if ok {
-		return &PointG1{new(bls12381impl.G1).Sub(p.Value, r.Value)}
+		return &PointG1{Value: new(bls12381impl.G1).Sub(p.Value, r.Value)}
 	} else {
 		panic("rhs is not PointBls12381G1")
 	}
@@ -114,7 +117,7 @@ func (p *PointG1) Mul(rhs curves.Scalar) curves.Point {
 	}
 	r, ok := rhs.(*Scalar)
 	if ok {
-		return &PointG1{new(bls12381impl.G1).Mul(p.Value, r.Value)}
+		return &PointG1{Value: new(bls12381impl.G1).Mul(p.Value, r.Value)}
 	} else {
 		panic("rhs is not ScalarBls12381")
 	}
@@ -134,7 +137,7 @@ func (*PointG1) Set(x, y *big.Int) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.NewInvalidCoordinates("invalid coordinates")
 	}
-	return &PointG1{value}, nil
+	return &PointG1{Value: value}, nil
 }
 
 func (p *PointG1) ToAffineCompressed() []byte {
@@ -154,7 +157,7 @@ func (*PointG1) FromAffineCompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "couldn't construct G1 point from affine compressed")
 	}
-	return &PointG1{value}, nil
+	return &PointG1{Value: value}, nil
 }
 
 func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
@@ -164,7 +167,7 @@ func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "couldn't construct G1 point from affine uncompressed")
 	}
-	return &PointG1{value}, nil
+	return &PointG1{Value: value}, nil
 }
 
 func (*PointG1) CurveName() string {
@@ -192,7 +195,7 @@ func MultiScalarMultBls12381G1(scalars []curves.Scalar, points []curves.Point) (
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multi scalar multiplication failed")
 	}
-	return &PointG1{value}, nil
+	return &PointG1{Value: value}, nil
 }
 
 func (*PointG1) OtherGroup() curves.PairingPoint {
@@ -209,7 +212,7 @@ func (p *PointG1) Pairing(rhs curves.PairingPoint) curves.Scalar {
 
 	value := e.Result()
 
-	return &ScalarGt{value}
+	return &ScalarGt{Value: value}
 }
 
 func (PointG1) X() curves.Element {

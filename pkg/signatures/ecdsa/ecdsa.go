@@ -11,12 +11,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Signature struct {
 	V *int
 	R curves.Scalar
 	S curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 // Normalise normalises the signature to a "low S" form. In ECDSA, signatures are

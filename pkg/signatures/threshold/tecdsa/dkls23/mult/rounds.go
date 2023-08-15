@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 )
 
@@ -15,6 +16,8 @@ type Round2Output struct {
 	RTilde           curves.Scalar
 	U                [L]curves.Scalar
 	GammaA           [L]curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 func (bob *Bob) Round1() (*Round1Output, error) {

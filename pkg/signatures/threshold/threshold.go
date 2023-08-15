@@ -4,12 +4,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type SigningKeyShare struct {
 	Share     curves.Scalar
 	PublicKey curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (s *SigningKeyShare) Validate() error {
@@ -31,7 +34,9 @@ func (s *SigningKeyShare) Validate() error {
 type PublicKeyShares struct {
 	Curve     curves.Curve
 	PublicKey curves.Point
-	SharesMap map[integration.IdentityHash]curves.Point
+	SharesMap map[helper_types.IdentityHash]curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {

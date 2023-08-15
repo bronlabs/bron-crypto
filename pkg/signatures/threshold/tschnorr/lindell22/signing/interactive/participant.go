@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
@@ -26,7 +27,9 @@ type state struct {
 	bigR        curves.Point
 	bigRWitness commitments.Witness
 
-	theirBigRCommitment map[integration.IdentityHash]commitments.Commitment
+	theirBigRCommitment map[helper_types.IdentityHash]commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Cosigner struct {
@@ -37,13 +40,15 @@ type Cosigner struct {
 
 	cohortConfig           *integration.CohortConfig
 	sessionParticipants    []integration.IdentityKey
-	identityKeyToSharingId map[integration.IdentityHash]int
+	identityKeyToSharingId map[helper_types.IdentityHash]int
 	sid                    []byte
 	round                  int
 	transcript             transcripts.Transcript
 	prng                   io.Reader
 
 	state *state
+
+	_ helper_types.Incomparable
 }
 
 func (p *Cosigner) GetIdentityKey() integration.IdentityKey {

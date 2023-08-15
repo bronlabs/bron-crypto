@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var (
@@ -494,6 +495,8 @@ var (
 // G2 is a point in g2.
 type G2 struct {
 	x, y, z fp2
+
+	_ helper_types.Incomparable
 }
 
 // Random creates a random point on the curve

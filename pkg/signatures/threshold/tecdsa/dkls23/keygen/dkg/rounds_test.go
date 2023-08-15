@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 	"hash"
 	"reflect"
@@ -48,7 +49,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
-	shardsMap := make(map[integration.IdentityHash]*dkls23.Shard, len(shards))
+	shardsMap := make(map[helper_types.IdentityHash]*dkls23.Shard, len(shards))
 	for i, shard := range shards {
 		shardsMap[identities[i].Hash()] = shard
 	}

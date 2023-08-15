@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -24,6 +25,8 @@ type Cosigner struct {
 	preSignatureIndex int
 	cohortConfig      *integration.CohortConfig
 	prng              io.Reader
+
+	_ helper_types.Incomparable
 }
 
 func (p *Cosigner) GetIdentityKey() integration.IdentityKey {

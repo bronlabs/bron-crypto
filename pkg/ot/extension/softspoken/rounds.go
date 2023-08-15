@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 // Round1Output is the receiver's PUBLIC output of round1 of OTe/COTe, to be sent to the Sender.
@@ -15,6 +16,8 @@ type Round1Output struct {
 	// challengeResponse is the challenge response for the consistency,
 	// containing ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	challengeResponse ChallengeResponse
+
+	_ helper_types.Incomparable
 }
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
@@ -94,6 +97,8 @@ func (receiver *Receiver) Round1ExtendAndProveConsistency(
 // Round2Output is the sender's PUBLIC output of round2 of OTe/COTe, to be sent to the Receiver.
 type Round2Output struct {
 	derandomizeMasks []DerandomizeMask
+
+	_ helper_types.Incomparable
 }
 
 // Round2Extend uses the PRG to extend the baseOT results, verifies their consistency

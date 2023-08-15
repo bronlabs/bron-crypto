@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const Name = "edwards25519"
@@ -26,6 +27,8 @@ type Curve struct {
 	Sc curves.Scalar
 	P  curves.Point
 	ID string
+
+	_ helper_types.Incomparable
 }
 
 func New() *Curve {

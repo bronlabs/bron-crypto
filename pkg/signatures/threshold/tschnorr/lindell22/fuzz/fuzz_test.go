@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -64,7 +65,7 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 	})
 }
 
-func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []integration.IdentityKey, shards map[integration.IdentityHash]*lindell22.Shard, message []byte, cipherSuite *integration.CipherSuite) {
+func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
 
 	cohort, _ := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
@@ -95,7 +96,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 }
 
-func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []integration.IdentityKey, shards map[integration.IdentityHash]*lindell22.Shard, message []byte, cipherSuite *integration.CipherSuite) {
+func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
 
 	var sid []byte
@@ -125,7 +126,7 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	require.NoError(t, err)
 }
 
-func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n, threshold int) ([]integration.IdentityKey, map[integration.IdentityHash]*lindell22.Shard) {
+func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n, threshold int) ([]integration.IdentityKey, map[helper_types.IdentityHash]*lindell22.Shard) {
 	t.Helper()
 	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)

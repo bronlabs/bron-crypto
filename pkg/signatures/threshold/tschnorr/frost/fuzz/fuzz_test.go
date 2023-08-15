@@ -22,6 +22,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
@@ -239,9 +240,9 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]map[integration.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
+	round2Inputs := make([]map[helper_types.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[integration.IdentityHash]*noninteractive.Round1Broadcast)
+		round2Inputs[i] = make(map[helper_types.IdentityHash]*noninteractive.Round1Broadcast)
 		for j := range participants {
 			if j != i {
 				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
