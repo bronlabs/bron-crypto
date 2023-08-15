@@ -117,8 +117,8 @@ func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, s
 	if shard == nil || shard.SigningKeyShare == nil {
 		return errs.NewVerificationFailed("shard is nil")
 	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := shard.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if sessionParticipants == nil {
 		return errs.NewIsNil("invalid number of session participants")

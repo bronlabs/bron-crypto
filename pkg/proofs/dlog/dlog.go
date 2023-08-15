@@ -1,0 +1,30 @@
+package dlog
+
+import (
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+)
+
+type Statement = curves.Point
+
+func StatementSubgroupMembershipCheck(basePoint curves.Point, statement Statement) error {
+	curve, err := basePoint.Curve()
+	if err != nil {
+		return errs.WrapInvalidCurve(err, "couldn't extract curve from basepoint")
+	}
+	if curve.Name() == edwards25519.Name {
+		edBasePoint, ok := basePoint.(*edwards25519.Point)
+		if !ok {
+			return errs.NewInvalidType("basepoint is not an edwards point. this should not happen.")
+		}
+		edStatement, ok := statement.(*edwards25519.Point)
+		if !ok {
+			return errs.NewInvalidCurve("the statement doesn't belong to edwards25519 but the basepoint does")
+		}
+		if !edBasePoint.IsSmallOrder() && edStatement.IsSmallOrder() {
+			return errs.NewVerificationFailed("basepoint is not low order but the statement is")
+		}
+	}
+	return nil
+}

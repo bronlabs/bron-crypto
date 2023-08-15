@@ -1,11 +1,10 @@
 package threshold
 
 import (
-	"errors"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type SigningKeyShare struct {
@@ -35,13 +34,29 @@ type PublicKeyShares struct {
 	SharesMap map[integration.IdentityHash]curves.Point
 }
 
-func (p *PublicKeyShares) Validate() error {
-	derivedPublicKey := p.Curve.Point().Identity()
-	for _, share := range p.SharesMap {
-		derivedPublicKey = derivedPublicKey.Add(share)
+func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
+	sharingIdToIdentityKey, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingIds := make([]curves.Scalar, cohortConfig.TotalParties)
+	partialPublicKeys := make([]curves.Point, cohortConfig.TotalParties)
+	for i := 0; i < cohortConfig.TotalParties; i++ {
+		sharingIds[i] = p.Curve.Scalar().New(i + 1)
+		identityKey, exists := sharingIdToIdentityKey[i+1]
+		if !exists {
+			return errs.NewMissing("missing identity key for sharing id %d", i+1)
+		}
+		partialPublicKey, exists := p.SharesMap[identityKey.Hash()]
+		if !exists {
+			return errs.NewMissing("partial public key doesn't exist for id hash %x", identityKey.Hash())
+		}
+		partialPublicKeys[i] = partialPublicKey
 	}
-	if !derivedPublicKey.Equal(p.PublicKey) {
-		return errors.New("public key shares can't be combined to the entire public key")
+	evaluateAt := p.Curve.Scalar().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	reconstructedPublicKey, err := sharing.InterpolateInTheExponent(p.Curve, sharingIds, partialPublicKeys, evaluateAt)
+	if err != nil {
+		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
+	}
+	if !reconstructedPublicKey.Equal(p.PublicKey) {
+		return errs.NewVerificationFailed("reconstructed public key is incorrect")
 	}
 	return nil
 }

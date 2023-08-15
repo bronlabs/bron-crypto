@@ -166,7 +166,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityHash]*Round2Br
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		transcript := p.state.transcript.Clone()
+		transcript := merlin.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (sharing id: %d)", senderSharingId)

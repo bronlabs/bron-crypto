@@ -171,8 +171,8 @@ func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfi
 		return errs.NewMissing("shard is nil")
 	}
 	// TODO: implement full validation with base ots and seeds etc
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := shard.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 
 	if sessionParticipants == nil {

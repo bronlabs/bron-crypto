@@ -10,7 +10,8 @@ The idea behind Fischlin, is essentially proof of work over the transcript. Esse
 **Players** 2 Parties, Prover and Verifier
 
 **Parameters**:
-- $\lambda$: Security parameter. In our case it's 256.
+- $\lambda$: Security parameter. In our case it's 128.
+- $k$: $\left \lceil \log_2 \lambda \right \rceil$
 - $L$: Length of the Hash function which has to be zero.
 - $R$: Total number of challenges produced.
 - $T$: Length of the sampled challenge.
