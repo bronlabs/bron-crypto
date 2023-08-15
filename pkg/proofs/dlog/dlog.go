@@ -8,6 +8,8 @@ import (
 
 type Statement = curves.Point
 
+// StatementSubgroupMembershipCheck checks whether the statement is in the prime subgroup, only if the basepoint
+// is in the prime subgroup.
 func StatementSubgroupMembershipCheck(basePoint curves.Point, statement Statement) error {
 	curve, err := basePoint.Curve()
 	if err != nil {
