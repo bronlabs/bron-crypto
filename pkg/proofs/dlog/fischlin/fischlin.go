@@ -15,9 +15,10 @@ import (
 const (
 	domainSeparationLabel = "COPPER_ZKPOK_DLOG_FISCHLIN-"
 	Lambda                = 128 // computational security parameter
+	k                     = 7   // ceil(log2(Lambda))
 	L                     = 8
 	R                     = Lambda / L
-	T                     = 3 * L // 3 is ceil(log(Lambda)). If you change the security parameter, you have to change this one as well.
+	T                     = k * L
 
 	LambdaBytes = Lambda / 8
 	LBytes      = L / 8
