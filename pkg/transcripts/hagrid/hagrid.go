@@ -130,6 +130,7 @@ func (t *Transcript) ratchet(message []byte) {
 // rekey the public transcript, or use an RNG before it has been finalised.
 type prngReader struct {
 	t *Transcript
+	io.Reader
 }
 
 // NewReader creates a new transcript PRNG, needed to generate random bytes.
