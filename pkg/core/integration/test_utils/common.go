@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type TestIdentityKey struct {
@@ -124,7 +124,7 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protoco
 func MakeTranscripts(label string, identities []integration.IdentityKey) (allTranscripts []transcripts.Transcript) {
 	allTranscripts = make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		allTranscripts[i] = merlin.NewTranscript(label)
+		allTranscripts[i] = hagrid.NewTranscript(label)
 	}
 	return allTranscripts
 }

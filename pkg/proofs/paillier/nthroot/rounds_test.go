@@ -11,18 +11,18 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := merlin.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel)
 	prover, err := nthroot.NewProver(bigN, x, y, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err
 	}
-	verifierTranscript := merlin.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel)
 	verifier, err := nthroot.NewVerifier(bigN, x, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err

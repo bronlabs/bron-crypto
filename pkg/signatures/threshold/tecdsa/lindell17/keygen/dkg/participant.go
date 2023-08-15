@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 var _ lindell17.Participant = (*Participant)(nil)
@@ -94,7 +94,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

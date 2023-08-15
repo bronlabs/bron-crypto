@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -108,12 +108,12 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 func doProof(x *big.Int, xEncrypted paillier.CipherText, r, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
 	appLabel := "Range"
 
-	verifierTranscript := merlin.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel)
 	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
-	proverTranscript := merlin.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel)
 	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 	if err != nil {
 		return err

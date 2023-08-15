@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -107,7 +107,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -154,7 +154,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Receiver struct {
@@ -58,7 +58,7 @@ func NewCOtReceiver(
 		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Receiver{
@@ -84,7 +84,7 @@ func NewCOtSender(
 		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Sender{

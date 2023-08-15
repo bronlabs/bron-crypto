@@ -7,13 +7,13 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func MakeTranscripts(label string, identities []integration.IdentityKey) []transcripts.Transcript {
 	allTranscripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		allTranscripts[i] = merlin.NewTranscript(label)
+		allTranscripts[i] = hagrid.NewTranscript(label)
 	}
 
 	return allTranscripts
