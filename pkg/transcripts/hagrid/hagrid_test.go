@@ -17,7 +17,7 @@ func TestSimpleTranscript(t *testing.T) {
 
 	cBytes := mt.ExtractBytes("challenge", 32)
 	cHex := fmt.Sprintf("%x", cBytes)
-	expectedHex := "68da956bb56aa9f5f5e45dca75fc8216badde6a6a953c36db481f7faf8f21b2a"
+	expectedHex := "25f0fee7cff96c33627d39bd13729a150967f3e154c8c8863b6449f3798de882"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -40,7 +40,7 @@ func TestComplexTranscript(t *testing.T) {
 		tr.AppendMessages("challengedata", chlBytes)
 	}
 
-	expectedChlHex := "db182e18df4d8dfde2facba6fe9d9de52e6fa3f740c2c3764b0de3022d50070d"
+	expectedChlHex := "4d7b81464cf26b51a76dcef82c459736ed92bf1105fd6323d0c89bb2bc36abcd"
 	chlHex := fmt.Sprintf("%x", chlBytes)
 
 	if chlHex != expectedChlHex {

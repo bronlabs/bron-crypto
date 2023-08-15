@@ -1,7 +1,6 @@
 package hagrid
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"io"
 
@@ -18,18 +17,18 @@ const (
 	Type                 transcripts.Type = "Hagrid"
 )
 
-var hashConstructor = sha256.New // Hash function used to hash messages longer than maxUnhashedMessage bytes.
+var hashConstructor = sha3.New256 // Hash function used to hash messages longer than maxUnhashedMessage bytes.
 
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
-	s [sha256.Size]byte
+	s [32]byte
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
 func NewTranscript(appLabel string) *Transcript {
 	t := Transcript{
-		s: [sha256.Size]byte{},
+		s: [32]byte{},
 	}
 	t.AppendMessages(domainSeparatorLabel, []byte(protocolLabel), []byte(appLabel))
 	return &t
@@ -45,15 +44,10 @@ func (*Transcript) Type() transcripts.Type {
 }
 
 // -------------------------- WRITE/READ OPS -------------------------------- //
-// AppendMessage adds the message to the transcript with the supplied label. Messages
-// of length greater than 100 MB must be hashed.
+// AppendMessage adds the message to the transcript with the supplied label.
 func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
-	if len(messages) == 1 {
-		t.appendMessage(label, messages[0])
-	} else {
-		for i, message := range messages {
-			t.appendMessage(fmt.Sprintf("%s_%d", label, i), message)
-		}
+	for _, message := range messages {
+		t.appendMessage(label, message)
 	}
 }
 
