@@ -19,118 +19,138 @@ import (
 func BenchmarkK256(b *testing.B) {
 	// 1000 points
 	b.Run("1000 point add - btcec", func(b *testing.B) {
-		b.StopTimer()
-		points := make([]*BenchPoint, 1000)
-		for i := range points {
-			points[i] = points[i].Random(crand.Reader).(*BenchPoint)
-		}
-		acc := new(BenchPoint).Identity()
-		b.StartTimer()
-		for _, pt := range points {
-			acc = acc.Add(pt)
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			points := make([]*BenchPoint, 1000)
+			for i := range points {
+				points[i] = points[i].Random(crand.Reader).(*BenchPoint)
+			}
+			acc := new(BenchPoint).Identity()
+			b.StartTimer()
+			for _, pt := range points {
+				acc = acc.Add(pt)
+			}
 		}
 	})
 	b.Run("1000 point add - ct k256", func(b *testing.B) {
-		b.StopTimer()
-		curve := k256.New()
-		points := make([]*k256.Point, 1000)
-		for i := range points {
-			points[i] = curve.Identity().Random(crand.Reader).(*k256.Point)
-		}
-		acc := curve.Identity()
-		b.StartTimer()
-		for _, pt := range points {
-			acc = acc.Add(pt)
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			curve := k256.New()
+			points := make([]*k256.Point, 1000)
+			for i := range points {
+				points[i] = curve.Identity().Random(crand.Reader).(*k256.Point)
+			}
+			acc := curve.Identity()
+			b.StartTimer()
+			for _, pt := range points {
+				acc = acc.Add(pt)
+			}
 		}
 	})
 	b.Run("1000 point double - btcec", func(b *testing.B) {
-		b.StopTimer()
-		acc := new(BenchPoint).Generator()
-		b.StartTimer()
-		for i := 0; i < 1000; i++ {
-			acc = acc.Double()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			acc := new(BenchPoint).Generator()
+			b.StartTimer()
+			for i := 0; i < 1000; i++ {
+				acc = acc.Double()
+			}
 		}
 	})
 	b.Run("1000 point double - ct k256", func(b *testing.B) {
-		b.StopTimer()
-		acc := new(k256.Point).Generator()
-		b.StartTimer()
-		for i := 0; i < 1000; i++ {
-			acc = acc.Double()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			acc := new(k256.Point).Generator()
+			b.StartTimer()
+			for i := 0; i < 1000; i++ {
+				acc = acc.Double()
+			}
 		}
 	})
 	b.Run("1000 point multiply - btcec", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*BenchScalar, 1000)
-		for i := range scalars {
-			s := new(BenchScalar).Random(crand.Reader)
-			scalars[i] = s.(*BenchScalar)
-		}
-		acc := new(BenchPoint).Generator().Mul(new(BenchScalar).New(2))
-		b.StartTimer()
-		for _, sc := range scalars {
-			acc = acc.Mul(sc)
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*BenchScalar, 1000)
+			for i := range scalars {
+				s := new(BenchScalar).Random(crand.Reader)
+				scalars[i] = s.(*BenchScalar)
+			}
+			acc := new(BenchPoint).Generator().Mul(new(BenchScalar).New(2))
+			b.StartTimer()
+			for _, sc := range scalars {
+				acc = acc.Mul(sc)
+			}
 		}
 	})
 	b.Run("1000 point multiply - ct k256", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*k256.Scalar, 1000)
-		for i := range scalars {
-			s := new(k256.Scalar).Random(crand.Reader)
-			scalars[i] = s.(*k256.Scalar)
-		}
-		acc := new(k256.Point).Generator()
-		b.StartTimer()
-		for _, sc := range scalars {
-			acc = acc.Mul(sc)
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*k256.Scalar, 1000)
+			for i := range scalars {
+				s := new(k256.Scalar).Random(crand.Reader)
+				scalars[i] = s.(*k256.Scalar)
+			}
+			acc := new(k256.Point).Generator()
+			b.StartTimer()
+			for _, sc := range scalars {
+				acc = acc.Mul(sc)
+			}
 		}
 	})
 	b.Run("1000 scalar invert - btcec", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*BenchScalar, 1000)
-		for i := range scalars {
-			s := new(BenchScalar).Random(crand.Reader)
-			scalars[i] = s.(*BenchScalar)
-		}
-		b.StartTimer()
-		for _, sc := range scalars {
-			_, _ = sc.Invert()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*BenchScalar, 1000)
+			for i := range scalars {
+				s := new(BenchScalar).Random(crand.Reader)
+				scalars[i] = s.(*BenchScalar)
+			}
+			b.StartTimer()
+			for _, sc := range scalars {
+				_, _ = sc.Invert()
+			}
 		}
 	})
 	b.Run("1000 scalar invert - ct k256", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*k256.Scalar, 1000)
-		for i := range scalars {
-			s := new(k256.Scalar).Random(crand.Reader)
-			scalars[i] = s.(*k256.Scalar)
-		}
-		b.StartTimer()
-		for _, sc := range scalars {
-			_, _ = sc.Invert()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*k256.Scalar, 1000)
+			for i := range scalars {
+				s := new(k256.Scalar).Random(crand.Reader)
+				scalars[i] = s.(*k256.Scalar)
+			}
+			b.StartTimer()
+			for _, sc := range scalars {
+				_, _ = sc.Invert()
+			}
 		}
 	})
 	b.Run("1000 scalar sqrt - btcec", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*BenchScalar, 1000)
-		for i := range scalars {
-			s := new(BenchScalar).Random(crand.Reader)
-			scalars[i] = s.(*BenchScalar)
-		}
-		b.StartTimer()
-		for _, sc := range scalars {
-			_, _ = sc.Sqrt()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*BenchScalar, 1000)
+			for i := range scalars {
+				s := new(BenchScalar).Random(crand.Reader)
+				scalars[i] = s.(*BenchScalar)
+			}
+			b.StartTimer()
+			for _, sc := range scalars {
+				_, _ = sc.Sqrt()
+			}
 		}
 	})
 	b.Run("1000 scalar sqrt - ct k256", func(b *testing.B) {
-		b.StopTimer()
-		scalars := make([]*k256.Scalar, 1000)
-		for i := range scalars {
-			s := new(k256.Scalar).Random(crand.Reader)
-			scalars[i] = s.(*k256.Scalar)
-		}
-		b.StartTimer()
-		for _, sc := range scalars {
-			_, _ = sc.Sqrt()
+		for n := 0; n < b.N; n++ {
+			b.StopTimer()
+			scalars := make([]*k256.Scalar, 1000)
+			for i := range scalars {
+				s := new(k256.Scalar).Random(crand.Reader)
+				scalars[i] = s.(*k256.Scalar)
+			}
+			b.StartTimer()
+			for _, sc := range scalars {
+				_, _ = sc.Sqrt()
+			}
 		}
 	})
 }
