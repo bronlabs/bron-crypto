@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -71,7 +71,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -118,7 +118,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

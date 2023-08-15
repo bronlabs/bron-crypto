@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	lindell17_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,7 +56,7 @@ func Test_HappyPath(t *testing.T) {
 
 	transcripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = merlin.NewTranscript("Lindell 2017 DKG")
+		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG")
 	}
 
 	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)

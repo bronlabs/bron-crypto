@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -73,9 +73,13 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	}
 
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+	tprng, err := transcript.NewReader("witness", myShard.SigningKeyShare.Share.Bytes(), prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
+	}
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)
@@ -91,7 +95,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		transcript:             transcript,
 		sessionParticipants:    sessionParticipants,
 		round:                  1,
-		prng:                   prng,
+		prng:                   tprng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

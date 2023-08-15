@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Alice struct {
@@ -52,7 +52,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 		return nil, errs.NewInvalidArgument("seet ot results is nil")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
+		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	forcedReuse := true
@@ -85,7 +85,7 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 		return nil, errs.NewInvalidArgument("seet ot results is nil")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_DKLS_MULTIPLY-")
+		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	forcedReuse := true

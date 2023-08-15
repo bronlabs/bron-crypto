@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Participant struct {
@@ -52,7 +52,7 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
 	}
 	return &Participant{
 		prng:          prng,

@@ -10,7 +10,7 @@ import (
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
@@ -41,7 +41,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 	}
 	dealt := dealer.Split(a_i0, p.prng)
 
-	proverTranscript := merlin.NewTranscript(DlogProofLabel)
+	proverTranscript := hagrid.NewTranscript(DlogProofLabel)
 	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript)
 	if err != nil {
@@ -166,7 +166,7 @@ func (p *Participant) Round3(round2output map[integration.IdentityHash]*Round2Br
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		transcript := merlin.NewTranscript(DlogProofLabel)
+		transcript := hagrid.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (sharing id: %d)", senderSharingId)

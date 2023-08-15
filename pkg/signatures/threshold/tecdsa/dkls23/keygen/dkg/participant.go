@@ -9,7 +9,7 @@ import (
 	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
@@ -43,7 +43,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(DkgLabel)
+		transcript = hagrid.NewTranscript(DkgLabel)
 	}
 	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
 	if err != nil {

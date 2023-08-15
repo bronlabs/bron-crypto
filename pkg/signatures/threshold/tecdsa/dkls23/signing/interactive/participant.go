@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "COPPER_KNOX_TECDSA_DKLS23-"
@@ -92,7 +92,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
 	tprng, err := transcript.NewReader("witness", shard.SigningKeyShare.Share.Bytes(), prng)

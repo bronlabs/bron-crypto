@@ -9,7 +9,7 @@ import (
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Round1Broadcast struct {
@@ -44,7 +44,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 	p.state.shareVector = shares
 	p.state.commitments = commitments
 
-	transcript := merlin.NewTranscript(DkgLabel)
+	transcript := hagrid.NewTranscript(DkgLabel)
 	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript)
 	if err != nil {
@@ -109,7 +109,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		transcript := merlin.NewTranscript(DkgLabel)
+		transcript := hagrid.NewTranscript(DkgLabel)
 		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
 			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (sharing id: %d)", senderSharingId)

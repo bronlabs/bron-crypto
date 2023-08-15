@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -52,7 +52,7 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -74,7 +74,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

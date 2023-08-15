@@ -6,7 +6,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -48,7 +48,7 @@ func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Tra
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -71,7 +71,7 @@ func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Tran
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
