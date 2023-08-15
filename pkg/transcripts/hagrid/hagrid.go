@@ -23,6 +23,7 @@ var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
 	s [32]byte
+	transcripts.Transcript
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
@@ -125,6 +126,8 @@ func (t *Transcript) ratchet(message []byte) {
 // that the sum output has at least as much entropy as the witness does. Finally,
 // binding the output to the output of an external RNG provides a backstop and
 // avoids the downsides of fully deterministic generation.
+
+var _ io.Reader = (*prngReader)(nil)
 
 // The transcript PRNG has a different type, to make it impossible to accidentally
 // rekey the public transcript, or use an RNG before it has been finalised.
