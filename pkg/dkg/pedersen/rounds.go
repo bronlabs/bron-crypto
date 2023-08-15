@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/schnorr"
@@ -109,20 +108,6 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 
 		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
-
-		if p.CohortConfig.CipherSuite.Curve.Name() == edwards25519.Name {
-			edwardsPoint, ok := senderCommitmentToTheirLocalSecret.(*edwards25519.Point)
-			if !ok {
-				return nil, nil, errs.NewIdentifiableAbort("curve is ed25519 but the sender with sharingId %d did not have a valid commitment to her local secret.", senderSharingId)
-			}
-			// Since the honest behaviour is to create a scalar out of the ristretto group, it is guaranteed to be in the prime subgroup.
-			// A malicious party - or a party engaging in DKG with another client software - may send this element such that it needs cofactor clearing.
-			// Such an element has a 1/8 chance of bypassing the dlog proof therefore successfully injecting a small group element into
-			// the resulting public key. More info: https://medium.com/zengo/baby-sharks-a3b9ceb4efe0
-			if edwardsPoint.Double().Double().Double().Sub(edwardsPoint).IsIdentity() {
-				return nil, nil, errs.NewIdentifiableAbort("sharing id %d tries to contribute a small group element to the public key", senderSharingId)
-			}
-		}
 
 		transcript := merlin.NewTranscript(DkgLabel)
 		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
