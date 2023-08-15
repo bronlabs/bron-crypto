@@ -17,7 +17,7 @@ const (
 	Type                 transcripts.Type = "Hagrid"
 )
 
-var hashConstructor = sha3.New256 // Hash function used to hash messages longer than maxUnhashedMessage bytes.
+var hashConstructor = sha3.New256 // Hash function used to hash messages
 
 var _ transcripts.Transcript = (*Transcript)(nil)
 
