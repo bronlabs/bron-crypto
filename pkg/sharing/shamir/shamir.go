@@ -157,47 +157,18 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	return s.interpolatePoint(xs, ys, s.Curve.Scalar().Zero())
 }
 
-// TODO: evaluate without interpolation via fft based techniques.
 func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result := s.Curve.Scalar().Zero()
-	for i, xi := range xs {
-		num := s.Curve.Scalar().One()
-		den := s.Curve.Scalar().One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-			num = num.Mul(xj.Sub(evaluateAt))
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		result = result.Add(ys[i].Mul(num.Div(den)))
+	result, err := sharing.Interpolate(s.Curve, xs, ys, evaluateAt)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not interpolate")
 	}
 	return result, nil
 }
 
 func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	coefficients := make([]curves.Scalar, len(xs))
-	for i, xi := range xs {
-		num := s.Curve.Scalar().One()
-		den := s.Curve.Scalar().One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-			num = num.Mul(xj.Sub(evaluateAt))
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		coefficients[i] = num.Div(den)
-	}
-	result, err := s.Curve.MultiScalarMult(coefficients, ys)
+	result, err := sharing.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "MSM failed")
+		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")
 	}
 	return result, nil
 }
