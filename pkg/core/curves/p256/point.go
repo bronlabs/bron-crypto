@@ -174,17 +174,17 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	sign &= 0x1
 
 	copy(raw[:], bitstring.ReverseBytes(input[1:]))
-	x, err := fp.P256FpNew().SetBytes(&raw)
+	x, err := fp.New().SetBytes(&raw)
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "set bytes failed")
 	}
 
 	value := p256n.PointNew().Identity()
-	rhs := fp.P256FpNew()
+	rhs := fp.New()
 	p.Value.Arithmetic.RhsEq(rhs, x)
 	// test that rhs is quadratic residue
 	// if not, then this Point is at infinity
-	y, wasQr := fp.P256FpNew().Sqrt(rhs)
+	y, wasQr := fp.New().Sqrt(rhs)
 	if wasQr {
 		// fix the sign
 		sigY := int(y.Bytes()[0] & 1)
@@ -208,12 +208,12 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	}
 
 	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
-	x, err := fp.P256FpNew().SetBytes(&arr)
+	x, err := fp.New().SetBytes(&arr)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "set bytes failed")
 	}
 	copy(arr[:], bitstring.ReverseBytes(input[33:]))
-	y, err := fp.P256FpNew().SetBytes(&arr)
+	y, err := fp.New().SetBytes(&arr)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "set bytes failed")
 	}
@@ -228,14 +228,14 @@ func (*Point) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (p *Point) X() curves.Element {
-	return Element{
+func (p *Point) X() curves.FieldElement {
+	return FieldElement{
 		v: p.Value.GetX(),
 	}
 }
 
-func (p *Point) Y() curves.Element {
-	return Element{
+func (p *Point) Y() curves.FieldElement {
+	return FieldElement{
 		v: p.Value.GetY(),
 	}
 }

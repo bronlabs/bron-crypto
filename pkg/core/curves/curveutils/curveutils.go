@@ -37,7 +37,7 @@ func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
 	case k256.Name:
 		return k256.NewElliptic(), nil
 	case p256.Name:
-		return p256.NistP256Curve(), nil
+		return p256.NewElliptic(), nil
 	default:
 		return nil, err
 	}

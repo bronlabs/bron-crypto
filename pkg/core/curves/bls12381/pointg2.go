@@ -215,11 +215,11 @@ func (p *PointG2) Pairing(rhs curves.PairingPoint) curves.Scalar {
 	return &ScalarGt{Value: value}
 }
 
-func (PointG2) X() curves.Element {
+func (PointG2) X() curves.FieldElement {
 	return nil
 }
 
-func (PointG2) Y() curves.Element {
+func (PointG2) Y() curves.FieldElement {
 	return nil
 }
 

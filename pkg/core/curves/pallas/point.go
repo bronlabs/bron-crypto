@@ -197,14 +197,14 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *Point) X() curves.Element {
-	return Element{
+func (p *Point) X() curves.FieldElement {
+	return FieldElement{
 		v: p.value.X(),
 	}
 }
 
-func (p *Point) Y() curves.Element {
-	return Element{
+func (p *Point) Y() curves.FieldElement {
+	return FieldElement{
 		v: p.value.Y(),
 	}
 }

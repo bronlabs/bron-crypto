@@ -19,9 +19,9 @@ var (
 
 func PointNew() *impl.EllipticPoint {
 	return &impl.EllipticPoint{
-		X:          fp.K256FpNew(),
-		Y:          fp.K256FpNew(),
-		Z:          fp.K256FpNew(),
+		X:          fp.New(),
+		Y:          fp.New(),
+		Z:          fp.New(),
 		Params:     getK256PointParams(),
 		Arithmetic: &k256PointArithmetic{},
 	}
@@ -29,15 +29,15 @@ func PointNew() *impl.EllipticPoint {
 
 func k256PointParamsInit() {
 	k256PointParams = impl.EllipticPointParams{
-		A: fp.K256FpNew(),
-		B: fp.K256FpNew().SetUint64(7),
-		Gx: fp.K256FpNew().SetLimbs(&[impl.FieldLimbs]uint64{
+		A: fp.New(),
+		B: fp.New().SetUint64(7),
+		Gx: fp.New().SetLimbs(&[impl.FieldLimbs]uint64{
 			0x59f2815b16f81798,
 			0x029bfcdb2dce28d9,
 			0x55a06295ce870b07,
 			0x79be667ef9dcbbac,
 		}),
-		Gy: fp.K256FpNew().SetLimbs(&[impl.FieldLimbs]uint64{
+		Gy: fp.New().SetLimbs(&[impl.FieldLimbs]uint64{
 			0x9c47d08ffb10d4b8,
 			0xfd17b448a6855419,
 			0x5da4fbfc0e1108a8,
@@ -256,9 +256,9 @@ func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPo
 	}
 	var buf [64]byte
 	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
-	u0 := fp.K256FpNew().SetBytesWide(&buf)
+	u0 := fp.New().SetBytesWide(&buf)
 	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
-	u1 := fp.K256FpNew().SetBytesWide(&buf)
+	u1 := fp.New().SetBytesWide(&buf)
 
 	r0x, r0y := sswuParams.Osswu3mod4(u0)
 	r1x, r1y := sswuParams.Osswu3mod4(u1)
@@ -270,7 +270,7 @@ func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPo
 	tv := &impl.EllipticPoint{
 		X: q1x,
 		Y: q1y,
-		Z: fp.K256FpNew().SetOne(),
+		Z: fp.New().SetOne(),
 	}
 	k.Add(out, out, tv)
 	return nil
@@ -410,8 +410,8 @@ func (k256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 func (k k256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	affine := PointNew()
 	k.ToAffine(affine, arg)
-	lhs := fp.K256FpNew().Square(affine.Y)
-	rhs := fp.K256FpNew()
+	lhs := fp.New().Square(affine.Y)
+	rhs := fp.New()
 	k.RhsEq(rhs, affine.X)
 	return lhs.Equal(rhs) == 1
 }

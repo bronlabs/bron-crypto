@@ -12,7 +12,7 @@ var (
 	p256FpParams   impl.FieldParams
 )
 
-func P256FpNew() *impl.Field {
+func New() *impl.Field {
 	return &impl.Field{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getP256FpParams(),

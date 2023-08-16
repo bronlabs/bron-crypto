@@ -17,9 +17,9 @@ var (
 
 func PointNew() *impl.EllipticPoint {
 	return &impl.EllipticPoint{
-		X:          fp.P256FpNew(),
-		Y:          fp.P256FpNew(),
-		Z:          fp.P256FpNew(),
+		X:          fp.New(),
+		Y:          fp.New(),
+		Z:          fp.New(),
 		Params:     getP256PointParams(),
 		Arithmetic: &p256PointArithmetic{},
 	}
@@ -37,10 +37,10 @@ func p256PointParamsInit() {
 	// gy := fp.P256FpNew().SetBigInt(params.Gy)
 
 	p256PointParams = impl.EllipticPointParams{
-		A:       fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{0xfffffffffffffffc, 0x00000003ffffffff, 0x0000000000000000, 0xfffffffc00000004}),
-		B:       fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{0xd89cdf6229c4bddf, 0xacf005cd78843090, 0xe5a220abf7212ed6, 0xdc30061d04874834}),
-		Gx:      fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{0x79e730d418a9143c, 0x75ba95fc5fedb601, 0x79fb732b77622510, 0x18905f76a53755c6}),
-		Gy:      fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{0xddf25357ce95560a, 0x8b4ab8e4ba19e45c, 0xd2e88688dd21f325, 0x8571ff1825885d85}),
+		A:       fp.New().SetRaw(&[impl.FieldLimbs]uint64{0xfffffffffffffffc, 0x00000003ffffffff, 0x0000000000000000, 0xfffffffc00000004}),
+		B:       fp.New().SetRaw(&[impl.FieldLimbs]uint64{0xd89cdf6229c4bddf, 0xacf005cd78843090, 0xe5a220abf7212ed6, 0xdc30061d04874834}),
+		Gx:      fp.New().SetRaw(&[impl.FieldLimbs]uint64{0x79e730d418a9143c, 0x75ba95fc5fedb601, 0x79fb732b77622510, 0x18905f76a53755c6}),
+		Gy:      fp.New().SetRaw(&[impl.FieldLimbs]uint64{0xddf25357ce95560a, 0x8b4ab8e4ba19e45c, 0xd2e88688dd21f325, 0x8571ff1825885d85}),
 		BitSize: 256,
 		Name:    "P256",
 	}
@@ -113,9 +113,9 @@ func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPo
 	}
 	var buf [64]byte
 	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
-	u0 := fp.P256FpNew().SetBytesWide(&buf)
+	u0 := fp.New().SetBytesWide(&buf)
 	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
-	u1 := fp.P256FpNew().SetBytesWide(&buf)
+	u1 := fp.New().SetBytesWide(&buf)
 
 	q0x, q0y := sswuParams.Osswu3mod4(u0)
 	q1x, q1y := sswuParams.Osswu3mod4(u1)
@@ -125,7 +125,7 @@ func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPo
 	tv := &impl.EllipticPoint{
 		X: q1x,
 		Y: q1y,
-		Z: fp.P256FpNew().SetOne(),
+		Z: fp.New().SetOne(),
 	}
 	k.Add(out, out, tv)
 	return nil
@@ -280,8 +280,8 @@ func (p256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 func (k p256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	affine := PointNew()
 	k.ToAffine(affine, arg)
-	lhs := fp.P256FpNew().Square(affine.Y)
-	rhs := fp.P256FpNew()
+	lhs := fp.New().Square(affine.Y)
+	rhs := fp.New()
 	k.RhsEq(rhs, affine.X)
 	return lhs.Equal(rhs) == 1
 }
@@ -313,5 +313,5 @@ func (p256PointArithmetic) RhsEq(out, x *impl.Field) {
 	out.Square(x)
 	out.Mul(out, x)
 	out.Add(out, getP256PointParams().B)
-	out.Add(out, fp.P256FpNew().Mul(getP256PointParams().A, x))
+	out.Add(out, fp.New().Mul(getP256PointParams().A, x))
 }

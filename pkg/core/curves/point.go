@@ -45,25 +45,25 @@ type WeierstrassPoint interface {
 }
 
 type Affine interface {
-	X() Element
-	Y() Element
+	X() FieldElement
+	Y() FieldElement
 }
 
 type Projective interface {
-	ProjectiveX() Element
-	ProjectiveY() Element
-	ProjectiveZ() Element
+	ProjectiveX() FieldElement
+	ProjectiveY() FieldElement
+	ProjectiveZ() FieldElement
 }
 
 type Jacobian interface {
-	JacobianX() Element
-	JacobianY() Element
-	JacobianZ() Element
+	JacobianX() FieldElement
+	JacobianY() FieldElement
+	JacobianZ() FieldElement
 }
 
 type Extended interface {
-	ExtendedX() Element
-	ExtendedY() Element
-	ExtendedZ() Element
-	ExtendedT() Element
+	ExtendedX() FieldElement
+	ExtendedY() FieldElement
+	ExtendedZ() FieldElement
+	ExtendedT() FieldElement
 }

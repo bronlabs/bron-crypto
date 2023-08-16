@@ -9,132 +9,167 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Element) = (*Element)(nil)
+// TODO: finish when filippo is forked
+type FieldProfile struct{}
 
-type Element struct {
+func (FieldProfile) Curve() curves.Curve {
+	return edwards25519Instance
+}
+
+func (FieldProfile) Order() *big.Int {
+	return nil
+}
+
+func (FieldProfile) Characteristic() *big.Int {
+	return nil
+}
+
+func (FieldProfile) ExtensionDegree() *big.Int {
+	return nil
+}
+
+var _ (curves.FieldElement) = (*FieldElement)(nil)
+
+type FieldElement struct {
 	v *impl.Field
 
 	_ helper_types.Incomparable
 }
 
 //nolint:revive // we don't care if impl shadows impl
-func (e *Element) impl() *impl.Field {
+func (e *FieldElement) impl() *impl.Field {
 	return e.v
 }
 
-func (e Element) Value() curves.FieldValue {
-	return e.v.Value
+func (FieldElement) Profile() curves.FieldProfile {
+	return &FieldProfile{}
 }
 
-func (e Element) Modulus() curves.FieldValue {
-	return e.v.Params.Modulus
-}
-
-func (Element) Clone() curves.Element {
+// IMPLEMENT
+func (FieldElement) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e Element) Cmp(rhs curves.Element) int {
-	rhse, ok := rhs.(Element)
+func (e FieldElement) Value() curves.FieldValue {
+	return e.v.Value
+}
+
+func (e FieldElement) Modulus() curves.FieldValue {
+	return e.v.Params.Modulus
+}
+
+func (FieldElement) Clone() curves.FieldElement {
+	return nil
+}
+
+func (e FieldElement) Cmp(rhs curves.FieldElement) int {
+	rhse, ok := rhs.(FieldElement)
 	if !ok {
 		return -2
 	}
 	return e.v.Cmp(rhse.impl())
 }
 
-func (Element) Random(prng io.Reader) curves.Element {
+func (FieldElement) New(value int) curves.FieldElement {
 	return nil
 }
 
-func (Element) Zero() curves.Element {
+func (FieldElement) Random(prng io.Reader) curves.FieldElement {
 	return nil
 }
 
-func (Element) One() curves.Element {
+func (FieldElement) Zero() curves.FieldElement {
 	return nil
 }
 
-func (Element) IsZero() bool {
+func (FieldElement) One() curves.FieldElement {
+	return nil
+}
+
+func (FieldElement) IsZero() bool {
 	return false
 }
 
-func (Element) IsOne() bool {
+func (FieldElement) IsOne() bool {
 	return false
 }
 
-func (Element) IsOdd() bool {
+func (FieldElement) IsOdd() bool {
 	return false
 }
 
-func (Element) IsEven() bool {
+func (FieldElement) IsEven() bool {
 	return false
 }
 
-func (Element) Square() curves.Element {
+func (FieldElement) Square() curves.FieldElement {
 	return nil
 }
 
-func (Element) Double() curves.Element {
+func (FieldElement) Double() curves.FieldElement {
 	return nil
 }
 
-func (Element) Sqrt() curves.Element {
+func (FieldElement) Sqrt() curves.FieldElement {
 	return nil
 }
 
-func (Element) Cube() curves.Element {
+func (FieldElement) Cube() curves.FieldElement {
 	return nil
 }
 
-func (Element) Add(rhs curves.Element) curves.Element {
+func (FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) Sub(rhs curves.Element) curves.Element {
+func (FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) Mul(rhs curves.Element) curves.Element {
+func (FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) MulAdd(y, z curves.Element) curves.Element {
+func (FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) Div(rhs curves.Element) curves.Element {
+func (FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) Exp(rhs curves.Element) curves.Element {
+func (FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (Element) Neg() curves.Element {
+func (FieldElement) Neg() curves.FieldElement {
 	return nil
 }
 
-func (Element) SetBigInt(value, modulus *big.Int) {}
-func (Element) BigInt() *big.Int {
-	return nil
-}
-
-func (Element) SetBytes(input []byte) (curves.Element, error) {
+func (FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
 	return nil, nil
 }
 
-func (Element) SetBytesWide(input []byte) (curves.Element, error) {
-	return nil, nil
-}
-
-func (Element) Bytes() []byte {
+func (FieldElement) BigInt() *big.Int {
 	return nil
 }
 
-func (Element) FromScalar(sc curves.Scalar) (curves.Element, error) {
+func (FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	return nil, nil
 }
 
-func (Element) Scalar(c curves.Curve) (curves.Element, error) {
+func (FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
+	return nil, nil
+}
+
+func (FieldElement) Bytes() []byte {
+	return nil
+}
+
+func (FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
+	return nil, nil
+}
+
+func (FieldElement) Scalar() (curves.FieldElement, error) {
 	return nil, nil
 }

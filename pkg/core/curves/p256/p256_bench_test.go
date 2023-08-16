@@ -682,11 +682,11 @@ func (p *BenchPoint) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (BenchPoint) X() curves.Element {
+func (BenchPoint) X() curves.FieldElement {
 	return nil
 }
 
-func (BenchPoint) Y() curves.Element {
+func (BenchPoint) Y() curves.FieldElement {
 	return nil
 }
 

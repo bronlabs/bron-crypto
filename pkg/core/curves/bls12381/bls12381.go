@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -26,12 +27,36 @@ var (
 
 var modulus = internal.Bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab")
 
+var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+
+// TODO: finish when BLS is here
+type CurveProfile struct{}
+
+func (CurveProfile) Field() curves.FieldProfile {
+	return nil
+}
+
+func (CurveProfile) SubGroupOrder() *big.Int {
+	return nil
+}
+
+func (CurveProfile) Cofactor() *big.Int {
+	return nil
+}
+
+type PairingCurveProfile struct{}
+
+func (PairingCurveProfile) EmbeddingDegree() *big.Int {
+	return big.NewInt(12)
+}
+
 var _ (curves.Curve) = (*Curve)(nil)
 
 type Curve struct {
-	Sc curves.Scalar
-	P  curves.Point
-	ID string
+	Scalar_  curves.Scalar
+	Point_   curves.Point
+	Name_    string
+	Profile_ curves.CurveProfile
 
 	_ helper_types.Incomparable
 }
@@ -39,22 +64,24 @@ type Curve struct {
 var _ (curves.PairingCurve) = (*PairingCurve)(nil)
 
 type PairingCurve struct {
-	G1_   *Curve
-	G2_   *Curve
-	GT_   curves.Scalar
-	Name_ string
+	PairingCurveProfile_ curves.PairingCurveProfile
+	G1_                  *Curve
+	G2_                  *Curve
+	GT_                  curves.Scalar
+	Name_                string
 
 	_ helper_types.Incomparable
 }
 
 func bls12381g1Init() {
 	bls12381g1 = Curve{
-		Sc: &Scalar{
+		Scalar_: &Scalar{
 			Value: bls12381impl.FqNew(),
 			point: new(PointG1),
 		},
-		P:  new(PointG1).Identity(),
-		ID: G1Name,
+		Point_:   new(PointG1).Identity(),
+		Name_:    G1Name,
+		Profile_: &CurveProfile{},
 	}
 }
 
@@ -65,12 +92,12 @@ func NewG1() *Curve {
 
 func bls12381g2Init() {
 	bls12381g2 = Curve{
-		Sc: &Scalar{
+		Scalar_: &Scalar{
 			Value: bls12381impl.FqNew(),
 			point: new(PointG2),
 		},
-		P:  new(PointG2).Identity(),
-		ID: G2Name,
+		Point_: new(PointG2).Identity(),
+		Name_:  G2Name,
 	}
 }
 
@@ -86,28 +113,33 @@ func New() *PairingCurve {
 		GT_: &ScalarGt{
 			Value: new(bls12381impl.Gt).SetOne(),
 		},
-		Name_: Name,
+		Name_:                Name,
+		PairingCurveProfile_: &PairingCurveProfile{},
 	}
 }
 
+func (c Curve) Profile() curves.CurveProfile {
+	return c.Profile_
+}
+
 func (c Curve) Scalar() curves.Scalar {
-	return c.Sc
+	return c.Scalar_
 }
 
 func (c Curve) Point() curves.Point {
-	return c.P
+	return c.Point_
 }
 
 func (c Curve) Name() string {
-	return c.ID
+	return c.Name_
 }
 
 func (c Curve) Generator() curves.Point {
-	return c.P.Generator()
+	return c.Point_.Generator()
 }
 
 func (c Curve) Identity() curves.Point {
-	return c.P.Identity()
+	return c.Point_.Identity()
 }
 
 func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
@@ -118,8 +150,12 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	return nil, nil
 }
 
-func (Curve) DeriveAffine(x curves.Element) (curves.Point, curves.Point, error) {
+func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	return nil, nil, nil
+}
+
+func (pc PairingCurve) PairingCurveProfile() curves.PairingCurveProfile {
+	return pc.PairingCurveProfile_
 }
 
 func (pc PairingCurve) Name() string {

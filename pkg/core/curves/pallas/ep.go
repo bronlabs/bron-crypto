@@ -4,8 +4,7 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"golang.org/x/crypto/blake2b"
-
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -30,8 +29,7 @@ func (p *Ep) Hash(input []byte) *Ep {
 	if input == nil {
 		input = []byte{}
 	}
-	h, _ := blake2b.New(64, []byte{})
-	u, _ := expandMsgXmd(h, input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
+	u := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
 	var buf [64]byte
 	copy(buf[:], u[:64])
 	u0 := new(fp.Fp).SetBytesWide(&buf)
