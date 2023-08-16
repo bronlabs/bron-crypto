@@ -33,9 +33,8 @@ linters:
     - depguard
     # Checks assignments with too many blank identifiers (e.g. x, , , _, := f())
     - dogsled
-    # # Tool for code clone detection
-    # # TODO: Enable this later
-    # - dupl
+    # Tool for code clone detection
+    - dupl
     # Checks for duplicate words in the source code.
     - dupword
     # check for two durations multiplied together
@@ -481,7 +480,7 @@ linters-settings:
       - '64'
   dupl:
     # tokens count to trigger issue, 150 by default
-    threshold: 150
+    threshold: 175
   gomoddirectives:
     # Allow local `replace` directives.
     # Default: false
