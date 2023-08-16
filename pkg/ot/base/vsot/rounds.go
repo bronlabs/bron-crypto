@@ -10,13 +10,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-<<<<<<< HEAD
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-=======
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
->>>>>>> master
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
