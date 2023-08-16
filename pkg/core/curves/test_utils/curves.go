@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#appendix-G.2.1
@@ -144,11 +145,15 @@ func Bhex(s string) *big.Int {
 type SswuParams struct {
 	Params          *elliptic.CurveParams
 	C1, C2, A, B, Z *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type MockReader struct {
 	index int
 	seed  []byte
+
+	_ helper_types.Incomparable
 }
 
 var (

@@ -12,12 +12,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Scalar) = (*Scalar)(nil)
 
 type Scalar struct {
 	Value *filippo.Scalar
+
+	_ helper_types.Incomparable
 }
 
 func (Scalar) Curve() (curves.Curve, error) {
@@ -47,7 +50,7 @@ func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
 	if err != nil {
 		panic("cannot set bytes")
 	}
-	return &Scalar{value}
+	return &Scalar{Value: value}
 }
 
 func (*Scalar) Zero() curves.Scalar {
@@ -106,7 +109,7 @@ func (*Scalar) New(input int) curves.Scalar {
 	}
 
 	return &Scalar{
-		value,
+		Value: value,
 	}
 }
 
@@ -121,7 +124,7 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 
 func (s *Scalar) Square() curves.Scalar {
 	value := filippo.NewScalar().Multiply(s.Value, s.Value)
-	return &Scalar{value}
+	return &Scalar{Value: value}
 }
 
 func (s *Scalar) Double() curves.Scalar {
@@ -146,7 +149,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 func (s *Scalar) Cube() curves.Scalar {
 	value := filippo.NewScalar().Multiply(s.Value, s.Value)
 	value.Multiply(value, s.Value)
-	return &Scalar{value}
+	return &Scalar{Value: value}
 }
 
 func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
@@ -199,7 +202,7 @@ func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
 	if ok {
 		value := filippo.NewScalar().Invert(r.Value)
 		value.Multiply(value, s.Value)
-		return &Scalar{value}
+		return &Scalar{Value: value}
 	} else {
 		panic("rhs is not ScalarEd25519")
 	}
@@ -240,7 +243,7 @@ func (*Scalar) SetBigInt(x *big.Int) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes failed")
 	}
-	return &Scalar{value}, nil
+	return &Scalar{Value: value}, nil
 }
 
 func (s *Scalar) BigInt() *big.Int {
@@ -263,7 +266,7 @@ func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
 	}
-	return &Scalar{value}, nil
+	return &Scalar{Value: value}, nil
 }
 
 // SetBytesWide takes input a 64-byte long byte array, reduce it and return an ed25519 scalar.
@@ -274,7 +277,7 @@ func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
 	}
-	return &Scalar{value}, nil
+	return &Scalar{Value: value}, nil
 }
 
 func isReduced(bytes_ []byte) bool {
@@ -313,7 +316,7 @@ func (*Scalar) SetBytes(input []byte) (result curves.Scalar, err error) {
 			return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
 		}
 	}
-	return &Scalar{value}, nil
+	return &Scalar{Value: value}, nil
 }
 
 func (s *Scalar) Clone() curves.Scalar {

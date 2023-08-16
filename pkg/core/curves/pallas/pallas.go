@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const Name = "pallas"
@@ -71,6 +72,8 @@ type Curve struct {
 	Point_   curves.Point
 	Name_    string
 	Profile_ curves.CurveProfile
+
+	_ helper_types.Incomparable
 }
 
 func pallasInit() {
@@ -139,7 +142,7 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	}
 
 	value := pippengerMultiScalarMultPallas(eps, nScalars)
-	return &Point{value}, nil
+	return &Point{value: value}, nil
 }
 
 // rhs of the curve equation.
@@ -246,7 +249,7 @@ func isoMap(p *Ep) *Ep {
 	y.Mul(y, new(fp.Fp).Square(z0))
 
 	return &Ep{
-		x, y, z0,
+		x: x, y: y, z: z0,
 	}
 }
 

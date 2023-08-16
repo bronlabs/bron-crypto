@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 func BenchmarkK256(b *testing.B) {
@@ -157,6 +158,8 @@ func BenchmarkK256(b *testing.B) {
 
 type BenchScalar struct {
 	value *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func (BenchScalar) CurveName() string {
@@ -303,7 +306,7 @@ func (s *BenchScalar) Div(rhs curves.Scalar) curves.Scalar {
 
 func (s *BenchScalar) Exp(k curves.Scalar) curves.Scalar {
 	value := new(big.Int).Exp(s.value, k.BigInt(), btcec.S256().N)
-	return &BenchScalar{value}
+	return &BenchScalar{value: value}
 }
 
 func (s *BenchScalar) Neg() curves.Scalar {
@@ -331,7 +334,7 @@ func (s *BenchScalar) SetBytes(bytes []byte) (curves.Scalar, error) {
 	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
 	value.Mod(value, btcec.S256().N)
 	return &BenchScalar{
-		value,
+		value: value,
 	}, nil
 }
 
@@ -339,7 +342,7 @@ func (s *BenchScalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
 	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
 	value.Mod(value, btcec.S256().N)
 	return &BenchScalar{
-		value,
+		value: value,
 	}, nil
 }
 
@@ -351,6 +354,8 @@ func (s *BenchScalar) Clone() curves.Scalar {
 
 type BenchPoint struct {
 	x, y *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func (BenchPoint) Curve() (curves.Curve, error) {
@@ -366,7 +371,7 @@ func (p *BenchPoint) Random(reader io.Reader) curves.Point {
 		_, _ = reader.Read(k[:])
 		x, y = curve.ScalarBaseMult(k[:])
 	}
-	return &BenchPoint{x, y}
+	return &BenchPoint{x: x, y: y}
 }
 
 func (p *BenchPoint) Hash(bytes ...[]byte) curves.Point {
@@ -399,7 +404,7 @@ func (p *BenchPoint) IsOnCurve() bool {
 func (p *BenchPoint) Double() curves.Point {
 	x, y := btcec.S256().Double(p.x, p.y)
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}
 }
 
@@ -418,7 +423,7 @@ func (p *BenchPoint) Add(rhs curves.Point) curves.Point {
 	r := rhs.(*BenchPoint)
 	x, y := btcec.S256().Add(p.x, p.y, r.x, r.y)
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}
 }
 
@@ -431,7 +436,7 @@ func (p *BenchPoint) Mul(rhs curves.Scalar) curves.Point {
 	k := rhs.Bytes()
 	x, y := btcec.S256().ScalarMult(p.x, p.y, k)
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}
 }
 
@@ -442,7 +447,7 @@ func (p *BenchPoint) Equal(rhs curves.Point) bool {
 
 func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}, nil
 }
 

@@ -13,12 +13,15 @@ import (
 	secp256k1 "github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Point) = (*Point)(nil)
 
 type Point struct {
 	Value *impl.EllipticPoint
+
+	_ helper_types.Incomparable
 }
 
 func (Point) Curve() (curves.Curve, error) {
@@ -38,7 +41,7 @@ func (*Point) Hash(inputs ...[]byte) curves.Point {
 		panic("cannot create Point from hash")
 	}
 
-	return &Point{value}
+	return &Point{Value: value}
 }
 
 func (*Point) Identity() curves.Point {
@@ -67,7 +70,7 @@ func (p *Point) IsOnCurve() bool {
 
 func (p *Point) Double() curves.Point {
 	value := secp256k1.PointNew().Double(p.Value)
-	return &Point{value}
+	return &Point{Value: value}
 }
 
 func (*Point) Scalar() curves.Scalar {
@@ -76,7 +79,7 @@ func (*Point) Scalar() curves.Scalar {
 
 func (p *Point) Neg() curves.Point {
 	value := secp256k1.PointNew().Neg(p.Value)
-	return &Point{value}
+	return &Point{Value: value}
 }
 
 func (p *Point) Add(rhs curves.Point) curves.Point {
@@ -86,7 +89,7 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 	r, ok := rhs.(*Point)
 	if ok {
 		value := secp256k1.PointNew().Add(p.Value, r.Value)
-		return &Point{value}
+		return &Point{Value: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
@@ -99,7 +102,7 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 	r, ok := rhs.(*Point)
 	if ok {
 		value := secp256k1.PointNew().Sub(p.Value, r.Value)
-		return &Point{value}
+		return &Point{Value: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
@@ -112,7 +115,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		value := secp256k1.PointNew().Mul(p.Value, r.Value)
-		return &Point{value}
+		return &Point{Value: value}
 	} else {
 		panic("rhs is not ScalarK256")
 	}
@@ -132,7 +135,7 @@ func (*Point) Set(x, y *big.Int) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "could not set x,y")
 	}
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (p *Point) ToAffineCompressed() []byte {
@@ -192,7 +195,7 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 		value.Y = y
 		value.Z.SetOne()
 	}
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
@@ -218,7 +221,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	value.X = x
 	value.Y = y
 	value.Z.SetOne()
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (p *Point) CurveName() string {

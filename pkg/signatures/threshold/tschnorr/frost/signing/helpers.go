@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
@@ -15,9 +16,9 @@ func ProducePartialSignature(
 	sessionParticipants []integration.IdentityKey,
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
-	D_alpha, E_alpha map[integration.IdentityHash]curves.Point,
+	D_alpha, E_alpha map[helper_types.IdentityHash]curves.Point,
 	sharingIdToIdentityKey map[int]integration.IdentityKey,
-	identityKeyToSharingId map[integration.IdentityHash]int,
+	identityKeyToSharingId map[helper_types.IdentityHash]int,
 	aggregationParameter *aggregation.SignatureAggregatorParameters,
 	message []byte,
 ) (*frost.PartialSignature, error) {
@@ -32,7 +33,7 @@ func ProducePartialSignature(
 		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty.Hash()].ToAffineCompressed()...)
 	}
 
-	R_js := map[integration.IdentityHash]curves.Point{}
+	R_js := map[helper_types.IdentityHash]curves.Point{}
 	for _, participant := range sessionParticipants {
 		sharingId := identityKeyToSharingId[participant.Hash()]
 		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)

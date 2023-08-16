@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
 )
 
@@ -27,6 +28,8 @@ func TestVector(t *testing.T) {
 		Message   string
 		Signature string
 		Valid     bool
+
+		_ helper_types.Incomparable
 	}
 	vectorData := []TestVectorData{
 		{

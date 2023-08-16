@@ -11,12 +11,15 @@ import (
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Scalar) = (*ScalarGt)(nil)
 
 type ScalarGt struct {
 	Value *bls12381impl.Gt
+
+	_ helper_types.Incomparable
 }
 
 func (ScalarGt) Curve() (curves.Curve, error) {
@@ -40,7 +43,7 @@ func (*ScalarGt) Random(reader io.Reader) curves.Scalar {
 	if err != nil {
 		return nil
 	}
-	return &ScalarGt{value}
+	return &ScalarGt{Value: value}
 }
 
 func (s *ScalarGt) Hash(inputs ...[]byte) curves.Scalar {
@@ -56,11 +59,11 @@ func (s *ScalarGt) Hash(inputs ...[]byte) curves.Scalar {
 }
 
 func (*ScalarGt) Zero() curves.Scalar {
-	return &ScalarGt{new(bls12381impl.Gt)}
+	return &ScalarGt{Value: new(bls12381impl.Gt)}
 }
 
 func (*ScalarGt) One() curves.Scalar {
-	return &ScalarGt{new(bls12381impl.Gt).SetOne()}
+	return &ScalarGt{Value: new(bls12381impl.Gt).SetOne()}
 }
 
 func (s *ScalarGt) IsZero() bool {
@@ -143,7 +146,7 @@ func (*ScalarGt) New(input int) curves.Scalar {
 	if isCanonical != 1 {
 		return nil
 	}
-	return &ScalarGt{value}
+	return &ScalarGt{Value: value}
 }
 
 func (s *ScalarGt) Cmp(rhs curves.Scalar) int {
@@ -157,13 +160,13 @@ func (s *ScalarGt) Cmp(rhs curves.Scalar) int {
 
 func (s *ScalarGt) Square() curves.Scalar {
 	return &ScalarGt{
-		new(bls12381impl.Gt).Square(s.Value),
+		Value: new(bls12381impl.Gt).Square(s.Value),
 	}
 }
 
 func (s *ScalarGt) Double() curves.Scalar {
 	return &ScalarGt{
-		new(bls12381impl.Gt).Double(s.Value),
+		Value: new(bls12381impl.Gt).Double(s.Value),
 	}
 }
 
@@ -173,7 +176,7 @@ func (s *ScalarGt) Invert() (curves.Scalar, error) {
 		return nil, errs.NewFailed("not invertible")
 	}
 	return &ScalarGt{
-		value,
+		Value: value,
 	}, nil
 }
 
@@ -186,7 +189,7 @@ func (s *ScalarGt) Cube() curves.Scalar {
 	value := new(bls12381impl.Gt).Square(s.Value)
 	value.Add(value, s.Value)
 	return &ScalarGt{
-		value,
+		Value: value,
 	}
 }
 
@@ -194,7 +197,7 @@ func (s *ScalarGt) Add(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*ScalarGt)
 	if ok {
 		return &ScalarGt{
-			new(bls12381impl.Gt).Add(s.Value, r.Value),
+			Value: new(bls12381impl.Gt).Add(s.Value, r.Value),
 		}
 	} else {
 		return nil
@@ -205,7 +208,7 @@ func (s *ScalarGt) Sub(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*ScalarGt)
 	if ok {
 		return &ScalarGt{
-			new(bls12381impl.Gt).Sub(s.Value, r.Value),
+			Value: new(bls12381impl.Gt).Sub(s.Value, r.Value),
 		}
 	} else {
 		return nil
@@ -216,7 +219,7 @@ func (s *ScalarGt) Mul(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*ScalarGt)
 	if ok {
 		return &ScalarGt{
-			new(bls12381impl.Gt).Add(s.Value, r.Value),
+			Value: new(bls12381impl.Gt).Add(s.Value, r.Value),
 		}
 	} else {
 		return nil
@@ -231,7 +234,7 @@ func (s *ScalarGt) Div(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*ScalarGt)
 	if ok {
 		return &ScalarGt{
-			new(bls12381impl.Gt).Sub(s.Value, r.Value),
+			Value: new(bls12381impl.Gt).Sub(s.Value, r.Value),
 		}
 	} else {
 		return nil
@@ -254,7 +257,7 @@ func (s *ScalarGt) Exp(k curves.Scalar) curves.Scalar {
 
 func (s *ScalarGt) Neg() curves.Scalar {
 	return &ScalarGt{
-		new(bls12381impl.Gt).Neg(s.Value),
+		Value: new(bls12381impl.Gt).Neg(s.Value),
 	}
 }
 
@@ -281,7 +284,7 @@ func (*ScalarGt) SetBytes(input []byte) (curves.Scalar, error) {
 	if isCanonical == 0 {
 		return nil, errs.NewDeserializationFailed("invalid bytes")
 	}
-	return &ScalarGt{ss}, nil
+	return &ScalarGt{Value: ss}, nil
 }
 
 func (*ScalarGt) SetBytesWide(input []byte) (curves.Scalar, error) {
@@ -301,7 +304,7 @@ func (*ScalarGt) SetBytesWide(input []byte) (curves.Scalar, error) {
 		return nil, errs.NewDeserializationFailed("invalid bytes")
 	}
 	value.Add(value, value2)
-	return &ScalarGt{value}, nil
+	return &ScalarGt{Value: value}, nil
 }
 
 func (s *ScalarGt) Clone() curves.Scalar {

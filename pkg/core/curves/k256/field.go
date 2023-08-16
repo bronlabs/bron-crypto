@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.FieldProfile) = (*FieldProfile)(nil)
@@ -35,6 +36,8 @@ var _ (curves.FieldElement) = (*FieldElement)(nil)
 
 type FieldElement struct {
 	v *impl.Field
+
+	_ helper_types.Incomparable
 }
 
 //nolint:revive // we don't care if impl shadows impl

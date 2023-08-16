@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
@@ -26,11 +27,13 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    []integration.IdentityKey
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityHash]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
 	aggregationParameter *aggregation.SignatureAggregatorParameters
+
+	_ helper_types.Incomparable
 }
 
 func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -116,8 +119,8 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alpha := map[integration.IdentityHash]curves.Point{}
-	E_alpha := map[integration.IdentityHash]curves.Point{}
+	D_alpha := map[helper_types.IdentityHash]curves.Point{}
+	E_alpha := map[helper_types.IdentityHash]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
 		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)

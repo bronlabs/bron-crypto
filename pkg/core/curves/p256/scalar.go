@@ -11,12 +11,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Scalar) = (*Scalar)(nil)
 
 type Scalar struct {
 	Value *impl.Field
+
+	_ helper_types.Incomparable
 }
 
 func (Scalar) Curve() (curves.Curve, error) {
@@ -116,7 +119,7 @@ func (s *Scalar) Invert() (curves.Scalar, error) {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
 	return &Scalar{
-		value,
+		Value: value,
 	}, nil
 }
 
@@ -126,7 +129,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 		return nil, errs.NewFailed("not a square")
 	}
 	return &Scalar{
-		value,
+		Value: value,
 	}, nil
 }
 
@@ -134,7 +137,7 @@ func (s *Scalar) Cube() curves.Scalar {
 	value := fq.New().Mul(s.Value, s.Value)
 	value.Mul(value, s.Value)
 	return &Scalar{
-		value,
+		Value: value,
 	}
 }
 
@@ -196,7 +199,7 @@ func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
 	}
 
 	value := fq.New().Exp(s.Value, exponent.Value)
-	return &Scalar{value}
+	return &Scalar{Value: value}
 }
 
 func (s *Scalar) Neg() curves.Scalar {
@@ -211,7 +214,7 @@ func (*Scalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
 	}
 	value := fq.New().SetBigInt(v)
 	return &Scalar{
-		value,
+		Value: value,
 	}, nil
 }
 
@@ -235,7 +238,7 @@ func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 		return nil, errs.WrapFailed(err, "could not set bytes")
 	}
 	return &Scalar{
-		value,
+		Value: value,
 	}, nil
 }
 

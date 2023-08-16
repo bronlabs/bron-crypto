@@ -11,11 +11,14 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type mockReader struct {
 	index int
 	seed  []byte
+
+	_ helper_types.Incomparable
 }
 
 var (

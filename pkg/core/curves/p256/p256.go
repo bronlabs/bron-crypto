@@ -10,6 +10,7 @@ import (
 	p256n "github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const Name = "P-256"
@@ -42,6 +43,8 @@ type Curve struct {
 	Point_   curves.Point
 	Name_    string
 	Profile_ curves.CurveProfile
+
+	_ helper_types.Incomparable
 }
 
 func p256Init() {
@@ -108,7 +111,7 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {

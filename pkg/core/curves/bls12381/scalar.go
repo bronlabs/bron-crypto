@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.PairingScalar) = (*Scalar)(nil)
@@ -18,6 +19,8 @@ var _ (curves.PairingScalar) = (*Scalar)(nil)
 type Scalar struct {
 	Value *impl.Field
 	point curves.PairingPoint
+
+	_ helper_types.Incomparable
 }
 
 func (s *Scalar) Curve() (curves.Curve, error) {
@@ -267,7 +270,7 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 		return nil, errs.WrapDeserializationFailed(err, "couldn't set bytes")
 	}
 	return &Scalar{
-		value, s.point,
+		Value: value, point: s.point,
 	}, nil
 }
 
@@ -278,7 +281,7 @@ func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	var seq [64]byte
 	copy(seq[:], input)
 	return &Scalar{
-		bls12381impl.FqNew().SetBytesWide(&seq), s.point,
+		Value: bls12381impl.FqNew().SetBytesWide(&seq), point: s.point,
 	}, nil
 }
 

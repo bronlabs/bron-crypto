@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 	"math/big"
 
@@ -30,18 +31,20 @@ type State struct {
 	myRPrime          *big.Int
 	myRDoublePrime    *big.Int
 
-	theirBigQCommitment          map[integration.IdentityHash]commitments.Commitment
-	theirBigQPrime               map[integration.IdentityHash]curves.Point
-	theirBigQDoublePrime         map[integration.IdentityHash]curves.Point
-	theirPaillierPublicKeys      map[integration.IdentityHash]*paillier.PublicKey
-	theirPaillierEncryptedShares map[integration.IdentityHash]paillier.CipherText
+	theirBigQCommitment          map[helper_types.IdentityHash]commitments.Commitment
+	theirBigQPrime               map[helper_types.IdentityHash]curves.Point
+	theirBigQDoublePrime         map[helper_types.IdentityHash]curves.Point
+	theirPaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
+	theirPaillierEncryptedShares map[helper_types.IdentityHash]paillier.CipherText
 
-	lpProvers                map[integration.IdentityHash]*lp.Prover
-	lpVerifiers              map[integration.IdentityHash]*lp.Verifier
-	lpdlPrimeProvers         map[integration.IdentityHash]*lpdl.Prover
-	lpdlPrimeVerifiers       map[integration.IdentityHash]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[integration.IdentityHash]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[integration.IdentityHash]*lpdl.Verifier
+	lpProvers                map[helper_types.IdentityHash]*lp.Prover
+	lpVerifiers              map[helper_types.IdentityHash]*lp.Verifier
+	lpdlPrimeProvers         map[helper_types.IdentityHash]*lpdl.Prover
+	lpdlPrimeVerifiers       map[helper_types.IdentityHash]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[helper_types.IdentityHash]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[helper_types.IdentityHash]*lpdl.Verifier
+
+	_ helper_types.Incomparable
 }
 
 type Participant struct {
@@ -51,13 +54,15 @@ type Participant struct {
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId  map[integration.IdentityHash]int
+	idKeyToSharingId  map[helper_types.IdentityHash]int
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
 
 	round int
 	state *State
+
+	_ helper_types.Incomparable
 }
 
 const (

@@ -1,23 +1,35 @@
 package bls12381impl
 
+import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
+
 const coefficientsG2 = 68
 
 type Engine struct {
 	pairs []pair
+
+	_ helper_types.Incomparable
 }
 
 type pair struct {
 	g1 G1
 	g2 G2
+
+	_ helper_types.Incomparable
 }
 
 type g2Prepared struct {
 	identity     int
 	coefficients []coefficients
+
+	_ helper_types.Incomparable
 }
 
 type coefficients struct {
 	a, b, c fp2
+
+	_ helper_types.Incomparable
 }
 
 func (c *coefficients) CMove(arg1, arg2 *coefficients, choice int) *coefficients {

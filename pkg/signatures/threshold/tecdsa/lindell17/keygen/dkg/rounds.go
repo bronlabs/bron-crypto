@@ -2,17 +2,18 @@ package dkg
 
 import (
 	"crypto/sha256"
+	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
@@ -27,6 +28,8 @@ var (
 
 type Round1Broadcast struct {
 	BigQCommitment commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
@@ -35,36 +38,48 @@ type Round2Broadcast struct {
 	BigQPrimeProof       *dlog.Proof
 	BigQDoublePrime      curves.Point
 	BigQDoublePrimeProof *dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 type Round3Broadcast struct {
 	CKeyPrime         paillier.CipherText
 	CKeyDoublePrime   paillier.CipherText
 	PaillierPublicKey *paillier.PublicKey
+
+	_ helper_types.Incomparable
 }
 
 type Round4P2P struct {
 	LpRound1Output              *lp.Round1Output
 	LpdlPrimeRound1Output       *lpdl.Round1Output
 	LpdlDoublePrimeRound1Output *lpdl.Round1Output
+
+	_ helper_types.Incomparable
 }
 
 type Round5P2P struct {
 	LpRound2Output              *lp.Round2Output
 	LpdlPrimeRound2Output       *lpdl.Round2Output
 	LpdlDoublePrimeRound2Output *lpdl.Round2Output
+
+	_ helper_types.Incomparable
 }
 
 type Round6P2P struct {
 	LpRound3Output              *lp.Round3Output
 	LpdlPrimeRound3Output       *lpdl.Round3Output
 	LpdlDoublePrimeRound3Output *lpdl.Round3Output
+
+	_ helper_types.Incomparable
 }
 
 type Round7P2P struct {
 	LpRound4Output              *lp.Round4Output
 	LpdlPrimeRound4Output       *lpdl.Round4Output
 	LpdlDoublePrimeRound4Output *lpdl.Round4Output
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
@@ -102,17 +117,17 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	// 1.iv. broadcast commitments
 	p.round++
 	return &Round1Broadcast{
-		bigQCommitment,
+		BigQCommitment: bigQCommitment,
 	}, nil
 }
 
-func (p *Participant) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Participant) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", p.round)
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = make(map[integration.IdentityHash]commitments.Commitment)
+	p.state.theirBigQCommitment = make(map[helper_types.IdentityHash]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -126,11 +141,11 @@ func (p *Participant) Round2(input map[integration.IdentityHash]*Round1Broadcast
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
 	dlogTranscript := p.transcript.Clone()
-	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, dlogTranscript)
+	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, dlogTranscript, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
 	}
-	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, dlogTranscript)
+	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, dlogTranscript, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
 	}
@@ -146,13 +161,13 @@ func (p *Participant) Round2(input map[integration.IdentityHash]*Round1Broadcast
 	}, nil
 }
 
-func (p *Participant) Round3(input map[integration.IdentityHash]*Round2Broadcast) (output *Round3Broadcast, err error) {
+func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcast) (output *Round3Broadcast, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", p.round)
 	}
 
-	p.state.theirBigQPrime = make(map[integration.IdentityHash]curves.Point)
-	p.state.theirBigQDoublePrime = make(map[integration.IdentityHash]curves.Point)
+	p.state.theirBigQPrime = make(map[helper_types.IdentityHash]curves.Point)
+	p.state.theirBigQDoublePrime = make(map[helper_types.IdentityHash]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants {
@@ -206,9 +221,9 @@ func (p *Participant) Round3(input map[integration.IdentityHash]*Round2Broadcast
 
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
-	p.state.lpProvers = make(map[integration.IdentityHash]*lp.Prover)
-	p.state.lpdlPrimeProvers = make(map[integration.IdentityHash]*lpdl.Prover)
-	p.state.lpdlDoublePrimeProvers = make(map[integration.IdentityHash]*lpdl.Prover)
+	p.state.lpProvers = make(map[helper_types.IdentityHash]*lp.Prover)
+	p.state.lpdlPrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
+	p.state.lpdlDoublePrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -238,19 +253,19 @@ func (p *Participant) Round3(input map[integration.IdentityHash]*Round2Broadcast
 	}, nil
 }
 
-func (p *Participant) Round4(input map[integration.IdentityHash]*Round3Broadcast) (output map[integration.IdentityHash]*Round4P2P, err error) {
+func (p *Participant) Round4(input map[helper_types.IdentityHash]*Round3Broadcast) (output map[helper_types.IdentityHash]*Round4P2P, err error) {
 	if p.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", p.round)
 	}
 
-	p.state.theirPaillierPublicKeys = make(map[integration.IdentityHash]*paillier.PublicKey)
-	p.state.theirPaillierEncryptedShares = make(map[integration.IdentityHash]paillier.CipherText)
+	p.state.theirPaillierPublicKeys = make(map[helper_types.IdentityHash]*paillier.PublicKey)
+	p.state.theirPaillierEncryptedShares = make(map[helper_types.IdentityHash]paillier.CipherText)
 
-	p.state.lpVerifiers = make(map[integration.IdentityHash]*lp.Verifier)
-	p.state.lpdlPrimeVerifiers = make(map[integration.IdentityHash]*lpdl.Verifier)
-	p.state.lpdlDoublePrimeVerifiers = make(map[integration.IdentityHash]*lpdl.Verifier)
+	p.state.lpVerifiers = make(map[helper_types.IdentityHash]*lp.Verifier)
+	p.state.lpdlPrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)
+	p.state.lpdlDoublePrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)
 
-	round4Outputs := make(map[integration.IdentityHash]*Round4P2P)
+	round4Outputs := make(map[helper_types.IdentityHash]*Round4P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -312,13 +327,13 @@ func (p *Participant) Round4(input map[integration.IdentityHash]*Round3Broadcast
 	return round4Outputs, nil
 }
 
-func (p *Participant) Round5(input map[integration.IdentityHash]*Round4P2P) (output map[integration.IdentityHash]*Round5P2P, err error) {
+func (p *Participant) Round5(input map[helper_types.IdentityHash]*Round4P2P) (output map[helper_types.IdentityHash]*Round5P2P, err error) {
 	if p.round != 5 {
 		return nil, errs.NewInvalidRound("%d != 5", p.round)
 	}
 
 	// 5. LP and LPDL continue
-	round5Outputs := make(map[integration.IdentityHash]*Round5P2P)
+	round5Outputs := make(map[helper_types.IdentityHash]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -347,13 +362,13 @@ func (p *Participant) Round5(input map[integration.IdentityHash]*Round4P2P) (out
 	return round5Outputs, nil
 }
 
-func (p *Participant) Round6(input map[integration.IdentityHash]*Round5P2P) (output map[integration.IdentityHash]*Round6P2P, err error) {
+func (p *Participant) Round6(input map[helper_types.IdentityHash]*Round5P2P) (output map[helper_types.IdentityHash]*Round6P2P, err error) {
 	if p.round != 6 {
 		return nil, errs.NewInvalidRound("%d != 6", p.round)
 	}
 
 	// 6. LP and LPDL continue
-	round6Outputs := make(map[integration.IdentityHash]*Round6P2P)
+	round6Outputs := make(map[helper_types.IdentityHash]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -382,13 +397,13 @@ func (p *Participant) Round6(input map[integration.IdentityHash]*Round5P2P) (out
 	return round6Outputs, nil
 }
 
-func (p *Participant) Round7(input map[integration.IdentityHash]*Round6P2P) (output map[integration.IdentityHash]*Round7P2P, err error) {
+func (p *Participant) Round7(input map[helper_types.IdentityHash]*Round6P2P) (output map[helper_types.IdentityHash]*Round7P2P, err error) {
 	if p.round != 7 {
 		return nil, errs.NewInvalidRound("%d != 7", p.round)
 	}
 
 	// 7. LP and LPDL continue
-	round7Outputs := make(map[integration.IdentityHash]*Round7P2P)
+	round7Outputs := make(map[helper_types.IdentityHash]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -417,7 +432,7 @@ func (p *Participant) Round7(input map[integration.IdentityHash]*Round6P2P) (out
 	return round7Outputs, nil
 }
 
-func (p *Participant) Round8(input map[integration.IdentityHash]*Round7P2P) (shard *lindell17.Shard, err error) {
+func (p *Participant) Round8(input map[helper_types.IdentityHash]*Round7P2P) (shard *lindell17.Shard, err error) {
 	if p.round != 8 {
 		return nil, errs.NewInvalidRound("%d != 8", p.round)
 	}
@@ -473,7 +488,7 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 	return commitments.Open(commitmentHashFunc, message, commitment, witness)
 }
 
-func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
+func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curve, err := bigQ.Curve()
@@ -482,7 +497,7 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 	}
 	generator := curve.Generator()
 
-	prover, err := dlog.NewProver(generator, sid, transcript)
+	prover, err := dlog.NewProver(generator, sid, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -507,5 +522,5 @@ func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid
 	}
 	generator := curve.Generator()
 
-	return dlog.Verify(generator, bigQ, proof, sid, transcript)
+	return dlog.Verify(generator, bigQ, proof, sid)
 }

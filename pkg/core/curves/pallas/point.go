@@ -11,12 +11,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Point) = (*Point)(nil)
 
 type Point struct {
 	value *Ep
+
+	_ helper_types.Incomparable
 }
 
 func (Point) Curve() (curves.Curve, error) {
@@ -28,19 +31,19 @@ func (Point) CurveName() string {
 }
 
 func (*Point) Random(reader io.Reader) curves.Point {
-	return &Point{new(Ep).Random(reader)}
+	return &Point{value: new(Ep).Random(reader)}
 }
 
 func (*Point) Hash(inputs ...[]byte) curves.Point {
-	return &Point{new(Ep).Hash(bytes.Join(inputs, nil))}
+	return &Point{value: new(Ep).Hash(bytes.Join(inputs, nil))}
 }
 
 func (*Point) Identity() curves.Point {
-	return &Point{new(Ep).Identity()}
+	return &Point{value: new(Ep).Identity()}
 }
 
 func (*Point) Generator() curves.Point {
-	return &Point{new(Ep).Generator()}
+	return &Point{value: new(Ep).Generator()}
 }
 
 func (p *Point) IsIdentity() bool {
@@ -56,15 +59,15 @@ func (p *Point) IsOnCurve() bool {
 }
 
 func (p *Point) Double() curves.Point {
-	return &Point{new(Ep).Double(p.value)}
+	return &Point{value: new(Ep).Double(p.value)}
 }
 
 func (*Point) Scalar() curves.Scalar {
-	return &Scalar{new(fq.Fq).SetZero()}
+	return &Scalar{value: new(fq.Fq).SetZero()}
 }
 
 func (p *Point) Neg() curves.Point {
-	return &Point{new(Ep).Neg(p.value)}
+	return &Point{value: new(Ep).Neg(p.value)}
 }
 
 func (p *Point) Add(rhs curves.Point) curves.Point {
@@ -72,7 +75,7 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 	if !ok {
 		return nil
 	}
-	return &Point{new(Ep).Add(p.value, r.value)}
+	return &Point{value: new(Ep).Add(p.value, r.value)}
 }
 
 func (p *Point) Sub(rhs curves.Point) curves.Point {
@@ -80,7 +83,7 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 	if !ok {
 		return nil
 	}
-	return &Point{new(Ep).Sub(p.value, r.value)}
+	return &Point{value: new(Ep).Sub(p.value, r.value)}
 }
 
 func (p *Point) Mul(rhs curves.Scalar) curves.Point {
@@ -88,7 +91,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	if !ok {
 		return nil
 	}
-	return &Point{new(Ep).Mul(p.value, s.value)}
+	return &Point{value: new(Ep).Mul(p.value, s.value)}
 }
 
 func (p *Point) Equal(rhs curves.Point) bool {
@@ -106,17 +109,17 @@ func (p *Point) Set(x, y *big.Int) (curves.Point, error) {
 	var data [32]byte
 	if yy == 1 {
 		if xx == 1 {
-			return &Point{new(Ep).Identity()}, nil
+			return &Point{value: new(Ep).Identity()}, nil
 		}
 		data = xElem.Bytes()
 		return p.FromAffineCompressed(data[:])
 	}
 	yElem := new(fp.Fp).SetBigInt(y)
-	value := &Ep{xElem, yElem, new(fp.Fp).SetOne()}
+	value := &Ep{x: xElem, y: yElem, z: new(fp.Fp).SetOne()}
 	if !value.IsOnCurve() {
 		return nil, errs.NewNotOnCurve("point is not on the curve")
 	}
-	return &Point{value}, nil
+	return &Point{value: value}, nil
 }
 
 func (p *Point) ToAffineCompressed() []byte {
@@ -132,7 +135,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Point{value}, nil
+	return &Point{value: value}, nil
 }
 
 func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
@@ -140,7 +143,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Point{value}, nil
+	return &Point{value: value}, nil
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {

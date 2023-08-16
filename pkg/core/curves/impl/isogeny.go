@@ -1,11 +1,17 @@
 package impl
 
+import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
+
 // IsogenyParams are the parameters needed to map from an isogeny to the main curve.
 type IsogenyParams struct {
 	XNum [][FieldLimbs]uint64
 	XDen [][FieldLimbs]uint64
 	YNum [][FieldLimbs]uint64
 	YDen [][FieldLimbs]uint64
+
+	_ helper_types.Incomparable
 }
 
 // Map from the isogeny curve to the main curve using the parameters.

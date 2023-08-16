@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	p256n "github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl/fq"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var (
@@ -17,6 +18,8 @@ var (
 
 type NistP256 struct {
 	*elliptic.CurveParams
+
+	_ helper_types.Incomparable
 }
 
 func oldP256InitAll() {

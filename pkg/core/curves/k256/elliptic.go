@@ -11,6 +11,7 @@ import (
 	secp256k1 "github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var (
@@ -20,6 +21,8 @@ var (
 
 type Koblitz256 struct {
 	*elliptic.CurveParams
+
+	_ helper_types.Incomparable
 }
 
 func oldK256InitAll() {

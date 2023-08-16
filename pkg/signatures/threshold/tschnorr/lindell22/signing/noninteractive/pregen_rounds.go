@@ -3,6 +3,7 @@ package noninteractive
 import (
 	"bytes"
 	"encoding/hex"
+	"io"
 	"strconv"
 
 	"golang.org/x/crypto/sha3"
@@ -10,8 +11,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
@@ -26,12 +27,16 @@ var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment []commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
 	BigR        []curves.Point
 	BigRWitness []commitments.Witness
 	BigRProof   []*dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
@@ -67,15 +72,15 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitment := make([]map[integration.IdentityHash]commitments.Commitment, p.tau)
+	theirBigRCommitment := make([]map[helper_types.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitment[i] = make(map[integration.IdentityHash]commitments.Commitment)
+		theirBigRCommitment[i] = make(map[helper_types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
 			in, ok := input[identity.Hash()]
 			if !ok {
@@ -85,7 +90,7 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Bro
 		}
 
 		// 1. compute proof of dlog knowledge of R
-		bigRProof[i], err = dlogProve(p.state.k[i], p.state.bigR[i], i, p.sid, p.state.bigS, p.transcript.Clone())
+		bigRProof[i], err = dlogProve(p.state.k[i], p.state.bigR[i], i, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot prove dlog")
 		}
@@ -102,14 +107,14 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Bro
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[integration.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input map[helper_types.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
-	BigR := make([]map[integration.IdentityHash]curves.Point, p.tau)
+	BigR := make([]map[helper_types.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
-		BigR[i] = make(map[integration.IdentityHash]curves.Point)
+		BigR[i] = make(map[helper_types.IdentityHash]curves.Point)
 		for _, identity := range p.cohortConfig.Participants {
 			in, ok := input[identity.Hash()]
 			if !ok {
@@ -165,7 +170,7 @@ func openCommitment(bigR curves.Point, i, tau int, pid, sid, bigS []byte, commit
 	return nil
 }
 
-func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
+func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
 	curve, err := x.Curve()
 	if err != nil {
 		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name())
@@ -174,7 +179,7 @@ func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
 
-	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript, prng)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
 	}
@@ -197,7 +202,7 @@ func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, presigIndex int, sid,
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
-	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot verify commitment")
 	}
 

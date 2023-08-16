@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
@@ -21,11 +22,15 @@ var h = sha3.New256
 
 type Round1Broadcast struct {
 	R_i curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type Round1P2P struct {
 	CommitmentToInstanceKey commitments.Commitment
 	MultiplicationOutput    *mult.Round1Output
+
+	_ helper_types.Incomparable
 }
 
 type Round2P2P struct {
@@ -34,13 +39,17 @@ type Round2P2P struct {
 	GammaV_ij                           curves.Point
 	Psi_ij                              curves.Scalar
 	WitnessOfTheCommitmentToInstanceKey commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
 	PK_i curves.Point
+
+	_ helper_types.Incomparable
 }
 
-func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Round1P2P, error) {
+func (ic *Cosigner) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
 	if ic.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
@@ -51,7 +60,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Ro
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
-	outputP2P := make(map[integration.IdentityHash]*Round1P2P, len(ic.SessionParticipants))
+	outputP2P := make(map[helper_types.IdentityHash]*Round1P2P, len(ic.SessionParticipants))
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
@@ -91,7 +100,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Ro
 	}, outputP2P, nil
 }
 
-func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityHash]*Round1Broadcast, round1outputP2P map[integration.IdentityHash]*Round1P2P) (*Round2Broadcast, map[integration.IdentityHash]*Round2P2P, error) {
+func (ic *Cosigner) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*Round2Broadcast, map[helper_types.IdentityHash]*Round2P2P, error) {
 	if ic.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
 	}
@@ -116,7 +125,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityHash]*R
 	// step 2.5
 	a := [mult.L]curves.Scalar{ic.state.r_i, ic.state.sk_i}
 
-	outputP2P := make(map[integration.IdentityHash]*Round2P2P)
+	outputP2P := make(map[helper_types.IdentityHash]*Round2P2P)
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
@@ -161,7 +170,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityHash]*R
 	}, outputP2P, nil
 }
 
-func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityHash]*Round2Broadcast, round2outputP2P map[integration.IdentityHash]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
+func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*Round2Broadcast, round2outputP2P map[helper_types.IdentityHash]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
@@ -272,7 +281,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityHash]*R
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[integration.IdentityHash]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[helper_types.IdentityHash]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
 	w := curve.Scalar().Zero()
 	u := curve.Scalar().Zero()

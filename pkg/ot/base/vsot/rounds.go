@@ -10,14 +10,16 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
 type Round1P2P struct {
-	Proof     *schnorr.Proof
+	Proof     *dlog.Proof
 	PublicKey curves.Point
+
+	_ helper_types.Incomparable
 }
 type (
 	Round2P2P = []ReceiversMaskedChoices
@@ -29,20 +31,19 @@ type (
 )
 
 // Round1ComputeAndZkpToPublicKey is the first phase of the protocol.
-// computes and stores public key and returns the schnorr proof. serialised / packed.
+// computes and stores public key and returns the dlog proof. serialised / packed.
 // This implements step 1 of Protocol 7 of DKLs18, page 16.
-func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.Point, error) {
+func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*dlog.Proof, curves.Point, error) {
 	var err error
 	// Sample the secret key and compute the public key.
 	sender.SecretKey = sender.Curve.Scalar().Random(rand.Reader)
 	sender.PublicKey = sender.Curve.ScalarBaseMult(sender.SecretKey)
 
 	// Generate the ZKP proof.
-	// TODO: implement cloning
-	clonedTranscript := hagrid.NewTranscript("VSOT")
-	prover, err := schnorr.NewProver(sender.Curve.Generator(), sender.UniqueSessionId, clonedTranscript)
+	sender.transcript.AppendMessages("dlog proof", sender.UniqueSessionId)
+	prover, err := dlog.NewProver(sender.Curve.Generator(), sender.UniqueSessionId, sender.transcript.Clone(), sender.prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing schnorr prover")
+		return nil, nil, errs.WrapFailed(err, "constructing dlog prover")
 	}
 	proof, publicKey, err := prover.Prove(sender.SecretKey)
 	if err != nil {
@@ -51,13 +52,13 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*schnorr.Proof, curves.P
 	return proof, publicKey, nil
 }
 
-// Round2VerifySchnorrAndPadTransfer verifies the schnorr proof of the public key sent by the sender, i.e., step 2),
+// Round2VerifyDlogAndPadTransfer verifies the dlog proof of the public key sent by the sender, i.e., step 2),
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Protocol 7 (page 16) of the paper.
-func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *schnorr.Proof) ([]ReceiversMaskedChoices, error) {
+func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *dlog.Proof) ([]ReceiversMaskedChoices, error) {
 	receiver.SenderPublicKey = senderPublicKey
-	clonedTranscript := hagrid.NewTranscript("VSOT")
-	if err := schnorr.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId, clonedTranscript); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "verifying schnorr proof in seed OT receiver round 2")
+	receiver.transcript.AppendMessages("dlog proof", receiver.UniqueSessionId)
+	if err := dlog.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "verifying dlog proof in seed OT receiver round 2")
 	}
 
 	result := make([]ReceiversMaskedChoices, receiver.BatchSize)

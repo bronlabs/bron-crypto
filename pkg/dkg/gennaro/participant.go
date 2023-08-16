@@ -6,7 +6,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -33,6 +34,8 @@ type Participant struct {
 
 	round int
 	state *State
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -52,10 +55,12 @@ type State struct {
 	commitments                      []curves.Point
 	blindedCommitments               []curves.Point
 	transcript                       transcripts.Transcript
-	a_i0Proof                        *schnorr.Proof
+	a_i0Proof                        *fischlin.Proof
 	secretKeyShare                   curves.Scalar
 	receivedBlindedCommitmentVectors map[int][]curves.Point
 	partialPublicKeyShares           map[int]curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {

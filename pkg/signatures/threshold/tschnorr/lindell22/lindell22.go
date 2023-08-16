@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
@@ -16,11 +17,15 @@ type Participant interface {
 type PartialSignature struct {
 	R curves.Point
 	S curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 type Shard struct {
 	SigningKeyShare *threshold.SigningKeyShare
 	PublicKeyShares *threshold.PublicKeyShares
+
+	_ helper_types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
@@ -35,9 +40,13 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR map[integration.IdentityHash]curves.Point
+	BigR map[helper_types.IdentityHash]curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type PreSignatureBatch struct {
 	PreSignatures []*PreSignature
+
+	_ helper_types.Incomparable
 }

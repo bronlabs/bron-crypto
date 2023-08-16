@@ -1,9 +1,15 @@
 package impl
 
+import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
+
 // SswuParams for computing the Simplified SWU mapping
 // for hash to curve implementations.
 type SswuParams struct {
 	C1, C2, A, B, Z [FieldLimbs]uint64
+
+	_ helper_types.Incomparable
 }
 
 // Osswu3mod4 computes the simplified map optmized for 3 mod 4 primes

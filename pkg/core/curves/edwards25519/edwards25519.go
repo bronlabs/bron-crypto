@@ -9,6 +9,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const Name = "edwards25519"
@@ -45,6 +46,8 @@ type Curve struct {
 	Point_   curves.Point
 	Name_    string
 	Profile_ curves.CurveProfile
+
+	_ helper_types.Incomparable
 }
 
 func New() *Curve {

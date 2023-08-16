@@ -6,6 +6,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.FieldProfile) = (*FieldProfile)(nil)
@@ -32,6 +33,8 @@ var _ (curves.FieldElement) = (*FieldElement)(nil)
 
 type FieldElement struct {
 	v *fp.Fp
+
+	_ helper_types.Incomparable
 }
 
 func (e *FieldElement) impl() *fp.Fp {

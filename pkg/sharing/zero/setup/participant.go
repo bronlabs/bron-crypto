@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -21,22 +22,28 @@ type Participant struct {
 	MySharingId     int
 	Participants    []integration.IdentityKey
 
-	IdentityKeyToSharingId map[integration.IdentityHash]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
 	state *State
 	round int
+
+	_ helper_types.Incomparable
 }
 
 type State struct {
-	receivedSeeds map[integration.IdentityHash]commitments.Commitment
-	sentSeeds     map[integration.IdentityHash]*committedSeedContribution
+	receivedSeeds map[helper_types.IdentityHash]commitments.Commitment
+	sentSeeds     map[helper_types.IdentityHash]*committedSeedContribution
 	transcript    transcripts.Transcript
+
+	_ helper_types.Incomparable
 }
 
 type committedSeedContribution struct {
 	seed       []byte
 	commitment commitments.Commitment
 	witness    commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
 func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
@@ -85,8 +92,8 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: map[integration.IdentityHash]commitments.Commitment{},
-			sentSeeds:     map[integration.IdentityHash]*committedSeedContribution{},
+			receivedSeeds: map[helper_types.IdentityHash]commitments.Commitment{},
+			sentSeeds:     map[helper_types.IdentityHash]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil

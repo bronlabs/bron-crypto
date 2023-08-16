@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
@@ -15,11 +16,13 @@ type SignatureAggregator struct {
 	PublicKey              curves.Point
 	MyIdentityKey          integration.IdentityKey
 	SessionParticipants    []integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityHash]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 	PublicKeyShares        *frost.PublicKeyShares
 	Message                []byte
 
 	parameters *SignatureAggregatorParameters
+
+	_ helper_types.Incomparable
 }
 
 func (sa *SignatureAggregator) HasIdentifiableAbort() bool {
@@ -29,12 +32,14 @@ func (sa *SignatureAggregator) HasIdentifiableAbort() bool {
 type SignatureAggregatorParameters struct {
 	Z_i     curves.Scalar
 	R       curves.Point
-	R_js    map[integration.IdentityHash]curves.Point
-	D_alpha map[integration.IdentityHash]curves.Point
-	E_alpha map[integration.IdentityHash]curves.Point
+	R_js    map[helper_types.IdentityHash]curves.Point
+	D_alpha map[helper_types.IdentityHash]curves.Point
+	E_alpha map[helper_types.IdentityHash]curves.Point
+
+	_ helper_types.Incomparable
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToSharingId map[integration.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToSharingId map[helper_types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -87,7 +92,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 }
 
 // TODO: condense/simplify.
-func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
 	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
 	}
@@ -96,7 +101,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[integration.Ident
 	}
 	// This is for TS-SUF-4 in case aggregator was the one computing the R
 	// for identifiable abort, you need R_js
-	recomputedR_js := map[integration.IdentityHash]curves.Point{}
+	recomputedR_js := map[helper_types.IdentityHash]curves.Point{}
 	if sa.parameters.R == nil {
 		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point().Identity()
 		combinedDsAndEs := []byte{}

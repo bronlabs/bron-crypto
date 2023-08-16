@@ -8,12 +8,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Ep struct {
 	x *fp.Fp
 	y *fp.Fp
 	z *fp.Fp
+
+	_ helper_types.Incomparable
 }
 
 func (p *Ep) Random(reader io.Reader) *Ep {

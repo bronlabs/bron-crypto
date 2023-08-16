@@ -13,11 +13,14 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Signature struct {
 	R curves.Point
 	Z curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 func (s *Signature) MarshalBinary() ([]byte, error) {
@@ -41,7 +44,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 	if publicKey.IsIdentity() {
 		return errs.NewVerificationFailed("public key is at infinity")
 	}
-	if curve.Name() == edwards25519.Name {
+	if curve.Name() == edwards25519.New().Name() {
 		edwardsPoint, ok := publicKey.(*edwards25519.Point)
 		if !ok {
 			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")

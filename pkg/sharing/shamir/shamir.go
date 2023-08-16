@@ -5,12 +5,15 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type Share struct {
 	Id    int           `json:"identifier"`
 	Value curves.Scalar `json:"value"`
+
+	_ helper_types.Incomparable
 }
 
 func (ss Share) Validate(curve curves.Curve) error {
@@ -54,6 +57,8 @@ func (ss Share) ToAdditive(identities []int) (curves.Scalar, error) {
 type Dealer struct {
 	Threshold, Total int
 	Curve            curves.Curve
+
+	_ helper_types.Incomparable
 }
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
@@ -66,7 +71,7 @@ func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("invalid curve")
 	}
-	return &Dealer{threshold, total, curve}, nil
+	return &Dealer{Threshold: threshold, Total: total, Curve: curve}, nil
 }
 
 func (s Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {

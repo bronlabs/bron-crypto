@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 )
 
@@ -14,16 +15,22 @@ var hashFunc = sha256.New
 
 type Round1Output struct {
 	EsidCommitment commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type ProverRound2Output struct {
 	C1 []paillier.CipherText
 	C2 []paillier.CipherText
+
+	_ helper_types.Incomparable
 }
 
 type VerifierRound3Output struct {
 	E           *big.Int
 	EsidWitness commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
 type ZetZero struct {
@@ -31,17 +38,23 @@ type ZetZero struct {
 	R1 *big.Int
 	W2 *big.Int
 	R2 *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type ZetOne struct {
 	J        int
 	XPlusWj  *big.Int
 	RTimesRj *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Round4Output struct {
 	ZetZero []*ZetZero
 	ZetOne  []*ZetOne
+
+	_ helper_types.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {

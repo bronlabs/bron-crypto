@@ -4,11 +4,14 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
 type Round1Broadcast struct {
 	Ri curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
@@ -22,7 +25,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *Participant) Round2(round1output map[integration.IdentityHash]*Round1Broadcast) ([]byte, error) {
+func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1Broadcast) ([]byte, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -39,8 +42,8 @@ func (p *Participant) Round2(round1output map[integration.IdentityHash]*Round1Br
 	return randomValue, nil
 }
 
-func sortRandomnessContributions(allIdentityKeysToRi map[integration.IdentityHash]*Round1Broadcast) ([][]byte, error) {
-	identityKeys := make([]integration.IdentityHash, len(allIdentityKeysToRi))
+func sortRandomnessContributions(allIdentityKeysToRi map[helper_types.IdentityHash]*Round1Broadcast) ([][]byte, error) {
+	identityKeys := make([]helper_types.IdentityHash, len(allIdentityKeysToRi))
 	i := 0
 	for identityKey := range allIdentityKeysToRi {
 		identityKeys[i] = identityKey
