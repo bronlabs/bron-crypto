@@ -545,7 +545,7 @@ linters-settings:
       - name: var-declaration
       # # Warns when a public return is from unexported type.
       # # TODO: enable this once
-      # - name: unexported-return
+      - name: unexported-return
       # Disallows blank imports
       - name: blank-imports
       # context.Context should be the first argument of a function.
@@ -975,6 +975,13 @@ issues:
         - nakedret
         # TODO: ENABLE THIS
         - wrapcheck
+
+    # contents of impl are not supposed to be used by outside libraries, its constants
+    - path: impl/
+      text: "unexported-return"
+      linters:
+        - revive
+
     # Exclude some revive messages
     - linters:
         - revive
