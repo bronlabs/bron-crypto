@@ -3,7 +3,6 @@ module github.com/copperexchange/knox-primitives
 go 1.20
 
 require (
-	filippo.io/edwards25519 v1.0.0
 	github.com/btcsuite/btcd v0.22.3
 	github.com/bwesterb/go-ristretto v1.2.3
 	github.com/google/gofuzz v1.2.0
@@ -17,6 +16,5 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

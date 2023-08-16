@@ -6,13 +6,13 @@ import (
 	"math/big"
 	"testing"
 
-	ed "filippo.io/edwards25519"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
 )
 
@@ -231,7 +231,7 @@ func TestPointRandom(t *testing.T) {
 		require.True(t, ok)
 		require.True(t, !sc.IsIdentity())
 		pBytes := sc.ToAffineCompressed()
-		_, err := ed.NewIdentityPoint().SetBytes(pBytes)
+		_, err := filippo.NewIdentityPoint().SetBytes(pBytes)
 		require.NoError(t, err)
 	}
 }
@@ -416,11 +416,11 @@ func TestSmallOrderPoints(t *testing.T) {
 	require.False(t, point.IsSmallOrder())
 }
 
-func toRSc(hx string) *ed.Scalar {
+func toRSc(hx string) *filippo.Scalar {
 	e, _ := hex.DecodeString(hx)
 	var data [32]byte
 	copy(data[:], e)
-	value, _ := new(ed.Scalar).SetCanonicalBytes(data[:])
+	value, _ := new(filippo.Scalar).SetCanonicalBytes(data[:])
 	return value
 }
 
