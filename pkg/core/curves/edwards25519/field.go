@@ -19,7 +19,7 @@ func (FieldProfile) Order() *big.Int {
 	return nil
 }
 
-func (p *FieldProfile) Characteristic() *big.Int {
+func (FieldProfile) Characteristic() *big.Int {
 	return nil
 }
 
