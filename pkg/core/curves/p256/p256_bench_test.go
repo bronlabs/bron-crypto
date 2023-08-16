@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
@@ -437,7 +438,7 @@ func (s *BenchScalar) MarshalBinary() ([]byte, error) {
 func (s *BenchScalar) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*BenchScalar)
 	if !ok {
@@ -454,7 +455,7 @@ func (s *BenchScalar) MarshalText() ([]byte, error) {
 func (s *BenchScalar) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*BenchScalar)
 	if !ok {
@@ -471,7 +472,7 @@ func (s *BenchScalar) MarshalJSON() ([]byte, error) {
 func (s *BenchScalar) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	S, ok := sc.(*BenchScalar)
 	if !ok {
@@ -700,7 +701,7 @@ func (p *BenchPoint) MarshalBinary() ([]byte, error) {
 func (p *BenchPoint) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(New(), input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*BenchPoint)
 	if !ok {
@@ -718,7 +719,7 @@ func (p *BenchPoint) MarshalText() ([]byte, error) {
 func (p *BenchPoint) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(New(), input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*BenchPoint)
 	if !ok {
@@ -736,7 +737,7 @@ func (p *BenchPoint) MarshalJSON() ([]byte, error) {
 func (p *BenchPoint) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(New(), input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	P, ok := pt.(*BenchPoint)
 	if !ok {

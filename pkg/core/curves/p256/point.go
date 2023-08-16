@@ -251,7 +251,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(p256Instance, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -268,7 +268,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(p256Instance, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -285,7 +285,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(p256Instance, input)
 	if err != nil {
-		return errs.WrapFailed(err, "could not extract a point from json")
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

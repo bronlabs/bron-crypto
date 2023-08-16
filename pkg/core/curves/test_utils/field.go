@@ -50,7 +50,7 @@ func (x *Element) MarshalJSON() ([]byte, error) {
 		Value:   x.Value.String(),
 	})
 	if err != nil {
-		return nil, errs.WrapFailed(err, "marshalling x failed")
+		return nil, errs.WrapSerializationFailed(err, "marshalling x failed")
 	}
 	return marshalled, nil
 }

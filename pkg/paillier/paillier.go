@@ -148,7 +148,7 @@ func (publicKey *PublicKey) MarshalJSON() ([]byte, error) {
 	data := PublicKeyJson{publicKey.N}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "json marshal failed")
+		return nil, errs.WrapSerializationFailed(err, "json marshal failed")
 	}
 	return marshalled, nil
 }
