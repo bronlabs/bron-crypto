@@ -2,6 +2,8 @@ package dkg
 
 import (
 	"crypto/sha256"
+	"io"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 
@@ -9,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
@@ -139,11 +141,11 @@ func (p *Participant) Round2(input map[helper_types.IdentityHash]*Round1Broadcas
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
 	dlogTranscript := p.transcript.Clone()
-	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, dlogTranscript)
+	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, dlogTranscript, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
 	}
-	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, dlogTranscript)
+	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, dlogTranscript, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
 	}
@@ -486,7 +488,7 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 	return commitments.Open(commitmentHashFunc, message, commitment, witness)
 }
 
-func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (proof *dlog.Proof, err error) {
+func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curve, err := bigQ.Curve()
@@ -495,7 +497,7 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 	}
 	generator := curve.Generator()
 
-	prover, err := dlog.NewProver(generator, sid, transcript)
+	prover, err := dlog.NewProver(generator, sid, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -520,5 +522,5 @@ func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid
 	}
 	generator := curve.Generator()
 
-	return dlog.Verify(generator, bigQ, proof, sid, transcript)
+	return dlog.Verify(generator, bigQ, proof, sid)
 }
