@@ -82,12 +82,32 @@ test-clean-long: ## Clear test cache and force all tests to be rerun
 
 .PHONY: fuzz-test
 fuzz-test: ## build and run fuzz test
-	go test github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/fuzz \
-		-fuzz ^FuzzFrostDkgInteractiveSigning$ -run ^$ \
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/fuzz \
+		-fuzz ^FuzzInteractiveSigning$$ \
 		-parallel=10 \
 		-fuzztime=120s
-	go test github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/fuzz \
-		-fuzz ^FuzzFrostDkgNonInteractiveSigning$ -run ^$ \
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/fuzz \
+		-fuzz ^FuzzNonInteractiveSigning$$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/fuzz \
+		-fuzz ^FuzzInteractiveSigning$$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/fuzz \
+		-fuzz ^FuzzNonInteractiveSigning$$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/fuzz \
+		-fuzz ^FuzzInteractiveSigning$$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/fuzz \
+		-fuzz ^FuzzNonInteractiveSigning$$ \
+		-parallel=10 \
+		-fuzztime=120s
+	go test github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/fuzz \
+		-fuzz ^FuzzInteractiveSigning$$ \
 		-parallel=10 \
 		-fuzztime=120s
 

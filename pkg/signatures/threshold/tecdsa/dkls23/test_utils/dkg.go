@@ -13,16 +13,18 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg"
 )
 
-func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
+func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader, sid []byte) (participants []*dkg.Participant, err error) {
 	if len(identities) != cohortConfig.TotalParties {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
 	}
 
 	participants = make([]*dkg.Participant, cohortConfig.TotalParties)
 
-	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
-	if err != nil {
-		return nil, err
+	if len(sid) == 0 {
+		sid, err = agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for i, identity := range identities {
@@ -209,7 +211,7 @@ func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[inte
 }
 
 func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
-	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil)
+	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
 	if err != nil {
 		return nil, err
 	}
