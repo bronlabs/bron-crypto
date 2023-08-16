@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 	"hash"
 	"reflect"
 	"runtime"
@@ -31,56 +32,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	t.Helper()
 
 	batchSize := softspoken.Kappa
-
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
-	require.NoError(t, err)
-
-	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil)
-	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
-	require.NoError(t, err)
-	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-	require.NoError(t, err)
-	for _, out := range r2OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-
-	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	r3OutsU, err := test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
-	require.NoError(t, err)
-	for _, out := range r3OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-
-	r4InsU := test_utils.MapDkgRound3OutputsToRound4Inputs(participants, r3OutsU)
-	r4OutsU, err := test_utils.DoDkgRound4(participants, r4InsU)
-	require.NoError(t, err)
-	for _, out := range r4OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-
-	r5InsU := test_utils.MapDkgRound4OutputsToRound5Inputs(participants, r4OutsU)
-	r5OutsU, err := test_utils.DoDkgRound5(participants, r5InsU)
-	require.NoError(t, err)
-	for _, out := range r5OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
-	}
-
-	r6InsU := test_utils.MapDkgRound5OutputsToRound6Inputs(participants, r5OutsU)
-	shards, err := test_utils.DoDkgRound6(participants, r6InsU)
+	identities, cohortConfig, participants, shards, err := dkls23_test_utils.KeyGen(curve, h, threshold, n, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {
@@ -252,7 +204,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil)
+	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
 	participants[0].ZeroSamplingParty.UniqueSessionId = []byte("invalid sid")
 	participants[0].GennaroParty.UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)

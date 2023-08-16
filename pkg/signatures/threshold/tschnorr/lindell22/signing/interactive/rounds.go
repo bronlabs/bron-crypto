@@ -127,7 +127,7 @@ func (p *Cosigner) Round3(input map[integration.IdentityHash]*Round2Broadcast, m
 	}
 	e, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(eBytes)
 	if err != nil {
-		return nil, errs.NewFailed("cannot set scalar")
+		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
 
 	// 3.iii. compute additive share d_i'

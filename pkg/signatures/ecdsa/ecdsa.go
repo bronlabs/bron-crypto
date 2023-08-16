@@ -145,7 +145,9 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get int from hash")
 	}
-	z, err := curve.Scalar().SetBytes(zInt.Bytes())
+	var zIntBytes [32]byte
+	zInt.FillBytes(zIntBytes[:])
+	z, err := curve.Scalar().SetBytes(zIntBytes[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
