@@ -289,6 +289,14 @@ func WrapDeserializationFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", deserializationFailed, fmt.Sprintf(format, args...))
 }
 
+func IsDeserializationFailed(err error) bool {
+	return is(err, deserializationFailed)
+}
+
+func HasDeserializationFailed(err error) bool {
+	return has(err, deserializationFailed)
+}
+
 func NewSerializationFailed(format string, args ...any) error {
 	return errors.Errorf("%s %s", serializationFailed, fmt.Sprintf(format, args...))
 }
@@ -297,12 +305,12 @@ func WrapSerializationFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", serializationFailed, fmt.Sprintf(format, args...))
 }
 
-func IsDeserializationFailed(err error) bool {
-	return is(err, deserializationFailed)
+func IsSerializationFailed(err error) bool {
+	return is(err, serializationFailed)
 }
 
-func HasDeserializationFailed(err error) bool {
-	return has(err, deserializationFailed)
+func HasSerializationFailed(err error) bool {
+	return has(err, serializationFailed)
 }
 
 func NewMissing(format string, args ...any) error {
