@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
@@ -26,7 +27,7 @@ const (
 	TBytes      = T / 8
 )
 
-type Statement = curves.Point
+type Statement = dlog.Statement
 
 type Prover struct {
 	uniqueSessionId []byte
@@ -134,6 +135,23 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 
 // Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform.
 func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
+	if basePoint == nil {
+		return errs.NewInvalidArgument("basepoint is nil")
+	}
+	if basePoint.IsIdentity() {
+		return errs.NewInvalidArgument("basepoint is identity")
+	}
+	if proof == nil {
+		return errs.NewInvalidArgument("proof is nil")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("length of session id is 0")
+	}
+
+	if err := dlog.StatementSubgroupMembershipCheck(basePoint, statement); err != nil {
+		return errs.WrapFailed(err, "subgroup membership check failed")
+	}
+
 	for i := 0; i < RBytes; i++ {
 		e_i := proof.E[i]
 		z_i := proof.Z[i]

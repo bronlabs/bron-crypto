@@ -2,9 +2,9 @@ package threshold
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type SigningKeyShare struct {
@@ -25,18 +25,6 @@ func (s *SigningKeyShare) Validate() error {
 	if !s.PublicKey.IsOnCurve() {
 		return errs.NewNotOnCurve("public key is not on curve")
 	}
-
-	if s.PublicKey.CurveName() == edwards25519.Name {
-		edwardsPoint, ok := s.PublicKey.(*edwards25519.Point)
-		if !ok {
-			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
-		}
-		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
-		// to a key substitution attack (specifically, it won't have message bound security). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
-		if edwardsPoint.IsSmallOrder() {
-			return errs.NewFailed("public key is small order")
-		}
-	}
 	return nil
 }
 
@@ -46,14 +34,29 @@ type PublicKeyShares struct {
 	SharesMap map[integration.IdentityHash]curves.Point
 }
 
-// TODO: write down validation (lambda trick)
-// func (p *PublicKeyShares) Validate() error {
-// 	derivedPublicKey := p.Curve.Point().Identity()
-// 	for _, share := range p.SharesMap {
-// 		derivedPublicKey = derivedPublicKey.Add(share)
-// 	}
-// 	if !derivedPublicKey.Equal(p.PublicKey) {
-// 		return errors.New("public key shares can't be combined to the entire public key")
-// 	}
-// 	return nil
-// }.
+func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
+	sharingIdToIdentityKey, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingIds := make([]curves.Scalar, cohortConfig.TotalParties)
+	partialPublicKeys := make([]curves.Point, cohortConfig.TotalParties)
+	for i := 0; i < cohortConfig.TotalParties; i++ {
+		sharingIds[i] = p.Curve.Scalar().New(i + 1)
+		identityKey, exists := sharingIdToIdentityKey[i+1]
+		if !exists {
+			return errs.NewMissing("missing identity key for sharing id %d", i+1)
+		}
+		partialPublicKey, exists := p.SharesMap[identityKey.Hash()]
+		if !exists {
+			return errs.NewMissing("partial public key doesn't exist for id hash %x", identityKey.Hash())
+		}
+		partialPublicKeys[i] = partialPublicKey
+	}
+	evaluateAt := p.Curve.Scalar().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	reconstructedPublicKey, err := sharing.InterpolateInTheExponent(p.Curve, sharingIds, partialPublicKeys, evaluateAt)
+	if err != nil {
+		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
+	}
+	if !reconstructedPublicKey.Equal(p.PublicKey) {
+		return errs.NewVerificationFailed("reconstructed public key is incorrect")
+	}
+	return nil
+}
