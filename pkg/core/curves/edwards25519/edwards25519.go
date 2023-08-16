@@ -29,6 +29,7 @@ func (CurveProfile) Field() curves.FieldProfile {
 	return &FieldProfile{}
 }
 
+// TODO: finish when filippo is forked
 func (CurveProfile) SubGroupOrder() *big.Int {
 	return nil
 }

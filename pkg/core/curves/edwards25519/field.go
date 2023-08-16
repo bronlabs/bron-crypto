@@ -8,8 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
 
-var _ (curves.FieldProfile) = (*FieldProfile)(nil)
-
+// TODO: finish when filippo is forked
 type FieldProfile struct{}
 
 func (FieldProfile) Curve() curves.Curve {

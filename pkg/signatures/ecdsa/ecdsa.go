@@ -108,18 +108,12 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.CurveName())
 	}
-	nativeCurve, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
-	}
-	subGroupOrder := nativeCurve.Params().N
-
 	// Calculate point R = (x1, x2) where
 	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx := signature.R.BigInt()
 	if (*signature.V & 2) != 0 {
-		rx = new(big.Int).Add(rx, subGroupOrder)
+		rx = new(big.Int).Add(rx, curve.Profile().SubGroupOrder())
 	}
 	rxBytes := rx.Bytes()
 	if len(rxBytes) < 32 {
@@ -192,10 +186,9 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
 
-	x, y := getPointCoordinates(publicKey)
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     x, Y: y,
+		X:     publicKey.X().BigInt(), Y: publicKey.Y().BigInt(),
 	}
 	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.BigInt(), signature.S.BigInt()); !ok {
 		return errs.NewVerificationFailed("signature verification failed")
@@ -204,26 +197,15 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 }
 
 func HashToInt(digest []byte, curve curves.Curve) (*big.Int, error) {
-	ecdsaCurve, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
-	}
-	order := ecdsaCurve.Params().N
-	orderBits := order.BitLen()
-	orderBytes := (orderBits + 7) / 8
+	orderBytes := len(curve.Profile().SubGroupOrder().Bytes())
 	if len(digest) > orderBytes {
 		digest = digest[:orderBytes]
 	}
 
 	ret := new(big.Int).SetBytes(digest)
-	excess := len(digest)*8 - orderBits
+	excess := (len(digest) - orderBytes) * 8
 	if excess > 0 {
 		ret.Rsh(ret, uint(excess))
 	}
 	return ret, nil
-}
-
-func getPointCoordinates(point curves.Point) (x, y *big.Int) {
-	affine := point.ToAffineUncompressed()
-	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
 }

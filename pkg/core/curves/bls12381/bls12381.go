@@ -28,6 +28,7 @@ var modulus = internal.Bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf673
 
 var _ (curves.CurveProfile) = (*CurveProfile)(nil)
 
+// TODO: finish when BLS is here
 type CurveProfile struct{}
 
 func (CurveProfile) Field() curves.FieldProfile {
@@ -44,7 +45,7 @@ func (CurveProfile) Cofactor() *big.Int {
 
 type PairingCurveProfile struct{}
 
-func (PairingCurveProfile) ExtensionDegree() *big.Int {
+func (PairingCurveProfile) EmbeddingDegree() *big.Int {
 	return big.NewInt(12)
 }
 
@@ -73,8 +74,9 @@ func bls12381g1Init() {
 			Value: bls12381impl.FqNew(),
 			point: new(PointG1),
 		},
-		Point_: new(PointG1).Identity(),
-		Name_:  G1Name,
+		Point_:   new(PointG1).Identity(),
+		Name_:    G1Name,
+		Profile_: &CurveProfile{},
 	}
 }
 
@@ -106,8 +108,13 @@ func New() *PairingCurve {
 		GT_: &ScalarGt{
 			Value: new(bls12381impl.Gt).SetOne(),
 		},
-		Name_: Name,
+		Name_:                Name,
+		PairingCurveProfile_: &PairingCurveProfile{},
 	}
+}
+
+func (c Curve) Profile() curves.CurveProfile {
+	return c.Profile()
 }
 
 func (c Curve) Scalar() curves.Scalar {
@@ -140,6 +147,10 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 
 func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	return nil, nil, nil
+}
+
+func (pc PairingCurve) PairingCurveProfile() curves.PairingCurveProfile {
+	return pc.PairingCurveProfile_
 }
 
 func (pc PairingCurve) Name() string {
