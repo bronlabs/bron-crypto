@@ -81,7 +81,7 @@ func (s *ScalarGt) MarshalBinary() ([]byte, error) {
 func (s *ScalarGt) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(GtName, s.SetBytes, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -98,7 +98,7 @@ func (s *ScalarGt) MarshalText() ([]byte, error) {
 func (s *ScalarGt) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -115,7 +115,7 @@ func (s *ScalarGt) MarshalJSON() ([]byte, error) {
 func (s *ScalarGt) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapFailed(err, "could not extract a scalar from json")
+		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarGt)
 	if !ok {

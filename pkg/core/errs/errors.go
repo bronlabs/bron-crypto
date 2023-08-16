@@ -12,6 +12,7 @@ type ErrorType string
 
 const (
 	deserializationFailed ErrorType = "[DESERIALIZATION_FAILED]"
+	serializationFailed   ErrorType = "[SERIALIZATION_FAILED]"
 	divisionByZero        ErrorType = "[DIVISION_BY_ZERO]"
 	duplicate             ErrorType = "[DUPLICATE]"
 	failed                ErrorType = "[FAILED]"
@@ -286,6 +287,14 @@ func NewDeserializationFailed(format string, args ...any) error {
 
 func WrapDeserializationFailed(err error, format string, args ...any) error {
 	return errors.Wrapf(err, "%s %s", deserializationFailed, fmt.Sprintf(format, args...))
+}
+
+func NewSerializationFailed(format string, args ...any) error {
+	return errors.Errorf("%s %s", serializationFailed, fmt.Sprintf(format, args...))
+}
+
+func WrapSerializationFailed(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", serializationFailed, fmt.Sprintf(format, args...))
 }
 
 func IsDeserializationFailed(err error) bool {

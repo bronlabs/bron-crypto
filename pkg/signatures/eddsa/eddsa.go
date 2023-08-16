@@ -33,7 +33,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
 	if len(RSerialized)+len(zSerialized) != signatureSize {
-		return serializedSignature, errs.NewDeserializationFailed("serialised signature is too large")
+		return serializedSignature, errs.NewSerializationFailed("serialised signature is too large")
 	}
 	serializedSignature = append(serializedSignature, RSerialized...)
 	serializedSignature = append(serializedSignature, zSerialized...)

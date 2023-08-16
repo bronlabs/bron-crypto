@@ -240,7 +240,7 @@ func (*PointG2) Modulus() *big.Int {
 func (p *PointG2) MarshalBinary() ([]byte, error) {
 	result, err := internal.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't marshal to binary")
+		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to binary")
 	}
 	return result, nil
 }
@@ -248,7 +248,7 @@ func (p *PointG2) MarshalBinary() ([]byte, error) {
 func (p *PointG2) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(NewG2(), input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG2)
 	if !ok {
@@ -261,7 +261,7 @@ func (p *PointG2) UnmarshalBinary(input []byte) error {
 func (p *PointG2) MarshalText() ([]byte, error) {
 	result, err := internal.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't marshal to text")
+		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to text")
 	}
 	return result, nil
 }
@@ -269,7 +269,7 @@ func (p *PointG2) MarshalText() ([]byte, error) {
 func (p *PointG2) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(NewG2(), input)
 	if err != nil {
-		return err
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG2)
 	if !ok {
@@ -282,7 +282,7 @@ func (p *PointG2) UnmarshalText(input []byte) error {
 func (p *PointG2) MarshalJSON() ([]byte, error) {
 	result, err := internal.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't marshal to json")
+		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to json")
 	}
 	return result, nil
 }
@@ -290,7 +290,7 @@ func (p *PointG2) MarshalJSON() ([]byte, error) {
 func (p *PointG2) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(NewG2(), input)
 	if err != nil {
-		return errs.WrapFailed(err, "could not extract a point from json")
+		return errs.WrapDeserializationFailed(err, "could not unmarshal")
 	}
 	P, ok := pt.(*PointG2)
 	if !ok {
