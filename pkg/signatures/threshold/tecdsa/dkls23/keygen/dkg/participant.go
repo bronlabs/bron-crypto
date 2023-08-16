@@ -63,11 +63,11 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 			continue
 		}
 		// 256 should be replaced with kappa once ot extensions are here
-		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}
