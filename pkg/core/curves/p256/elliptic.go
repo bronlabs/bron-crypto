@@ -31,7 +31,7 @@ func oldP256InitAll() {
 	oldP256.Name = curve.Params().Name
 }
 
-func NistP256Curve() *NistP256 {
+func NewElliptic() *NistP256 {
 	oldP256InitOnce.Do(oldP256InitAll)
 	return &oldP256
 }
@@ -70,6 +70,9 @@ func (*NistP256) ScalarMul(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	if err != nil {
 		return nil, nil
 	}
+	if len(k) > 32 {
+		panic("invalid scalar length")
+	}
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
 	s, err := fq.New().SetBytes(&bytes_)
@@ -80,6 +83,9 @@ func (*NistP256) ScalarMul(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 }
 
 func (*NistP256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
+	if len(k) > 32 {
+		panic("invalid scalar length")
+	}
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
 	s, err := fq.New().SetBytes(&bytes_)
