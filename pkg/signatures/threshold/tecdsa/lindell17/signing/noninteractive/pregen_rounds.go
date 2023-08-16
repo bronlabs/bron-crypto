@@ -2,6 +2,7 @@ package noninteractive
 
 import (
 	"bytes"
+	"io"
 	"strconv"
 
 	"golang.org/x/crypto/sha3"
@@ -12,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
@@ -80,7 +81,7 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Bro
 			theirBigRCommitments[i][identity.Hash()] = in.BigRCommitment[i]
 		}
 
-		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myIdentityKey, p.state.k[i], p.state.bigR[i])
+		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myIdentityKey, p.state.k[i], p.state.bigR[i], p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot proof R dlog")
 		}
@@ -156,7 +157,7 @@ func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curve
 	return nil
 }
 
-func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point) (proof *dlog.Proof, err error) {
+func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point, prng io.Reader) (proof *dlog.Proof, err error) {
 	curveName := k.CurveName()
 	curve, err := curveutils.GetCurveByName(curveName)
 	if err != nil {
@@ -165,7 +166,7 @@ func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integ
 
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
-	prover, err := dlog.NewProver(curve.Generator(), sid, transcript)
+	prover, err := dlog.NewProver(curve.Generator(), sid, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct provererr")
 	}
@@ -190,7 +191,7 @@ func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party
 
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
-	if err := dlog.Verify(curve.Generator(), bigR, proof, sid, transcript); err != nil {
+	if err := dlog.Verify(curve.Generator(), bigR, proof, sid); err != nil {
 		return errs.WrapVerificationFailed(err, "dlog verify failed")
 	}
 	return nil

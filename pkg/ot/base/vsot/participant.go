@@ -14,6 +14,7 @@ package vsot
 
 import (
 	"crypto/rand"
+	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -90,7 +91,8 @@ type Sender struct {
 	BatchSize int
 
 	UniqueSessionId []byte
-	Transcript      transcripts.Transcript
+	transcript      transcripts.Transcript
+	prng            io.Reader
 }
 
 // Receiver stores state for the "receiver" role in OT. Protocol 7, Appendix A, of DKLs.
@@ -110,49 +112,60 @@ type Receiver struct {
 	BatchSize int
 
 	UniqueSessionId []byte
-	Transcript      transcripts.Transcript
+	transcript      transcripts.Transcript
+	prng            io.Reader
 }
 
 // NewSender creates a new "sender" object, ready to participate in a _random_ verified simplest OT in the role of the sender.
 // no messages are specified by the sender, because random ones will be sent (hence the random OT).
 // ultimately, the `Sender`'s `Output` field will be appropriately populated.
 // you can use it directly, or alternatively bootstrap it into an _actual_ (non-random) OT using `Round7Encrypt` below.
-func NewSender(curve curves.Curve, batchSize int, uniqueSessionId []byte, transcript transcripts.Transcript) (*Sender, error) {
+func NewSender(curve curves.Curve, batchSize int, uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Sender, error) {
 	if batchSize&0x07 != 0 { // This is the same as `batchSize % 8 != 0`, but is constant time
 		return nil, errs.NewInvalidArgument("batch size should be a multiple of 8")
+	}
+	if prng == nil {
+		return nil, errs.NewInvalidArgument("prng is nil")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
-	transcript.AppendMessages("VSOT Sender", uniqueSessionId)
+	transcript.AppendMessages("session_id", uniqueSessionId)
+	transcript.AppendMessages("VSOT", uniqueSessionId)
 	return &Sender{
 		Output:          &SenderOutput{},
 		Curve:           curve,
 		BatchSize:       batchSize,
 		UniqueSessionId: uniqueSessionId,
-		Transcript:      transcript,
+		transcript:      transcript,
+		prng:            prng,
 	}, nil
 }
 
 // NewReceiver is a Random OT receiver. Therefore, the choice bits are created randomly.
 // The choice bits are stored in a packed format (e.g., each choice is a single bit in a byte array).
-func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, transcript transcripts.Transcript) (*Receiver, error) {
+func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Receiver, error) {
 	// This is the same as `batchSize % 8 != 0`, but is constant time
 	if batchSize&0x07 != 0 {
 		return nil, errs.NewInvalidArgument("batch size should be a multiple of 8")
+	}
+	if prng == nil {
+		return nil, errs.NewInvalidArgument("prng is nil")
 	}
 
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
+	transcript.AppendMessages("VSOT", uniqueSessionId)
 
 	receiver := &Receiver{
 		Output:          &ReceiverOutput{},
 		Curve:           curve,
 		BatchSize:       batchSize,
 		UniqueSessionId: uniqueSessionId,
-		Transcript:      transcript,
+		transcript:      transcript,
+		prng:            prng,
 	}
 	batchSizeBytes := batchSize >> 3 // divide by 8
 	receiver.Output.PackedRandomChoiceBits = make([]byte, batchSizeBytes)

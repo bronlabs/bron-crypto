@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
@@ -72,7 +72,8 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
 	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
-	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone())
+	secondaryCosigner.transcript.AppendMessages("bigR2Proof", bigR2ProofSessionId)
+	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone(), secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -97,13 +98,15 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	bigR2ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed()...)
-	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId, primaryCosigner.transcript.Clone())
+	primaryCosigner.transcript.AppendMessages("bigR2Proof", bigR2ProofSessionId)
+	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
 	}
 
 	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
-	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR1ProofSessionId, nil)
+	primaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
+	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR1ProofSessionId, primaryCosigner.transcript.Clone(), primaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
@@ -142,7 +145,8 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	bigR1ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
-	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId, nil); err != nil { // TODO: clone transcript
+	secondaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
+	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId); err != nil { // TODO: clone transcript
 		return nil, errs.WrapFailed(err, "cannot verify R1 dlog proof")
 	}
 

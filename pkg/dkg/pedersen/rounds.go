@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -46,7 +46,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 
 	transcript := hagrid.NewTranscript(DkgLabel)
 	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
@@ -111,7 +111,7 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 
 		transcript := hagrid.NewTranscript(DkgLabel)
 		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId, transcript); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
 			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (sharing id: %d)", senderSharingId)
 		}
 

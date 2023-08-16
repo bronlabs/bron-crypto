@@ -23,7 +23,7 @@ import (
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
@@ -200,7 +200,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 
 	t.Run("proving something irrelevant", func(t *testing.T) {
 		t.Parallel()
-		prover, err := schnorr.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil)
+		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil, prng)
 		require.NoError(t, err)
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Random(prng))
 		require.NoError(t, err)
@@ -214,7 +214,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
-		prover, err := schnorr.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil)
+		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil, prng)
 		require.NoError(t, err)
 		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Zero())
 		require.NoError(t, err)
