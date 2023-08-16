@@ -11,6 +11,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -21,6 +22,8 @@ type TestIdentityKey struct {
 	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 var _ integration.IdentityKey = (*TestIdentityKey)(nil)

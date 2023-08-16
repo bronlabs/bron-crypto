@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
@@ -15,6 +16,8 @@ type Dealer struct {
 	Threshold, Total int
 	Curve            curves.Curve
 	Generator        curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
@@ -59,6 +62,8 @@ type Output struct {
 	BlindingShares, SecretShares    []*Share
 	Commitments, BlindedCommitments []curves.Point
 	Generator                       curves.Point
+
+	_ helper_types.Incomparable
 }
 
 // NewDealer creates a new pedersen VSS.
@@ -83,7 +88,7 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 		return nil, errs.NewIsIdentity("invalid generator")
 	}
 
-	return &Dealer{threshold, total, curve, generator}, nil
+	return &Dealer{Threshold: threshold, Total: total, Curve: curve, Generator: generator}, nil
 }
 
 // Split creates the verifiers, blinding and shares.
@@ -116,7 +121,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 	}
 
 	return &Output{
-		blinding, blindingShares, shares, commitments, blindedCommitments, pd.Generator,
+		Blinding: blinding, BlindingShares: blindingShares, SecretShares: shares, Commitments: commitments, BlindedCommitments: blindedCommitments, Generator: pd.Generator,
 	}
 }
 

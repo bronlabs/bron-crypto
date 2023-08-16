@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
@@ -14,7 +15,7 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityHash]*frost.SigningKeyShare, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*frost.SigningKeyShare, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -49,7 +50,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	results := map[integration.IdentityHash]*frost.SigningKeyShare{}
+	results := map[helper_types.IdentityHash]*frost.SigningKeyShare{}
 
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value

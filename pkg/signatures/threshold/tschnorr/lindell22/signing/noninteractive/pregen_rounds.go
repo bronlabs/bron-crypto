@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -26,12 +26,16 @@ var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment []commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
 	BigR        []curves.Point
 	BigRWitness []commitments.Witness
 	BigRProof   []*dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
@@ -67,15 +71,15 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitment := make([]map[integration.IdentityHash]commitments.Commitment, p.tau)
+	theirBigRCommitment := make([]map[helper_types.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitment[i] = make(map[integration.IdentityHash]commitments.Commitment)
+		theirBigRCommitment[i] = make(map[helper_types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants {
 			in, ok := input[identity.Hash()]
 			if !ok {
@@ -102,14 +106,14 @@ func (p *PreGenParticipant) Round2(input map[integration.IdentityHash]*Round1Bro
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[integration.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input map[helper_types.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
-	BigR := make([]map[integration.IdentityHash]curves.Point, p.tau)
+	BigR := make([]map[helper_types.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
-		BigR[i] = make(map[integration.IdentityHash]curves.Point)
+		BigR[i] = make(map[helper_types.IdentityHash]curves.Point)
 		for _, identity := range p.cohortConfig.Participants {
 			in, ok := input[identity.Hash()]
 			if !ok {

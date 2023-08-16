@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -20,10 +21,12 @@ type Participant struct {
 	MyIdentityKey         integration.IdentityKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   map[integration.IdentityHash]*vsot.Sender
-	BaseOTReceiverParties map[integration.IdentityHash]*vsot.Receiver
+	BaseOTSenderParties   map[helper_types.IdentityHash]*vsot.Sender
+	BaseOTReceiverParties map[helper_types.IdentityHash]*vsot.Receiver
 
 	Shard *dkls23.Shard
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -53,8 +56,8 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[integration.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
-	receivers := make(map[integration.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
+	senders := make(map[helper_types.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
+	receivers := make(map[helper_types.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
 	for _, participant := range cohortConfig.Participants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue

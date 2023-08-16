@@ -6,6 +6,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 // FieldLimbs is the number of limbs needed to represent this field.
@@ -26,6 +27,8 @@ type Field struct {
 	Params *FieldParams
 	// Arithmetic are the field methods
 	Arithmetic FieldArithmetic
+
+	_ helper_types.Incomparable
 }
 
 // FieldParams are the field parameters.
@@ -40,6 +43,8 @@ type FieldParams struct {
 	Modulus [FieldLimbs]uint64
 	// Modulus as big.Int
 	BiModulus *big.Int
+
+	_ helper_types.Incomparable
 }
 
 // FieldArithmetic are the methods that can be done on a field.

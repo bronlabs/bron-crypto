@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type PreGenParticipant struct {
@@ -16,12 +17,16 @@ type PreGenParticipant struct {
 	CohortConfig  *integration.CohortConfig
 	round         int
 	state         *preGenState
+
+	_ helper_types.Incomparable
 }
 
 type preGenState struct {
 	ds          []curves.Scalar
 	es          []curves.Scalar
 	Commitments []*AttestedCommitmentToNoncePair
+
+	_ helper_types.Incomparable
 }
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {

@@ -48,7 +48,7 @@ func Test_RecoverPublicKey(t *testing.T) {
 	// and one of them shall match
 	successfullyRecoveredValidPublicKey := false
 	for v := 0; v < 4; v++ {
-		if err := ecdsa.Verify(&ecdsa.Signature{&v, r, s}, hashFunc, publicKey, message); err == nil {
+		if err := ecdsa.Verify(&ecdsa.Signature{V: &v, R: r, S: s}, hashFunc, publicKey, message); err == nil {
 			successfullyRecoveredValidPublicKey = true
 			break
 		}

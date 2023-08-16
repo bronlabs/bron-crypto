@@ -1,10 +1,16 @@
 package bls12381impl
 
-import "io"
+import (
+	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
 
 // fp12 represents an element a + b w of fp^12 = fp^6 / w^2 - v.
 type fp12 struct {
 	A, B fp6
+
+	_ helper_types.Incomparable
 }
 
 // SetFp creates an element from a lower field.

@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -18,10 +19,12 @@ type Cosigner struct {
 	myShard        *lindell22.Shard
 	myPreSignature *lindell22.PreSignature
 
-	identityKeyToSharingId map[integration.IdentityHash]int
+	identityKeyToSharingId map[helper_types.IdentityHash]int
 	sessionParticipants    []integration.IdentityKey
 	cohortConfig           *integration.CohortConfig
 	prng                   io.Reader
+
+	_ helper_types.Incomparable
 }
 
 func (c *Cosigner) GetIdentityKey() integration.IdentityKey {

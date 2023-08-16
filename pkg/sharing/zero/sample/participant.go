@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
@@ -17,11 +18,13 @@ type Participant struct {
 	PresentParticipants []integration.IdentityKey
 	UniqueSessionId     []byte
 
-	IdentityKeyToSharingId map[integration.IdentityHash]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
 	Seeds zero.PairwiseSeeds
 
 	round int
+
+	_ helper_types.Incomparable
 }
 
 func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {

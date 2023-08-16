@@ -10,6 +10,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var h = sha256.New
@@ -36,25 +37,27 @@ type entry struct {
 	commit  commitments.Commitment
 	witness commitments.Witness
 	err     error
+
+	_ helper_types.Incomparable
 }
 
 // Test inputs and placeholders for results that will be filled in
 // during init()
 var testResults = []entry{
-	{[]byte("This is a test message"), nil, nil, nil},
-	{[]byte("short msg"), nil, nil, nil},
+	{msg: []byte("This is a test message"), commit: nil, witness: nil, err: nil},
+	{msg: []byte("short msg"), commit: nil, witness: nil, err: nil},
 	{
-		[]byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
-		nil, nil, nil,
+		msg:    []byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
+		commit: nil, witness: nil, err: nil,
 	},
 	{
-		[]byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-		nil, nil, nil,
+		msg:    []byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
+		commit: nil, witness: nil, err: nil,
 	},
 	// msg = \epsilon (empty string)
-	{[]byte{}, nil, nil, nil},
+	{msg: []byte{}, commit: nil, witness: nil, err: nil},
 	// msg == nil
-	{nil, nil, nil, nil},
+	{msg: nil, commit: nil, witness: nil, err: nil},
 }
 
 // Run our inputs through commit and record the outputs

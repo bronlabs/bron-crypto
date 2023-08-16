@@ -6,12 +6,15 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 var _ (curves.Element) = (*Element)(nil)
 
 type Element struct {
 	v *fp.Fp
+
+	_ helper_types.Incomparable
 }
 
 func (e *Element) impl() *fp.Fp {

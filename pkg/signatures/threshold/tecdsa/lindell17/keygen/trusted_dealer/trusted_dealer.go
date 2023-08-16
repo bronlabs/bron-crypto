@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
@@ -26,7 +27,7 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration.IdentityHash]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
+func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_types.IdentityHash]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
 	// verify private key
@@ -70,7 +71,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 		myShare := myShard.SigningKeyShare.Share.BigInt()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
 		for _, theirShard := range shards {
-			if myShard != theirShard {
+			if myShard.PaillierSecretKey.N.Cmp(theirShard.PaillierSecretKey.N) != 0 && myShard.PaillierSecretKey.N2.Cmp(theirShard.PaillierSecretKey.N2) != 0 {
 				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 				theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 				if err != nil {
@@ -86,7 +87,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[integration
 	return nil
 }
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityHash]*lindell17.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*lindell17.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -131,7 +132,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
-	shards := make(map[integration.IdentityHash]*lindell17.Shard)
+	shards := make(map[helper_types.IdentityHash]*lindell17.Shard)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
 		shards[identityKey.Hash()] = &lindell17.Shard{
@@ -139,8 +140,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 				Share:     share,
 				PublicKey: publicKey,
 			},
-			PaillierPublicKeys:      make(map[integration.IdentityHash]*paillier.PublicKey),
-			PaillierEncryptedShares: make(map[integration.IdentityHash]paillier.CipherText),
+			PaillierPublicKeys:      make(map[helper_types.IdentityHash]*paillier.PublicKey),
+			PaillierEncryptedShares: make(map[helper_types.IdentityHash]paillier.CipherText),
 		}
 	}
 

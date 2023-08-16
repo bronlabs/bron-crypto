@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
@@ -28,7 +29,7 @@ type Cosigner struct {
 	UniqueSessionId       []byte
 	CohortConfig          *integration.CohortConfig
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToShamirId map[integration.IdentityHash]int
+	IdentityKeyToShamirId map[helper_types.IdentityHash]int
 	SessionParticipants   []integration.IdentityKey
 	sessionShamirIDs      []int
 
@@ -36,19 +37,25 @@ type Cosigner struct {
 	subprotocols *SubProtocols
 	state        *state
 	round        int
+
+	_ helper_types.Incomparable
 }
 
 type SubProtocols struct {
 	// use to get the secret key msak (zeta_i)
 	zeroShareSampling *sample.Participant
 	// pairwise multiplication protocol ie. each party acts as alice and bob against every party
-	multiplication map[integration.IdentityHash]*Multiplication
+	multiplication map[helper_types.IdentityHash]*Multiplication
+
+	_ helper_types.Incomparable
 }
 
 // Corresponding participant objects for pairwise multiplication subprotocols.
 type Multiplication struct {
 	Alice *mult.Alice
 	Bob   *mult.Bob
+
+	_ helper_types.Incomparable
 }
 
 type state struct {
@@ -56,13 +63,15 @@ type state struct {
 	sk_i                               curves.Scalar
 	r_i                                curves.Scalar
 	R_i                                curves.Point
-	cU_i                               map[integration.IdentityHash]curves.Scalar
-	cV_i                               map[integration.IdentityHash]curves.Scalar
+	cU_i                               map[helper_types.IdentityHash]curves.Scalar
+	cV_i                               map[helper_types.IdentityHash]curves.Scalar
 	pk_i                               curves.Point
-	Chi_i                              map[integration.IdentityHash]curves.Scalar
-	witnessesOfCommitmentToInstanceKey map[integration.IdentityHash]commitments.Witness
-	receivedCommitmentsToInstanceKey   map[integration.IdentityHash]commitments.Commitment
-	receivedR_i                        map[integration.IdentityHash]curves.Point
+	Chi_i                              map[helper_types.IdentityHash]curves.Scalar
+	witnessesOfCommitmentToInstanceKey map[helper_types.IdentityHash]commitments.Witness
+	receivedCommitmentsToInstanceKey   map[helper_types.IdentityHash]commitments.Commitment
+	receivedR_i                        map[helper_types.IdentityHash]curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -112,7 +121,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 	// step 0.3
-	multipliers := make(map[integration.IdentityHash]*Multiplication, len(sessionParticipants))
+	multipliers := make(map[helper_types.IdentityHash]*Multiplication, len(sessionParticipants))
 	for _, participant := range sessionParticipants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
@@ -144,12 +153,12 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 			multiplication:    multipliers,
 		},
 		state: &state{
-			witnessesOfCommitmentToInstanceKey: map[integration.IdentityHash]commitments.Witness{},
-			Chi_i:                              map[integration.IdentityHash]curves.Scalar{},
-			cU_i:                               map[integration.IdentityHash]curves.Scalar{},
-			cV_i:                               map[integration.IdentityHash]curves.Scalar{},
-			receivedCommitmentsToInstanceKey:   map[integration.IdentityHash]commitments.Commitment{},
-			receivedR_i:                        map[integration.IdentityHash]curves.Point{},
+			witnessesOfCommitmentToInstanceKey: map[helper_types.IdentityHash]commitments.Witness{},
+			Chi_i:                              map[helper_types.IdentityHash]curves.Scalar{},
+			cU_i:                               map[helper_types.IdentityHash]curves.Scalar{},
+			cV_i:                               map[helper_types.IdentityHash]curves.Scalar{},
+			receivedCommitmentsToInstanceKey:   map[helper_types.IdentityHash]commitments.Commitment{},
+			receivedR_i:                        map[helper_types.IdentityHash]curves.Point{},
 		},
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
 		IdentityKeyToShamirId: identityKeyToShamirId,

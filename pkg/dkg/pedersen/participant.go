@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 )
 
@@ -23,6 +24,8 @@ type Participant struct {
 
 	round int
 	state *State
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -40,6 +43,8 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 type State struct {
 	shareVector []*feldman.Share
 	commitments []curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {

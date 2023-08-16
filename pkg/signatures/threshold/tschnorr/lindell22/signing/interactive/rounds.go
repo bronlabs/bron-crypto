@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
@@ -25,12 +25,16 @@ var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
 	BigRProof   *dlog.Proof
 	BigR        curves.Point
 	BigRWitness commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
 func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
@@ -61,12 +65,12 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *Cosigner) Round2(input map[integration.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Cosigner) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
-	p.state.theirBigRCommitment = make(map[integration.IdentityHash]commitments.Commitment)
+	p.state.theirBigRCommitment = make(map[helper_types.IdentityHash]commitments.Commitment)
 	for _, identity := range p.sessionParticipants {
 		in, ok := input[identity.Hash()]
 		if !ok {
@@ -90,7 +94,7 @@ func (p *Cosigner) Round2(input map[integration.IdentityHash]*Round1Broadcast) (
 	}, nil
 }
 
-func (p *Cosigner) Round3(input map[integration.IdentityHash]*Round2Broadcast, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}

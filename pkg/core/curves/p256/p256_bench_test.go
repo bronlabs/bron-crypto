@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 func BenchmarkP256(b *testing.B) {
@@ -193,10 +194,14 @@ func BenchmarkP256(b *testing.B) {
 
 type BenchScalar struct {
 	value *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type BenchPoint struct {
 	x, y *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func (BenchScalar) CurveName() string {
@@ -365,7 +370,7 @@ func (s *BenchScalar) Div(rhs curves.Scalar) curves.Scalar {
 
 func (s *BenchScalar) Exp(k curves.Scalar) curves.Scalar {
 	value := new(big.Int).Exp(s.value, k.BigInt(), elliptic.P256().Params().N)
-	return &BenchScalar{value}
+	return &BenchScalar{value: value}
 }
 
 func (s *BenchScalar) Neg() curves.Scalar {
@@ -415,7 +420,7 @@ func (s *BenchScalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
 	value := new(big.Int).SetBytes(bytes)
 	value.Mod(value, elliptic.P256().Params().N)
 	return &BenchScalar{
-		value,
+		value: value,
 	}, nil
 }
 
@@ -502,7 +507,7 @@ func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
 	x, y := curve.Add(q0x, q0y, q1x, q1y)
 
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}
 }
 
@@ -537,7 +542,7 @@ func (p *BenchPoint) IsOnCurve() bool {
 func (p *BenchPoint) Double() curves.Point {
 	curve := elliptic.P256()
 	x, y := curve.Double(p.x, p.y)
-	return &BenchPoint{x, y}
+	return &BenchPoint{x: x, y: y}
 }
 
 func (p *BenchPoint) Scalar() curves.Scalar {
@@ -557,7 +562,7 @@ func (p *BenchPoint) Add(rhs curves.Point) curves.Point {
 	r, ok := rhs.(*BenchPoint)
 	if ok {
 		x, y := elliptic.P256().Add(p.x, p.y, r.x, r.y)
-		return &BenchPoint{x, y}
+		return &BenchPoint{x: x, y: y}
 	} else {
 		return nil
 	}
@@ -570,7 +575,7 @@ func (p *BenchPoint) Sub(rhs curves.Point) curves.Point {
 	r, ok := rhs.Neg().(*BenchPoint)
 	if ok {
 		x, y := elliptic.P256().Add(p.x, p.y, r.x, r.y)
-		return &BenchPoint{x, y}
+		return &BenchPoint{x: x, y: y}
 	} else {
 		return nil
 	}
@@ -583,7 +588,7 @@ func (p *BenchPoint) Mul(rhs curves.Scalar) curves.Point {
 	r, ok := rhs.(*BenchScalar)
 	if ok {
 		x, y := elliptic.P256().ScalarMult(p.x, p.y, r.value.Bytes())
-		return &BenchPoint{x, y}
+		return &BenchPoint{x: x, y: y}
 	} else {
 		return nil
 	}
@@ -611,7 +616,7 @@ func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
 	}
 	x = new(big.Int).Set(x)
 	y = new(big.Int).Set(y)
-	return &BenchPoint{x, y}, nil
+	return &BenchPoint{x: x, y: y}, nil
 }
 
 func (p *BenchPoint) ToAffineCompressed() []byte {
@@ -656,7 +661,7 @@ func (p *BenchPoint) FromAffineCompressed(bytes []byte) (curves.Point, error) {
 		y = new(big.Int)
 	}
 	return &BenchPoint{
-		x, y,
+		x: x, y: y,
 	}, nil
 }
 
@@ -669,7 +674,7 @@ func (p *BenchPoint) FromAffineUncompressed(bytes []byte) (curves.Point, error) 
 	}
 	x := new(big.Int).SetBytes(bytes[1:33])
 	y := new(big.Int).SetBytes(bytes[33:])
-	return &BenchPoint{x, y}, nil
+	return &BenchPoint{x: x, y: y}, nil
 }
 
 func (p *BenchPoint) CurveName() string {

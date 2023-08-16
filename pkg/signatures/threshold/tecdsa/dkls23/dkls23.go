@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -24,18 +25,24 @@ type PartialSignature struct {
 	Ui curves.Scalar
 	Wi curves.Scalar
 	Ri curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type BaseOTConfig struct {
 	AsSender   *vsot.SenderOutput
 	AsReceiver *vsot.ReceiverOutput
+
+	_ helper_types.Incomparable
 }
 
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs map[integration.IdentityHash]*BaseOTConfig
+	PairwiseBaseOTs map[helper_types.IdentityHash]*BaseOTConfig
+
+	_ helper_types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {

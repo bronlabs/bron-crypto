@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -26,6 +27,8 @@ type Prover struct {
 	uniqueSessionId []byte
 	transcript      transcripts.Transcript
 	BasePoint       curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (*Prover) IsUC() bool {
@@ -37,6 +40,8 @@ func (*Prover) IsUC() bool {
 type Proof struct {
 	C curves.Scalar
 	S curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
@@ -34,6 +35,8 @@ type Prover struct {
 	transcript      transcripts.Transcript
 	prng            io.Reader
 	BasePoint       curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (*Prover) IsUC() bool {
@@ -44,6 +47,8 @@ type Proof struct {
 	A [RBytes]curves.Point
 	E [RBytes]curves.Scalar
 	Z [RBytes]curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 // NewProver generates a `Prover` object, ready to generate dlog proofs on any given point.

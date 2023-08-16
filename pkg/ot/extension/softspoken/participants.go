@@ -3,6 +3,7 @@ package softspoken
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -24,6 +25,8 @@ type Receiver struct {
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
+
+	_ helper_types.Incomparable
 }
 
 type Sender struct {
@@ -42,6 +45,8 @@ type Sender struct {
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
+
+	_ helper_types.Incomparable
 }
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.

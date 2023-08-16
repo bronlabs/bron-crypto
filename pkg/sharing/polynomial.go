@@ -6,10 +6,13 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Polynomial struct {
 	Coefficients []curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 func (p *Polynomial) Degree() int {

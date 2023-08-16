@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -17,7 +18,9 @@ type preGenParticipantState struct {
 	bigR        []curves.Point
 	bigRWitness []commitments.Witness
 
-	theirBigRCommitments []map[integration.IdentityHash]commitments.Commitment
+	theirBigRCommitments []map[helper_types.IdentityHash]commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type PreGenParticipant struct {
@@ -33,6 +36,8 @@ type PreGenParticipant struct {
 	prng          io.Reader
 
 	state *preGenParticipantState
+
+	_ helper_types.Incomparable
 }
 
 func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {

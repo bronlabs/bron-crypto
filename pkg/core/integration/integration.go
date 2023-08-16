@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
@@ -20,8 +21,6 @@ type Participant interface {
 	GetCohortConfig() *CohortConfig
 }
 
-type IdentityHash [32]byte
-
 type IdentityKey interface {
 	Sign(message []byte) []byte
 	Verify(signature []byte, publicKey curves.Point, message []byte) error
@@ -32,6 +31,8 @@ type IdentityKey interface {
 type CipherSuite struct {
 	Curve curves.Curve
 	Hash  func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 func (cs *CipherSuite) Validate() error {
@@ -58,6 +59,8 @@ type CohortConfig struct {
 	PreSignatureComposer IdentityKey
 
 	participantHashSet hashset.HashSet[IdentityKey]
+
+	_ helper_types.Incomparable
 }
 
 func (c *CohortConfig) Validate() error {
@@ -143,17 +146,17 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	return copied
 }
 
-func SortIdentityHashes(identityKeys []IdentityHash) []IdentityHash {
+func SortIdentityHashes(identityKeys []helper_types.IdentityHash) []helper_types.IdentityHash {
 	sort.Slice(identityKeys, func(i, j int) bool {
 		return binary.BigEndian.Uint64(identityKeys[i][:]) < binary.BigEndian.Uint64(identityKeys[j][:])
 	})
 	return identityKeys
 }
 
-func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityHash]int, mySharingId int) {
+func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[helper_types.IdentityHash]int, mySharingId int) {
 	identityKeys = SortIdentityKeys(identityKeys)
 	idToKey = make(map[int]IdentityKey)
-	keyToId = make(map[IdentityHash]int)
+	keyToId = make(map[helper_types.IdentityHash]int)
 	mySharingId = -1
 
 	for sharingIdMinusOne, identityKey := range identityKeys {

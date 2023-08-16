@@ -193,15 +193,15 @@ func TestAdditiveAllCombinations(t *testing.T) {
 func TestMarshalJsonRoundTrip(t *testing.T) {
 	curve := edwards25519.New()
 	shares := []shamir.Share{
-		{0, curve.Scalar().New(300)},
-		{2, curve.Scalar().New(300000)},
-		{20, curve.Scalar().New(12812798)},
-		{31, curve.Scalar().New(17)},
-		{57, curve.Scalar().New(5066680)},
-		{128, curve.Scalar().New(3005)},
-		{19, curve.Scalar().New(317)},
-		{7, curve.Scalar().New(323)},
-		{222, curve.Scalar().New(-1)},
+		{Id: 0, Value: curve.Scalar().New(300)},
+		{Id: 2, Value: curve.Scalar().New(300000)},
+		{Id: 20, Value: curve.Scalar().New(12812798)},
+		{Id: 31, Value: curve.Scalar().New(17)},
+		{Id: 57, Value: curve.Scalar().New(5066680)},
+		{Id: 128, Value: curve.Scalar().New(3005)},
+		{Id: 19, Value: curve.Scalar().New(317)},
+		{Id: 7, Value: curve.Scalar().New(323)},
+		{Id: 222, Value: curve.Scalar().New(-1)},
 	}
 	// Run all the tests!
 	for _, in := range shares {

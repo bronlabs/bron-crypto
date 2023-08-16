@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -94,7 +95,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, *integration.C
 	return fz, n, message, cipherSuite
 }
 
-func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, n int, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[integration.IdentityHash]*lindell17.Shard, message []byte) {
+func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, n int, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell17.Shard, message []byte) {
 	t.Helper()
 
 	aliceIdx := 0
@@ -151,7 +152,7 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	}
 }
 
-func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integration.IdentityKey, map[integration.IdentityHash]*lindell17.Shard) {
+func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integration.IdentityKey, map[helper_types.IdentityHash]*lindell17.Shard) {
 	t.Helper()
 
 	identities, err := test_utils.MakeIdentities(cipherSuite, n)
@@ -171,7 +172,7 @@ func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integra
 	return identities, shards
 }
 
-func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[integration.IdentityHash]*lindell17.Shard, message []byte) {
+func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell17.Shard, message []byte) {
 	t.Helper()
 
 	var sessionId []byte
