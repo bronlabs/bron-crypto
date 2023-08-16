@@ -12,7 +12,7 @@ type ErrorType string
 
 const (
 	deserializationFailed ErrorType = "[DESERIALIZATION_FAILED]"
-	serializationFailed   ErrorType = "[SERIALIZATION_FAILED]"
+	serializationFailed   ErrorType = "[SERIALISATION_FAILED]"
 	divisionByZero        ErrorType = "[DIVISION_BY_ZERO]"
 	duplicate             ErrorType = "[DUPLICATE]"
 	failed                ErrorType = "[FAILED]"
