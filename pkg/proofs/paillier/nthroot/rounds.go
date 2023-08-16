@@ -5,18 +5,25 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Round1Output struct {
 	A *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Round2Output struct {
 	E *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Round3Output struct {
 	Z *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func (prover *Prover) Round1() (output *Round1Output, err error) {

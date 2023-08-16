@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
@@ -16,21 +17,29 @@ import (
 
 type Round1OutputP2P struct {
 	BigR1Commitment commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Round2OutputP2P struct {
 	BigR2      curves.Point
 	BigR2Proof *dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 type Round3OutputP2P struct {
 	BigR1Witness commitments.Witness
 	BigR1        curves.Point
 	BigR1Proof   *dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 type Round4OutputP2P struct {
 	C3 paillier.CipherText
+
+	_ helper_types.Incomparable
 }
 
 var commitmentHashFunc = sha256.New
@@ -189,7 +198,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 
 	secondaryCosigner.round++
 	return &Round4OutputP2P{
-		c3,
+		C3: c3,
 	}, nil
 }
 

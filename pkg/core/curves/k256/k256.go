@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	secp256k1 "github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 const Name = "secp256k1"
@@ -23,6 +24,8 @@ type Curve struct {
 	Sc curves.Scalar
 	P  curves.Point
 	ID string
+
+	_ helper_types.Incomparable
 }
 
 func k256Init() {
@@ -84,7 +87,7 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
-	return &Point{value}, nil
+	return &Point{Value: value}, nil
 }
 
 func (Curve) DeriveAffine(x curves.Element) (curves.Point, curves.Point, error) {

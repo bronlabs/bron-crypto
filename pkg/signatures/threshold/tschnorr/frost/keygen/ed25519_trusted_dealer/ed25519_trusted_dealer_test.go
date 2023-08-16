@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"errors"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"hash"
 	"testing"
 
@@ -22,6 +23,8 @@ type identityKey struct {
 	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 func (k *identityKey) PublicKey() curves.Point {

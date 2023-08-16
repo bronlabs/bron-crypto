@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -15,10 +16,14 @@ import (
 type Round1Broadcast struct {
 	Ci        []curves.Point
 	DlogProof *dlog.Proof
+
+	_ helper_types.Incomparable
 }
 
 type Round1P2P struct {
 	Xij curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 const (
@@ -26,7 +31,7 @@ const (
 	SharingIdLabel = "Pedersen DKG sharing id parameter"
 )
 
-func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -55,7 +60,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 		return nil, nil, errs.WrapFailed(err, "couldn't sign")
 	}
 
-	outboundP2PMessages := map[integration.IdentityHash]*Round1P2P{}
+	outboundP2PMessages := map[helper_types.IdentityHash]*Round1P2P{}
 
 	for sharingId, identityKey := range p.sharingIdToIdentityKey {
 		if sharingId != p.MySharingId {
@@ -75,7 +80,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[integration.IdentityHash]*
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]*Round1Broadcast, round1outputP2P map[integration.IdentityHash]*Round1P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
+func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*threshold.SigningKeyShare, *threshold.PublicKeyShares, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -179,8 +184,8 @@ func (p *Participant) Round2(round1outputBroadcast map[integration.IdentityHash]
 	}, publicKeyShares, nil
 }
 
-func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[integration.IdentityHash]curves.Point, error) {
-	shares := map[integration.IdentityHash]curves.Point{}
+func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[helper_types.IdentityHash]curves.Point, error) {
+	shares := map[helper_types.IdentityHash]curves.Point{}
 	for j, identityKey := range sharingIdToIdentityKey {
 		Y_j := cohort.CipherSuite.Curve.Point().Identity()
 		for _, C_l := range commitmentVectors {

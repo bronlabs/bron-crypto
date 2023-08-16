@@ -3,6 +3,7 @@ package dkg
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
@@ -18,6 +19,8 @@ import (
 type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {

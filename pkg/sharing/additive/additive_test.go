@@ -77,7 +77,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 					for i, id := range identities {
 						value, err := shamirShares[id-1].ToAdditive(identities)
 						require.NoError(t, err)
-						additiveShares[i] = &additive.Share{value}
+						additiveShares[i] = &additive.Share{Value: value}
 					}
 
 					combinedAdditiveShares, err := additiveDealer.Combine(additiveShares)

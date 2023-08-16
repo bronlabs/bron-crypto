@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -20,16 +21,22 @@ import (
 type PrivateKey struct {
 	a curves.Scalar
 	PublicKey
+
+	_ helper_types.Incomparable
 }
 
 type PublicKey struct {
 	Curve curves.Curve
 	Y     curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type Signature struct {
 	R curves.Scalar
 	S curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 const (
@@ -69,6 +76,8 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 type Signer struct {
 	PublicKey  *PublicKey
 	privateKey *PrivateKey
+
+	_ helper_types.Incomparable
 }
 
 func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar) (*Signer, error) {

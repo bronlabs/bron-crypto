@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
@@ -24,6 +25,8 @@ var _ transcripts.Transcript = (*Transcript)(nil)
 type Transcript struct {
 	s [32]byte
 	transcripts.Transcript
+
+	_ helper_types.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
@@ -134,6 +137,8 @@ var _ io.Reader = (*prngReader)(nil)
 type prngReader struct {
 	t *Transcript
 	io.Reader
+
+	_ helper_types.Incomparable
 }
 
 // NewReader creates a new transcript PRNG, needed to generate random bytes.

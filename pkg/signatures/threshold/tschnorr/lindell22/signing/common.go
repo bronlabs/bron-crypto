@@ -4,12 +4,13 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId map[integration.IdentityHash]int) (curves.Scalar, error) {
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId map[helper_types.IdentityHash]int) (curves.Scalar, error) {
 	shamirIndices := make([]int, len(participants))
 	for i, identity := range participants {
 		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]

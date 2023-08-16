@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
 )
@@ -11,18 +12,26 @@ import (
 type Round1Output struct {
 	NthRootProverOutputs []*nthroot.Round1Output
 	X                    []paillier.CipherText
+
+	_ helper_types.Incomparable
 }
 
 type Round2Output struct {
 	NthRootVerifierOutputs []*nthroot.Round2Output
+
+	_ helper_types.Incomparable
 }
 
 type Round3Output struct {
 	NthRootProverOutputs []*nthroot.Round3Output
+
+	_ helper_types.Incomparable
 }
 
 type Round4Output struct {
 	YPrime []*big.Int
+
+	_ helper_types.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {

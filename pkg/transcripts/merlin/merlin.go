@@ -10,6 +10,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
@@ -27,6 +28,8 @@ var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
 	s strobe.Strobe
+
+	_ helper_types.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The
@@ -137,6 +140,8 @@ func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
 // rekey the public transcript, or use an RNG before it has been finalised.
 type prngReader struct {
 	t *Transcript
+
+	_ helper_types.Incomparable
 }
 
 // NewReader creates a new transcript PRNG, needed to generate random bytes.

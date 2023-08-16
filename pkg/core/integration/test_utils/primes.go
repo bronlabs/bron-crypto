@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/copperexchange/knox-primitives/pkg/core"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type SafePrimeMocker struct {
@@ -12,6 +13,8 @@ type SafePrimeMocker struct {
 	M                *sync.Mutex
 	SafePrimes       []*big.Int
 	GenSafePrimeOrig func(bits uint) (*big.Int, error)
+
+	_ helper_types.Incomparable
 }
 
 func NewSafePrimeMocker() *SafePrimeMocker {

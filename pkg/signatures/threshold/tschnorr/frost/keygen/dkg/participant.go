@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -11,6 +12,8 @@ import (
 
 type Participant struct {
 	pedersenParty *pedersen.Participant
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {

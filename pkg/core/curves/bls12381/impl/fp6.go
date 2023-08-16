@@ -1,11 +1,17 @@
 package bls12381impl
 
-import "io"
+import (
+	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
 
 // fp6 represents an element
 // a + b v + c v^2 of fp^6 = fp^2 / v^3 - u - 1.
 type fp6 struct {
 	A, B, C fp2
+
+	_ helper_types.Incomparable
 }
 
 // Set fp6 = a.
