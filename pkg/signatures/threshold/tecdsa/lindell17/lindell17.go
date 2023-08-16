@@ -2,6 +2,7 @@ package lindell17
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -36,4 +37,13 @@ type PreSignature struct {
 
 type PreSignatureBatch struct {
 	PreSignatures []*PreSignature
+}
+
+func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
+	if err := s.SigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "invalid signing key share")
+	}
+	// TODO: validate the rest of the paillier stuff
+	// TODO: validate cohort membership after hashset is incorporated
+	return nil
 }

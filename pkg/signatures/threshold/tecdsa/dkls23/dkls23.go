@@ -2,6 +2,7 @@ package dkls23
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
@@ -19,6 +20,12 @@ type (
 	PairwiseSeeds   = zero.PairwiseSeeds
 )
 
+type PartialSignature struct {
+	Ui curves.Scalar
+	Wi curves.Scalar
+	Ri curves.Point
+}
+
 type BaseOTConfig struct {
 	AsSender   *vsot.SenderOutput
 	AsReceiver *vsot.ReceiverOutput
@@ -31,8 +38,14 @@ type Shard struct {
 	PairwiseBaseOTs map[integration.IdentityHash]*BaseOTConfig
 }
 
-type PartialSignature struct {
-	Ui curves.Scalar
-	Wi curves.Scalar
-	Ri curves.Point
+func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
+	if err := s.SigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "invalid signing key share")
+	}
+	if err := s.PublicKeyShares.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "invalid public key shares map")
+	}
+	// TODO: ensure all pairwise seeds are in cohort, after hashset is incorporated.
+	// TODO: ensure all pairwise base OTs seeds are in cohort, after hashset is incorporated.
+	return nil
 }

@@ -94,8 +94,8 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if err := myShard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if myIdentityKey == nil {
 		return nil, errs.NewIsNil("my identity key is nil")
@@ -141,8 +141,8 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if err := myShard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if myIdentityKey == nil {
 		return nil, errs.NewIsNil("my identity key is nil")

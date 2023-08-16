@@ -53,6 +53,14 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		shardsMap[identities[i].Hash()] = shard
 	}
 
+	t.Run("each shard is validated", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(shards); i++ {
+			err := shards[i].Validate(cohortConfig)
+			require.NoError(t, err)
+		}
+	})
+
 	t.Run("each signing share is different", func(t *testing.T) {
 		t.Parallel()
 		// each signing share is different

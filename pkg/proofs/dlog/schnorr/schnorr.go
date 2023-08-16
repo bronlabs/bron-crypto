@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -19,7 +20,7 @@ const (
 	digestLabel           = "digest"
 )
 
-type Statement = curves.Point
+type Statement = dlog.Statement
 
 type Prover struct {
 	uniqueSessionId []byte
@@ -95,6 +96,9 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	}
 	if basePoint.IsIdentity() {
 		return errs.NewInvalidArgument("basepoint is identity")
+	}
+	if err := dlog.StatementSubgroupMembershipCheck(basePoint, statement); err != nil {
+		return errs.WrapFailed(err, "subgroup membership check failed")
 	}
 
 	curve, err := basePoint.Curve()
