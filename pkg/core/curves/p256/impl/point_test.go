@@ -16,7 +16,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 	g := p256n.PointNew().Generator()
 	pt1 := p256n.PointNew().Double(g)
 	pt2 := p256n.PointNew().Add(g, g)
-	pt3 := p256n.PointNew().Mul(g, fp.P256FpNew().SetUint64(2))
+	pt3 := p256n.PointNew().Mul(g, fp.New().SetUint64(2))
 
 	e1 := pt1.Equal(pt2)
 	e2 := pt1.Equal(pt3)

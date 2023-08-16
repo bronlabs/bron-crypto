@@ -75,7 +75,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	}
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
-	s, err := fq.K256FqNew().SetBytes(&bytes_)
+	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
 		panic(errs.WrapDeserializationFailed(err, "set bytes"))
 	}
@@ -85,7 +85,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 func (*Koblitz256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
-	s, err := fq.K256FqNew().SetBytes(&bytes_)
+	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
 		panic(errs.WrapDeserializationFailed(err, "set bytes"))
 	}

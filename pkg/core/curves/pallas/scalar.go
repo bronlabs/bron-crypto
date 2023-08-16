@@ -5,9 +5,8 @@ import (
 	"io"
 	"math/big"
 
-	"golang.org/x/crypto/blake2b"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -37,11 +36,7 @@ func (s *Scalar) Random(reader io.Reader) curves.Scalar {
 }
 
 func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
-	h, _ := blake2b.New(64, []byte{})
-	xmd, err := expandMsgXmd(h, bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
-	if err != nil {
-		return nil
-	}
+	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	var t [64]byte
 	copy(t[:], xmd)
 	return &Scalar{

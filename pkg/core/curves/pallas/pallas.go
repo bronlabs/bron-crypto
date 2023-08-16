@@ -1,12 +1,12 @@
 package pallas
 
 import (
-	"hash"
 	"math/big"
 	"reflect"
 	"sync"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
@@ -48,19 +48,37 @@ var (
 	z    = new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffff4, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000})
 )
 
+var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+
+type CurveProfile struct{}
+
+func (CurveProfile) Field() curves.FieldProfile {
+	return &FieldProfile{}
+}
+
+func (CurveProfile) SubGroupOrder() *big.Int {
+	return fq.New().Params.BiModulus
+}
+
+func (CurveProfile) Cofactor() *big.Int {
+	return big.NewInt(1)
+}
+
 var _ (curves.Curve) = (*Curve)(nil)
 
 type Curve struct {
-	Sc curves.Scalar
-	P  curves.Point
-	ID string
+	Scalar_  curves.Scalar
+	Point_   curves.Point
+	Name_    string
+	Profile_ curves.CurveProfile
 }
 
 func pallasInit() {
 	pallasInstance = Curve{
-		Sc: new(Scalar).Zero(),
-		P:  new(Point).Identity(),
-		ID: Name,
+		Scalar_:  new(Scalar).Zero(),
+		Point_:   new(Point).Identity(),
+		Name_:    Name,
+		Profile_: &CurveProfile{},
 	}
 }
 
@@ -69,31 +87,35 @@ func New() *Curve {
 	return &pallasInstance
 }
 
+func (c Curve) Profile() curves.CurveProfile {
+	return c.Profile_
+}
+
 func (c Curve) Scalar() curves.Scalar {
-	return c.Sc
+	return c.Scalar_
 }
 
 func (c Curve) Point() curves.Point {
-	return c.P
+	return c.Point_
 }
 
 func (c Curve) Name() string {
-	return c.ID
+	return c.Name_
 }
 
 func (c Curve) Generator() curves.Point {
-	return c.P.Generator()
+	return c.Point_.Generator()
 }
 
 func (c Curve) Identity() curves.Point {
-	return c.P.Identity()
+	return c.Point_.Identity()
 }
 
 func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) DeriveAffine(x curves.Element) (curves.Point, curves.Point, error) {
+func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	return nil, nil, nil
 }
 
@@ -273,53 +295,4 @@ func mapSswu(u *fp.Fp) *Ep {
 	return &Ep{
 		x: x, y: y, z: new(fp.Fp).SetOne(),
 	}
-}
-
-// TODO: rewrite like K256
-func expandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
-	domainLen := uint8(len(domain))
-	if domainLen > 255 {
-		return nil, errs.NewInvalidLength("invalid domain length")
-	}
-	// DST_prime = DST || I2OSP(len(DST), 1)
-	// b_0 = H(Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime)
-	_, _ = h.Write(make([]byte, h.BlockSize()))
-	_, _ = h.Write(msg)
-	_, _ = h.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
-	_, _ = h.Write([]byte{0})
-	_, _ = h.Write(domain)
-	_, _ = h.Write([]byte{domainLen})
-	b0 := h.Sum(nil)
-
-	// b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
-	h.Reset()
-	_, _ = h.Write(b0)
-	_, _ = h.Write([]byte{1})
-	_, _ = h.Write(domain)
-	_, _ = h.Write([]byte{domainLen})
-	b1 := h.Sum(nil)
-
-	// b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
-	ell := (outLen + h.Size() - 1) / h.Size()
-	bi := b1
-	out := make([]byte, outLen)
-	for i := 1; i < ell; i++ {
-		h.Reset()
-		// b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
-		tmp := make([]byte, h.Size())
-		for j := 0; j < h.Size(); j++ {
-			tmp[j] = b0[j] ^ bi[j]
-		}
-		_, _ = h.Write(tmp)
-		_, _ = h.Write([]byte{1 + uint8(i)})
-		_, _ = h.Write(domain)
-		_, _ = h.Write([]byte{domainLen})
-
-		// b_1 || ... || b_(ell - 1)
-		copy(out[(i-1)*h.Size():i*h.Size()], bi[:])
-		bi = h.Sum(nil)
-	}
-	// b_ell
-	copy(out[(ell-1)*h.Size():], bi[:])
-	return out[:outLen], nil
 }

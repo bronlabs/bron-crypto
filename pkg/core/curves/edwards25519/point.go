@@ -373,11 +373,11 @@ func (p *Point) IsSmallOrder() bool {
 	return p.Double().Double().Double().IsIdentity()
 }
 
-func (Point) X() curves.Element {
+func (Point) X() curves.FieldElement {
 	return nil
 }
 
-func (Point) Y() curves.Element {
+func (Point) Y() curves.FieldElement {
 	return nil
 }
 

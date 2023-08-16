@@ -18,7 +18,7 @@ var (
 	k256FqParams   impl.FieldParams
 )
 
-func K256FqNew() *impl.Field {
+func New() *impl.Field {
 	return &impl.Field{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getK256FqParams(),

@@ -39,19 +39,19 @@ func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
 	copy(t[:48], bitstring.ReverseBytes(xmd))
 
 	return &Scalar{
-		Value: fq.K256FqNew().SetBytesWide(&t),
+		Value: fq.New().SetBytesWide(&t),
 	}
 }
 
 func (*Scalar) Zero() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().SetZero(),
+		Value: fq.New().SetZero(),
 	}
 }
 
 func (*Scalar) One() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().SetOne(),
+		Value: fq.New().SetOne(),
 	}
 }
 
@@ -72,7 +72,7 @@ func (s *Scalar) IsEven() bool {
 }
 
 func (*Scalar) New(value int) curves.Scalar {
-	t := fq.K256FqNew()
+	t := fq.New()
 	v := big.NewInt(int64(value))
 	if value < 0 {
 		v.Mod(v, t.Params.BiModulus)
@@ -96,18 +96,18 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 
 func (s *Scalar) Square() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().Square(s.Value),
+		Value: fq.New().Square(s.Value),
 	}
 }
 
 func (s *Scalar) Double() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().Double(s.Value),
+		Value: fq.New().Double(s.Value),
 	}
 }
 
 func (s *Scalar) Invert() (curves.Scalar, error) {
-	value, wasInverted := fq.K256FqNew().Invert(s.Value)
+	value, wasInverted := fq.New().Invert(s.Value)
 	if !wasInverted {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
@@ -117,7 +117,7 @@ func (s *Scalar) Invert() (curves.Scalar, error) {
 }
 
 func (s *Scalar) Sqrt() (curves.Scalar, error) {
-	value, wasSquare := fq.K256FqNew().Sqrt(s.Value)
+	value, wasSquare := fq.New().Sqrt(s.Value)
 	if !wasSquare {
 		return nil, errs.NewFailed("not a square")
 	}
@@ -127,7 +127,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 }
 
 func (s *Scalar) Cube() curves.Scalar {
-	value := fq.K256FqNew().Mul(s.Value, s.Value)
+	value := fq.New().Mul(s.Value, s.Value)
 	value.Mul(value, s.Value)
 	return &Scalar{
 		value,
@@ -138,7 +138,7 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: fq.K256FqNew().Add(s.Value, r.Value),
+			Value: fq.New().Add(s.Value, r.Value),
 		}
 	} else {
 		panic("rhs is not ScalarK256")
@@ -149,7 +149,7 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: fq.K256FqNew().Sub(s.Value, r.Value),
+			Value: fq.New().Sub(s.Value, r.Value),
 		}
 	} else {
 		panic("rhs is not ScalarK256")
@@ -160,7 +160,7 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: fq.K256FqNew().Mul(s.Value, r.Value),
+			Value: fq.New().Mul(s.Value, r.Value),
 		}
 	} else {
 		panic("rhs is not ScalarK256")
@@ -174,7 +174,7 @@ func (s *Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
 func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
-		v, wasInverted := fq.K256FqNew().Invert(r.Value)
+		v, wasInverted := fq.New().Invert(r.Value)
 		if !wasInverted {
 			panic("cannot invert rhs")
 		}
@@ -191,13 +191,13 @@ func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
 		panic("rhs is not ScalarK256")
 	}
 
-	value := fq.K256FqNew().Exp(s.Value, exponent.Value)
+	value := fq.New().Exp(s.Value, exponent.Value)
 	return &Scalar{value}
 }
 
 func (s *Scalar) Neg() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().Neg(s.Value),
+		Value: fq.New().Neg(s.Value),
 	}
 }
 
@@ -205,7 +205,7 @@ func (*Scalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
 	if v == nil {
 		return nil, errs.NewFailed("'v' cannot be nil")
 	}
-	value := fq.K256FqNew().SetBigInt(v)
+	value := fq.New().SetBigInt(v)
 	return &Scalar{
 		value,
 	}, nil
@@ -226,7 +226,7 @@ func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	}
 	var seq [32]byte
 	copy(seq[:], bitstring.ReverseBytes(input))
-	value, err := fq.K256FqNew().SetBytes(&seq)
+	value, err := fq.New().SetBytes(&seq)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set bytes")
 	}
@@ -242,7 +242,7 @@ func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	var seq [64]byte
 	copy(seq[:], input)
 	return &Scalar{
-		Value: fq.K256FqNew().SetBytesWide(&seq),
+		Value: fq.New().SetBytesWide(&seq),
 	}, nil
 }
 
@@ -252,7 +252,7 @@ func (*Scalar) CurveName() string {
 
 func (s *Scalar) Clone() curves.Scalar {
 	return &Scalar{
-		Value: fq.K256FqNew().Set(s.Value),
+		Value: fq.New().Set(s.Value),
 	}
 }
 

@@ -72,7 +72,7 @@ func (*NistP256) ScalarMul(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	}
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
-	s, err := fq.P256FqNew().SetBytes(&bytes_)
+	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
 		return nil, nil
 	}
@@ -82,7 +82,7 @@ func (*NistP256) ScalarMul(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 func (*NistP256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	var bytes_ [32]byte
 	copy(bytes_[:], bitstring.ReverseBytes(k))
-	s, err := fq.P256FqNew().SetBytes(&bytes_)
+	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
 		return nil, nil
 	}

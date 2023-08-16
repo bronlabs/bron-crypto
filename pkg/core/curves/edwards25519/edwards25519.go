@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"math/big"
 	"reflect"
 	"sync"
 
@@ -20,12 +21,29 @@ var (
 	scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
 )
 
+var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+
+type CurveProfile struct{}
+
+func (CurveProfile) Field() curves.FieldProfile {
+	return &FieldProfile{}
+}
+
+func (CurveProfile) SubGroupOrder() *big.Int {
+	return nil
+}
+
+func (CurveProfile) Cofactor() *big.Int {
+	return big.NewInt(8)
+}
+
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Sc curves.Scalar
-	P  curves.Point
-	ID string
+	Scalar_  curves.Scalar
+	Point_   curves.Point
+	Name_    string
+	Profile_ curves.CurveProfile
 }
 
 func New() *Curve {
@@ -35,30 +53,35 @@ func New() *Curve {
 
 func ed25519Init() {
 	edwards25519Instance = Curve{
-		Sc: new(Scalar).Zero(),
-		P:  new(Point).Identity(),
-		ID: Name,
+		Scalar_:  new(Scalar).Zero(),
+		Point_:   new(Point).Identity(),
+		Name_:    Name,
+		Profile_: &CurveProfile{},
 	}
 }
 
+func (c Curve) Profile() curves.CurveProfile {
+	return c.Profile_
+}
+
 func (c Curve) Scalar() curves.Scalar {
-	return c.Sc
+	return c.Scalar_
 }
 
 func (c Curve) Point() curves.Point {
-	return c.P
+	return c.Point_
 }
 
 func (c Curve) Name() string {
-	return c.ID
+	return c.Name_
 }
 
 func (c Curve) Generator() curves.Point {
-	return c.P.Generator()
+	return c.Point_.Generator()
 }
 
 func (c Curve) Identity() curves.Point {
-	return c.P.Identity()
+	return c.Point_.Identity()
 }
 
 func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
@@ -86,6 +109,6 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	return &Point{Value: pt}, nil
 }
 
-func (Curve) DeriveAffine(x curves.Element) (curves.Point, curves.Point, error) {
+func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	return nil, nil, nil
 }

@@ -446,11 +446,11 @@ func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
 	}, nil
 }
 
-func (BenchPoint) X() curves.Element {
+func (BenchPoint) X() curves.FieldElement {
 	return nil
 }
 
-func (BenchPoint) Y() curves.Element {
+func (BenchPoint) Y() curves.FieldElement {
 	return nil
 }
 

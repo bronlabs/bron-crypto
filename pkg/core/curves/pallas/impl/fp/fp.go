@@ -35,7 +35,7 @@ var s = 32
 // p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001.
 var Modulus = &Fp{0x992d30ed00000001, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000}
 
-var biModulus = new(big.Int).SetBytes([]byte{
+var BiModulus = new(big.Int).SetBytes([]byte{
 	0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x22, 0x46, 0x98, 0xfc, 0x09, 0x4c, 0xf9, 0x1b,
@@ -183,7 +183,7 @@ func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 func (fp *Fp) SetBigInt(bi *big.Int) *Fp {
 	var buffer [32]byte
 	r := new(big.Int).Set(bi)
-	r.Mod(r, biModulus)
+	r.Mod(r, BiModulus)
 	r.FillBytes(buffer[:])
 	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = fp.SetBytes(&buffer)
