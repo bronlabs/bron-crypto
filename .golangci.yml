@@ -570,11 +570,6 @@ linters-settings:
       - name: range
       # Conventions around the naming of receivers.
       - name: receiver-naming
-      # # Sets restriction for maximum Cyclomatic complexity.
-      # # TODO: enable this once all cyclomatic complexity todos are resolved
-      # # - name: cyclomatic
-      # #   arguments:
-      # #     - 13
       # Warns on empty code blocks
       - name: empty-block
       # Looks for program exits in funcs other than main() or init()
