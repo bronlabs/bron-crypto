@@ -75,9 +75,6 @@ linters:
     - gofmt
     # Gofumpt checks whether code was gofumpt-ed.
     - gofumpt
-    # # An analyzer to detect magic numbers.
-    # # TODO: enable this
-    # - gomnd
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
     - gomoddirectives
     # Checks that printf-like functions are named with f at the end
@@ -470,14 +467,6 @@ linters-settings:
   dogsled:
     # checks assignments with too many blank identifiers; default is 2
     max-blank-identifiers: 3
-  gomnd: # Detection methods of magic numbers
-    # the list of enabled checks, see https://github.com/tommy-muehle/go-mnd/#checks for description.
-    checks: argument,case,condition,operation,return,assign
-    ignored-numbers:
-      - '2' # We often use 2 in the context of two-party stuff (e.g. DKLs18)
-      - '10' # Parsing integers in base 10 is common
-      - '32'
-      - '64'
   dupl:
     # tokens count to trigger issue, 150 by default
     threshold: 175
