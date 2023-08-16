@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
 
 func TestExpandMsgXmd(t *testing.T) {

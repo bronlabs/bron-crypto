@@ -114,7 +114,7 @@ func New() *PairingCurve {
 }
 
 func (c Curve) Profile() curves.CurveProfile {
-	return c.Profile()
+	return c.Profile_
 }
 
 func (c Curve) Scalar() curves.Scalar {

@@ -67,7 +67,7 @@ func (e FieldElement) Cmp(rhs curves.FieldElement) int {
 	return e.v.Cmp(rhse.impl())
 }
 
-func (e FieldElement) New(value int) curves.FieldElement {
+func (FieldElement) New(value int) curves.FieldElement {
 	return nil
 }
 
@@ -146,6 +146,7 @@ func (FieldElement) Neg() curves.FieldElement {
 func (FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
 	return nil, nil
 }
+
 func (FieldElement) BigInt() *big.Int {
 	return nil
 }

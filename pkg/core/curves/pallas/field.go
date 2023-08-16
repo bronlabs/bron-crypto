@@ -69,7 +69,7 @@ func (FieldElement) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e FieldElement) New(value int) curves.FieldElement {
+func (FieldElement) New(value int) curves.FieldElement {
 	return nil
 }
 
@@ -148,6 +148,7 @@ func (FieldElement) Neg() curves.FieldElement {
 func (FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
 	return nil, nil
 }
+
 func (FieldElement) BigInt() *big.Int {
 	return nil
 }

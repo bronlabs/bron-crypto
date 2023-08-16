@@ -255,6 +255,6 @@ func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) 
 	return result, nil
 }
 
-func (e FieldElement) Scalar() (curves.FieldElement, error) {
+func (FieldElement) Scalar() (curves.FieldElement, error) {
 	return nil, nil
 }
