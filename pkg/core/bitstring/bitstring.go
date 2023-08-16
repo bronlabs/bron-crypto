@@ -58,26 +58,14 @@ func BoolToByte(b bool) byte {
 	}
 }
 
-// ByteSub is a constant time algorithm for subtracting
+// ByteSubBE is a constant time algorithm for subtracting
 // 1 from the array as if it were a big number.
 // 0 is considered a wrap which resets to 0xFF.
-func ByteSub(b []byte) {
-	m := byte(1)
-	for i := 0; i < len(b); i++ {
-		b[i] -= m
-
-		// If b[i] > 0, s == 0
-		// If b[i] == 0, s == 1
-		// Computing IsNonZero(b[i])
-		s1 := int8(b[i]) >> 7
-		s2 := -int8(b[i]) >> 7
-		s := byte((s1 | s2) + 1)
-
-		// If s == 0, don't subtract anymore
-		// s == 1, continue subtracting
-		m = s & m
-		// If s == 0 this does nothing
-		// If s == 1 reset this value to 0xFF
-		b[i] |= -s
+func ByteSubBE(b []byte) {
+	carry := uint16(0)
+	for i := range b {
+		t := uint16(b[i]) + uint16(0x00ff) + carry
+		b[i] = byte(t & 0xff)
+		carry = t >> 8
 	}
 }
