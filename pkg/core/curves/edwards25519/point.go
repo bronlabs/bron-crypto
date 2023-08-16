@@ -284,7 +284,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	point, err := internal.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "marshal to point failed")
+		return nil, errs.WrapSerializationFailed(err, "marshal to point failed")
 	}
 	return point, nil
 }
@@ -305,7 +305,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	t, err := internal.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "marshal to text failed")
+		return nil, errs.WrapSerializationFailed(err, "marshal to text failed")
 	}
 	return t, nil
 }
@@ -326,7 +326,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	point, err := internal.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "marshal to json failed")
+		return nil, errs.WrapSerializationFailed(err, "marshal to json failed")
 	}
 	return point, nil
 }
