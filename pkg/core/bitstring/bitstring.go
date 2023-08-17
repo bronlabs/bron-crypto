@@ -53,20 +53,6 @@ func Memset(buffer []byte, value byte) {
 	}
 }
 
-// IntToByteArray converts from int to byte array.
-func IntToByteArray(i int) [4]byte {
-	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
-}
-
-// BoolToByte converts a boolean to a byte.
-func BoolToByte(b bool) byte {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
-}
-
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].

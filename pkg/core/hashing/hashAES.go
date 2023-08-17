@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// IV is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
+	// IV is the hash's initialisation vector. We choose 32 arbitrary bytes: "  ℂｏℙṔęℛ·㏇  "
 	IV = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
 	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
 	AesBlockSize = aes.BlockSize
@@ -120,7 +120,7 @@ func (h *AesHash) Write(input []byte) (n int, err error) {
 			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
 			// We increase a hash-level counter on each TMMO call and use it as index.
 			h.counter++
-			xorIndex(h.permutedOnceBlock, outputBlock, int32(h.counter))
+			xorIndexBE(h.permutedOnceBlock, outputBlock, int32(h.counter))
 			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
 			h.blockCipher.Encrypt(outputBlock, outputBlock)
 			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
@@ -183,8 +183,8 @@ func (h *AesHash) Sum(b []byte) (res []byte) {
 }
 
 /* ----------------------------- AUXILIARY ---------------------------------- */
-// xorIndex xors the first 4 bytes of the block with the index.
-func xorIndex(input, output []byte, index int32) {
+// xorIndexBE xors the first 4 bytes of the block with the index.
+func xorIndexBE(input, output []byte, index int32) {
 	copy(output, input)
 	output[0] ^= byte(index >> 24)
 	output[1] ^= byte(index >> 16)
