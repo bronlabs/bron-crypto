@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// HashIv is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
-	HashIv = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
+	// IV is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
+	iv = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
 	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
 	AesBlockSize = aes.BlockSize
 	// AesKeySize is the key size (in bytes) for the internal block cipher. Set to 32B (AES256).
@@ -19,7 +19,7 @@ const (
 )
 
 /*
-HashAes implements an extension of the Tweakable Matyas-Meyer-Oseas (TMMO)
+AesHash implements an extension of the Tweakable Matyas-Meyer-Oseas (TMMO)
 construction (Section 7.4 of [GKWY20](https://eprint.iacr.org/2019/074.pdf),
 using a block cipher (π) as an ideal permutation. With an input `x` of size a
 single block of π, and an index `i` ∈ [1,2,...,L] (for an output with L blocks
@@ -43,12 +43,14 @@ B) Pad the last input block with zeros if it doesn't fit the AES block.
 
 See the README.md for the full algorithm description.
 */
-type HashAes struct {
-	outputBlockLength int
-	counter           int
-	blockCipher       cipher.Block
-	hashIv            []byte
-	digest            []byte
+type AesHash struct {
+	hash.Hash
+
+	outputBlockLength int          // Fixed digest size in # AES blocks
+	counter           int          // Hash-wide counter to use as index in TMMO
+	blockCipher       cipher.Block // Hold the underlying block cipher π (AES-256)
+	hashIv            []byte       // Initialization Vector. Stored to be able to `.Reset()`
+	digest            []byte       // Hash output
 
 	// Auxiliary variables. Allocated once and used on every `Write`, thus this
 	// implementation is not thread-safe (only one thread per ExtendedTMMO).
@@ -56,10 +58,10 @@ type HashAes struct {
 	aesKey            []byte // Store the key on every iteration.
 }
 
-// NewHashAes creates a new HashAes object to perform AES256-based hashing. It
+// NewAesHash creates a new HashAes object to perform AES256-based hashing. It
 // requires outputLength (number of Bytes) multiple of AesBlockSize, and an
 // optional initialization vector of AesKeSize bytes.
-func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
+func NewAesHash(outputLength int, hashIv []byte) (hash.Hash, error) {
 	if outputLength < AesBlockSize || outputLength%AesBlockSize != 0 {
 		return nil, errs.NewInvalidArgument("outputLength (%dB) must be a multiple of AesBlockSize (%dB)", outputLength, AesBlockSize)
 	}
@@ -67,7 +69,7 @@ func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
 	// If no iv is provided, use the hardcoded IV.
 	var internalHashIv []byte
 	if len(hashIv) == 0 {
-		internalHashIv = []byte(HashIv)
+		internalHashIv = []byte(iv)
 	} else {
 		internalHashIv = make([]byte, len(hashIv))
 		copy(internalHashIv, hashIv) // Create a copy of the hashIv for Reset
@@ -84,7 +86,7 @@ func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
 	// 2) Initialise the digest and the auxiliary variables.
 	digest := make([]byte, outputLength)
 	permutedOnceBlock := make([]byte, AesBlockSize)
-	return &HashAes{
+	return &AesHash{
 		outputBlockLength: outputLength / AesBlockSize,
 		counter:           0,
 		blockCipher:       blockCipher,
@@ -97,7 +99,7 @@ func NewHashAes(outputLength int, hashIv []byte) (hash.Hash, error) {
 
 // Write (via the embedded io.Writer interface) adds more data to the running hash.
 // It never returns an error.
-func (h *HashAes) Write(input []byte) (n int, err error) {
+func (h *AesHash) Write(input []byte) (n int, err error) {
 	// A) Align the input into blocks of AesBlockSize bytes. Pad 0s if unalligned.
 	inputLength := len(input)
 	inputBlockLength := (inputLength + AesBlockSize - 1) / AesBlockSize // ceil
@@ -141,18 +143,18 @@ func (h *HashAes) Write(input []byte) (n int, err error) {
 }
 
 // Size returns the number of bytes hashAes.Sum will return.
-func (h *HashAes) Size() int {
+func (h *AesHash) Size() int {
 	return h.outputBlockLength * AesBlockSize
 }
 
 // BlockSize returns the hash's underlying block size. The Write method avoids
 // padding if all writes are a multiple of the block size.
-func (*HashAes) BlockSize() int {
+func (*AesHash) BlockSize() int {
 	return AesBlockSize
 }
 
 // Reset resets the Hash to its initial state.
-func (h *HashAes) Reset() {
+func (h *AesHash) Reset() {
 	h.counter = 0
 	h.aesKey = h.hashIv[:AesKeySize]
 	blockCipher, err := aes.NewCipher(h.aesKey)
@@ -166,7 +168,7 @@ func (h *HashAes) Reset() {
 
 // Sum appends the current hash to b and returns the resulting slice.
 // It does not change the underlying hash state.
-func (h *HashAes) Sum(b []byte) (res []byte) {
+func (h *AesHash) Sum(b []byte) (res []byte) {
 	l := len(b)
 	if l == 0 {
 		res = make([]byte, h.Size())
@@ -179,6 +181,7 @@ func (h *HashAes) Sum(b []byte) (res []byte) {
 	return res
 }
 
+/* ----------------------------- AUXILIARY ---------------------------------- */
 // xorIndex xors the first 4 bytes of the block with the index.
 func xorIndex(input, output []byte, index int32) {
 	copy(output, input)

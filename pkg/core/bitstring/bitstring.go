@@ -48,7 +48,7 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 
 // Memset sets all the bytes in the slice to the given value.
 func Memset(buffer []byte, value byte) {
-	for i := 0; i < len(buffer); i++ {
+	for i := range buffer {
 		buffer[i] = value
 	}
 }
