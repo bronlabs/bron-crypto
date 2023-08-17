@@ -11,7 +11,7 @@ import (
 
 const (
 	// IV is the hash's initialisation vector. We hardcode 32 arbitrary bytes.
-	iv = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
+	IV = string("\u00a0\u2001\u2102\uff4f\u2119\u1e54\u0119\u211b\u0387\u33c7\u00A0\u200A")
 	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
 	AesBlockSize = aes.BlockSize
 	// AesKeySize is the key size (in bytes) for the internal block cipher. Set to 32B (AES256).
@@ -49,7 +49,7 @@ type AesHash struct {
 	outputBlockLength int          // Fixed digest size in # AES blocks
 	counter           int          // Hash-wide counter to use as index in TMMO
 	blockCipher       cipher.Block // Hold the underlying block cipher π (AES-256)
-	hashIv            []byte       // Initialization Vector. Stored to be able to `.Reset()`
+	iv                []byte       // Initialization Vector. Stored to be able to `.Reset()`
 	digest            []byte       // Hash output
 
 	// Auxiliary variables. Allocated once and used on every `Write`, thus this
@@ -59,20 +59,21 @@ type AesHash struct {
 }
 
 // NewAesHash creates a new HashAes object to perform AES256-based hashing. It
-// requires outputLength (number of Bytes) multiple of AesBlockSize, and an
-// optional initialization vector of AesKeSize bytes.
-func NewAesHash(outputLength int, hashIv []byte) (hash.Hash, error) {
+// requires `outputLength` to set the digest size (# of Bytes) to a multiple of
+// AesBlockSize, and an optional initialization vector `iv` of AesKeSize bytes
+// to personalise the hash function (typ. use a session ID).
+func NewAesHash(outputLength int, iv []byte) (hash.Hash, error) {
 	if outputLength < AesBlockSize || outputLength%AesBlockSize != 0 {
 		return nil, errs.NewInvalidArgument("outputLength (%dB) must be a multiple of AesBlockSize (%dB)", outputLength, AesBlockSize)
 	}
 	// 1) Initialise the cipher with the initialization vector (iv) as key.
 	// If no iv is provided, use the hardcoded IV.
 	var internalHashIv []byte
-	if len(hashIv) == 0 {
-		internalHashIv = []byte(iv)
+	if len(iv) == 0 {
+		internalHashIv = []byte(IV)
 	} else {
-		internalHashIv = make([]byte, len(hashIv))
-		copy(internalHashIv, hashIv) // Create a copy of the hashIv for Reset
+		internalHashIv = make([]byte, len(iv))
+		copy(internalHashIv, iv) // Create a copy of the hashIv for Reset
 	}
 	if len(internalHashIv) < AesKeySize {
 		return nil, errs.NewInvalidLength("iv length must be at least %d bytes", AesKeySize)
@@ -90,7 +91,7 @@ func NewAesHash(outputLength int, hashIv []byte) (hash.Hash, error) {
 		outputBlockLength: outputLength / AesBlockSize,
 		counter:           0,
 		blockCipher:       blockCipher,
-		hashIv:            internalHashIv,
+		iv:                internalHashIv,
 		digest:            digest,
 		permutedOnceBlock: permutedOnceBlock,
 		aesKey:            aesKey,
@@ -156,7 +157,7 @@ func (*AesHash) BlockSize() int {
 // Reset resets the Hash to its initial state.
 func (h *AesHash) Reset() {
 	h.counter = 0
-	h.aesKey = h.hashIv[:AesKeySize]
+	h.aesKey = h.iv[:AesKeySize]
 	blockCipher, err := aes.NewCipher(h.aesKey)
 	if err != nil {
 		panic("failed to create block cipher") // panic because Reset doesn't return error
