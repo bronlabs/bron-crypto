@@ -2,7 +2,6 @@ package softspoken
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -10,12 +9,15 @@ import (
 )
 
 type Receiver struct {
-	// baseOtSeeds (k^i_0, k^i_1) ∈ [ξ][2][κ]bits are the options used while
+	// baseOtSeeds (k^i_0, k^i_1) ∈ [κ][2][κ]bits are the options used while
 	//  of playing the sender in a base OT protocol. They act as seeds to COTe.
 	baseOtSeeds *vsot.SenderOutput
 
-	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId []byte
+	// extPackedChoices (x_i ∈ [η']bits) are the extended packed choices of the receiver.
+	extPackedChoices ExtPackedChoices
+
+	// sid is the unique identifier of the current session (sid in DKLs19)
+	sid []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript transcripts.Transcript
@@ -34,8 +36,8 @@ type Sender struct {
 	// of playing the receiver in a base OT protocol. They act as seeds of COTe.
 	baseOtSeeds *vsot.ReceiverOutput
 
-	// uniqueSessionId is the unique identifier of the current session (sid in DKLs19)
-	uniqueSessionId []byte
+	// sid is the unique identifier of the current session (sid in DKLs19)
+	sid []byte
 
 	// transcript is the transcript containing the protocol's publicly exchanged messages.
 	transcript transcripts.Transcript
@@ -50,7 +52,7 @@ type Sender struct {
 }
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
-// The `baseOtResults` are the results of playing the sender role in ξ baseOTs.
+// The `baseOtResults` are the results of playing the sender role in κ baseOTs.
 func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
 	uniqueSessionId []byte,
@@ -58,25 +60,21 @@ func NewCOtReceiver(
 	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
-	// Validate parameters: L must be 1 for forced reuse
-	if useForcedReuse && (lOTe != 1) {
-		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
-	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Receiver{
-		baseOtSeeds:     baseOtResults,
-		uniqueSessionId: uniqueSessionId,
-		transcript:      transcript,
-		curve:           curve,
-		useForcedReuse:  useForcedReuse,
+		baseOtSeeds:    baseOtResults,
+		sid:            uniqueSessionId,
+		transcript:     transcript,
+		curve:          curve,
+		useForcedReuse: useForcedReuse,
 	}, nil
 }
 
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
-// The `baseOtResults` are the results of playing the receiver role in ξ baseOTs.
+// The `baseOtResults` are the results of playing the receiver role in κ baseOTs.
 func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
 	uniqueSessionId []byte,
@@ -84,19 +82,15 @@ func NewCOtSender(
 	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {
-	// L must be 1 for forced reuse
-	if useForcedReuse && (lOTe != 1) {
-		return nil, errs.NewInvalidArgument("forced reuse is only supported for COTe batch size L=1")
-	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Sender{
-		baseOtSeeds:     baseOtResults,
-		uniqueSessionId: uniqueSessionId,
-		transcript:      transcript,
-		curve:           curve,
-		useForcedReuse:  useForcedReuse,
+		baseOtSeeds:    baseOtResults,
+		sid:            uniqueSessionId,
+		transcript:     transcript,
+		curve:          curve,
+		useForcedReuse: useForcedReuse,
 	}, nil
 }

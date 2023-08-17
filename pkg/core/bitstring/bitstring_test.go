@@ -39,22 +39,27 @@ func TestXorBytesNew(t *testing.T) {
 	require.Equal(t, []byte{0x03, 0x07, 0x0B, 0x00}, out)
 }
 
-func TestIntToByteArray(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		require.Equal(t, [4]byte{0x00, 0x00, 0x00, byte(i)}, bitstring.IntToByteArray(i))
+func TestTransposeBooleanMatrix(t *testing.T) {
+	// Test with a 8x6 matrix
+	inputMatrix := [][]byte{
+		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+		{0x21, 0x43, 0x65, 0x87, 0xA9, 0xCB},
+		{0x31, 0x53, 0x75, 0x97, 0xB9, 0xDB},
+		{0x41, 0x63, 0x85, 0xA7, 0xC9, 0xEB},
+		{0x51, 0x73, 0x95, 0xB7, 0xD9, 0xFB},
+		{0x61, 0x83, 0xA5, 0xC7, 0xE9, 0x0B},
+		{0x71, 0x93, 0xB5, 0xD7, 0xF9, 0x1B},
+		{0x81, 0xA3, 0xC5, 0xE7, 0x09, 0x2B},
 	}
-	for i := 256; i < 356; i++ {
-		require.Equal(t, [4]byte{0x00, 0x00, 0x01, byte(i - 256)}, bitstring.IntToByteArray(i))
+	transposedMatrix := bitstring.TransposePackedBits(inputMatrix)
+	for i := 0; i < len(inputMatrix); i++ {
+		for j := 0; j < len(transposedMatrix); j++ {
+			// Check that the bit at position i in the jth row of the input matrix.
+			// is equal to the bit at position j in the ith row of the transposed matrix.
+			// using bitstring.SelectBit (careful! it takes a byte array as input)
+			require.Equal(t,
+				bitstring.SelectBit(inputMatrix[i], j),
+				bitstring.SelectBit(transposedMatrix[j][:], i))
+		}
 	}
-	for i := 65536; i < 65636; i++ {
-		require.Equal(t, [4]byte{0x00, 0x01, 0x00, byte(i - 65536)}, bitstring.IntToByteArray(i))
-	}
-	for i := 16777216; i < 16777316; i++ {
-		require.Equal(t, [4]byte{0x01, 0x00, 0x00, byte(i - 16777216)}, bitstring.IntToByteArray(i))
-	}
-}
-
-func TestBoolToByte(t *testing.T) {
-	require.Equal(t, byte(0x00), bitstring.BoolToByte(false))
-	require.Equal(t, byte(0x01), bitstring.BoolToByte(true))
 }

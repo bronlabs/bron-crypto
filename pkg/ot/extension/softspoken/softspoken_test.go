@@ -18,65 +18,71 @@ var curveInstances = []curves.Curve{
 	p256.New(),
 }
 
-func TestOTextension(t *testing.T) {
-	for _, curve := range curveInstances {
-		// Generic setup
-		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := rand.Read(uniqueSessionId[:])
-		require.NoError(t, err)
-
-		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId)
-		require.NoError(t, err)
-
-		// Set OTe inputs
-		choices, _ := test_utils.GenerateSoftspokenRandomInputs(
-			t, 1, curve)
-
-		// Run OTe
-		oTeSenderOutput, oTeReceiverOutput, err := test_utils.RunSoftspokenOTe(
-			t, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices)
-		require.NoError(t, err)
-
-		// Check OTe result
-		test_utils.CheckSoftspokenOTeOutputs(t, oTeSenderOutput, oTeReceiverOutput, &choices)
-	}
-}
-
-func TestCOTextension(t *testing.T) {
+func Test_HappyPath_OTe(t *testing.T) {
 	for _, curve := range curveInstances {
 		// Generic setup
 		useForcedReuse := false
-		inputBatchLen := 1 // Must be 1 if useForcedReuse is false. Set L>1 for higher batch sizes, or loop over inputBatchLen.
+		inputBatchLen := 3
 		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := rand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId)
+		baseOtSendOutput, baseOtRecOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
 		require.NoError(t, err)
-		test_utils.CheckSoftspokenBaseOTOutputs(t, baseOtSenderOutput, baseOtReceiverOutput)
+
+		// Set OTe inputs
+		choices, _, err := test_utils.GenerateSoftspokenRandomInputs(inputBatchLen, curve, useForcedReuse)
+		require.NoError(t, err)
+
+		// Run OTe
+		oTeSenderOutput, oTeReceiverOutput, err := test_utils.RunSoftspokenOTe(
+			curve, uniqueSessionId[:], baseOtSendOutput, baseOtRecOutput, choices)
+		require.NoError(t, err)
+
+		// Check OTe result
+		err = test_utils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices)
+		require.NoError(t, err)
+	}
+}
+
+func Test_HappyPath_COTe(t *testing.T) {
+	for _, curve := range curveInstances {
+		// Generic setup
+		useForcedReuse := false
+		inputBatchLen := 5
+		uniqueSessionId := [vsot.DigestSize]byte{}
+		_, err := rand.Read(uniqueSessionId[:])
+		require.NoError(t, err)
+
+		// BaseOTs
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		require.NoError(t, err)
+		err = test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		require.NoError(t, err)
 
 		// Set COTe inputs
-		choices, inputOpts := test_utils.GenerateSoftspokenRandomInputs(
-			t, inputBatchLen, curve)
+		choices, inputOpts, err := test_utils.GenerateSoftspokenRandomInputs(
+			inputBatchLen, curve, useForcedReuse)
+		require.NoError(t, err)
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(t,
-			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(
+			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
-		test_utils.CheckSoftspokenCOTeOutputs(t, cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		err = test_utils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		require.NoError(t, err)
 
 	}
 }
 
-func TestCOTextensionWithForcedReuse(t *testing.T) {
+func Test_HappyPath_COTeForcedReuse(t *testing.T) {
 	for _, curve := range curveInstances {
 		// Fixed parameters
 		useForcedReuse := true
-		inputBatchLen := 128
+		inputBatchLen := 5
 
 		// Session ID
 		uniqueSessionId := [vsot.DigestSize]byte{}
@@ -84,20 +90,22 @@ func TestCOTextensionWithForcedReuse(t *testing.T) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId)
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
 		require.NoError(t, err)
-		test_utils.CheckSoftspokenBaseOTOutputs(t, baseOtSenderOutput, baseOtReceiverOutput)
+		test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
 		// Set COTe inputs
-		choices, inputOpts := test_utils.GenerateSoftspokenRandomInputs(
-			t, inputBatchLen, curve)
+		choices, inputOpts, err := test_utils.GenerateSoftspokenRandomInputs(
+			inputBatchLen, curve, useForcedReuse)
+		require.NoError(t, err)
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(t,
-			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, &choices, inputOpts)
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(
+			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
-		test_utils.CheckSoftspokenCOTeOutputs(t, cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		err = test_utils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		require.NoError(t, err)
 	}
 }

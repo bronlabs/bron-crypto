@@ -1,6 +1,8 @@
 package bitstring
 
-import "github.com/copperexchange/knox-primitives/pkg/core/errs"
+import (
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+)
 
 // SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
 // it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
@@ -44,18 +46,39 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// IntToByteArray converts from int to byte array.
-func IntToByteArray(i int) [4]byte {
-	return [4]byte{byte(i >> 24), byte(i >> 16), byte(i >> 8), byte(i)}
-}
-
-// BoolToByte converts a boolean to a byte.
-func BoolToByte(b bool) byte {
-	if b {
-		return 1
-	} else {
-		return 0
+// TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
+// groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
+// were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+func TransposePackedBits(inputMatrix [][]byte) [][]byte {
+	// Read input sizes and allocate output
+	nRowsInput := len(inputMatrix)
+	if nRowsInput%8 != 0 {
+		panic("input matrix must have a number of rows divisible by 8")
 	}
+	nColsInputBytes := len(inputMatrix[0])
+	nRowsOutput := nColsInputBytes << 3
+	nColsOutputBytes := nRowsInput >> 3
+	transposedMatrix := make([][]byte, nRowsOutput)
+	for i := 0; i < nRowsOutput; i++ {
+		transposedMatrix[i] = make([]byte, nColsOutputBytes)
+	}
+	// Actually transpose the matrix bits
+	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
+		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
+			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
+				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
+					rowBit := rowByte<<3 + rowBitWithinByte
+					columnBit := columnByte<<3 + columnBitWithinByte
+					// Grab the corresponding  bit at input[rowBit][columnBit]
+					bitAtInputRowBitColumnBit := inputMatrix[rowBit][columnByte] >> columnBitWithinByte & 0x01
+					// Place the bit at output[columnBit][rowBit]
+					shiftedBit := bitAtInputRowBitColumnBit << rowBitWithinByte
+					transposedMatrix[columnBit][rowByte] |= shiftedBit
+				}
+			}
+		}
+	}
+	return transposedMatrix
 }
 
 // ByteSubBE is a constant time algorithm for subtracting
