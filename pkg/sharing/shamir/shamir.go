@@ -5,30 +5,37 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing"
 )
 
 type Share struct {
 	Id    int           `json:"identifier"`
 	Value curves.Scalar `json:"value"`
+
+	_ helper_types.Incomparable
 }
 
-func (ss Share) Validate(curve *curves.Curve) error {
+func (ss Share) Validate(curve curves.Curve) error {
 	if ss.Id == 0 {
 		return errs.NewInvalidIdentifier("invalid identifier - id is zero")
 	}
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
 	}
-	if shareCurveName := ss.Value.CurveName(); shareCurveName != curve.Name {
-		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurveName, curve.Name)
+	shareCurve, err := ss.Value.Curve()
+	if err != nil {
+		return errs.WrapInvalidCurve(err, "could not extract share curve")
+	}
+	if shareCurve.Name() != curve.Name() {
+		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurve.Name(), curve.Name())
 	}
 
 	return nil
 }
 
 func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
-	curve, err := curves.GetCurveByName(ss.Value.CurveName())
+	curve, err := ss.Value.Curve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
 	}
@@ -49,10 +56,12 @@ func (ss Share) ToAdditive(identities []int) (curves.Scalar, error) {
 
 type Dealer struct {
 	Threshold, Total int
-	Curve            *curves.Curve
+	Curve            curves.Curve
+
+	_ helper_types.Incomparable
 }
 
-func NewDealer(threshold, total int, curve *curves.Curve) (*Dealer, error) {
+func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	if total < threshold {
 		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
 	}
@@ -62,7 +71,7 @@ func NewDealer(threshold, total int, curve *curves.Curve) (*Dealer, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("invalid curve")
 	}
-	return &Dealer{threshold, total, curve}, nil
+	return &Dealer{Threshold: threshold, Total: total, Curve: curve}, nil
 }
 
 func (s Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
@@ -77,7 +86,7 @@ func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader
 	poly := new(sharing.Polynomial).NewPolynomial(secret, s.Threshold, prng)
 	shares := make([]*Share, s.Total)
 	for i := range shares {
-		x := s.Curve.Scalar.New(i + 1)
+		x := s.Curve.Scalar().New(i + 1)
 		shares[i] = &Share{
 			Id:    i + 1,
 			Value: poly.Evaluate(x),
@@ -121,9 +130,9 @@ func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = share.Value
-		xs[i] = s.Curve.Scalar.New(share.Id)
+		xs[i] = s.Curve.Scalar().New(share.Id)
 	}
-	return s.interpolate(xs, ys, s.Curve.Scalar.Zero())
+	return s.interpolate(xs, ys, s.Curve.Scalar().Zero())
 }
 
 func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
@@ -148,52 +157,23 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = s.Curve.ScalarBaseMult(share.Value)
-		xs[i] = s.Curve.Scalar.New(share.Id)
+		xs[i] = s.Curve.Scalar().New(share.Id)
 	}
-	return s.interpolatePoint(xs, ys, s.Curve.Scalar.Zero())
+	return s.interpolatePoint(xs, ys, s.Curve.Scalar().Zero())
 }
 
-// TODO: evaluate without interpolation via fft based techniques.
 func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result := s.Curve.Scalar.Zero()
-	for i, xi := range xs {
-		num := s.Curve.Scalar.One()
-		den := s.Curve.Scalar.One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-			num = num.Mul(xj.Sub(evaluateAt))
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		result = result.Add(ys[i].Mul(num.Div(den)))
+	result, err := sharing.Interpolate(s.Curve, xs, ys, evaluateAt)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not interpolate")
 	}
 	return result, nil
 }
 
 func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	coefficients := make([]curves.Scalar, len(xs))
-	for i, xi := range xs {
-		num := s.Curve.Scalar.One()
-		den := s.Curve.Scalar.One()
-		for j, xj := range xs {
-			if i == j {
-				continue
-			}
-			num = num.Mul(xj.Sub(evaluateAt))
-			den = den.Mul(xj.Sub(xi))
-		}
-		if den.IsZero() {
-			return nil, errs.NewDivisionByZero("divide by zero")
-		}
-		coefficients[i] = num.Div(den)
-	}
-	result, err := s.Curve.MultiScalarMult(coefficients, ys)
+	result, err := sharing.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "MSM failed")
+		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")
 	}
 	return result, nil
 }

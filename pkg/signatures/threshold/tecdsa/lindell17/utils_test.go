@@ -8,18 +8,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
 func Test_ShouldSplitEdgeCases(t *testing.T) {
 	t.Parallel()
 
-	supportedCurves := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
-		curves.ED25519(),
-		curves.BLS12381G1(),
-		curves.BLS12381G2(),
+	supportedCurves := []curves.Curve{
+		k256.New(),
+		p256.New(),
+		edwards25519.New(),
 	}
 
 	for _, c := range supportedCurves {
@@ -48,11 +49,11 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		t.Run(c.Name, func(t *testing.T) {
+		t.Run(c.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			for _, xInt := range edgeCases {
-				x, err := curve.NewScalar().SetBigInt(xInt)
+				x, err := curve.Scalar().SetBigInt(xInt)
 				require.NoError(t, err)
 
 				x1, x2, _, err := lindell17.DecomposeInQThirds(x, crand.Reader)
@@ -78,21 +79,19 @@ func Test_ShouldSplit(t *testing.T) {
 		n = 10_000
 	}
 
-	supportedCurves := []*curves.Curve{
-		curves.K256(),
-		curves.P256(),
-		curves.ED25519(),
-		curves.BLS12381G1(),
-		curves.BLS12381G2(),
+	supportedCurves := []curves.Curve{
+		k256.New(),
+		p256.New(),
+		edwards25519.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		t.Run(curve.Name, func(t *testing.T) {
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			for i := 0; i < n; i++ {
-				x := curve.NewScalar().Random(crand.Reader)
+				x := curve.Scalar().Random(crand.Reader)
 
 				x1, x2, _, err := lindell17.DecomposeInQThirds(x, crand.Reader)
 				require.NoError(t, err)

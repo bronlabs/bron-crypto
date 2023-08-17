@@ -7,11 +7,12 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -26,7 +27,9 @@ type state struct {
 	bigR        curves.Point
 	bigRWitness commitments.Witness
 
-	theirBigRCommitment map[integration.IdentityKey]commitments.Commitment
+	theirBigRCommitment map[helper_types.IdentityHash]commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Cosigner struct {
@@ -37,13 +40,15 @@ type Cosigner struct {
 
 	cohortConfig           *integration.CohortConfig
 	sessionParticipants    []integration.IdentityKey
-	identityKeyToSharingId map[integration.IdentityKey]int
+	identityKeyToSharingId map[helper_types.IdentityHash]int
 	sid                    []byte
 	round                  int
 	transcript             transcripts.Transcript
 	prng                   io.Reader
 
 	state *state
+
+	_ helper_types.Incomparable
 }
 
 func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -73,9 +78,13 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	}
 
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+	tprng, err := transcript.NewReader("witness", myShard.SigningKeyShare.Share.Bytes(), prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
+	}
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)
@@ -91,7 +100,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		transcript:             transcript,
 		sessionParticipants:    sessionParticipants,
 		round:                  1,
-		prng:                   prng,
+		prng:                   tprng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,
@@ -117,8 +126,8 @@ func validateInputs(sid []byte, sessionParticipants []integration.IdentityKey, s
 	if shard == nil || shard.SigningKeyShare == nil {
 		return errs.NewVerificationFailed("shard is nil")
 	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := shard.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if sessionParticipants == nil {
 		return errs.NewIsNil("invalid number of session participants")

@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
@@ -21,11 +22,13 @@ type Cosigner struct {
 
 	CohortConfig           *integration.CohortConfig
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 	SessionParticipants    []integration.IdentityKey
 
 	round int
 	state *State
+
+	_ helper_types.Incomparable
 }
 
 func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -56,6 +59,8 @@ type State struct {
 	E_i curves.Point
 
 	aggregation *aggregation.SignatureAggregatorParameters
+
+	_ helper_types.Incomparable
 }
 
 func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {

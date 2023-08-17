@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -9,7 +10,7 @@ import (
 	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
@@ -20,10 +21,12 @@ type Participant struct {
 	MyIdentityKey         integration.IdentityKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   map[integration.IdentityKey]*vsot.Sender
-	BaseOTReceiverParties map[integration.IdentityKey]*vsot.Receiver
+	BaseOTSenderParties   map[helper_types.IdentityHash]*vsot.Sender
+	BaseOTReceiverParties map[helper_types.IdentityHash]*vsot.Receiver
 
 	Shard *dkls23.Shard
+
+	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -43,7 +46,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(DkgLabel)
+		transcript = hagrid.NewTranscript(DkgLabel)
 	}
 	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
 	if err != nil {
@@ -53,18 +56,18 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[integration.IdentityKey]*vsot.Sender, len(cohortConfig.Participants)-1)
-	receivers := make(map[integration.IdentityKey]*vsot.Receiver, len(cohortConfig.Participants)-1)
+	senders := make(map[helper_types.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
+	receivers := make(map[helper_types.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
 	for _, participant := range cohortConfig.Participants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
 		// 256 should be replaced with kappa once ot extensions are here
-		senders[participant], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript)
+		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

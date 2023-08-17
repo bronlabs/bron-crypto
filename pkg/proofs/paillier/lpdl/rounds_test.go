@@ -10,10 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -22,15 +24,15 @@ func Test_HappyPath(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := curves.P256()
-	elCurve, err := curve.ToEllipticCurve()
+	curve := p256.New()
+	elCurve, err := curveutils.ToEllipticCurve(curve)
 	require.NoError(t, err)
 	q := elCurve.Params().N
 
 	xInt, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
 
-	x, err := curve.NewScalar().SetBigInt(xInt)
+	x, err := curve.Scalar().SetBigInt(xInt)
 	require.NoError(t, err)
 
 	bigQ := curve.ScalarBaseMult(x)
@@ -49,19 +51,19 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := curves.P256()
-	elCurve, err := curve.ToEllipticCurve()
+	curve := p256.New()
+	elCurve, err := curveutils.ToEllipticCurve(curve)
 	require.NoError(t, err)
 	q := elCurve.Params().N
 
 	x1Int, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
-	x1, err := curve.NewScalar().SetBigInt(x1Int)
+	x1, err := curve.Scalar().SetBigInt(x1Int)
 	require.NoError(t, err)
 
 	x2Int, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
-	x2, err := curve.NewScalar().SetBigInt(x2Int)
+	x2, err := curve.Scalar().SetBigInt(x2Int)
 	require.NoError(t, err)
 
 	bigQ2 := curve.ScalarBaseMult(x2)
@@ -80,18 +82,18 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := curves.P256()
-	elCurve, err := curve.ToEllipticCurve()
+	curve := p256.New()
+	elCurve, err := curveutils.ToEllipticCurve(curve)
 	require.NoError(t, err)
 	q := elCurve.Params().N
 
 	xInt, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
-	x, err := curve.NewScalar().SetBigInt(xInt)
+	x, err := curve.Scalar().SetBigInt(xInt)
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMult(x)
 
-	x2Encrypted, r, err := pk.Encrypt(curve.NewScalar().Random(prng).BigInt())
+	x2Encrypted, r, err := pk.Encrypt(curve.Scalar().Random(prng).BigInt())
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -105,14 +107,14 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := curves.P256()
-	elCurve, err := curve.ToEllipticCurve()
+	curve := p256.New()
+	elCurve, err := curveutils.ToEllipticCurve(curve)
 	require.NoError(t, err)
 	q := elCurve.Params().N
 
 	xLowInt, err := randomIntOutRangeLow(q, prng)
 	require.NoError(t, err)
-	xLow, err := curve.NewScalar().SetBigInt(xLowInt)
+	xLow, err := curve.Scalar().SetBigInt(xLowInt)
 	require.NoError(t, err)
 	bigQLow := curve.ScalarBaseMult(xLow)
 	xLowEncrypted, _, err := pk.Encrypt(xLow.BigInt())
@@ -120,7 +122,7 @@ func Test_FailOnOutOfRange(t *testing.T) {
 
 	xHighInt, err := randomIntOutRangeHigh(q, prng)
 	require.NoError(t, err)
-	xHigh, err := curve.NewScalar().SetBigInt(xHighInt)
+	xHigh, err := curve.Scalar().SetBigInt(xHighInt)
 	require.NoError(t, err)
 	bigQHigh := curve.ScalarBaseMult(xHigh)
 	xHighEncrypted, r, err := pk.Encrypt(xHigh.BigInt())
@@ -169,13 +171,13 @@ func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
-	verifierTranscript := merlin.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
 	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := merlin.NewTranscript(transcriptLabel)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel)
 	prover, err := lpdl.NewProver(sessionId, sk, x, r, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err

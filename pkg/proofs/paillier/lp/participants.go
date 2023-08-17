@@ -5,10 +5,11 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -22,29 +23,39 @@ type Participant struct {
 	sessionId  []byte
 	transcript transcripts.Transcript
 	prng       io.Reader
+
+	_ helper_types.Incomparable
 }
 
 type VerifierState struct {
 	rootProvers []*nthroot.Prover
 	x           []paillier.CipherText
 	y           []*big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Verifier struct {
 	Participant
 	paillierPublicKey *paillier.PublicKey
 	state             *VerifierState
+
+	_ helper_types.Incomparable
 }
 
 type ProverState struct {
 	rootVerifiers []*nthroot.Verifier
 	x             []paillier.CipherText
+
+	_ helper_types.Incomparable
 }
 
 type Prover struct {
 	Participant
 	paillierSecretKey *paillier.SecretKey
 	state             *ProverState
+
+	_ helper_types.Incomparable
 }
 
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
@@ -52,7 +63,7 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -74,7 +85,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

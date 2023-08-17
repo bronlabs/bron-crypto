@@ -10,13 +10,17 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 )
 
 type mockedIdentityKey struct {
-	curve     *curves.Curve
+	curve     curves.Curve
 	publicKey curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {
@@ -37,14 +41,14 @@ func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, mes
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := curves.ED25519()
-	alicePublicKey := curve.Point.Random(crand.Reader)
+	curve := edwards25519.New()
+	alicePublicKey := curve.Point().Random(crand.Reader)
 	aliceIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: alicePublicKey,
 	}
 
-	bobPublicKey := curve.Point.Random(crand.Reader)
+	bobPublicKey := curve.Point().Random(crand.Reader)
 	bobIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: bobPublicKey,

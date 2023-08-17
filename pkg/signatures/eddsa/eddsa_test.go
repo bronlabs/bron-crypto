@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 )
@@ -19,7 +19,7 @@ import (
 // test vector 10 fails, because the std implementation does not compress the public key before hashing
 func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 	t.Parallel()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	h := sha512.New
 	// From Page 8 of https://eprint.iacr.org/2020/1244.pdf
 	// Any point P of the group E can be uniquely represented as a linear combination of B and
@@ -75,16 +75,16 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			result := ed25519.Verify(publicKeyStd, message, signatureBytes)
 			require.True(t, result)
 
-			publicKey, err := curve.Point.FromAffineCompressed(publicKeyBytes)
+			publicKey, err := curve.Point().FromAffineCompressed(publicKeyBytes)
 			require.NoError(t, err)
 
 			RBytes := signatureBytes[:32]
 			zBytes := signatureBytes[32:]
 
-			R, err := curve.Point.FromAffineCompressed(RBytes)
+			R, err := curve.Point().FromAffineCompressed(RBytes)
 			require.NoError(t, err)
 
-			z, err := curve.Scalar.SetBytes(zBytes)
+			z, err := curve.Scalar().SetBytes(zBytes)
 			require.NoError(t, err)
 
 			signature := &eddsa.Signature{

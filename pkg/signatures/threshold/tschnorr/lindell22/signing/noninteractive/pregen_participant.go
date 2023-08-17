@@ -8,10 +8,11 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -26,7 +27,9 @@ type state struct {
 	k                   []curves.Scalar
 	bigR                []curves.Point
 	bigRWitness         []commitments.Witness
-	theirBigRCommitment []map[integration.IdentityKey]commitments.Commitment
+	theirBigRCommitment []map[helper_types.IdentityHash]commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type PreGenParticipant struct {
@@ -43,6 +46,8 @@ type PreGenParticipant struct {
 	transcript   transcripts.Transcript
 
 	state *state
+
+	_ helper_types.Incomparable
 }
 
 func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
@@ -72,7 +77,7 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 	}
 
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))

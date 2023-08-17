@@ -3,143 +3,15 @@ package hashing
 import (
 	"bytes"
 	"hash"
-	"math/big"
-	"math/bits"
 
 	"golang.org/x/crypto/hkdf"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/native"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 )
-
-func I2OSP(b, n int) []byte {
-	os := new(big.Int).SetInt64(int64(b)).Bytes()
-	if n > len(os) {
-		var buf bytes.Buffer
-		buf.Write(make([]byte, n-len(os)))
-		buf.Write(os)
-		return buf.Bytes()
-	}
-	return os[:n]
-}
-
-func OS2IP(os []byte) *big.Int {
-	return new(big.Int).SetBytes(os)
-}
-
-func concat(xs ...[]byte) []byte {
-	var result []byte
-	for _, x := range xs {
-		result = append(result, x...)
-	}
-	return result
-}
-
-func xor(b1, b2 []byte) []byte {
-	// b1 and b2 must be same length
-	result := make([]byte, len(b1))
-	for i := range b1 {
-		result[i] = b1[i] ^ b2[i]
-	}
-
-	return result
-}
-
-func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]byte, error) {
-	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
-
-	// step 1
-	ell := lenInBytes / native.FieldBytes
-
-	// step 2
-	if ell > 255 {
-		return nil, errs.NewInvalidArgument("ell > 25")
-	}
-
-	// step 3
-	dstPrime := append(DST, I2OSP(len(DST), 1)...)
-
-	// step 4
-	zPad := I2OSP(0, f().BlockSize())
-
-	// step 5 & 6
-	msgPrime := concat(zPad, msg, I2OSP(lenInBytes, 2), I2OSP(0, 1), dstPrime)
-
-	var err error
-
-	b := make([][]byte, ell+1)
-
-	// step 7
-	b[0], err = Hash(f, msgPrime)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "step 7")
-	}
-
-	// step 8
-	b[1], err = Hash(f, concat(b[0], I2OSP(1, 1), dstPrime))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "step 8")
-	}
-
-	// step 9
-	for i := 2; i <= ell; i++ {
-		// step 10
-		b[i], err = Hash(f, concat(xor(b[0], b[i-1]), I2OSP(i, 1), dstPrime))
-		if err != nil {
-			return nil, errs.WrapFailed(err, "step 10")
-		}
-	}
-	// step 11
-	uniformBytes := concat(b[1:]...)
-
-	// step 12
-	return uniformBytes[:lenInBytes], nil
-}
-
-// TODO: make sure this outputs consistently with the curve implementation.
-func HashToField(h func() hash.Hash, DST, message []byte, securityParameter, characteristic, extensionDegree, count int) ([][]*big.Int, error) {
-	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.3
-
-	L := (bits.Len(uint(characteristic)) + securityParameter - 1) / 8
-
-	// step 1
-	lenInBytes := count * extensionDegree * L
-
-	// step 2
-	uniformBytes, err := ExpandMessageXmd(h, message, DST, lenInBytes)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "step 2")
-	}
-
-	u := make([][]*big.Int, count)
-
-	// step 3
-	for i := 0; i < count; i++ {
-		e := make([]*big.Int, extensionDegree)
-		// step 4
-		for j := 0; j < extensionDegree; j++ {
-			// step 5
-			elmOffset := L * (j + i*extensionDegree)
-			// step 6
-			tv := uniformBytes[elmOffset : elmOffset+L]
-			// step 7
-			e[j] = new(big.Int).Mod(OS2IP(tv), big.NewInt(int64(characteristic)))
-		}
-		// step 8
-		u[i] = e
-	}
-	// step 9
-	return u, nil
-}
-
-// TODO: make sure this outputs consistently with the curve implementation.
-func HashToCurve(curve curves.Curve, mapToCurve func(curves.Scalar) curves.Point, message []byte) (curves.Point, error) {
-	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-10#name-encoding-byte-strings-to-ell
-	// Needs curve profile, a method to clear cofactor afterwards etc.
-	return nil, errs.NewFailed("not implemented")
-}
 
 // Hash iteratively writes all the inputs to the given hash function and returns the result.
 func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
@@ -169,10 +41,10 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	switch len(digest) {
-	case native.FieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytes
-	case native.WideFieldBytes:
-		setBytesFunc = cipherSuite.Curve.Scalar.SetBytesWide
+	case impl.FieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar().SetBytes
+	case impl.WideFieldBytes:
+		setBytesFunc = cipherSuite.Curve.Scalar().SetBytesWide
 	default:
 		return nil, errs.WrapDeserializationFailed(err, "digest length %d is not supported", len(digest))
 	}
@@ -227,31 +99,7 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		if n != len(okm) {
 			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)
 		}
-		byteSub(f)
+		bitstring.ByteSubBE(f)
 	}
 	return okm, nil
-}
-
-// ByteSub is a constant time algorithm for subtracting
-// 1 from the array as if it were a big number.
-// 0 is considered a wrap which resets to 0xFF.
-func byteSub(b []byte) {
-	m := byte(1)
-	for i := 0; i < len(b); i++ {
-		b[i] -= m
-
-		// If b[i] > 0, s == 0
-		// If b[i] == 0, s == 1
-		// Computing IsNonZero(b[i])
-		s1 := int8(b[i]) >> 7
-		s2 := -int8(b[i]) >> 7
-		s := byte((s1 | s2) + 1)
-
-		// If s == 0, don't subtract anymore
-		// s == 1, continue subtracting
-		m = s & m
-		// If s == 0 this does nothing
-		// If s == 1 reset this value to 0xFF
-		b[i] |= -s
-	}
 }

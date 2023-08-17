@@ -7,11 +7,12 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "COPPER_KNOX_TECDSA_DKLS23-"
@@ -28,7 +29,7 @@ type Cosigner struct {
 	UniqueSessionId       []byte
 	CohortConfig          *integration.CohortConfig
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToShamirId map[integration.IdentityKey]int
+	IdentityKeyToShamirId map[helper_types.IdentityHash]int
 	SessionParticipants   []integration.IdentityKey
 	sessionShamirIDs      []int
 
@@ -36,19 +37,25 @@ type Cosigner struct {
 	subprotocols *SubProtocols
 	state        *state
 	round        int
+
+	_ helper_types.Incomparable
 }
 
 type SubProtocols struct {
 	// use to get the secret key msak (zeta_i)
 	zeroShareSampling *sample.Participant
 	// pairwise multiplication protocol ie. each party acts as alice and bob against every party
-	multiplication map[integration.IdentityKey]*Multiplication
+	multiplication map[helper_types.IdentityHash]*Multiplication
+
+	_ helper_types.Incomparable
 }
 
 // Corresponding participant objects for pairwise multiplication subprotocols.
 type Multiplication struct {
 	Alice *mult.Alice
 	Bob   *mult.Bob
+
+	_ helper_types.Incomparable
 }
 
 type state struct {
@@ -56,13 +63,15 @@ type state struct {
 	sk_i                               curves.Scalar
 	r_i                                curves.Scalar
 	R_i                                curves.Point
-	cU_i                               map[integration.IdentityKey]curves.Scalar
-	cV_i                               map[integration.IdentityKey]curves.Scalar
+	cU_i                               map[helper_types.IdentityHash]curves.Scalar
+	cV_i                               map[helper_types.IdentityHash]curves.Scalar
 	pk_i                               curves.Point
-	Chi_i                              map[integration.IdentityKey]curves.Scalar
-	witnessesOfCommitmentToInstanceKey map[integration.IdentityKey]commitments.Witness
-	receivedCommitmentsToInstanceKey   map[integration.IdentityKey]commitments.Commitment
-	receivedR_i                        map[integration.IdentityKey]curves.Point
+	Chi_i                              map[helper_types.IdentityHash]curves.Scalar
+	witnessesOfCommitmentToInstanceKey map[helper_types.IdentityHash]commitments.Witness
+	receivedCommitmentsToInstanceKey   map[helper_types.IdentityHash]commitments.Commitment
+	receivedR_i                        map[helper_types.IdentityHash]curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -92,7 +101,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
 	tprng, err := transcript.NewReader("witness", shard.SigningKeyShare.Share.Bytes(), prng)
@@ -103,29 +112,29 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, len(sessionParticipants))
 	for i := 0; i < len(sessionParticipants); i++ {
-		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i]]
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i].Hash()]
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 	// step 0.3
-	multipliers := make(map[integration.IdentityKey]*Multiplication, len(sessionParticipants))
+	multipliers := make(map[helper_types.IdentityHash]*Multiplication, len(sessionParticipants))
 	for _, participant := range sessionParticipants {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
-		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsReceiver, uniqueSessionId, prng, transcript.Clone())
+		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsReceiver, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant].AsSender, uniqueSessionId, prng, transcript.Clone())
+		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsSender, uniqueSessionId, prng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		multipliers[participant] = &Multiplication{
+		multipliers[participant.Hash()] = &Multiplication{
 			Alice: alice,
 			Bob:   bob,
 		}
@@ -144,12 +153,12 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 			multiplication:    multipliers,
 		},
 		state: &state{
-			witnessesOfCommitmentToInstanceKey: map[integration.IdentityKey]commitments.Witness{},
-			Chi_i:                              map[integration.IdentityKey]curves.Scalar{},
-			cU_i:                               map[integration.IdentityKey]curves.Scalar{},
-			cV_i:                               map[integration.IdentityKey]curves.Scalar{},
-			receivedCommitmentsToInstanceKey:   map[integration.IdentityKey]commitments.Commitment{},
-			receivedR_i:                        map[integration.IdentityKey]curves.Point{},
+			witnessesOfCommitmentToInstanceKey: map[helper_types.IdentityHash]commitments.Witness{},
+			Chi_i:                              map[helper_types.IdentityHash]curves.Scalar{},
+			cU_i:                               map[helper_types.IdentityHash]curves.Scalar{},
+			cV_i:                               map[helper_types.IdentityHash]curves.Scalar{},
+			receivedCommitmentsToInstanceKey:   map[helper_types.IdentityHash]commitments.Commitment{},
+			receivedR_i:                        map[helper_types.IdentityHash]curves.Point{},
 		},
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
 		IdentityKeyToShamirId: identityKeyToShamirId,
@@ -171,8 +180,8 @@ func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfi
 		return errs.NewMissing("shard is nil")
 	}
 	// TODO: implement full validation with base ots and seeds etc
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := shard.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 
 	if sessionParticipants == nil {

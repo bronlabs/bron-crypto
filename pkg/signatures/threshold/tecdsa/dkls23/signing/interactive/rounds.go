@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
@@ -21,11 +22,15 @@ var h = sha3.New256
 
 type Round1Broadcast struct {
 	R_i curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type Round1P2P struct {
 	CommitmentToInstanceKey commitments.Commitment
 	MultiplicationOutput    *mult.Round1Output
+
+	_ helper_types.Incomparable
 }
 
 type Round2P2P struct {
@@ -34,51 +39,56 @@ type Round2P2P struct {
 	GammaV_ij                           curves.Point
 	Psi_ij                              curves.Scalar
 	WitnessOfTheCommitmentToInstanceKey commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
 type Round2Broadcast struct {
 	PK_i curves.Point
+
+	_ helper_types.Incomparable
 }
 
-func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Round1P2P, error) {
+func (ic *Cosigner) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
 	if ic.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
 	// step 1.1
-	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
 	// step 1.2
-	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar.Random(ic.prng)
+	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
-	outputP2P := make(map[integration.IdentityKey]*Round1P2P, len(ic.SessionParticipants))
+	outputP2P := make(map[helper_types.IdentityHash]*Round1P2P, len(ic.SessionParticipants))
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}
 
 		// step 1.3.1
-		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[participant], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
+		idHash := participant.Hash()
+		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[idHash], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
 		commitmentToInstanceKey, witness, err := commitments.Commit(h, message)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
 		}
-		ic.state.witnessesOfCommitmentToInstanceKey[participant] = witness
+		ic.state.witnessesOfCommitmentToInstanceKey[idHash] = witness
 
 		// step 1.3.2
-		multiplicationOutput, err := ic.subprotocols.multiplication[participant].Bob.Round1()
+		multiplicationOutput, err := ic.subprotocols.multiplication[idHash].Bob.Round1()
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "multiplication round 1")
 		}
 
 		// step 1.3.3
-		ic.state.Chi_i[participant] = ic.subprotocols.multiplication[participant].Bob.BTilde[0] // this is effectively bob's input to the multiplication protocol
-		if ic.subprotocols.multiplication[participant].Bob.BTilde[0].Cmp(ic.subprotocols.multiplication[participant].Bob.BTilde[1]) != 0 {
+		ic.state.Chi_i[idHash] = ic.subprotocols.multiplication[idHash].Bob.BTilde[0] // this is effectively bob's input to the multiplication protocol
+		if ic.subprotocols.multiplication[idHash].Bob.BTilde[0].Cmp(ic.subprotocols.multiplication[idHash].Bob.BTilde[1]) != 0 {
 			return nil, nil, errs.WrapFailed(err, "bob's input is not compatible with forced reuse")
 		}
 
 		// step 1.3.4
-		outputP2P[participant] = &Round1P2P{
+		outputP2P[idHash] = &Round1P2P{
 			CommitmentToInstanceKey: commitmentToInstanceKey,
 			MultiplicationOutput:    multiplicationOutput,
 		}
@@ -90,7 +100,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[integration.IdentityKey]*Rou
 	}, outputP2P, nil
 }
 
-func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Round1Broadcast, round1outputP2P map[integration.IdentityKey]*Round1P2P) (*Round2Broadcast, map[integration.IdentityKey]*Round2P2P, error) {
+func (ic *Cosigner) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*Round2Broadcast, map[helper_types.IdentityHash]*Round2P2P, error) {
 	if ic.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", ic.round)
 	}
@@ -115,41 +125,42 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 	// step 2.5
 	a := [mult.L]curves.Scalar{ic.state.r_i, ic.state.sk_i}
 
-	outputP2P := make(map[integration.IdentityKey]*Round2P2P)
+	outputP2P := make(map[helper_types.IdentityHash]*Round2P2P)
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}
 		// step 2.6.1
-		receivedBroadcastMessage := round1outputBroadcast[participant]
-		ic.state.receivedR_i[participant] = receivedBroadcastMessage.R_i
+		idHash := participant.Hash()
+		receivedBroadcastMessage := round1outputBroadcast[idHash]
+		ic.state.receivedR_i[idHash] = receivedBroadcastMessage.R_i
 
 		// step 2.6.2
-		receivedP2PMessage := round1outputP2P[participant]
-		ic.state.receivedCommitmentsToInstanceKey[participant] = receivedP2PMessage.CommitmentToInstanceKey
+		receivedP2PMessage := round1outputP2P[idHash]
+		ic.state.receivedCommitmentsToInstanceKey[idHash] = receivedP2PMessage.CommitmentToInstanceKey
 
 		// step 2.6.3
-		c_ij, multiplicationOutput, err := ic.subprotocols.multiplication[participant].Alice.Round2(receivedP2PMessage.MultiplicationOutput, a)
+		c_ij, multiplicationOutput, err := ic.subprotocols.multiplication[idHash].Alice.Round2(receivedP2PMessage.MultiplicationOutput, a)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "F_RVOLE round 2 sample")
 		}
-		ic.state.cU_i[participant] = c_ij[0]
-		ic.state.cV_i[participant] = c_ij[1]
+		ic.state.cU_i[idHash] = c_ij[0]
+		ic.state.cV_i[idHash] = c_ij[1]
 
 		// step 2.6.4
-		gammaU_ij := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.cU_i[participant])
+		gammaU_ij := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.cU_i[idHash])
 		// step 2.6.5
-		gammaV_ij := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.cV_i[participant])
+		gammaV_ij := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.cV_i[idHash])
 		// step 2.6.6
-		psi_ij := ic.state.phi_i.Sub(ic.state.Chi_i[participant])
+		psi_ij := ic.state.phi_i.Sub(ic.state.Chi_i[idHash])
 
 		// step 2.6.7
-		outputP2P[participant] = &Round2P2P{
+		outputP2P[idHash] = &Round2P2P{
 			Multiplication:                      multiplicationOutput,
 			GammaU_ij:                           gammaU_ij,
 			GammaV_ij:                           gammaV_ij,
 			Psi_ij:                              psi_ij,
-			WitnessOfTheCommitmentToInstanceKey: ic.state.witnessesOfCommitmentToInstanceKey[participant],
+			WitnessOfTheCommitmentToInstanceKey: ic.state.witnessesOfCommitmentToInstanceKey[idHash],
 		}
 	}
 	ic.round++
@@ -159,29 +170,30 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[integration.IdentityKey]*Ro
 	}, outputP2P, nil
 }
 
-func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Round2Broadcast, round2outputP2P map[integration.IdentityKey]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
+func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*Round2Broadcast, round2outputP2P map[helper_types.IdentityHash]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
 	refreshedPublicKey := ic.state.pk_i // this has zeta_i added so different than the one from public key share map
 	R := ic.state.R_i
 	phiPsi := ic.state.phi_i
-	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
-	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar.Zero()
+	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
+	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 
 	for _, participant := range ic.SessionParticipants {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}
 		// step 3.1.1
-		receivedBroadcastedMessage, exists := round2outputBroadcast[participant]
+		idHash := participant.Hash()
+		receivedBroadcastedMessage, exists := round2outputBroadcast[idHash]
 		if !exists {
 			return nil, errs.NewMissing("don't have broadcast message")
 		}
 		pk_j := receivedBroadcastedMessage.PK_i
 
 		// step 3.1.2
-		receivedP2PMessage, exists := round2outputP2P[participant]
+		receivedP2PMessage, exists := round2outputP2P[idHash]
 		if !exists {
 			return nil, errs.NewMissing("don't have p2p message")
 		}
@@ -189,27 +201,27 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.1.3
-		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[participant], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[participant].ToAffineCompressed())
+		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[idHash], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[idHash].ToAffineCompressed())
 		if err := commitments.Open(
 			h,
 			supposedlyCommittedMessage,
-			ic.state.receivedCommitmentsToInstanceKey[participant],
+			ic.state.receivedCommitmentsToInstanceKey[idHash],
 			receivedP2PMessage.WitnessOfTheCommitmentToInstanceKey,
 		); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "message could not be openned")
 		}
 
 		// step 3.1.4
-		d_ij, err := ic.subprotocols.multiplication[participant].Bob.Round3(receivedP2PMessage.Multiplication)
+		d_ij, err := ic.subprotocols.multiplication[idHash].Bob.Round3(receivedP2PMessage.Multiplication)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob round 3")
 		}
 		du_ij := d_ij[0]
 		dv_ij := d_ij[1]
 
-		Chi_ij := ic.state.Chi_i[participant]
+		Chi_ij := ic.state.Chi_i[idHash]
 		// step 3.1.5
-		R_j := ic.state.receivedR_i[participant]
+		R_j := ic.state.receivedR_i[idHash]
 		lhs1 := R_j.Mul(Chi_ij).Sub(GammaU_ji)
 		rhs1 := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(du_ij)
 		if !lhs1.Equal(rhs1) {
@@ -227,9 +239,9 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 
 		refreshedPublicKey = refreshedPublicKey.Add(pk_j)
 		// We're partially evaluating what we need for future steps inside of this loop
-		cu_ij := ic.state.cU_i[participant]
-		cv_ij := ic.state.cV_i[participant]
-		phiPsi = phiPsi.Add(round2outputP2P[participant].Psi_ij)
+		cu_ij := ic.state.cU_i[idHash]
+		cv_ij := ic.state.cV_i[idHash]
+		phiPsi = phiPsi.Add(round2outputP2P[idHash].Psi_ij)
 		cUdU = cUdU.Add(cu_ij).Add(du_ij)
 		cVdV = cVdV.Add(cv_ij).Add(dv_ij)
 		R = R.Add(R_j) // step 3.3
@@ -247,7 +259,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 
 	// step 3.6
 	xBigInt := getXCoordinate(R)
-	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar.SetBigInt(xBigInt)
+	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBigInt(xBigInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
@@ -269,11 +281,11 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[integration.IdentityKey]*Ro
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[integration.IdentityKey]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[helper_types.IdentityHash]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
-	w := curve.Scalar.Zero()
-	u := curve.Scalar.Zero()
-	R := curve.Point.Identity()
+	w := curve.Scalar().Zero()
+	u := curve.Scalar().Zero()
+	R := curve.Point().Identity()
 	for _, partialSignature := range partialSignatures {
 		w = w.Add(partialSignature.Wi)
 		u = u.Add(partialSignature.Ui)
@@ -282,7 +294,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	xBigInt := getXCoordinate(R)
 
 	// step 4.2
-	rx, err := curve.Scalar.SetBigInt(xBigInt)
+	rx, err := curve.Scalar().SetBigInt(xBigInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}

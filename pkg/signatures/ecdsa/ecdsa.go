@@ -6,14 +6,20 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Signature struct {
 	V *int
 	R curves.Scalar
 	S curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 // Normalise normalises the signature to a "low S" form. In ECDSA, signatures are
@@ -55,21 +61,21 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *big.Int
 
 	//nolint:gocritic // below is not a switch
-	if p, ok := bigR.(*curves.PointK256); ok {
+	if p, ok := bigR.(*k256.Point); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
-	} else if p, ok := bigR.(*curves.PointP256); ok {
+	} else if p, ok := bigR.(*p256.Point); ok {
 		rx = p.X().BigInt()
 		ry = p.Y().BigInt()
 	} else {
 		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
 	}
 
-	curve, err := curves.GetCurveByName(bigR.CurveName())
+	curve, err := bigR.Curve()
 	if err != nil {
 		return -1, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return -1, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
@@ -101,22 +107,16 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
-	curve, err := curves.GetCurveByName(signature.R.CurveName())
+	curve, err := signature.R.Curve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.CurveName())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
-	}
-	subGroupOrder := nativeCurve.Params().N
-
 	// Calculate point R = (x1, x2) where
 	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx := signature.R.BigInt()
 	if (*signature.V & 2) != 0 {
-		rx = new(big.Int).Add(rx, subGroupOrder)
+		rx = new(big.Int).Add(rx, curve.Profile().SubGroupOrder())
 	}
 	rxBytes := rx.Bytes()
 	if len(rxBytes) < 32 {
@@ -127,7 +127,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		ryCompressed[0]++
 	}
 	affine := append(ryCompressed, rxBytes...)
-	bigR, err := curve.Point.FromAffineCompressed(affine)
+	bigR, err := curve.Point().FromAffineCompressed(affine)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate R")
 	}
@@ -142,7 +142,9 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get int from hash")
 	}
-	z, err := curve.NewScalar().SetBytes(zInt.Bytes())
+	var zIntBytes [32]byte
+	zInt.FillBytes(zIntBytes[:])
+	z, err := curve.Scalar().SetBytes(zIntBytes[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
@@ -156,11 +158,11 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 }
 
 func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Point, message []byte) error {
-	curve, err := curves.GetCurveByName(publicKey.CurveName())
+	curve, err := publicKey.Curve()
 	if err != nil {
 		return errs.WrapFailed(err, "could not get curve")
 	}
-	if curve.Name != curves.K256Name && curve.Name != curves.P256Name {
+	if curve.Name() != k256.Name && curve.Name() != p256.Name {
 		return errs.NewFailed("curve is not supported")
 	}
 	if !publicKey.IsOnCurve() {
@@ -184,15 +186,14 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		return errs.WrapFailed(err, "could not produce message digest")
 	}
 
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
 	}
 
-	x, y := getPointCoordinates(publicKey)
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     x, Y: y,
+		X:     publicKey.X().BigInt(), Y: publicKey.Y().BigInt(),
 	}
 	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.BigInt(), signature.S.BigInt()); !ok {
 		return errs.NewVerificationFailed("signature verification failed")
@@ -200,27 +201,16 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	return nil
 }
 
-func HashToInt(digest []byte, curve *curves.Curve) (*big.Int, error) {
-	ecdsaCurve, err := curve.ToEllipticCurve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
-	}
-	order := ecdsaCurve.Params().N
-	orderBits := order.BitLen()
-	orderBytes := (orderBits + 7) / 8
+func HashToInt(digest []byte, curve curves.Curve) (*big.Int, error) {
+	orderBytes := len(curve.Profile().SubGroupOrder().Bytes())
 	if len(digest) > orderBytes {
 		digest = digest[:orderBytes]
 	}
 
 	ret := new(big.Int).SetBytes(digest)
-	excess := len(digest)*8 - orderBits
+	excess := (len(digest) - orderBytes) * 8
 	if excess > 0 {
 		ret.Rsh(ret, uint(excess))
 	}
 	return ret, nil
-}
-
-func getPointCoordinates(point curves.Point) (x, y *big.Int) {
-	affine := point.ToAffineUncompressed()
-	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
 }

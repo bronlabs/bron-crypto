@@ -11,16 +11,19 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type TestIdentityKey struct {
-	curve  *curves.Curve
+	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 var _ integration.IdentityKey = (*TestIdentityKey)(nil)
@@ -124,7 +127,7 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protoco
 func MakeTranscripts(label string, identities []integration.IdentityKey) (allTranscripts []transcripts.Transcript) {
 	allTranscripts = make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		allTranscripts[i] = merlin.NewTranscript(label)
+		allTranscripts[i] = hagrid.NewTranscript(label)
 	}
 	return allTranscripts
 }

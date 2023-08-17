@@ -5,10 +5,13 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
 type Share struct {
+	_ helper_types.Incomparable
+
 	Value curves.Scalar `json:"value"`
 }
 
@@ -18,7 +21,7 @@ type Share struct {
 // In case after conversion, resharing of the new shamir share is desired. A new protocol must
 // be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
 func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, error) {
-	curve, err := curves.GetCurveByName(s.Value.CurveName())
+	curve, err := s.Value.Curve()
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
 	}
@@ -42,17 +45,19 @@ func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, e
 
 type Dealer struct {
 	Total int
-	Curve *curves.Curve
+	Curve curves.Curve
+
+	_ helper_types.Incomparable
 }
 
-func NewDealer(total int, curve *curves.Curve) (*Dealer, error) {
+func NewDealer(total int, curve curves.Curve) (*Dealer, error) {
 	if total < 2 {
 		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
 	}
 	if curve == nil {
 		return nil, errs.NewIsNil("invalid curve")
 	}
-	return &Dealer{total, curve}, nil
+	return &Dealer{Total: total, Curve: curve}, nil
 }
 
 func (d Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
@@ -60,13 +65,13 @@ func (d Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 		return nil, errs.NewIsZero("invalid secret")
 	}
 	shares := make([]*Share, d.Total)
-	partialSum := d.Curve.Scalar.Zero()
+	partialSum := d.Curve.Scalar().Zero()
 	for i := 1; i < d.Total; i++ {
-		share := d.Curve.Scalar.Random(prng)
+		share := d.Curve.Scalar().Random(prng)
 		partialSum = partialSum.Add(share)
-		shares[i] = &Share{share}
+		shares[i] = &Share{Value: share}
 	}
-	shares[0] = &Share{secret.Sub(partialSum)}
+	shares[0] = &Share{Value: secret.Sub(partialSum)}
 	return shares, nil
 }
 
@@ -74,7 +79,7 @@ func (d Dealer) Combine(shares []*Share) (curves.Scalar, error) {
 	if len(shares) != d.Total {
 		return nil, errs.NewFailed("len(shares) != N")
 	}
-	secret := d.Curve.Scalar.Zero()
+	secret := d.Curve.Scalar().Zero()
 	for _, share := range shares {
 		if share == nil || share.Value.IsZero() {
 			return nil, errs.NewIsZero("found a share with value %d", share.Value.BigInt())

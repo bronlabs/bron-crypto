@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 )
 
@@ -197,6 +198,8 @@ type lcmTest struct {
 	y        *big.Int
 	err      error
 	expected *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func runTestLcm(t *testing.T, testArgs []lcmTest) {
@@ -370,7 +373,7 @@ func TestLcmBigPrimes(t *testing.T) {
 	expected2.SetString("28396499784314989096609919418127345447157066075586506422680304338142086939236798450800279134642308338458035596559017626154823247809313781525454242216477721507296693149109832139024597927259443182893280359146077724553052468871051438675286719817790943900280362711254811533504902741179161752948522341835287769530110541739921633871308290020066875307078092554117637608375242902999872137629980200197702760214658136789637368191031173973090138816890631056194895911511193868568337270184231814553242352572122713100022187023932306383784997785740075483768764231396924369937421906728046753885386778340930941242102624489916449738497", 10)
 	testArgs := []lcmTest{
 		{
-			x, y, nil, expected,
+			x: x, y: y, err: nil, expected: expected,
 		},
 		{
 			x:        x2,
@@ -434,6 +437,8 @@ func TestLFailureCases(t *testing.T) {
 type keygenTest struct {
 	bits                        uint
 	p, q, n, lambda, totient, u *big.Int
+
+	_ helper_types.Incomparable
 }
 
 func TestKeyGen(t *testing.T) {

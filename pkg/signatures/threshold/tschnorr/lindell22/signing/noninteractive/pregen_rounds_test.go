@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -16,7 +16,7 @@ import (
 func Test_PreGenHappyPath(t *testing.T) {
 	t.Parallel()
 
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	hashFunc := sha512.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -49,7 +49,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 			for p1 := range identities {
 				p1BigR := cipherSuite.Curve.ScalarBaseMult(batches[p1].PreSignatures[i].K)
 				for p2 := range identities {
-					p2BigR := batches[p2].PreSignatures[i].BigR[identities[p1]]
+					p2BigR := batches[p2].PreSignatures[i].BigR[identities[p1].Hash()]
 					require.True(t, p1BigR.Equal(p2BigR))
 				}
 			}

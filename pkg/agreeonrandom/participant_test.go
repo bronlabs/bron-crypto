@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -16,7 +16,7 @@ import (
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	cipherSuite := &integration.CipherSuite{Curve: curve, Hash: sha3.New256}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)

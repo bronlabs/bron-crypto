@@ -7,9 +7,10 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -34,6 +35,8 @@ type Cosigner struct {
 	mySharingId   int
 	myShard       *lindell17.Shard
 	round         int
+
+	_ helper_types.Incomparable
 }
 
 type PrimaryCosignerState struct {
@@ -42,6 +45,8 @@ type PrimaryCosignerState struct {
 	bigR         curves.Point
 	r            curves.Scalar
 	bigR1        curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type PrimaryCosigner struct {
@@ -50,12 +55,16 @@ type PrimaryCosigner struct {
 	secondaryIdentityKey integration.IdentityKey
 	secondarySharingId   int
 	state                *PrimaryCosignerState
+
+	_ helper_types.Incomparable
 }
 
 type SecondaryCosignerState struct {
 	bigR1Commitment commitments.Commitment
 	k2              curves.Scalar
 	bigR2           curves.Point
+
+	_ helper_types.Incomparable
 }
 
 type SecondaryCosigner struct {
@@ -64,6 +73,8 @@ type SecondaryCosigner struct {
 	primaryIdentityKey integration.IdentityKey
 	primarySharingId   int
 	state              *SecondaryCosignerState
+
+	_ helper_types.Incomparable
 }
 
 func (cosigner *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -94,8 +105,8 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if err := myShard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if myIdentityKey == nil {
 		return nil, errs.NewIsNil("my identity key is nil")
@@ -107,7 +118,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -124,7 +135,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 			round:         1,
 		},
 		secondaryIdentityKey: secondaryIdentityKey,
-		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey],
+		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey.Hash()],
 		state:                &PrimaryCosignerState{},
 	}
 	if !primaryCosigner.IsSignatureAggregator() {
@@ -141,8 +152,8 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	if cohortConfig.PreSignatureComposer != nil {
 		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
-	if err := myShard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if myIdentityKey == nil {
 		return nil, errs.NewIsNil("my identity key is nil")
@@ -154,7 +165,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -171,7 +182,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 			round:         1,
 		},
 		primaryIdentityKey: primaryIdentityKey,
-		primarySharingId:   keyToId[primaryIdentityKey],
+		primarySharingId:   keyToId[primaryIdentityKey.Hash()],
 		state:              &SecondaryCosignerState{},
 	}, nil
 }

@@ -6,12 +6,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
-var testCurve = curves.ED25519()
+var testCurve = edwards25519.New()
 
 func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 	_, err := feldman.NewDealer(0, 0, testCurve)
@@ -23,7 +23,7 @@ func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	_, _, err = scheme.Split(testCurve.NewScalar(), crand.Reader)
+	_, _, err = scheme.Split(testCurve.Scalar(), crand.Reader)
 	require.NotNil(t, err)
 }
 
@@ -42,11 +42,11 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 	_, err = scheme.Combine([]*shamir.Share{
 		{
 			Id:    1,
-			Value: testCurve.Scalar.New(3),
+			Value: testCurve.Scalar().New(3),
 		},
 		{
 			Id:    1,
-			Value: testCurve.Scalar.New(3),
+			Value: testCurve.Scalar().New(3),
 		},
 	}...)
 	require.NotNil(t, err)
@@ -59,18 +59,18 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 	shares := []*shamir.Share{
 		{
 			Id:    0,
-			Value: testCurve.Scalar.New(3),
+			Value: testCurve.Scalar().New(3),
 		},
 		{
 			Id:    2,
-			Value: testCurve.Scalar.New(3),
+			Value: testCurve.Scalar().New(3),
 		},
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 	shares[0] = &shamir.Share{
 		Id:    4,
-		Value: testCurve.Scalar.New(3),
+		Value: testCurve.Scalar().New(3),
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
@@ -81,7 +81,7 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret := testCurve.Scalar.Hash([]byte("test"))
+	secret := testCurve.Scalar().Hash([]byte("test"))
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
@@ -99,7 +99,7 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret := testCurve.Scalar.Hash([]byte("test"))
+	secret := testCurve.Scalar().Hash([]byte("test"))
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	for _, s := range shares {
 		err = feldman.Verify(s, commitments)

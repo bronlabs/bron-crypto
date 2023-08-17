@@ -6,12 +6,15 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 type PrivateNoncePair struct {
 	SmallD curves.Scalar
 	SmallE curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
 type AttestedCommitmentToNoncePair struct {
@@ -19,6 +22,8 @@ type AttestedCommitmentToNoncePair struct {
 	D           curves.Point
 	E           curves.Point
 	Attestation []byte
+
+	_ helper_types.Incomparable
 }
 
 func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.CohortConfig) error {
@@ -43,8 +48,18 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	if !ac.E.IsOnCurve() {
 		return errs.NewNotOnCurve("E is not on the curve")
 	}
-	if ac.D.CurveName() != ac.E.CurveName() {
-		return errs.NewInvalidCurve("D and E are not on the same curve %s != %s", ac.D.CurveName(), ac.E.CurveName())
+	dCurve, err := ac.D.Curve()
+	if err != nil {
+		return errs.WrapFailed(err, "could not extract D curve")
+	}
+
+	eCurve, err := ac.E.Curve()
+	if err != nil {
+		return errs.WrapFailed(err, "could not extract E curve")
+	}
+
+	if dCurve.Name() != eCurve.Name() {
+		return errs.NewInvalidCurve("D and E are not on the same curve %s != %s", dCurve.Name(), eCurve.Name())
 	}
 	message := ac.D.ToAffineCompressed()
 	message = append(message, ac.E.ToAffineCompressed()...)
@@ -151,6 +166,6 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) {
 	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
-		return identityKeyToSharingId[attestedCommitments[i].Attestor] < identityKeyToSharingId[attestedCommitments[j].Attestor]
+		return identityKeyToSharingId[attestedCommitments[i].Attestor.Hash()] < identityKeyToSharingId[attestedCommitments[j].Attestor.Hash()]
 	})
 }

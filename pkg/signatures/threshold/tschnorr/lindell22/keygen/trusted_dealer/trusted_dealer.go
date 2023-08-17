@@ -1,9 +1,11 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"io"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
-	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -12,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integration.IdentityKey]*lindell22.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*lindell22.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -22,7 +24,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
-	schnorrPrivateKey := curve.NewScalar().Random(prng)
+	schnorrPrivateKey := curve.Scalar().Random(prng)
 	schnorrPublicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
@@ -37,15 +39,15 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[integra
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
 
-	publicKeySharesMap := make(map[integration.IdentityKey]curves.Point)
+	publicKeySharesMap := make(map[helper_types.IdentityHash]curves.Point)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		publicKeySharesMap[identityKey] = curve.ScalarBaseMult(shamirShares[sharingId-1].Value)
+		publicKeySharesMap[identityKey.Hash()] = curve.ScalarBaseMult(shamirShares[sharingId-1].Value)
 	}
 
-	shards := make(map[integration.IdentityKey]*lindell22.Shard)
+	shards := make(map[helper_types.IdentityHash]*lindell22.Shard)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
-		shards[identityKey] = &lindell22.Shard{
+		shards[identityKey.Hash()] = &lindell22.Shard{
 			SigningKeyShare: &threshold.SigningKeyShare{
 				Share:     share,
 				PublicKey: schnorrPublicKey,

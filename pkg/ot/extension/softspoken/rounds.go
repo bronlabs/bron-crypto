@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
@@ -17,6 +18,8 @@ type Round1Output struct {
 	// challengeResponse is the challenge response for the consistency,
 	// containing ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	challengeResponse ChallengeResponse
+
+	_ helper_types.Incomparable
 }
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
@@ -100,6 +103,8 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 // Round2Output is the sender's PUBLIC output of round2 of OTe/COTe, to be sent to the Receiver.
 type Round2Output struct {
 	derandMask DerandomizeMask
+
+	_ helper_types.Incomparable
 }
 
 // Round2Extend uses the PRG to extend the baseOT results, verifies their consistency
@@ -214,13 +219,13 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 					idxOTe = l
 				}
 				// z_A_j = ECP(v_0_j)
-				cOTeSenderOutput[l][i][j], err = S.curve.Scalar.SetBytes(
+				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().SetBytes(
 					oTeSenderOutput[0][idxOTe][i][j][:])
 				if err != nil {
 					return nil, nil, nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
 				}
 				// τ_j = ECP(v_1_j) - z_A_j + α_j
-				round2Output.derandMask[l][i][j], err = S.curve.Scalar.SetBytes(
+				round2Output.derandMask[l][i][j], err = S.curve.Scalar().SetBytes(
 					oTeSenderOutput[1][idxOTe][i][j][:])
 				if err != nil {
 					return nil, nil, nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
@@ -285,7 +290,7 @@ func (R *Receiver) Round3Derandomize(
 					idxOTe = l
 				}
 				// ECP(v_x_j)
-				v_x_NegCurve, err = R.curve.Scalar.SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
+				v_x_NegCurve, err = R.curve.Scalar().SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {
 					return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.2)")
 				}

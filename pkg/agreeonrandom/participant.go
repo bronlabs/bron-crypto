@@ -6,27 +6,32 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Participant struct {
 	prng io.Reader
 
-	Curve         *curves.Curve
+	Curve         curves.Curve
 	MyIdentityKey integration.IdentityKey
 
 	state *State
 	round int
+
+	_ helper_types.Incomparable
 }
 
 type State struct {
 	transcript transcripts.Transcript
 	r_i        curves.Scalar
+
+	_ helper_types.Incomparable
 }
 
-func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -52,7 +57,7 @@ func NewParticipant(curve *curves.Curve, identityKey integration.IdentityKey, pa
 
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
 	}
 	return &Participant{
 		prng:          prng,

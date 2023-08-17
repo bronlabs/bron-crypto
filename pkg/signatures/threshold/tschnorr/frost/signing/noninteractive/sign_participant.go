@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
@@ -26,11 +27,13 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    []integration.IdentityKey
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
 	aggregationParameter *aggregation.SignatureAggregatorParameters
+
+	_ helper_types.Incomparable
 }
 
 func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -104,7 +107,7 @@ func NewNonInteractiveCosigner(
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[mySharingId-1]
-		curve, err := curves.GetCurveByName(myAttestedCommitment.D.CurveName())
+		curve, err := myAttestedCommitment.D.Curve()
 		if err != nil {
 			return nil, errs.WrapInvalidCurve(err, "no such curve")
 		}
@@ -116,16 +119,16 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alpha := map[integration.IdentityKey]curves.Point{}
-	E_alpha := map[integration.IdentityKey]curves.Point{}
+	D_alpha := map[helper_types.IdentityHash]curves.Point{}
+	E_alpha := map[helper_types.IdentityHash]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
 		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
 		if !found {
 			continue
 		}
-		D_alpha[attestedCommitment.Attestor] = attestedCommitment.D
-		E_alpha[attestedCommitment.Attestor] = attestedCommitment.E
+		D_alpha[attestedCommitment.Attestor.Hash()] = attestedCommitment.D
+		E_alpha[attestedCommitment.Attestor.Hash()] = attestedCommitment.E
 	}
 
 	return &Cosigner{

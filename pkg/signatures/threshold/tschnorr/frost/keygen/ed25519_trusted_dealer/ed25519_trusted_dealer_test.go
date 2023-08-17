@@ -5,10 +5,12 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"errors"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"hash"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
@@ -18,9 +20,11 @@ import (
 )
 
 type identityKey struct {
-	curve  *curves.Curve
+	curve  curves.Curve
 	signer *schnorr.Signer
 	h      func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 func (k *identityKey) PublicKey() curves.Point {
@@ -46,7 +50,7 @@ func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message [
 
 func Test_happyPath(t *testing.T) {
 	t.Parallel()
-	curve := curves.ED25519()
+	curve := edwards25519.New()
 	h := sha512.New
 
 	cipherSuite := &integration.CipherSuite{

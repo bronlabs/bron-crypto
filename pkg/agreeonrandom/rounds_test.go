@@ -12,12 +12,14 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 )
 
-func doRoundsWithMockR1Output(t *testing.T, curve *curves.Curve, identities []integration.IdentityKey) []byte {
+func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []integration.IdentityKey) []byte {
 	t.Helper()
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
@@ -41,7 +43,7 @@ func doRoundsWithMockR1Output(t *testing.T, curve *curves.Curve, identities []in
 	return agreeOnRandoms[0]
 }
 
-func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
+func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -64,7 +66,7 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) []byte {
 	return random
 }
 
-func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
+func testDuplicatePubKeys(t *testing.T, curve curves.Curve) {
 	t.Helper()
 	var randomErr error
 	// eventually duplicate pubkey will cause failed to generate unique random
@@ -74,11 +76,11 @@ func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 			Hash:  sha3.New256,
 		}
 
-		identityAlice, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		identityAlice, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{1}), nil)
 		require.NoError(t, err)
-		identityBob, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{1}), nil)
+		identityBob, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{1}), nil)
 		require.NoError(t, err)
-		identityCharlie, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar.Hash([]byte{2}), nil)
+		identityCharlie, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{2}), nil)
 		require.NoError(t, err)
 		identities := []integration.IdentityKey{identityAlice, identityBob, identityCharlie}
 		_, err = test_utils.ProduceSharedRandomValue(curve, identities)
@@ -92,16 +94,16 @@ func testDuplicatePubKeys(t *testing.T, curve *curves.Curve) {
 
 func TestDuplicatePubkeys(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		boundedCurve := curve
-		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", boundedCurve.Name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
 			testDuplicatePubKeys(t, boundedCurve)
 		})
 	}
 }
 
-func testWithMockR1Output(t *testing.T, curve *curves.Curve, n int) []byte {
+func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -125,11 +127,11 @@ func testWithMockR1Output(t *testing.T, curve *curves.Curve, n int) []byte {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				testHappyPath(t, boundedCurve, boundedN)
 			})
@@ -139,11 +141,11 @@ func Test_HappyPath(t *testing.T) {
 
 func TestTwoSeparateExecutions(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				random1 := testHappyPath(t, boundedCurve, boundedN)
 				random2 := testHappyPath(t, boundedCurve, boundedN)
@@ -155,11 +157,11 @@ func TestTwoSeparateExecutions(t *testing.T) {
 
 func TestWithAttackerInput(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Attacker input curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Attacker input curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				random1 := testWithMockR1Output(t, boundedCurve, boundedN)
 				random2 := testWithMockR1Output(t, boundedCurve, boundedN)

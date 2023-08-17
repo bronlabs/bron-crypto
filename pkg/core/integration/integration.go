@@ -7,7 +7,9 @@ import (
 	"sort"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
@@ -27,8 +29,10 @@ type IdentityKey interface {
 }
 
 type CipherSuite struct {
-	Curve *curves.Curve
+	Curve curves.Curve
 	Hash  func() hash.Hash
+
+	_ helper_types.Incomparable
 }
 
 func (cs *CipherSuite) Validate() error {
@@ -55,6 +59,8 @@ type CohortConfig struct {
 	PreSignatureComposer IdentityKey
 
 	participantHashSet hashset.HashSet[IdentityKey]
+
+	_ helper_types.Incomparable
 }
 
 func (c *CohortConfig) Validate() error {
@@ -127,7 +133,7 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	copied := append([]IdentityKey{}, identityKeys...)
 	sort.Slice(copied, func(i, j int) bool {
 		switch copied[i].PublicKey().CurveName() {
-		case curves.ED25519Name:
+		case edwards25519.Name:
 			iKey := binary.LittleEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
 			jKey := binary.LittleEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
 			return iKey < jKey
@@ -140,17 +146,24 @@ func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
 	return copied
 }
 
-func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[IdentityKey]int, mySharingId int) {
+func SortIdentityHashes(identityKeys []helper_types.IdentityHash) []helper_types.IdentityHash {
+	sort.Slice(identityKeys, func(i, j int) bool {
+		return binary.BigEndian.Uint64(identityKeys[i][:]) < binary.BigEndian.Uint64(identityKeys[j][:])
+	})
+	return identityKeys
+}
+
+func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[helper_types.IdentityHash]int, mySharingId int) {
 	identityKeys = SortIdentityKeys(identityKeys)
 	idToKey = make(map[int]IdentityKey)
-	keyToId = make(map[IdentityKey]int)
+	keyToId = make(map[helper_types.IdentityHash]int)
 	mySharingId = -1
 
 	for sharingIdMinusOne, identityKey := range identityKeys {
 		sharingId := sharingIdMinusOne + 1
 		idToKey[sharingId] = identityKey
-		keyToId[identityKey] = sharingId
-		if myIdentityKey != nil && identityKey.PublicKey().Equal(myIdentityKey.PublicKey()) {
+		keyToId[identityKey.Hash()] = sharingId
+		if myIdentityKey != nil && types.Equals(identityKey, myIdentityKey) {
 			mySharingId = sharingId
 		}
 	}

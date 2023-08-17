@@ -21,7 +21,7 @@ import (
 //	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
 //	.             └---> S: k^i_0, k^i_1
-func RunSoftspokenBaseOT(t *testing.T, curve *curves.Curve, sid []byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
+func RunSoftspokenBaseOT(t *testing.T, curve curves.Curve, sid []byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
 	t.Helper() // TODO: remove *testing.T from most Run test_util functions. Use errors instead.
 	senderOutput, receiverOutput, err := test_utils.RunVSOT(t, curve, softspoken.Kappa, sid)
 	if err != nil {
@@ -58,7 +58,7 @@ func CheckSoftspokenBaseOTOutputs(baseOtSenderOutput *vsot.SenderOutput, baseOtR
 //		S:   ---┘                        └---> S: (v_0, v_1)
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
 func RunSoftspokenOTe(
-	curve *curves.Curve,
+	curve curves.Curve,
 	sid []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
@@ -128,7 +128,7 @@ func CheckSoftspokenOTeOutputs(
 // NOTE: it should only be used by setting L=1 in "participants.go".
 func RunSoftspokenCOTe(
 	useForcedReuse bool,
-	curve *curves.Curve,
+	curve curves.Curve,
 	sid []byte,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
@@ -163,7 +163,7 @@ func RunSoftspokenCOTe(
 
 // GenerateSoftspokenRandomInputs generates random inputs for the SoftspokenOT
 // Correlated OT extension.
-func GenerateSoftspokenRandomInputs(inputBatchLen int, curve *curves.Curve, useForcedReuse bool) (
+func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useForcedReuse bool) (
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
 	inputOpts softspoken.COTeInputOpt, // sender's input, the InputOpt α
 	err error,
@@ -185,7 +185,7 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve *curves.Curve, useF
 	for l := 0; l < inputBatchLen; l++ {
 		for i := 0; i < softspoken.Xi; i++ {
 			for k := 0; k < softspoken.ROTeWidth; k++ {
-				inputOpts[l][i][k] = curve.Scalar.Random(rand.Reader)
+				inputOpts[l][i][k] = curve.Scalar().Random(rand.Reader)
 			}
 		}
 	}

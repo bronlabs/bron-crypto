@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
@@ -19,13 +19,13 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
 
-	verifierTranscript := merlin.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
 	verifier, err := lp.NewVerifier(k, pk, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := merlin.NewTranscript(transcriptLabel)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel)
 	prover, err := lp.NewProver(k, sk, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/noninteractive"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -22,10 +23,10 @@ func MakePreGenParticipants(tau int, identities []integration.IdentityKey, sid [
 	return parties, nil
 }
 
-func DoPreGenRound1(participants []*noninteractive.PreGenParticipant) (output []map[integration.IdentityKey]*noninteractive.Round1Broadcast, err error) {
-	result := make([]map[integration.IdentityKey]*noninteractive.Round1Broadcast, len(participants))
+func DoPreGenRound1(participants []*noninteractive.PreGenParticipant) (output []map[helper_types.IdentityHash]*noninteractive.Round1Broadcast, err error) {
+	result := make([]map[helper_types.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
 	for i := range participants {
-		result[i] = make(map[integration.IdentityKey]*noninteractive.Round1Broadcast)
+		result[i] = make(map[helper_types.IdentityHash]*noninteractive.Round1Broadcast)
 	}
 
 	for i, party := range participants {
@@ -34,17 +35,17 @@ func DoPreGenRound1(participants []*noninteractive.PreGenParticipant) (output []
 			return nil, err
 		}
 		for j := range participants {
-			result[j][party.GetIdentityKey()] = out
+			result[j][party.GetIdentityKey().Hash()] = out
 		}
 	}
 
 	return result, nil
 }
 
-func DoPreGenRound2(participants []*noninteractive.PreGenParticipant, input []map[integration.IdentityKey]*noninteractive.Round1Broadcast) (output []map[integration.IdentityKey]*noninteractive.Round2Broadcast, err error) {
-	result := make([]map[integration.IdentityKey]*noninteractive.Round2Broadcast, len(participants))
+func DoPreGenRound2(participants []*noninteractive.PreGenParticipant, input []map[helper_types.IdentityHash]*noninteractive.Round1Broadcast) (output []map[helper_types.IdentityHash]*noninteractive.Round2Broadcast, err error) {
+	result := make([]map[helper_types.IdentityHash]*noninteractive.Round2Broadcast, len(participants))
 	for i := range participants {
-		result[i] = make(map[integration.IdentityKey]*noninteractive.Round2Broadcast)
+		result[i] = make(map[helper_types.IdentityHash]*noninteractive.Round2Broadcast)
 	}
 
 	for i, party := range participants {
@@ -53,14 +54,14 @@ func DoPreGenRound2(participants []*noninteractive.PreGenParticipant, input []ma
 			return nil, err
 		}
 		for j := range participants {
-			result[j][party.GetIdentityKey()] = out
+			result[j][party.GetIdentityKey().Hash()] = out
 		}
 	}
 
 	return result, nil
 }
 
-func DoPreGenRound3(participants []*noninteractive.PreGenParticipant, input []map[integration.IdentityKey]*noninteractive.Round2Broadcast) (output []*lindell22.PreSignatureBatch, err error) {
+func DoPreGenRound3(participants []*noninteractive.PreGenParticipant, input []map[helper_types.IdentityHash]*noninteractive.Round2Broadcast) (output []*lindell22.PreSignatureBatch, err error) {
 	result := make([]*lindell22.PreSignatureBatch, len(participants))
 
 	for i := range participants {

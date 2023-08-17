@@ -5,7 +5,10 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Cosigner struct {
@@ -22,6 +25,8 @@ type Cosigner struct {
 	preSignatureIndex int
 	cohortConfig      *integration.CohortConfig
 	prng              io.Reader
+
+	_ helper_types.Incomparable
 }
 
 func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -45,7 +50,7 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -60,8 +65,16 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 	}
 
 	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
-	theirSharingId := keyToId[participantIdentity]
+	theirSharingId := keyToId[participantIdentity.Hash()]
 
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
+	}
+	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+	tprng, err := transcript.NewReader("witness", myShard.SigningKeyShare.Share.Bytes(), prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
+	}
 	return &Cosigner{
 		myIdentityKey:       myIdentityKey,
 		mySharingId:         mySharingId,
@@ -71,6 +84,6 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 		theirSharingId:      theirSharingId,
 		preSignatureIndex:   preSignatureIndex,
 		cohortConfig:        cohortConfig,
-		prng:                prng,
+		prng:                tprng,
 	}, nil
 }

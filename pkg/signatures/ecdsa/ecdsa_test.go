@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 )
@@ -18,8 +18,7 @@ func Test_RecoverPublicKey(t *testing.T) {
 	t.Parallel()
 
 	nativeCurve := elliptic.P256()
-	curve, err := curves.GetCurveByName(nativeCurve.Params().Name)
-	require.NoError(t, err)
+	curve := p256.New()
 
 	hashFunc := sha256.New
 	message := []byte("Hello")
@@ -30,16 +29,16 @@ func Test_RecoverPublicKey(t *testing.T) {
 	require.NoError(t, err)
 	nativePublicKey := &nativePrivateKey.PublicKey
 
-	publicKey, err := curve.Point.Set(nativePublicKey.X, nativePublicKey.Y)
+	publicKey, err := curve.Point().Set(nativePublicKey.X, nativePublicKey.Y)
 	require.NoError(t, err)
 
 	nativeR, nativeS, err := nativeEcdsa.Sign(crand.Reader, nativePrivateKey, messageHash)
 	require.NoError(t, err)
 
-	r, err := curve.Scalar.SetBigInt(nativeR)
+	r, err := curve.Scalar().SetBigInt(nativeR)
 	require.NoError(t, err)
 
-	s, err := curve.Scalar.SetBigInt(nativeS)
+	s, err := curve.Scalar().SetBigInt(nativeS)
 	require.NoError(t, err)
 
 	ok := nativeEcdsa.Verify(nativePublicKey, messageHash, nativeR, nativeS)
@@ -49,7 +48,7 @@ func Test_RecoverPublicKey(t *testing.T) {
 	// and one of them shall match
 	successfullyRecoveredValidPublicKey := false
 	for v := 0; v < 4; v++ {
-		if err := ecdsa.Verify(&ecdsa.Signature{&v, r, s}, hashFunc, publicKey, message); err == nil {
+		if err := ecdsa.Verify(&ecdsa.Signature{V: &v, R: r, S: s}, hashFunc, publicKey, message); err == nil {
 			successfullyRecoveredValidPublicKey = true
 			break
 		}

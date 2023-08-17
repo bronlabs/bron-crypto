@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	lindell17_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: curves.K256(),
+		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
 
@@ -56,7 +56,7 @@ func Test_HappyPath(t *testing.T) {
 
 	transcripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = merlin.NewTranscript("Lindell 2017 DKG")
+		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG")
 	}
 
 	lindellParticipants, err := lindell17_dkg_test_utils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)
@@ -147,10 +147,10 @@ func Test_HappyPath(t *testing.T) {
 					myShard := shards[i]
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
-					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i]]
+					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
 					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare, err := cipherSuite.Curve.NewScalar().SetBigInt(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetBigInt(theirDecryptedSigningShareInt)
 					require.NoError(t, err)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}

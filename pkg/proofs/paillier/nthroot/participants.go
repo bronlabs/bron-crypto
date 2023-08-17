@@ -5,8 +5,9 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -19,28 +20,38 @@ type Participant struct {
 	x     *big.Int
 	round int
 	prng  io.Reader
+
+	_ helper_types.Incomparable
 }
 
 type ProverState struct {
 	bigNSquared *big.Int
 	r           *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Prover struct {
 	Participant
 	y     *big.Int
 	state *ProverState
+
+	_ helper_types.Incomparable
 }
 
 type VerifierState struct {
 	bigNSquared *big.Int
 	e           *big.Int
 	a           *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type Verifier struct {
 	Participant
 	state *VerifierState
+
+	_ helper_types.Incomparable
 }
 
 func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
@@ -48,7 +59,7 @@ func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Tra
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -71,7 +82,7 @@ func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Tran
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

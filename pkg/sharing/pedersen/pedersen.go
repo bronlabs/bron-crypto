@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 )
 
@@ -13,14 +14,16 @@ type Share = shamir.Share
 // Dealer Verifiable Secret Sharing Scheme.
 type Dealer struct {
 	Threshold, Total int
-	Curve            *curves.Curve
+	Curve            curves.Curve
 	Generator        curves.Point
+
+	_ helper_types.Incomparable
 }
 
 func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
-	curve, err := curves.GetCurveByName(generator.CurveName())
+	curve, err := generator.Curve()
 	if err != nil {
-		return errs.WrapInvalidCurve(err, "no such curve: %s", generator.CurveName())
+		return errs.WrapInvalidCurve(err, "no such curve: %s", curve.Name())
 	}
 	if err := share.Validate(curve); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid share")
@@ -29,8 +32,8 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 		return errs.WrapVerificationFailed(err, "invalid blind share")
 	}
 
-	x := curve.Scalar.New(share.Id)
-	i := curve.Scalar.One()
+	x := curve.Scalar().New(share.Id)
+	i := curve.Scalar().One()
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
@@ -59,6 +62,8 @@ type Output struct {
 	BlindingShares, SecretShares    []*Share
 	Commitments, BlindedCommitments []curves.Point
 	Generator                       curves.Point
+
+	_ helper_types.Incomparable
 }
 
 // NewDealer creates a new pedersen VSS.
@@ -72,9 +77,9 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	if generator == nil {
 		return nil, errs.NewIsNil("generator is nil")
 	}
-	curve, err := curves.GetCurveByName(generator.CurveName())
+	curve, err := generator.Curve()
 	if err != nil {
-		return nil, errs.NewInvalidCurve("no such curve: %s", generator.CurveName())
+		return nil, errs.NewInvalidCurve("no such curve: %s", curve.Name())
 	}
 	if !generator.IsOnCurve() {
 		return nil, errs.NewNotOnCurve("invalid generator")
@@ -83,13 +88,13 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 		return nil, errs.NewIsIdentity("invalid generator")
 	}
 
-	return &Dealer{threshold, total, curve, generator}, nil
+	return &Dealer{Threshold: threshold, Total: total, Curve: curve, Generator: generator}, nil
 }
 
 // Split creates the verifiers, blinding and shares.
 func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 	// generate a random blinding factor
-	blinding := pd.Curve.Scalar.Random(prng)
+	blinding := pd.Curve.Scalar().Random(prng)
 
 	shamirDealer := shamir.Dealer{
 		Threshold: pd.Threshold,
@@ -116,7 +121,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 	}
 
 	return &Output{
-		blinding, blindingShares, shares, commitments, blindedCommitments, pd.Generator,
+		Blinding: blinding, BlindingShares: blindingShares, SecretShares: shares, Commitments: commitments, BlindedCommitments: blindedCommitments, Generator: pd.Generator,
 	}
 }
 

@@ -6,11 +6,13 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -25,14 +27,18 @@ type Participant struct {
 	sessionId  []byte
 	transcript transcripts.Transcript
 	prng       io.Reader
+
+	_ helper_types.Incomparable
 }
 
 type State struct {
-	curve *curves.Curve
+	curve curves.Curve
 	q     *big.Int
 	q2    *big.Int
 	a     *big.Int
 	b     *big.Int
+
+	_ helper_types.Incomparable
 }
 
 type VerifierState struct {
@@ -40,6 +46,8 @@ type VerifierState struct {
 	cDoublePrimeWitness commitments.Witness
 	bigQPrime           curves.Point
 	cHat                commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Verifier struct {
@@ -47,6 +55,8 @@ type Verifier struct {
 	rangeVerifier *paillierrange.Verifier
 	c             paillier.CipherText
 	state         *VerifierState
+
+	_ helper_types.Incomparable
 }
 
 type ProverState struct {
@@ -55,6 +65,8 @@ type ProverState struct {
 	bigQHat                curves.Point
 	bigQHatWitness         commitments.Witness
 	cDoublePrimeCommitment commitments.Commitment
+
+	_ helper_types.Incomparable
 }
 
 type Prover struct {
@@ -63,6 +75,8 @@ type Prover struct {
 	sk          *paillier.SecretKey
 	x           curves.Scalar
 	state       *ProverState
+
+	_ helper_types.Incomparable
 }
 
 func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
@@ -70,15 +84,15 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	curve, err := curves.GetCurveByName(bigQ.CurveName())
+	curve, err := bigQ.Curve()
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", bigQ.CurveName())
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "cannot get native curve")
 	}
@@ -117,15 +131,15 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	curve, err := curves.GetCurveByName(x.CurveName())
+	curve, err := x.Curve()
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", x.CurveName())
+		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	nativeCurve, err := curve.ToEllipticCurve()
+	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "cannot get native curve")
 	}

@@ -2,9 +2,10 @@ package softspoken
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Receiver struct {
@@ -22,10 +23,12 @@ type Receiver struct {
 	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
+	curve curves.Curve
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
+
+	_ helper_types.Incomparable
 }
 
 type Sender struct {
@@ -40,10 +43,12 @@ type Sender struct {
 	transcript transcripts.Transcript
 
 	// curve is the elliptic curve used in the protocol.
-	curve *curves.Curve
+	curve curves.Curve
 
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
+
+	_ helper_types.Incomparable
 }
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
@@ -52,11 +57,11 @@ func NewCOtReceiver(
 	baseOtResults *vsot.SenderOutput,
 	uniqueSessionId []byte,
 	transcript transcripts.Transcript,
-	curve *curves.Curve,
+	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Receiver{
@@ -74,11 +79,11 @@ func NewCOtSender(
 	baseOtResults *vsot.ReceiverOutput,
 	uniqueSessionId []byte,
 	transcript transcripts.Transcript,
-	curve *curves.Curve,
+	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {
 	if transcript == nil {
-		transcript = merlin.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Sender{

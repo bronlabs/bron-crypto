@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
 	"math/big"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 var _ lindell17.Participant = (*Participant)(nil)
@@ -30,34 +31,38 @@ type State struct {
 	myRPrime          *big.Int
 	myRDoublePrime    *big.Int
 
-	theirBigQCommitment          map[integration.IdentityKey]commitments.Commitment
-	theirBigQPrime               map[integration.IdentityKey]curves.Point
-	theirBigQDoublePrime         map[integration.IdentityKey]curves.Point
-	theirPaillierPublicKeys      map[integration.IdentityKey]*paillier.PublicKey
-	theirPaillierEncryptedShares map[integration.IdentityKey]paillier.CipherText
+	theirBigQCommitment          map[helper_types.IdentityHash]commitments.Commitment
+	theirBigQPrime               map[helper_types.IdentityHash]curves.Point
+	theirBigQDoublePrime         map[helper_types.IdentityHash]curves.Point
+	theirPaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
+	theirPaillierEncryptedShares map[helper_types.IdentityHash]paillier.CipherText
 
-	lpProvers                map[integration.IdentityKey]*lp.Prover
-	lpVerifiers              map[integration.IdentityKey]*lp.Verifier
-	lpdlPrimeProvers         map[integration.IdentityKey]*lpdl.Prover
-	lpdlPrimeVerifiers       map[integration.IdentityKey]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[integration.IdentityKey]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[integration.IdentityKey]*lpdl.Verifier
+	lpProvers                map[helper_types.IdentityHash]*lp.Prover
+	lpVerifiers              map[helper_types.IdentityHash]*lp.Verifier
+	lpdlPrimeProvers         map[helper_types.IdentityHash]*lpdl.Prover
+	lpdlPrimeVerifiers       map[helper_types.IdentityHash]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[helper_types.IdentityHash]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[helper_types.IdentityHash]*lpdl.Verifier
+
+	_ helper_types.Incomparable
 }
 
 type Participant struct {
 	lindell17.Participant
 	myIdentityKey     integration.IdentityKey
-	mySharingId        int
+	mySharingId       int
 	mySigningKeyShare *threshold.SigningKeyShare
 	publicKeyShares   *threshold.PublicKeyShares
 	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId   map[integration.IdentityKey]int
+	idKeyToSharingId  map[helper_types.IdentityHash]int
 	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
 
 	round int
 	state *State
+
+	_ helper_types.Incomparable
 }
 
 const (
@@ -94,7 +99,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	if transcript == nil {
-		transcript = merlin.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -102,11 +107,11 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 
 	return &Participant{
 		myIdentityKey:     myIdentityKey,
-		mySharingId:        mySharingId,
+		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
 		cohortConfig:      cohortConfig,
-		idKeyToSharingId:   idKeyToSharingId,
+		idKeyToSharingId:  idKeyToSharingId,
 		sessionId:         sessionId,
 		transcript:        transcript,
 		prng:              prng,

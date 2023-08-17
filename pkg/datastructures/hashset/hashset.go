@@ -2,11 +2,14 @@ package hashset
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 )
 
 type HashSet[T types.Hashable] struct {
 	value map[[32]byte]T
+
+	_ helper_types.Incomparable
 }
 
 func NewHashSet[T types.Hashable](participants []T) (HashSet[T], error) {

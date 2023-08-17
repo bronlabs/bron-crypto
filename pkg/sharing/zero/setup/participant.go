@@ -7,39 +7,46 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 type Participant struct {
 	prng io.Reader
 
 	UniqueSessionId []byte
-	Curve           *curves.Curve
+	Curve           curves.Curve
 	MyIdentityKey   integration.IdentityKey
 	MySharingId     int
 	Participants    []integration.IdentityKey
 
-	IdentityKeyToSharingId map[integration.IdentityKey]int
+	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
 	state *State
 	round int
+
+	_ helper_types.Incomparable
 }
 
 type State struct {
-	receivedSeeds map[integration.IdentityKey]commitments.Commitment
-	sentSeeds     map[integration.IdentityKey]*committedSeedContribution
+	receivedSeeds map[helper_types.IdentityHash]commitments.Commitment
+	sentSeeds     map[helper_types.IdentityHash]*committedSeedContribution
 	transcript    transcripts.Transcript
+
+	_ helper_types.Incomparable
 }
 
 type committedSeedContribution struct {
 	seed       []byte
 	commitment commitments.Commitment
 	witness    commitments.Witness
+
+	_ helper_types.Incomparable
 }
 
-func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -71,7 +78,7 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 	}
 	sortedParticipants := integration.SortIdentityKeys(participants)
 	if transcript == nil {
-		transcript = merlin.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
 	}
 	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
 
@@ -85,8 +92,8 @@ func NewParticipant(curve *curves.Curve, uniqueSessionId []byte, identityKey int
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: map[integration.IdentityKey]commitments.Commitment{},
-			sentSeeds:     map[integration.IdentityKey]*committedSeedContribution{},
+			receivedSeeds: map[helper_types.IdentityHash]commitments.Commitment{},
+			sentSeeds:     map[helper_types.IdentityHash]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil

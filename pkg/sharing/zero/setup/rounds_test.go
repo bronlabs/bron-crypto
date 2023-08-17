@@ -8,6 +8,8 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
@@ -15,7 +17,7 @@ import (
 
 var h = sha3.New256
 
-func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
+func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
@@ -57,8 +59,8 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 			if i == j {
 				continue
 			}
-			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey]
-			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey]
+			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyIdentityKey.Hash()]
+			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyIdentityKey.Hash()]
 			require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 		}
 	}
@@ -66,11 +68,11 @@ func testHappyPath(t *testing.T, curve *curves.Curve, n int) {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []*curves.Curve{curves.ED25519(), curves.K256()} {
+	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
 		for _, n := range []int{2, 10} {
 			boundedCurve := curve
 			boundedN := n
-			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
 				testHappyPath(t, boundedCurve, boundedN)
 			})

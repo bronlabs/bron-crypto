@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -16,7 +17,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	curve := curves.K256()
+	curve := k256.New()
 	h := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -72,7 +73,7 @@ func Test_HappyPath(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			shamirShares[i] = &shamir.Share{
 				Id:    i + 1,
-				Value: shards[identities[i]].SigningKeyShare.Share,
+				Value: shards[identities[i].Hash()].SigningKeyShare.Share,
 			}
 		}
 
@@ -80,7 +81,7 @@ func Test_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 
 		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-		require.True(t, shards[identities[0]].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
+		require.True(t, shards[identities[0].Hash()].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
 	})
 
 	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {
@@ -90,7 +91,7 @@ func Test_HappyPath(t *testing.T) {
 			myShare := myShard.SigningKeyShare.Share.BigInt()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for _, theirShard := range shards {
-				if myShard != theirShard {
+				if myShard.PaillierSecretKey.N.Cmp(theirShard.PaillierSecretKey.N) != 0 && myShard.PaillierSecretKey.N2.Cmp(theirShard.PaillierSecretKey.N2) != 0 {
 					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 					require.NoError(t, err)
