@@ -3,6 +3,7 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -35,8 +36,8 @@ func Test_HappyPath(t *testing.T) {
 		Protocol:             protocols.LINDELL17,
 		Threshold:            2,
 		TotalParties:         3,
-		Participants:         []integration.IdentityKey{alice, bob, charlie},
-		SignatureAggregators: []integration.IdentityKey{alice, bob, charlie},
+		Participants:         hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
+		SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
 	}
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)

@@ -25,7 +25,7 @@ type Cosigner struct {
 	Shard         *frost.Shard
 
 	CohortConfig           *integration.CohortConfig
-	SessionParticipants    []integration.IdentityKey
+	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	SharingIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
@@ -49,7 +49,7 @@ func (nic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (nic *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range nic.CohortConfig.SignatureAggregators {
+	for _, signatureAggregator := range nic.CohortConfig.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(nic.MyIdentityKey.PublicKey()) {
 			return true
 		}
@@ -60,7 +60,7 @@ func (nic *Cosigner) IsSignatureAggregator() bool {
 func NewNonInteractiveCosigner(
 	identityKey integration.IdentityKey, shard *frost.Shard,
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
-	presentParties []integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader,
+	presentParties *hashset.HashSet[integration.IdentityKey], cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*Cosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
@@ -80,19 +80,15 @@ func NewNonInteractiveCosigner(
 
 	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 
-	for i, participant := range presentParties {
+	for i, participant := range presentParties.Iter() {
 		if participant == nil {
-			return nil, errs.NewIsNil("participant %d is nil", i)
+			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	presentPartiesHashSet, err := hashset.NewHashSet(presentParties)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct present participant hash set")
-	}
-	if presentPartiesHashSet.Size() <= 0 {
+	if presentParties.Len() <= 0 {
 		return nil, errs.NewInvalidArgument("no party is present")
 	}
-	for _, participant := range presentParties {
+	for _, participant := range presentParties.Iter() {
 		if !cohortConfig.IsInCohort(participant) {
 			return nil, errs.NewMissing("present party is not in cohort")
 		}
@@ -123,7 +119,7 @@ func NewNonInteractiveCosigner(
 	E_alpha := map[helper_types.IdentityHash]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
-		_, found := presentPartiesHashSet.Get(attestedCommitment.Attestor)
+		_, found := presentParties.Get(attestedCommitment.Attestor)
 		if !found {
 			continue
 		}

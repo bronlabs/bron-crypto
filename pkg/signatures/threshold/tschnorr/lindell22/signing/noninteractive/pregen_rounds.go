@@ -81,7 +81,7 @@ func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Br
 	bigRProof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitment[i] = make(map[helper_types.IdentityHash]commitments.Commitment)
-		for _, identity := range p.cohortConfig.Participants {
+		for _, identity := range p.cohortConfig.Participants.Iter() {
 			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
@@ -115,7 +115,7 @@ func (p *PreGenParticipant) Round3(input map[helper_types.IdentityHash]*Round2Br
 	BigR := make([]map[helper_types.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
 		BigR[i] = make(map[helper_types.IdentityHash]curves.Point)
-		for _, identity := range p.cohortConfig.Participants {
+		for _, identity := range p.cohortConfig.Participants.Iter() {
 			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))

@@ -14,9 +14,9 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []integration.IdentityKey) []byte {
@@ -24,7 +24,7 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []int
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
 		var participant *agreeonrandom.Participant
-		participant, _ = agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
+		participant, _ = agreeonrandom.NewParticipant(curve, identity, hashset.NewHashSet(identities), nil, crand.Reader)
 		participants = append(participants, participant)
 	}
 
@@ -64,43 +64,6 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 		}
 	}
 	return random
-}
-
-func testDuplicatePubKeys(t *testing.T, curve curves.Curve) {
-	t.Helper()
-	var randomErr error
-	// eventually duplicate pubkey will cause failed to generate unique random
-	for i := 0; i < 10; i++ {
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  sha3.New256,
-		}
-
-		identityAlice, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{1}), nil)
-		require.NoError(t, err)
-		identityBob, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{1}), nil)
-		require.NoError(t, err)
-		identityCharlie, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte{2}), nil)
-		require.NoError(t, err)
-		identities := []integration.IdentityKey{identityAlice, identityBob, identityCharlie}
-		_, err = test_utils.ProduceSharedRandomValue(curve, identities)
-		if err != nil {
-			randomErr = err
-			break
-		}
-	}
-	require.True(t, errs.IsDuplicate(randomErr))
-}
-
-func TestDuplicatePubkeys(t *testing.T) {
-	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
-		boundedCurve := curve
-		t.Run(fmt.Sprintf("Test duplicate pubkeys curve=%s", boundedCurve.Name()), func(t *testing.T) {
-			t.Parallel()
-			testDuplicatePubKeys(t, boundedCurve)
-		})
-	}
 }
 
 func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {

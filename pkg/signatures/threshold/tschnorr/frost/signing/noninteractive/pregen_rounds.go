@@ -65,8 +65,10 @@ func (p *PreGenParticipant) Round2(round1output map[helper_types.IdentityHash]*R
 	privateNoncePairs := make([]*PrivateNoncePair, p.Tau)
 
 	for i := 0; i < p.Tau; i++ {
-		preSignature := make(PreSignature, len(p.CohortConfig.Participants))
-		for j, participant := range p.CohortConfig.Participants {
+		preSignature := make(PreSignature, p.CohortConfig.Participants.Len())
+		j := -1
+		for _, participant := range p.CohortConfig.Participants.Iter() {
+			j++
 			senderSharingId := j + 1
 			message, exists := round1output[participant.Hash()]
 			if !exists {

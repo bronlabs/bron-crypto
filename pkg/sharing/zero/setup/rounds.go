@@ -32,7 +32,7 @@ func (p *Participant) Round1() (map[helper_types.IdentityHash]*Round1P2P, error)
 	}
 
 	output := map[helper_types.IdentityHash]*Round1P2P{}
-	for _, participant := range p.Participants {
+	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue
@@ -67,7 +67,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1P
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 	output := map[helper_types.IdentityHash]*Round2P2P{}
-	for _, participant := range p.Participants {
+	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue
@@ -98,7 +98,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 	pairwiseSeeds := zero.PairwiseSeeds{}
-	for _, participant := range p.Participants {
+	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue

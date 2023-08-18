@@ -1,11 +1,14 @@
 package signing_helpers
 
 import (
+	"sort"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
@@ -13,7 +16,7 @@ import (
 
 func ProducePartialSignature(
 	participant frost.Participant,
-	sessionParticipants []integration.IdentityKey,
+	sessionParticipants *hashset.HashSet[integration.IdentityKey],
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
 	D_alpha, E_alpha map[helper_types.IdentityHash]curves.Point,
@@ -27,14 +30,17 @@ func ProducePartialSignature(
 	R := cohortConfig.CipherSuite.Curve.Point().Identity()
 	r_i := cohortConfig.CipherSuite.Curve.Scalar().Zero()
 
+	// we need to consistently order the Ds and Es
 	combinedDsAndEs := []byte{}
-	for _, presentParty := range sessionParticipants {
+	sortedIdentities := integration.ByPublicKey(sessionParticipants.List())
+	sort.Sort(sortedIdentities)
+	for _, presentParty := range sortedIdentities {
 		combinedDsAndEs = append(combinedDsAndEs, D_alpha[presentParty.Hash()].ToAffineCompressed()...)
 		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty.Hash()].ToAffineCompressed()...)
 	}
 
 	R_js := map[helper_types.IdentityHash]curves.Point{}
-	for _, participant := range sessionParticipants {
+	for _, participant := range sessionParticipants.Iter() {
 		sharingId := identityKeyToSharingId[participant.Hash()]
 		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
 		if sharingId == mySharingId {
@@ -70,9 +76,11 @@ func ProducePartialSignature(
 		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 	}
 
-	presentPartySharingIds := make([]int, len(sessionParticipants))
-	for i := 0; i < len(sessionParticipants); i++ {
-		presentPartySharingIds[i] = identityKeyToSharingId[sessionParticipants[i].Hash()]
+	presentPartySharingIds := make([]int, sessionParticipants.Len())
+	i := -1
+	for _, sessionParticipant := range sessionParticipants.Iter() {
+		i++
+		presentPartySharingIds[i] = identityKeyToSharingId[sessionParticipant.Hash()]
 	}
 
 	shamirShare := &shamir.Share{

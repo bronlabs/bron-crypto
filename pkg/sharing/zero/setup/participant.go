@@ -2,6 +2,7 @@ package setup
 
 import (
 	"io"
+	"sort"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -16,11 +17,11 @@ import (
 type Participant struct {
 	prng io.Reader
 
-	UniqueSessionId []byte
-	Curve           curves.Curve
-	MyIdentityKey   integration.IdentityKey
-	MySharingId     int
-	Participants    []integration.IdentityKey
+	UniqueSessionId    []byte
+	Curve              curves.Curve
+	MyIdentityKey      integration.IdentityKey
+	MySharingId        int
+	SortedParticipants []integration.IdentityKey
 
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
@@ -46,7 +47,7 @@ type committedSeedContribution struct {
 	_ helper_types.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
@@ -56,19 +57,15 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	if uniqueSessionId == nil {
 		return nil, errs.NewInvalidArgument("session id is nil")
 	}
-	if len(participants) < 2 {
+	if participants.Len() < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	for i, participant := range participants {
+	for i, participant := range participants.Iter() {
 		if participant == nil {
-			return nil, errs.NewIsNil("participant %d is nil", i)
+			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	participantHashSet, err := hashset.NewHashSet(participants)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct participant hash set")
-	}
-	_, found := participantHashSet.Get(identityKey)
+	_, found := participants.Get(identityKey)
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
@@ -76,7 +73,8 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
-	sortedParticipants := integration.SortIdentityKeys(participants)
+	sortedParticipants := integration.ByPublicKey(participants.List())
+	sort.Sort(sortedParticipants)
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
 	}
@@ -87,7 +85,7 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 		Curve:                  curve,
 		MyIdentityKey:          identityKey,
 		MySharingId:            mySharingId,
-		Participants:           sortedParticipants,
+		SortedParticipants:     sortedParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{

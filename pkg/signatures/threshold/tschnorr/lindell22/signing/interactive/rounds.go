@@ -72,7 +72,7 @@ func (p *Cosigner) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) 
 	}
 
 	p.state.theirBigRCommitment = make(map[helper_types.IdentityHash]commitments.Commitment)
-	for _, identity := range p.sessionParticipants {
+	for _, identity := range p.sessionParticipants.Iter() {
 		in, ok := input[identity.Hash()]
 		if !ok {
 			return nil, errs.NewMissing("no input from participant")
@@ -101,7 +101,7 @@ func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, 
 	}
 
 	bigR := p.cohortConfig.CipherSuite.Curve.Point().Identity()
-	for _, identity := range p.sessionParticipants {
+	for _, identity := range p.sessionParticipants.Iter() {
 		in, ok := input[identity.Hash()]
 		if !ok {
 			return nil, errs.NewMissing("no input from participant")

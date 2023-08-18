@@ -3,6 +3,7 @@ package test_utils
 import (
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 )
@@ -15,7 +16,7 @@ func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities [
 		return nil, err
 	}
 	for i, identity := range identities {
-		participants[i], err = sample.NewParticipant(cohortConfig, uniqueSessionId, identity, seeds[i], identities)
+		participants[i], err = sample.NewParticipant(cohortConfig, uniqueSessionId, identity, seeds[i], hashset.NewHashSet(identities))
 		if err != nil {
 			return nil, err
 		}

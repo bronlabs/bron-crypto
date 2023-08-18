@@ -128,7 +128,7 @@ func (p *Participant) Round2(input map[helper_types.IdentityHash]*Round1Broadcas
 
 	// 2. store commitments
 	p.state.theirBigQCommitment = make(map[helper_types.IdentityHash]commitments.Commitment)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -170,7 +170,7 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 	p.state.theirBigQDoublePrime = make(map[helper_types.IdentityHash]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -224,7 +224,7 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 	p.state.lpProvers = make(map[helper_types.IdentityHash]*lp.Prover)
 	p.state.lpdlPrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -266,7 +266,7 @@ func (p *Participant) Round4(input map[helper_types.IdentityHash]*Round3Broadcas
 	p.state.lpdlDoublePrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)
 
 	round4Outputs := make(map[helper_types.IdentityHash]*Round4P2P)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -334,7 +334,7 @@ func (p *Participant) Round5(input map[helper_types.IdentityHash]*Round4P2P) (ou
 
 	// 5. LP and LPDL continue
 	round5Outputs := make(map[helper_types.IdentityHash]*Round5P2P)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -369,7 +369,7 @@ func (p *Participant) Round6(input map[helper_types.IdentityHash]*Round5P2P) (ou
 
 	// 6. LP and LPDL continue
 	round6Outputs := make(map[helper_types.IdentityHash]*Round6P2P)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -404,7 +404,7 @@ func (p *Participant) Round7(input map[helper_types.IdentityHash]*Round6P2P) (ou
 
 	// 7. LP and LPDL continue
 	round7Outputs := make(map[helper_types.IdentityHash]*Round7P2P)
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}
@@ -437,7 +437,7 @@ func (p *Participant) Round8(input map[helper_types.IdentityHash]*Round7P2P) (sh
 		return nil, errs.NewInvalidRound("%d != 8", p.round)
 	}
 
-	for _, identity := range p.cohortConfig.Participants {
+	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
 		}

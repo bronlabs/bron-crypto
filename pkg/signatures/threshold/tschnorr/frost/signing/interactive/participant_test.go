@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	trusted_dealer "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/keygen/ed25519_trusted_dealer"
 )
@@ -70,8 +71,8 @@ func Test_CanInitialize(t *testing.T) {
 		Protocol:             protocols.FROST,
 		Threshold:            2,
 		TotalParties:         2,
-		Participants:         identityKeys,
-		SignatureAggregators: identityKeys,
+		Participants:         hashset.NewHashSet(identityKeys),
+		SignatureAggregators: hashset.NewHashSet(identityKeys),
 	}
 	identityKeysToSigningKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
@@ -94,9 +95,9 @@ func Test_CanInitialize(t *testing.T) {
 		PublicKeyShares: nil,
 	}
 
-	alice, err := NewInteractiveCosigner(aliceIdentityKey, aliceSessionParticipants, &aliceShard, cohortConfig, crand.Reader)
+	alice, err := NewInteractiveCosigner(aliceIdentityKey, hashset.NewHashSet(aliceSessionParticipants), &aliceShard, cohortConfig, crand.Reader)
 	require.NoError(t, err)
-	bob, err := NewInteractiveCosigner(bobIdentityKey, bobSessionParticipants, &bobShard, cohortConfig, crand.Reader)
+	bob, err := NewInteractiveCosigner(bobIdentityKey, hashset.NewHashSet(bobSessionParticipants), &bobShard, cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	for _, party := range []*Cosigner{alice, bob} {
 		require.NoError(t, err)

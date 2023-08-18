@@ -78,7 +78,7 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, 
 	fz.Fuzz(&sid)
 	_, _, _, shards, err := dkls23_test_utils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
 	if err != nil {
-		if errs.IsDuplicate(err) {
+		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.Skip("too many participants")
 		}
 	}

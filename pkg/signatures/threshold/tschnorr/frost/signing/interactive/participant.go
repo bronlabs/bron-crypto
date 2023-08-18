@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
 )
@@ -23,7 +24,7 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SharingIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
-	SessionParticipants    []integration.IdentityKey
+	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
 
 	round int
 	state *State
@@ -44,7 +45,7 @@ func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range ic.CohortConfig.SignatureAggregators {
+	for _, signatureAggregator := range ic.CohortConfig.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			return true
 		}
@@ -63,7 +64,7 @@ type State struct {
 	_ helper_types.Incomparable
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
+func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -80,10 +81,10 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 	if sessionParticipants == nil {
 		return nil, errs.NewIsNil("invalid number of session participants")
 	}
-	if len(sessionParticipants) != cohortConfig.Threshold {
+	if sessionParticipants.Len() != cohortConfig.Threshold {
 		return nil, errs.NewIncorrectCount("invalid number of session participants")
 	}
-	for _, sessionParticipant := range sessionParticipants {
+	for _, sessionParticipant := range sessionParticipants.Iter() {
 		if !cohortConfig.IsInCohort(sessionParticipant) {
 			return nil, errs.NewInvalidArgument("invalid session participant")
 		}

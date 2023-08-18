@@ -15,8 +15,9 @@ import (
 type Participant struct {
 	prng io.Reader
 
-	Curve         curves.Curve
-	MyIdentityKey integration.IdentityKey
+	Curve               curves.Curve
+	MyIdentityKey       integration.IdentityKey
+	SharingIdToIdentity map[int]integration.IdentityKey
 
 	state *State
 	round int
@@ -31,26 +32,22 @@ type State struct {
 	_ helper_types.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants []integration.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
-	if len(participants) < 2 {
+	if participants.Len() < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	for i, participant := range participants {
+	for i, participant := range participants.Iter() {
 		if participant == nil {
-			return nil, errs.NewIsNil("participant %d is nil", i)
+			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	presentParticipantHashSet, err := hashset.NewHashSet(participants)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't construct hashset of participants")
-	}
-	_, found := presentParticipantHashSet.Get(identityKey)
+	_, found := participants.Get(identityKey)
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
@@ -59,11 +56,14 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
 	}
+	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(identityKey, participants)
+
 	return &Participant{
-		prng:          prng,
-		MyIdentityKey: identityKey,
-		round:         1,
-		Curve:         curve,
+		prng:                prng,
+		MyIdentityKey:       identityKey,
+		round:               1,
+		Curve:               curve,
+		SharingIdToIdentity: sharingIdToIdentity,
 		state: &State{
 			transcript: transcript,
 		},

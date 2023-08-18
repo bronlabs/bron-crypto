@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/signing/interactive"
@@ -37,7 +38,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 			return nil, errors.New("invalid identity")
 		}
 		// TODO: test for what happens if session participants are set to be different for different parties
-		participants[i], err = interactive.NewCosigner(sid, identity, identities, shards[i], cohortConfig, prng, nil)
+		participants[i], err = interactive.NewCosigner(sid, identity, hashset.NewHashSet(identities), shards[i], cohortConfig, prng, nil)
 		if err != nil {
 			return nil, err
 		}

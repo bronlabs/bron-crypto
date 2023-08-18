@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
@@ -63,8 +64,8 @@ func Test_CanInitialize(t *testing.T) {
 		Protocol:             protocols.FROST,
 		Threshold:            2,
 		TotalParties:         2,
-		Participants:         identityKeys,
-		SignatureAggregators: identityKeys,
+		Participants:         hashset.NewHashSet(identityKeys),
+		SignatureAggregators: hashset.NewHashSet(identityKeys),
 	}
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identityKeys)
 	require.NoError(t, err)

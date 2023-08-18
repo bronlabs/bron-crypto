@@ -8,12 +8,13 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 func ProduceSharedRandomValue(curve curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
-		participant, err := agreeonrandom.NewParticipant(curve, identity, identities, nil, crand.Reader)
+		participant, err := agreeonrandom.NewParticipant(curve, identity, hashset.NewHashSet(identities), nil, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

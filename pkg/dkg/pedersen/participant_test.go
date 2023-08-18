@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 type mockedIdentityKey struct {
@@ -66,8 +67,8 @@ func Test_CanInitialize(t *testing.T) {
 		Protocol:             protocols.FROST,
 		Threshold:            2,
 		TotalParties:         2,
-		Participants:         identityKeys,
-		SignatureAggregators: identityKeys,
+		Participants:         hashset.NewHashSet(identityKeys),
+		SignatureAggregators: hashset.NewHashSet(identityKeys),
 	}
 	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, crand.Reader)
 	require.NoError(t, err)

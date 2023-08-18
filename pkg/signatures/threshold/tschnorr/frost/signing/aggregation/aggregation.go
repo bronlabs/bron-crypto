@@ -2,12 +2,14 @@ package aggregation
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
@@ -17,7 +19,7 @@ type SignatureAggregator struct {
 	CohortConfig           *integration.CohortConfig
 	PublicKey              curves.Point
 	MyIdentityKey          integration.IdentityKey
-	SessionParticipants    []integration.IdentityKey
+	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 	PublicKeyShares        *frost.PublicKeyShares
 	Message                []byte
@@ -41,7 +43,7 @@ type SignatureAggregatorParameters struct {
 	_ helper_types.Incomparable
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants []integration.IdentityKey, identityKeyToSharingId map[helper_types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[helper_types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -51,7 +53,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if sessionParticipants == nil {
 		return nil, errs.NewIsNil("must provide the list of the sharing ids of session participants")
 	}
-	if len(sessionParticipants) == 0 {
+	if sessionParticipants.Len() == 0 {
 		return nil, errs.NewIncorrectCount("must provide the list of the sharing ids of session participants")
 	}
 	if len(identityKeyToSharingId) != cohortConfig.TotalParties {
@@ -86,7 +88,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		parameters:             parameters,
 	}
 	if aggregator.HasIdentifiableAbort() {
-		if len(aggregator.parameters.R_js) != len(sessionParticipants) {
+		if len(aggregator.parameters.R_js) != sessionParticipants.Len() {
 			return nil, errs.NewIncorrectCount("identifiable abort is enabled and the size of Rjs and S is not equal.")
 		}
 	}
@@ -95,10 +97,10 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 
 // TODO: condense/simplify.
 func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
-	if len(sa.parameters.D_alpha) != len(sa.SessionParticipants) {
+	if len(sa.parameters.D_alpha) != sa.SessionParticipants.Len() {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
 	}
-	if len(sa.parameters.E_alpha) != len(sa.SessionParticipants) {
+	if len(sa.parameters.E_alpha) != sa.SessionParticipants.Len() {
 		return nil, errs.NewIncorrectCount("length of E_alpha is not equal to S")
 	}
 	// This is for TS-SUF-4 in case aggregator was the one computing the R
@@ -107,14 +109,15 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 	if sa.parameters.R == nil {
 		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point().Identity()
 		combinedDsAndEs := []byte{}
-		for _, presentParty := range sa.SessionParticipants {
+		// we need to consistently order the Ds and Es
+		sortedIdentities := integration.ByPublicKey(sa.SessionParticipants.List())
+		sort.Sort(sortedIdentities)
+		for _, presentParty := range sortedIdentities {
 			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.D_alpha[presentParty.Hash()].ToAffineCompressed()...)
-		}
-		for _, presentParty := range sa.SessionParticipants {
 			combinedDsAndEs = append(combinedDsAndEs, sa.parameters.E_alpha[presentParty.Hash()].ToAffineCompressed()...)
 		}
 
-		for _, jIdentityKey := range sa.SessionParticipants {
+		for _, jIdentityKey := range sa.SessionParticipants.Iter() {
 			j := sa.IdentityKeyToSharingId[jIdentityKey.Hash()]
 
 			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
@@ -139,13 +142,14 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 			return nil, errs.WrapFailed(err, "could not initialise shamir config")
 		}
 
-		sharingIDs := make([]int, len(sa.SessionParticipants))
-		for i, party := range sa.SessionParticipants {
+		var sharingIDs []int
+		for _, party := range sa.SessionParticipants.Iter() {
 			var ok bool
-			sharingIDs[i], ok = sa.IdentityKeyToSharingId[party.Hash()]
+			sharingID, ok := sa.IdentityKeyToSharingId[party.Hash()]
 			if !ok {
 				return nil, errs.NewMissing("could not find sharing id for the party")
 			}
+			sharingIDs = append(sharingIDs, sharingID)
 		}
 		lagrangeCoefficients, err := shamirConfig.LagrangeCoefficients(sharingIDs)
 		if err != nil {
@@ -162,7 +166,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 			return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
 		}
 
-		for _, jIdentityKey := range sa.SessionParticipants {
+		for _, jIdentityKey := range sa.SessionParticipants.Iter() {
 			j, exists := sa.IdentityKeyToSharingId[jIdentityKey.Hash()]
 			if !exists {
 				return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)

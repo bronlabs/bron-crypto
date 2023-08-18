@@ -1,7 +1,10 @@
 package sample
 
 import (
+	"sort"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
@@ -14,10 +17,12 @@ func (p *Participant) Sample() (zero.Sample, error) {
 	// We need to sample a random value that is consistent with the seeds we received from the other participants.
 	// Because we want to enforce that we abort if participants don't agree on who's present in the sampling phase.
 	var presentParticipantIdentityKey []byte
-	for _, participant := range p.PresentParticipants {
+	sortedParticipants := integration.ByPublicKey(p.PresentParticipants.List())
+	sort.Sort(sortedParticipants)
+	for _, participant := range sortedParticipants {
 		presentParticipantIdentityKey = append(presentParticipantIdentityKey, participant.PublicKey().ToAffineCompressed()...)
 	}
-	for _, participant := range p.PresentParticipants {
+	for _, participant := range sortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
 			continue

@@ -1,18 +1,23 @@
 package signing
 
 import (
+	"sort"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []integration.IdentityKey, identityKeyToSharingId map[helper_types.IdentityHash]int) (curves.Scalar, error) {
-	shamirIndices := make([]int, len(participants))
-	for i, identity := range participants {
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[helper_types.IdentityHash]int) (curves.Scalar, error) {
+	shamirIndices := make([]int, participants.Len())
+	i := -1
+	for _, identity := range participants.Iter() {
+		i++
 		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]
 	}
 	share := &shamir.Share{
@@ -27,8 +32,9 @@ func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants []
 	return additiveShare, nil
 }
 
-func BigS(participants []integration.IdentityKey) []byte {
-	sortedIdentities := integration.SortIdentityKeys(participants)
+func BigS(participants *hashset.HashSet[integration.IdentityKey]) []byte {
+	sortedIdentities := integration.ByPublicKey(participants.List())
+	sort.Sort(sortedIdentities)
 	var bigS []byte
 	for _, identity := range sortedIdentities {
 		pid := identity.PublicKey().ToAffineCompressed()

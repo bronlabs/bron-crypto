@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 type PrivateNoncePair struct {
@@ -75,14 +74,12 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 	if ps == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
-	for i, participant := range cohortConfig.Participants {
+	i := -1
+	for _, participant := range cohortConfig.Participants.Iter() {
+		i++
 		if participant == nil {
 			return errs.NewIsNil("participant %d is nil", i)
 		}
-	}
-	attestorsHashSet, err := hashset.NewHashSet(cohortConfig.Participants)
-	if err != nil {
-		return errs.WrapFailed(err, "could not construct participant hash set")
 	}
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
@@ -98,12 +95,6 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 		}
 		DHashSet[thisPartyAttestedCommitment.D] = true
 		EHashSet[thisPartyAttestedCommitment.E] = true
-	}
-	for _, participant := range cohortConfig.Participants {
-		_, found := attestorsHashSet.Get(participant)
-		if !found {
-			return errs.NewMissing("at least one party in the cohort does not have an attested commitment")
-		}
 	}
 	sortPreSignatureInPlace(cohortConfig, *ps)
 	return nil

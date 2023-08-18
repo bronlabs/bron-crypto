@@ -91,7 +91,7 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output map[helper_types.I
 	D_alpha = map[helper_types.IdentityHash]curves.Point{}
 	E_alpha = map[helper_types.IdentityHash]curves.Point{}
 
-	for _, senderIdentityKey := range ic.SessionParticipants {
+	for _, senderIdentityKey := range ic.SessionParticipants.Iter() {
 		sharingId, exists := ic.IdentityKeyToSharingId[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, nil, errs.NewMissing("sender identity key is not found")

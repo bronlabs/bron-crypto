@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
@@ -27,10 +28,10 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 
-	alice, err := NewParticipant(curve, aliceIdentityKey, identities, nil, crand.Reader)
+	alice, err := NewParticipant(curve, aliceIdentityKey, hashset.NewHashSet(identities), nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, bobIdentityKey, identities, nil, crand.Reader)
+	bob, err := NewParticipant(curve, bobIdentityKey, hashset.NewHashSet(identities), nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {

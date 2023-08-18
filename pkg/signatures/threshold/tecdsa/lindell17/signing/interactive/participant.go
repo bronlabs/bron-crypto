@@ -90,7 +90,7 @@ func (cosigner *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (cosigner *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range cosigner.cohortConfig.SignatureAggregators {
+	for _, signatureAggregator := range cosigner.cohortConfig.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(cosigner.myIdentityKey.PublicKey()) {
 			return true
 		}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	interactive_signing "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/interactive"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
@@ -23,7 +24,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 			return nil, errors.New("invalid identity")
 		}
 		// TODO: test for what happens if session participants are set to be different for different parties
-		participants[i], err = interactive_signing.NewInteractiveCosigner(identity, identities, shards[i], cohortConfig, crand.Reader)
+		participants[i], err = interactive_signing.NewInteractiveCosigner(identity, hashset.NewHashSet(identities), shards[i], cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err
 		}
@@ -35,7 +36,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.Cosigner, err error) {
 	participants = make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
-		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], identities, cohortConfig, crand.Reader)
+		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

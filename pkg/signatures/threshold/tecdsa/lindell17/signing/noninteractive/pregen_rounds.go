@@ -74,7 +74,7 @@ func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Br
 
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitments[i] = make(map[helper_types.IdentityHash]commitments.Commitment)
-		for _, identity := range p.cohortConfig.Participants {
+		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}
@@ -111,7 +111,7 @@ func (p *PreGenParticipant) Round3(input map[helper_types.IdentityHash]*Round2Br
 	for i := 0; i < p.tau; i++ {
 		commonBigR[i] = make(map[helper_types.IdentityHash]curves.Point)
 
-		for _, identity := range p.cohortConfig.Participants {
+		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if types.Equals(identity, p.myIdentityKey) {
 				continue
 			}

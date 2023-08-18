@@ -20,6 +20,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
@@ -106,8 +107,8 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 		Protocol:             protocols.LINDELL17,
 		Threshold:            lindell17.Threshold,
 		TotalParties:         n,
-		Participants:         identities,
-		SignatureAggregators: identities,
+		Participants:         hashset.NewHashSet(identities),
+		SignatureAggregators: hashset.NewHashSet(identities),
 	}
 	var sid []byte
 	fz.Fuzz(&sid)
@@ -163,8 +164,8 @@ func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integra
 		Protocol:             protocols.LINDELL17,
 		Threshold:            lindell17.Threshold,
 		TotalParties:         n,
-		Participants:         identities,
-		SignatureAggregators: identities,
+		Participants:         hashset.NewHashSet(identities),
+		SignatureAggregators: hashset.NewHashSet(identities),
 	}
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)

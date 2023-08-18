@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -23,7 +24,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
 		}
-		participants[i], err = interactive.NewCosigner(identity, sid, identities, shards[identity.Hash()], cohortConfig, allTranscripts[i], prng)
+		participants[i], err = interactive.NewCosigner(identity, sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], prng)
 		if err != nil {
 			return nil, err
 		}

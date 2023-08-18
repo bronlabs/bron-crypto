@@ -56,9 +56,9 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[helper_types.IdentityHash]*vsot.Sender, len(cohortConfig.Participants)-1)
-	receivers := make(map[helper_types.IdentityHash]*vsot.Receiver, len(cohortConfig.Participants)-1)
-	for _, participant := range cohortConfig.Participants {
+	senders := make(map[helper_types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
+	receivers := make(map[helper_types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
+	for _, participant := range cohortConfig.Participants.Iter() {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}

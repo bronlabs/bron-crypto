@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
 func Test_CanInitialize(t *testing.T) {
@@ -20,17 +21,17 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	alice, err := NewParticipant(curve, []byte("test"), aliceIdentityKey, identities, nil, crand.Reader)
+	alice, err := NewParticipant(curve, []byte("test"), aliceIdentityKey, hashset.NewHashSet(identities), nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, []byte("test"), bobIdentityKey, identities, nil, crand.Reader)
+	bob, err := NewParticipant(curve, []byte("test"), bobIdentityKey, hashset.NewHashSet(identities), nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
 		require.Len(t, party.IdentityKeyToSharingId, 2)
-		require.Len(t, party.Participants, 2)
+		require.Len(t, party.SortedParticipants, 2)
 		require.NotNil(t, party.state)
 		require.NotNil(t, party.state.transcript)
 		require.NotNil(t, party.state.receivedSeeds)

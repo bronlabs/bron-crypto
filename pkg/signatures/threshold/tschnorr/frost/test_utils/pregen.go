@@ -2,6 +2,7 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+	"sort"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -10,11 +11,14 @@ import (
 
 func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (participants []*noninteractive.PreGenParticipant, err error) {
 	// copy identities as they get sorted inplace when creating participant
-	identities := make([]integration.IdentityKey, cohortConfig.TotalParties)
-	copy(identities, cohortConfig.Participants)
+	identities := cohortConfig.Participants.Clone()
 
 	participants = make([]*noninteractive.PreGenParticipant, cohortConfig.TotalParties)
-	for i, identity := range identities {
+	sortedIdentities := integration.ByPublicKey(identities.List())
+	sort.Sort(sortedIdentities)
+	i := -1
+	for _, identity := range sortedIdentities {
+		i++
 		participants[i], err = noninteractive.NewPreGenParticipant(identity, cohortConfig, tau, crand.Reader)
 		if err != nil {
 			return nil, err

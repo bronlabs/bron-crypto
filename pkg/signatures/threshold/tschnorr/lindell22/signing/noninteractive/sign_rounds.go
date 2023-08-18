@@ -10,7 +10,7 @@ import (
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	k := c.myPreSignature.K
 	bigRSum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
-	for _, identity := range c.sessionParticipants {
+	for _, identity := range c.sessionParticipants.Iter() {
 		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
 	}
 

@@ -15,7 +15,7 @@ type Participant struct {
 	Curve               curves.Curve
 	MyIdentityKey       integration.IdentityKey
 	MySharingId         int
-	PresentParticipants []integration.IdentityKey
+	PresentParticipants *hashset.HashSet[integration.IdentityKey]
 	UniqueSessionId     []byte
 
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
@@ -27,7 +27,7 @@ type Participant struct {
 	_ helper_types.Incomparable
 }
 
-func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants []integration.IdentityKey) (*Participant, error) {
+func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey]) (*Participant, error) {
 	if err := cohortConfig.CipherSuite.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
@@ -37,19 +37,15 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	if uniqueSessionId == nil {
 		return nil, errs.NewInvalidArgument("session id is nil")
 	}
-	if len(presentParticipants) < 2 {
+	if presentParticipants.Len() < 2 {
 		return nil, errs.NewInvalidArgument("need at least 2 participants")
 	}
-	for i, participant := range presentParticipants {
+	for i, participant := range presentParticipants.Iter() {
 		if participant == nil {
-			return nil, errs.NewIsNil("participant %d is nil", i)
+			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	presentParticipantHashSet, err := hashset.NewHashSet(presentParticipants)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct present participant hash set")
-	}
-	_, found := presentParticipantHashSet.Get(identityKey)
+	_, found := presentParticipants.Get(identityKey)
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
@@ -60,7 +56,7 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	if len(seeds) == 0 {
 		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
 	}
-	err = checkSeedMatch(cohortConfig.Participants, seeds)
+	err := checkSeedMatch(cohortConfig.Participants, seeds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "seeds do not match participants")
 	}
@@ -97,13 +93,13 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	}, nil
 }
 
-func checkSeedMatch(participants []integration.IdentityKey, seeds zero.PairwiseSeeds) error {
-	if len(participants) != len(seeds)+1 {
+func checkSeedMatch(participants *hashset.HashSet[integration.IdentityKey], seeds zero.PairwiseSeeds) error {
+	if participants.Len() != len(seeds)+1 {
 		return errs.NewFailed("number of participants and seeds do not match")
 	}
 	for seedKey := range seeds {
 		found := false
-		for _, idKey := range participants {
+		for _, idKey := range participants.Iter() {
 			if seedKey == idKey.Hash() {
 				found = true
 				break

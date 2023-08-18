@@ -1,7 +1,6 @@
 package hashset
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 )
@@ -12,21 +11,17 @@ type HashSet[T types.Hashable] struct {
 	_ helper_types.Incomparable
 }
 
-func NewHashSet[T types.Hashable](participants []T) (HashSet[T], error) {
+func NewHashSet[T types.Hashable](participants []T) *HashSet[T] {
 	elements := map[[32]byte]T{}
-	for i, participant := range participants {
+	for _, participant := range participants {
 		key := participant.Hash()
-		if _, exists := elements[key]; exists {
-			return HashSet[T]{}, errs.NewDuplicate("participant %d is duplicate", i)
+		if _, exists := elements[key]; !exists {
+			elements[key] = participant
 		}
-		elements[key] = participant
 	}
-	if len(elements) != len(participants) {
-		return HashSet[T]{}, errs.NewInvalidArgument("not all participants are added")
-	}
-	return HashSet[T]{
+	return &HashSet[T]{
 		value: elements,
-	}, nil
+	}
 }
 
 func (set *HashSet[T]) Get(element T) (T, bool) {
@@ -35,12 +30,12 @@ func (set *HashSet[T]) Get(element T) (T, bool) {
 	return e, exists
 }
 
-func (set *HashSet[T]) Size() int {
+func (set *HashSet[T]) Len() int {
 	return len(set.value)
 }
 
 func (set *HashSet[T]) IsEmpty() bool {
-	return set.Size() == 0
+	return set.Len() == 0
 }
 
 func (set *HashSet[T]) Contains(element T) bool {
@@ -69,7 +64,7 @@ func (set *HashSet[T]) Clear() {
 	set.value = make(map[[32]byte]T)
 }
 
-func (set *HashSet[T]) Union(other HashSet[T]) HashSet[T] {
+func (set *HashSet[T]) Union(other *HashSet[T]) HashSet[T] {
 	result := HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		result.Add(element)
@@ -80,7 +75,7 @@ func (set *HashSet[T]) Union(other HashSet[T]) HashSet[T] {
 	return result
 }
 
-func (set *HashSet[T]) Difference(other HashSet[T]) HashSet[T] {
+func (set *HashSet[T]) Difference(other *HashSet[T]) HashSet[T] {
 	result := HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		if !other.Contains(element) {
@@ -90,7 +85,7 @@ func (set *HashSet[T]) Difference(other HashSet[T]) HashSet[T] {
 	return result
 }
 
-func (set *HashSet[T]) Intersection(other HashSet[T]) HashSet[T] {
+func (set *HashSet[T]) Intersection(other *HashSet[T]) HashSet[T] {
 	result := HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		if other.Contains(element) {
@@ -98,4 +93,34 @@ func (set *HashSet[T]) Intersection(other HashSet[T]) HashSet[T] {
 		}
 	}
 	return result
+}
+
+func (set *HashSet[T]) Iter() map[[32]byte]T {
+	return set.value
+}
+
+func (set *HashSet[T]) Clone() *HashSet[T] {
+	return &HashSet[T]{value: set.Iter()}
+}
+
+func (set *HashSet[T]) List() []T {
+	result := make([]T, len(set.value))
+	i := -1
+	for _, element := range set.value {
+		i++
+		result[i] = element
+	}
+	return result
+}
+
+func (set *HashSet[T]) Equals(other *HashSet[T]) bool {
+	if set.Len() != other.Len() {
+		return false
+	}
+	for _, element := range set.value {
+		if !other.Contains(element) {
+			return false
+		}
+	}
+	return true
 }

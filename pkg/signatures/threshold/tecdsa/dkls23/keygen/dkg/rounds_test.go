@@ -41,9 +41,9 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		require.NotNil(t, shard.SigningKeyShare)
 		require.NotNil(t, shard.PublicKeyShares)
 		require.NotNil(t, shard.PairwiseSeeds)
-		require.Len(t, shard.PairwiseSeeds, len(cohortConfig.Participants)-1)
+		require.Len(t, shard.PairwiseSeeds, cohortConfig.Participants.Len()-1)
 		require.NotNil(t, shard.PairwiseBaseOTs)
-		require.Len(t, shard.PairwiseBaseOTs, len(cohortConfig.Participants)-1)
+		require.Len(t, shard.PairwiseBaseOTs, cohortConfig.Participants.Len()-1)
 		for _, baseOTConfig := range shard.PairwiseBaseOTs {
 			require.NotNil(t, baseOTConfig)
 			require.NotNil(t, baseOTConfig.AsSender)

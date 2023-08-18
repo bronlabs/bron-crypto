@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
@@ -61,7 +62,7 @@ func Test_SignHappyPath(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				cosigner, err2 := noninteractive.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, identities[:threshold], 0, batches[i], sid, nil, prng)
+				cosigner, err2 := noninteractive.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, nil, prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}

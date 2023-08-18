@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 )
@@ -18,7 +19,7 @@ func MakeSetupParticipants(curve curves.Curve, identities []integration.Identity
 		return nil, err
 	}
 	for i, identity := range identities {
-		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, identities, nil, crand.Reader)
+		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, hashset.NewHashSet(identities), nil, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

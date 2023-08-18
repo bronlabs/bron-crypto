@@ -20,6 +20,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
@@ -114,7 +115,7 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	partialSignatures := make([]*lindell22.PartialSignature, threshold)
 	for i := 0; i < threshold; i++ {
 		shard := shards[identities[i].Hash()]
-		cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, identities[:threshold], 0, batches[i], sid, nil, crand.Reader)
+		cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, nil, crand.Reader)
 		require.NoError(t, err2)
 		partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 		require.NoError(t, err)

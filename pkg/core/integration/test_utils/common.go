@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"hash"
+	"sort"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
@@ -13,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -84,9 +86,9 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 		}
 	}
 
-	identities = integration.SortIdentityKeys(identities)
-
-	return identities, nil
+	sortedIdentities := integration.ByPublicKey(identities)
+	sort.Sort(sortedIdentities)
+	return sortedIdentities, nil
 }
 
 func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar, options *schnorr.Options) (integration.IdentityKey, error) {
@@ -113,8 +115,8 @@ func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protoco
 		Protocol:             protocol,
 		Threshold:            threshold,
 		TotalParties:         len(parties),
-		Participants:         parties,
-		SignatureAggregators: aggregators,
+		Participants:         hashset.NewHashSet(parties),
+		SignatureAggregators: hashset.NewHashSet(aggregators),
 	}
 
 	if err := cohortConfig.Validate(); err != nil {

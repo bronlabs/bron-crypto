@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
 
@@ -34,20 +35,20 @@ func Test_CanInitialize(t *testing.T) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
-		Participants: identities,
+		Participants: hashset.NewHashSet(identities),
 	}
 
-	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey, aliceSeeds, identities)
+	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey, aliceSeeds, hashset.NewHashSet(identities))
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey, bobSeeds, identities)
+	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey, bobSeeds, hashset.NewHashSet(identities))
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
 		require.Len(t, party.IdentityKeyToSharingId, 2)
-		require.Len(t, party.PresentParticipants, 2)
+		require.Equal(t, party.PresentParticipants.Len(), 2)
 	}
 	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
 }

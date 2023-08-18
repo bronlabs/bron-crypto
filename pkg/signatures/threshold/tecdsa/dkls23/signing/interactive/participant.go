@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
@@ -30,7 +31,7 @@ type Cosigner struct {
 	CohortConfig          *integration.CohortConfig
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[helper_types.IdentityHash]int
-	SessionParticipants   []integration.IdentityKey
+	SessionParticipants   *hashset.HashSet[integration.IdentityKey]
 	sessionShamirIDs      []int
 
 	transcript   transcripts.Transcript
@@ -87,7 +88,7 @@ func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range ic.CohortConfig.SignatureAggregators {
+	for _, signatureAggregator := range ic.CohortConfig.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			return true
 		}
@@ -96,7 +97,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs23 cosigner.
-func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants []integration.IdentityKey, shard *dkls23.Shard, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Cosigner, error) {
+func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
@@ -110,9 +111,11 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	}
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
-	sessionShamirIDs := make([]int, len(sessionParticipants))
-	for i := 0; i < len(sessionParticipants); i++ {
-		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipants[i].Hash()]
+	sessionShamirIDs := make([]int, sessionParticipants.Len())
+	i := -1
+	for _, sessionParticipant := range sessionParticipants.Iter() {
+		i++
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipant.Hash()]
 	}
 
 	// step 0.2
@@ -121,8 +124,8 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 	// step 0.3
-	multipliers := make(map[helper_types.IdentityHash]*Multiplication, len(sessionParticipants))
-	for _, participant := range sessionParticipants {
+	multipliers := make(map[helper_types.IdentityHash]*Multiplication, sessionParticipants.Len())
+	for _, participant := range sessionParticipants.Iter() {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
@@ -169,7 +172,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	return cosigner, nil
 }
 
-func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, shard *dkls23.Shard, sessionParticipants []integration.IdentityKey) error {
+func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, shard *dkls23.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey]) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -187,10 +190,10 @@ func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfi
 	if sessionParticipants == nil {
 		return errs.NewIsNil("invalid number of session participants")
 	}
-	if len(sessionParticipants) != cohortConfig.Threshold {
+	if sessionParticipants.Len() != cohortConfig.Threshold {
 		return errs.NewInvalidLength("invalid number of session participants")
 	}
-	for _, sessionParticipant := range sessionParticipants {
+	for _, sessionParticipant := range sessionParticipants.Iter() {
 		if !cohortConfig.IsInCohort(sessionParticipant) {
 			return errs.NewInvalidIdentifier("invalid session participant")
 		}

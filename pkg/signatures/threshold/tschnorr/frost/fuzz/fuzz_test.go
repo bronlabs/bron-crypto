@@ -25,6 +25,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
@@ -200,7 +201,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.Signing
 
 	cosigners := make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
 	for i, identity := range identities {
-		cosigners[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], identities, cohortConfig, random)
+		cosigners[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
 		require.NoError(t, err)
 	}
 
@@ -283,7 +284,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 
 	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, identities, threshold, identities)
 	if err != nil {
-		if errs.IsDuplicate(err) {
+		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)
@@ -291,7 +292,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
 	if err != nil {
-		if errs.IsDuplicate(err) {
+		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)

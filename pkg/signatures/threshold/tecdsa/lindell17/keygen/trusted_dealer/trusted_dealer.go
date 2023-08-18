@@ -131,7 +131,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(cohortConfig.Participants[0], cohortConfig.Participants)
+	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	shards := make(map[helper_types.IdentityHash]*lindell17.Shard)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value

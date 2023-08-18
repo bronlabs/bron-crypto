@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"hash"
 	"testing"
 
@@ -66,8 +67,8 @@ func Test_HappyPath(t *testing.T) {
 		Protocol:             protocols.DKLS23,
 		Threshold:            2,
 		TotalParties:         3,
-		Participants:         []integration.IdentityKey{alice, bob, charlie},
-		SignatureAggregators: []integration.IdentityKey{alice, bob, charlie},
+		Participants:         hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
+		SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
 	}
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)

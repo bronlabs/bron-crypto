@@ -1,9 +1,10 @@
 package agreeonrandom
 
 import (
+	"sort"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 )
@@ -32,7 +33,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1B
 	round1output[p.MyIdentityKey.Hash()] = &Round1Broadcast{
 		Ri: p.state.r_i,
 	}
-	sortRandomnessContributions, err := sortRandomnessContributions(round1output)
+	sortRandomnessContributions, err := p.sortRandomnessContributions(round1output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
@@ -42,17 +43,19 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1B
 	return randomValue, nil
 }
 
-func sortRandomnessContributions(allIdentityKeysToRi map[helper_types.IdentityHash]*Round1Broadcast) ([][]byte, error) {
-	identityKeys := make([]helper_types.IdentityHash, len(allIdentityKeysToRi))
+func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi map[helper_types.IdentityHash]*Round1Broadcast) ([][]byte, error) {
+	sortedSharingIds := make([]int, len(allIdentityKeysToRi))
 	i := 0
-	for identityKey := range allIdentityKeysToRi {
-		identityKeys[i] = identityKey
+	for sharingId := range p.SharingIdToIdentity {
+		sortedSharingIds[i] = sharingId
 		i++
 	}
-	identityKeys = integration.SortIdentityHashes(identityKeys)
+
+	sort.Ints(sortedSharingIds)
 	sortedRVector := make([][]byte, len(allIdentityKeysToRi))
-	for i, identityKey := range identityKeys {
-		message, exists := allIdentityKeysToRi[identityKey]
+	for i, sharingId := range sortedSharingIds {
+		identityKey := p.SharingIdToIdentity[sharingId]
+		message, exists := allIdentityKeysToRi[identityKey.Hash()]
 		if !exists {
 			return nil, errs.NewMissing("message couldn't be found")
 		}

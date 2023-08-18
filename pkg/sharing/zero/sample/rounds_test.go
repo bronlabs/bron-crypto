@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
@@ -104,7 +105,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	require.NoError(t, err)
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
-		Participants: allIdentities,
+		Participants: hashset.NewHashSet(allIdentities),
 	}
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -135,7 +136,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
-		Participants: allIdentities,
+		Participants: hashset.NewHashSet(allIdentities),
 	}
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
@@ -212,11 +213,11 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
-		Participants: []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity},
+		Participants: hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}),
 	}
-	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity, aliceSeed, []integration.IdentityKey{aliceIdentity, bobIdentity})
-	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity, bobSeed, []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity})
-	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity, charlieSeed, []integration.IdentityKey{bobIdentity, charlieIdentity})
+	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity, aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity}))
+	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity, bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}))
+	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity, charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}))
 
 	aliceSample, err := aliceParticipant.Sample()
 	require.NoError(t, err)

@@ -59,8 +59,8 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*R
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
-	outputP2P := make(map[helper_types.IdentityHash]*Round1P2P, len(ic.SessionParticipants))
-	for _, participant := range ic.SessionParticipants {
+	outputP2P := make(map[helper_types.IdentityHash]*Round1P2P, ic.SessionParticipants.Len())
+	for _, participant := range ic.SessionParticipants.Iter() {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}
@@ -125,7 +125,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[helper_types.IdentityHash]*
 	a := [mult.L]curves.Scalar{ic.state.r_i, ic.state.sk_i}
 
 	outputP2P := make(map[helper_types.IdentityHash]*Round2P2P)
-	for _, participant := range ic.SessionParticipants {
+	for _, participant := range ic.SessionParticipants.Iter() {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}
@@ -179,7 +179,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 	cUdU := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 
-	for _, participant := range ic.SessionParticipants {
+	for _, participant := range ic.SessionParticipants.Iter() {
 		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			continue
 		}

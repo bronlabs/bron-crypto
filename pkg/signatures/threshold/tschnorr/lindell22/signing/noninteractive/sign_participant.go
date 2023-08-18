@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -20,7 +21,7 @@ type Cosigner struct {
 	myPreSignature *lindell22.PreSignature
 
 	identityKeyToSharingId map[helper_types.IdentityHash]int
-	sessionParticipants    []integration.IdentityKey
+	sessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	cohortConfig           *integration.CohortConfig
 	prng                   io.Reader
 
@@ -40,7 +41,7 @@ func (c *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (c *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range c.cohortConfig.SignatureAggregators {
+	for _, signatureAggregator := range c.cohortConfig.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(c.myIdentityKey.PublicKey()) {
 			return true
 		}
@@ -48,7 +49,7 @@ func (c *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants []integration.IdentityKey, preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
 	if err := validateCosignerInputs(myIdentityKey, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
 	}
@@ -79,7 +80,7 @@ func validateCosignerInputs(identityKey integration.IdentityKey, shard *lindell2
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if len(cohortConfig.Participants) != cohortConfig.TotalParties {
+	if cohortConfig.Participants.Len() != cohortConfig.TotalParties {
 		return errs.NewIncorrectCount("invalid number of participants")
 	}
 	if cohortConfig.PreSignatureComposer != nil {

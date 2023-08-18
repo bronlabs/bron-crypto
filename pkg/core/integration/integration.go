@@ -53,12 +53,10 @@ type CohortConfig struct {
 	Protocol     protocols.Protocol
 	Threshold    int
 	TotalParties int
-	Participants []IdentityKey
+	Participants *hashset.HashSet[IdentityKey]
 
-	SignatureAggregators []IdentityKey
+	SignatureAggregators *hashset.HashSet[IdentityKey]
 	PreSignatureComposer IdentityKey
-
-	participantHashSet hashset.HashSet[IdentityKey]
 
 	_ helper_types.Incomparable
 }
@@ -82,21 +80,16 @@ func (c *CohortConfig) Validate() error {
 	if c.Threshold > c.TotalParties {
 		return errs.NewIncorrectCount("threshold is greater that total parties")
 	}
-	if c.TotalParties != len(c.Participants) {
+	if c.TotalParties != c.Participants.Len() {
 		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
 	}
-	for i, participant := range c.Participants {
+	for i, participant := range c.Participants.Iter() {
 		if participant == nil {
-			return errs.NewIsNil("participant %d is nil", i)
+			return errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	participantHashSet, err := hashset.NewHashSet(c.Participants)
-	if err != nil {
-		return errs.WrapFailed(err, "could not construct hash set of participants")
-	}
-	c.participantHashSet = participantHashSet
 
-	if c.SignatureAggregators == nil || len(c.SignatureAggregators) == 0 {
+	if c.SignatureAggregators == nil || c.SignatureAggregators.Len() == 0 {
 		return errs.NewIsNil("need to specify at least one signature aggregator")
 	}
 
@@ -104,12 +97,12 @@ func (c *CohortConfig) Validate() error {
 }
 
 func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
-	_, found := c.participantHashSet.Get(identityKey)
+	_, found := c.Participants.Get(identityKey)
 	return found
 }
 
 func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
-	for _, aggregator := range c.SignatureAggregators {
+	for _, aggregator := range c.SignatureAggregators.Iter() {
 		if aggregator.PublicKey().Equal(identityKey.PublicKey()) {
 			return true
 		}
@@ -129,37 +122,14 @@ func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func SortIdentityKeys(identityKeys []IdentityKey) []IdentityKey {
-	copied := append([]IdentityKey{}, identityKeys...)
-	sort.Slice(copied, func(i, j int) bool {
-		switch copied[i].PublicKey().CurveName() {
-		case edwards25519.Name:
-			iKey := binary.LittleEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
-			jKey := binary.LittleEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
-			return iKey < jKey
-		default:
-			iKey := binary.BigEndian.Uint64(copied[i].PublicKey().ToAffineCompressed())
-			jKey := binary.BigEndian.Uint64(copied[j].PublicKey().ToAffineCompressed())
-			return iKey < jKey
-		}
-	})
-	return copied
-}
-
-func SortIdentityHashes(identityKeys []helper_types.IdentityHash) []helper_types.IdentityHash {
-	sort.Slice(identityKeys, func(i, j int) bool {
-		return binary.BigEndian.Uint64(identityKeys[i][:]) < binary.BigEndian.Uint64(identityKeys[j][:])
-	})
-	return identityKeys
-}
-
-func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (idToKey map[int]IdentityKey, keyToId map[helper_types.IdentityHash]int, mySharingId int) {
-	identityKeys = SortIdentityKeys(identityKeys)
+func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys *hashset.HashSet[IdentityKey]) (idToKey map[int]IdentityKey, keyToId map[helper_types.IdentityHash]int, mySharingId int) {
+	sortedIdentityKeys := ByPublicKey(identityKeys.List())
+	sort.Sort(sortedIdentityKeys)
 	idToKey = make(map[int]IdentityKey)
 	keyToId = make(map[helper_types.IdentityHash]int)
 	mySharingId = -1
 
-	for sharingIdMinusOne, identityKey := range identityKeys {
+	for sharingIdMinusOne, identityKey := range sortedIdentityKeys {
 		sharingId := sharingIdMinusOne + 1
 		idToKey[sharingId] = identityKey
 		keyToId[identityKey.Hash()] = sharingId
@@ -169,4 +139,27 @@ func DeriveSharingIds(myIdentityKey IdentityKey, identityKeys []IdentityKey) (id
 	}
 
 	return idToKey, keyToId, mySharingId
+}
+
+type ByPublicKey []IdentityKey
+
+func (l ByPublicKey) Len() int {
+	return len(l)
+}
+
+func (l ByPublicKey) Less(i, j int) bool {
+	switch l[i].PublicKey().CurveName() {
+	case edwards25519.Name:
+		iKey := binary.LittleEndian.Uint64(l[i].PublicKey().ToAffineCompressed())
+		jKey := binary.LittleEndian.Uint64(l[j].PublicKey().ToAffineCompressed())
+		return iKey < jKey
+	default:
+		iKey := binary.BigEndian.Uint64(l[i].PublicKey().ToAffineCompressed())
+		jKey := binary.BigEndian.Uint64(l[j].PublicKey().ToAffineCompressed())
+		return iKey < jKey
+	}
+}
+
+func (l ByPublicKey) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
 }
