@@ -46,6 +46,13 @@ func XorBytes(in ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
+// Memset sets all the bytes in the slice to the given value.
+func Memset(buffer []byte, value byte) {
+	for i := range buffer {
+		buffer[i] = value
+	}
+}
+
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
