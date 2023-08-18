@@ -3,12 +3,17 @@ package errs
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
 type ErrorType string
+
+type AbortIdentifier interface {
+	~int | ~string | ~[]byte | ~[32]byte
+}
 
 const (
 	deserializationFailed ErrorType = "[DESERIALIZATION_FAILED]"
@@ -17,6 +22,7 @@ const (
 	duplicate             ErrorType = "[DUPLICATE]"
 	failed                ErrorType = "[FAILED]"
 	identifiableAbort     ErrorType = "[ABORT]"
+	totalAbort            ErrorType = "[TOTAL_ABORT]"
 	incorrectCount        ErrorType = "[INCORRECT_COUNT]"
 	invalidArgument       ErrorType = "[INVALID_ARGUMENT]"
 	invalidCoordinates    ErrorType = "[INVALID_COORDINATES]"
@@ -345,20 +351,96 @@ func HasDuplicate(err error) bool {
 	return has(err, duplicate)
 }
 
-func NewIdentifiableAbort(format string, args ...any) error {
+func NewIdentifiableAbort[T AbortIdentifier](id T, format string, args ...any) error {
+	return errors.Errorf(
+		"%s(ID=%s) %s",
+		identifiableAbort,
+		fmt.Sprintf(abortFormatSpecifier(id), id),
+		fmt.Sprintf(format, args...),
+	)
+}
+
+func WrapIdentifiableAbort[T AbortIdentifier](err error, id T, format string, args ...any) error {
+	return errors.Wrapf(
+		err,
+		"%s(ID=%s) %s",
+		identifiableAbort,
+		fmt.Sprintf(abortFormatSpecifier(id), id),
+		fmt.Sprintf(format, args...),
+	)
+}
+
+func IsIdentifiableAbort(err error, id any) bool {
+	t := identifiableAbort
+	if id != nil {
+		t = ErrorType(
+			fmt.Sprintf(
+				"%s(ID=%s)", t, fmt.Sprintf(abortFormatSpecifier(id), id),
+			),
+		)
+	}
+	return is(err, t)
+}
+
+func HasIdentifiableAbort(err error, id any) bool {
+	t := identifiableAbort
+	if id != nil {
+		t = ErrorType(
+			fmt.Sprintf(
+				"%s(ID=%s)", t, fmt.Sprintf(abortFormatSpecifier(id), id),
+			),
+		)
+	}
+	return has(err, t)
+}
+
+func NewTotalAbort(id any, format string, args ...any) error {
+	if id != nil {
+		return errors.Errorf(
+			"%s(ID=%s) %s",
+			totalAbort,
+			fmt.Sprintf(abortFormatSpecifier(id), id),
+			fmt.Sprintf(format, args...),
+		)
+	}
 	return errors.Errorf("%s %s", identifiableAbort, fmt.Sprintf(format, args...))
 }
 
-func WrapIdentifiableAbort(err error, format string, args ...any) error {
+func WrapTotalAbort(err error, id any, format string, args ...any) error {
+	if id != nil {
+		return errors.Wrapf(
+			err,
+			"%s(ID=%s) %s",
+			totalAbort,
+			fmt.Sprintf(abortFormatSpecifier(id), id),
+			fmt.Sprintf(format, args...),
+		)
+	}
 	return errors.Wrapf(err, "%s %s", identifiableAbort, fmt.Sprintf(format, args...))
 }
 
-func IsIdentifiableAbort(err error) bool {
-	return is(err, identifiableAbort)
+func IsTotalAbort(err error, id any) bool {
+	t := totalAbort
+	if id != nil {
+		t = ErrorType(
+			fmt.Sprintf(
+				"%s(ID=%s)", t, fmt.Sprintf(abortFormatSpecifier(id), id),
+			),
+		)
+	}
+	return is(err, t)
 }
 
-func HasIdentifiableAbort(err error) bool {
-	return has(err, identifiableAbort)
+func HasTotalAbort(err error, id any) bool {
+	t := identifiableAbort
+	if id != nil {
+		t = ErrorType(
+			fmt.Sprintf(
+				"%s(ID=%s)", t, fmt.Sprintf(abortFormatSpecifier(id), id),
+			),
+		)
+	}
+	return has(err, t)
 }
 
 func NewFailed(format string, args ...any) error {
@@ -375,4 +457,20 @@ func IsFailed(err error) bool {
 
 func HasFailed(err error) bool {
 	return has(err, failed)
+}
+
+func isByteArrayOrSlice(x any) bool {
+	if _, ok := x.([]byte); ok {
+		return true
+	}
+	v := reflect.ValueOf(x)
+	return v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8
+}
+
+func abortFormatSpecifier(id any) string {
+	specifier := "%v"
+	if isByteArrayOrSlice(id) {
+		specifier = "%x"
+	}
+	return specifier
 }

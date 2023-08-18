@@ -75,7 +75,7 @@ func (p *Cosigner) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) 
 	for _, identity := range p.sessionParticipants {
 		in, ok := input[identity.Hash()]
 		if !ok {
-			return nil, errs.NewIdentifiableAbort("no input from participant")
+			return nil, errs.NewMissing("no input from participant")
 		}
 		p.state.theirBigRCommitment[identity.Hash()] = in.BigRCommitment
 	}
@@ -104,7 +104,7 @@ func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, 
 	for _, identity := range p.sessionParticipants {
 		in, ok := input[identity.Hash()]
 		if !ok {
-			return nil, errs.NewIdentifiableAbort("no input from participant")
+			return nil, errs.NewMissing("no input from participant")
 		}
 
 		theirBigR := in.BigR
@@ -118,7 +118,7 @@ func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, 
 
 		// 2. verify dlog
 		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof")
+			return nil, errs.WrapIdentifiableAbort(err, identity.Hash(), "cannot verify dlog proof")
 		}
 
 		// 3.i. compute sum of R

@@ -124,7 +124,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 	// smuggle previous value
 	r3InsB[attackerIndex][identities[1].Hash()].Commitments = r2InsB[attackerIndex][identities[1].Hash()].BlindedCommitments
 	_, _, err = test_utils.DoDkgRound3(participants, r3InsB)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -210,7 +210,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -224,7 +224,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		}
 		_, _, err = test_utils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 }
 
@@ -257,7 +257,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	r2Outs[alice].Commitments[0] = r2Outs[alice].Commitments[0].Sub(r2Outs[bob].Commitments[0])
 	r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
 	_, _, err = participants[bob].Round3(r3Ins[bob])
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 	require.True(t, strings.Contains(err.Error(), "dlog proof"))
 }
 
@@ -305,7 +305,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 	_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
@@ -357,7 +357,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 
 	t.Run("Alice uses some garbage as sid", func(t *testing.T) {
@@ -380,7 +380,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = test_utils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 }
 

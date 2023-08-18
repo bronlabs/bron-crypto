@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 )
 
@@ -75,7 +76,7 @@ func MessageToScalar(hashFunc func() hash.Hash, curve curves.Curve, message []by
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash message")
 	}
-	mPrimeInt, err := lindell17.DigestToInt(messageHash, curve)
+	mPrimeInt, err := ecdsa.HashToInt(messageHash, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
 	}

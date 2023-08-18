@@ -404,7 +404,7 @@ func (S *Sender) VerifyChallengeResponse(
 				q_expected = challengeResponse.t_val[i][k]
 			}
 			if !(q_expected == qi_val[k]) {
-				return errs.NewIdentifiableAbort("q_val != q_expected. OTe consistency check failed")
+				return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 			}
 		}
 	}

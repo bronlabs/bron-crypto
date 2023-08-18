@@ -185,7 +185,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	// 4. check that alpha == ax + b (over integers), if not aborts
 	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.A, prover.x.BigInt()), input.B)
 	if prover.state.alpha.Cmp(alphaCheck) != 0 {
-		return nil, errs.NewIdentifiableAbort("verifier is misbehaving")
+		return nil, errs.NewIdentifiableAbort("verifier", "verifier is misbehaving")
 	}
 
 	rangeProverOutput, err := prover.rangeProver.Round4(input.RangeVerifierOutput)

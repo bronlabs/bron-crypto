@@ -10,58 +10,13 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
-// TODO: remove.
-func GetPointCoordinates(point curves.Point) (x, y *big.Int) {
-	affine := point.ToAffineUncompressed()
-	return new(big.Int).SetBytes(affine[1:33]), new(big.Int).SetBytes(affine[33:65])
-}
-
-// TODO: remove.
-func GetCurveOrder(curve curves.Curve) (*big.Int, error) {
-	ec, err := curveutils.ToEllipticCurve(curve)
-	if err == nil {
-		return ec.Params().N, nil
-	}
-
-	// fallback
-	minusOne, err := curve.Scalar().SetBigInt(big.NewInt(-1))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set scalar")
-	}
-
-	return new(big.Int).Add(minusOne.BigInt(), big.NewInt(1)), nil
-}
-
-// TODO: the same as hash to int.
-func DigestToInt(digest []byte, curve curves.Curve) (*big.Int, error) {
-	order, err := GetCurveOrder(curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get curve order")
-	}
-	orderBits := order.BitLen()
-	orderBytes := (orderBits + 7) / 8
-	if len(digest) > orderBytes {
-		digest = digest[:orderBytes]
-	}
-
-	ret := new(big.Int).SetBytes(digest)
-	excess := len(digest)*8 - orderBits
-	if excess > 0 {
-		ret.Rsh(ret, uint(excess))
-	}
-	return ret, nil
-}
-
 // DecomposeInQThirds splits scalar x to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
 func DecomposeInQThirds(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, i int, err error) {
 	curve, err := scalar.Curve()
 	if err != nil {
 		return nil, nil, 0, errs.WrapInvalidCurve(err, "invalid curve %s", scalar.CurveName())
 	}
-	order, err := GetCurveOrder(curve)
-	if err != nil {
-		return nil, nil, 0, errs.WrapFailed(err, "cannot get curve order")
-	}
+	order := curve.Profile().SubGroupOrder()
 
 	i = 0
 	l := new(big.Int).Div(new(big.Int).Add(order, big.NewInt(2)), big.NewInt(3))
@@ -157,10 +112,7 @@ func IsInSecondThird(scalar curves.Scalar) bool {
 	if err != nil {
 		return false
 	}
-	order, err := GetCurveOrder(curve)
-	if err != nil {
-		return false
-	}
+	order := curve.Profile().SubGroupOrder()
 	l := new(big.Int).Div(new(big.Int).Add(order, big.NewInt(2)), big.NewInt(3))
 	twoL := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(2)), big.NewInt(2)), big.NewInt(3))
 	return scalar.BigInt().Cmp(l) >= 0 && scalar.BigInt().Cmp(twoL) < 0
@@ -171,10 +123,7 @@ func inEighteenth(lowBoundInclusive, highBoundExclusive int64, x curves.Scalar) 
 	if err != nil {
 		return false
 	}
-	order, err := GetCurveOrder(curve)
-	if err != nil {
-		return false
-	}
+	order := curve.Profile().SubGroupOrder()
 
 	l := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(lowBoundInclusive)), big.NewInt(17)), big.NewInt(18))
 	h := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(17)), big.NewInt(18))
@@ -186,10 +135,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive int64, curveName s
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not get curve")
 	}
-	order, err := GetCurveOrder(curve)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not get curve order")
-	}
+	order := curve.Profile().SubGroupOrder()
 
 	l := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(lowBoundInclusive)), big.NewInt(17)), big.NewInt(18))
 	h := new(big.Int).Div(new(big.Int).Add(new(big.Int).Mul(order, big.NewInt(highBoundExclusive)), big.NewInt(17)), big.NewInt(18))

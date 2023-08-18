@@ -155,17 +155,18 @@ func randomIntInRange(q *big.Int, prng io.Reader) (*big.Int, error) {
 }
 
 func randomIntOutRangeLow(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	return crand.Int(prng, l)
+	// we should make x < 0 to make this 100% correct but this is good enough
+	// and current Paillier encryption does not support negative numbers
+	l := new(big.Int).Div(q, big.NewInt(4))
+	return crand.Int(prng, l) // x < q/4
 }
 
 func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	x, err := crand.Int(prng, l)
+	x, err := crand.Int(prng, q)
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(new(big.Int).Add(l, l), x), nil
+	return new(big.Int).Add(x, q), nil // x >= q
 }
 
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {

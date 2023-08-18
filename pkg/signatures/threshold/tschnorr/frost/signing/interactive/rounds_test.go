@@ -243,7 +243,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
 	mappedPartialSignaturesBeta := test_utils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
 	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
@@ -287,7 +287,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	partialSignatures[maliciousParty].Zi = curve.Scalar().Random(crand.Reader)
 	mappedPartialSignatures := test_utils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func Test_HappyPath(t *testing.T) {

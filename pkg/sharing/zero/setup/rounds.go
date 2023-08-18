@@ -77,7 +77,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1P
 			return nil, errs.NewMissing("no message was received from participant with sharing id %d", sharingId)
 		}
 		if message.Commitment == nil {
-			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty commitment", sharingId)
+			return nil, errs.NewMissing("participant with sharingId %d sent empty commitment", sharingId)
 		}
 		p.state.receivedSeeds[participant.Hash()] = message.Commitment
 		contributed, exists := p.state.sentSeeds[participant.Hash()]
@@ -112,13 +112,13 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P
 			return nil, errs.NewMissing("do not have a commitment from participant with sharing id %d", sharingId)
 		}
 		if message.Message == nil {
-			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty message", sharingId)
+			return nil, errs.NewMissing("participant with sharingId %d sent empty message", sharingId)
 		}
 		if message.Witness == nil {
-			return nil, errs.NewIdentifiableAbort("participant with sharingId %d sent empty witness", sharingId)
+			return nil, errs.NewMissing("participant with sharingId %d sent empty witness", sharingId)
 		}
 		if err := commitments.Open(h, message.Message, commitment, message.Witness); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "commitment from participant with sharing id %d can't be opened", sharingId)
+			return nil, errs.WrapIdentifiableAbort(err, sharingId, "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds[participant.Hash()]
 		if !exists {

@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"bytes"
-	"math/big"
 
 	"golang.org/x/crypto/sha3"
 
@@ -208,13 +207,13 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 			ic.state.receivedCommitmentsToInstanceKey[idHash],
 			receivedP2PMessage.WitnessOfTheCommitmentToInstanceKey,
 		); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "message could not be openned")
+			return nil, errs.WrapTotalAbort(err, idHash, "message could not be openned")
 		}
 
 		// step 3.1.4
 		d_ij, err := ic.subprotocols.multiplication[idHash].Bob.Round3(receivedP2PMessage.Multiplication)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "bob round 3")
+			return nil, errs.WrapTotalAbort(err, idHash, "bob round 3")
 		}
 		du_ij := d_ij[0]
 		dv_ij := d_ij[1]
@@ -225,7 +224,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 		lhs1 := R_j.Mul(Chi_ij).Sub(GammaU_ji)
 		rhs1 := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(du_ij)
 		if !lhs1.Equal(rhs1) {
-			return nil, errs.NewIdentifiableAbort("failed first check")
+			return nil, errs.NewTotalAbort(idHash, "failed first check")
 		}
 
 		// step 3.1.6
@@ -234,7 +233,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 		lhs2 := llhs.Sub(GammaV_ji)
 		rhs := ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(dv_ij)
 		if !lhs2.Equal(rhs) {
-			return nil, errs.NewIdentifiableAbort("failed second check")
+			return nil, errs.NewTotalAbort(idHash, "failed second check")
 		}
 
 		refreshedPublicKey = refreshedPublicKey.Add(pk_j)
@@ -249,7 +248,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 
 	// step 3.2
 	if !refreshedPublicKey.Equal(ic.Shard.SigningKeyShare.PublicKey) {
-		return nil, errs.NewFailed("recomputed public key is wrong")
+		return nil, errs.NewTotalAbort(nil, "recomputed public key is wrong")
 	}
 
 	// step 3.4
@@ -258,17 +257,15 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 	v_i := ic.state.sk_i.Mul(phiPsi).Add(cVdV)
 
 	// step 3.6
-	xBigInt := getXCoordinate(R)
-	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBigInt(xBigInt)
+	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBigInt(R.X().BigInt())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
-	// TODO: FiatShamir is not the right name. Clean up hash to curve scalar stuff. Alternative is regular hash then
-	// setbytefunc
-	digest, err := hashing.FiatShamir(ic.CohortConfig.CipherSuite, message)
+	digest, err := hashing.CreateDigestScalar(ic.CohortConfig.CipherSuite, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce digest")
 	}
+	// TODO: redo when FieldElement.Scalar is implemented
 	w_i := digest.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
 
 	ic.round++
@@ -291,10 +288,9 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 		u = u.Add(partialSignature.Ui)
 		R = R.Add(partialSignature.Ri)
 	}
-	xBigInt := getXCoordinate(R)
 
 	// step 4.2
-	rx, err := curve.Scalar().SetBigInt(xBigInt)
+	rx, err := curve.Scalar().SetBigInt(R.X().BigInt())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
@@ -329,10 +325,4 @@ func prepareCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId,
 		},
 		nil,
 	)
-}
-
-// TODO: remove when curve interface is extended.
-func getXCoordinate(point curves.Point) (x *big.Int) {
-	affine := point.ToAffineUncompressed()
-	return new(big.Int).SetBytes(affine[1:33])
 }

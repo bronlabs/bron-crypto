@@ -126,7 +126,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 			Value: p2pMessageFromSender.XPrime_ij,
 		}
 		if err := pedersen.Verify(receivedShare, receivedBlindingShare, senderBlindedCommitmentVector, p.H); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "abort from pedersen (sharing id: %d)", senderSharingId)
+			return nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from pedersen given sharing id")
 		}
 
 		secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.X_ij)
@@ -175,7 +175,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		transcript := hagrid.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from schnorr dlog proof of a_i0 (sharing id: %d)", senderSharingId)
+			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from schnorr dlog proof of a_i0 given sharing id")
 		}
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderSharingId]
@@ -193,7 +193,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 			return nil, nil, errs.WrapFailed(err, "couldn't derive partial public key share")
 		}
 		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
-			return nil, nil, errs.NewIdentifiableAbort("shares received from sharing id %d is inconsistent", senderSharingId)
+			return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "shares received from sharing id is inconsistent")
 		}
 
 		publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)

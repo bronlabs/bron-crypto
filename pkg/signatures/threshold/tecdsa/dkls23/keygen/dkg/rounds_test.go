@@ -4,13 +4,14 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
@@ -222,7 +223,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
 	_, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func Test_HappyPath(t *testing.T) {

@@ -1,6 +1,8 @@
 package aggregation
 
 import (
+	"fmt"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
@@ -189,7 +191,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {
-				return nil, errs.NewIdentifiableAbort("participant with sharing id %d is misbehaving", j)
+				return nil, errs.NewIdentifiableAbort(fmt.Sprintf("%d", j), "participant with sharing id is misbehaving")
 			}
 		}
 	}

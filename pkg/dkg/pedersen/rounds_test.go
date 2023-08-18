@@ -148,7 +148,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 	r3InsU[attackerIndex][identities[1].Hash()].Xij = curve.Scalar().Hash(uniqueSessionId)
 	_, _, err = test_utils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -234,7 +234,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -248,7 +248,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		}
 		_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err))
+		require.True(t, errs.IsIdentifiableAbort(err, nil))
 	})
 }
 
@@ -279,7 +279,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 	_, _, err = participants[bob].Round2(r3InsB[bob], r3InsU[bob])
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 	require.True(t, strings.Contains(err.Error(), "dlog proof"))
 }
 
@@ -327,7 +327,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	r3InsBBeta[attackerIndex] = r3InsBAlpha[attackerIndex]
 	_, _, err = test_utils.DoDkgRound2(participantsBeta, r3InsBBeta, r3InsUBeta)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func Test_HappyPath(t *testing.T) {

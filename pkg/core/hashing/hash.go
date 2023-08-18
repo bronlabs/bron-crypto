@@ -56,6 +56,10 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 	return challenge, nil
 }
 
+// CreateDigestScalar is the same as FiatShamir, except it'll be used in the signing algorithms to create the digest.
+// We rename it because FiatShamir is not the right name.
+var CreateDigestScalar = FiatShamir
+
 // FiatShamirHKDF computes the HKDF over many values
 // iteratively such that each value is hashed separately
 // and based on preceding values
@@ -99,7 +103,7 @@ func FiatShamirHKDF(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		if n != len(okm) {
 			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)
 		}
-		bitstring.ByteSubBE(f)
+		bitstring.ByteSubLE(f)
 	}
 	return okm, nil
 }

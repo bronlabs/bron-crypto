@@ -117,7 +117,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 		transcript := hagrid.NewTranscript(DkgLabel)
 		transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
-			return nil, nil, errs.NewIdentifiableAbort("abort from schnorr dlog proof (sharing id: %d)", senderSharingId)
+			return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "abort from schnorr dlog proof given sharing id ")
 		}
 
 		p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey.Hash()]
@@ -130,7 +130,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 			Value: receivedSecretKeyShare,
 		}
 		if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, "abort from feldman (sharing id: %d)", senderSharingId)
+			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from feldman given sharing id")
 		}
 
 		partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)

@@ -10,7 +10,7 @@ import (
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx, _ := lindell17.GetPointCoordinates(bigR)
+	bigRx := bigR.X().BigInt()
 	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
@@ -32,10 +32,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q, err := lindell17.GetCurveOrder(p.cohortConfig.CipherSuite.Curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate subgroup order")
-	}
+	q := p.cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()
 	mPrime, err := signing.MessageToScalar(p.cohortConfig.CipherSuite.Hash, p.cohortConfig.CipherSuite.Curve, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -54,7 +51,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 
 func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.Signature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx, _ := lindell17.GetPointCoordinates(bigR)
+	bigRx := bigR.X().BigInt()
 	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")

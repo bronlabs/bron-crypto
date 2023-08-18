@@ -11,7 +11,6 @@ import (
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing"
 )
 
@@ -110,7 +109,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	primaryCosigner.transcript.AppendMessages("bigR2Proof", bigR2ProofSessionId)
 	err = dlog.Verify(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), round2Output.BigR2, round2Output.BigR2Proof, bigR2ProofSessionId)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot verify R2 dlog proof")
+		return nil, errs.WrapTotalAbort(err, "secondary", "cannot verify R2 dlog proof")
 	}
 
 	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
@@ -128,7 +127,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
-	bigRx, _ := lindell17.GetPointCoordinates(primaryCosigner.state.bigR)
+	bigRx := primaryCosigner.state.bigR.X().BigInt()
 	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
@@ -150,17 +149,17 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
 	err = commitments.Open(commitmentHashFunc, bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot open R1 commitment")
+		return nil, errs.WrapTotalAbort(err, "primary", "cannot open R1 commitment")
 	}
 
 	bigR1ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
 	secondaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
-	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId); err != nil { // TODO: clone transcript
-		return nil, errs.WrapFailed(err, "cannot verify R1 dlog proof")
+	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId); err != nil {
+		return nil, errs.WrapTotalAbort(err, "primary", "cannot verify R1 dlog proof")
 	}
 
 	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
-	bigRx, _ := lindell17.GetPointCoordinates(bigR)
+	bigRx := bigR.X().BigInt()
 	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
@@ -181,10 +180,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q, err := lindell17.GetCurveOrder(secondaryCosigner.cohortConfig.CipherSuite.Curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate subgroup order")
-	}
+	q := secondaryCosigner.cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()
 	mPrime, err := signing.MessageToScalar(secondaryCosigner.cohortConfig.CipherSuite.Hash, secondaryCosigner.cohortConfig.CipherSuite.Curve, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -210,7 +206,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	paillierSecretKey := primaryCosigner.myShard.PaillierSecretKey
 	sPrimeInt, err := paillierSecretKey.Decrypt(round4Output.C3)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot decrypt c3")
+		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
 	}
 	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(sPrimeInt)
 	if err != nil {
@@ -236,7 +232,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	}
 	signature.Normalise()
 	if err := ecdsa.Verify(signature, primaryCosigner.cohortConfig.CipherSuite.Hash, primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
+		return nil, errs.WrapTotalAbort(err, "secondary", "could not verify produced signature")
 	}
 	return signature, nil
 }

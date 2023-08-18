@@ -145,7 +145,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-	require.True(t, errs.IsIdentifiableAbort(err))
+	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func Test_HappyPath(t *testing.T) {
