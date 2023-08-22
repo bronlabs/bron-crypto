@@ -17,15 +17,15 @@ import (
 )
 
 func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, prngs []io.Reader) (participants []*interactive.Cosigner, err error) {
-	if len(identities) < cohortConfig.Threshold {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
+	if len(identities) < cohortConfig.Protocol.Threshold {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
 	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities)
 	if err != nil {
 		return nil, err
 	}
 
-	participants = make([]*interactive.Cosigner, cohortConfig.Threshold)
+	participants = make([]*interactive.Cosigner, cohortConfig.Protocol.Threshold)
 	for i, identity := range identities {
 		var prng io.Reader
 		if len(prngs) != 0 && prngs[i] != nil {

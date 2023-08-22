@@ -67,12 +67,14 @@ func Test_CanInitialize(t *testing.T) {
 	}
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.FROST,
-		Threshold:            2,
-		TotalParties:         2,
-		Participants:         hashset.NewHashSet(identityKeys),
-		SignatureAggregators: hashset.NewHashSet(identityKeys),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identityKeys),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.FROST,
+			Threshold:            2,
+			TotalParties:         2,
+			SignatureAggregators: hashset.NewHashSet(identityKeys),
+		},
 	}
 	identityKeysToSigningKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)

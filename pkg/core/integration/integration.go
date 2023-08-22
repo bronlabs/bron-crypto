@@ -50,13 +50,18 @@ func (cs *CipherSuite) Validate() error {
 
 type CohortConfig struct {
 	CipherSuite  *CipherSuite
-	Protocol     protocols.Protocol
+	Participants *hashset.HashSet[IdentityKey]
+	Protocol     *ProtocolConfig
+
+	_ helper_types.Incomparable
+}
+
+type ProtocolConfig struct {
+	Name         protocols.Protocol
 	Threshold    int
 	TotalParties int
-	Participants *hashset.HashSet[IdentityKey]
 
 	SignatureAggregators *hashset.HashSet[IdentityKey]
-	PreSignatureComposer IdentityKey
 
 	_ helper_types.Incomparable
 }
@@ -70,17 +75,7 @@ func (c *CohortConfig) Validate() error {
 		return errs.WrapVerificationFailed(err, "ciphersuite is invalid")
 	}
 
-	if supported := protocols.Supported[c.Protocol]; !supported {
-		return errs.NewInvalidArgument("protocol %s is not supported", c.Protocol)
-	}
-
-	if c.Threshold <= 0 {
-		return errs.NewIncorrectCount("threshold is nonpositive")
-	}
-	if c.Threshold > c.TotalParties {
-		return errs.NewIncorrectCount("threshold is greater that total parties")
-	}
-	if c.TotalParties != c.Participants.Len() {
+	if c.Protocol.TotalParties != c.Participants.Len() {
 		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
 	}
 	for i, participant := range c.Participants.Iter() {
@@ -88,11 +83,26 @@ func (c *CohortConfig) Validate() error {
 			return errs.NewIsNil("participant %x is nil", i)
 		}
 	}
+	if c.Protocol != nil {
+		return c.Protocol.Validate()
+	}
+	return nil
+}
+
+func (c *ProtocolConfig) Validate() error {
+	if supported := protocols.Supported[c.Name]; !supported {
+		return errs.NewInvalidArgument("protocol %s is not supported", c.Name)
+	}
+	if c.Threshold <= 0 {
+		return errs.NewIncorrectCount("threshold is nonpositive")
+	}
+	if c.Threshold > c.TotalParties {
+		return errs.NewIncorrectCount("threshold is greater that total parties")
+	}
 
 	if c.SignatureAggregators == nil || c.SignatureAggregators.Len() == 0 {
 		return errs.NewIsNil("need to specify at least one signature aggregator")
 	}
-
 	return nil
 }
 
@@ -102,7 +112,7 @@ func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
 }
 
 func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
-	for _, aggregator := range c.SignatureAggregators.Iter() {
+	for _, aggregator := range c.Protocol.SignatureAggregators.Iter() {
 		if aggregator.PublicKey().Equal(identityKey.PublicKey()) {
 			return true
 		}

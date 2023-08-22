@@ -35,7 +35,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")
@@ -44,7 +44,7 @@ func Test_HappyPath(t *testing.T) {
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
-	require.Len(t, shards, cohortConfig.TotalParties)
+	require.Len(t, shards, cohortConfig.Protocol.TotalParties)
 
 	sessionId := []byte("TestSession")
 	primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
@@ -86,7 +86,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	}
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 	require.NoError(t, err)
 
 	alice := 0
@@ -123,7 +123,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			require.NoError(t, err)
 			alice, bob, charlie := identities[0], identities[1], identities[2]
 
-			cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+			cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")
@@ -132,7 +132,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, shards)
-			require.Len(t, shards, cohortConfig.TotalParties)
+			require.Len(t, shards, cohortConfig.Protocol.TotalParties)
 
 			sessionId := []byte("TestSession")
 			primary, err := interactive.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
@@ -191,7 +191,7 @@ func doGennaroDkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConf
 	r1OutsB, r1OutsU, err := gennaro_dkg_test_utils.DoDkgRound1(gennaroParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := gennaro_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)

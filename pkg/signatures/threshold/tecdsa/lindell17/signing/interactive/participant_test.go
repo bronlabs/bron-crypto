@@ -26,7 +26,7 @@ func Test_CanInitialize(t *testing.T) {
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, 2, identities)
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, 2, identities)
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, prng)

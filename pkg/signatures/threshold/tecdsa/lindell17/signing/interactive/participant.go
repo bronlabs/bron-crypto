@@ -90,7 +90,7 @@ func (cosigner *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (cosigner *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range cosigner.cohortConfig.SignatureAggregators.Iter() {
+	for _, signatureAggregator := range cosigner.cohortConfig.Protocol.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(cosigner.myIdentityKey.PublicKey()) {
 			return true
 		}
@@ -101,9 +101,6 @@ func (cosigner *Cosigner) IsSignatureAggregator() bool {
 func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
 	if err := myShard.Validate(cohortConfig); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
@@ -148,9 +145,6 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
 	}
 	if err := myShard.Validate(cohortConfig); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate shard")

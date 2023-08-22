@@ -41,7 +41,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	}
 	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
-	dealer, err := pedersen.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.H)
+	dealer, err := pedersen.NewDealer(p.CohortConfig.Protocol.Threshold, p.CohortConfig.Protocol.TotalParties, p.H)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct pedersen dealer")
 	}
@@ -99,7 +99,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 	}
 	partialPublicKeyShares := map[int]curves.Point{}
 
-	for senderSharingId := 1; senderSharingId <= p.CohortConfig.TotalParties; senderSharingId++ {
+	for senderSharingId := 1; senderSharingId <= p.CohortConfig.Protocol.TotalParties; senderSharingId++ {
 		if senderSharingId == p.MySharingId {
 			continue
 		}
@@ -154,7 +154,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		p.MySharingId: p.state.commitments,
 	}
 
-	for senderSharingId := 1; senderSharingId <= p.CohortConfig.TotalParties; senderSharingId++ {
+	for senderSharingId := 1; senderSharingId <= p.CohortConfig.Protocol.TotalParties; senderSharingId++ {
 		if senderSharingId == p.MySharingId {
 			continue
 		}
@@ -179,9 +179,9 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		}
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderSharingId]
-		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
-		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
-		for k := 0; k < p.CohortConfig.Threshold; k++ {
+		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
+		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
+		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
 			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
 			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
 			C_lk := senderCommitmentVector[k]

@@ -130,7 +130,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -165,7 +165,7 @@ func TestSignNilMessage(t *testing.T) {
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)

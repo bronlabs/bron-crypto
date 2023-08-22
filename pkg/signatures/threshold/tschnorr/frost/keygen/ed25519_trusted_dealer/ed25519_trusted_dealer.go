@@ -23,7 +23,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	if cohortConfig.CipherSuite.Curve.Name() != edwards25519.Name {
 		return nil, errs.NewInvalidArgument("curve not supported")
 	}
-	if cohortConfig.Protocol != protocols.FROST {
+	if cohortConfig.Protocol.Name != protocols.FROST {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 	curve := edwards25519.New()
@@ -40,7 +40,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapSerializationError(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}

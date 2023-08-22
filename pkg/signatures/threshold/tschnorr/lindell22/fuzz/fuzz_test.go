@@ -69,7 +69,7 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
 
-	cohort, _ := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, _ := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	shard := shards[identities[0].Hash()]
 	publicKey := shard.SigningKeyShare.PublicKey
 
@@ -106,7 +106,7 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	if len(sid) == 0 {
 		t.Skip()
 	}
-	cohort, _ := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, _ := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	transcripts := integration_test_utils.MakeTranscripts("fuzz-test", identities)
 	participants, err := noninteractive_test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n, threshold int)
 	t.Helper()
 	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	require.NoError(t, err)
 	shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
 	require.NoError(t, err)

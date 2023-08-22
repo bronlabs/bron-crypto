@@ -86,9 +86,6 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
-	}
 	if err := mySigningKeyShare.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
 	}

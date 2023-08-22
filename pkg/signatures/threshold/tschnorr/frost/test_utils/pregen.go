@@ -13,7 +13,7 @@ func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (pa
 	// copy identities as they get sorted inplace when creating participant
 	identities := cohortConfig.Participants.Clone()
 
-	participants = make([]*noninteractive.PreGenParticipant, cohortConfig.TotalParties)
+	participants = make([]*noninteractive.PreGenParticipant, cohortConfig.Protocol.TotalParties)
 	sortedIdentities := integration.ByPublicKey(identities.List())
 	sort.Sort(sortedIdentities)
 	i := -1

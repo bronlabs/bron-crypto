@@ -198,7 +198,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.Signing
 		})
 	}
 
-	cosigners := make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
+	cosigners := make([]*noninteractive.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
 		cosigners[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
 		require.NoError(t, err)
@@ -229,7 +229,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.Signing
 
 func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair) {
 	t.Helper()
-	pregenParticipants := make([]*noninteractive.PreGenParticipant, cohortConfig.TotalParties)
+	pregenParticipants := make([]*noninteractive.PreGenParticipant, cohortConfig.Protocol.TotalParties)
 	var err error
 	for i, identity := range identities {
 		pregenParticipants[i], err = noninteractive.NewPreGenParticipant(identity, cohortConfig, tau, random)
@@ -278,7 +278,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		identities = append(identities, identity)
 	}
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()

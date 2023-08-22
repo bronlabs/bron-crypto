@@ -79,7 +79,7 @@ type ReceiverOutput struct {
 	_ helper_types.Incomparable
 }
 
-// Sender stores state for the "sender" role in OT. see Protocol 7 in Appendix A of DKLs18.
+// Sender stores state for the "sender" role in OT. see Name 7 in Appendix A of DKLs18.
 type Sender struct {
 	// Output is the output that is produced as a result of running random OT protocol.
 	Output *SenderOutput
@@ -102,7 +102,7 @@ type Sender struct {
 	_ helper_types.Incomparable
 }
 
-// Receiver stores state for the "receiver" role in OT. Protocol 7, Appendix A, of DKLs.
+// Receiver stores state for the "receiver" role in OT. Name 7, Appendix A, of DKLs.
 type Receiver struct {
 	// Output is the output that is produced as a result of running random OT protocol.
 	Output *ReceiverOutput

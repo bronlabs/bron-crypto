@@ -103,12 +103,14 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	bobIdx := 1
 	tau := maxNumberOfPreSignatures
 	cohort := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.LINDELL17,
-		Threshold:            lindell17.Threshold,
-		TotalParties:         n,
-		Participants:         hashset.NewHashSet(identities),
-		SignatureAggregators: hashset.NewHashSet(identities),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identities),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.LINDELL17,
+			Threshold:            lindell17.Threshold,
+			TotalParties:         n,
+			SignatureAggregators: hashset.NewHashSet(identities),
+		},
 	}
 	var sid []byte
 	fz.Fuzz(&sid)
@@ -160,12 +162,14 @@ func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integra
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.LINDELL17,
-		Threshold:            lindell17.Threshold,
-		TotalParties:         n,
-		Participants:         hashset.NewHashSet(identities),
-		SignatureAggregators: hashset.NewHashSet(identities),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identities),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.LINDELL17,
+			Threshold:            lindell17.Threshold,
+			TotalParties:         n,
+			SignatureAggregators: hashset.NewHashSet(identities),
+		},
 	}
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
@@ -180,7 +184,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	fz.Fuzz(&sessionId)
 	alice := identities[0]
 	bob := identities[1]
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob})
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob})
 	require.NoError(t, err)
 
 	aliceShard := shards[alice.Hash()]

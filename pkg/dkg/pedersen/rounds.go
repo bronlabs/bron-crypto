@@ -38,7 +38,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 
 	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
-	dealer, err := feldman.NewDealer(p.CohortConfig.Threshold, p.CohortConfig.TotalParties, p.CohortConfig.CipherSuite.Curve)
+	dealer, err := feldman.NewDealer(p.CohortConfig.Protocol.Threshold, p.CohortConfig.Protocol.TotalParties, p.CohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
@@ -95,7 +95,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 		p.MySharingId: p.state.commitments,
 	}
 
-	for senderSharingId := 1; senderSharingId <= p.CohortConfig.TotalParties; senderSharingId++ {
+	for senderSharingId := 1; senderSharingId <= p.CohortConfig.Protocol.TotalParties; senderSharingId++ {
 		if senderSharingId == p.MySharingId {
 			continue
 		}
@@ -134,9 +134,9 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 		}
 
 		partialPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(receivedSecretKeyShare)
-		iToKs := make([]curves.Scalar, p.CohortConfig.Threshold)
-		C_lks := make([]curves.Point, p.CohortConfig.Threshold)
-		for k := 0; k < p.CohortConfig.Threshold; k++ {
+		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
+		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
+		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
 			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
 			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
 			C_lk := senderCommitmentVector[k]
@@ -189,9 +189,9 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 	for j, identityKey := range sharingIdToIdentityKey {
 		Y_j := cohort.CipherSuite.Curve.Point().Identity()
 		for _, C_l := range commitmentVectors {
-			jToKs := make([]curves.Scalar, cohort.Threshold)
+			jToKs := make([]curves.Scalar, cohort.Protocol.Threshold)
 			// TODO: add simultaneous scalar exp
-			for k := 0; k < cohort.Threshold; k++ {
+			for k := 0; k < cohort.Protocol.Threshold; k++ {
 				exp := cohort.CipherSuite.Curve.Scalar().New(k)
 				jToK := cohort.CipherSuite.Curve.Scalar().New(j).Exp(exp)
 				jToKs[k] = jToK

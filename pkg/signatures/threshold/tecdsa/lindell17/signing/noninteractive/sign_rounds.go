@@ -28,7 +28,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
 
-	theirLambda, err := signing.CalcOtherPartyLagrangeCoefficient(p.theirSharingId, p.mySharingId, p.cohortConfig.TotalParties, p.cohortConfig.CipherSuite.Curve)
+	theirLambda, err := signing.CalcOtherPartyLagrangeCoefficient(p.theirSharingId, p.mySharingId, p.cohortConfig.Protocol.TotalParties, p.cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}

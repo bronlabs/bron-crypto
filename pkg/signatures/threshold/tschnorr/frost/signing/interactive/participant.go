@@ -45,7 +45,7 @@ func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range ic.CohortConfig.SignatureAggregators.Iter() {
+	for _, signatureAggregator := range ic.CohortConfig.Protocol.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
 			return true
 		}
@@ -68,9 +68,6 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if cohortConfig.PreSignatureComposer != nil {
-		return nil, errs.NewVerificationFailed("can't set presignature composer if cosigner is interactive")
-	}
 	if shard == nil {
 		return nil, errs.NewVerificationFailed("shard is nil")
 	}
@@ -81,7 +78,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 	if sessionParticipants == nil {
 		return nil, errs.NewIsNil("invalid number of session participants")
 	}
-	if sessionParticipants.Len() != cohortConfig.Threshold {
+	if sessionParticipants.Len() != cohortConfig.Protocol.Threshold {
 		return nil, errs.NewIncorrectCount("invalid number of session participants")
 	}
 	for _, sessionParticipant := range sessionParticipants.Iter() {

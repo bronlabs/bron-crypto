@@ -48,7 +48,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
+			cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")
@@ -57,7 +57,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, shards)
-			require.Len(t, shards, cohort.TotalParties)
+			require.Len(t, shards, cohort.Protocol.TotalParties)
 
 			transcripts := test_utils.MakeTranscripts(transcriptAppLabel, identities)
 			participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)

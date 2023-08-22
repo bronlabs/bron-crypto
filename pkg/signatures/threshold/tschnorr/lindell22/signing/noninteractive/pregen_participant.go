@@ -63,7 +63,7 @@ func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (p *PreGenParticipant) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range p.cohortConfig.SignatureAggregators.Iter() {
+	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
 		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
 			return true
 		}
@@ -109,7 +109,7 @@ func validatePreGenInputs(tau int, identityKey integration.IdentityKey, sid []by
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if cohortConfig.Participants.Len() != cohortConfig.TotalParties {
+	if cohortConfig.Participants.Len() != cohortConfig.Protocol.TotalParties {
 		return errs.NewIncorrectCount("invalid number of participants")
 	}
 	if identityKey == nil || !cohortConfig.IsInCohort(identityKey) {

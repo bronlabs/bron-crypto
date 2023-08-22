@@ -65,7 +65,7 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 
 func doInteractiveSigning(t *testing.T, threshold int, identities []integration.IdentityKey, shards []*dkls23.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
 	err = test_utils2.RunInteractiveSign(cohortConfig, signerIdentities, shards, message)

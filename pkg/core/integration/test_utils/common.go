@@ -104,19 +104,21 @@ func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar) (i
 	}, nil
 }
 
-func MakeCohort(cipherSuite *integration.CipherSuite, protocol protocols.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
+func MakeCohortProtocol(cipherSuite *integration.CipherSuite, protocol protocols.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
 	if threshold > len(identities) {
 		return nil, errors.Errorf("invalid t=%d, n=%d", threshold, len(identities))
 	}
 	parties := append([]integration.IdentityKey{}, identities...)
 	aggregators := append([]integration.IdentityKey{}, signatureAggregators...)
 	cohortConfig = &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocol,
-		Threshold:            threshold,
-		TotalParties:         len(parties),
-		Participants:         hashset.NewHashSet(parties),
-		SignatureAggregators: hashset.NewHashSet(aggregators),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(parties),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocol,
+			Threshold:            threshold,
+			TotalParties:         len(parties),
+			SignatureAggregators: hashset.NewHashSet(aggregators),
+		},
 	}
 
 	if err := cohortConfig.Validate(); err != nil {

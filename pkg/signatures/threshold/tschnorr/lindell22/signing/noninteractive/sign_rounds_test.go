@@ -41,7 +41,7 @@ func Test_SignHappyPath(t *testing.T) {
 	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	require.NoError(t, err)
 
 	transcripts := integration_test_utils.MakeTranscripts(transcriptAppLabel, identities)

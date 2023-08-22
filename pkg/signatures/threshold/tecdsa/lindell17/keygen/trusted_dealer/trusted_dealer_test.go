@@ -32,18 +32,20 @@ func Test_HappyPath(t *testing.T) {
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.LINDELL17,
-		Threshold:            2,
-		TotalParties:         3,
-		Participants:         hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
-		SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.LINDELL17,
+			Threshold:            2,
+			TotalParties:         3,
+			SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
+		},
 	}
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
-	require.Len(t, shards, cohortConfig.TotalParties)
+	require.Len(t, shards, cohortConfig.Protocol.TotalParties)
 
 	t.Run("all signing key shares are valid", func(t *testing.T) {
 		t.Parallel()

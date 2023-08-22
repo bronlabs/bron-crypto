@@ -40,7 +40,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 			Value: shards[sharingIdToIdentity[sharingId].Hash()].SigningKeyShare.Share,
 		}
 	}
-	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, cohortConfig.CipherSuite.Curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, cohortConfig.CipherSuite.Curve)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "cannot create Feldman dealer")
 	}
@@ -93,8 +93,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
-	if cohortConfig.Protocol != protocols.LINDELL17 {
-		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol)
+	if cohortConfig.Protocol.Name != protocols.LINDELL17 {
+		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol.Name)
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
@@ -122,7 +122,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a knox point")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}

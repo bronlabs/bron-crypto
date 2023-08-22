@@ -19,15 +19,15 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
 
-	if cohortConfig.Protocol != protocols.LINDELL22 {
-		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol)
+	if cohortConfig.Protocol.Name != protocols.LINDELL22 {
+		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol.Name)
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
 	schnorrPrivateKey := curve.Scalar().Random(prng)
 	schnorrPublicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
-	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}

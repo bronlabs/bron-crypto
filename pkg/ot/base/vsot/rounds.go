@@ -32,7 +32,7 @@ type (
 
 // Round1ComputeAndZkpToPublicKey is the first phase of the protocol.
 // computes and stores public key and returns the dlog proof. serialised / packed.
-// This implements step 1 of Protocol 7 of DKLs18, page 16.
+// This implements step 1 of Name 7 of DKLs18, page 16.
 func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*dlog.Proof, curves.Point, error) {
 	var err error
 	// Sample the secret key and compute the public key.
@@ -53,7 +53,7 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*dlog.Proof, curves.Poin
 }
 
 // Round2VerifyDlogAndPadTransfer verifies the dlog proof of the public key sent by the sender, i.e., step 2),
-// and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Protocol 7 (page 16) of the paper.
+// and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Name 7 (page 16) of the paper.
 func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *dlog.Proof) ([]ReceiversMaskedChoices, error) {
 	receiver.SenderPublicKey = senderPublicKey
 	receiver.transcript.AppendMessages("dlog proof", receiver.UniqueSessionId)
@@ -216,7 +216,7 @@ func (receiver *Receiver) Round8Decrypt(ciphertext [][KeyCount][DigestSize]byte)
 	return receiver.Output.Decrypt(ciphertext)
 }
 
-// Encrypt runs step 9) of the seed OT Protocol 7) of https://eprint.iacr.org/2018/499.pdf,
+// Encrypt runs step 9) of the seed OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
 // in which the seed OT sender "encrypts" both messages under the "one-time keys" output by the random OT.
 func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyCount][DigestSize]byte, error) {
 	batchSize := len(s.OneTimePadEncryptionKeys)
@@ -237,7 +237,7 @@ func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyC
 	return ciphertexts, nil
 }
 
-// Decrypt is step 10) of the seed OT Protocol 7) of https://eprint.iacr.org/2018/499.pdf,
+// Decrypt is step 10) of the seed OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
 // where the seed OT receiver "decrypts" the message it's receiving using the "key" it received in the random OT.
 func (r *ReceiverOutput) Decrypt(ciphertexts [][KeyCount][DigestSize]byte) ([][DigestSize]byte, error) {
 	batchSize := len(r.OneTimePadDecryptionKey)

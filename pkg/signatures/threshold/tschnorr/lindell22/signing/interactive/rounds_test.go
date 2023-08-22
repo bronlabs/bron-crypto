@@ -79,7 +79,7 @@ func Test_HappyPath(t *testing.T) {
 	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohort(cipherSuite, protocols.LINDELL22, identities, th, identities)
+	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(cohort, prng)

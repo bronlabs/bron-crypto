@@ -13,11 +13,11 @@ import (
 )
 
 func MakeParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*tecdsa.Participant, err error) {
-	if len(identities) != cohortConfig.TotalParties {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
+	if len(identities) != cohortConfig.Protocol.TotalParties {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
 
-	participants = make([]*tecdsa.Participant, cohortConfig.TotalParties)
+	participants = make([]*tecdsa.Participant, cohortConfig.Protocol.TotalParties)
 
 	for i, identity := range identities {
 		var prng io.Reader

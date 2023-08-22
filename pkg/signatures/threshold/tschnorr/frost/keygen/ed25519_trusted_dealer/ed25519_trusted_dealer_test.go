@@ -83,18 +83,20 @@ func Test_happyPath(t *testing.T) {
 	}
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.FROST,
-		Threshold:            2,
-		TotalParties:         3,
-		Participants:         hashset.NewHashSet([]integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey}),
-		SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey}),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet([]integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey}),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.FROST,
+			Threshold:            2,
+			TotalParties:         3,
+			SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{aliceIdentityKey, bobIdentityKey, charlieIdentityKey}),
+		},
 	}
 
 	signingKeyShares, err := trusted_dealer.Keygen(cohortConfig, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, signingKeyShares)
-	require.Len(t, signingKeyShares, cohortConfig.TotalParties)
+	require.Len(t, signingKeyShares, cohortConfig.Protocol.TotalParties)
 
 	for _, signingKeyShare := range signingKeyShares {
 		err = signingKeyShare.Validate()

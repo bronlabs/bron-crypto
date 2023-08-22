@@ -41,9 +41,9 @@ type PublicKeyShares struct {
 
 func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
 	sharingIdToIdentityKey, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
-	sharingIds := make([]curves.Scalar, cohortConfig.TotalParties)
-	partialPublicKeys := make([]curves.Point, cohortConfig.TotalParties)
-	for i := 0; i < cohortConfig.TotalParties; i++ {
+	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
+	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
+	for i := 0; i < cohortConfig.Protocol.TotalParties; i++ {
 		sharingIds[i] = p.Curve.Scalar().New(i + 1)
 		identityKey, exists := sharingIdToIdentityKey[i+1]
 		if !exists {

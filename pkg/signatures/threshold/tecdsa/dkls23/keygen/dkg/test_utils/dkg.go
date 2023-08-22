@@ -25,7 +25,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 			return nil, nil, nil, nil, err
 		}
 	}
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -40,7 +40,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		return nil, nil, nil, nil, err
 	}
 	for _, out := range r1OutsU {
-		if len(out) != cohortConfig.TotalParties-1 {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
 			return nil, nil, nil, nil, errs.NewFailed("output size does not match")
 		}
 	}
@@ -51,7 +51,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		return nil, nil, nil, nil, err
 	}
 	for _, out := range r2OutsU {
-		if len(out) != cohortConfig.TotalParties-1 {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
 			return nil, nil, nil, nil, errs.NewFailed("output size does not match")
 		}
 	}
@@ -62,7 +62,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		return nil, nil, nil, nil, err
 	}
 	for _, out := range r3OutsU {
-		if len(out) != cohortConfig.TotalParties-1 {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
 			return nil, nil, nil, nil, errs.NewFailed("output size does not match")
 		}
 	}
@@ -73,7 +73,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		return nil, nil, nil, nil, err
 	}
 	for _, out := range r4OutsU {
-		if len(out) != cohortConfig.TotalParties-1 {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
 			return nil, nil, nil, nil, errs.NewFailed("output size does not match")
 		}
 	}
@@ -84,7 +84,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		return nil, nil, nil, nil, err
 	}
 	for _, out := range r5OutsU {
-		if len(out) != cohortConfig.TotalParties-1 {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
 			return nil, nil, nil, nil, errs.NewFailed("output size does not match")
 		}
 	}

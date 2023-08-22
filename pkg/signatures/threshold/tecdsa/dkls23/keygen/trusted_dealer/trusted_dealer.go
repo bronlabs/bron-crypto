@@ -27,7 +27,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
 		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
 	}
-	if cohortConfig.Protocol != protocols.DKLS23 {
+	if cohortConfig.Protocol.Name != protocols.DKLS23 {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 
@@ -50,7 +50,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.NewVerificationFailed("calculated public key is incorrect")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)
+	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}

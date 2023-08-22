@@ -14,11 +14,11 @@ import (
 )
 
 func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, allTranscripts []transcripts.Transcript, prngs []io.Reader) (participants []*lindell17_dkg.Participant, err error) {
-	if len(identities) != cohortConfig.TotalParties {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
+	if len(identities) != cohortConfig.Protocol.TotalParties {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
 
-	participants = make([]*lindell17_dkg.Participant, cohortConfig.TotalParties)
+	participants = make([]*lindell17_dkg.Participant, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
 		var prng io.Reader
 		if prngs != nil && prngs[i] != nil {

@@ -34,7 +34,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	shards, err := test_utils.RunDKG(curve, cohortConfig, allIdentities)

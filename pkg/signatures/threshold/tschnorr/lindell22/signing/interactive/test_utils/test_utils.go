@@ -14,12 +14,12 @@ import (
 )
 
 func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
-	if len(identities) < cohortConfig.Threshold {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
+	if len(identities) < cohortConfig.Protocol.Threshold {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
 
 	prng := crand.Reader
-	participants = make([]*interactive.Cosigner, cohortConfig.Threshold)
+	participants = make([]*interactive.Cosigner, cohortConfig.Protocol.Threshold)
 	for i, identity := range identities {
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")

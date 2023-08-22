@@ -65,12 +65,14 @@ func Test_CanInitialize(t *testing.T) {
 	}
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.FROST,
-		Threshold:            n,
-		TotalParties:         n,
-		Participants:         hashset.NewHashSet(identityKeys),
-		SignatureAggregators: hashset.NewHashSet(identityKeys),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identityKeys),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.FROST,
+			Threshold:            n,
+			TotalParties:         n,
+			SignatureAggregators: hashset.NewHashSet(identityKeys),
+		},
 	}
 
 	alice, err := NewPreGenParticipant(aliceIdentityKey, cohortConfig, tau, crand.Reader)

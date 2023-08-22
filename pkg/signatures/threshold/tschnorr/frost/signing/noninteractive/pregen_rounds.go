@@ -57,7 +57,7 @@ func (p *PreGenParticipant) Round2(round1output map[helper_types.IdentityHash]*R
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	}
-	if len(round1output) != p.CohortConfig.TotalParties {
+	if len(round1output) != p.CohortConfig.Protocol.TotalParties {
 		return nil, nil, errs.NewIncorrectCount("the number of received messages is not equal to total parties")
 	}
 

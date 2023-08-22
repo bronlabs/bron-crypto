@@ -15,11 +15,11 @@ import (
 )
 
 func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader, sid []byte) (participants []*dkg.Participant, err error) {
-	if len(identities) != cohortConfig.TotalParties {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.TotalParties)
+	if len(identities) != cohortConfig.Protocol.TotalParties {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
 
-	participants = make([]*dkg.Participant, cohortConfig.TotalParties)
+	participants = make([]*dkg.Participant, cohortConfig.Protocol.TotalParties)
 
 	if len(sid) == 0 {
 		sid, err = agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)

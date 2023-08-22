@@ -3,15 +3,15 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/dkg"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,12 +27,14 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.LINDELL22,
-		Threshold:            2,
-		TotalParties:         2,
-		Participants:         hashset.NewHashSet(identities),
-		SignatureAggregators: hashset.NewHashSet(identities),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identities),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.LINDELL22,
+			Threshold:            2,
+			TotalParties:         2,
+			SignatureAggregators: hashset.NewHashSet(identities),
+		},
 	}
 	uniqueSessionId := []byte("sid")
 	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0], cohortConfig, nil, crand.Reader)

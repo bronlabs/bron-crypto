@@ -14,11 +14,11 @@ import (
 )
 
 func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*interactive_signing.Cosigner, err error) {
-	if len(identities) < cohortConfig.Threshold {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Threshold)
+	if len(identities) < cohortConfig.Protocol.Threshold {
+		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
 
-	participants = make([]*interactive_signing.Cosigner, cohortConfig.Threshold)
+	participants = make([]*interactive_signing.Cosigner, cohortConfig.Protocol.Threshold)
 	for i, identity := range identities {
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
@@ -34,7 +34,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 }
 
 func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair) (participants []*noninteractive.Cosigner, err error) {
-	participants = make([]*noninteractive.Cosigner, cohortConfig.TotalParties)
+	participants = make([]*noninteractive.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
 		participants[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
 		if err != nil {

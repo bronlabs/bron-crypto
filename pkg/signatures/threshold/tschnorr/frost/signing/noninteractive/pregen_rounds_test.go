@@ -28,7 +28,7 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 
 	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohort(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)

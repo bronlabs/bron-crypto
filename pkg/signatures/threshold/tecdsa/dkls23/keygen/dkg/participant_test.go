@@ -60,12 +60,14 @@ func Test_CanInitialize(t *testing.T) {
 	}
 
 	cohortConfig := &integration.CohortConfig{
-		CipherSuite:          cipherSuite,
-		Protocol:             protocols.DKLS23,
-		Threshold:            2,
-		TotalParties:         2,
-		Participants:         hashset.NewHashSet(identityKeys),
-		SignatureAggregators: hashset.NewHashSet(identityKeys),
+		CipherSuite:  cipherSuite,
+		Participants: hashset.NewHashSet(identityKeys),
+		Protocol: &integration.ProtocolConfig{
+			Name:                 protocols.DKLS23,
+			Threshold:            2,
+			TotalParties:         2,
+			SignatureAggregators: hashset.NewHashSet(identityKeys),
+		},
 	}
 	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
 	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)

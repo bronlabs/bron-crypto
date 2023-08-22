@@ -30,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 
 	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohort(cipherSuite, protocols.FROST, identities, 2, identities)
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 	r1OutsB, r1OutsU, err := gennaro_dkg_test_utils.DoDkgRound1(gennaroParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.TotalParties-1)
+		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
 	r2InsB, r2InsU := gennaro_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)

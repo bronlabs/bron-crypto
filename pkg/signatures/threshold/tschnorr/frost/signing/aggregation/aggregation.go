@@ -56,7 +56,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 	if sessionParticipants.Len() == 0 {
 		return nil, errs.NewIncorrectCount("must provide the list of the sharing ids of session participants")
 	}
-	if len(identityKeyToSharingId) != cohortConfig.TotalParties {
+	if len(identityKeyToSharingId) != cohortConfig.Protocol.TotalParties {
 		return nil, errs.NewIncorrectCount("don't have enough mapping for shamir to identity keys as we have parties")
 	}
 	if shard == nil {
@@ -137,7 +137,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 	}
 
 	if sa.HasIdentifiableAbort() {
-		shamirConfig, err := shamir.NewDealer(sa.CohortConfig.Threshold, sa.CohortConfig.TotalParties, sa.CohortConfig.CipherSuite.Curve)
+		shamirConfig, err := shamir.NewDealer(sa.CohortConfig.Protocol.Threshold, sa.CohortConfig.Protocol.TotalParties, sa.CohortConfig.CipherSuite.Curve)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not initialise shamir config")
 		}
