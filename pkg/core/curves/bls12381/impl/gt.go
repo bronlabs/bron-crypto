@@ -11,11 +11,11 @@ import (
 const GtFieldBytes = 576
 
 // Gt is the target group.
-type Gt fp12
+type Gt Fp12
 
 // Random generates a random field element.
 func (gt *Gt) Random(reader io.Reader) (*Gt, error) {
-	_, err := (*fp12)(gt).Random(reader)
+	_, err := (*Fp12)(gt).Random(reader)
 	return gt, err
 }
 
@@ -24,8 +24,8 @@ func (gt *Gt) Random(reader io.Reader) (*Gt, error) {
 // operation in the so-called `cyclotomic subgroup` of `Fq6` so that
 // it can be compared with other elements of `Gt`.
 func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
-	var t0, t1, t2, t3, t4, t5, t6, t fp12
-	t0.FrobeniusMap((*fp12)(a))
+	var t0, t1, t2, t3, t4, t5, t6, t Fp12
+	t0.FrobeniusMap((*Fp12)(a))
 	t0.FrobeniusMap(&t0)
 	t0.FrobeniusMap(&t0)
 	t0.FrobeniusMap(&t0)
@@ -33,7 +33,7 @@ func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
 	t0.FrobeniusMap(&t0)
 
 	// Shouldn't happen since we enforce `a` to be non-zero but just in case
-	_, wasInverted := t1.Invert((*fp12)(a))
+	_, wasInverted := t1.Invert((*Fp12)(a))
 	t2.Mul(&t0, &t1)
 	t1.Set(&t2)
 	t2.FrobeniusMap(&t2)
@@ -66,23 +66,23 @@ func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
 	t3.Mul(&t3, &t1)
 	t3.Mul(&t3, &t6)
 	t.Mul(&t3, &t4)
-	(*fp12)(gt).CMove((*fp12)(gt), &t, wasInverted)
+	(*Fp12)(gt).CMove((*Fp12)(gt), &t, wasInverted)
 	return gt
 }
 
 // IsZero returns 1 if gt == 0, 0 otherwise.
 func (gt *Gt) IsZero() int {
-	return (*fp12)(gt).IsZero()
+	return (*Fp12)(gt).IsZero()
 }
 
 // IsOne returns 1 if gt == 1, 0 otherwise.
 func (gt *Gt) IsOne() int {
-	return (*fp12)(gt).IsOne()
+	return (*Fp12)(gt).IsOne()
 }
 
 // SetOne gt = one.
 func (gt *Gt) SetOne() *Gt {
-	(*fp12)(gt).SetOne()
+	(*Fp12)(gt).SetOne()
 	return gt
 }
 
@@ -164,16 +164,16 @@ func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (*Gt, int) {
 
 // Equal returns 1 if gt == rhs, 0 otherwise.
 func (gt *Gt) Equal(rhs *Gt) int {
-	return (*fp12)(gt).Equal((*fp12)(rhs))
+	return (*Fp12)(gt).Equal((*Fp12)(rhs))
 }
 
 // Generator returns the base point.
 func (gt *Gt) Generator() *Gt {
 	// pairing(&G1::generator(), &G2::generator())
-	gt.Set((*Gt)(&fp12{
-		A: fp6{
-			A: fp2{
-				A: fp{
+	gt.Set((*Gt)(&Fp12{
+		A: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x1972e433a01f85c5,
 					0x97d32b76fd772538,
 					0xc8ce546fc96bcdf9,
@@ -181,7 +181,7 @@ func (gt *Gt) Generator() *Gt {
 					0xa611342781843780,
 					0x13f3448a3fc6d825,
 				},
-				B: fp{
+				B: Fp{
 					0xd26331b02e9d6995,
 					0x9d68a482f7797e7d,
 					0x9c9b29248d39ea92,
@@ -190,8 +190,8 @@ func (gt *Gt) Generator() *Gt {
 					0x083ca4afba360478,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x59e261db0916b641,
 					0x2716b6f4b23e960d,
 					0xc8e55b10a0bd9c45,
@@ -199,7 +199,7 @@ func (gt *Gt) Generator() *Gt {
 					0x8cf89ebf57fdaac5,
 					0x12d6b7929e777a5e,
 				},
-				B: fp{
+				B: Fp{
 					0x5fc85188b0e15f35,
 					0x34a06e3a8f096365,
 					0xdb3126a6e02ad62c,
@@ -208,8 +208,8 @@ func (gt *Gt) Generator() *Gt {
 					0x1723703a926f8889,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0x93588f2971828778,
 					0x43f65b8611ab7585,
 					0x3183aaf5ec279fdf,
@@ -217,7 +217,7 @@ func (gt *Gt) Generator() *Gt {
 					0x64e176a6a64c99b0,
 					0x179fa78c58388f1f,
 				},
-				B: fp{
+				B: Fp{
 					0x672a0a11ca2aef12,
 					0x0d11b9b52aa3f16b,
 					0xa44412d0699d056e,
@@ -227,9 +227,9 @@ func (gt *Gt) Generator() *Gt {
 				},
 			},
 		},
-		B: fp6{
-			A: fp2{
-				A: fp{
+		B: Fp6{
+			A: Fp2{
+				A: Fp{
 					0xd30a88a1b062c679,
 					0x5ac56a5d35fc8304,
 					0xd0c834a6a81f290d,
@@ -237,7 +237,7 @@ func (gt *Gt) Generator() *Gt {
 					0xf0c27ff780500af0,
 					0x09245da6e2d72eae,
 				},
-				B: fp{
+				B: Fp{
 					0x9f2e0676791b5156,
 					0xe2d1c8234918fe13,
 					0x4c9e459f3c561bf4,
@@ -246,8 +246,8 @@ func (gt *Gt) Generator() *Gt {
 					0x15af618341c59acc,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x7c95658c24993ab1,
 					0x73eb38721ca886b9,
 					0x5256d749477434bc,
@@ -255,7 +255,7 @@ func (gt *Gt) Generator() *Gt {
 					0x04a3d3f80c86ce6d,
 					0x18a64a87fb686eaa,
 				},
-				B: fp{
+				B: Fp{
 					0xbb83e71bb920cf26,
 					0x2a5277ac92a73945,
 					0xfc0ee59f94f046a0,
@@ -264,8 +264,8 @@ func (gt *Gt) Generator() *Gt {
 					0x03f847aa9fdbe567,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0x8078dba56134e657,
 					0x1cd7ec9a43998a6e,
 					0xb1aa599a1a993766,
@@ -273,7 +273,7 @@ func (gt *Gt) Generator() *Gt {
 					0x8e159be3b605dffa,
 					0x0c86ba0d4af13fc2,
 				},
-				B: fp{
+				B: Fp{
 					0xe80ff2a06a52ffb1,
 					0x7694ca48721a906c,
 					0x7583183e03b08514,
@@ -289,37 +289,37 @@ func (gt *Gt) Generator() *Gt {
 
 // Add adds this value to another value.
 func (gt *Gt) Add(arg1, arg2 *Gt) *Gt {
-	(*fp12)(gt).Mul((*fp12)(arg1), (*fp12)(arg2))
+	(*Fp12)(gt).Mul((*Fp12)(arg1), (*Fp12)(arg2))
 	return gt
 }
 
 // Double this value.
 func (gt *Gt) Double(a *Gt) *Gt {
-	(*fp12)(gt).Square((*fp12)(a))
+	(*Fp12)(gt).Square((*Fp12)(a))
 	return gt
 }
 
 // Sub subtracts the two values.
 func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
-	var t fp12
-	t.Conjugate((*fp12)(arg2))
-	(*fp12)(gt).Mul((*fp12)(arg1), &t)
+	var t Fp12
+	t.Conjugate((*Fp12)(arg2))
+	(*Fp12)(gt).Mul((*Fp12)(arg1), &t)
 	return gt
 }
 
 // Neg negates this value.
 func (gt *Gt) Neg(a *Gt) *Gt {
-	(*fp12)(gt).Conjugate((*fp12)(a))
+	(*Fp12)(gt).Conjugate((*Fp12)(a))
 	return gt
 }
 
 // Mul multiplies this value by the input scalar.
 func (gt *Gt) Mul(a *Gt, s *impl.Field) *Gt {
-	var f, p fp12
-	f.Set((*fp12)(a))
+	var f, p Fp12
+	f.Set((*Fp12)(a))
 	bytes := s.Bytes()
 
-	precomputed := [16]fp12{}
+	precomputed := [16]Fp12{}
 	precomputed[1].Set(&f)
 	for i := 2; i < 16; i += 2 {
 		precomputed[i].Square(&precomputed[i>>1])
@@ -333,24 +333,24 @@ func (gt *Gt) Mul(a *Gt, s *impl.Field) *Gt {
 		window := bytes[32-1-i>>3] >> (4 - i&0x04) & 0x0F
 		p.Mul(&p, &precomputed[window])
 	}
-	(*fp12)(gt).Set(&p)
+	(*Fp12)(gt).Set(&p)
 	return gt
 }
 
 // Square this value.
 func (gt *Gt) Square(a *Gt) *Gt {
-	(*fp12)(gt).cyclotomicSquare((*fp12)(a))
+	(*Fp12)(gt).cyclotomicSquare((*Fp12)(a))
 	return gt
 }
 
 // Invert this value.
 func (gt *Gt) Invert(a *Gt) (*Gt, int) {
-	_, wasInverted := (*fp12)(gt).Invert((*fp12)(a))
+	_, wasInverted := (*Fp12)(gt).Invert((*Fp12)(a))
 	return gt, wasInverted
 }
 
-func fp4Square(a, b, arg1, arg2 *fp2) {
-	var t0, t1, t2 fp2
+func fp4Square(a, b, arg1, arg2 *Fp2) {
+	var t0, t1, t2 Fp2
 
 	t0.Square(arg1)
 	t1.Square(arg2)
@@ -362,11 +362,11 @@ func fp4Square(a, b, arg1, arg2 *fp2) {
 	b.Sub(&t2, &t1)
 }
 
-func (f *fp12) cyclotomicSquare(a *fp12) {
+func (f *Fp12) cyclotomicSquare(a *Fp12) {
 	// Adaptation of Algorithm 5.5.4, Guide to Pairing-Based Cryptography
 	// Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
 	// https://eprint.iacr.org/2009/565.pdf
-	var z0, z1, z2, z3, z4, z5, t0, t1, t2, t3 fp2
+	var z0, z1, z2, z3, z4, z5, t0, t1, t2, t3 Fp2
 	z0.Set(&a.A.A)
 	z4.Set(&a.A.B)
 	z3.Set(&a.A.C)
@@ -412,8 +412,8 @@ func (f *fp12) cyclotomicSquare(a *fp12) {
 	f.B.C.Set(&z5)
 }
 
-func (f *fp12) cyclotomicExp(a *fp12) {
-	var t fp12
+func (f *Fp12) cyclotomicExp(a *Fp12) {
+	var t Fp12
 	t.SetOne()
 	foundOne := 0
 

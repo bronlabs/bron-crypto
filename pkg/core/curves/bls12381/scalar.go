@@ -17,8 +17,8 @@ import (
 var _ (curves.PairingScalar) = (*Scalar)(nil)
 
 type Scalar struct {
-	Value *impl.Field
-	point curves.PairingPoint
+	Value  *impl.Field
+	Point_ curves.PairingPoint
 
 	_ helper_types.Incomparable
 }
@@ -59,22 +59,22 @@ func (s *Scalar) Hash(inputs ...[]byte) curves.Scalar {
 	copy(t[:48], bitstring.ReverseBytes(xmd))
 
 	return &Scalar{
-		Value: bls12381impl.FqNew().SetBytesWide(&t),
-		point: s.point,
+		Value:  bls12381impl.FqNew().SetBytesWide(&t),
+		Point_: s.Point_,
 	}
 }
 
 func (s *Scalar) Zero() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().SetZero(),
-		point: s.point,
+		Value:  bls12381impl.FqNew().SetZero(),
+		Point_: s.Point_,
 	}
 }
 
 func (s *Scalar) One() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().SetOne(),
-		point: s.point,
+		Value:  bls12381impl.FqNew().SetOne(),
+		Point_: s.Point_,
 	}
 }
 
@@ -103,8 +103,8 @@ func (s *Scalar) New(value int) curves.Scalar {
 		v.Mod(v, t.Params.BiModulus)
 	}
 	return &Scalar{
-		Value: t.SetBigInt(v),
-		point: s.point,
+		Value:  t.SetBigInt(v),
+		Point_: s.Point_,
 	}
 }
 
@@ -119,16 +119,16 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 
 func (s *Scalar) Square() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().Square(s.Value),
-		point: s.point,
+		Value:  bls12381impl.FqNew().Square(s.Value),
+		Point_: s.Point_,
 	}
 }
 
 func (s *Scalar) Double() curves.Scalar {
 	v := bls12381impl.FqNew().Double(s.Value)
 	return &Scalar{
-		Value: v,
-		point: s.point,
+		Value:  v,
+		Point_: s.Point_,
 	}
 }
 
@@ -138,8 +138,8 @@ func (s *Scalar) Invert() (curves.Scalar, error) {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
 	return &Scalar{
-		Value: value,
-		point: s.point,
+		Value:  value,
+		Point_: s.Point_,
 	}, nil
 }
 
@@ -149,8 +149,8 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 		return nil, errs.NewFailed("not a square")
 	}
 	return &Scalar{
-		Value: value,
-		point: s.point,
+		Value:  value,
+		Point_: s.Point_,
 	}, nil
 }
 
@@ -158,8 +158,8 @@ func (s *Scalar) Cube() curves.Scalar {
 	value := bls12381impl.FqNew().Square(s.Value)
 	value.Mul(value, s.Value)
 	return &Scalar{
-		Value: value,
-		point: s.point,
+		Value:  value,
+		Point_: s.Point_,
 	}
 }
 
@@ -167,8 +167,8 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: bls12381impl.FqNew().Add(s.Value, r.Value),
-			point: s.point,
+			Value:  bls12381impl.FqNew().Add(s.Value, r.Value),
+			Point_: s.Point_,
 		}
 	} else {
 		panic("rhs is not ScalarBls12381")
@@ -179,8 +179,8 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: bls12381impl.FqNew().Sub(s.Value, r.Value),
-			point: s.point,
+			Value:  bls12381impl.FqNew().Sub(s.Value, r.Value),
+			Point_: s.Point_,
 		}
 	} else {
 		panic("rhs is not ScalarBls12381")
@@ -191,8 +191,8 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
-			Value: bls12381impl.FqNew().Mul(s.Value, r.Value),
-			point: s.point,
+			Value:  bls12381impl.FqNew().Mul(s.Value, r.Value),
+			Point_: s.Point_,
 		}
 	} else {
 		panic("rhs is not ScalarBls12381")
@@ -212,8 +212,8 @@ func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
 		}
 		v.Mul(v, s.Value)
 		return &Scalar{
-			Value: v,
-			point: s.point,
+			Value:  v,
+			Point_: s.Point_,
 		}
 	} else {
 		panic("rhs is not ScalarBls12381")
@@ -228,15 +228,15 @@ func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
 
 	value := bls12381impl.FqNew().Exp(s.Value, exp.Value)
 	return &Scalar{
-		Value: value,
-		point: s.point,
+		Value:  value,
+		Point_: s.Point_,
 	}
 }
 
 func (s *Scalar) Neg() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().Neg(s.Value),
-		point: s.point,
+		Value:  bls12381impl.FqNew().Neg(s.Value),
+		Point_: s.Point_,
 	}
 }
 
@@ -245,8 +245,8 @@ func (s *Scalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
 		return nil, errs.NewFailed("invalid value")
 	}
 	return &Scalar{
-		Value: bls12381impl.FqNew().SetBigInt(v),
-		point: s.point,
+		Value:  bls12381impl.FqNew().SetBigInt(v),
+		Point_: s.Point_,
 	}, nil
 }
 
@@ -267,10 +267,10 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	copy(seq[:], bitstring.ReverseBytes(input))
 	value, err := bls12381impl.FqNew().SetBytes(&seq)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "couldn't set bytes")
+		return nil, errs.WrapSerializationError(err, "couldn't set bytes")
 	}
 	return &Scalar{
-		Value: value, point: s.point,
+		Value: value, Point_: s.Point_,
 	}, nil
 }
 
@@ -281,29 +281,29 @@ func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	var seq [64]byte
 	copy(seq[:], input)
 	return &Scalar{
-		Value: bls12381impl.FqNew().SetBytesWide(&seq), point: s.point,
+		Value: bls12381impl.FqNew().SetBytesWide(&seq), Point_: s.Point_,
 	}, nil
 }
 
 func (s *Scalar) Clone() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().Set(s.Value),
-		point: s.point,
+		Value:  bls12381impl.FqNew().Set(s.Value),
+		Point_: s.Point_,
 	}
 }
 
 func (s *Scalar) OtherGroup() curves.PairingPoint {
-	return s.point.OtherGroup()
+	return s.Point_.OtherGroup()
 }
 
 func (s *Scalar) Point() curves.PairingPoint {
-	return s.point
+	return s.Point_
 }
 
 func (s *Scalar) SetPoint(p curves.PairingPoint) curves.PairingScalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew().Set(s.Value),
-		point: p,
+		Value:  bls12381impl.FqNew().Set(s.Value),
+		Point_: p,
 	}
 }
 
@@ -314,7 +314,7 @@ func (s *Scalar) Order() *big.Int {
 func (s *Scalar) MarshalBinary() ([]byte, error) {
 	result, err := internal.ScalarMarshalBinary(s)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to binary")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
 	}
 	return result, nil
 }
@@ -326,21 +326,21 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	}
 	sc, err := internal.ScalarUnmarshalBinary(curve.Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
 	s.Value = ss.Value
-	s.point = ss.point
+	s.Point_ = ss.Point_
 	return nil
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
 	result, err := internal.ScalarMarshalText(s)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to text")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
 	}
 	return result, nil
 }
@@ -352,14 +352,14 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 	}
 	sc, err := internal.ScalarUnmarshalText(curve.Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
 	s.Value = ss.Value
-	s.point = ss.point
+	s.Point_ = ss.Point_
 	return nil
 }
 
@@ -370,7 +370,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 	}
 	result, err := internal.ScalarMarshalJson(curve.Name(), s)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal json")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal json")
 	}
 	return result, nil
 }
@@ -378,7 +378,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 func (s *Scalar) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
+		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

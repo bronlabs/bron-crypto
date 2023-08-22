@@ -33,7 +33,7 @@ func (s *Signature) MarshalBinary() ([]byte, error) {
 	RSerialized := s.R.ToAffineCompressed()
 	zSerialized := s.Z.Bytes()
 	if len(RSerialized)+len(zSerialized) != signatureSize {
-		return serializedSignature, errs.NewSerializationFailed("serialised signature is too large")
+		return serializedSignature, errs.NewSerializationError("serialised signature is too large")
 	}
 	serializedSignature = append(serializedSignature, RSerialized...)
 	serializedSignature = append(serializedSignature, zSerialized...)
@@ -47,7 +47,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 	if curve.Name() == edwards25519.New().Name() {
 		edwardsPoint, ok := publicKey.(*edwards25519.Point)
 		if !ok {
-			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
+			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
 		// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptibe
 		// to a key substitution attack (specifically, it won't be binded to a public key (SBS) and a signature cannot be binded to a unique message in presence of malicious keys (MBS)). Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
@@ -58,7 +58,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 		if reflect.ValueOf(hashFunction).Pointer() == reflect.ValueOf(sha512.New).Pointer() {
 			serializedSignature, err := signature.MarshalBinary()
 			if err != nil {
-				return errs.WrapDeserializationFailed(err, "could not serialise signature to binary")
+				return errs.WrapSerializationError(err, "could not serialise signature to binary")
 			}
 			if ok := ed25519.Verify(publicKey.ToAffineCompressed(), message, serializedSignature); !ok {
 				return errs.NewVerificationFailed("could not verify schnorr signature using ed25519 verifier")
@@ -71,7 +71,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 			Hash:  hashFunction,
 		}, signature.R.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 		if err != nil {
-			return errs.WrapDeserializationFailed(err, "fiat shamir failed")
+			return errs.WrapSerializationError(err, "fiat shamir failed")
 		}
 
 		zG := curve.ScalarBaseMult(signature.Z)

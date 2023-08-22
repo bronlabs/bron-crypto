@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
@@ -25,9 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.New()
-	elCurve, err := curveutils.ToEllipticCurve(curve)
-	require.NoError(t, err)
-	q := elCurve.Params().N
+	q := curve.Profile().SubGroupOrder()
 
 	xInt, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
@@ -52,9 +49,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.New()
-	elCurve, err := curveutils.ToEllipticCurve(curve)
-	require.NoError(t, err)
-	q := elCurve.Params().N
+	q := curve.Profile().SubGroupOrder()
 
 	x1Int, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
@@ -83,9 +78,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.New()
-	elCurve, err := curveutils.ToEllipticCurve(curve)
-	require.NoError(t, err)
-	q := elCurve.Params().N
+	q := curve.Profile().SubGroupOrder()
 
 	xInt, err := randomIntInRange(q, prng)
 	require.NoError(t, err)
@@ -108,9 +101,7 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.New()
-	elCurve, err := curveutils.ToEllipticCurve(curve)
-	require.NoError(t, err)
-	q := elCurve.Params().N
+	q := curve.Profile().SubGroupOrder()
 
 	xLowInt, err := randomIntOutRangeLow(q, prng)
 	require.NoError(t, err)

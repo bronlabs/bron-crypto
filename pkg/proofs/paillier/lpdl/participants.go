@@ -6,7 +6,6 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
@@ -92,11 +91,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	nativeCurve, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "cannot get native curve")
-	}
-	q := nativeCurve.Params().N
+	q := curve.Profile().SubGroupOrder()
 	q2 := new(big.Int).Mul(q, q)
 
 	rangeProofTranscript := transcript.Clone()
@@ -139,12 +134,8 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
 	}
-	nativeCurve, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "cannot get native curve")
-	}
-	q := nativeCurve.Params().N
-	qSquared := new(big.Int).Mul(q, q)
+	q := curve.Profile().SubGroupOrder()
+	q2 := new(big.Int).Mul(q, q)
 
 	rangeProofTranscript := transcript.Clone()
 	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, sessionId, rangeProofTranscript, prng)
@@ -165,7 +156,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 			State: State{
 				curve: curve,
 				q:     q,
-				q2:    qSquared,
+				q2:    q2,
 			},
 		},
 	}, nil

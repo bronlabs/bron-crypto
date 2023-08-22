@@ -81,7 +81,7 @@ func (s *ScalarGt) MarshalBinary() ([]byte, error) {
 func (s *ScalarGt) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(GtName, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -98,7 +98,7 @@ func (s *ScalarGt) MarshalText() ([]byte, error) {
 func (s *ScalarGt) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -115,7 +115,7 @@ func (s *ScalarGt) MarshalJSON() ([]byte, error) {
 func (s *ScalarGt) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
+		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarGt)
 	if !ok {
@@ -282,7 +282,7 @@ func (*ScalarGt) SetBytes(input []byte) (curves.Scalar, error) {
 	copy(b[:], input)
 	ss, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewDeserializationFailed("invalid bytes")
+		return nil, errs.NewSerializationError("invalid bytes")
 	}
 	return &ScalarGt{Value: ss}, nil
 }
@@ -296,12 +296,12 @@ func (*ScalarGt) SetBytesWide(input []byte) (curves.Scalar, error) {
 
 	value, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewDeserializationFailed("invalid bytes")
+		return nil, errs.NewSerializationError("invalid bytes")
 	}
 	copy(b[:], input[bls12381impl.GtFieldBytes:])
 	value2, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewDeserializationFailed("invalid bytes")
+		return nil, errs.NewSerializationError("invalid bytes")
 	}
 	value.Add(value, value2)
 	return &ScalarGt{Value: value}, nil

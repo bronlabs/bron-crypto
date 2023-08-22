@@ -59,16 +59,16 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't extract C and S field from input")
+		return errs.WrapSerializationError(err, "couldn't extract C and S field from input")
 	}
 
 	s.R, err = curveutils.NewScalarFromJSON(parsed.R)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't deserialize R")
+		return errs.WrapSerializationError(err, "couldn't deserialize R")
 	}
 	s.S, err = curveutils.NewScalarFromJSON(parsed.S)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't deserialize S")
+		return errs.WrapSerializationError(err, "couldn't deserialize S")
 	}
 	return nil
 }
@@ -216,10 +216,6 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 	if !publicKey.Y.IsOnCurve() {
 		return errs.NewInvalidArgument("public key is not on curve")
 	}
-	ec, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to convert curve to elliptic curve")
-	}
 	// 1. Let P = lift_x(int(pk)); fail if that fails.
 	// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
 	P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
@@ -227,7 +223,7 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 		return errs.WrapFailed(err, "failed to lift x")
 	}
 	// 2. Let r = int(sig[0:32]); fail if r ≥ p.
-	if signature.R.BigInt().Cmp(ec.Params().P) >= 0 {
+	if signature.R.BigInt().Cmp(curve.Profile().Field().Order()) >= 0 {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
 	// 3. Let s = int(sig[32:64]); fail if s ≥ n. This step is implicit
@@ -256,10 +252,6 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("BIP0340")
 	}
-	ec, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to convert curve to elliptic curve")
-	}
 	size := len(publickeys)
 	if size != len(messages) || size != len(signatures) {
 		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal")
@@ -282,7 +274,7 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 		}
 		// 3. Let ri = int(sigi[0:32]); fail if ri ≥ p.
 		r := signatures[i].R
-		if r.BigInt().Cmp(ec.Params().P) >= 0 {
+		if r.BigInt().Cmp(curve.Profile().Field().Order()) >= 0 {
 			return errs.NewInvalidArgument("r is invalid")
 		}
 		// 4. Let si = int(sigi[32:64]); fail if si ≥ n.

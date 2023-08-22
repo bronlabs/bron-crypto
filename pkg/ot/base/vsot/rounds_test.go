@@ -1,7 +1,7 @@
 package vsot_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"testing"
@@ -23,7 +23,7 @@ func TestOtOnMultipleCurves(t *testing.T) {
 	for _, curve := range curveInstances {
 		batchSize := 256
 		hashKeySeed := [32]byte{}
-		_, err := rand.Read(hashKeySeed[:])
+		_, err := crand.Read(hashKeySeed[:])
 		require.NoError(t, err)
 		sender, receiver, err := test_utils.RunVSOT(t, curve, batchSize, hashKeySeed[:])
 		require.NoError(t, err)

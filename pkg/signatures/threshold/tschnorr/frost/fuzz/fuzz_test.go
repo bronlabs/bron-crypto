@@ -29,7 +29,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
@@ -274,10 +273,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)), &schnorr.Options{
-			TranscriptPrefixes: [][]byte{[]byte(transcriptPrefixes)},
-			TranscriptSuffixes: [][]byte{[]byte(transcriptSuffixes)},
-		})
+		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}

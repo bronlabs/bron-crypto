@@ -1,7 +1,7 @@
 package uint128
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"encoding/binary"
 	"math/big"
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func randUint128() Uint128 {
 	randBuf := make([]byte, 16)
-	rand.Read(randBuf)
+	crand.Read(randBuf)
 	return FromBytes(randBuf)
 }
 
@@ -63,7 +63,7 @@ func TestArithmetic(t *testing.T) {
 	// random values
 	randBuf := make([]byte, 17)
 	randUint128 := func() Uint128 {
-		rand.Read(randBuf)
+		crand.Read(randBuf)
 		var Lo, Hi uint64
 		if randBuf[16]&1 != 0 {
 			Lo = binary.LittleEndian.Uint64(randBuf[:8])

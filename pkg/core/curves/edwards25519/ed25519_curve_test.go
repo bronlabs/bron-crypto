@@ -6,13 +6,13 @@ import (
 	"math/big"
 	"testing"
 
+	filippo "filippo.io/edwards25519"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
 )
 

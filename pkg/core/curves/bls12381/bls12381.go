@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
@@ -25,23 +26,35 @@ var (
 	bls12381g2         Curve
 )
 
-var modulus = internal.Bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab")
+var (
+	p          = internal.Bhex("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab")
+	r          = internal.Bhex("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
+	cofactorG2 = internal.Bhex("0x396C8C005555E1568C00AAAB0000AAAB")
+)
 
 var _ (curves.CurveProfile) = (*CurveProfile)(nil)
 
-// TODO: finish when BLS is here
-type CurveProfile struct{}
+type CurveProfile struct {
+	i        curves.Curve
+	cofactor *big.Int
+	profile  curves.FieldProfile
+}
 
-func (CurveProfile) Field() curves.FieldProfile {
-	return nil
+func (c *CurveProfile) Field() curves.FieldProfile {
+	return c.profile
 }
 
 func (CurveProfile) SubGroupOrder() *big.Int {
-	return nil
+	return r
 }
 
-func (CurveProfile) Cofactor() *big.Int {
-	return nil
+func (c *CurveProfile) Cofactor() curves.Scalar {
+	result, _ := c.i.Scalar().SetBigInt(c.cofactor)
+	return result
+}
+
+func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+	return New()
 }
 
 type PairingCurveProfile struct{}
@@ -76,12 +89,16 @@ type PairingCurve struct {
 func bls12381g1Init() {
 	bls12381g1 = Curve{
 		Scalar_: &Scalar{
-			Value: bls12381impl.FqNew(),
-			point: new(PointG1),
+			Value:  bls12381impl.FqNew(),
+			Point_: new(PointG1),
 		},
-		Point_:   new(PointG1).Identity(),
-		Name_:    G1Name,
-		Profile_: &CurveProfile{},
+		Point_: new(PointG1).Identity(),
+		Name_:  G1Name,
+		Profile_: &CurveProfile{
+			i:        bls12381g1,
+			cofactor: big.NewInt(1),
+			profile:  &FieldProfileG1{},
+		},
 	}
 }
 
@@ -93,11 +110,16 @@ func NewG1() *Curve {
 func bls12381g2Init() {
 	bls12381g2 = Curve{
 		Scalar_: &Scalar{
-			Value: bls12381impl.FqNew(),
-			point: new(PointG2),
+			Value:  bls12381impl.FqNew(),
+			Point_: new(PointG2),
 		},
 		Point_: new(PointG2).Identity(),
 		Name_:  G2Name,
+		Profile_: &CurveProfile{
+			i:        bls12381g2,
+			cofactor: cofactorG2,
+			profile:  &FieldProfileG2{},
+		},
 	}
 }
 
@@ -146,8 +168,18 @@ func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	return nil, nil
+func (c Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+	var result curves.Point
+	var err error
+	if c.Name() == G1Name {
+		result, err = multiScalarMultBls12381G1(scalars, points)
+	} else {
+		result, err = multiScalarMultBls12381G2(scalars, points)
+	}
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't do msm")
+	}
+	return result, nil
 }
 
 func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {

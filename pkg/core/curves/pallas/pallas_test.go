@@ -49,24 +49,24 @@ func TestPointPallasNeg(t *testing.T) {
 
 func TestPointPallasRandom(t *testing.T) {
 	a := new(Ep).Random(test_utils.TestRng())
-	require.NotNil(t, a.x)
-	require.NotNil(t, a.y)
-	require.NotNil(t, a.z)
+	require.NotNil(t, a.X)
+	require.NotNil(t, a.Y)
+	require.NotNil(t, a.Z)
 	require.True(t, a.IsOnCurve())
 	e := &Ep{
-		x: &fp.Fp{
+		X: &fp.Fp{
 			0x7263083d01d4859c,
 			0x65a03323b5a3d204,
 			0xe71d73222b136668,
 			0x1d1b1bcf1256b539,
 		},
-		y: &fp.Fp{
+		Y: &fp.Fp{
 			0x8cc2516ffe23e1bb,
 			0x5418f941eeaca812,
 			0x16c9af658a846f29,
 			0x11c572091c418668,
 		},
-		z: &fp.Fp{
+		Z: &fp.Fp{
 			0xa879589adb77a88e,
 			0x5444a531a19f2406,
 			0x637ff77c51dda524,

@@ -21,7 +21,7 @@ func NewScalarFromJSON(data []byte) (curves.Scalar, error) {
 
 	err := json.Unmarshal(data, &m)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "json unmarshal failed")
+		return nil, errs.WrapSerializationError(err, "json unmarshal failed")
 	}
 	curve, err := GetCurveByName(m.Type)
 	if err != nil {

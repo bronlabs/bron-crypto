@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 	p256n "github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl/fp"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -32,8 +33,12 @@ func (CurveProfile) SubGroupOrder() *big.Int {
 	return fq.New().Params.BiModulus
 }
 
-func (CurveProfile) Cofactor() *big.Int {
-	return big.NewInt(1)
+func (CurveProfile) Cofactor() curves.Scalar {
+	return p256Instance.Scalar().One()
+}
+
+func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+	return nil
 }
 
 var _ (curves.Curve) = (*Curve)(nil)
@@ -114,6 +119,32 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	return &Point{Value: value}, nil
 }
 
-func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	return nil, nil, nil
+func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+	xc, ok := x.(FieldElement)
+	if !ok {
+		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")
+	}
+	rhs := fp.New()
+	new(Point).Value.Arithmetic.RhsEq(rhs, xc.v)
+	y, wasQr := fp.New().Sqrt(rhs)
+	if !wasQr {
+		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
+	}
+	p1e := p256n.PointNew().Identity()
+	p1e.X = xc.v
+	p1e.Y = y
+	p1e.Z.SetOne()
+
+	p2e := p256n.PointNew().Identity()
+	p2e.X = xc.v
+	p2e.Y = fp.New().Neg(y)
+	p2e.Z.SetOne()
+
+	p1 := &Point{Value: p1e}
+	p2 := &Point{Value: p2e}
+
+	if p1.Y().IsEven() {
+		return p1, p2, nil
+	}
+	return p2, p1, nil
 }

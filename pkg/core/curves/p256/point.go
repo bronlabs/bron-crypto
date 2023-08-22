@@ -68,6 +68,16 @@ func (p *Point) IsOnCurve() bool {
 	return p.Value.IsOnCurve()
 }
 
+func (p *Point) Clone() curves.Point {
+	return &Point{
+		Value: p256n.PointNew().Set(p.Value),
+	}
+}
+
+func (p *Point) ClearCofactor() curves.Point {
+	return p.Clone()
+}
+
 func (p *Point) Double() curves.Point {
 	value := p256n.PointNew().Double(p.Value)
 	return &Point{Value: value}
@@ -169,14 +179,14 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	}
 	sign := int(input[0])
 	if sign != 2 && sign != 3 {
-		return nil, errs.NewDeserializationFailed("invalid sign byte")
+		return nil, errs.NewSerializationError("invalid sign byte")
 	}
 	sign &= 0x1
 
 	copy(raw[:], bitstring.ReverseBytes(input[1:]))
 	x, err := fp.New().SetBytes(&raw)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set bytes failed")
+		return nil, errs.WrapSerializationError(err, "set bytes failed")
 	}
 
 	value := p256n.PointNew().Identity()
@@ -204,7 +214,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	if input[0] != 4 {
-		return nil, errs.NewDeserializationFailed("invalid sign byte")
+		return nil, errs.NewSerializationError("invalid sign byte")
 	}
 
 	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
@@ -240,6 +250,24 @@ func (p *Point) Y() curves.FieldElement {
 	}
 }
 
+func (p *Point) ProjectiveX() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.X,
+	}
+}
+
+func (p *Point) ProjectiveY() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.Y,
+	}
+}
+
+func (p *Point) ProjectiveZ() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.Z,
+	}
+}
+
 func (*Point) Params() *elliptic.CurveParams {
 	return elliptic.P256().Params()
 }
@@ -251,7 +279,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(p256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -268,7 +296,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(p256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -285,7 +313,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(p256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

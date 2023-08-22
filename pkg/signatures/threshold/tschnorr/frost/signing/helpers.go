@@ -73,7 +73,7 @@ func ProducePartialSignature(
 		message,
 	)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
+		return nil, errs.WrapSerializationError(err, "converting hash to c failed")
 	}
 
 	presentPartySharingIds := make([]int, sessionParticipants.Len())

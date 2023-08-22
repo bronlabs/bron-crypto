@@ -1,7 +1,7 @@
 package softspoken_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ func Test_HappyPath_OTe(t *testing.T) {
 		useForcedReuse := false
 		inputBatchLen := 3
 		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := rand.Read(uniqueSessionId[:])
+		_, err := crand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
 		// BaseOTs
@@ -52,7 +52,7 @@ func Test_HappyPath_COTe(t *testing.T) {
 		useForcedReuse := false
 		inputBatchLen := 5
 		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := rand.Read(uniqueSessionId[:])
+		_, err := crand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
 		// BaseOTs
@@ -86,7 +86,7 @@ func Test_HappyPath_COTeForcedReuse(t *testing.T) {
 
 		// Session ID
 		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := rand.Read(uniqueSessionId[:])
+		_, err := crand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
 
 		// BaseOTs

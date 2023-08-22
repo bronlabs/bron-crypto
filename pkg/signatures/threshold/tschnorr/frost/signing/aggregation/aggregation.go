@@ -66,7 +66,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		return nil, errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !shard.PublicKeyShares.PublicKey.IsOnCurve() {
-		return nil, errs.NewNotOnCurve("public key is not on curve")
+		return nil, errs.NewMembershipError("public key is not on curve")
 	}
 	if message == nil {
 		return nil, errs.NewIsNil("message is empty")
@@ -163,7 +163,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[helper_types.Iden
 			sa.Message,
 		)
 		if err != nil {
-			return nil, errs.WrapDeserializationFailed(err, "converting hash to c failed")
+			return nil, errs.WrapSerializationError(err, "converting hash to c failed")
 		}
 
 		for _, jIdentityKey := range sa.SessionParticipants.Iter() {

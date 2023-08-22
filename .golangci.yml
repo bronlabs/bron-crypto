@@ -95,9 +95,8 @@ linters:
     # # TODO: enable this when we have an alternative. It's currently flaky as
     # # well as unmainted
     # - ifshort
-    # # Enforces consistent import aliases
-    # # TODO: enable this in knox sdk
-    # - importas
+    # Enforces consistent import aliases
+    - importas
     # Detects when assignments to existing variables are not used
     - ineffassign
     # Finds slice declarations with non-zero initial length
@@ -219,6 +218,13 @@ linters-settings:
       - "the"
       - "and"
       - "a"
+  importas:
+    no-unaliased: true
+    alias:
+      - pkg: "crypto/rand"
+        alias: crand
+      - pkg: "filippo.io/edwards25519"
+        alias: filippo
   errchkjson:
     # With check-error-free-encoding set to true, errchkjson does warn about errors
     # from json encoding functions that are safe to be ignored,

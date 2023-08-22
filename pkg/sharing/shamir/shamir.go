@@ -63,10 +63,10 @@ type Dealer struct {
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	if total < threshold {
-		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
+		return nil, errs.NewIncorrectCount("total cannot be less than threshold")
 	}
 	if threshold < 2 {
-		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
+		return nil, errs.NewIncorrectCount("threshold cannot be less than 2")
 	}
 	if curve == nil {
 		return nil, errs.NewIsNil("invalid curve")
@@ -75,8 +75,8 @@ func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 }
 
 func (s Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
-	if secret.IsZero() {
-		return nil, errs.NewIsZero("invalid secret")
+	if secret == nil {
+		return nil, errs.NewIsNil("secret is nil")
 	}
 	shares, _ := s.GeneratePolynomialAndShares(secret, prng)
 	return shares, nil

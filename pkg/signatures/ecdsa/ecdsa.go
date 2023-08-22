@@ -75,11 +75,6 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	if err != nil {
 		return -1, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
 	}
-	nativeCurve, err := curveutils.ToEllipticCurve(curve)
-	if err != nil {
-		return -1, errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
-	}
-	subGroupOrder := nativeCurve.Params().N
 
 	var recoveryId int
 	if ry.Bit(0) == 0 {
@@ -88,7 +83,7 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 		recoveryId = 1
 	}
 
-	switch rx.Cmp(subGroupOrder) {
+	switch rx.Cmp(curve.Profile().SubGroupOrder()) {
 	case -1:
 	case 0:
 		return -1, errs.NewFailed("x coordinate of the signature is equal to subGroupOrder")

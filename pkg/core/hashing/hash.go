@@ -46,12 +46,12 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 	case impl.WideFieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar().SetBytesWide
 	default:
-		return nil, errs.WrapDeserializationFailed(err, "digest length %d is not supported", len(digest))
+		return nil, errs.WrapSerializationError(err, "digest length %d is not supported", len(digest))
 	}
 
 	challenge, err := setBytesFunc(digest)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not compute fiat shamir challenge")
+		return nil, errs.WrapSerializationError(err, "could not compute fiat shamir challenge")
 	}
 	return challenge, nil
 }

@@ -7,7 +7,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
 
-type FieldValue = [impl.FieldLimbs]uint64
+// the base field of all curves need 4 limbs, but edwards25519 which needs 5.
+type FieldValue = []uint64
 
 const (
 	FieldBytes     = impl.FieldBytes
@@ -15,7 +16,6 @@ const (
 )
 
 type FieldProfile interface {
-	Curve() Curve
 	Order() *big.Int           // p^k
 	Characteristic() *big.Int  // p
 	ExtensionDegree() *big.Int // k
@@ -24,7 +24,7 @@ type FieldProfile interface {
 type FieldElement interface {
 	Profile() FieldProfile
 	Value() FieldValue
-	Modulus() FieldValue
+	Modulus() *big.Int
 	Clone() FieldElement
 	Cmp(rhs FieldElement) int
 
@@ -40,7 +40,7 @@ type FieldElement interface {
 
 	Square() FieldElement
 	Double() FieldElement
-	Sqrt() FieldElement
+	Sqrt() (result FieldElement, wasSquare bool)
 	Cube() FieldElement
 	Add(rhs FieldElement) FieldElement
 	Sub(rhs FieldElement) FieldElement
@@ -56,5 +56,5 @@ type FieldElement interface {
 	SetBytesWide(input []byte) (FieldElement, error)
 	Bytes() []byte
 	FromScalar(sc Scalar) (FieldElement, error)
-	Scalar() (FieldElement, error)
+	Scalar(curve Curve) (Scalar, error)
 }

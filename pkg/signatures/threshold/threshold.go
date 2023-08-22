@@ -26,7 +26,7 @@ func (s *SigningKeyShare) Validate() error {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !s.PublicKey.IsOnCurve() {
-		return errs.NewNotOnCurve("public key is not on curve")
+		return errs.NewMembershipError("public key is not on curve")
 	}
 	return nil
 }

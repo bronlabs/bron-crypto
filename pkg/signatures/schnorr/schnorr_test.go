@@ -41,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 					Curve: boundedCurve,
 					Hash:  boundedH,
 				}
-				signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+				signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader)
 				require.NoError(t, err)
 				require.NotNil(t, signer)
 				require.NotNil(t, signer.PublicKey)
@@ -49,7 +49,7 @@ func Test_HappyPath(t *testing.T) {
 				signature, err := signer.Sign(message)
 				require.NoError(t, err)
 
-				err = schnorr.Verify(cipherSuite, signer.PublicKey, message, signature, nil)
+				err = schnorr.Verify(cipherSuite, signer.PublicKey, message, signature)
 				require.NoError(t, err)
 			})
 		}
@@ -63,7 +63,7 @@ func Test_CanJsonMarshalAndUnmarshal(t *testing.T) {
 		Curve: k256.New(),
 		Hash:  sha512.New,
 	}
-	signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	signer, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, signer)
 	require.NotNil(t, signer.PublicKey)

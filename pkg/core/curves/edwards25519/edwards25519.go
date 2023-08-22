@@ -5,8 +5,11 @@ import (
 	"reflect"
 	"sync"
 
+	filippo "filippo.io/edwards25519"
+	"filippo.io/edwards25519/field"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
@@ -19,6 +22,17 @@ var (
 
 	scOne, _   = filippo.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
+
+	subgroupOrder  = "1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"
+	baseFieldOrder = "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"
+
+	// d is a constant in the curve equation.
+	d, _ = new(field.Element).SetBytes([]byte{
+		0xa3, 0x78, 0x59, 0x13, 0xca, 0x4d, 0xeb, 0x75,
+		0xab, 0xd8, 0x41, 0x41, 0x4d, 0x0a, 0x70, 0x00,
+		0x98, 0xe8, 0x79, 0x77, 0x79, 0x40, 0xc7, 0x8c,
+		0x73, 0xfe, 0x6f, 0x2b, 0xee, 0x6c, 0x03, 0x52,
+	})
 )
 
 var _ (curves.CurveProfile) = (*CurveProfile)(nil)
@@ -29,13 +43,16 @@ func (CurveProfile) Field() curves.FieldProfile {
 	return &FieldProfile{}
 }
 
-// TODO: finish when filippo is forked
 func (CurveProfile) SubGroupOrder() *big.Int {
-	return nil
+	return internal.Bhex(subgroupOrder)
 }
 
-func (CurveProfile) Cofactor() *big.Int {
-	return big.NewInt(8)
+func (CurveProfile) Cofactor() curves.Scalar {
+	return edwards25519Instance.Scalar().One()
+}
+
+func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+	return nil
 }
 
 var _ curves.Curve = (*Curve)(nil)
@@ -97,7 +114,7 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	for i, sc := range scalars {
 		s, err := filippo.NewScalar().SetCanonicalBytes(sc.Bytes())
 		if err != nil {
-			return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
+			return nil, errs.WrapSerializationError(err, "set canonical bytes")
 		}
 		nScalars[i] = s
 	}
@@ -113,5 +130,51 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 }
 
 func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	return nil, nil, nil
+	xc, ok := x.(FieldElement)
+	if !ok {
+		return nil, nil, errs.NewInvalidType("x is not an edwards25519 base field element")
+	}
+	xb := xc.v.Bytes()
+
+	y, err := new(field.Element).SetBytes(xb)
+	if err != nil {
+		return nil, nil, errs.NewInvalidCoordinates("edwards25519: invalid point encoding length")
+	}
+	feOne := new(field.Element).One()
+
+	// -x² + y² = 1 + dx²y²
+	// x² + dx²y² = x²(dy² + 1) = y² - 1
+	// x² = (y² - 1) / (dy² + 1)
+
+	// u = y² - 1
+	y2 := new(field.Element).Square(y)
+	u := new(field.Element).Subtract(y2, feOne)
+
+	// v = dy² + 1
+	vv := new(field.Element).Multiply(y2, d)
+	vv = vv.Add(vv, feOne)
+
+	// x = +√(u/v)
+	xx, wasSquare := new(field.Element).SqrtRatio(u, vv)
+	if wasSquare == 0 {
+		return nil, nil, errs.NewInvalidCoordinates("edwards25519: invalid point encoding")
+	}
+
+	// Select the negative square root if the sign bit is set.
+	xxNeg := new(field.Element).Negate(xx)
+	xx = xx.Select(xxNeg, xx, int(xb[31]>>7))
+
+	t := new(field.Element).Multiply(xx, y)
+
+	p1e, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xx, y, feOne, t)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
+	}
+	p1 := &Point{Value: p1e}
+	p2 := p1.Neg()
+
+	if p1.Y().IsEven() {
+		return p1, p2, nil
+	}
+	return p2, p1, nil
 }

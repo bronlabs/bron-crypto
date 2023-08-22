@@ -7,11 +7,11 @@ import (
 	"io"
 	"math/big"
 
+	filippo "filippo.io/edwards25519"
+	"filippo.io/edwards25519/field"
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl/field"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -63,6 +63,18 @@ func (*Point) Identity() curves.Point {
 func (*Point) Generator() curves.Point {
 	return &Point{
 		Value: filippo.NewGeneratorPoint(),
+	}
+}
+
+func (p *Point) Clone() curves.Point {
+	return &Point{
+		Value: filippo.NewIdentityPoint().Set(p.Value),
+	}
+}
+
+func (p *Point) ClearCofactor() curves.Point {
+	return &Point{
+		Value: filippo.NewIdentityPoint().MultByCofactor(p.Value),
 	}
 }
 
@@ -252,7 +264,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 	pt, err := filippo.NewIdentityPoint().SetBytes(inBytes)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set bytes method failed")
+		return nil, errs.WrapSerializationError(err, "set bytes method failed")
 	}
 	return &Point{Value: pt}, nil
 }
@@ -276,7 +288,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	t := new(field.Element).Multiply(x, y)
 	value, err := filippo.NewIdentityPoint().SetExtendedCoordinates(x, y, z, t)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set extended coordinates")
+		return nil, errs.WrapSerializationError(err, "set extended coordinates")
 	}
 	return &Point{Value: value}, nil
 }
@@ -284,7 +296,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	point, err := internal.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "marshal to point failed")
+		return nil, errs.WrapSerializationError(err, "marshal to point failed")
 	}
 	return point, nil
 }
@@ -292,7 +304,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "unmarshal binary failed")
+		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -305,7 +317,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	t, err := internal.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "marshal to text failed")
+		return nil, errs.WrapSerializationError(err, "marshal to text failed")
 	}
 	return t, nil
 }
@@ -313,7 +325,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "unmarshal binary failed")
+		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -326,7 +338,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	point, err := internal.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "marshal to json failed")
+		return nil, errs.WrapSerializationError(err, "marshal to json failed")
 	}
 	return point, nil
 }
@@ -334,7 +346,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not extract a point from json")
+		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*Point)
 	if !ok {
@@ -373,15 +385,53 @@ func (p *Point) IsSmallOrder() bool {
 	// return false
 
 	// performance difference is negligible
-	return p.Double().Double().Double().IsIdentity()
+	return p.ClearCofactor().IsIdentity()
 }
 
-func (Point) X() curves.FieldElement {
-	return nil
+func (p *Point) X() curves.FieldElement {
+	x, _, z, _ := p.Value.ExtendedCoordinates()
+	recip := new(field.Element).Invert(z)
+	x.Multiply(x, recip)
+	return &FieldElement{
+		v: x,
+	}
 }
 
-func (Point) Y() curves.FieldElement {
-	return nil
+func (p *Point) Y() curves.FieldElement {
+	_, y, z, _ := p.Value.ExtendedCoordinates()
+	recip := new(field.Element).Invert(z)
+	y.Multiply(y, recip)
+	return &FieldElement{
+		v: y,
+	}
+}
+
+func (p *Point) ExtendedX() curves.FieldElement {
+	x, _, _, _ := p.Value.ExtendedCoordinates()
+	return &FieldElement{
+		v: x,
+	}
+}
+
+func (p *Point) ExtendedY() curves.FieldElement {
+	_, y, _, _ := p.Value.ExtendedCoordinates()
+	return &FieldElement{
+		v: y,
+	}
+}
+
+func (p *Point) ExtendedZ() curves.FieldElement {
+	_, _, z, _ := p.Value.ExtendedCoordinates()
+	return &FieldElement{
+		v: z,
+	}
+}
+
+func (p *Point) ExtendedT() curves.FieldElement {
+	_, _, _, t := p.Value.ExtendedCoordinates()
+	return &FieldElement{
+		v: t,
+	}
 }
 
 // Attempt to convert to an `EdwardsPoint`, using the supplied

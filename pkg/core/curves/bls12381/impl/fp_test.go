@@ -12,14 +12,14 @@ import (
 )
 
 func TestFpSetOne(t *testing.T) {
-	var fp fp
+	var fp Fp
 	fp.SetOne()
 	require.NotNil(t, fp)
 	require.Equal(t, fp, r)
 }
 
 func TestFpSetUint64(t *testing.T) {
-	var act fp
+	var act Fp
 	act.SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
@@ -27,7 +27,7 @@ func TestFpSetUint64(t *testing.T) {
 }
 
 func TestFpAdd(t *testing.T) {
-	var lhs, rhs, exp, res fp
+	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetUint64(2)
@@ -52,7 +52,7 @@ func TestFpAdd(t *testing.T) {
 }
 
 func TestFpSub(t *testing.T) {
-	var lhs, rhs, exp, res fp
+	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetZero()
@@ -80,7 +80,7 @@ func TestFpSub(t *testing.T) {
 }
 
 func TestFpMul(t *testing.T) {
-	var lhs, rhs, exp, res fp
+	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetOne()
@@ -105,7 +105,7 @@ func TestFpMul(t *testing.T) {
 }
 
 func TestFpDouble(t *testing.T) {
-	var a, e, res fp
+	var a, e, res Fp
 	a.SetUint64(2)
 	e.SetUint64(4)
 	require.Equal(t, &e, res.Double(&a))
@@ -120,7 +120,7 @@ func TestFpDouble(t *testing.T) {
 }
 
 func TestFpSquare(t *testing.T) {
-	var a, e, res fp
+	var a, e, res Fp
 	a.SetUint64(4)
 	e.SetUint64(16)
 	require.Equal(t, 1, e.Equal(res.Square(&a)))
@@ -139,7 +139,7 @@ func TestFpSquare(t *testing.T) {
 }
 
 func TestFpNeg(t *testing.T) {
-	var g, a, e fp
+	var g, a, e Fp
 	g.SetLimbs(&[Limbs]uint64{7, 0, 0, 0, 0, 0})
 	a.SetOne()
 	a.Neg(&a)
@@ -151,7 +151,7 @@ func TestFpNeg(t *testing.T) {
 }
 
 func TestFpExp(t *testing.T) {
-	var a, e, by fp
+	var a, e, by Fp
 	e.SetUint64(8)
 	a.SetUint64(2)
 	by.SetUint64(3)
@@ -159,7 +159,7 @@ func TestFpExp(t *testing.T) {
 }
 
 func TestFpSqrt(t *testing.T) {
-	var t1, t2, t3 fp
+	var t1, t2, t3 Fp
 	t1.SetUint64(2)
 	t2.Neg(&t1)
 	t3.Square(&t1)
@@ -173,7 +173,7 @@ func TestFpSqrt(t *testing.T) {
 }
 
 func TestFpInvert(t *testing.T) {
-	var two, twoInv, a, lhs, rhs, rhsInv fp
+	var two, twoInv, a, lhs, rhs, rhsInv Fp
 	twoInv.SetRaw(&[Limbs]uint64{0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f, 0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596})
 	two.SetUint64(2)
 	_, inverted := a.Invert(&two)
@@ -192,7 +192,7 @@ func TestFpInvert(t *testing.T) {
 }
 
 func TestFpCMove(t *testing.T) {
-	var t1, t2, tt fp
+	var t1, t2, tt Fp
 	t1.SetUint64(5)
 	t2.SetUint64(10)
 	require.Equal(t, &t1, tt.CMove(&t1, &t2, 0))
@@ -200,7 +200,7 @@ func TestFpCMove(t *testing.T) {
 }
 
 func TestFpBytes(t *testing.T) {
-	var t1, t2 fp
+	var t1, t2 Fp
 	t1.SetUint64(99)
 	seq := t1.Bytes()
 	_, suc := t2.SetBytes(&seq)
@@ -217,7 +217,7 @@ func TestFpBytes(t *testing.T) {
 }
 
 func TestFpBigInt(t *testing.T) {
-	var t1, t2, e fp
+	var t1, t2, e Fp
 	t1.SetBigInt(big.NewInt(9999))
 	t2.SetBigInt(t1.BigInt())
 	require.Equal(t, t1, t2)
@@ -233,7 +233,7 @@ func TestFpBigInt(t *testing.T) {
 }
 
 func TestFpSetBytesWideBigInt(t *testing.T) {
-	var a fp
+	var a Fp
 	var tv2 [96]byte
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(tv2[:])
@@ -248,23 +248,23 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 }
 
 func TestFpToMontgomery(t *testing.T) {
-	var v fp
+	var v Fp
 	v.SetUint64(2)
-	require.Equal(t, fp{0x321300000006554f, 0xb93c0018d6c40005, 0x57605e0db0ddbb51, 0x8b256521ed1f9bcb, 0x6cf28d7901622c03, 0x11ebab9dbb81e28c}, v)
+	require.Equal(t, Fp{0x321300000006554f, 0xb93c0018d6c40005, 0x57605e0db0ddbb51, 0x8b256521ed1f9bcb, 0x6cf28d7901622c03, 0x11ebab9dbb81e28c}, v)
 }
 
 func TestFpFromMontgomery(t *testing.T) {
-	var v fp
-	e := fp{2, 0, 0, 0, 0, 0}
+	var v Fp
+	e := Fp{2, 0, 0, 0, 0, 0}
 	v.SetUint64(2)
 	v.fromMontgomery(&v)
 	require.Equal(t, e, v)
 }
 
 func TestFpLexicographicallyLargest(t *testing.T) {
-	require.Equal(t, 0, new(fp).SetZero().LexicographicallyLargest())
-	require.Equal(t, 0, new(fp).SetOne().LexicographicallyLargest())
-	require.Equal(t, 0, (&fp{
+	require.Equal(t, 0, new(Fp).SetZero().LexicographicallyLargest())
+	require.Equal(t, 0, new(Fp).SetOne().LexicographicallyLargest())
+	require.Equal(t, 0, (&Fp{
 		0xa1fafffffffe5557,
 		0x995bfff976a3fffe,
 		0x03f41d24d174ceb4,
@@ -272,7 +272,7 @@ func TestFpLexicographicallyLargest(t *testing.T) {
 		0x778a468f507a6034,
 		0x020559931f7f8103,
 	}).LexicographicallyLargest())
-	require.Equal(t, 1, (&fp{
+	require.Equal(t, 1, (&Fp{
 		0x1804000000015554,
 		0x855000053ab00001,
 		0x633cb57c253c276f,
@@ -280,7 +280,7 @@ func TestFpLexicographicallyLargest(t *testing.T) {
 		0xd3916126f2d14ca2,
 		0x17fbb8571a006596,
 	}).LexicographicallyLargest())
-	require.Equal(t, 1, (&fp{
+	require.Equal(t, 1, (&Fp{
 		0x43f5fffffffcaaae,
 		0x32b7fff2ed47fffd,
 		0x07e83a49a2e99d69,

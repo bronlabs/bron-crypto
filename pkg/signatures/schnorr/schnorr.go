@@ -42,16 +42,16 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't extract C and S field from input")
+		return errs.WrapSerializationError(err, "couldn't extract C and S field from input")
 	}
 
 	s.C, err = curveutils.NewScalarFromJSON(parsed.C)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't deserialize C")
+		return errs.WrapSerializationError(err, "couldn't deserialize C")
 	}
 	s.S, err = curveutils.NewScalarFromJSON(parsed.S)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "couldn't deserialize S")
+		return errs.WrapSerializationError(err, "couldn't deserialize S")
 	}
 	return nil
 }
@@ -61,19 +61,11 @@ type Signer struct {
 	PublicKey   *PublicKey
 	privateKey  *PrivateKey
 	prng        io.Reader
-	options     *Options
 
 	_ helper_types.Incomparable
 }
 
-type Options struct {
-	TranscriptPrefixes [][]byte
-	TranscriptSuffixes [][]byte
-
-	_ helper_types.Incomparable
-}
-
-func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader, options *Options) (*Signer, error) {
+func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader) (*Signer, error) {
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "ciphersuite is invalid")
 	}
@@ -81,13 +73,15 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "key generation failed")
 	}
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
 
 	return &Signer{
 		CipherSuite: cipherSuite,
 		PublicKey:   &privateKey.PublicKey,
 		privateKey:  privateKey,
 		prng:        prng,
-		options:     options,
 	}, nil
 }
 
@@ -124,7 +118,7 @@ func KeyGen(curve curves.Curve, secret curves.Scalar, prng io.Reader) (*PrivateK
 	}, nil
 }
 
-func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature, options *Options) error {
+func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
 	if err := cipherSuite.Validate(); err != nil {
 		return errs.WrapInvalidArgument(err, "ciphersuite is invalid")
 	}
@@ -132,7 +126,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 		return errs.NewIsNil("public key is not provided")
 	}
 	if !publicKey.Y.IsOnCurve() {
-		return errs.NewNotOnCurve("public key is not on curve")
+		return errs.NewMembershipError("public key is not on curve")
 	}
 	if publicKey.Y.IsIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
@@ -141,7 +135,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	if cipherSuite.Curve.Name() == edwards25519.Name {
 		edwardsPoint, ok := publicKey.Y.(*edwards25519.Point)
 		if !ok {
-			return errs.NewDeserializationFailed("curve is ed25519 but the public key could not be type casted to the correct point struct")
+			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
 		if edwardsPoint.IsSmallOrder() {
 			return errs.NewFailed("public key is small order")

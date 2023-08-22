@@ -16,40 +16,39 @@ type AbortIdentifier interface {
 }
 
 const (
-	deserializationFailed ErrorType = "[DESERIALIZATION_FAILED]"
-	serializationFailed   ErrorType = "[SERIALISATION_FAILED]"
-	divisionByZero        ErrorType = "[DIVISION_BY_ZERO]"
-	duplicate             ErrorType = "[DUPLICATE]"
-	failed                ErrorType = "[FAILED]"
-	identifiableAbort     ErrorType = "[ABORT]"
-	totalAbort            ErrorType = "[TOTAL_ABORT]"
-	incorrectCount        ErrorType = "[INCORRECT_COUNT]"
-	invalidArgument       ErrorType = "[INVALID_ARGUMENT]"
-	invalidCoordinates    ErrorType = "[INVALID_COORDINATES]"
-	invalidCurve          ErrorType = "[INVALID_CURVE]"
-	invalidIdentifier     ErrorType = "[INVALID_IDENTIFIER]"
-	invalidLength         ErrorType = "[INVALID_LENGTH]"
-	invalidRound          ErrorType = "[INVALID_ROUND]"
-	invalidType           ErrorType = "[INVALID_TYPE]"
-	isIdentity            ErrorType = "[IS_IDENTITY]"
-	isNil                 ErrorType = "[IS_NIL]"
-	isZero                ErrorType = "[IS_ZERO]"
-	missing               ErrorType = "[MISSING]"
-	notOnCurve            ErrorType = "[NOT_ON_CURVE]"
-	verificationFailed    ErrorType = "[VERIFICATION_FAILED]"
+	DivisionByZero     ErrorType = "[DIVISION_BY_ZERO]"
+	Duplicate          ErrorType = "[DUPLICATE]"
+	Failed             ErrorType = "[FAILED]"
+	IdentifiableAbort  ErrorType = "[ABORT]"
+	IncorrectCount     ErrorType = "[INCORRECT_COUNT]"
+	InvalidArgument    ErrorType = "[INVALID_ARGUMENT]"
+	InvalidCoordinates ErrorType = "[INVALID_COORDINATES]"
+	InvalidCurve       ErrorType = "[INVALID_CURVE]"
+	InvalidIdentifier  ErrorType = "[INVALID_IDENTIFIER]"
+	InvalidLength      ErrorType = "[INVALID_LENGTH]"
+	InvalidRound       ErrorType = "[INVALID_ROUND]"
+	InvalidType        ErrorType = "[INVALID_TYPE]"
+	IsIdentity         ErrorType = "[IS_IDENTITY]"
+	IsNil              ErrorType = "[IS_NIL]"
+	IsZero             ErrorType = "[IS_ZERO]"
+	Membership         ErrorType = "[MEMBERSHIP]"
+	Missing            ErrorType = "[MISSING]"
+	Serialisation      ErrorType = "[SERIALISATION_ERROR]"
+	TotalAbort         ErrorType = "[TOTAL_ABORT]"
+	VerificationFailed ErrorType = "[VERIFICATION_FAILED]"
 )
 
-func is(err error, errorType ErrorType) bool {
+func Is(err error, errorType ErrorType) bool {
 	return err != nil && strings.Contains(err.Error(), string(errorType))
 }
 
-func has(err error, errorType ErrorType) bool {
+func Has(err error, errorType ErrorType) bool {
 	if err == nil {
 		return false
 	}
 
 	for {
-		if is(err, errorType) {
+		if Is(err, errorType) {
 			return true
 		}
 
@@ -64,297 +63,281 @@ func has(err error, errorType ErrorType) bool {
 }
 
 func NewIsNil(format string, args ...any) error {
-	return errors.Errorf("%s %s", isNil, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", IsNil, fmt.Sprintf(format, args...))
 }
 
 func WrapIsNil(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", isNil, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", IsNil, fmt.Sprintf(format, args...))
 }
 
 func IsIsNil(err error) bool {
-	return is(err, isNil)
+	return Is(err, IsNil)
 }
 
 func HasIsNil(err error) bool {
-	return has(err, isNil)
+	return Has(err, IsNil)
 }
 
 func NewInvalidArgument(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidArgument, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidArgument, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidArgument(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidArgument, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidArgument, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidArgument(err error) bool {
-	return is(err, invalidArgument)
+	return Is(err, InvalidArgument)
 }
 
 func HasInvalidArgument(err error) bool {
-	return has(err, invalidArgument)
+	return Has(err, InvalidArgument)
 }
 
-func NewNotOnCurve(format string, args ...any) error {
-	return errors.Errorf("%s %s", notOnCurve, fmt.Sprintf(format, args...))
+func NewMembershipError(format string, args ...any) error {
+	return errors.Errorf("%s %s", Membership, fmt.Sprintf(format, args...))
 }
 
-func WrapNotOnCurve(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", notOnCurve, fmt.Sprintf(format, args...))
+func WrapMembershipError(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Membership, fmt.Sprintf(format, args...))
 }
 
-func IsNotOnCurve(err error) bool {
-	return is(err, notOnCurve)
+func IsMembershipError(err error) bool {
+	return Is(err, Membership)
 }
 
-func HasNotOnCurve(err error) bool {
-	return has(err, notOnCurve)
+func HasMembershipError(err error) bool {
+	return Has(err, Membership)
 }
 
 func NewInvalidCoordinates(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidCoordinates, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidCoordinates, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidCoordinates(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidCoordinates, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidCoordinates, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidCoordinates(err error) bool {
-	return is(err, invalidCoordinates)
+	return Is(err, InvalidCoordinates)
 }
 
 func HasInvalidCoordinates(err error) bool {
-	return has(err, invalidCoordinates)
+	return Has(err, InvalidCoordinates)
 }
 
 func NewInvalidCurve(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidCurve, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidCurve, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidCurve(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidCurve, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidCurve, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidCurve(err error) bool {
-	return is(err, invalidCurve)
+	return Is(err, InvalidCurve)
 }
 
 func HasInvalidCurve(err error) bool {
-	return has(err, invalidCurve)
+	return Has(err, InvalidCurve)
 }
 
 func NewIsZero(format string, args ...any) error {
-	return errors.Errorf("%s %s", isZero, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", IsZero, fmt.Sprintf(format, args...))
 }
 
 func WrapIsZero(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", isZero, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", IsZero, fmt.Sprintf(format, args...))
 }
 
 func IsIsZero(err error) bool {
-	return is(err, isZero)
+	return Is(err, IsZero)
 }
 
 func HasIsZero(err error) bool {
-	return has(err, isZero)
+	return Has(err, IsZero)
 }
 
 func NewIsIdentity(format string, args ...any) error {
-	return errors.Errorf("%s %s", isIdentity, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", IsIdentity, fmt.Sprintf(format, args...))
 }
 
 func WrapIsIdentity(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", isIdentity, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", IsIdentity, fmt.Sprintf(format, args...))
 }
 
 func IsIsIdentity(err error) bool {
-	return is(err, isIdentity)
+	return Is(err, IsIdentity)
 }
 
 func HasIsIdentity(err error) bool {
-	return has(err, isIdentity)
+	return Has(err, IsIdentity)
 }
 
 func NewInvalidRound(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidRound, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidRound, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidRound(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidRound, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidRound, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidRound(err error) bool {
-	return is(err, invalidRound)
+	return Is(err, InvalidRound)
 }
 
 func HasInvalidRound(err error) bool {
-	return has(err, invalidRound)
+	return Has(err, InvalidRound)
 }
 
 func NewInvalidType(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidType, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidType, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidType(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidType, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidType, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidType(err error) bool {
-	return is(err, invalidType)
+	return Is(err, InvalidType)
 }
 
 func HasInvalidType(err error) bool {
-	return has(err, invalidType)
+	return Has(err, InvalidType)
 }
 
 func NewIncorrectCount(format string, args ...any) error {
-	return errors.Errorf("%s %s", incorrectCount, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", IncorrectCount, fmt.Sprintf(format, args...))
 }
 
 func WrapIncorrectCount(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", incorrectCount, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", IncorrectCount, fmt.Sprintf(format, args...))
 }
 
 func IsIncorrectCount(err error) bool {
-	return is(err, incorrectCount)
+	return Is(err, IncorrectCount)
 }
 
 func HasIncorrectCount(err error) bool {
-	return has(err, incorrectCount)
+	return Has(err, IncorrectCount)
 }
 
 func NewVerificationFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", verificationFailed, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", VerificationFailed, fmt.Sprintf(format, args...))
 }
 
 func WrapVerificationFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", verificationFailed, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", VerificationFailed, fmt.Sprintf(format, args...))
 }
 
 func IsVerificationFailed(err error) bool {
-	return is(err, verificationFailed)
+	return Is(err, VerificationFailed)
 }
 
 func HasVerificationFailed(err error) bool {
-	return has(err, verificationFailed)
+	return Has(err, VerificationFailed)
 }
 
 func NewDivisionByZero(format string, args ...any) error {
-	return errors.Errorf("%s %s", divisionByZero, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", DivisionByZero, fmt.Sprintf(format, args...))
 }
 
 func WrapDivisionByZero(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", divisionByZero, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", DivisionByZero, fmt.Sprintf(format, args...))
 }
 
 func IsDivisionByZero(err error) bool {
-	return is(err, divisionByZero)
+	return Is(err, DivisionByZero)
 }
 
 func HasDivisionByZero(err error) bool {
-	return has(err, divisionByZero)
+	return Has(err, DivisionByZero)
 }
 
 func NewInvalidLength(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidLength, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidLength, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidLength(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidLength, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidLength, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidLength(err error) bool {
-	return is(err, invalidLength)
+	return Is(err, InvalidLength)
 }
 
 func HasInvalidLength(err error) bool {
-	return has(err, invalidLength)
+	return Has(err, InvalidLength)
 }
 
 func NewInvalidIdentifier(format string, args ...any) error {
-	return errors.Errorf("%s %s", invalidIdentifier, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", InvalidIdentifier, fmt.Sprintf(format, args...))
 }
 
 func WrapInvalidIdentifier(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", invalidIdentifier, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", InvalidIdentifier, fmt.Sprintf(format, args...))
 }
 
 func IsInvalidIdentifier(err error) bool {
-	return is(err, invalidIdentifier)
+	return Is(err, InvalidIdentifier)
 }
 
 func HasInvalidIdentifier(err error) bool {
-	return has(err, invalidIdentifier)
+	return Has(err, InvalidIdentifier)
 }
 
-func NewDeserializationFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", deserializationFailed, fmt.Sprintf(format, args...))
+func NewSerializationError(format string, args ...any) error {
+	return errors.Errorf("%s %s", Serialisation, fmt.Sprintf(format, args...))
 }
 
-func WrapDeserializationFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", deserializationFailed, fmt.Sprintf(format, args...))
+func WrapSerializationError(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Serialisation, fmt.Sprintf(format, args...))
 }
 
-func IsDeserializationFailed(err error) bool {
-	return is(err, deserializationFailed)
+func IsSerializationError(err error) bool {
+	return Is(err, Serialisation)
 }
 
-func HasDeserializationFailed(err error) bool {
-	return has(err, deserializationFailed)
-}
-
-func NewSerializationFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", serializationFailed, fmt.Sprintf(format, args...))
-}
-
-func WrapSerializationFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", serializationFailed, fmt.Sprintf(format, args...))
-}
-
-func IsSerializationFailed(err error) bool {
-	return is(err, serializationFailed)
-}
-
-func HasSerializationFailed(err error) bool {
-	return has(err, serializationFailed)
+func HasSerializationError(err error) bool {
+	return Has(err, Serialisation)
 }
 
 func NewMissing(format string, args ...any) error {
-	return errors.Errorf("%s %s", missing, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", Missing, fmt.Sprintf(format, args...))
 }
 
 func WrapMissing(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", missing, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", Missing, fmt.Sprintf(format, args...))
 }
 
 func IsMissing(err error) bool {
-	return is(err, missing)
+	return Is(err, Missing)
 }
 
 func HasMissing(err error) bool {
-	return has(err, missing)
+	return Has(err, Missing)
 }
 
 func NewDuplicate(format string, args ...any) error {
-	return errors.Errorf("%s %s", duplicate, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", Duplicate, fmt.Sprintf(format, args...))
 }
 
 func WrapDuplicate(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", duplicate, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", Duplicate, fmt.Sprintf(format, args...))
 }
 
 func IsDuplicate(err error) bool {
-	return is(err, duplicate)
+	return Is(err, Duplicate)
 }
 
 func HasDuplicate(err error) bool {
-	return has(err, duplicate)
+	return Has(err, Duplicate)
 }
 
 func NewIdentifiableAbort[T AbortIdentifier](id T, format string, args ...any) error {
 	return errors.Errorf(
 		"%s(ID=%s) %s",
-		identifiableAbort,
+		IdentifiableAbort,
 		fmt.Sprintf(abortFormatSpecifier(id), id),
 		fmt.Sprintf(format, args...),
 	)
@@ -364,14 +347,14 @@ func WrapIdentifiableAbort[T AbortIdentifier](err error, id T, format string, ar
 	return errors.Wrapf(
 		err,
 		"%s(ID=%s) %s",
-		identifiableAbort,
+		IdentifiableAbort,
 		fmt.Sprintf(abortFormatSpecifier(id), id),
 		fmt.Sprintf(format, args...),
 	)
 }
 
 func IsIdentifiableAbort(err error, id any) bool {
-	t := identifiableAbort
+	t := IdentifiableAbort
 	if id != nil {
 		t = ErrorType(
 			fmt.Sprintf(
@@ -379,11 +362,11 @@ func IsIdentifiableAbort(err error, id any) bool {
 			),
 		)
 	}
-	return is(err, t)
+	return Is(err, t)
 }
 
 func HasIdentifiableAbort(err error, id any) bool {
-	t := identifiableAbort
+	t := IdentifiableAbort
 	if id != nil {
 		t = ErrorType(
 			fmt.Sprintf(
@@ -391,19 +374,19 @@ func HasIdentifiableAbort(err error, id any) bool {
 			),
 		)
 	}
-	return has(err, t)
+	return Has(err, t)
 }
 
 func NewTotalAbort(id any, format string, args ...any) error {
 	if id != nil {
 		return errors.Errorf(
 			"%s(ID=%s) %s",
-			totalAbort,
+			TotalAbort,
 			fmt.Sprintf(abortFormatSpecifier(id), id),
 			fmt.Sprintf(format, args...),
 		)
 	}
-	return errors.Errorf("%s %s", identifiableAbort, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", IdentifiableAbort, fmt.Sprintf(format, args...))
 }
 
 func WrapTotalAbort(err error, id any, format string, args ...any) error {
@@ -411,16 +394,16 @@ func WrapTotalAbort(err error, id any, format string, args ...any) error {
 		return errors.Wrapf(
 			err,
 			"%s(ID=%s) %s",
-			totalAbort,
+			TotalAbort,
 			fmt.Sprintf(abortFormatSpecifier(id), id),
 			fmt.Sprintf(format, args...),
 		)
 	}
-	return errors.Wrapf(err, "%s %s", identifiableAbort, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", IdentifiableAbort, fmt.Sprintf(format, args...))
 }
 
 func IsTotalAbort(err error, id any) bool {
-	t := totalAbort
+	t := TotalAbort
 	if id != nil {
 		t = ErrorType(
 			fmt.Sprintf(
@@ -428,11 +411,11 @@ func IsTotalAbort(err error, id any) bool {
 			),
 		)
 	}
-	return is(err, t)
+	return Is(err, t)
 }
 
 func HasTotalAbort(err error, id any) bool {
-	t := identifiableAbort
+	t := IdentifiableAbort
 	if id != nil {
 		t = ErrorType(
 			fmt.Sprintf(
@@ -440,23 +423,23 @@ func HasTotalAbort(err error, id any) bool {
 			),
 		)
 	}
-	return has(err, t)
+	return Has(err, t)
 }
 
 func NewFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", failed, fmt.Sprintf(format, args...))
+	return errors.Errorf("%s %s", Failed, fmt.Sprintf(format, args...))
 }
 
 func WrapFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", failed, fmt.Sprintf(format, args...))
+	return errors.Wrapf(err, "%s %s", Failed, fmt.Sprintf(format, args...))
 }
 
 func IsFailed(err error) bool {
-	return is(err, failed)
+	return Is(err, Failed)
 }
 
 func HasFailed(err error) bool {
-	return has(err, failed)
+	return Has(err, Failed)
 }
 
 func isByteArrayOrSlice(x any) bool {

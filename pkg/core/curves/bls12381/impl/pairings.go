@@ -27,7 +27,7 @@ type g2Prepared struct {
 }
 
 type coefficients struct {
-	a, b, c fp2
+	a, b, c Fp2
 
 	_ helper_types.Incomparable
 }
@@ -83,12 +83,12 @@ func (e *Engine) pairing() *Gt {
 		return f
 	}
 	coeffs := e.computeCoeffs()
-	e.millerLoop((*fp12)(f), coeffs)
+	e.millerLoop((*Fp12)(f), coeffs)
 	return f.FinalExponentiation(f)
 }
 
-func (e *Engine) millerLoop(f *fp12, coeffs []g2Prepared) {
-	newF := new(fp12).SetZero()
+func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
+	newF := new(Fp12).SetZero()
 	found := 0
 	cIdx := 0
 	for i := 63; i >= 0; i-- {
@@ -161,43 +161,43 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 	return coeffs
 }
 
-func ell(f *fp12, coeffs coefficients, p *G1) {
-	var x, y fp2
-	x.A.Mul(&coeffs.a.A, &p.y)
-	x.B.Mul(&coeffs.a.B, &p.y)
-	y.A.Mul(&coeffs.b.A, &p.x)
-	y.B.Mul(&coeffs.b.B, &p.x)
+func ell(f *Fp12, coeffs coefficients, p *G1) {
+	var x, y Fp2
+	x.A.Mul(&coeffs.a.A, &p.Y)
+	x.B.Mul(&coeffs.a.B, &p.Y)
+	y.A.Mul(&coeffs.b.A, &p.X)
+	y.B.Mul(&coeffs.b.B, &p.X)
 	f.MulByABD(f, &coeffs.c, &y, &x)
 }
 
 func doublingStep(p *G2) coefficients {
 	// Adaptation of Algorithm 26, https://eprint.iacr.org/2010/354.pdf
-	var t0, t1, t2, t3, t4, t5, t6, zsqr fp2
-	t0.Square(&p.x)
-	t1.Square(&p.y)
+	var t0, t1, t2, t3, t4, t5, t6, zsqr Fp2
+	t0.Square(&p.X)
+	t1.Square(&p.Y)
 	t2.Square(&t1)
-	t3.Add(&t1, &p.x)
+	t3.Add(&t1, &p.X)
 	t3.Square(&t3)
 	t3.Sub(&t3, &t0)
 	t3.Sub(&t3, &t2)
 	t3.Double(&t3)
 	t4.Double(&t0)
 	t4.Add(&t4, &t0)
-	t6.Add(&p.x, &t4)
+	t6.Add(&p.X, &t4)
 	t5.Square(&t4)
-	zsqr.Square(&p.z)
-	p.x.Sub(&t5, &t3)
-	p.x.Sub(&p.x, &t3)
-	p.z.Add(&p.z, &p.y)
-	p.z.Square(&p.z)
-	p.z.Sub(&p.z, &t1)
-	p.z.Sub(&p.z, &zsqr)
-	p.y.Sub(&t3, &p.x)
-	p.y.Mul(&p.y, &t4)
+	zsqr.Square(&p.Z)
+	p.X.Sub(&t5, &t3)
+	p.X.Sub(&p.X, &t3)
+	p.Z.Add(&p.Z, &p.Y)
+	p.Z.Square(&p.Z)
+	p.Z.Sub(&p.Z, &t1)
+	p.Z.Sub(&p.Z, &zsqr)
+	p.Y.Sub(&t3, &p.X)
+	p.Y.Mul(&p.Y, &t4)
 	t2.Double(&t2)
 	t2.Double(&t2)
 	t2.Double(&t2)
-	p.y.Sub(&p.y, &t2)
+	p.Y.Sub(&p.Y, &t2)
 	t3.Mul(&t4, &zsqr)
 	t3.Double(&t3)
 	t3.Neg(&t3)
@@ -207,7 +207,7 @@ func doublingStep(p *G2) coefficients {
 	t1.Double(&t1)
 	t1.Double(&t1)
 	t6.Sub(&t6, &t1)
-	t0.Mul(&p.z, &zsqr)
+	t0.Mul(&p.Z, &zsqr)
 	t0.Double(&t0)
 
 	return coefficients{
@@ -217,46 +217,46 @@ func doublingStep(p *G2) coefficients {
 
 func additionStep(r, q *G2) coefficients {
 	// Adaptation of Algorithm 27, https://eprint.iacr.org/2010/354.pdf
-	var zsqr, ysqr fp2
-	var t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10 fp2
-	zsqr.Square(&r.z)
-	ysqr.Square(&q.y)
-	t0.Mul(&zsqr, &q.x)
-	t1.Add(&q.y, &r.z)
+	var zsqr, ysqr Fp2
+	var t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10 Fp2
+	zsqr.Square(&r.Z)
+	ysqr.Square(&q.Y)
+	t0.Mul(&zsqr, &q.X)
+	t1.Add(&q.Y, &r.Z)
 	t1.Square(&t1)
 	t1.Sub(&t1, &ysqr)
 	t1.Sub(&t1, &zsqr)
 	t1.Mul(&t1, &zsqr)
-	t2.Sub(&t0, &r.x)
+	t2.Sub(&t0, &r.X)
 	t3.Square(&t2)
 	t4.Double(&t3)
 	t4.Double(&t4)
 	t5.Mul(&t4, &t2)
-	t6.Sub(&t1, &r.y)
-	t6.Sub(&t6, &r.y)
-	t9.Mul(&t6, &q.x)
-	t7.Mul(&t4, &r.x)
-	r.x.Square(&t6)
-	r.x.Sub(&r.x, &t5)
-	r.x.Sub(&r.x, &t7)
-	r.x.Sub(&r.x, &t7)
-	r.z.Add(&r.z, &t2)
-	r.z.Square(&r.z)
-	r.z.Sub(&r.z, &zsqr)
-	r.z.Sub(&r.z, &t3)
-	t10.Add(&q.y, &r.z)
-	t8.Sub(&t7, &r.x)
+	t6.Sub(&t1, &r.Y)
+	t6.Sub(&t6, &r.Y)
+	t9.Mul(&t6, &q.X)
+	t7.Mul(&t4, &r.X)
+	r.X.Square(&t6)
+	r.X.Sub(&r.X, &t5)
+	r.X.Sub(&r.X, &t7)
+	r.X.Sub(&r.X, &t7)
+	r.Z.Add(&r.Z, &t2)
+	r.Z.Square(&r.Z)
+	r.Z.Sub(&r.Z, &zsqr)
+	r.Z.Sub(&r.Z, &t3)
+	t10.Add(&q.Y, &r.Z)
+	t8.Sub(&t7, &r.X)
 	t8.Mul(&t8, &t6)
-	t0.Mul(&r.y, &t5)
+	t0.Mul(&r.Y, &t5)
 	t0.Double(&t0)
-	r.y.Sub(&t8, &t0)
+	r.Y.Sub(&t8, &t0)
 	t10.Square(&t10)
 	t10.Sub(&t10, &ysqr)
-	zsqr.Square(&r.z)
+	zsqr.Square(&r.Z)
 	t10.Sub(&t10, &zsqr)
 	t9.Double(&t9)
 	t9.Sub(&t9, &t10)
-	t10.Double(&r.z)
+	t10.Double(&r.Z)
 	t6.Neg(&t6)
 	t1.Double(&t6)
 

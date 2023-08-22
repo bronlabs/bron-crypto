@@ -68,6 +68,16 @@ func (p *Point) IsOnCurve() bool {
 	return p.Value.IsOnCurve()
 }
 
+func (p *Point) Clone() curves.Point {
+	return &Point{
+		Value: secp256k1.PointNew().Set(p.Value),
+	}
+}
+
+func (p *Point) ClearCofactor() curves.Point {
+	return p.Clone()
+}
+
 func (p *Point) Double() curves.Point {
 	value := secp256k1.PointNew().Double(p.Value)
 	return &Point{Value: value}
@@ -240,6 +250,24 @@ func (p *Point) Y() curves.FieldElement {
 	}
 }
 
+func (p *Point) ProjectiveX() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.X,
+	}
+}
+
+func (p *Point) ProjectiveY() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.Y,
+	}
+}
+
+func (p *Point) ProjectiveZ() curves.FieldElement {
+	return FieldElement{
+		v: p.Value.Z,
+	}
+}
+
 func (*Point) Params() *elliptic.CurveParams {
 	return NewElliptic().Params()
 }
@@ -251,7 +279,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(k256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal binary")
+		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -268,7 +296,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(k256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal text")
+		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -285,7 +313,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(k256Instance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

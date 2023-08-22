@@ -63,7 +63,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 		Curve: k.curve,
 		Y:     k.PublicKey(),
 	}
-	if err := schnorr.Verify(cipherSuite, schnorrPublicKey, message, schnorrSignature, nil); err != nil {
+	if err := schnorr.Verify(cipherSuite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errors.Wrap(err, "could not verify schnorr signature")
 	}
 	return nil
@@ -79,7 +79,7 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 
 	identities = make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		identity, err := MakeIdentity(cipherSuite, nil, nil)
+		identity, err := MakeIdentity(cipherSuite, nil)
 		identities[i] = identity
 		if err != nil {
 			return nil, err
@@ -91,8 +91,8 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 	return sortedIdentities, nil
 }
 
-func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar, options *schnorr.Options) (integration.IdentityKey, error) {
-	signer, err := schnorr.NewSigner(cipherSuite, secret, crand.Reader, options)
+func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar) (integration.IdentityKey, error) {
+	signer, err := schnorr.NewSigner(cipherSuite, secret, crand.Reader)
 	if err != nil {
 		return nil, err
 	}

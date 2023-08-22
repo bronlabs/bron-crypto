@@ -261,7 +261,7 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 func (s *Scalar) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal binary")
+		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -278,7 +278,7 @@ func (s *Scalar) MarshalText() ([]byte, error) {
 func (s *Scalar) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal text")
+		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -295,7 +295,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 func (s *Scalar) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
+		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

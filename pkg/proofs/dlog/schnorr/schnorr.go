@@ -1,7 +1,7 @@
 package schnorr
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -74,7 +74,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	}
 
 	statement := p.BasePoint.Mul(x)
-	k := curve.Scalar().Random(rand.Reader)
+	k := curve.Scalar().Random(crand.Reader)
 	R := p.BasePoint.Mul(k)
 
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
@@ -85,7 +85,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 
 	result.C, err = curve.Scalar().SetBytes(digest)
 	if err != nil {
-		return nil, nil, errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
 	}
 	result.S = result.C.Mul(x).Add(k)
 	return result, statement, nil
@@ -127,7 +127,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 
 	computedChallenge, err := curve.Scalar().SetBytes(digest)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not produce fiat shamir challenge scalar")
+		return errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
 	}
 
 	if computedChallenge.Cmp(proof.C) != 0 {

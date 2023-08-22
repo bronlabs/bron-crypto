@@ -1,7 +1,7 @@
 package schnorr
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"fmt"
 	"testing"
 
@@ -32,7 +32,7 @@ func TestZKPOverMultipleCurves(t *testing.T) {
 			require.NotNil(t, prover)
 			require.NotNil(t, prover.BasePoint)
 
-			secret := boundedCurve.Scalar().Random(rand.Reader)
+			secret := boundedCurve.Scalar().Random(crand.Reader)
 			proof, statement, err := prover.Prove(secret)
 			require.NoError(t, err)
 
@@ -59,9 +59,9 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 			require.NotNil(t, prover)
 			require.NotNil(t, prover.BasePoint)
 
-			secret := boundedCurve.Scalar().Random(rand.Reader)
+			secret := boundedCurve.Scalar().Random(crand.Reader)
 			proof, _, err := prover.Prove(secret)
-			badStatement := boundedCurve.Point().Random(rand.Reader)
+			badStatement := boundedCurve.Point().Random(crand.Reader)
 			require.NoError(t, err)
 
 			err = Verify(boundedCurve.Point().Generator(), badStatement, proof, uniqueSessionId[:], nil)

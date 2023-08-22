@@ -48,7 +48,7 @@ func ScalarUnmarshalBinary(name string, f setBytesFuncType, input []byte) (curve
 	data := UnmarshalScalar(input)
 	scalar, err := f(data)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set bytes failed")
+		return nil, errs.WrapSerializationError(err, "set bytes failed")
 	}
 	return scalar, nil
 }
@@ -77,7 +77,7 @@ func ScalarUnmarshalText(name string, f setBytesFuncType, input []byte) (curves.
 	data := UnmarshalScalar(input)
 	var t [scalarBytes]byte
 	if _, err := hex.Decode(t[:], data); err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "hex decoding failed")
+		return nil, errs.WrapSerializationError(err, "hex decoding failed")
 	}
 	scalar, err := f(t[:])
 	if err != nil {
@@ -102,15 +102,15 @@ func NewScalarFromJSON(f setBytesFuncType, data []byte) (curves.Scalar, error) {
 
 	err := json.Unmarshal(data, &m)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "json unmarshal failed")
+		return nil, errs.WrapSerializationError(err, "json unmarshal failed")
 	}
 	s, err := hex.DecodeString(m["value"])
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "hex decode string failed")
+		return nil, errs.WrapSerializationError(err, "hex decode string failed")
 	}
 	S, err := f(s)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set bytes failed")
+		return nil, errs.WrapSerializationError(err, "set bytes failed")
 	}
 	return S, nil
 }

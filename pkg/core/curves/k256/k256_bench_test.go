@@ -358,6 +358,17 @@ type BenchPoint struct {
 	_ helper_types.Incomparable
 }
 
+func (p *BenchPoint) Clone() curves.Point {
+	return &BenchPoint{
+		x: new(big.Int).SetBytes(p.x.Bytes()),
+		y: new(big.Int).SetBytes(p.y.Bytes()),
+	}
+}
+
+func (p *BenchPoint) ClearCofactor() curves.Point {
+	return p.Clone()
+}
+
 func (BenchPoint) Curve() (curves.Curve, error) {
 	return k256.New(), nil
 }

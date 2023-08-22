@@ -72,14 +72,22 @@ func (p *PointG2) IsOnCurve() bool {
 	return p.Value.IsOnCurve() == 1
 }
 
+func (p *PointG2) Clone() curves.Point {
+	return &PointG2{Value: new(bls12381impl.G2).Set(p.Value)}
+}
+
+func (p *PointG2) ClearCofactor() curves.Point {
+	return &PointG2{Value: new(bls12381impl.G2).ClearCofactor(p.Value)}
+}
+
 func (p *PointG2) Double() curves.Point {
 	return &PointG2{Value: new(bls12381impl.G2).Double(p.Value)}
 }
 
 func (*PointG2) Scalar() curves.Scalar {
 	return &Scalar{
-		Value: bls12381impl.FqNew(),
-		point: new(PointG2),
+		Value:  bls12381impl.FqNew(),
+		Point_: new(PointG2),
 	}
 }
 
@@ -155,7 +163,7 @@ func (*PointG2) FromAffineCompressed(input []byte) (curves.Point, error) {
 	copy(b[:], input)
 	value, err := new(bls12381impl.G2).FromCompressed(&b)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "couldn't construct G2 from affine compressed")
+		return nil, errs.WrapSerializationError(err, "couldn't construct G2 from affine compressed")
 	}
 	return &PointG2{Value: value}, nil
 }
@@ -165,7 +173,7 @@ func (*PointG2) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	copy(b[:], input)
 	value, err := new(bls12381impl.G2).FromUncompressed(&b)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "couldn't construct G2 from affine uncompressed")
+		return nil, errs.WrapSerializationError(err, "couldn't construct G2 from affine uncompressed")
 	}
 	return &PointG2{Value: value}, nil
 }
@@ -174,7 +182,7 @@ func (*PointG2) CurveName() string {
 	return G2Name
 }
 
-func MultiScalarMultBls12381G2(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func multiScalarMultBls12381G2(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*bls12381impl.G2, len(points))
 	nScalars := make([]*impl.Field, len(scalars))
 	for i, pt := range points {
@@ -215,32 +223,44 @@ func (p *PointG2) Pairing(rhs curves.PairingPoint) curves.Scalar {
 	return &ScalarGt{Value: value}
 }
 
-func (PointG2) X() curves.FieldElement {
-	return nil
+func (p *PointG2) X() curves.FieldElement {
+	return &FieldElementG2{
+		v: p.Value.GetX(),
+	}
 }
 
-func (PointG2) Y() curves.FieldElement {
-	return nil
+func (p *PointG2) Y() curves.FieldElement {
+	return &FieldElementG2{
+		v: p.Value.GetY(),
+	}
 }
 
-// func (p *PointBls12381G2) X() *big.Int {
-// 	x := p.Value.ToUncompressed()
-// 	return new(big.Int).SetBytes(x[:bls12381impl.WideFieldBytes])
-// }.
+func (p *PointG2) ProjectiveX() curves.FieldElement {
+	return FieldElementG2{
+		v: &p.Value.X,
+	}
+}
 
-// func (p *PointBls12381G2) Y() *big.Int {
-// 	y := p.Value.ToUncompressed()
-// 	return new(big.Int).SetBytes(y[bls12381impl.WideFieldBytes:])
-// }.
+func (p *PointG2) ProjectiveY() curves.FieldElement {
+	return FieldElementG2{
+		v: &p.Value.Y,
+	}
+}
+
+func (p *PointG2) ProjectiveZ() curves.FieldElement {
+	return FieldElementG2{
+		v: &p.Value.Z,
+	}
+}
 
 func (*PointG2) Modulus() *big.Int {
-	return modulus
+	return new(big.Int).Mul(p, p)
 }
 
 func (p *PointG2) MarshalBinary() ([]byte, error) {
 	result, err := internal.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to binary")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
 	}
 	return result, nil
 }
@@ -248,7 +268,7 @@ func (p *PointG2) MarshalBinary() ([]byte, error) {
 func (p *PointG2) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(NewG2(), input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG2)
 	if !ok {
@@ -261,7 +281,7 @@ func (p *PointG2) UnmarshalBinary(input []byte) error {
 func (p *PointG2) MarshalText() ([]byte, error) {
 	result, err := internal.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to text")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
 	}
 	return result, nil
 }
@@ -269,7 +289,7 @@ func (p *PointG2) MarshalText() ([]byte, error) {
 func (p *PointG2) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(NewG2(), input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG2)
 	if !ok {
@@ -282,7 +302,7 @@ func (p *PointG2) UnmarshalText(input []byte) error {
 func (p *PointG2) MarshalJSON() ([]byte, error) {
 	result, err := internal.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "couldn't marshal to json")
+		return nil, errs.WrapSerializationError(err, "couldn't marshal to json")
 	}
 	return result, nil
 }
@@ -290,7 +310,7 @@ func (p *PointG2) MarshalJSON() ([]byte, error) {
 func (p *PointG2) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(NewG2(), input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	P, ok := pt.(*PointG2)
 	if !ok {

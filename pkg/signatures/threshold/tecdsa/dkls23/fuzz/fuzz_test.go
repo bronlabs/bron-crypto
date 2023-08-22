@@ -56,7 +56,7 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 	fz.Fuzz(&secretValue)
 	identities := make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, cipherSuite.Curve.Scalar().Hash(secretValue), nil)
+		identity, err := test_utils_integration.MakeIdentity(cipherSuite, cipherSuite.Curve.Scalar().Hash(secretValue))
 		identities[i] = identity
 		require.NoError(t, err)
 	}

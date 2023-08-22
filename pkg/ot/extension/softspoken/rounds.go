@@ -1,7 +1,7 @@
 package softspoken
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -48,7 +48,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	for l := 0; l < LOTe; l++ {
 		copy(R.extPackedChoices[l*XiBytes:(l+1)*XiBytes], oTeInputChoices[l][:])
 	}
-	if _, err = rand.Read(R.extPackedChoices[etaBytes:]); err != nil {
+	if _, err = crand.Read(R.extPackedChoices[etaBytes:]); err != nil {
 		return nil, nil, errs.WrapFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG

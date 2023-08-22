@@ -5,11 +5,11 @@ import (
 	"io"
 	"math/big"
 
+	filippo "filippo.io/edwards25519"
 	"github.com/bwesterb/go-ristretto"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -229,7 +229,7 @@ func (s *Scalar) Neg() curves.Scalar {
 
 func (*Scalar) SetBigInt(x *big.Int) (curves.Scalar, error) {
 	if x == nil {
-		return nil, errs.NewDeserializationFailed("invalid value")
+		return nil, errs.NewSerializationError("invalid value")
 	}
 
 	bi25519, _ := new(big.Int).SetString("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED", 16)
@@ -241,7 +241,7 @@ func (*Scalar) SetBigInt(x *big.Int) (curves.Scalar, error) {
 	}
 	value, err := filippo.NewScalar().SetCanonicalBytes(rBuf[:])
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes failed")
+		return nil, errs.WrapSerializationError(err, "set canonical bytes failed")
 	}
 	return &Scalar{Value: value}, nil
 }
@@ -264,7 +264,7 @@ func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 	}
 	value, err := filippo.NewScalar().SetCanonicalBytes(input)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
+		return nil, errs.WrapSerializationError(err, "set canonical bytes")
 	}
 	return &Scalar{Value: value}, nil
 }
@@ -275,7 +275,7 @@ func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	value, err := filippo.NewScalar().SetUniformBytes(input)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
+		return nil, errs.WrapSerializationError(err, "set uniform bytes")
 	}
 	return &Scalar{Value: value}, nil
 }
@@ -306,14 +306,14 @@ func (*Scalar) SetBytes(input []byte) (result curves.Scalar, err error) {
 	if isReduced(input) {
 		value, err = filippo.NewScalar().SetCanonicalBytes(input)
 		if err != nil {
-			return nil, errs.WrapDeserializationFailed(err, "set canonical bytes")
+			return nil, errs.WrapSerializationError(err, "set canonical bytes")
 		}
 	} else {
 		var wideBytes [64]byte
 		copy(wideBytes[:], input[:])
 		value, err = filippo.NewScalar().SetUniformBytes(wideBytes[:])
 		if err != nil {
-			return nil, errs.WrapDeserializationFailed(err, "set uniform bytes")
+			return nil, errs.WrapSerializationError(err, "set uniform bytes")
 		}
 	}
 	return &Scalar{Value: value}, nil
@@ -332,7 +332,7 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 func (s *Scalar) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "scalar unmarshal binary failed")
+		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -349,7 +349,7 @@ func (s *Scalar) MarshalText() ([]byte, error) {
 func (s *Scalar) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "scalar unmarshal binary failed")
+		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -374,7 +374,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 func (s *Scalar) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not extract a scalar from json")
+		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

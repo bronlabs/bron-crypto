@@ -22,9 +22,9 @@ func TestCheckExistIdentity(t *testing.T) {
 		Curve: edwards25519.New(),
 		Hash:  sha3.New256,
 	}
-	identityAlice, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{1}), nil)
+	identityAlice, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{1}))
 	require.NoError(t, err)
-	identityBob, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{2}), nil)
+	identityBob, err := MakeIdentity(cipherSuite, edwards25519.New().Scalar().Hash([]byte{2}))
 	require.NoError(t, err)
 	s := hashset.NewHashSet([]integration.IdentityKey{identityAlice})
 	require.NoError(t, err)

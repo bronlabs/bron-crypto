@@ -6,48 +6,48 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-// fp2 is a point in p^2.
-type fp2 struct {
-	A, B fp
+// Fp2 is a point in p^2.
+type Fp2 struct {
+	A, B Fp
 
 	_ helper_types.Incomparable
 }
 
 // Set copies a into fp2.
-func (f *fp2) Set(a *fp2) *fp2 {
+func (f *Fp2) Set(a *Fp2) *Fp2 {
 	f.A.Set(&a.A)
 	f.B.Set(&a.B)
 	return f
 }
 
 // SetZero fp2 = 0.
-func (f *fp2) SetZero() *fp2 {
+func (f *Fp2) SetZero() *Fp2 {
 	f.A.SetZero()
 	f.B.SetZero()
 	return f
 }
 
 // SetOne fp2 to the multiplicative identity element.
-func (f *fp2) SetOne() *fp2 {
+func (f *Fp2) SetOne() *Fp2 {
 	f.A.SetOne()
 	f.B.SetZero()
 	return f
 }
 
 // SetFp creates an element from a lower field.
-func (f *fp2) SetFp(a *fp) *fp2 {
+func (f *Fp2) SetFp(a *Fp) *Fp2 {
 	f.A.Set(a)
 	f.B.SetZero()
 	return f
 }
 
 // Random generates a random field element.
-func (f *fp2) Random(reader io.Reader) (*fp2, error) {
-	a, err := new(fp).Random(reader)
+func (f *Fp2) Random(reader io.Reader) (*Fp2, error) {
+	a, err := new(Fp).Random(reader)
 	if err != nil {
 		return nil, err
 	}
-	b, err := new(fp).Random(reader)
+	b, err := new(Fp).Random(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -57,24 +57,24 @@ func (f *fp2) Random(reader io.Reader) (*fp2, error) {
 }
 
 // IsZero returns 1 if fp2 == 0, 0 otherwise.
-func (f *fp2) IsZero() int {
+func (f *Fp2) IsZero() int {
 	return f.A.IsZero() & f.B.IsZero()
 }
 
 // IsOne returns 1 if fp2 == 1, 0 otherwise.
-func (f *fp2) IsOne() int {
+func (f *Fp2) IsOne() int {
 	return f.A.IsOne() & f.B.IsZero()
 }
 
 // Equal returns 1 if f == rhs, 0 otherwise.
-func (f *fp2) Equal(rhs *fp2) int {
+func (f *Fp2) Equal(rhs *Fp2) int {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B)
 }
 
 // LexicographicallyLargest returns 1 if
 // this element is strictly lexicographically larger than its negation
 // 0 otherwise.
-func (f *fp2) LexicographicallyLargest() int {
+func (f *Fp2) LexicographicallyLargest() int {
 	// If this element's B coefficient is lexicographically largest
 	// then it is lexicographically largest. Otherwise, in the event
 	// the B coefficient is zero and the A coefficient is
@@ -86,7 +86,7 @@ func (f *fp2) LexicographicallyLargest() int {
 }
 
 // Sgn0 returns the lowest bit value.
-func (f *fp2) Sgn0() int {
+func (f *Fp2) Sgn0() int {
 	// if A = 0 return B.Sgn0  else A.Sgn0
 	a := f.A.IsZero()
 	t := f.B.Sgn0() & a
@@ -96,14 +96,14 @@ func (f *fp2) Sgn0() int {
 }
 
 // FrobeniusMap raises this element to p.
-func (f *fp2) FrobeniusMap(a *fp2) *fp2 {
+func (f *Fp2) FrobeniusMap(a *Fp2) *Fp2 {
 	// This is always just a conjugation. If you're curious why, here's
 	// an article about it: https://alicebob.cryptoland.net/the-frobenius-endomorphism-with-finite-fields/
 	return f.Conjugate(a)
 }
 
 // Conjugate computes the conjugation of this element.
-func (f *fp2) Conjugate(a *fp2) *fp2 {
+func (f *Fp2) Conjugate(a *Fp2) *Fp2 {
 	f.A.Set(&a.A)
 	f.B.Neg(&a.B)
 	return f
@@ -114,8 +114,8 @@ func (f *fp2) Conjugate(a *fp2) *fp2 {
 // au + a + bu^2 + bu
 // and because u^2 = -1, we get
 // (a - b) + (a + b)u.
-func (f *fp2) MulByNonResidue(a *fp2) *fp2 {
-	var aa, bb fp
+func (f *Fp2) MulByNonResidue(a *Fp2) *Fp2 {
+	var aa, bb Fp
 	aa.Sub(&a.A, &a.B)
 	bb.Add(&a.A, &a.B)
 	f.A.Set(&aa)
@@ -124,8 +124,8 @@ func (f *fp2) MulByNonResidue(a *fp2) *fp2 {
 }
 
 // Square computes the square of this element.
-func (f *fp2) Square(arg *fp2) *fp2 {
-	var a, b, c fp
+func (f *Fp2) Square(arg *Fp2) *Fp2 {
+	var a, b, c Fp
 
 	// Complex squaring:
 	//
@@ -148,29 +148,29 @@ func (f *fp2) Square(arg *fp2) *fp2 {
 }
 
 // Add performs field addition.
-func (f *fp2) Add(arg1, arg2 *fp2) *fp2 {
+func (f *Fp2) Add(arg1, arg2 *Fp2) *Fp2 {
 	f.A.Add(&arg1.A, &arg2.A)
 	f.B.Add(&arg1.B, &arg2.B)
 	return f
 }
 
 // Double doubles specified element.
-func (f *fp2) Double(a *fp2) *fp2 {
+func (f *Fp2) Double(a *Fp2) *Fp2 {
 	f.A.Double(&a.A)
 	f.B.Double(&a.B)
 	return f
 }
 
 // Sub performs field subtraction.
-func (f *fp2) Sub(arg1, arg2 *fp2) *fp2 {
+func (f *Fp2) Sub(arg1, arg2 *Fp2) *Fp2 {
 	f.A.Sub(&arg1.A, &arg2.A)
 	f.B.Sub(&arg1.B, &arg2.B)
 	return f
 }
 
 // Mul computes Karatsuba multiplication.
-func (f *fp2) Mul(arg1, arg2 *fp2) *fp2 {
-	var v0, v1, t, a, b fp
+func (f *Fp2) Mul(arg1, arg2 *Fp2) *Fp2 {
+	var v0, v1, t, a, b Fp
 
 	// Karatsuba multiplication:
 	//
@@ -188,7 +188,7 @@ func (f *fp2) Mul(arg1, arg2 *fp2) *fp2 {
 	// a' = v0 + v1
 	// b' = (a0 + b0) * (a1 + b1) - v0 + v1
 	v0.Mul(&arg1.A, &arg2.A)
-	v1.Mul(new(fp).Neg(&arg1.B), &arg2.B)
+	v1.Mul(new(Fp).Neg(&arg1.B), &arg2.B)
 
 	a.Add(&v0, &v1)
 	b.Add(&arg1.A, &arg1.B)
@@ -201,29 +201,29 @@ func (f *fp2) Mul(arg1, arg2 *fp2) *fp2 {
 	return f
 }
 
-func (f *fp2) Mul0(arg1 *fp2, arg2 *fp) *fp2 {
+func (f *Fp2) Mul0(arg1 *Fp2, arg2 *Fp) *Fp2 {
 	f.A.Mul(&arg1.A, arg2)
 	f.B.Mul(&arg1.B, arg2)
 	return f
 }
 
 // MulBy3b returns arg * 12 or 3 * b.
-func (f *fp2) MulBy3b(arg *fp2) *fp2 {
+func (f *Fp2) MulBy3b(arg *Fp2) *Fp2 {
 	return f.Mul(arg, &curveG23B)
 }
 
 // Neg performs field negation.
-func (f *fp2) Neg(a *fp2) *fp2 {
+func (f *Fp2) Neg(a *Fp2) *Fp2 {
 	f.A.Neg(&a.A)
 	f.B.Neg(&a.B)
 	return f
 }
 
 // Sqrt performs field square root.
-func (f *fp2) Sqrt(a *fp2) (*fp2, int) {
+func (f *Fp2) Sqrt(a *Fp2) (*Fp2, int) {
 	// Algorithm 9, https://eprint.iacr.org/2012/685.pdf
 	// with constant time modifications.
-	var a1, alpha, x0, t, res, res2 fp2
+	var a1, alpha, x0, t, res, res2 Fp2
 	e1 := a.IsZero()
 	// a1 = self^((p - 3) / 4)
 	a1.pow(a, &[Limbs]uint64{
@@ -249,8 +249,8 @@ func (f *fp2) Sqrt(a *fp2) (*fp2, int) {
 	res2.A.Neg(&x0.B)
 	res2.B.Set(&x0.A)
 	// alpha == -1
-	e2 := alpha.Equal(&fp2{
-		A: fp{
+	e2 := alpha.Equal(&Fp2{
+		A: Fp{
 			0x43f5fffffffcaaae,
 			0x32b7fff2ed47fffd,
 			0x07e83a49a2e99d69,
@@ -258,7 +258,7 @@ func (f *fp2) Sqrt(a *fp2) (*fp2, int) {
 			0xef148d1ea0f4c069,
 			0x040ab3263eff0206,
 		},
-		B: fp{},
+		B: Fp{},
 	})
 
 	// Otherwise, the correct solution is (1 + alpha)^((p - 1) // 2) * x0
@@ -289,7 +289,7 @@ func (f *fp2) Sqrt(a *fp2) (*fp2, int) {
 // Invert computes the multiplicative inverse of this field
 // element, returning the original value of fp2
 // in the case that this element is zero.
-func (f *fp2) Invert(arg *fp2) (*fp2, int) {
+func (f *Fp2) Invert(arg *Fp2) (*Fp2, int) {
 	// We wish to find the multiplicative inverse of a nonzero
 	// element a + bu in fp2. We leverage an identity
 	//
@@ -303,7 +303,7 @@ func (f *fp2) Invert(arg *fp2) (*fp2, int) {
 	// This gives that (a - bu)/(a^2 + b^2) is the inverse
 	// of (a + bu). Importantly, this can be computing using
 	// only a single inversion in fp.
-	var a, b, t fp
+	var a, b, t Fp
 	a.Square(&arg.A)
 	b.Square(&arg.B)
 	a.Add(&a, &b)
@@ -320,22 +320,22 @@ func (f *fp2) Invert(arg *fp2) (*fp2, int) {
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *fp2) CMove(arg1, arg2 *fp2, choice int) *fp2 {
+func (f *Fp2) CMove(arg1, arg2 *Fp2, choice int) *Fp2 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	return f
 }
 
 // CNeg conditionally negates a if choice == 1.
-func (f *fp2) CNeg(a *fp2, choice int) *fp2 {
-	var t fp2
+func (f *Fp2) CNeg(a *Fp2, choice int) *Fp2 {
+	var t Fp2
 	t.Neg(a)
 	return f.CMove(f, &t, choice)
 }
 
-func (f *fp2) pow(base *fp2, exp *[Limbs]uint64) {
-	res := (&fp2{}).SetOne()
-	tmp := (&fp2{}).SetZero()
+func (f *Fp2) pow(base *Fp2, exp *[Limbs]uint64) {
+	res := (&Fp2{}).SetOne()
+	tmp := (&Fp2{}).SetZero()
 
 	for i := len(exp) - 1; i >= 0; i-- {
 		for j := 63; j >= 0; j-- {

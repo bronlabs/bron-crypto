@@ -7,11 +7,11 @@ import (
 )
 
 func TestFp12Arithmetic(t *testing.T) {
-	var aa, bb, cc, d, e, f fp12
-	a := fp12{
-		A: fp6{
-			A: fp2{
-				A: fp{
+	var aa, bb, cc, d, e, f Fp12
+	a := Fp12{
+		A: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9cb98b1b82d58,
 					0x5fe911eba3aa1d9d,
 					0x96bf1b5f4dd81db3,
@@ -19,7 +19,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa20b9674640eab,
 					0x09bbcea7d8d9497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303cb98b1662daa,
 					0xd93110aa0a621d5a,
 					0xbfa9820c5be4a468,
@@ -28,8 +28,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c305bb19c0e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9cb98b162d858,
 					0x0be9109cf7aa1d57,
 					0xc791bc55fece41d2,
@@ -37,7 +37,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49c1d9c010e60f,
 					0x0acdb8e158bfe3c8,
 				},
-				B: fp{
+				B: Fp{
 					0x8aefcb98b15f8306,
 					0x3ea1108fe4f21d54,
 					0xcf79f69fa1b7df3b,
@@ -46,8 +46,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed86c0797bee5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5cb98b15c2db4,
 					0x71591082d23a1d51,
 					0xd76230e944a17ca4,
@@ -55,7 +55,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972dc1701fa66e3,
 					0x12e31f2dd6bde7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2acb98b1732d9d,
 					0x2cfd10dd06961d64,
 					0x07396b86c6ef24e8,
@@ -65,9 +65,9 @@ func TestFp12Arithmetic(t *testing.T) {
 				},
 			},
 		},
-		B: fp6{
-			A: fp2{
-				A: fp{
+		B: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9cb98b1b82d58,
 					0x5fe911eba3aa1d9d,
 					0x96bf1b5f4dd81db3,
@@ -75,7 +75,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa20b9674640eab,
 					0x09bbcea7d8d9497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303cb98b1662daa,
 					0xd93110aa0a621d5a,
 					0xbfa9820c5be4a468,
@@ -84,8 +84,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c305bb19c0e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9cb98b162d858,
 					0x0be9109cf7aa1d57,
 					0xc791bc55fece41d2,
@@ -93,7 +93,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49c1d9c010e60f,
 					0x0acdb8e158bfe3c8,
 				},
-				B: fp{
+				B: Fp{
 					0x8aefcb98b15f8306,
 					0x3ea1108fe4f21d54,
 					0xcf79f69fa1b7df3b,
@@ -102,8 +102,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed86c0797bee5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5cb98b15c2db4,
 					0x71591082d23a1d51,
 					0xd76230e944a17ca4,
@@ -111,7 +111,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972dc1701fa66e3,
 					0x12e31f2dd6bde7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2acb98b1732d9d,
 					0x2cfd10dd06961d64,
 					0x07396b86c6ef24e8,
@@ -123,10 +123,10 @@ func TestFp12Arithmetic(t *testing.T) {
 		},
 	}
 
-	b := fp12{
-		A: fp6{
-			A: fp2{
-				A: fp{
+	b := Fp12{
+		A: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9_cb98_b1b8_2d58,
 					0x5fe9_11eb_a3aa_1d9d,
 					0x96bf_1b5f_4dd8_1db3,
@@ -134,7 +134,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa2_0b96_7464_0eab,
 					0x09bb_cea7_d8d9_497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303_cb98_b166_2daa,
 					0xd931_10aa_0a62_1d5a,
 					0xbfa9_820c_5be4_a468,
@@ -143,8 +143,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c3_05bb_19c0_e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9_cb98_b162_d858,
 					0x0be9_109c_f7aa_1d57,
 					0xc791_bc55_fece_41d2,
@@ -152,7 +152,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49_c1d9_c010_e60f,
 					0x0acd_b8e1_58bf_e348,
 				},
-				B: fp{
+				B: Fp{
 					0x8aef_cb98_b15f_8306,
 					0x3ea1_108f_e4f2_1d54,
 					0xcf79_f69f_a1b7_df3b,
@@ -161,8 +161,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed8_6c07_97be_e5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5_cb98_b15c_2db4,
 					0x7159_1082_d23a_1d51,
 					0xd762_30e9_44a1_7ca4,
@@ -170,7 +170,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972_dc17_01fa_66e3,
 					0x12e3_1f2d_d6bd_e7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2a_cb98_b173_2d9d,
 					0x2cfd_10dd_0696_1d64,
 					0x0739_6b86_c6ef_24e8,
@@ -180,9 +180,9 @@ func TestFp12Arithmetic(t *testing.T) {
 				},
 			},
 		},
-		B: fp6{
-			A: fp2{
-				A: fp{
+		B: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9_cb98_b1b8_2d58,
 					0x5fe9_11eb_a3aa_1d9d,
 					0x96bf_1b5f_4dd2_1db3,
@@ -190,7 +190,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa2_0b96_7464_0eab,
 					0x09bb_cea7_d8d9_497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303_cb98_b166_2daa,
 					0xd931_10aa_0a62_1d5a,
 					0xbfa9_820c_5be4_a468,
@@ -199,8 +199,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c3_05bb_19c0_e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9_cb98_b162_d858,
 					0x0be9_109c_f7aa_1d57,
 					0xc791_bc55_fece_41d2,
@@ -208,7 +208,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49_c1d9_c010_e60f,
 					0x0acd_b8e1_58bf_e3c8,
 				},
-				B: fp{
+				B: Fp{
 					0x8aef_cb98_b15f_8306,
 					0x3ea1_108f_e4f2_1d54,
 					0xcf79_f69f_a117_df3b,
@@ -217,8 +217,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed8_6c07_97be_e5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5_cb98_b15c_2db4,
 					0x7159_1082_d23a_1d51,
 					0xd762_30e9_44a1_7ca4,
@@ -226,7 +226,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972_dc17_01fa_66e3,
 					0x12e3_1f2d_d6bd_e7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2a_cb98_b173_2d9d,
 					0x2cfd_10dd_0696_1d64,
 					0x0739_6b86_c6ef_24e8,
@@ -238,10 +238,10 @@ func TestFp12Arithmetic(t *testing.T) {
 		},
 	}
 
-	c := fp12{
-		A: fp6{
-			A: fp2{
-				A: fp{
+	c := Fp12{
+		A: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9_cb98_71b8_2d58,
 					0x5fe9_11eb_a3aa_1d9d,
 					0x96bf_1b5f_4dd8_1db3,
@@ -249,7 +249,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa2_0b96_7464_0eab,
 					0x09bb_cea7_d8d9_497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303_cb98_b166_2daa,
 					0xd931_10aa_0a62_1d5a,
 					0xbfa9_820c_5be4_a468,
@@ -258,8 +258,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c3_05bb_19c0_e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9_cb98_b162_d858,
 					0x0be9_109c_f7aa_1d57,
 					0x7791_bc55_fece_41d2,
@@ -267,7 +267,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49_c1d9_c010_e60f,
 					0x0acd_b8e1_58bf_e3c8,
 				},
-				B: fp{
+				B: Fp{
 					0x8aef_cb98_b15f_8306,
 					0x3ea1_108f_e4f2_1d54,
 					0xcf79_f69f_a1b7_df3b,
@@ -276,8 +276,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed8_6c07_97be_e5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5_cb98_b15c_2db4,
 					0x7159_1082_d23a_1d51,
 					0xd762_40e9_44a1_7ca4,
@@ -285,7 +285,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972_dc17_01fa_66e3,
 					0x12e3_1f2d_d6bd_e7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2a_cb98_b173_2d9d,
 					0x2cfd_10dd_0696_1d64,
 					0x0739_6b86_c6ef_24e8,
@@ -295,9 +295,9 @@ func TestFp12Arithmetic(t *testing.T) {
 				},
 			},
 		},
-		B: fp6{
-			A: fp2{
-				A: fp{
+		B: Fp6{
+			A: Fp2{
+				A: Fp{
 					0x47f9_cb98_b1b8_2d58,
 					0x5fe9_11eb_a3aa_1d9d,
 					0x96bf_1b5f_4dd8_1db3,
@@ -305,7 +305,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xafa2_0b96_7464_0eab,
 					0x09bb_cea7_d8d9_497d,
 				},
-				B: fp{
+				B: Fp{
 					0x0303_cb98_b166_2daa,
 					0xd931_10aa_0a62_1d5a,
 					0xbfa9_820c_5be4_a468,
@@ -314,8 +314,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x06c3_05bb_19c0_e1c1,
 				},
 			},
-			B: fp2{
-				A: fp{
+			B: Fp2{
+				A: Fp{
 					0x46f9_cb98_b162_d858,
 					0x0be9_109c_f7aa_1d57,
 					0xc791_bc55_fece_41d2,
@@ -323,7 +323,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xcb49_c1d3_c010_e60f,
 					0x0acd_b8e1_58bf_e3c8,
 				},
-				B: fp{
+				B: Fp{
 					0x8aef_cb98_b15f_8306,
 					0x3ea1_108f_e4f2_1d54,
 					0xcf79_f69f_a1b7_df3b,
@@ -332,8 +332,8 @@ func TestFp12Arithmetic(t *testing.T) {
 					0x0ed8_6c07_97be_e5cf,
 				},
 			},
-			C: fp2{
-				A: fp{
+			C: Fp2{
+				A: Fp{
 					0xcee5_cb98_b15c_2db4,
 					0x7159_1082_d23a_1d51,
 					0xd762_30e9_44a1_7ca4,
@@ -341,7 +341,7 @@ func TestFp12Arithmetic(t *testing.T) {
 					0xa972_dc17_01fa_66e3,
 					0x12e3_1f2d_d6bd_e7d6,
 				},
-				B: fp{
+				B: Fp{
 					0xad2a_cb98_b173_2d9d,
 					0x2cfd_10dd_0696_1d64,
 					0x0739_6b86_c6ef_24e8,

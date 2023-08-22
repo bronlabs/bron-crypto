@@ -82,7 +82,7 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 		return nil, errs.NewInvalidCurve("no such curve: %s", curve.Name())
 	}
 	if !generator.IsOnCurve() {
-		return nil, errs.NewNotOnCurve("invalid generator")
+		return nil, errs.NewMembershipError("invalid generator")
 	}
 	if generator.IsIdentity() {
 		return nil, errs.NewIsIdentity("invalid generator")

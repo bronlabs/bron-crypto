@@ -74,7 +74,7 @@ func (*Koblitz256) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	p1, err := secp256k1.PointNew().SetBigInt(Bx, By)
 	if err != nil {
-		panic(errs.WrapDeserializationFailed(err, "set big int"))
+		panic(errs.WrapSerializationError(err, "set big int"))
 	}
 	if len(k) > 32 {
 		panic("invalid scalar length")
@@ -83,7 +83,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	copy(bytes_[:], bitstring.ReverseBytes(k))
 	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
-		panic(errs.WrapDeserializationFailed(err, "set bytes"))
+		panic(errs.WrapSerializationError(err, "set bytes"))
 	}
 	return p1.Mul(p1, s).BigInt()
 }
@@ -96,7 +96,7 @@ func (*Koblitz256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	copy(bytes_[:], bitstring.ReverseBytes(k))
 	s, err := fq.New().SetBytes(&bytes_)
 	if err != nil {
-		panic(errs.WrapDeserializationFailed(err, "set bytes"))
+		panic(errs.WrapSerializationError(err, "set bytes"))
 	}
 	p1 := secp256k1.PointNew().Generator()
 	return p1.Mul(p1, s).BigInt()

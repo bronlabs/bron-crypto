@@ -7,7 +7,7 @@
 package core
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math"
 	"math/big"
 
@@ -28,7 +28,7 @@ var GenerateSafePrime = func(bits uint) (*big.Int, error) {
 		// rand.Prime throws an error if bits < 2
 		// -1 so the Sophie-Germain prime is 1023 bits
 		// and the Safe prime is 1024
-		p, err = rand.Prime(rand.Reader, int(bits)-1)
+		p, err = crand.Prime(crand.Reader, int(bits)-1)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "reading from crand")
 		}

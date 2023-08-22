@@ -42,7 +42,7 @@ func PointUnmarshalBinary(curve curves.Curve, input []byte) (curves.Point, error
 	}
 	point, err := curve.Point().FromAffineCompressed(input[i+1:])
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "from affine compressed")
+		return nil, errs.WrapSerializationError(err, "from affine compressed")
 	}
 	return point, nil
 }
@@ -79,11 +79,11 @@ func PointUnmarshalText(curve curves.Curve, input []byte) (curves.Point, error) 
 	buffer := make([]byte, (len(input)-i)/2)
 	_, err := hex.Decode(buffer, input[i+1:])
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "hex decoding failed")
+		return nil, errs.WrapSerializationError(err, "hex decoding failed")
 	}
 	point, err := curve.Point().FromAffineCompressed(buffer)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "from affine compressed")
+		return nil, errs.WrapSerializationError(err, "from affine compressed")
 	}
 	return point, nil
 }
@@ -107,15 +107,15 @@ func NewPointFromJSON(curve curves.Curve, data []byte) (curves.Point, error) {
 	var m map[string]string
 
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "json unmarshal failed")
+		return nil, errs.WrapSerializationError(err, "json unmarshal failed")
 	}
 	p, err := hex.DecodeString(m["value"])
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "hex decode string failed")
+		return nil, errs.WrapSerializationError(err, "hex decode string failed")
 	}
 	P, err := curve.Point().FromAffineCompressed(p)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "from affine compressed")
+		return nil, errs.WrapSerializationError(err, "from affine compressed")
 	}
 	return P, nil
 }

@@ -25,9 +25,9 @@ var generator = &Fq{0x96bc8c8cffffffed, 0x74c2a54b49f7778e, 0xfffffffffffffffd, 
 
 var s = 32
 
-// modulus representation
+// Modulus representation
 // p = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001.
-var modulus = &Fq{0x8c46eb2100000001, 0x224698fc0994a8dd, 0x0000000000000000, 0x4000000000000000}
+var Modulus = &Fq{0x8c46eb2100000001, 0x224698fc0994a8dd, 0x0000000000000000, 0x4000000000000000}
 
 var BiModulus = new(big.Int).SetBytes([]byte{
 	0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -158,7 +158,7 @@ func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 		binary.LittleEndian.Uint64(input[16:24]),
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
-	if d0.Cmp(modulus) != -1 {
+	if d0.Cmp(Modulus) != -1 {
 		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	fiat_pasta_fq_from_bytes((*[4]uint64)(fq), input)

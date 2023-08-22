@@ -1096,10 +1096,10 @@ func TestSerializeSecretKeyIgnoreFields(t *testing.T) {
 
 func TestSerializationErrorConditions(t *testing.T) {
 	pk := new(paillier.PublicKey)
-	require.True(t, errs.IsDeserializationFailed(pk.UnmarshalJSON([]byte(`invalid`))))
+	require.True(t, errs.IsSerializationError(pk.UnmarshalJSON([]byte(`invalid`))))
 
 	sk := new(paillier.SecretKey)
-	require.True(t, errs.IsDeserializationFailed(sk.UnmarshalJSON([]byte(`invalid`))))
+	require.True(t, errs.IsSerializationError(sk.UnmarshalJSON([]byte(`invalid`))))
 }
 
 func TestNewSecretKeyErrorConditions(t *testing.T) {

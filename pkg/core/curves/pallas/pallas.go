@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fq"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
@@ -58,11 +58,15 @@ func (CurveProfile) Field() curves.FieldProfile {
 }
 
 func (CurveProfile) SubGroupOrder() *big.Int {
-	return fq.New().Params.BiModulus
+	return fq.BiModulus
 }
 
-func (CurveProfile) Cofactor() *big.Int {
-	return big.NewInt(1)
+func (CurveProfile) Cofactor() curves.Scalar {
+	return pallasInstance.Scalar().One()
+}
+
+func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+	return nil
 }
 
 var _ (curves.Curve) = (*Curve)(nil)
@@ -118,11 +122,35 @@ func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	return nil, nil, nil
+func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+	xc, ok := x.(FieldElement)
+	if !ok {
+		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")
+	}
+	rhs := rhsPallas(xc.v)
+	y, wasQr := new(fp.Fp).Sqrt(rhs)
+	if !wasQr {
+		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
+	}
+	p1e := new(Ep)
+	p1e.X = xc.v
+	p1e.Y = y
+	p1e.Z.SetOne()
+
+	p2e := new(Ep)
+	p2e.X = xc.v
+	p2e.Y = new(fp.Fp).Neg(y)
+	p2e.Z.SetOne()
+
+	p1 := &Point{value: p1e}
+	p2 := &Point{value: p2e}
+
+	if p1.Y().IsEven() {
+		return p1, p2, nil
+	}
+	return p2, p1, nil
 }
 
-// TODO: make it like K256
 func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	eps := make([]*Ep, len(points))
 	for i, pt := range points {
@@ -202,43 +230,43 @@ func pippengerMultiScalarMultPallas(points []*Ep, scalars []*big.Int) *Ep {
 // in "Avoiding inversions" [WB2019, section 4.3].
 func isoMap(p *Ep) *Ep {
 	var z [4]*fp.Fp
-	z[0] = new(fp.Fp).Square(p.z)    // z^2
-	z[1] = new(fp.Fp).Mul(z[0], p.z) // z^3
+	z[0] = new(fp.Fp).Square(p.Z)    // z^2
+	z[1] = new(fp.Fp).Mul(z[0], p.Z) // z^3
 	z[2] = new(fp.Fp).Square(z[0])   // z^4
 	z[3] = new(fp.Fp).Square(z[1])   // z^6
 
 	// ((iso[0] * x + iso[1] * z^2) * x + iso[2] * z^4) * x + iso[3] * z^6
 	numX := new(fp.Fp).Set(isomapper[0])
-	numX.Mul(numX, p.x)
+	numX.Mul(numX, p.X)
 	numX.Add(numX, new(fp.Fp).Mul(isomapper[1], z[0]))
-	numX.Mul(numX, p.x)
+	numX.Mul(numX, p.X)
 	numX.Add(numX, new(fp.Fp).Mul(isomapper[2], z[2]))
-	numX.Mul(numX, p.x)
+	numX.Mul(numX, p.X)
 	numX.Add(numX, new(fp.Fp).Mul(isomapper[3], z[3]))
 
 	// (z^2 * x + iso[4] * z^4) * x + iso[5] * z^6
 	divX := new(fp.Fp).Set(z[0])
-	divX.Mul(divX, p.x)
+	divX.Mul(divX, p.X)
 	divX.Add(divX, new(fp.Fp).Mul(isomapper[4], z[2]))
-	divX.Mul(divX, p.x)
+	divX.Mul(divX, p.X)
 	divX.Add(divX, new(fp.Fp).Mul(isomapper[5], z[3]))
 
 	// (((iso[6] * x + iso[7] * z2) * x + iso[8] * z4) * x + iso[9] * z6) * y
 	numY := new(fp.Fp).Set(isomapper[6])
-	numY.Mul(numY, p.x)
+	numY.Mul(numY, p.X)
 	numY.Add(numY, new(fp.Fp).Mul(isomapper[7], z[0]))
-	numY.Mul(numY, p.x)
+	numY.Mul(numY, p.X)
 	numY.Add(numY, new(fp.Fp).Mul(isomapper[8], z[2]))
-	numY.Mul(numY, p.x)
+	numY.Mul(numY, p.X)
 	numY.Add(numY, new(fp.Fp).Mul(isomapper[9], z[3]))
-	numY.Mul(numY, p.y)
+	numY.Mul(numY, p.Y)
 
 	// (((x + iso[10] * z2) * x + iso[11] * z4) * x + iso[12] * z6) * z3
-	divY := new(fp.Fp).Set(p.x)
+	divY := new(fp.Fp).Set(p.X)
 	divY.Add(divY, new(fp.Fp).Mul(isomapper[10], z[0]))
-	divY.Mul(divY, p.x)
+	divY.Mul(divY, p.X)
 	divY.Add(divY, new(fp.Fp).Mul(isomapper[11], z[2]))
-	divY.Mul(divY, p.x)
+	divY.Mul(divY, p.X)
 	divY.Add(divY, new(fp.Fp).Mul(isomapper[12], z[3]))
 	divY.Mul(divY, z[1])
 
@@ -249,7 +277,7 @@ func isoMap(p *Ep) *Ep {
 	y.Mul(y, new(fp.Fp).Square(z0))
 
 	return &Ep{
-		x: x, y: y, z: z0,
+		X: x, Y: y, Z: z0,
 	}
 }
 
@@ -296,6 +324,6 @@ func mapSswu(u *fp.Fp) *Ep {
 	y.CMove(new(fp.Fp).Neg(y), y, bool2int[e3])
 
 	return &Ep{
-		x: x, y: y, z: new(fp.Fp).SetOne(),
+		X: x, Y: y, Z: new(fp.Fp).SetOne(),
 	}
 }

@@ -14,7 +14,7 @@ func TestG1IsOnCurve(t *testing.T) {
 	require.Equal(t, 1, new(G1).Identity().IsOnCurve())
 	require.Equal(t, 1, new(G1).Generator().IsOnCurve())
 
-	z := fp{
+	z := Fp{
 		0xba7afa1f9a6fe250,
 		0xfa0f5b595eafe731,
 		0x3bdc477694c306e7,
@@ -25,12 +25,12 @@ func TestG1IsOnCurve(t *testing.T) {
 
 	gen := new(G1).Generator()
 	test := G1{
-		x: *(gen.x.Mul(&gen.x, &z)),
-		y: *(gen.y.Mul(&gen.y, &z)),
-		z: z,
+		X: *(gen.X.Mul(&gen.X, &z)),
+		Y: *(gen.Y.Mul(&gen.Y, &z)),
+		Z: z,
 	}
 	require.Equal(t, 1, test.IsOnCurve())
-	test.x = z
+	test.X = z
 	require.Equal(t, 0, test.IsOnCurve())
 }
 
@@ -43,7 +43,7 @@ func TestG1Equality(t *testing.T) {
 	require.Equal(t, 0, a.Equal(b))
 	require.Equal(t, 0, b.Equal(a))
 
-	z := fp{
+	z := Fp{
 		0xba7afa1f9a6fe250,
 		0xfa0f5b595eafe731,
 		0x3bdc477694c306e7,
@@ -53,22 +53,22 @@ func TestG1Equality(t *testing.T) {
 	}
 
 	c := G1{}
-	c.x.Mul(&a.x, &z)
-	c.y.Mul(&a.y, &z)
-	c.z.Set(&z)
+	c.X.Mul(&a.X, &z)
+	c.Y.Mul(&a.Y, &z)
+	c.Z.Set(&z)
 
 	require.Equal(t, 1, c.IsOnCurve())
 
 	require.Equal(t, 1, a.Equal(&c))
 	require.Equal(t, 0, b.Equal(&c))
 
-	c.y.Neg(&c.y)
+	c.Y.Neg(&c.Y)
 	require.Equal(t, 1, c.IsOnCurve())
 
 	require.Equal(t, 0, a.Equal(&c))
 
-	c.y.Neg(&c.y)
-	c.x.Set(&z)
+	c.Y.Neg(&c.Y)
+	c.X.Set(&z)
 	require.Equal(t, 0, c.IsOnCurve())
 }
 
@@ -82,7 +82,7 @@ func TestG1Double(t *testing.T) {
 	require.Equal(t, 0, t0.IsIdentity())
 	require.Equal(t, 1, t0.IsOnCurve())
 	e := G1{
-		x: fp{
+		X: Fp{
 			0x53e978ce58a9ba3c,
 			0x3ea0583c4f3d65f9,
 			0x4d20bb47f0012960,
@@ -90,7 +90,7 @@ func TestG1Double(t *testing.T) {
 			0x26b552a39d7eb21f,
 			0x0008895d26e68785,
 		},
-		y: fp{
+		Y: Fp{
 			0x70110b3298293940,
 			0xda33c5393f1f6afc,
 			0xb86edfd16a5aa785,
@@ -98,7 +98,7 @@ func TestG1Double(t *testing.T) {
 			0x25cfc2b522d11720,
 			0x06361c83f8d09b15,
 		},
-		z: r,
+		Z: r,
 	}
 
 	require.Equal(t, 1, e.Equal(t0))
@@ -113,7 +113,7 @@ func TestG1Add(t *testing.T) {
 	require.Equal(t, 1, c.IsOnCurve())
 
 	b.Generator()
-	z := fp{
+	z := Fp{
 		0xba7afa1f9a6fe250,
 		0xfa0f5b595eafe731,
 		0x3bdc477694c306e7,
@@ -121,9 +121,9 @@ func TestG1Add(t *testing.T) {
 		0x64aa6e0649b2078c,
 		0x12b108ac33643c3e,
 	}
-	b.x.Mul(&b.x, &z)
-	b.y.Mul(&b.y, &z)
-	b.z.Set(&z)
+	b.X.Mul(&b.X, &z)
+	b.Y.Mul(&b.Y, &z)
+	b.Z.Set(&z)
 	c.Add(a, b)
 	require.Equal(t, 0, c.IsIdentity())
 	require.Equal(t, 1, g.Equal(c))
@@ -144,7 +144,7 @@ func TestG1Add(t *testing.T) {
 	require.Equal(t, 1, d.IsOnCurve())
 	require.Equal(t, 1, c.Equal(d))
 
-	beta := fp{
+	beta := Fp{
 		0xcd03c9e48671f071,
 		0x5dab22461fcda5d2,
 		0x587042afd3851b95,
@@ -156,13 +156,13 @@ func TestG1Add(t *testing.T) {
 	a.Generator()
 	a.Double(a)
 	a.Double(a)
-	b.x.Mul(&a.x, &beta)
-	b.y.Neg(&a.y)
-	b.z.Set(&a.z)
+	b.X.Mul(&a.X, &beta)
+	b.Y.Neg(&a.Y)
+	b.Z.Set(&a.Z)
 	require.Equal(t, 1, a.IsOnCurve())
 	require.Equal(t, 1, b.IsOnCurve())
 	c.Add(a, b)
-	d.x.Set(&fp{
+	d.X.Set(&Fp{
 		0x29e1e987ef68f2d0,
 		0xc5f3ec531db03233,
 		0xacd6c4b6ca19730f,
@@ -170,7 +170,7 @@ func TestG1Add(t *testing.T) {
 		0x46e3b2c5785cc7a9,
 		0x07e571d42d22ddd6,
 	})
-	d.y.Set(&fp{
+	d.Y.Set(&Fp{
 		0x94d117a7e5a539e7,
 		0x8e17ef673d4b5d22,
 		0x9d746aaf508a33ea,
@@ -178,7 +178,7 @@ func TestG1Add(t *testing.T) {
 		0x0bc3b8d5fb0447f7,
 		0x07bfa4c7210f4f44,
 	})
-	d.z.SetOne()
+	d.Z.SetOne()
 	require.Equal(t, 1, c.Equal(d))
 }
 
@@ -224,7 +224,7 @@ func TestG1Neg(t *testing.T) {
 func TestG1InCorrectSubgroup(t *testing.T) {
 	// ZCash test vector
 	a := G1{
-		x: fp{
+		X: Fp{
 			0x0abaf895b97e43c8,
 			0xba4c6432eb9b61b0,
 			0x12506f52adfe307f,
@@ -232,7 +232,7 @@ func TestG1InCorrectSubgroup(t *testing.T) {
 			0x84744f05b8e9bd71,
 			0x113d554fb09554f7,
 		},
-		y: fp{
+		Y: Fp{
 			0x73e90e88f5cf01c0,
 			0x37007b65dd3197e2,
 			0x5cf9a1992f0d7c78,
@@ -240,7 +240,7 @@ func TestG1InCorrectSubgroup(t *testing.T) {
 			0xf6a63f6f07f60961,
 			0x0c53b5b97e634df3,
 		},
-		z: *(new(fp).SetOne()),
+		Z: *(new(Fp).SetOne()),
 	}
 	require.Equal(t, 0, a.InCorrectSubgroup())
 
@@ -276,7 +276,7 @@ func TestG1ClearCofactor(t *testing.T) {
 	id.ClearCofactor(id)
 	require.Equal(t, 1, id.IsOnCurve())
 
-	z := fp{
+	z := Fp{
 		0x3d2d1c670671394e,
 		0x0ee3a800a2f7c1ca,
 		0x270f4f21da2e5050,
@@ -286,7 +286,7 @@ func TestG1ClearCofactor(t *testing.T) {
 	}
 
 	point := G1{
-		x: fp{
+		X: Fp{
 			0x48af5ff540c817f0,
 			0xd73893acaf379d5a,
 			0xe6c43584e18e023c,
@@ -294,7 +294,7 @@ func TestG1ClearCofactor(t *testing.T) {
 			0xf618c6d3ccc0f8d8,
 			0x0073542cd671e16c,
 		},
-		y: fp{
+		Y: Fp{
 			0x57bf8be79461d0ba,
 			0xfc61459cee3547c3,
 			0x0d23567df1ef147b,
@@ -302,11 +302,11 @@ func TestG1ClearCofactor(t *testing.T) {
 			0xb0c8cfbe9dc8fdc1,
 			0x1328661767ef368b,
 		},
-		z: *(&fp{}).Set(&z),
+		Z: *(&Fp{}).Set(&z),
 	}
-	point.x.Mul(&point.x, &z)
-	point.z.Square(&z)
-	point.z.Mul(&point.z, &z)
+	point.X.Mul(&point.X, &z)
+	point.Z.Square(&z)
+	point.Z.Mul(&point.Z, &z)
 
 	require.Equal(t, 1, point.IsOnCurve())
 	require.Equal(t, 0, point.InCorrectSubgroup())

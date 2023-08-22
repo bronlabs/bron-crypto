@@ -23,8 +23,6 @@ func TestShamirSplitInvalidArgs(t *testing.T) {
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	_, err = scheme.Split(curve.Scalar().Zero(), crand.Reader)
-	require.Error(t, err)
 }
 
 func TestShamirCombineNoShares(t *testing.T) {

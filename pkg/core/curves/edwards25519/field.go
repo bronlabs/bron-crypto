@@ -4,70 +4,71 @@ import (
 	"io"
 	"math/big"
 
+	"filippo.io/edwards25519/field"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-// TODO: finish when filippo is forked
 type FieldProfile struct{}
 
-func (FieldProfile) Curve() curves.Curve {
-	return edwards25519Instance
-}
-
 func (FieldProfile) Order() *big.Int {
-	return nil
+	return internal.Bhex(baseFieldOrder)
 }
 
 func (FieldProfile) Characteristic() *big.Int {
-	return nil
+	return internal.Bhex(baseFieldOrder)
 }
 
 func (FieldProfile) ExtensionDegree() *big.Int {
-	return nil
+	return big.NewInt(1)
 }
 
 var _ (curves.FieldElement) = (*FieldElement)(nil)
 
 type FieldElement struct {
-	v *impl.Field
+	v *field.Element
 
 	_ helper_types.Incomparable
-}
-
-//nolint:revive // we don't care if impl shadows impl
-func (e *FieldElement) impl() *impl.Field {
-	return e.v
 }
 
 func (FieldElement) Profile() curves.FieldProfile {
 	return &FieldProfile{}
 }
 
-// IMPLEMENT
 func (FieldElement) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e FieldElement) Value() curves.FieldValue {
-	return e.v.Value
-}
-
-func (e FieldElement) Modulus() curves.FieldValue {
-	return e.v.Params.Modulus
-}
-
-func (FieldElement) Clone() curves.FieldElement {
+func (FieldElement) Value() curves.FieldValue {
 	return nil
 }
 
+func (FieldElement) Modulus() *big.Int {
+	return internal.Bhex(baseFieldOrder)
+}
+
+func (e FieldElement) Clone() curves.FieldElement {
+	return &FieldElement{
+		v: e.v,
+	}
+}
+
 func (e FieldElement) Cmp(rhs curves.FieldElement) int {
-	rhse, ok := rhs.(FieldElement)
+	n, ok := rhs.(FieldElement)
 	if !ok {
 		return -2
 	}
-	return e.v.Cmp(rhse.impl())
+	if e.v.Equal(n.v) == 1 {
+		return 0
+	}
+	v := e.v.Subtract(e.v, n.v)
+	if v.IsNegative() == 1 {
+		return -1
+	}
+	return 1
 }
 
 func (FieldElement) New(value int) curves.FieldElement {
@@ -78,12 +79,16 @@ func (FieldElement) Random(prng io.Reader) curves.FieldElement {
 	return nil
 }
 
-func (FieldElement) Zero() curves.FieldElement {
-	return nil
+func (e FieldElement) Zero() curves.FieldElement {
+	return &FieldElement{
+		v: e.v.Zero(),
+	}
 }
 
-func (FieldElement) One() curves.FieldElement {
-	return nil
+func (e FieldElement) One() curves.FieldElement {
+	return &FieldElement{
+		v: e.v.One(),
+	}
 }
 
 func (FieldElement) IsZero() bool {
@@ -102,48 +107,77 @@ func (FieldElement) IsEven() bool {
 	return false
 }
 
-func (FieldElement) Square() curves.FieldElement {
-	return nil
+func (e FieldElement) Square() curves.FieldElement {
+	return &FieldElement{
+		v: e.v.Square(e.v),
+	}
 }
 
-func (FieldElement) Double() curves.FieldElement {
-	return nil
+func (e FieldElement) Double() curves.FieldElement {
+	return e.Add(e)
 }
 
-func (FieldElement) Sqrt() curves.FieldElement {
-	return nil
+func (FieldElement) Sqrt() (curves.FieldElement, bool) {
+	return nil, false
 }
 
-func (FieldElement) Cube() curves.FieldElement {
-	return nil
+func (e FieldElement) Cube() curves.FieldElement {
+	return e.Square().Mul(e)
 }
 
-func (FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
-	return nil
+func (e FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(FieldElement)
+	if !ok {
+		panic("rhs is not an edwards25519 base field element")
+	}
+	return &FieldElement{
+		v: e.v.Add(e.v, n.v),
+	}
 }
 
-func (FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
-	return nil
+func (e FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(FieldElement)
+	if !ok {
+		panic("rhs is not an edwards25519 base field element")
+	}
+	return &FieldElement{
+		v: e.v.Subtract(e.v, n.v),
+	}
 }
 
-func (FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
-	return nil
+func (e FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(FieldElement)
+	if !ok {
+		panic("rhs is not an edwards25519 base field element")
+	}
+	return &FieldElement{
+		v: e.v.Multiply(e.v, n.v),
+	}
 }
 
-func (FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
-	return nil
+func (e FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
+	return e.Mul(y).Add(z)
 }
 
-func (FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
-	return nil
+func (e FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
+	inverted := e.v.Invert(e.v)
+	zero := new(field.Element).Zero()
+	if inverted.Equal(zero) == 1 {
+		panic("could not invert")
+	}
+	return &FieldElement{
+		v: e.v.Multiply(e.v, inverted),
+	}
 }
 
 func (FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
 	return nil
 }
 
-func (FieldElement) Neg() curves.FieldElement {
-	return nil
+func (e FieldElement) Neg() curves.FieldElement {
+	return &FieldElement{
+		v: e.v.Negate(e.v),
+	}
 }
 
 func (FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
@@ -158,18 +192,24 @@ func (FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	return nil, nil
 }
 
-func (FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	return nil, nil
+func (e FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
+	result, err := e.v.SetBytes(input)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not set bytes")
+	}
+	return &FieldElement{
+		v: result,
+	}, nil
 }
 
-func (FieldElement) Bytes() []byte {
-	return nil
+func (e FieldElement) Bytes() []byte {
+	return e.v.Bytes()
 }
 
 func (FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
 	return nil, nil
 }
 
-func (FieldElement) Scalar() (curves.FieldElement, error) {
+func (FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
 	return nil, nil
 }

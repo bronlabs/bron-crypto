@@ -16,10 +16,6 @@ var _ (curves.FieldProfile) = (*FieldProfile)(nil)
 
 type FieldProfile struct{}
 
-func (FieldProfile) Curve() curves.Curve {
-	return p256Instance
-}
-
 func (FieldProfile) Order() *big.Int {
 	return fp.New().Params.BiModulus
 }
@@ -46,11 +42,11 @@ func (e *FieldElement) impl() *impl.Field {
 }
 
 func (e FieldElement) Value() curves.FieldValue {
-	return e.v.Value
+	return e.v.Value[:]
 }
 
-func (e FieldElement) Modulus() curves.FieldValue {
-	return e.v.Params.Modulus
+func (e FieldElement) Modulus() *big.Int {
+	return e.v.Params.BiModulus
 }
 
 func (e FieldElement) Clone() curves.FieldElement {
@@ -129,14 +125,11 @@ func (e FieldElement) Double() curves.FieldElement {
 	}
 }
 
-func (e FieldElement) Sqrt() curves.FieldElement {
+func (e FieldElement) Sqrt() (curves.FieldElement, bool) {
 	result, wasSquare := fp.New().Sqrt(e.v)
-	if !wasSquare {
-		panic("couln't take sqrt")
-	}
 	return &FieldElement{
 		v: result,
-	}
+	}, wasSquare
 }
 
 func (e FieldElement) Cube() curves.FieldElement {
@@ -202,9 +195,11 @@ func (e FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
 }
 
 func (e FieldElement) Neg() curves.FieldElement {
-	var out curves.FieldValue
+	var out [impl.FieldLimbs]uint64
 	e.v.Arithmetic.Neg(&out, &e.v.Value)
-	return nil
+	return &FieldElement{
+		v: e.v.Neg(e.v),
+	}
 }
 
 func (e FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
@@ -253,11 +248,15 @@ func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) 
 	}
 	result, err := e.SetBytes(sc.Bytes())
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert from scalar")
+		return nil, errs.WrapSerializationError(err, "could not convert from scalar")
 	}
 	return result, nil
 }
 
-func (FieldElement) Scalar() (curves.FieldElement, error) {
-	return nil, nil
+func (e FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
+	results, err := curve.Scalar().SetBytes(e.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert field element to scalar")
+	}
+	return results, nil
 }

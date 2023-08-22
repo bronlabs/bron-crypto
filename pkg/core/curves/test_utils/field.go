@@ -2,7 +2,7 @@
 package test_utils
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +50,7 @@ func (x *Element) MarshalJSON() ([]byte, error) {
 		Value:   x.Value.String(),
 	})
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "marshalling x failed")
+		return nil, errs.WrapSerializationError(err, "marshalling x failed")
 	}
 	return marshalled, nil
 }
@@ -58,17 +58,17 @@ func (x *Element) MarshalJSON() ([]byte, error) {
 func (x *Element) UnmarshalJSON(bytes []byte) error {
 	var e ElementJSON
 	if err := json.Unmarshal(bytes, &e); err != nil {
-		return errs.WrapDeserializationFailed(err, "could not json unmarshal")
+		return errs.WrapSerializationError(err, "could not json unmarshal")
 	}
 	// Convert the strings to big.Ints
 	modulus, ok := new(big.Int).SetString(e.Modulus, 10)
 	if !ok {
-		return errs.NewDeserializationFailed("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
+		return errs.NewSerializationError("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
 	}
 	x.Modulus = &Field{modulus}
 	x.Value, ok = new(big.Int).SetString(e.Value, 10)
 	if !ok {
-		return errs.NewDeserializationFailed("failed to unmarshal value string '%v' to big.Int", e.Value)
+		return errs.NewSerializationError("failed to unmarshal value string '%v' to big.Int", e.Value)
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func (f Field) One() *Element {
 
 func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	if r == nil {
-		r = rand.Reader
+		r = crand.Reader
 	}
 	var randInt *big.Int
 	var err error
@@ -126,7 +126,7 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	} else {
 		// Read a random integer within the field. This is defined as [0, max) so we don't need to
 		// explicitly check it is within the field. If it is not, NewElement will panic anyways.
-		randInt, err = rand.Int(r, f.Int)
+		randInt, err = crand.Int(r, f.Int)
 	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get random element")

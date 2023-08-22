@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	g2x = fp2{
-		A: fp{
+	g2x = Fp2{
+		A: Fp{
 			0xf5f2_8fa2_0294_0a10,
 			0xb3f5_fb26_87b4_961a,
 			0xa1a8_93b5_3e2a_e580,
@@ -20,7 +20,7 @@ var (
 			0x6f67_b763_1863_366b,
 			0x0581_9192_4350_bcd7,
 		},
-		B: fp{
+		B: Fp{
 			0xa5a9_c075_9e23_f606,
 			0xaaa0_c59d_bccd_60c3,
 			0x3bb1_7e18_e286_7806,
@@ -29,8 +29,8 @@ var (
 			0x1192_2a09_7360_edf3,
 		},
 	}
-	g2y = fp2{
-		A: fp{
+	g2y = Fp2{
+		A: Fp{
 			0x4c73_0af8_6049_4c4a,
 			0x597c_fa1f_5e36_9c5a,
 			0xe7e6_856c_aa0a_635a,
@@ -38,7 +38,7 @@ var (
 			0x07d3_a975_f0ef_25a2,
 			0x0083_fd8e_7e80_dae5,
 		},
-		B: fp{
+		B: Fp{
 			0xadc0_fc92_df64_b05d,
 			0x18aa_270a_2b14_61dc,
 			0x86ad_ac6a_3be4_eba0,
@@ -47,8 +47,8 @@ var (
 			0x0b2b_c2a1_63de_1bf2,
 		},
 	}
-	curveG2B = fp2{
-		A: fp{
+	curveG2B = Fp2{
+		A: Fp{
 			0xaa27_0000_000c_fff3,
 			0x53cc_0032_fc34_000a,
 			0x478f_e97a_6b0a_807f,
@@ -56,7 +56,7 @@ var (
 			0x8ec9_733b_bf78_ab2f,
 			0x09d6_4551_3d83_de7e,
 		},
-		B: fp{
+		B: Fp{
 			0xaa27_0000_000c_fff3,
 			0x53cc_0032_fc34_000a,
 			0x478f_e97a_6b0a_807f,
@@ -65,8 +65,8 @@ var (
 			0x09d6_4551_3d83_de7e,
 		},
 	}
-	curveG23B = fp2{
-		A: fp{
+	curveG23B = Fp2{
+		A: Fp{
 			0x447600000027552e,
 			0xdcb8009a43480020,
 			0x6f7ee9ce4a6e8b59,
@@ -74,7 +74,7 @@ var (
 			0x6140b1fcfb1e54b7,
 			0x0381be097f0bb4e1,
 		},
-		B: fp{
+		B: Fp{
 			0x447600000027552e,
 			0xdcb8009a43480020,
 			0x6f7ee9ce4a6e8b59,
@@ -83,9 +83,9 @@ var (
 			0x0381be097f0bb4e1,
 		},
 	}
-	sswuMapA = fp2{
-		A: fp{},
-		B: fp{
+	sswuMapA = Fp2{
+		A: Fp{},
+		B: Fp{
 			0xe53a000003135242,
 			0x01080c0fdef80285,
 			0xe7889edbe340f6bd,
@@ -94,8 +94,8 @@ var (
 			0x1220b4e979ea5467,
 		},
 	}
-	sswuMapB = fp2{
-		A: fp{
+	sswuMapB = Fp2{
+		A: Fp{
 			0x22ea00000cf89db2,
 			0x6ec832df71380aa4,
 			0x6e1b94403db5a66e,
@@ -103,7 +103,7 @@ var (
 			0x3dd3a569412c0a34,
 			0x125cdb5e74dc4fd1,
 		},
-		B: fp{
+		B: Fp{
 			0x22ea00000cf89db2,
 			0x6ec832df71380aa4,
 			0x6e1b94403db5a66e,
@@ -112,8 +112,8 @@ var (
 			0x125cdb5e74dc4fd1,
 		},
 	}
-	sswuMapZ = fp2{
-		A: fp{
+	sswuMapZ = Fp2{
+		A: Fp{
 			0x87ebfffffff9555c,
 			0x656fffe5da8ffffa,
 			0x0fd0749345d33ad2,
@@ -121,7 +121,7 @@ var (
 			0xde291a3d41e980d3,
 			0x0815664c7dfe040d,
 		},
-		B: fp{
+		B: Fp{
 			0x43f5fffffffcaaae,
 			0x32b7fff2ed47fffd,
 			0x07e83a49a2e99d69,
@@ -130,8 +130,8 @@ var (
 			0x040ab3263eff0206,
 		},
 	}
-	sswuMapZInv = fp2{
-		A: fp{
+	sswuMapZInv = Fp2{
+		A: Fp{
 			0xacd0000000011110,
 			0x9dd9999dc88ccccd,
 			0xb5ca2ac9b76352bf,
@@ -139,7 +139,7 @@ var (
 			0x42dab41f28a77081,
 			0x132fc6ac14cd1e12,
 		},
-		B: fp{
+		B: Fp{
 			0xe396ffffffff2223,
 			0x4fbf332fcd0d9998,
 			0x0c4bbd3c1aff4cc4,
@@ -148,8 +148,8 @@ var (
 			0x10692e942f195791,
 		},
 	}
-	swwuMapMbDivA = fp2{
-		A: fp{
+	swwuMapMbDivA = Fp2{
+		A: Fp{
 			0x903c555555474fb3,
 			0x5f98cc95ce451105,
 			0x9f8e582eefe0fade,
@@ -157,7 +157,7 @@ var (
 			0x467a4ad10ee6de53,
 			0x0e7146f483e23a05,
 		},
-		B: fp{
+		B: Fp{
 			0x29c2aaaaaab85af8,
 			0xbf133368e30eeefa,
 			0xc7a27a7206cffb45,
@@ -167,9 +167,9 @@ var (
 		},
 	}
 
-	g2IsoXNum = []fp2{
+	g2IsoXNum = []Fp2{
 		{
-			A: fp{
+			A: Fp{
 				0x47f671c71ce05e62,
 				0x06dd57071206393e,
 				0x7c80cd2af3fd71a2,
@@ -177,7 +177,7 @@ var (
 				0xc54516acc8d037f6,
 				0x13808f550920ea41,
 			},
-			B: fp{
+			B: Fp{
 				0x47f671c71ce05e62,
 				0x06dd57071206393e,
 				0x7c80cd2af3fd71a2,
@@ -187,7 +187,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -195,7 +195,7 @@ var (
 				0x0000000000000000,
 				0x0000000000000000,
 			},
-			B: fp{
+			B: Fp{
 				0x5fe55555554c71d0,
 				0x873fffdd236aaaa3,
 				0x6a6b4619b26ef918,
@@ -205,7 +205,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x0a0c5555555971c3,
 				0xdb0c00101f9eaaae,
 				0xb1fb2f941d797997,
@@ -213,7 +213,7 @@ var (
 				0xb70040e2c20556f4,
 				0x149d7861e581393b,
 			},
-			B: fp{
+			B: Fp{
 				0xaff2aaaaaaa638e8,
 				0x439fffee91b55551,
 				0xb535a30cd9377c8c,
@@ -223,7 +223,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x40aac71c71c725ed,
 				0x190955557a84e38e,
 				0xd817050a8f41abc3,
@@ -231,7 +231,7 @@ var (
 				0x696eb479f885d059,
 				0x198e1a74328002d2,
 			},
-			B: fp{
+			B: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -241,9 +241,9 @@ var (
 			},
 		},
 	}
-	g2IsoXDen = []fp2{
+	g2IsoXDen = []Fp2{
 		{
-			A: fp{
+			A: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -251,7 +251,7 @@ var (
 				0x0000000000000000,
 				0x0000000000000000,
 			},
-			B: fp{
+			B: Fp{
 				0x1f3affffff13ab97,
 				0xf25bfc611da3ff3e,
 				0xca3757cb3819b208,
@@ -261,7 +261,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x447600000027552e,
 				0xdcb8009a43480020,
 				0x6f7ee9ce4a6e8b59,
@@ -269,7 +269,7 @@ var (
 				0x6140b1fcfb1e54b7,
 				0x0381be097f0bb4e1,
 			},
-			B: fp{
+			B: Fp{
 				0x7588ffffffd8557d,
 				0x41f3ff646e0bffdf,
 				0xf7b1e8d2ac426aca,
@@ -279,7 +279,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x760900000002fffd,
 				0xebf4000bc40c0002,
 				0x5f48985753c758ba,
@@ -287,7 +287,7 @@ var (
 				0x5c071a97a256ec6d,
 				0x15f65ec3fa80e493,
 			},
-			B: fp{
+			B: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -297,9 +297,9 @@ var (
 			},
 		},
 	}
-	g2IsoYNum = []fp2{
+	g2IsoYNum = []Fp2{
 		{
-			A: fp{
+			A: Fp{
 				0x96d8f684bdfc77be,
 				0xb530e4f43b66d0e2,
 				0x184a88ff379652fd,
@@ -307,7 +307,7 @@ var (
 				0x0fd2e39eada3eba9,
 				0x08c8055e31c5d5c3,
 			},
-			B: fp{
+			B: Fp{
 				0x96d8f684bdfc77be,
 				0xb530e4f43b66d0e2,
 				0x184a88ff379652fd,
@@ -317,7 +317,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x00000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -325,7 +325,7 @@ var (
 				0x0000000000000000,
 				0x0000000000000000,
 			},
-			B: fp{
+			B: Fp{
 				0xbf0a71c71c91b406,
 				0x4d6d55d28b7638fd,
 				0x9d82f98e5f205aee,
@@ -335,7 +335,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0xd7f9555555531c74,
 				0x21cffff748daaaa8,
 				0x5a9ad1866c9bbe46,
@@ -343,7 +343,7 @@ var (
 				0x4a0db369c0a32af1,
 				0x02b1ccc429ff56af,
 			},
-			B: fp{
+			B: Fp{
 				0xe205aaaaaaac8e37,
 				0xfcdc000768795556,
 				0x0c96011a8a1537dd,
@@ -353,7 +353,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0xa470bda12f67f35c,
 				0xc0fe38e23327b425,
 				0xc9d3d0f2c6f0678d,
@@ -361,7 +361,7 @@ var (
 				0x27f6c0e2f0746764,
 				0x117c5e6e28aa9054,
 			},
-			B: fp{
+			B: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -371,9 +371,9 @@ var (
 			},
 		},
 	}
-	g2IsoYDen = []fp2{
+	g2IsoYDen = []Fp2{
 		{
-			A: fp{
+			A: Fp{
 				0x0162fffffa765adf,
 				0x8f7bea480083fb75,
 				0x561b3c2259e93611,
@@ -381,7 +381,7 @@ var (
 				0xca713efc00367660,
 				0x03c6a03d41da1151,
 			},
-			B: fp{
+			B: Fp{
 				0x0162fffffa765adf,
 				0x8f7bea480083fb75,
 				0x561b3c2259e93611,
@@ -391,7 +391,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -399,7 +399,7 @@ var (
 				0x0000000000000000,
 				0x0000000000000000,
 			},
-			B: fp{
+			B: Fp{
 				0x5db0fffffd3b02c5,
 				0xd713f52358ebfdba,
 				0x5ea60761a84d161a,
@@ -409,7 +409,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x66b10000003affc5,
 				0xcb1400e764ec0030,
 				0xa73e5eb56fa5d106,
@@ -417,7 +417,7 @@ var (
 				0x11e10afb78ad7f13,
 				0x05429d0e3e918f52,
 			},
-			B: fp{
+			B: Fp{
 				0x534dffffffc4aae6,
 				0x5397ff174c67ffcf,
 				0xbff273eb870b251d,
@@ -427,7 +427,7 @@ var (
 			},
 		},
 		{
-			A: fp{
+			A: Fp{
 				0x760900000002fffd,
 				0xebf4000bc40c0002,
 				0x5f48985753c758ba,
@@ -435,7 +435,7 @@ var (
 				0x5c071a97a256ec6d,
 				0x15f65ec3fa80e493,
 			},
-			B: fp{
+			B: Fp{
 				0x0000000000000000,
 				0x0000000000000000,
 				0x0000000000000000,
@@ -447,9 +447,9 @@ var (
 	}
 
 	// 1 / ((u+1) ^ ((q-1)/3)).
-	psiCoeffX = fp2{
-		A: fp{},
-		B: fp{
+	psiCoeffX = Fp2{
+		A: Fp{},
+		B: Fp{
 			0x890dc9e4867545c3,
 			0x2af322533285a5d5,
 			0x50880866309b7e2c,
@@ -459,8 +459,8 @@ var (
 		},
 	}
 	// 1 / ((u+1) ^ (p-1)/2).
-	psiCoeffY = fp2{
-		A: fp{
+	psiCoeffY = Fp2{
+		A: Fp{
 			0x3e2f585da55c9ad1,
 			0x4294213d86c18183,
 			0x382844c88b623732,
@@ -468,7 +468,7 @@ var (
 			0x1d794e4fac7cf0b9,
 			0x0bd592fc7d825ec8,
 		},
-		B: fp{
+		B: Fp{
 			0x7bcfa7a25aa30fda,
 			0xdc17dec12a927e7c,
 			0x2f088dd86b4ebef1,
@@ -479,8 +479,8 @@ var (
 	}
 
 	// 1 / 2 ^ ((q-1)/3).
-	psi2CoeffX = fp2{
-		A: fp{
+	psi2CoeffX = Fp2{
+		A: Fp{
 			0xcd03c9e48671f071,
 			0x5dab22461fcda5d2,
 			0x587042afd3851b95,
@@ -488,13 +488,13 @@ var (
 			0x03f97d6e83d050d2,
 			0x18f0206554638741,
 		},
-		B: fp{},
+		B: Fp{},
 	}
 )
 
 // G2 is a point in g2.
 type G2 struct {
-	x, y, z fp2
+	X, Y, Z Fp2
 
 	_ helper_types.Incomparable
 }
@@ -517,7 +517,7 @@ func (g2 *G2) Random(reader io.Reader) (*G2, error) {
 // Hash uses the hasher to map bytes to a valid point.
 func (g2 *G2) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G2 {
 	var u []byte
-	var u0, u1 fp2
+	var u0, u1 Fp2
 	var r0, r1, q0, q1 G2
 
 	switch hash.Type() {
@@ -547,36 +547,36 @@ func (g2 *G2) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G2 {
 
 // Identity returns the identity point.
 func (g2 *G2) Identity() *G2 {
-	g2.x.SetZero()
-	g2.y.SetOne()
-	g2.z.SetZero()
+	g2.X.SetZero()
+	g2.Y.SetOne()
+	g2.Z.SetZero()
 	return g2
 }
 
 // Generator returns the base point.
 func (g2 *G2) Generator() *G2 {
-	g2.x.Set(&g2x)
-	g2.y.Set(&g2y)
-	g2.z.SetOne()
+	g2.X.Set(&g2x)
+	g2.Y.Set(&g2y)
+	g2.Z.SetOne()
 	return g2
 }
 
 // IsIdentity returns true if this point is at infinity.
 func (g2 *G2) IsIdentity() int {
-	return g2.z.IsZero()
+	return g2.Z.IsZero()
 }
 
 // IsOnCurve determines if this point represents a valid curve point.
 func (g2 *G2) IsOnCurve() int {
 	// Y^2 Z = X^3 + b Z^3
-	var lhs, rhs, t fp2
-	lhs.Square(&g2.y)
-	lhs.Mul(&lhs, &g2.z)
+	var lhs, rhs, t Fp2
+	lhs.Square(&g2.Y)
+	lhs.Mul(&lhs, &g2.Z)
 
-	rhs.Square(&g2.x)
-	rhs.Mul(&rhs, &g2.x)
-	t.Square(&g2.z)
-	t.Mul(&t, &g2.z)
+	rhs.Square(&g2.X)
+	rhs.Mul(&rhs, &g2.X)
+	t.Square(&g2.Z)
+	t.Mul(&t, &g2.Z)
 	t.Mul(&t, &curveG2B)
 	rhs.Add(&rhs, &t)
 
@@ -593,23 +593,23 @@ func (g2 *G2) InCorrectSubgroup() int {
 // Add adds this point to another point.
 func (g2 *G2) Add(arg1, arg2 *G2) *G2 {
 	// Algorithm 7, https://eprint.iacr.org/2015/1060.pdf
-	var t0, t1, t2, t3, t4, x3, y3, z3 fp2
+	var t0, t1, t2, t3, t4, x3, y3, z3 Fp2
 
-	t0.Mul(&arg1.x, &arg2.x)
-	t1.Mul(&arg1.y, &arg2.y)
-	t2.Mul(&arg1.z, &arg2.z)
-	t3.Add(&arg1.x, &arg1.y)
-	t4.Add(&arg2.x, &arg2.y)
+	t0.Mul(&arg1.X, &arg2.X)
+	t1.Mul(&arg1.Y, &arg2.Y)
+	t2.Mul(&arg1.Z, &arg2.Z)
+	t3.Add(&arg1.X, &arg1.Y)
+	t4.Add(&arg2.X, &arg2.Y)
 	t3.Mul(&t3, &t4)
 	t4.Add(&t0, &t1)
 	t3.Sub(&t3, &t4)
-	t4.Add(&arg1.y, &arg1.z)
-	x3.Add(&arg2.y, &arg2.z)
+	t4.Add(&arg1.Y, &arg1.Z)
+	x3.Add(&arg2.Y, &arg2.Z)
 	t4.Mul(&t4, &x3)
 	x3.Add(&t1, &t2)
 	t4.Sub(&t4, &x3)
-	x3.Add(&arg1.x, &arg1.z)
-	y3.Add(&arg2.x, &arg2.z)
+	x3.Add(&arg1.X, &arg1.Z)
+	y3.Add(&arg2.X, &arg2.Z)
 	x3.Mul(&x3, &y3)
 	y3.Add(&t0, &t2)
 	y3.Sub(&x3, &y3)
@@ -629,9 +629,9 @@ func (g2 *G2) Add(arg1, arg2 *G2) *G2 {
 	z3.Mul(&z3, &t4)
 	z3.Add(&z3, &t0)
 
-	g2.x.Set(&x3)
-	g2.y.Set(&y3)
-	g2.z.Set(&z3)
+	g2.X.Set(&x3)
+	g2.Y.Set(&y3)
+	g2.Z.Set(&z3)
 	return g2
 }
 
@@ -645,14 +645,14 @@ func (g2 *G2) Sub(arg1, arg2 *G2) *G2 {
 // Double this point.
 func (g2 *G2) Double(a *G2) *G2 {
 	// Algorithm 9, https://eprint.iacr.org/2015/1060.pdf
-	var t0, t1, t2, x3, y3, z3 fp2
+	var t0, t1, t2, x3, y3, z3 Fp2
 
-	t0.Square(&a.y)
+	t0.Square(&a.Y)
 	z3.Double(&t0)
 	z3.Double(&z3)
 	z3.Double(&z3)
-	t1.Mul(&a.y, &a.z)
-	t2.Square(&a.z)
+	t1.Mul(&a.Y, &a.Z)
+	t2.Square(&a.Z)
 	t2.MulBy3b(&t2)
 	x3.Mul(&t2, &z3)
 	y3.Add(&t0, &t2)
@@ -662,14 +662,14 @@ func (g2 *G2) Double(a *G2) *G2 {
 	t0.Sub(&t0, &t2)
 	y3.Mul(&t0, &y3)
 	y3.Add(&y3, &x3)
-	t1.Mul(&a.x, &a.y)
+	t1.Mul(&a.X, &a.Y)
 	x3.Mul(&t0, &t1)
 	x3.Double(&x3)
 
 	e := a.IsIdentity()
-	g2.x.CMove(&x3, t0.SetZero(), e)
-	g2.z.CMove(&z3, &t0, e)
-	g2.y.CMove(&y3, t0.SetOne(), e)
+	g2.X.CMove(&x3, t0.SetZero(), e)
+	g2.Z.CMove(&z3, &t0, e)
+	g2.Y.CMove(&y3, t0.SetOne(), e)
 	return g2
 }
 
@@ -741,15 +741,15 @@ func (g2 *G2) ClearCofactor(a *G2) *G2 {
 // Neg negates this point.
 func (g2 *G2) Neg(a *G2) *G2 {
 	g2.Set(a)
-	g2.y.CNeg(&a.y, -(a.IsIdentity() - 1))
+	g2.Y.CNeg(&a.Y, -(a.IsIdentity() - 1))
 	return g2
 }
 
 // Set copies a into g2.
 func (g2 *G2) Set(a *G2) *G2 {
-	g2.x.Set(&a.x)
-	g2.y.Set(&a.y)
-	g2.z.Set(&a.z)
+	g2.X.Set(&a.X)
+	g2.Y.Set(&a.Y)
+	g2.Z.Set(&a.Z)
 	return g2
 }
 
@@ -781,8 +781,8 @@ func (g2 *G2) ToCompressed() [WideFieldBytes]byte {
 	var out [WideFieldBytes]byte
 	var t G2
 	t.ToAffine(g2)
-	xABytes := t.x.A.Bytes()
-	xBBytes := t.x.B.Bytes()
+	xABytes := t.X.A.Bytes()
+	xBBytes := t.X.B.Bytes()
 	copy(out[:FieldBytes], bitstring.ReverseBytes(xBBytes[:]))
 	copy(out[FieldBytes:], bitstring.ReverseBytes(xABytes[:]))
 	isInfinity := byte(g2.IsIdentity())
@@ -791,13 +791,13 @@ func (g2 *G2) ToCompressed() [WideFieldBytes]byte {
 	// Is infinity
 	out[0] |= (1 << 6) & -isInfinity
 	// Sign of y only set if not infinity
-	out[0] |= (byte(t.y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
+	out[0] |= (byte(t.Y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
 	return out
 }
 
 // FromCompressed deserializes this element from compressed form.
 func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
-	var xFp, yFp fp2
+	var xFp, yFp Fp2
 	var xA, xB [FieldBytes]byte
 	var p G2
 	compressedFlag := int((input[0] >> 7) & 1)
@@ -833,9 +833,9 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	}
 
 	yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
-	p.x.Set(&xFp)
-	p.y.Set(&yFp)
-	p.z.SetOne()
+	p.X.Set(&xFp)
+	p.Y.Set(&yFp)
+	p.Z.SetOne()
 	if p.InCorrectSubgroup() == 0 {
 		return nil, errs.NewFailed("point is not in correct subgroup")
 	}
@@ -847,13 +847,13 @@ func (g2 *G2) ToUncompressed() [DoubleWideFieldBytes]byte {
 	var out [DoubleWideFieldBytes]byte
 	var t G2
 	t.ToAffine(g2)
-	bytes := t.x.B.Bytes()
+	bytes := t.X.B.Bytes()
 	copy(out[:FieldBytes], bitstring.ReverseBytes(bytes[:]))
-	bytes = t.x.A.Bytes()
+	bytes = t.X.A.Bytes()
 	copy(out[FieldBytes:WideFieldBytes], bitstring.ReverseBytes(bytes[:]))
-	bytes = t.y.B.Bytes()
+	bytes = t.Y.B.Bytes()
 	copy(out[WideFieldBytes:WideFieldBytes+FieldBytes], bitstring.ReverseBytes(bytes[:]))
-	bytes = t.y.A.Bytes()
+	bytes = t.Y.A.Bytes()
 	copy(out[WideFieldBytes+FieldBytes:], bitstring.ReverseBytes(bytes[:]))
 	isInfinity := byte(g2.IsIdentity())
 	out[0] |= (1 << 6) & -isInfinity
@@ -862,7 +862,7 @@ func (g2 *G2) ToUncompressed() [DoubleWideFieldBytes]byte {
 
 // FromUncompressed deserializes this element from uncompressed form.
 func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
-	var a, b fp
+	var a, b Fp
 	var t [FieldBytes]byte
 	var p G2
 	infinityFlag := int((input[0] >> 6) & 1)
@@ -885,8 +885,8 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 		return nil, errs.NewFailed("invalid bytes - x.A not in field")
 	}
 
-	p.x.B.Set(&b)
-	p.x.A.Set(&a)
+	p.X.B.Set(&b)
+	p.X.A.Set(&a)
 
 	copy(t[:], bitstring.ReverseBytes(input[WideFieldBytes:WideFieldBytes+FieldBytes]))
 	_, valid = b.SetBytes(&t)
@@ -899,9 +899,9 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 		return nil, errs.NewFailed("invalid bytes - y.A not in field")
 	}
 
-	p.y.B.Set(&b)
-	p.y.A.Set(&a)
-	p.z.SetOne()
+	p.Y.B.Set(&b)
+	p.Y.A.Set(&a)
+	p.Z.SetOne()
 
 	if p.IsOnCurve() == 0 {
 		return nil, errs.NewFailed("point is not on the curve")
@@ -915,45 +915,45 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 // ToAffine converts the point into affine coordinates.
 func (g2 *G2) ToAffine(a *G2) *G2 {
 	var wasInverted int
-	var zero, x, y, z fp2
-	_, wasInverted = z.Invert(&a.z)
-	x.Mul(&a.x, &z)
-	y.Mul(&a.y, &z)
+	var zero, x, y, z Fp2
+	_, wasInverted = z.Invert(&a.Z)
+	x.Mul(&a.X, &z)
+	y.Mul(&a.Y, &z)
 
-	g2.x.CMove(&zero, &x, wasInverted)
-	g2.y.CMove(&zero, &y, wasInverted)
-	g2.z.CMove(&zero, z.SetOne(), wasInverted)
+	g2.X.CMove(&zero, &x, wasInverted)
+	g2.Y.CMove(&zero, &y, wasInverted)
+	g2.Z.CMove(&zero, z.SetOne(), wasInverted)
 	return g2
 }
 
 // GetX returns the affine X coordinate.
-func (g2 *G2) GetX() *fp2 {
+func (g2 *G2) GetX() *Fp2 {
 	var t G2
 	t.ToAffine(g2)
-	return &t.x
+	return &t.X
 }
 
 // GetY returns the affine Y coordinate.
-func (g2 *G2) GetY() *fp2 {
+func (g2 *G2) GetY() *Fp2 {
 	var t G2
 	t.ToAffine(g2)
-	return &t.y
+	return &t.Y
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
 func (g2 *G2) Equal(rhs *G2) int {
-	var x1, x2, y1, y2 fp2
+	var x1, x2, y1, y2 Fp2
 	var e1, e2 int
 
 	// This technique avoids inversions
-	x1.Mul(&g2.x, &rhs.z)
-	x2.Mul(&rhs.x, &g2.z)
+	x1.Mul(&g2.X, &rhs.Z)
+	x2.Mul(&rhs.X, &g2.Z)
 
-	y1.Mul(&g2.y, &rhs.z)
-	y2.Mul(&rhs.y, &g2.z)
+	y1.Mul(&g2.Y, &rhs.Z)
+	y2.Mul(&rhs.Y, &g2.Z)
 
-	e1 = g2.z.IsZero()
-	e2 = rhs.z.IsZero()
+	e1 = g2.Z.IsZero()
+	e2 = rhs.Z.IsZero()
 
 	// Both at infinity or coordinates are the same
 	return (e1 & e2) | (^e1 & ^e2)&x1.Equal(&x2)&y1.Equal(&y2)
@@ -961,9 +961,9 @@ func (g2 *G2) Equal(rhs *G2) int {
 
 // CMove sets g2 = arg1 if choice == 0 and g2 = arg2 if choice == 1.
 func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
-	g2.x.CMove(&arg1.x, &arg2.x, choice)
-	g2.y.CMove(&arg1.y, &arg2.y, choice)
-	g2.z.CMove(&arg1.z, &arg2.z, choice)
+	g2.X.CMove(&arg1.X, &arg2.X, choice)
+	g2.Y.CMove(&arg1.Y, &arg2.Y, choice)
+	g2.Z.CMove(&arg1.Z, &arg2.Z, choice)
 	return g2
 }
 
@@ -1025,32 +1025,32 @@ func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.Field) (*G2, error) {
 }
 
 func (g2 *G2) psi(a *G2) *G2 {
-	g2.x.FrobeniusMap(&a.x)
-	g2.y.FrobeniusMap(&a.y)
+	g2.X.FrobeniusMap(&a.X)
+	g2.Y.FrobeniusMap(&a.Y)
 	// z = frobenius(z)
-	g2.z.FrobeniusMap(&a.z)
+	g2.Z.FrobeniusMap(&a.Z)
 
 	// x = frobenius(x)/((u+1)^((p-1)/3))
-	g2.x.Mul(&g2.x, &psiCoeffX)
+	g2.X.Mul(&g2.X, &psiCoeffX)
 	// y = frobenius(y)/(u+1)^((p-1)/2)
-	g2.y.Mul(&g2.y, &psiCoeffY)
+	g2.Y.Mul(&g2.Y, &psiCoeffY)
 
 	return g2
 }
 
 func (g2 *G2) psi2(a *G2) *G2 {
 	// x = frobenius^2(x)/2^((p-1)/3); note that q^2 is the order of the field.
-	g2.x.Mul(&a.x, &psi2CoeffX)
+	g2.X.Mul(&a.X, &psi2CoeffX)
 	// y = -frobenius^2(y); note that q^2 is the order of the field.
-	g2.y.Neg(&a.y)
-	g2.z.Set(&a.z)
+	g2.Y.Neg(&a.Y)
+	g2.Z.Set(&a.Z)
 	return g2
 }
 
-func (g2 *G2) sswu(u *fp2) {
+func (g2 *G2) sswu(u *Fp2) {
 	/// simplified swu map for q = 9 mod 16 where AB == 0
 	// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-11.html>
-	var tv1, tv2, x1, x2, gx1, gx2, x, y, y2, t fp2
+	var tv1, tv2, x1, x2, gx1, gx2, x, y, y2, t Fp2
 
 	tv1.Square(u)
 	tv1.Mul(&tv1, &sswuMapZ)
@@ -1059,7 +1059,7 @@ func (g2 *G2) sswu(u *fp2) {
 
 	x1.Add(&tv1, &tv2)
 	x1.Invert(&x1)
-	x1.Add(&x1, (&fp2{}).SetOne())
+	x1.Add(&x1, (&Fp2{}).SetOne())
 	x1.CMove(&x1, &sswuMapZInv, x1.IsZero())
 	x1.Mul(&x1, &swwuMapMbDivA)
 
@@ -1082,19 +1082,19 @@ func (g2 *G2) sswu(u *fp2) {
 	y.Sqrt(&y2)
 
 	y.CNeg(&y, u.Sgn0()^y.Sgn0())
-	g2.x.Set(&x)
-	g2.y.Set(&y)
-	g2.z.SetOne()
+	g2.X.Set(&x)
+	g2.Y.Set(&y)
+	g2.Z.SetOne()
 }
 
 func (g2 *G2) isogenyMap(a *G2) {
 	const Degree = 4
-	var xs [Degree]fp2
+	var xs [Degree]Fp2
 	xs[0].SetOne()
-	xs[1].Set(&a.x)
-	xs[2].Square(&a.x)
+	xs[1].Set(&a.X)
+	xs[2].Square(&a.X)
 	for i := 3; i < Degree; i++ {
-		xs[i].Mul(&xs[i-1], &a.x)
+		xs[i].Mul(&xs[i-1], &a.X)
 	}
 
 	xNum := computeKFp2(xs[:], g2IsoXNum)
@@ -1102,17 +1102,17 @@ func (g2 *G2) isogenyMap(a *G2) {
 	yNum := computeKFp2(xs[:], g2IsoYNum)
 	yDen := computeKFp2(xs[:], g2IsoYDen)
 
-	g2.x.Invert(&xDen)
-	g2.x.Mul(&g2.x, &xNum)
+	g2.X.Invert(&xDen)
+	g2.X.Mul(&g2.X, &xNum)
 
-	g2.y.Invert(&yDen)
-	g2.y.Mul(&g2.y, &yNum)
-	g2.y.Mul(&g2.y, &a.y)
-	g2.z.SetOne()
+	g2.Y.Invert(&yDen)
+	g2.Y.Mul(&g2.Y, &yNum)
+	g2.Y.Mul(&g2.Y, &a.Y)
+	g2.Z.SetOne()
 }
 
-func computeKFp2(xxs, k []fp2) fp2 {
-	var xx, t fp2
+func computeKFp2(xxs, k []Fp2) Fp2 {
+	var xx, t Fp2
 	for i := range k {
 		xx.Add(&xx, t.Mul(&xxs[i], &k[i]))
 	}

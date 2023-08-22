@@ -20,6 +20,8 @@ type Point interface {
 	Double() Point
 	Scalar() Scalar
 	Neg() Point
+	ClearCofactor() Point
+	Clone() Point
 	Add(rhs Point) Point
 	Sub(rhs Point) Point
 	Mul(rhs Scalar) Point

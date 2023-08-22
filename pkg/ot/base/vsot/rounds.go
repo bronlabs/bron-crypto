@@ -1,7 +1,7 @@
 package vsot
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"crypto/subtle"
 
 	"golang.org/x/crypto/sha3"
@@ -36,7 +36,7 @@ type (
 func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*dlog.Proof, curves.Point, error) {
 	var err error
 	// Sample the secret key and compute the public key.
-	sender.SecretKey = sender.Curve.Scalar().Random(rand.Reader)
+	sender.SecretKey = sender.Curve.Scalar().Random(crand.Reader)
 	sender.PublicKey = sender.Curve.ScalarBaseMult(sender.SecretKey)
 
 	// Generate the ZKP proof.
@@ -64,7 +64,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 	result := make([]ReceiversMaskedChoices, receiver.BatchSize)
 	receiver.Output.OneTimePadDecryptionKey = make([]OneTimePadDecryptionKey, receiver.BatchSize)
 	for i := 0; i < receiver.BatchSize; i++ {
-		a := receiver.Curve.Scalar().Random(rand.Reader)
+		a := receiver.Curve.Scalar().Random(crand.Reader)
 		// Computing `A := a . G + w . B` in constant time, by first computing option0 = a.G and option1 = a.G+B and then
 		// constant time choosing one of them by first assuming that the output is option0, and overwrite it if the choice bit is 1.
 
@@ -97,7 +97,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
 	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
 		if receiversMaskedChoice[i], err = sender.Curve.Point().FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
-			return nil, errs.WrapDeserializationFailed(err, "uncompress the point")
+			return nil, errs.WrapSerializationError(err, "uncompress the point")
 		}
 	}
 

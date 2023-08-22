@@ -5,10 +5,11 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"errors"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"hash"
 	"testing"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
@@ -59,21 +60,21 @@ func Test_happyPath(t *testing.T) {
 		Hash:  h,
 	}
 
-	aliceSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	aliceSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader)
 	require.NoError(t, err)
 	aliceIdentityKey := &identityKey{
 		curve:  curve,
 		signer: aliceSigner,
 		h:      h,
 	}
-	bobSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	bobSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader)
 	require.NoError(t, err)
 	bobIdentityKey := &identityKey{
 		curve:  curve,
 		signer: bobSigner,
 		h:      h,
 	}
-	charlieSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader, nil)
+	charlieSigner, err := schnorr.NewSigner(cipherSuite, nil, crand.Reader)
 	require.NoError(t, err)
 	charlieIdentityKey := &identityKey{
 		curve:  curve,

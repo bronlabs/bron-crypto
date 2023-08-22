@@ -24,8 +24,8 @@ const qInv = 0xfffffffeffffffff
 // fqGenerator = 7 (multiplicative fqGenerator of r-1 order, that is also quadratic nonresidue).
 var fqGenerator = [impl.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4}
 
-// fqModulus.
-var fqModulus = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
+// FqModulus.
+var FqModulus = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
 
 func FqNew() *impl.Field {
 	return &impl.Field{
@@ -75,10 +75,10 @@ func (bls12381FqArithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
 	// since it can't underflow.
 	var t [impl.FieldLimbs]uint64
 	var borrow uint64
-	t[0], borrow = sbb(fqModulus[0], arg[0], 0)
-	t[1], borrow = sbb(fqModulus[1], arg[1], borrow)
-	t[2], borrow = sbb(fqModulus[2], arg[2], borrow)
-	t[3], _ = sbb(fqModulus[3], arg[3], borrow)
+	t[0], borrow = sbb(FqModulus[0], arg[0], 0)
+	t[1], borrow = sbb(FqModulus[1], arg[1], borrow)
+	t[2], borrow = sbb(FqModulus[2], arg[2], borrow)
+	t[3], _ = sbb(FqModulus[3], arg[3], borrow)
 
 	// t could be `fqModulus` if `arg`=0. Set mask=0 if self=0
 	// and 0xff..ff if `arg`!=0
@@ -165,7 +165,7 @@ func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 
 	// Subtract the fqModulus to ensure the value
 	// is smaller.
-	f.Sub(out, &t, &fqModulus)
+	f.Sub(out, &t, &FqModulus)
 }
 
 // Sub performs modular subtraction.
@@ -178,10 +178,10 @@ func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 	// If underflow occurred on the final limb, borrow 0xff...ff, otherwise
 	// borrow = 0x00...00. Conditionally mask to add the fqModulus
 	borrow = -borrow
-	d0, carry := adc(d0, fqModulus[0]&borrow, 0)
-	d1, carry = adc(d1, fqModulus[1]&borrow, carry)
-	d2, carry = adc(d2, fqModulus[2]&borrow, carry)
-	d3, _ = adc(d3, fqModulus[3]&borrow, carry)
+	d0, carry := adc(d0, FqModulus[0]&borrow, 0)
+	d1, carry = adc(d1, FqModulus[1]&borrow, carry)
+	d2, carry = adc(d2, FqModulus[2]&borrow, carry)
+	d3, _ = adc(d3, FqModulus[3]&borrow, carry)
 
 	out[0] = d0
 	out[1] = d1
@@ -385,32 +385,32 @@ func (f bls12381FqArithmetic) montReduce(out *[impl.FieldLimbs]uint64, r *[2 * i
 	var rr [impl.FieldLimbs]uint64
 
 	k = r[0] * qInv
-	_, carry = mac(r[0], k, fqModulus[0], 0)
-	r1, carry = mac(r[1], k, fqModulus[1], carry)
-	r2, carry = mac(r[2], k, fqModulus[2], carry)
-	r3, carry = mac(r[3], k, fqModulus[3], carry)
+	_, carry = mac(r[0], k, FqModulus[0], 0)
+	r1, carry = mac(r[1], k, FqModulus[1], carry)
+	r2, carry = mac(r[2], k, FqModulus[2], carry)
+	r3, carry = mac(r[3], k, FqModulus[3], carry)
 	r4, carry2 = adc(r[4], 0, carry)
 
 	k = r1 * qInv
-	_, carry = mac(r1, k, fqModulus[0], 0)
-	r2, carry = mac(r2, k, fqModulus[1], carry)
-	r3, carry = mac(r3, k, fqModulus[2], carry)
-	r4, carry = mac(r4, k, fqModulus[3], carry)
+	_, carry = mac(r1, k, FqModulus[0], 0)
+	r2, carry = mac(r2, k, FqModulus[1], carry)
+	r3, carry = mac(r3, k, FqModulus[2], carry)
+	r4, carry = mac(r4, k, FqModulus[3], carry)
 	r5, carry2 = adc(r[5], carry2, carry)
 
 	k = r2 * qInv
-	_, carry = mac(r2, k, fqModulus[0], 0)
-	r3, carry = mac(r3, k, fqModulus[1], carry)
-	r4, carry = mac(r4, k, fqModulus[2], carry)
-	r5, carry = mac(r5, k, fqModulus[3], carry)
+	_, carry = mac(r2, k, FqModulus[0], 0)
+	r3, carry = mac(r3, k, FqModulus[1], carry)
+	r4, carry = mac(r4, k, FqModulus[2], carry)
+	r5, carry = mac(r5, k, FqModulus[3], carry)
 	r6, carry2 = adc(r[6], carry2, carry)
 
 	k = r3 * qInv
-	_, carry = mac(r3, k, fqModulus[0], 0)
-	rr[0], carry = mac(r4, k, fqModulus[1], carry)
-	rr[1], carry = mac(r5, k, fqModulus[2], carry)
-	rr[2], carry = mac(r6, k, fqModulus[3], carry)
+	_, carry = mac(r3, k, FqModulus[0], 0)
+	rr[0], carry = mac(r4, k, FqModulus[1], carry)
+	rr[1], carry = mac(r5, k, FqModulus[2], carry)
+	rr[2], carry = mac(r6, k, FqModulus[3], carry)
 	rr[3], _ = adc(r[7], carry2, carry)
 
-	f.Sub(out, &rr, &fqModulus)
+	f.Sub(out, &rr, &FqModulus)
 }

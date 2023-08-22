@@ -14,8 +14,8 @@ func TestG2IsOnCurve(t *testing.T) {
 	require.Equal(t, 1, new(G2).Identity().IsOnCurve())
 	require.Equal(t, 1, new(G2).Generator().IsOnCurve())
 
-	z := fp2{
-		A: fp{
+	z := Fp2{
+		A: Fp{
 			0xba7a_fa1f_9a6f_e250,
 			0xfa0f_5b59_5eaf_e731,
 			0x3bdc_4776_94c3_06e7,
@@ -23,7 +23,7 @@ func TestG2IsOnCurve(t *testing.T) {
 			0x64aa_6e06_49b2_078c,
 			0x12b1_08ac_3364_3c3e,
 		},
-		B: fp{
+		B: Fp{
 			0x1253_25df_3d35_b5a8,
 			0xdc46_9ef5_555d_7fe3,
 			0x02d7_16d2_4431_06a9,
@@ -34,13 +34,13 @@ func TestG2IsOnCurve(t *testing.T) {
 	}
 
 	test := new(G2).Generator()
-	test.x.Mul(&test.x, &z)
-	test.y.Mul(&test.y, &z)
-	test.z.Set(&z)
+	test.X.Mul(&test.X, &z)
+	test.Y.Mul(&test.Y, &z)
+	test.Z.Set(&z)
 
 	require.Equal(t, 1, test.IsOnCurve())
 
-	test.x.Set(&z)
+	test.X.Set(&z)
 	require.Equal(t, 0, test.IsOnCurve())
 }
 
@@ -56,8 +56,8 @@ func TestG2Equal(t *testing.T) {
 func TestG2ToAffine(t *testing.T) {
 	a := new(G2).Generator()
 
-	z := fp2{
-		A: fp{
+	z := Fp2{
+		A: Fp{
 			0xba7afa1f9a6fe250,
 			0xfa0f5b595eafe731,
 			0x3bdc477694c306e7,
@@ -65,7 +65,7 @@ func TestG2ToAffine(t *testing.T) {
 			0x64aa6e0649b2078c,
 			0x12b108ac33643c3e,
 		},
-		B: fp{
+		B: Fp{
 			0x125325df3d35b5a8,
 			0xdc469ef5555d7fe3,
 			0x02d716d2443106a9,
@@ -75,9 +75,9 @@ func TestG2ToAffine(t *testing.T) {
 		},
 	}
 
-	a.x.Mul(&a.x, &z)
-	a.y.Mul(&a.y, &z)
-	a.z.Set(&z)
+	a.X.Mul(&a.X, &z)
+	a.Y.Mul(&a.Y, &z)
+	a.Z.Set(&z)
 
 	require.Equal(t, 1, a.ToAffine(a).Equal(new(G2).Generator()))
 }
@@ -89,8 +89,8 @@ func TestG2Double(t *testing.T) {
 	a.Generator()
 	a.Double(a)
 	e := G2{
-		x: fp2{
-			A: fp{
+		X: Fp2{
+			A: Fp{
 				0xe9d9e2da9620f98b,
 				0x54f1199346b97f36,
 				0x3db3b820376bed27,
@@ -98,7 +98,7 @@ func TestG2Double(t *testing.T) {
 				0x41d7c12786354493,
 				0x05710794c255c064,
 			},
-			B: fp{
+			B: Fp{
 				0xd6c1d3ca6ea0d06e,
 				0xda0cbd905595489f,
 				0x4f5352d43479221d,
@@ -107,8 +107,8 @@ func TestG2Double(t *testing.T) {
 				0x08d7ea71ea91ef81,
 			},
 		},
-		y: fp2{
-			A: fp{
+		Y: Fp2{
+			A: Fp{
 				0x15ba26eb4b0d186f,
 				0x0d086d64b7e9e01e,
 				0xc8b848dd652f4c78,
@@ -116,7 +116,7 @@ func TestG2Double(t *testing.T) {
 				0x255e8dd8b6dc812a,
 				0x164142af21dcf93f,
 			},
-			B: fp{
+			B: Fp{
 				0xf9b4a1a895984db4,
 				0xd417b114cccff748,
 				0x6856301fc89f086e,
@@ -125,7 +125,7 @@ func TestG2Double(t *testing.T) {
 				0x00acf7d325cb89cf,
 			},
 		},
-		z: *((&fp2{}).SetOne()),
+		Z: *((&Fp2{}).SetOne()),
 	}
 	require.Equal(t, 1, e.Equal(a))
 }
@@ -153,8 +153,8 @@ func TestG2Add(t *testing.T) {
 	require.Equal(t, 1, e.Equal(c))
 
 	// Degenerate case
-	beta := fp2{
-		A: fp{
+	beta := Fp2{
+		A: Fp{
 			0xcd03c9e48671f071,
 			0x5dab22461fcda5d2,
 			0x587042afd3851b95,
@@ -162,18 +162,18 @@ func TestG2Add(t *testing.T) {
 			0x03f97d6e83d050d2,
 			0x18f0206554638741,
 		},
-		B: fp{},
+		B: Fp{},
 	}
 	beta.Square(&beta)
-	b.x.Mul(&a.x, &beta)
-	b.y.Neg(&a.y)
-	b.z.Set(&a.z)
+	b.X.Mul(&a.X, &beta)
+	b.Y.Neg(&a.Y)
+	b.Z.Set(&a.Z)
 	require.Equal(t, 1, b.IsOnCurve())
 
 	c.Add(a, b)
 
-	e.x.Set(&fp2{
-		A: fp{
+	e.X.Set(&Fp2{
+		A: Fp{
 			0x705abc799ca773d3,
 			0xfe132292c1d4bf08,
 			0xf37ece3e07b2b466,
@@ -181,7 +181,7 @@ func TestG2Add(t *testing.T) {
 			0x1e0970d033bc77e8,
 			0x1985c81e20a693f2,
 		},
-		B: fp{
+		B: Fp{
 			0x1d79b25db36ab924,
 			0x23948e4d529639d3,
 			0x471ba7fb0d006297,
@@ -190,8 +190,8 @@ func TestG2Add(t *testing.T) {
 			0x051d2728b67bf952,
 		},
 	})
-	e.y.Set(&fp2{
-		A: fp{
+	e.Y.Set(&Fp2{
+		A: Fp{
 			0x41b1bbf6576c0abf,
 			0xb6cc93713f7a0f9a,
 			0x6b65b43e48f3f01f,
@@ -199,7 +199,7 @@ func TestG2Add(t *testing.T) {
 			0x3e32dadc6ec22cb6,
 			0x0bb0fc49d79807e3,
 		},
-		B: fp{
+		B: Fp{
 			0x7d1397788f5f2ddf,
 			0xab2907144ff0d8e8,
 			0x5b7573e0cdb91f92,
@@ -208,7 +208,7 @@ func TestG2Add(t *testing.T) {
 			0x11f95c16d14c3bbe,
 		},
 	})
-	e.z.SetOne()
+	e.Z.SetOne()
 	require.Equal(t, 1, e.Equal(c))
 }
 
@@ -245,8 +245,8 @@ func TestG2Mul(t *testing.T) {
 
 func TestG2InCorrectSubgroup(t *testing.T) {
 	a := G2{
-		x: fp2{
-			A: fp{
+		X: Fp2{
+			A: Fp{
 				0x89f550c813db6431,
 				0xa50be8c456cd8a1a,
 				0xa45b374114cae851,
@@ -254,7 +254,7 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 				0x970ca02c3ba80bc7,
 				0x02b85d24e840fbac,
 			},
-			B: fp{
+			B: Fp{
 				0x6888bc53d70716dc,
 				0x3dea6b4117682d70,
 				0xd8f5f930500ca354,
@@ -263,8 +263,8 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 				0x05081505515006ad,
 			},
 		},
-		y: fp2{
-			A: fp{
+		Y: Fp2{
+			A: Fp{
 				0x3cf1ea0d434b0f40,
 				0x1a0dc610e603e333,
 				0x7f89956160c72fa0,
@@ -272,7 +272,7 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 				0xeee8e206ec0fe137,
 				0x097592b226dfef28,
 			},
-			B: fp{
+			B: Fp{
 				0x71e8bb5f29247367,
 				0xa5fe049e211831ce,
 				0x0ce6b354502a3896,
@@ -281,7 +281,7 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 				0x156944c4dfe92bbb,
 			},
 		},
-		z: *(&fp2{}).SetOne(),
+		Z: *(&Fp2{}).SetOne(),
 	}
 	require.Equal(t, 0, a.InCorrectSubgroup())
 
@@ -312,8 +312,8 @@ func TestG2MulByX(t *testing.T) {
 func TestG2Psi(t *testing.T) {
 	generator := new(G2).Generator()
 
-	z := fp2{
-		A: fp{
+	z := Fp2{
+		A: Fp{
 			0x0ef2ddffab187c0a,
 			0x2424522b7d5ecbfc,
 			0xc6f341a3398054f4,
@@ -321,7 +321,7 @@ func TestG2Psi(t *testing.T) {
 			0xd55c0b5a88e0dd97,
 			0x066428d704923e52,
 		},
-		B: fp{
+		B: Fp{
 			0x538bbe0c95b4878d,
 			0xad04a50379522881,
 			0x6d5c05bf5c12fb64,
@@ -333,8 +333,8 @@ func TestG2Psi(t *testing.T) {
 
 	// `point` is a random point in the curve
 	point := G2{
-		x: fp2{
-			A: fp{
+		X: Fp2{
+			A: Fp{
 				0xee4c8cb7c047eaf2,
 				0x44ca22eee036b604,
 				0x33b3affb2aefe101,
@@ -342,7 +342,7 @@ func TestG2Psi(t *testing.T) {
 				0x7bfc2154cd7419a4,
 				0x0a2d0c2b756e5edc,
 			},
-			B: fp{
+			B: Fp{
 				0xfc224361029a8777,
 				0x4cbf2baab8740924,
 				0xc5008c6ec6592c89,
@@ -351,8 +351,8 @@ func TestG2Psi(t *testing.T) {
 				0x10fe54daa2d3d495,
 			},
 		},
-		y: fp2{
-			A: fp{
+		Y: Fp2{
+			A: Fp{
 				0x7de7edc43953b75c,
 				0x58be1d2de35e87dc,
 				0x5731d30b0e337b40,
@@ -360,7 +360,7 @@ func TestG2Psi(t *testing.T) {
 				0x8b22c203764bedca,
 				0x01616c8d1033b771,
 			},
-			B: fp{
+			B: Fp{
 				0xea126fe476b5733b,
 				0x85cee68b5dae1652,
 				0x98247779f7272b04,
@@ -369,11 +369,11 @@ func TestG2Psi(t *testing.T) {
 				0x1555b67fc7bbe73d,
 			},
 		},
-		z: *(&fp2{}).Set(&z),
+		Z: *(&Fp2{}).Set(&z),
 	}
-	point.x.Mul(&point.x, &z)
-	point.z.Square(&point.z)
-	point.z.Mul(&point.z, &z)
+	point.X.Mul(&point.X, &z)
+	point.Z.Square(&point.Z)
+	point.Z.Mul(&point.Z, &z)
 	require.Equal(t, 1, point.IsOnCurve())
 
 	// psi2(P) = psi(psi(P))
@@ -406,8 +406,8 @@ func TestG2Psi(t *testing.T) {
 }
 
 func TestG2ClearCofactor(t *testing.T) {
-	z := fp2{
-		A: fp{
+	z := Fp2{
+		A: Fp{
 			0x0ef2ddffab187c0a,
 			0x2424522b7d5ecbfc,
 			0xc6f341a3398054f4,
@@ -415,7 +415,7 @@ func TestG2ClearCofactor(t *testing.T) {
 			0xd55c0b5a88e0dd97,
 			0x066428d704923e52,
 		},
-		B: fp{
+		B: Fp{
 			0x538bbe0c95b4878d,
 			0xad04a50379522881,
 			0x6d5c05bf5c12fb64,
@@ -427,8 +427,8 @@ func TestG2ClearCofactor(t *testing.T) {
 
 	// `point` is a random point in the curve
 	point := G2{
-		x: fp2{
-			A: fp{
+		X: Fp2{
+			A: Fp{
 				0xee4c8cb7c047eaf2,
 				0x44ca22eee036b604,
 				0x33b3affb2aefe101,
@@ -436,7 +436,7 @@ func TestG2ClearCofactor(t *testing.T) {
 				0x7bfc2154cd7419a4,
 				0x0a2d0c2b756e5edc,
 			},
-			B: fp{
+			B: Fp{
 				0xfc224361029a8777,
 				0x4cbf2baab8740924,
 				0xc5008c6ec6592c89,
@@ -445,8 +445,8 @@ func TestG2ClearCofactor(t *testing.T) {
 				0x10fe54daa2d3d495,
 			},
 		},
-		y: fp2{
-			A: fp{
+		Y: Fp2{
+			A: Fp{
 				0x7de7edc43953b75c,
 				0x58be1d2de35e87dc,
 				0x5731d30b0e337b40,
@@ -454,7 +454,7 @@ func TestG2ClearCofactor(t *testing.T) {
 				0x8b22c203764bedca,
 				0x01616c8d1033b771,
 			},
-			B: fp{
+			B: Fp{
 				0xea126fe476b5733b,
 				0x85cee68b5dae1652,
 				0x98247779f7272b04,
@@ -463,11 +463,11 @@ func TestG2ClearCofactor(t *testing.T) {
 				0x1555b67fc7bbe73d,
 			},
 		},
-		z: fp2{},
+		Z: Fp2{},
 	}
-	point.x.Mul(&point.x, &z)
-	point.z.Square(&z)
-	point.z.Mul(&point.z, &z)
+	point.X.Mul(&point.X, &z)
+	point.Z.Square(&z)
+	point.Z.Mul(&point.Z, &z)
 
 	require.Equal(t, 1, point.IsOnCurve())
 	require.Equal(t, 0, point.InCorrectSubgroup())

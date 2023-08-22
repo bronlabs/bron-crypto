@@ -6,16 +6,16 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-// fp6 represents an element
+// Fp6 represents an element
 // a + b v + c v^2 of fp^6 = fp^2 / v^3 - u - 1.
-type fp6 struct {
-	A, B, C fp2
+type Fp6 struct {
+	A, B, C Fp2
 
 	_ helper_types.Incomparable
 }
 
 // Set fp6 = a.
-func (f *fp6) Set(a *fp6) *fp6 {
+func (f *Fp6) Set(a *Fp6) *Fp6 {
 	f.A.Set(&a.A)
 	f.B.Set(&a.B)
 	f.C.Set(&a.C)
@@ -23,7 +23,7 @@ func (f *fp6) Set(a *fp6) *fp6 {
 }
 
 // SetFp creates an element from a lower field.
-func (f *fp6) SetFp(a *fp) *fp6 {
+func (f *Fp6) SetFp(a *Fp) *Fp6 {
 	f.A.SetFp(a)
 	f.B.SetZero()
 	f.C.SetZero()
@@ -31,7 +31,7 @@ func (f *fp6) SetFp(a *fp) *fp6 {
 }
 
 // SetFp2 creates an element from a lower field.
-func (f *fp6) SetFp2(a *fp2) *fp6 {
+func (f *Fp6) SetFp2(a *Fp2) *Fp6 {
 	f.A.Set(a)
 	f.B.SetZero()
 	f.C.SetZero()
@@ -39,7 +39,7 @@ func (f *fp6) SetFp2(a *fp2) *fp6 {
 }
 
 // SetZero fp6 to zero.
-func (f *fp6) SetZero() *fp6 {
+func (f *Fp6) SetZero() *Fp6 {
 	f.A.SetZero()
 	f.B.SetZero()
 	f.C.SetZero()
@@ -47,7 +47,7 @@ func (f *fp6) SetZero() *fp6 {
 }
 
 // SetOne fp6 to multiplicative identity element.
-func (f *fp6) SetOne() *fp6 {
+func (f *Fp6) SetOne() *Fp6 {
 	f.A.SetOne()
 	f.B.SetZero()
 	f.C.SetZero()
@@ -55,16 +55,16 @@ func (f *fp6) SetOne() *fp6 {
 }
 
 // Random generates a random field element.
-func (f *fp6) Random(reader io.Reader) (*fp6, error) {
-	a, err := new(fp2).Random(reader)
+func (f *Fp6) Random(reader io.Reader) (*Fp6, error) {
+	a, err := new(Fp2).Random(reader)
 	if err != nil {
 		return nil, err
 	}
-	b, err := new(fp2).Random(reader)
+	b, err := new(Fp2).Random(reader)
 	if err != nil {
 		return nil, err
 	}
-	c, err := new(fp2).Random(reader)
+	c, err := new(Fp2).Random(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (f *fp6) Random(reader io.Reader) (*fp6, error) {
 }
 
 // Add computes arg1+arg2.
-func (f *fp6) Add(arg1, arg2 *fp6) *fp6 {
+func (f *Fp6) Add(arg1, arg2 *Fp6) *Fp6 {
 	f.A.Add(&arg1.A, &arg2.A)
 	f.B.Add(&arg1.B, &arg2.B)
 	f.C.Add(&arg1.C, &arg2.C)
@@ -83,12 +83,12 @@ func (f *fp6) Add(arg1, arg2 *fp6) *fp6 {
 }
 
 // Double computes arg1+arg1.
-func (f *fp6) Double(arg *fp6) *fp6 {
+func (f *Fp6) Double(arg *Fp6) *Fp6 {
 	return f.Add(arg, arg)
 }
 
 // Sub computes arg1-arg2.
-func (f *fp6) Sub(arg1, arg2 *fp6) *fp6 {
+func (f *Fp6) Sub(arg1, arg2 *Fp6) *Fp6 {
 	f.A.Sub(&arg1.A, &arg2.A)
 	f.B.Sub(&arg1.B, &arg2.B)
 	f.C.Sub(&arg1.C, &arg2.C)
@@ -96,8 +96,8 @@ func (f *fp6) Sub(arg1, arg2 *fp6) *fp6 {
 }
 
 // Mul computes arg1*arg2.
-func (f *fp6) Mul(arg1, arg2 *fp6) *fp6 {
-	var aa, bb, cc, s, t1, t2, t3 fp2
+func (f *Fp6) Mul(arg1, arg2 *Fp6) *Fp6 {
+	var aa, bb, cc, s, t1, t2, t3 Fp2
 
 	aa.Mul(&arg1.A, &arg2.A)
 	bb.Mul(&arg1.B, &arg2.B)
@@ -133,8 +133,8 @@ func (f *fp6) Mul(arg1, arg2 *fp6) *fp6 {
 }
 
 // MulByB scales this field by a scalar in the B coefficient.
-func (f *fp6) MulByB(arg *fp6, b *fp2) *fp6 {
-	var bB, t1, t2 fp2
+func (f *Fp6) MulByB(arg *Fp6, b *Fp2) *Fp6 {
+	var bB, t1, t2 Fp2
 	bB.Mul(&arg.B, b)
 	// (b + c) * arg2 - bB
 	t1.Add(&arg.B, &arg.C)
@@ -153,8 +153,8 @@ func (f *fp6) MulByB(arg *fp6, b *fp2) *fp6 {
 }
 
 // MulByAB scales this field by scalars in the A and B coefficients.
-func (f *fp6) MulByAB(arg *fp6, a, b *fp2) *fp6 {
-	var aA, bB, t1, t2, t3 fp2
+func (f *Fp6) MulByAB(arg *Fp6, a, b *Fp2) *Fp6 {
+	var aA, bB, t1, t2, t3 Fp2
 
 	aA.Mul(&arg.A, a)
 	bB.Mul(&arg.B, b)
@@ -184,12 +184,12 @@ func (f *fp6) MulByAB(arg *fp6, a, b *fp2) *fp6 {
 }
 
 // MulByNonResidue multiplies by quadratic nonresidue v.
-func (f *fp6) MulByNonResidue(arg *fp6) *fp6 {
+func (f *Fp6) MulByNonResidue(arg *Fp6) *Fp6 {
 	// Given a + bv + cv^2, this produces
 	//     av + bv^2 + cv^3
 	// but because v^3 = u + 1, we have
 	//     c(u + 1) + av + bv^2
-	var a, b, c fp2
+	var a, b, c Fp2
 	a.MulByNonResidue(&arg.C)
 	b.Set(&arg.A)
 	c.Set(&arg.B)
@@ -200,11 +200,11 @@ func (f *fp6) MulByNonResidue(arg *fp6) *fp6 {
 }
 
 // FrobeniusMap raises this element to p.
-func (f *fp6) FrobeniusMap(arg *fp6) *fp6 {
-	var a, b, c fp2
-	pm1Div3 := fp2{
-		A: fp{},
-		B: fp{
+func (f *Fp6) FrobeniusMap(arg *Fp6) *Fp6 {
+	var a, b, c Fp2
+	pm1Div3 := Fp2{
+		A: Fp{},
+		B: Fp{
 			0xcd03c9e48671f071,
 			0x5dab22461fcda5d2,
 			0x587042afd3851b95,
@@ -213,8 +213,8 @@ func (f *fp6) FrobeniusMap(arg *fp6) *fp6 {
 			0x18f0206554638741,
 		},
 	}
-	p2m2Div3 := fp2{
-		A: fp{
+	p2m2Div3 := Fp2{
+		A: Fp{
 			0x890dc9e4867545c3,
 			0x2af322533285a5d5,
 			0x50880866309b7e2c,
@@ -222,7 +222,7 @@ func (f *fp6) FrobeniusMap(arg *fp6) *fp6 {
 			0x14e4f04fe2db9068,
 			0x14e56d3f1564853a,
 		},
-		B: fp{},
+		B: Fp{},
 	}
 	a.FrobeniusMap(&arg.A)
 	b.FrobeniusMap(&arg.B)
@@ -241,8 +241,8 @@ func (f *fp6) FrobeniusMap(arg *fp6) *fp6 {
 }
 
 // Square computes fp6^2.
-func (f *fp6) Square(arg *fp6) *fp6 {
-	var s0, s1, s2, s3, s4, ab, bc fp2
+func (f *Fp6) Square(arg *Fp6) *Fp6 {
+	var s0, s1, s2, s3, s4, ab, bc Fp2
 
 	s0.Square(&arg.A)
 	ab.Mul(&arg.A, &arg.B)
@@ -270,8 +270,8 @@ func (f *fp6) Square(arg *fp6) *fp6 {
 }
 
 // Invert computes this element's field inversion.
-func (f *fp6) Invert(arg *fp6) (*fp6, int) {
-	var a, b, c, s, t fp2
+func (f *Fp6) Invert(arg *Fp6) (*Fp6, int) {
+	var a, b, c, s, t Fp2
 
 	// a' = a^2 - (b * c).mul_by_nonresidue()
 	a.Mul(&arg.B, &arg.C)
@@ -314,7 +314,7 @@ func (f *fp6) Invert(arg *fp6) (*fp6, int) {
 }
 
 // Neg computes the field negation.
-func (f *fp6) Neg(arg *fp6) *fp6 {
+func (f *Fp6) Neg(arg *Fp6) *Fp6 {
 	f.A.Neg(&arg.A)
 	f.B.Neg(&arg.B)
 	f.C.Neg(&arg.C)
@@ -322,23 +322,23 @@ func (f *fp6) Neg(arg *fp6) *fp6 {
 }
 
 // IsZero returns 1 if fp6 == 0, 0 otherwise.
-func (f *fp6) IsZero() int {
+func (f *Fp6) IsZero() int {
 	return f.A.IsZero() & f.B.IsZero() & f.C.IsZero()
 }
 
 // IsOne returns 1 if fp6 == 1, 0 otherwise.
-func (f *fp6) IsOne() int {
+func (f *Fp6) IsOne() int {
 	return f.A.IsOne() & f.B.IsZero() & f.B.IsZero()
 }
 
 // Equal returns 1 if fp6 == rhs, 0 otherwise.
-func (f *fp6) Equal(rhs *fp6) int {
+func (f *Fp6) Equal(rhs *Fp6) int {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B) & f.C.Equal(&rhs.C)
 }
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *fp6) CMove(arg1, arg2 *fp6, choice int) *fp6 {
+func (f *Fp6) CMove(arg1, arg2 *Fp6, choice int) *Fp6 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	f.C.CMove(&arg1.C, &arg2.C, choice)

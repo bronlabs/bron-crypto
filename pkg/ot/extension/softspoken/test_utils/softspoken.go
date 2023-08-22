@@ -2,7 +2,7 @@ package test_utils
 
 import (
 	"bytes"
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
@@ -174,7 +174,7 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 	}
 	choices = make(softspoken.OTeInputChoices, choicesBatchLen)
 	for l := 0; l < choicesBatchLen; l++ {
-		if _, err := rand.Read(choices[l][:]); err != nil {
+		if _, err := crand.Read(choices[l][:]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not generate random choice bits")
 		}
 	}
@@ -185,7 +185,7 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 	for l := 0; l < inputBatchLen; l++ {
 		for i := 0; i < softspoken.Xi; i++ {
 			for k := 0; k < softspoken.ROTeWidth; k++ {
-				inputOpts[l][i][k] = curve.Scalar().Random(rand.Reader)
+				inputOpts[l][i][k] = curve.Scalar().Random(crand.Reader)
 			}
 		}
 	}

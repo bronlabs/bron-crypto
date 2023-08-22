@@ -3,8 +3,9 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -38,11 +39,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	}
 	privateKey, err := curve.Scalar().SetBigInt(ecdsaPrivateKey.D)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert go private key bytes to a knox scalar")
+		return nil, errs.WrapSerializationError(err, "could not convert go private key bytes to a knox scalar")
 	}
 	publicKey, err := curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert go public key bytes to a knox point")
+		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a knox point")
 	}
 	calculatedPublicKey := curve.ScalarBaseMult(privateKey)
 	if !calculatedPublicKey.Equal(publicKey) {

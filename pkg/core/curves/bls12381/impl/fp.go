@@ -10,11 +10,11 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
-// fp field element mod p.
-type fp [Limbs]uint64
+// Fp field element mod p.
+type Fp [Limbs]uint64
 
 var (
-	modulus = fp{
+	modulus = Fp{
 		0xb9feffffffffaaab,
 		0x1eabfffeb153ffff,
 		0x6730d2a0f6b0f624,
@@ -22,7 +22,7 @@ var (
 		0x4b1ba7b6434bacd7,
 		0x1a0111ea397fe69a,
 	}
-	halfModulus = fp{
+	halfModulus = Fp{
 		0xdcff_7fff_ffff_d556,
 		0x0f55_ffff_58a9_ffff,
 		0xb398_6950_7b58_7b12,
@@ -31,7 +31,7 @@ var (
 		0x0d00_88f5_1cbf_f34d,
 	}
 	// 2^256 mod p.
-	r = fp{
+	r = Fp{
 		0x760900000002fffd,
 		0xebf4000bc40c0002,
 		0x5f48985753c758ba,
@@ -40,7 +40,7 @@ var (
 		0x15f65ec3fa80e493,
 	}
 	// 2^512 mod p.
-	r2 = fp{
+	r2 = Fp{
 		0xf4df1f341c341746,
 		0x0a76e6a609d104f1,
 		0x8de5476c4c95b6d5,
@@ -49,7 +49,7 @@ var (
 		0x11988fe592cae3aa,
 	}
 	// 2^768 mod p.
-	r3 = fp{
+	r3 = Fp{
 		0xed48ac6bd94ca1e0,
 		0x315f831e03a7adf8,
 		0x9a53352a615e29dd,
@@ -70,7 +70,7 @@ const (
 )
 
 // IsZero returns 1 if fp == 0, 0 otherwise.
-func (f *fp) IsZero() int {
+func (f *Fp) IsZero() int {
 	t := f[0]
 	t |= f[1]
 	t |= f[2]
@@ -81,7 +81,7 @@ func (f *fp) IsZero() int {
 }
 
 // IsNonZero returns 1 if fp != 0, 0 otherwise.
-func (f *fp) IsNonZero() int {
+func (f *Fp) IsNonZero() int {
 	t := f[0]
 	t |= f[1]
 	t |= f[2]
@@ -92,14 +92,14 @@ func (f *fp) IsNonZero() int {
 }
 
 // IsOne returns 1 if fp == 1, 0 otherwise.
-func (f *fp) IsOne() int {
+func (f *Fp) IsOne() int {
 	return f.Equal(&r)
 }
 
 // Cmp returns -1 if f < rhs
 // 0 if f == rhs
 // 1 if f > rhs.
-func (f *fp) Cmp(rhs *fp) int {
+func (f *Fp) Cmp(rhs *Fp) int {
 	gt := uint64(0)
 	lt := uint64(0)
 	for i := 5; i >= 0; i-- {
@@ -125,7 +125,7 @@ func (f *fp) Cmp(rhs *fp) int {
 }
 
 // Equal returns 1 if fp == rhs, 0 otherwise.
-func (f *fp) Equal(rhs *fp) int {
+func (f *Fp) Equal(rhs *Fp) int {
 	t := f[0] ^ rhs[0]
 	t |= f[1] ^ rhs[1]
 	t |= f[2] ^ rhs[2]
@@ -138,8 +138,8 @@ func (f *fp) Equal(rhs *fp) int {
 // LexicographicallyLargest returns 1 if
 // this element is strictly lexicographically larger than its negation
 // 0 otherwise.
-func (f *fp) LexicographicallyLargest() int {
-	var ff fp
+func (f *Fp) LexicographicallyLargest() int {
+	var ff Fp
 	ff.fromMontgomery(f)
 
 	_, borrow := sbb(ff[0], halfModulus[0], 0)
@@ -153,13 +153,13 @@ func (f *fp) LexicographicallyLargest() int {
 }
 
 // Sgn0 returns the lowest bit value.
-func (f *fp) Sgn0() int {
-	t := new(fp).fromMontgomery(f)
+func (f *Fp) Sgn0() int {
+	t := new(Fp).fromMontgomery(f)
 	return int(t[0] & 1)
 }
 
 // SetOne fp = r.
-func (f *fp) SetOne() *fp {
+func (f *Fp) SetOne() *Fp {
 	f[0] = r[0]
 	f[1] = r[1]
 	f[2] = r[2]
@@ -170,7 +170,7 @@ func (f *fp) SetOne() *fp {
 }
 
 // SetZero fp = 0.
-func (f *fp) SetZero() *fp {
+func (f *Fp) SetZero() *Fp {
 	f[0] = 0
 	f[1] = 0
 	f[2] = 0
@@ -181,7 +181,7 @@ func (f *fp) SetZero() *fp {
 }
 
 // SetUint64 fp = rhs.
-func (f *fp) SetUint64(rhs uint64) *fp {
+func (f *Fp) SetUint64(rhs uint64) *Fp {
 	f[0] = rhs
 	f[1] = 0
 	f[2] = 0
@@ -192,7 +192,7 @@ func (f *fp) SetUint64(rhs uint64) *fp {
 }
 
 // Random generates a random field element.
-func (f *fp) Random(reader io.Reader) (*fp, error) {
+func (f *Fp) Random(reader io.Reader) (*Fp, error) {
 	var t [WideFieldBytes]byte
 	n, err := reader.Read(t[:])
 	if err != nil {
@@ -205,7 +205,7 @@ func (f *fp) Random(reader io.Reader) (*fp, error) {
 }
 
 // Hash converts the byte sequence into a field element.
-func (f *fp) Hash(input []byte) *fp {
+func (f *Fp) Hash(input []byte) *Fp {
 	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
 	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherSha256(), input, dst, hashBytes)
 	var t [WideFieldBytes]byte
@@ -214,20 +214,20 @@ func (f *fp) Hash(input []byte) *fp {
 }
 
 // toMontgomery converts this field to montgomery form.
-func (f *fp) toMontgomery(a *fp) *fp {
+func (f *Fp) toMontgomery(a *Fp) *Fp {
 	// arg.R^0 * R^2 / R = arg.R
 	return f.Mul(a, &r2)
 }
 
 // fromMontgomery converts this field from montgomery form.
-func (f *fp) fromMontgomery(a *fp) *fp {
+func (f *Fp) fromMontgomery(a *Fp) *Fp {
 	// Mul by 1 is division by 2^256 mod q
 	// out.Mul(arg, &[impl.FieldLimbs]uint64{1, 0, 0, 0})
 	return f.montReduce(&[Limbs * 2]uint64{a[0], a[1], a[2], a[3], a[4], a[5], 0, 0, 0, 0, 0, 0})
 }
 
 // Neg performs modular negation.
-func (f *fp) Neg(a *fp) *fp {
+func (f *Fp) Neg(a *Fp) *Fp {
 	// Subtract `arg` from `modulus`. Ignore final borrow
 	// since it can't underflow.
 	var t [Limbs]uint64
@@ -253,7 +253,7 @@ func (f *fp) Neg(a *fp) *fp {
 }
 
 // Square performs modular square.
-func (f *fp) Square(a *fp) *fp {
+func (f *Fp) Square(a *Fp) *Fp {
 	var r [2 * Limbs]uint64
 	var carry uint64
 
@@ -306,12 +306,12 @@ func (f *fp) Square(a *fp) *fp {
 }
 
 // Double this element.
-func (f *fp) Double(a *fp) *fp {
+func (f *Fp) Double(a *Fp) *Fp {
 	return f.Add(a, a)
 }
 
 // Mul performs modular multiplication.
-func (f *fp) Mul(arg1, arg2 *fp) *fp {
+func (f *Fp) Mul(arg1, arg2 *Fp) *Fp {
 	// Schoolbook multiplication
 	var r [2 * Limbs]uint64
 	var carry uint64
@@ -362,8 +362,8 @@ func (f *fp) Mul(arg1, arg2 *fp) *fp {
 }
 
 // MulBy3b returns arg * 12 or 3 * b.
-func (f *fp) MulBy3b(arg *fp) *fp {
-	var a, t fp
+func (f *Fp) MulBy3b(arg *Fp) *Fp {
+	var a, t Fp
 	a.Double(arg) // 2
 	t.Double(&a)  // 4
 	a.Double(&t)  // 8
@@ -372,8 +372,8 @@ func (f *fp) MulBy3b(arg *fp) *fp {
 }
 
 // Add performs modular addition.
-func (f *fp) Add(arg1, arg2 *fp) *fp {
-	var t fp
+func (f *Fp) Add(arg1, arg2 *Fp) *Fp {
+	var t Fp
 	var carry uint64
 
 	t[0], carry = adc(arg1[0], arg2[0], 0)
@@ -389,7 +389,7 @@ func (f *fp) Add(arg1, arg2 *fp) *fp {
 }
 
 // Sub performs modular subtraction.
-func (f *fp) Sub(arg1, arg2 *fp) *fp {
+func (f *Fp) Sub(arg1, arg2 *Fp) *Fp {
 	d0, borrow := sbb(arg1[0], arg2[0], 0)
 	d1, borrow := sbb(arg1[1], arg2[1], borrow)
 	d2, borrow := sbb(arg1[2], arg2[2], borrow)
@@ -417,13 +417,13 @@ func (f *fp) Sub(arg1, arg2 *fp) *fp {
 }
 
 // Sqrt performs modular square root.
-func (f *fp) Sqrt(a *fp) (*fp, int) {
+func (f *Fp) Sqrt(a *Fp) (*Fp, int) {
 	// Shank's method, as p = 3 (mod 4). This means
 	// exponentiate by (p+1)/4. This only works for elements
 	// that are actually quadratic residue,
 	// so check the result at the end.
-	var c, z fp
-	z.pow(a, &fp{
+	var c, z Fp
+	z.pow(a, &Fp{
 		0xee7fbfffffffeaab,
 		0x07aaffffac54ffff,
 		0xd9cc34a83dac3d89,
@@ -439,10 +439,10 @@ func (f *fp) Sqrt(a *fp) (*fp, int) {
 }
 
 // Invert performs modular inverse.
-func (f *fp) Invert(a *fp) (*fp, int) {
+func (f *Fp) Invert(a *Fp) (*Fp, int) {
 	// Exponentiate by p - 2
-	t := &fp{}
-	t.pow(a, &fp{
+	t := &Fp{}
+	t.pow(a, &Fp{
 		0xb9feffffffffaaa9,
 		0x1eabfffeb153ffff,
 		0x6730d2a0f6b0f624,
@@ -457,9 +457,9 @@ func (f *fp) Invert(a *fp) (*fp, int) {
 
 // SetBytes converts a little endian byte array into a field element
 // return 0 if the bytes are not in the field, 1 if they are.
-func (f *fp) SetBytes(arg *[FieldBytes]byte) (*fp, int) {
+func (f *Fp) SetBytes(arg *[FieldBytes]byte) (*Fp, int) {
 	var borrow uint64
-	t := &fp{}
+	t := &Fp{}
 
 	t[0] = binary.LittleEndian.Uint64(arg[:8])
 	t[1] = binary.LittleEndian.Uint64(arg[8:16])
@@ -498,8 +498,8 @@ func (f *fp) SetBytes(arg *[FieldBytes]byte) (*fp, int) {
 // that (2^384 - 1)*c is an acceptable product for the reduction. Therefore, the
 // reduction always works so long as `c` is in the field; in this case it is either the
 // constant `r2` or `r3`.
-func (f *fp) SetBytesWide(a *[WideFieldBytes]byte) *fp {
-	d0 := &fp{
+func (f *Fp) SetBytesWide(a *[WideFieldBytes]byte) *Fp {
+	d0 := &Fp{
 		binary.LittleEndian.Uint64(a[:8]),
 		binary.LittleEndian.Uint64(a[8:16]),
 		binary.LittleEndian.Uint64(a[16:24]),
@@ -507,7 +507,7 @@ func (f *fp) SetBytesWide(a *[WideFieldBytes]byte) *fp {
 		binary.LittleEndian.Uint64(a[32:40]),
 		binary.LittleEndian.Uint64(a[40:48]),
 	}
-	d1 := &fp{
+	d1 := &Fp{
 		binary.LittleEndian.Uint64(a[48:56]),
 		binary.LittleEndian.Uint64(a[56:64]),
 		binary.LittleEndian.Uint64(a[64:72]),
@@ -523,7 +523,7 @@ func (f *fp) SetBytesWide(a *[WideFieldBytes]byte) *fp {
 
 // SetBigInt initialises an element from big.Int
 // The value is reduced by the modulus.
-func (f *fp) SetBigInt(bi *big.Int) *fp {
+func (f *Fp) SetBigInt(bi *big.Int) *Fp {
 	var buffer [FieldBytes]byte
 	t := new(big.Int).Set(bi)
 	t.Mod(t, biModulus)
@@ -534,7 +534,7 @@ func (f *fp) SetBigInt(bi *big.Int) *fp {
 }
 
 // Set copies a into fp.
-func (f *fp) Set(a *fp) *fp {
+func (f *Fp) Set(a *Fp) *Fp {
 	f[0] = a[0]
 	f[1] = a[1]
 	f[2] = a[2]
@@ -546,13 +546,13 @@ func (f *fp) Set(a *fp) *fp {
 
 // SetLimbs converts an array into a field element
 // by converting to montgomery form.
-func (f *fp) SetLimbs(a *[Limbs]uint64) *fp {
-	return f.toMontgomery((*fp)(a))
+func (f *Fp) SetLimbs(a *[Limbs]uint64) *Fp {
+	return f.toMontgomery((*Fp)(a))
 }
 
 // SetRaw converts a raw array into a field element
 // Assumes input is already in montgomery form.
-func (f *fp) SetRaw(a *[Limbs]uint64) *fp {
+func (f *Fp) SetRaw(a *[Limbs]uint64) *Fp {
 	f[0] = a[0]
 	f[1] = a[1]
 	f[2] = a[2]
@@ -563,9 +563,9 @@ func (f *fp) SetRaw(a *[Limbs]uint64) *fp {
 }
 
 // Bytes converts a field element to a little endian byte array.
-func (f *fp) Bytes() [FieldBytes]byte {
+func (f *Fp) Bytes() [FieldBytes]byte {
 	var out [FieldBytes]byte
-	t := new(fp).fromMontgomery(f)
+	t := new(Fp).fromMontgomery(f)
 	binary.LittleEndian.PutUint64(out[:8], t[0])
 	binary.LittleEndian.PutUint64(out[8:16], t[1])
 	binary.LittleEndian.PutUint64(out[16:24], t[2])
@@ -576,20 +576,20 @@ func (f *fp) Bytes() [FieldBytes]byte {
 }
 
 // BigInt converts this element into the big.Int struct.
-func (f *fp) BigInt() *big.Int {
+func (f *Fp) BigInt() *big.Int {
 	buffer := f.Bytes()
 	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.
-func (f *fp) Raw() [Limbs]uint64 {
-	t := new(fp).fromMontgomery(f)
+func (f *Fp) Raw() [Limbs]uint64 {
+	t := new(Fp).fromMontgomery(f)
 	return *t
 }
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *fp) CMove(arg1, arg2 *fp, choice int) *fp {
+func (f *Fp) CMove(arg1, arg2 *Fp, choice int) *Fp {
 	mask := uint64(-choice)
 	f[0] = arg1[0] ^ ((arg1[0] ^ arg2[0]) & mask)
 	f[1] = arg1[1] ^ ((arg1[1] ^ arg2[1]) & mask)
@@ -601,20 +601,20 @@ func (f *fp) CMove(arg1, arg2 *fp, choice int) *fp {
 }
 
 // CNeg conditionally negates a if choice == 1.
-func (f *fp) CNeg(a *fp, choice int) *fp {
-	var t fp
+func (f *Fp) CNeg(a *Fp, choice int) *Fp {
+	var t Fp
 	t.Neg(a)
 	return f.CMove(f, &t, choice)
 }
 
 // Exp raises base^exp.
-func (f *fp) Exp(base, exp *fp) *fp {
-	e := (&fp{}).fromMontgomery(exp)
+func (f *Fp) Exp(base, exp *Fp) *Fp {
+	e := (&Fp{}).fromMontgomery(exp)
 	return f.pow(base, e)
 }
 
-func (f *fp) pow(base, e *fp) *fp {
-	var tmp, res fp
+func (f *Fp) pow(base, e *Fp) *Fp {
+	var tmp, res Fp
 	res.SetOne()
 
 	for i := len(e) - 1; i >= 0; i-- {
@@ -634,10 +634,10 @@ func (f *fp) pow(base, e *fp) *fp {
 }
 
 // montReduce performs the montgomery reduction.
-func (f *fp) montReduce(r *[2 * Limbs]uint64) *fp {
+func (f *Fp) montReduce(r *[2 * Limbs]uint64) *Fp {
 	// Taken from Algorithm 14.32 in Handbook of Applied Cryptography
 	var r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, carry, k uint64
-	var rr fp
+	var rr Fp
 
 	k = r[0] * inv
 	_, carry = mac(r[0], k, modulus[0], 0)

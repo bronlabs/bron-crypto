@@ -2,8 +2,9 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -32,11 +33,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	}
 	privateKey, err := curve.Scalar().SetBytesWide(privateKeyBytes)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
+		return nil, errs.WrapSerializationError(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
 	}
 	publicKey, err := curve.Point().FromAffineCompressed(publicKeyBytes)
 	if err != nil {
-		return nil, errs.WrapDeserializationFailed(err, "could not convert ed25519 public key bytes to an ed25519 point")
+		return nil, errs.WrapSerializationError(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
 	dealer, err := feldman.NewDealer(cohortConfig.Threshold, cohortConfig.TotalParties, curve)

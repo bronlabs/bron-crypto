@@ -46,12 +46,20 @@ func (*Point) Generator() curves.Point {
 	return &Point{value: new(Ep).Generator()}
 }
 
+func (p *Point) Clone() curves.Point {
+	return &Point{value: new(Ep).Set(p.value)}
+}
+
+func (p *Point) ClearCofactor() curves.Point {
+	return p.Clone()
+}
+
 func (p *Point) IsIdentity() bool {
 	return p.value.IsIdentity()
 }
 
 func (p *Point) IsNegative() bool {
-	return p.value.Y().IsOdd()
+	return p.value.GetY().IsOdd()
 }
 
 func (p *Point) IsOnCurve() bool {
@@ -115,9 +123,9 @@ func (p *Point) Set(x, y *big.Int) (curves.Point, error) {
 		return p.FromAffineCompressed(data[:])
 	}
 	yElem := new(fp.Fp).SetBigInt(y)
-	value := &Ep{x: xElem, y: yElem, z: new(fp.Fp).SetOne()}
+	value := &Ep{X: xElem, Y: yElem, Z: new(fp.Fp).SetOne()}
 	if !value.IsOnCurve() {
-		return nil, errs.NewNotOnCurve("point is not on the curve")
+		return nil, errs.NewMembershipError("point is not on the curve")
 	}
 	return &Point{value: value}, nil
 }
@@ -153,7 +161,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := internal.PointUnmarshalBinary(pallasInstance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -170,7 +178,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := internal.PointUnmarshalText(pallasInstance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -187,7 +195,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := internal.NewPointFromJSON(pallasInstance, input)
 	if err != nil {
-		return errs.WrapDeserializationFailed(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {
@@ -199,13 +207,31 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 
 func (p *Point) X() curves.FieldElement {
 	return FieldElement{
-		v: p.value.X(),
+		v: p.value.GetX(),
 	}
 }
 
 func (p *Point) Y() curves.FieldElement {
 	return FieldElement{
-		v: p.value.Y(),
+		v: p.value.GetY(),
+	}
+}
+
+func (p *Point) JacobianX() curves.FieldElement {
+	return FieldElement{
+		v: p.value.X,
+	}
+}
+
+func (p *Point) JacobianY() curves.FieldElement {
+	return FieldElement{
+		v: p.value.Y,
+	}
+}
+
+func (p *Point) Jacobian() curves.FieldElement {
+	return FieldElement{
+		v: p.value.Z,
 	}
 }
 

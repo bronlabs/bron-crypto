@@ -148,7 +148,7 @@ func (publicKey *PublicKey) MarshalJSON() ([]byte, error) {
 	data := PublicKeyJson{publicKey.N}
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return nil, errs.WrapSerializationFailed(err, "json marshal failed")
+		return nil, errs.WrapSerializationError(err, "json marshal failed")
 	}
 	return marshalled, nil
 }
@@ -157,7 +157,7 @@ func (publicKey *PublicKey) MarshalJSON() ([]byte, error) {
 func (publicKey *PublicKey) UnmarshalJSON(bytes []byte) error {
 	data := new(PublicKeyJson)
 	if err := json.Unmarshal(bytes, data); err != nil {
-		return errs.WrapDeserializationFailed(err, "cannot deserialize PublicKey")
+		return errs.WrapSerializationError(err, "cannot deserialize PublicKey")
 	}
 	if data.N == nil {
 		return errs.NewIsNil("n is nil")
@@ -389,7 +389,7 @@ func (secretKey *SecretKey) MarshalJSON() ([]byte, error) {
 func (secretKey *SecretKey) UnmarshalJSON(bytes []byte) error {
 	data := new(SecretKeyJson)
 	if err := json.Unmarshal(bytes, data); err != nil {
-		return errs.WrapDeserializationFailed(err, "cannot deserialize secret key")
+		return errs.WrapSerializationError(err, "cannot deserialize secret key")
 	}
 
 	if data.N != nil {

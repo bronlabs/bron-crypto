@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	g1x = fp{
+	g1x = Fp{
 		0x5cb38790fd530c16,
 		0x7817fc679976fff5,
 		0x154f95c7143ba1c1,
@@ -19,7 +19,7 @@ var (
 		0xedce6ecc21dbf440,
 		0x120177419e0bfb75,
 	}
-	g1y = fp{
+	g1y = Fp{
 		0xbaac93d50ce72271,
 		0x8c22631a7918fd8e,
 		0xdd595f13570725ce,
@@ -27,7 +27,7 @@ var (
 		0x0e1c8c3fad0059c0,
 		0x0bbc3efc5008a26a,
 	}
-	curveG1B = fp{
+	curveG1B = Fp{
 		0xaa270000000cfff3,
 		0x53cc0032fc34000a,
 		0x478fe97a6b0a807f,
@@ -35,7 +35,7 @@ var (
 		0x8ec9733bbf78ab2f,
 		0x09d645513d83de7e,
 	}
-	osswuMapA = fp{
+	osswuMapA = Fp{
 		0x2f65aa0e9af5aa51,
 		0x86464c2d1e8416c3,
 		0xb85ce591b7bd31e2,
@@ -43,7 +43,7 @@ var (
 		0x28376eda6bfc1835,
 		0x155455c3e5071d85,
 	}
-	osswuMapB = fp{
+	osswuMapB = Fp{
 		0xfb996971fe22a1e0,
 		0x9aa93eb35b742d6f,
 		0x8c476013de99c5c4,
@@ -51,7 +51,7 @@ var (
 		0xca72b5e45a52d888,
 		0x06824061418a386b,
 	}
-	osswuMapC1 = fp{
+	osswuMapC1 = Fp{
 		0xee7fbfffffffeaaa,
 		0x07aaffffac54ffff,
 		0xd9cc34a83dac3d89,
@@ -59,7 +59,7 @@ var (
 		0x92c6e9ed90d2eb35,
 		0x0680447a8e5ff9a6,
 	}
-	osswuMapC2 = fp{
+	osswuMapC2 = Fp{
 		0x43b571cad3215f1f,
 		0xccb460ef1c702dc2,
 		0x742d884f4f97100b,
@@ -67,7 +67,7 @@ var (
 		0xe40f3fa13fce8f88,
 		0x0073a2af9892a2ff,
 	}
-	oswwuMapZ = fp{
+	oswwuMapZ = Fp{
 		0x886c00000023ffdc,
 		0x0f70008d3090001d,
 		0x77672417ed5828c3,
@@ -75,10 +75,10 @@ var (
 		0x50553f1b9c131521,
 		0x078c712fbe0ab6e8,
 	}
-	oswwuMapXd1  = *((&fp{}).Mul(&oswwuMapZ, &osswuMapA))
-	negOsswuMapA = *(&fp{}).Neg(&osswuMapA)
+	oswwuMapXd1  = *((&Fp{}).Mul(&oswwuMapZ, &osswuMapA))
+	negOsswuMapA = *(&Fp{}).Neg(&osswuMapA)
 
-	g1IsoXNum = []fp{
+	g1IsoXNum = []Fp{
 		{
 			0x4d18b6f3af00131c,
 			0x19fa219793fee28c,
@@ -176,7 +176,7 @@ var (
 			0x18ae6a856f40715d,
 		},
 	}
-	g1IsoXDen = []fp{
+	g1IsoXDen = []Fp{
 		{
 			0xb962a077fdb0f945,
 			0xa6a9740fefda13a0,
@@ -266,7 +266,7 @@ var (
 			0x15f65ec3fa80e493,
 		},
 	}
-	g1IsoYNum = []fp{
+	g1IsoYNum = []Fp{
 		{
 			0x2b567ff3e2837267,
 			0x1d4d9e57b958a767,
@@ -396,7 +396,7 @@ var (
 			0x106d87d1b51d13b9,
 		},
 	}
-	g1IsoYDen = []fp{
+	g1IsoYDen = []Fp{
 		{
 			0xeb6c359d47e52b1c,
 			0x18ef5f8a10634d60,
@@ -530,7 +530,7 @@ var (
 
 // G1 is a point in g1.
 type G1 struct {
-	x, y, z fp
+	X, Y, Z Fp
 
 	_ helper_types.Incomparable
 }
@@ -553,7 +553,7 @@ func (g1 *G1) Random(reader io.Reader) (*G1, error) {
 // Hash uses the hasher to map bytes to a valid point.
 func (g1 *G1) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G1 {
 	var u []byte
-	var u0, u1 fp
+	var u0, u1 Fp
 	var r0, r1, q0, q1 G1
 
 	switch hash.Type() {
@@ -579,36 +579,36 @@ func (g1 *G1) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G1 {
 
 // Identity returns the identity point.
 func (g1 *G1) Identity() *G1 {
-	g1.x.SetZero()
-	g1.y.SetOne()
-	g1.z.SetZero()
+	g1.X.SetZero()
+	g1.Y.SetOne()
+	g1.Z.SetZero()
 	return g1
 }
 
 // Generator returns the base point.
 func (g1 *G1) Generator() *G1 {
-	g1.x.Set(&g1x)
-	g1.y.Set(&g1y)
-	g1.z.SetOne()
+	g1.X.Set(&g1x)
+	g1.Y.Set(&g1y)
+	g1.Z.SetOne()
 	return g1
 }
 
 // IsIdentity returns true if this point is at infinity.
 func (g1 *G1) IsIdentity() int {
-	return g1.z.IsZero()
+	return g1.Z.IsZero()
 }
 
 // IsOnCurve determines if this point represents a valid curve point.
 func (g1 *G1) IsOnCurve() int {
 	// Y^2 Z = X^3 + b Z^3
-	var lhs, rhs, t fp
-	lhs.Square(&g1.y)
-	lhs.Mul(&lhs, &g1.z)
+	var lhs, rhs, t Fp
+	lhs.Square(&g1.Y)
+	lhs.Mul(&lhs, &g1.Z)
 
-	rhs.Square(&g1.x)
-	rhs.Mul(&rhs, &g1.x)
-	t.Square(&g1.z)
-	t.Mul(&t, &g1.z)
+	rhs.Square(&g1.X)
+	rhs.Mul(&rhs, &g1.X)
+	t.Square(&g1.Z)
+	t.Mul(&t, &g1.Z)
 	t.Mul(&t, &curveG1B)
 	rhs.Add(&rhs, &t)
 
@@ -625,23 +625,23 @@ func (g1 *G1) InCorrectSubgroup() int {
 // Add adds this point to another point.
 func (g1 *G1) Add(arg1, arg2 *G1) *G1 {
 	// Algorithm 7, https://eprint.iacr.org/2015/1060.pdf
-	var t0, t1, t2, t3, t4, x3, y3, z3 fp
+	var t0, t1, t2, t3, t4, x3, y3, z3 Fp
 
-	t0.Mul(&arg1.x, &arg2.x)
-	t1.Mul(&arg1.y, &arg2.y)
-	t2.Mul(&arg1.z, &arg2.z)
-	t3.Add(&arg1.x, &arg1.y)
-	t4.Add(&arg2.x, &arg2.y)
+	t0.Mul(&arg1.X, &arg2.X)
+	t1.Mul(&arg1.Y, &arg2.Y)
+	t2.Mul(&arg1.Z, &arg2.Z)
+	t3.Add(&arg1.X, &arg1.Y)
+	t4.Add(&arg2.X, &arg2.Y)
 	t3.Mul(&t3, &t4)
 	t4.Add(&t0, &t1)
 	t3.Sub(&t3, &t4)
-	t4.Add(&arg1.y, &arg1.z)
-	x3.Add(&arg2.y, &arg2.z)
+	t4.Add(&arg1.Y, &arg1.Z)
+	x3.Add(&arg2.Y, &arg2.Z)
 	t4.Mul(&t4, &x3)
 	x3.Add(&t1, &t2)
 	t4.Sub(&t4, &x3)
-	x3.Add(&arg1.x, &arg1.z)
-	y3.Add(&arg2.x, &arg2.z)
+	x3.Add(&arg1.X, &arg1.Z)
+	y3.Add(&arg2.X, &arg2.Z)
 	x3.Mul(&x3, &y3)
 	y3.Add(&t0, &t2)
 	y3.Sub(&x3, &y3)
@@ -661,9 +661,9 @@ func (g1 *G1) Add(arg1, arg2 *G1) *G1 {
 	z3.Mul(&z3, &t4)
 	z3.Add(&z3, &t0)
 
-	g1.x.Set(&x3)
-	g1.y.Set(&y3)
-	g1.z.Set(&z3)
+	g1.X.Set(&x3)
+	g1.Y.Set(&y3)
+	g1.Z.Set(&z3)
 	return g1
 }
 
@@ -677,14 +677,14 @@ func (g1 *G1) Sub(arg1, arg2 *G1) *G1 {
 // Double this point.
 func (g1 *G1) Double(a *G1) *G1 {
 	// Algorithm 9, https://eprint.iacr.org/2015/1060.pdf
-	var t0, t1, t2, x3, y3, z3 fp
+	var t0, t1, t2, x3, y3, z3 Fp
 
-	t0.Square(&a.y)
+	t0.Square(&a.Y)
 	z3.Double(&t0)
 	z3.Double(&z3)
 	z3.Double(&z3)
-	t1.Mul(&a.y, &a.z)
-	t2.Square(&a.z)
+	t1.Mul(&a.Y, &a.Z)
+	t2.Square(&a.Z)
 	t2.MulBy3b(&t2)
 	x3.Mul(&t2, &z3)
 	y3.Add(&t0, &t2)
@@ -694,14 +694,14 @@ func (g1 *G1) Double(a *G1) *G1 {
 	t0.Sub(&t0, &t2)
 	y3.Mul(&t0, &y3)
 	y3.Add(&y3, &x3)
-	t1.Mul(&a.x, &a.y)
+	t1.Mul(&a.X, &a.Y)
 	x3.Mul(&t0, &t1)
 	x3.Double(&x3)
 
 	e := a.IsIdentity()
-	g1.x.CMove(&x3, t0.SetZero(), e)
-	g1.z.CMove(&z3, &t0, e)
-	g1.y.CMove(&y3, t0.SetOne(), e)
+	g1.X.CMove(&x3, t0.SetZero(), e)
+	g1.Z.CMove(&z3, &t0, e)
+	g1.Y.CMove(&y3, t0.SetOne(), e)
 	return g1
 }
 
@@ -760,15 +760,15 @@ func (g1 *G1) ClearCofactor(a *G1) *G1 {
 // Neg negates this point.
 func (g1 *G1) Neg(a *G1) *G1 {
 	g1.Set(a)
-	g1.y.CNeg(&a.y, -(a.IsIdentity() - 1))
+	g1.Y.CNeg(&a.Y, -(a.IsIdentity() - 1))
 	return g1
 }
 
 // Set copies a into g1.
 func (g1 *G1) Set(a *G1) *G1 {
-	g1.x.Set(&a.x)
-	g1.y.Set(&a.y)
-	g1.z.Set(&a.z)
+	g1.X.Set(&a.X)
+	g1.Y.Set(&a.Y)
+	g1.Z.Set(&a.Z)
 	return g1
 }
 
@@ -776,23 +776,23 @@ func (g1 *G1) Set(a *G1) *G1 {
 func (g1 *G1) BigInt() (x, y *big.Int) {
 	var t G1
 	t.ToAffine(g1)
-	return t.x.BigInt(), t.y.BigInt()
+	return t.X.BigInt(), t.Y.BigInt()
 }
 
 // SetBigInt creates a point from affine x, y
 // and returns the point if it is on the curve.
 func (g1 *G1) SetBigInt(x, y *big.Int) (*G1, error) {
-	var xx, yy fp
+	var xx, yy Fp
 	var pp G1
-	pp.x = *(xx.SetBigInt(x))
-	pp.y = *(yy.SetBigInt(y))
+	pp.X = *(xx.SetBigInt(x))
+	pp.Y = *(yy.SetBigInt(y))
 
-	if pp.x.IsZero()&pp.y.IsZero() == 1 {
+	if pp.X.IsZero()&pp.Y.IsZero() == 1 {
 		pp.Identity()
 		return g1.Set(&pp), nil
 	}
 
-	pp.z.SetOne()
+	pp.Z.SetOne()
 
 	// If not the identity point and not on the curve then invalid
 	if (pp.IsOnCurve()&pp.InCorrectSubgroup())|(xx.IsZero()&yy.IsZero()) == 0 {
@@ -806,7 +806,7 @@ func (g1 *G1) ToCompressed() [FieldBytes]byte {
 	var out [FieldBytes]byte
 	var t G1
 	t.ToAffine(g1)
-	xBytes := t.x.Bytes()
+	xBytes := t.X.Bytes()
 	copy(out[:], bitstring.ReverseBytes(xBytes[:]))
 	isInfinity := byte(g1.IsIdentity())
 	// Compressed flag
@@ -814,13 +814,13 @@ func (g1 *G1) ToCompressed() [FieldBytes]byte {
 	// Is infinity
 	out[0] |= (1 << 6) & -isInfinity
 	// Sign of y only set if not infinity
-	out[0] |= (byte(t.y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
+	out[0] |= (byte(t.Y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
 	return out
 }
 
 // FromCompressed deserializes this element from compressed form.
 func (g1 *G1) FromCompressed(input *[FieldBytes]byte) (*G1, error) {
-	var xFp, yFp fp
+	var xFp, yFp Fp
 	var x [FieldBytes]byte
 	var p G1
 	compressedFlag := int((input[0] >> 7) & 1)
@@ -851,9 +851,9 @@ func (g1 *G1) FromCompressed(input *[FieldBytes]byte) (*G1, error) {
 	}
 
 	yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
-	p.x.Set(&xFp)
-	p.y.Set(&yFp)
-	p.z.SetOne()
+	p.X.Set(&xFp)
+	p.Y.Set(&yFp)
+	p.Z.SetOne()
 	if p.InCorrectSubgroup() == 0 {
 		return nil, errs.NewFailed("point is not in correct subgroup")
 	}
@@ -865,8 +865,8 @@ func (g1 *G1) ToUncompressed() [WideFieldBytes]byte {
 	var out [WideFieldBytes]byte
 	var t G1
 	t.ToAffine(g1)
-	xBytes := t.x.Bytes()
-	yBytes := t.y.Bytes()
+	xBytes := t.X.Bytes()
+	yBytes := t.Y.Bytes()
 	copy(out[:FieldBytes], bitstring.ReverseBytes(xBytes[:]))
 	copy(out[FieldBytes:], bitstring.ReverseBytes(yBytes[:]))
 	isInfinity := byte(g1.IsIdentity())
@@ -876,7 +876,7 @@ func (g1 *G1) ToUncompressed() [WideFieldBytes]byte {
 
 // FromUncompressed deserializes this element from uncompressed form.
 func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
-	var xFp, yFp fp
+	var xFp, yFp Fp
 	var t [FieldBytes]byte
 	var p G1
 	infinityFlag := int((input[0] >> 6) & 1)
@@ -899,9 +899,9 @@ func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
 		return nil, errs.NewFailed("invalid bytes - y not in field")
 	}
 
-	p.x.Set(&xFp)
-	p.y.Set(&yFp)
-	p.z.SetOne()
+	p.X.Set(&xFp)
+	p.Y.Set(&yFp)
+	p.Z.SetOne()
 
 	if p.IsOnCurve() == 0 {
 		return nil, errs.NewFailed("point is not on the curve")
@@ -915,45 +915,45 @@ func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
 // ToAffine converts the point into affine coordinates.
 func (g1 *G1) ToAffine(a *G1) *G1 {
 	var wasInverted int
-	var zero, x, y, z fp
-	_, wasInverted = z.Invert(&a.z)
-	x.Mul(&a.x, &z)
-	y.Mul(&a.y, &z)
+	var zero, x, y, z Fp
+	_, wasInverted = z.Invert(&a.Z)
+	x.Mul(&a.X, &z)
+	y.Mul(&a.Y, &z)
 
-	g1.x.CMove(&zero, &x, wasInverted)
-	g1.y.CMove(&zero, &y, wasInverted)
-	g1.z.CMove(&zero, z.SetOne(), wasInverted)
+	g1.X.CMove(&zero, &x, wasInverted)
+	g1.Y.CMove(&zero, &y, wasInverted)
+	g1.Z.CMove(&zero, z.SetOne(), wasInverted)
 	return g1
 }
 
 // GetX returns the affine X coordinate.
-func (g1 *G1) GetX() *fp {
+func (g1 *G1) GetX() *Fp {
 	var t G1
 	t.ToAffine(g1)
-	return &t.x
+	return &t.X
 }
 
 // GetY returns the affine Y coordinate.
-func (g1 *G1) GetY() *fp {
+func (g1 *G1) GetY() *Fp {
 	var t G1
 	t.ToAffine(g1)
-	return &t.y
+	return &t.Y
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
 func (g1 *G1) Equal(rhs *G1) int {
-	var x1, x2, y1, y2 fp
+	var x1, x2, y1, y2 Fp
 	var e1, e2 int
 
 	// This technique avoids inversions
-	x1.Mul(&g1.x, &rhs.z)
-	x2.Mul(&rhs.x, &g1.z)
+	x1.Mul(&g1.X, &rhs.Z)
+	x2.Mul(&rhs.X, &g1.Z)
 
-	y1.Mul(&g1.y, &rhs.z)
-	y2.Mul(&rhs.y, &g1.z)
+	y1.Mul(&g1.Y, &rhs.Z)
+	y2.Mul(&rhs.Y, &g1.Z)
 
-	e1 = g1.z.IsZero()
-	e2 = rhs.z.IsZero()
+	e1 = g1.Z.IsZero()
+	e2 = rhs.Z.IsZero()
 
 	// Both at infinity or coordinates are the same
 	return (e1 & e2) | (^e1 & ^e2)&x1.Equal(&x2)&y1.Equal(&y2)
@@ -961,9 +961,9 @@ func (g1 *G1) Equal(rhs *G1) int {
 
 // CMove sets g1 = arg1 if choice == 0 and g1 = arg2 if choice == 1.
 func (g1 *G1) CMove(arg1, arg2 *G1, choice int) *G1 {
-	g1.x.CMove(&arg1.x, &arg2.x, choice)
-	g1.y.CMove(&arg1.y, &arg2.y, choice)
-	g1.z.CMove(&arg1.z, &arg2.z, choice)
+	g1.X.CMove(&arg1.X, &arg2.X, choice)
+	g1.Y.CMove(&arg1.Y, &arg2.Y, choice)
+	g1.Z.CMove(&arg1.Z, &arg2.Z, choice)
 	return g1
 }
 
@@ -1025,10 +1025,10 @@ func (g1 *G1) SumOfProducts(points []*G1, scalars []*impl.Field) (*G1, error) {
 	return g1, nil
 }
 
-func (g1 *G1) osswu3mod4(u *fp) {
+func (g1 *G1) osswu3mod4(u *Fp) {
 	// Taken from section 8.8.1 in
 	// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html>
-	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, y1, y2 fp
+	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, y1, y2 Fp
 
 	// tv1 = u^2
 	tv1.Square(u)
@@ -1078,20 +1078,20 @@ func (g1 *G1) osswu3mod4(u *fp) {
 	e3 := u.Sgn0() ^ y2.Sgn0()
 	y2.CNeg(&y2, e3)
 
-	g1.z.SetOne()
-	g1.y.Set(&y2)
-	_, _ = g1.x.Invert(&xd)
-	g1.x.Mul(&g1.x, &x2n)
+	g1.Z.SetOne()
+	g1.Y.Set(&y2)
+	_, _ = g1.X.Invert(&xd)
+	g1.X.Mul(&g1.X, &x2n)
 }
 
 func (g1 *G1) isogenyMap(a *G1) {
 	const Degree = 16
-	var xs [Degree]fp
+	var xs [Degree]Fp
 	xs[0] = r
-	xs[1].Set(&a.x)
-	xs[2].Square(&a.x)
+	xs[1].Set(&a.X)
+	xs[2].Square(&a.X)
 	for i := 3; i < Degree; i++ {
-		xs[i].Mul(&xs[i-1], &a.x)
+		xs[i].Mul(&xs[i-1], &a.X)
 	}
 
 	xNum := computeKFp(xs[:], g1IsoXNum)
@@ -1099,17 +1099,17 @@ func (g1 *G1) isogenyMap(a *G1) {
 	yNum := computeKFp(xs[:], g1IsoYNum)
 	yDen := computeKFp(xs[:], g1IsoYDen)
 
-	g1.x.Invert(&xDen)
-	g1.x.Mul(&g1.x, &xNum)
+	g1.X.Invert(&xDen)
+	g1.X.Mul(&g1.X, &xNum)
 
-	g1.y.Invert(&yDen)
-	g1.y.Mul(&g1.y, &yNum)
-	g1.y.Mul(&g1.y, &a.y)
-	g1.z.SetOne()
+	g1.Y.Invert(&yDen)
+	g1.Y.Mul(&g1.Y, &yNum)
+	g1.Y.Mul(&g1.Y, &a.Y)
+	g1.Z.SetOne()
 }
 
-func computeKFp(xxs, k []fp) fp {
-	var xx, t fp
+func computeKFp(xxs, k []Fp) Fp {
+	var xx, t Fp
 	for i := range k {
 		xx.Add(&xx, t.Mul(&xxs[i], &k[i]))
 	}
