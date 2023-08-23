@@ -5,11 +5,11 @@ import (
 	"crypto/sha512"
 	"crypto/subtle"
 	"io"
-	"math/big"
 
 	filippo "filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
@@ -17,29 +17,29 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Point) = (*Point)(nil)
+var _ curves.Point = (*PointEd25519)(nil)
 
-type Point struct {
+type PointEd25519 struct {
 	Value *filippo.Point
 
 	_ helper_types.Incomparable
 }
 
-func (Point) Curve() (curves.Curve, error) {
-	return edwards25519Instance, nil
+func (*PointEd25519) Curve() curves.Curve {
+	return &edwards25519Instance
 }
 
-func (Point) CurveName() string {
+func (*PointEd25519) CurveName() string {
 	return Name
 }
 
-func (p *Point) Random(reader io.Reader) curves.Point {
+func (p *PointEd25519) Random(reader io.Reader) curves.Point {
 	var seed [64]byte
 	_, _ = reader.Read(seed[:])
 	return p.Hash(seed[:])
 }
 
-func (*Point) Hash(inputs ...[]byte) curves.Point {
+func (*PointEd25519) Hash(inputs ...[]byte) curves.Point {
 	/// Perform hashing to the group using the Elligator2 map
 	///
 	/// See https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#section-6.7.1
@@ -54,89 +54,89 @@ func (*Point) Hash(inputs ...[]byte) curves.Point {
 	return toEdwards(m1, signBit)
 }
 
-func (*Point) Identity() curves.Point {
-	return &Point{
+func (*PointEd25519) Identity() curves.Point {
+	return &PointEd25519{
 		Value: filippo.NewIdentityPoint(),
 	}
 }
 
-func (*Point) Generator() curves.Point {
-	return &Point{
+func (*PointEd25519) Generator() curves.Point {
+	return &PointEd25519{
 		Value: filippo.NewGeneratorPoint(),
 	}
 }
 
-func (p *Point) Clone() curves.Point {
-	return &Point{
+func (p *PointEd25519) Clone() curves.Point {
+	return &PointEd25519{
 		Value: filippo.NewIdentityPoint().Set(p.Value),
 	}
 }
 
-func (p *Point) ClearCofactor() curves.Point {
-	return &Point{
+func (p *PointEd25519) ClearCofactor() curves.Point {
+	return &PointEd25519{
 		Value: filippo.NewIdentityPoint().MultByCofactor(p.Value),
 	}
 }
 
-func (p *Point) IsIdentity() bool {
+func (p *PointEd25519) IsIdentity() bool {
 	return p.Equal(p.Identity())
 }
 
-func (*Point) IsNegative() bool {
+func (*PointEd25519) IsNegative() bool {
 	// Negative points don't really exist in ed25519
 	return false
 }
 
-func (p *Point) IsOnCurve() bool {
+func (p *PointEd25519) IsOnCurve() bool {
 	_, err := filippo.NewIdentityPoint().SetBytes(p.ToAffineCompressed())
 	return err == nil
 }
 
-func (p *Point) Double() curves.Point {
-	return &Point{Value: filippo.NewIdentityPoint().Add(p.Value, p.Value)}
+func (p *PointEd25519) Double() curves.Point {
+	return &PointEd25519{Value: filippo.NewIdentityPoint().Add(p.Value, p.Value)}
 }
 
-func (*Point) Scalar() curves.Scalar {
-	return new(Scalar).Zero()
+func (*PointEd25519) Scalar() curves.Scalar {
+	return new(ScalarEd25519).Zero()
 }
 
-func (p *Point) Neg() curves.Point {
-	return &Point{Value: filippo.NewIdentityPoint().Negate(p.Value)}
+func (p *PointEd25519) Neg() curves.Point {
+	return &PointEd25519{Value: filippo.NewIdentityPoint().Negate(p.Value)}
 }
 
-func (p *Point) Add(rhs curves.Point) curves.Point {
+func (p *PointEd25519) Add(rhs curves.Point) curves.Point {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(*PointEd25519)
 	if ok {
-		return &Point{Value: filippo.NewIdentityPoint().Add(p.Value, r.Value)}
+		return &PointEd25519{Value: filippo.NewIdentityPoint().Add(p.Value, r.Value)}
 	} else {
 		panic("rhs in not PointEd25519")
 	}
 }
 
-func (p *Point) Sub(rhs curves.Point) curves.Point {
+func (p *PointEd25519) Sub(rhs curves.Point) curves.Point {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(*PointEd25519)
 	if ok {
 		rTmp := filippo.NewIdentityPoint().Negate(r.Value)
-		return &Point{Value: filippo.NewIdentityPoint().Add(p.Value, rTmp)}
+		return &PointEd25519{Value: filippo.NewIdentityPoint().Add(p.Value, rTmp)}
 	} else {
 		panic("rhs in not PointEd25519")
 	}
 }
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+func (p *PointEd25519) Mul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
-	r, ok := rhs.(*Scalar)
+	r, ok := rhs.(*ScalarEd25519)
 	if ok {
 		value := filippo.NewIdentityPoint().ScalarMult(r.Value, p.Value)
-		return &Point{Value: value}
+		return &PointEd25519{Value: value}
 	} else {
 		panic("rhs in not ScalarEd25519")
 	}
@@ -146,18 +146,18 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 // is a function for mangling the bits of a (formerly
 // mathematically well-defined) "scalar" and multiplying it to produce a
 // public key.
-func (*Point) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *Scalar) (*Point, error) {
+func (*PointEd25519) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *ScalarEd25519) (*PointEd25519, error) {
 	data := rhs.Value.Bytes()
 	s, err := filippo.NewScalar().SetBytesWithClamping(data[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
 	}
 	value := filippo.NewIdentityPoint().ScalarBaseMult(s)
-	return &Point{Value: value}, nil
+	return &PointEd25519{Value: value}, nil
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*Point)
+func (p *PointEd25519) Equal(rhs curves.Point) bool {
+	r, ok := rhs.(*PointEd25519)
 	if ok {
 		// We would like to check that the point (X/Z, Y/Z) is equal to
 		// the point (X'/Z', Y'/Z') without converting into affine
@@ -176,15 +176,15 @@ func (p *Point) Equal(rhs curves.Point) bool {
 	}
 }
 
-func (p *Point) Set(x, y *big.Int) (curves.Point, error) {
+func (p *PointEd25519) Set(x, y *saferith.Nat) (curves.Point, error) {
 	// check is identity
 	xx := subtle.ConstantTimeCompare(x.Bytes(), []byte{})
 	yy := subtle.ConstantTimeCompare(y.Bytes(), []byte{})
-	if (xx | yy) == 1 {
+	if (xx | yy) != 0 {
 		return p.Identity(), nil
 	}
-	xElem := new(ed.FieldElement).SetBigInt(x)
-	yElem := new(ed.FieldElement).SetBigInt(y)
+	xElem := new(ed.FieldElement).SetBigInt(x.Big())
+	yElem := new(ed.FieldElement).SetBigInt(y.Big())
 
 	var data [32]byte
 	var affine [64]byte
@@ -246,11 +246,11 @@ func cselect(v, a, b *ed.FieldElement, cond bool) {
 	v[4] = (m & a[4]) | (^m & b[4])
 }
 
-func (p *Point) ToAffineCompressed() []byte {
+func (p *PointEd25519) ToAffineCompressed() []byte {
 	return p.Value.Bytes()
 }
 
-func (p *Point) ToAffineUncompressed() []byte {
+func (p *PointEd25519) ToAffineUncompressed() []byte {
 	x, y, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
 	x.Multiply(x, recip)
@@ -261,20 +261,20 @@ func (p *Point) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
+func (*PointEd25519) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 	pt, err := filippo.NewIdentityPoint().SetBytes(inBytes)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set bytes method failed")
 	}
-	return &Point{Value: pt}, nil
+	return &PointEd25519{Value: pt}, nil
 }
 
-func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
+func (*PointEd25519) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	if len(inBytes) != 64 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	if bytes.Equal(inBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) {
-		return &Point{Value: filippo.NewIdentityPoint()}, nil
+		return &PointEd25519{Value: filippo.NewIdentityPoint()}, nil
 	}
 	x, err := new(field.Element).SetBytes(inBytes[:32])
 	if err != nil {
@@ -290,10 +290,10 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set extended coordinates")
 	}
-	return &Point{Value: value}, nil
+	return &PointEd25519{Value: value}, nil
 }
 
-func (p *Point) MarshalBinary() ([]byte, error) {
+func (p *PointEd25519) MarshalBinary() ([]byte, error) {
 	point, err := internal.PointMarshalBinary(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to point failed")
@@ -301,12 +301,12 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 	return point, nil
 }
 
-func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(edwards25519Instance, input)
+func (p *PointEd25519) UnmarshalBinary(input []byte) error {
+	pt, err := internal.PointUnmarshalBinary(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointEd25519)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -314,7 +314,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalText() ([]byte, error) {
+func (p *PointEd25519) MarshalText() ([]byte, error) {
 	t, err := internal.PointMarshalText(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to text failed")
@@ -322,12 +322,12 @@ func (p *Point) MarshalText() ([]byte, error) {
 	return t, nil
 }
 
-func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(edwards25519Instance, input)
+func (p *PointEd25519) UnmarshalText(input []byte) error {
+	pt, err := internal.PointUnmarshalText(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointEd25519)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -335,7 +335,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalJSON() ([]byte, error) {
+func (p *PointEd25519) MarshalJSON() ([]byte, error) {
 	point, err := internal.PointMarshalJson(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to json failed")
@@ -343,12 +343,12 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 	return point, nil
 }
 
-func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(edwards25519Instance, input)
+func (p *PointEd25519) UnmarshalJSON(input []byte) error {
+	pt, err := internal.NewPointFromJSON(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}
-	P, ok := pt.(*Point)
+	P, ok := pt.(*PointEd25519)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
@@ -356,15 +356,15 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *Point) GetEdwardsPoint() *filippo.Point {
+func (p *PointEd25519) GetEdwardsPoint() *filippo.Point {
 	return filippo.NewIdentityPoint().Set(p.Value)
 }
 
-func (*Point) SetEdwardsPoint(pt *filippo.Point) *Point {
-	return &Point{Value: filippo.NewIdentityPoint().Set(pt)}
+func (*PointEd25519) SetEdwardsPoint(pt *filippo.Point) *PointEd25519 {
+	return &PointEd25519{Value: filippo.NewIdentityPoint().Set(pt)}
 }
 
-func (p *Point) IsSmallOrder() bool {
+func (p *PointEd25519) IsSmallOrder() bool {
 	// pBytes := p.ToAffineCompressed()
 	// pHex := hex.EncodeToString(pBytes)
 
@@ -388,48 +388,48 @@ func (p *Point) IsSmallOrder() bool {
 	return p.ClearCofactor().IsIdentity()
 }
 
-func (p *Point) X() curves.FieldElement {
+func (p *PointEd25519) X() curves.FieldElement {
 	x, _, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
 	x.Multiply(x, recip)
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: x,
 	}
 }
 
-func (p *Point) Y() curves.FieldElement {
+func (p *PointEd25519) Y() curves.FieldElement {
 	_, y, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
 	y.Multiply(y, recip)
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: y,
 	}
 }
 
-func (p *Point) ExtendedX() curves.FieldElement {
+func (p *PointEd25519) ExtendedX() curves.FieldElement {
 	x, _, _, _ := p.Value.ExtendedCoordinates()
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: x,
 	}
 }
 
-func (p *Point) ExtendedY() curves.FieldElement {
+func (p *PointEd25519) ExtendedY() curves.FieldElement {
 	_, y, _, _ := p.Value.ExtendedCoordinates()
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: y,
 	}
 }
 
-func (p *Point) ExtendedZ() curves.FieldElement {
+func (p *PointEd25519) ExtendedZ() curves.FieldElement {
 	_, _, z, _ := p.Value.ExtendedCoordinates()
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: z,
 	}
 }
 
-func (p *Point) ExtendedT() curves.FieldElement {
+func (p *PointEd25519) ExtendedT() curves.FieldElement {
 	_, _, _, t := p.Value.ExtendedCoordinates()
-	return &FieldElement{
+	return &FieldElementEd25519{
 		v: t,
 	}
 }
@@ -438,7 +438,7 @@ func (p *Point) ExtendedT() curves.FieldElement {
 // choice of sign for the `EdwardsPoint`.
 //   - `sign`: a `u8` donating the desired sign of the resulting
 //     `EdwardsPoint`.  `0` denotes positive and `1` negative.
-func toEdwards(u *ed.FieldElement, sign byte) *Point {
+func toEdwards(u *ed.FieldElement, sign byte) *PointEd25519 {
 	one := new(ed.FieldElement).SetOne()
 	// To decompress the Montgomery u coordinate to an
 	// `EdwardsPoint`, we apply the birational map to obtain the
@@ -470,7 +470,7 @@ func toEdwards(u *ed.FieldElement, sign byte) *Point {
 		return nil
 	}
 	pt.MultByCofactor(pt)
-	return &Point{Value: pt}
+	return &PointEd25519{Value: pt}
 }
 
 // Perform the Elligator2 mapping to a Montgomery point encoded as a 32 byte value

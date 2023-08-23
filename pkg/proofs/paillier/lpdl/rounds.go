@@ -1,11 +1,12 @@
 package lpdl
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -32,8 +33,8 @@ type Round2Output struct {
 
 type Round3Output struct {
 	RangeVerifierOutput *paillierrange.VerifierRound3Output
-	A                   *big.Int
-	B                   *big.Int
+	A                   *saferith.Nat
+	B                   *saferith.Nat
 	CDoublePrimeWitness commitments.Witness
 
 	_ helper_types.Incomparable
@@ -53,11 +54,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = crand.Int(verifier.prng, verifier.state.q)
+	verifier.state.a, err = core.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = crand.Int(verifier.prng, verifier.state.q2)
+	verifier.state.b, err = core.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
@@ -85,11 +86,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.iii. compute Q' = aQ + bQ
-	aScalar, err := verifier.state.curve.Scalar().SetBigInt(verifier.state.a)
+	aScalar, err := verifier.state.curve.Scalar().SetNat(verifier.state.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
-	bScalar, err := verifier.state.curve.Scalar().SetBigInt(verifier.state.b)
+	bScalar, err := verifier.state.curve.Scalar().SetNat(verifier.state.b)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
@@ -122,7 +123,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
-	alphaScalar, err := prover.state.curve.Scalar().SetBigInt(prover.state.alpha)
+	alphaScalar, err := prover.state.curve.Scalar().SetNat(prover.state.alpha)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar")
 	}
@@ -183,8 +184,9 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 
 	// 4. check that alpha == ax + b (over integers), if not aborts
-	alphaCheck := new(big.Int).Add(new(big.Int).Mul(input.A, prover.x.BigInt()), input.B)
-	if prover.state.alpha.Cmp(alphaCheck) != 0 {
+	ax := new(saferith.Nat).Mul(input.A, prover.x.Nat(), -1)
+	axPlusB := new(saferith.Nat).Add(ax, input.B, prover.state.q2.BitLen()+1)
+	if prover.state.alpha.Eq(axPlusB) == 0 {
 		return nil, errs.NewIdentifiableAbort("verifier", "verifier is misbehaving")
 	}
 

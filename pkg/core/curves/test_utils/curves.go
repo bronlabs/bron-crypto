@@ -137,11 +137,6 @@ func ExpandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
 	return out[:outLen], nil
 }
 
-func Bhex(s string) *big.Int {
-	r, _ := new(big.Int).SetString(s, 16)
-	return r
-}
-
 type SswuParams struct {
 	Params          *elliptic.CurveParams
 	C1, C2, A, B, Z *big.Int

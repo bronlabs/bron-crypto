@@ -120,7 +120,7 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	// in case the value is used in
 	// Scalar multiplications with points
 	if f.Int.Cmp(Ed25519Order()) == 0 {
-		scalar := &edwards25519.Scalar{}
+		scalar := &edwards25519.ScalarEd25519{}
 		s := scalar.Random(r)
 		randInt = new(big.Int).SetBytes(bitstring.ReverseBytes(s.Bytes()))
 	} else {

@@ -3,7 +3,9 @@ package bls12381impl
 import (
 	"encoding/binary"
 	"io"
-	"math/big"
+	"strings"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -14,7 +16,7 @@ import (
 type Fp [Limbs]uint64
 
 var (
-	modulus = Fp{
+	fpModulusLimbs = Fp{
 		0xb9feffffffffaaab,
 		0x1eabfffeb153ffff,
 		0x6730d2a0f6b0f624,
@@ -57,10 +59,7 @@ var (
 		0x2512d43565724728,
 		0x0aa6346091755d4d,
 	}
-	biModulus = new(big.Int).SetBytes([]byte{
-		0x1a, 0x01, 0x11, 0xea, 0x39, 0x7f, 0xe6, 0x9a, 0x4b, 0x1b, 0xa7, 0xb6, 0x43, 0x4b, 0xac, 0xd7, 0x64, 0x77, 0x4b, 0x84, 0xf3, 0x85, 0x12, 0xbf, 0x67, 0x30, 0xd2, 0xa0, 0xf6, 0xb0, 0xf6, 0x24, 0x1e, 0xab, 0xff, 0xfe, 0xb1, 0x53, 0xff, 0xff, 0xb9, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xaa, 0xab,
-	},
-	)
+	fpModulus, _ = saferith.ModulusFromHex(strings.ToUpper("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab"))
 )
 
 // inv = -(p^{-1} mod 2^64) mod 2^64.
@@ -232,12 +231,12 @@ func (f *Fp) Neg(a *Fp) *Fp {
 	// since it can't underflow.
 	var t [Limbs]uint64
 	var borrow uint64
-	t[0], borrow = sbb(modulus[0], a[0], 0)
-	t[1], borrow = sbb(modulus[1], a[1], borrow)
-	t[2], borrow = sbb(modulus[2], a[2], borrow)
-	t[3], borrow = sbb(modulus[3], a[3], borrow)
-	t[4], borrow = sbb(modulus[4], a[4], borrow)
-	t[5], _ = sbb(modulus[5], a[5], borrow)
+	t[0], borrow = sbb(fpModulusLimbs[0], a[0], 0)
+	t[1], borrow = sbb(fpModulusLimbs[1], a[1], borrow)
+	t[2], borrow = sbb(fpModulusLimbs[2], a[2], borrow)
+	t[3], borrow = sbb(fpModulusLimbs[3], a[3], borrow)
+	t[4], borrow = sbb(fpModulusLimbs[4], a[4], borrow)
+	t[5], _ = sbb(fpModulusLimbs[5], a[5], borrow)
 
 	// t could be `modulus` if `arg`=0. Set mask=0 if self=0
 	// and 0xff..ff if `arg`!=0
@@ -385,7 +384,7 @@ func (f *Fp) Add(arg1, arg2 *Fp) *Fp {
 
 	// Subtract the modulus to ensure the value
 	// is smaller.
-	return f.Sub(&t, &modulus)
+	return f.Sub(&t, &fpModulusLimbs)
 }
 
 // Sub performs modular subtraction.
@@ -400,12 +399,12 @@ func (f *Fp) Sub(arg1, arg2 *Fp) *Fp {
 	// If underflow occurred on the final limb, borrow 0xff...ff, otherwise
 	// borrow = 0x00...00. Conditionally mask to add the modulus
 	borrow = -borrow
-	d0, carry := adc(d0, modulus[0]&borrow, 0)
-	d1, carry = adc(d1, modulus[1]&borrow, carry)
-	d2, carry = adc(d2, modulus[2]&borrow, carry)
-	d3, carry = adc(d3, modulus[3]&borrow, carry)
-	d4, carry = adc(d4, modulus[4]&borrow, carry)
-	d5, _ = adc(d5, modulus[5]&borrow, carry)
+	d0, carry := adc(d0, fpModulusLimbs[0]&borrow, 0)
+	d1, carry = adc(d1, fpModulusLimbs[1]&borrow, carry)
+	d2, carry = adc(d2, fpModulusLimbs[2]&borrow, carry)
+	d3, carry = adc(d3, fpModulusLimbs[3]&borrow, carry)
+	d4, carry = adc(d4, fpModulusLimbs[4]&borrow, carry)
+	d5, _ = adc(d5, fpModulusLimbs[5]&borrow, carry)
 
 	f[0] = d0
 	f[1] = d1
@@ -469,12 +468,12 @@ func (f *Fp) SetBytes(arg *[FieldBytes]byte) (*Fp, int) {
 	t[5] = binary.LittleEndian.Uint64(arg[40:])
 
 	// Try to subtract the modulus
-	_, borrow = sbb(t[0], modulus[0], 0)
-	_, borrow = sbb(t[1], modulus[1], borrow)
-	_, borrow = sbb(t[2], modulus[2], borrow)
-	_, borrow = sbb(t[3], modulus[3], borrow)
-	_, borrow = sbb(t[4], modulus[4], borrow)
-	_, borrow = sbb(t[5], modulus[5], borrow)
+	_, borrow = sbb(t[0], fpModulusLimbs[0], 0)
+	_, borrow = sbb(t[1], fpModulusLimbs[1], borrow)
+	_, borrow = sbb(t[2], fpModulusLimbs[2], borrow)
+	_, borrow = sbb(t[3], fpModulusLimbs[3], borrow)
+	_, borrow = sbb(t[4], fpModulusLimbs[4], borrow)
+	_, borrow = sbb(t[5], fpModulusLimbs[5], borrow)
 
 	// If the element is smaller than modulus then the
 	// subtraction will underflow, producing a borrow value
@@ -521,12 +520,12 @@ func (f *Fp) SetBytesWide(a *[WideFieldBytes]byte) *Fp {
 	return f.Add(d0, d1)
 }
 
-// SetBigInt initialises an element from big.Int
+// SetNat initialises an element from saferith.Nat
 // The value is reduced by the modulus.
-func (f *Fp) SetBigInt(bi *big.Int) *Fp {
+func (f *Fp) SetNat(bi *saferith.Nat) *Fp {
 	var buffer [FieldBytes]byte
-	t := new(big.Int).Set(bi)
-	t.Mod(t, biModulus)
+	t := new(saferith.Nat).SetNat(bi)
+	t.Mod(t, fpModulus)
 	t.FillBytes(buffer[:])
 	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = f.SetBytes(&buffer)
@@ -575,10 +574,10 @@ func (f *Fp) Bytes() [FieldBytes]byte {
 	return out
 }
 
-// BigInt converts this element into the big.Int struct.
-func (f *Fp) BigInt() *big.Int {
+// Nat converts this element into the saferith.Nat struct.
+func (f *Fp) Nat() *saferith.Nat {
 	buffer := f.Bytes()
-	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.
@@ -640,58 +639,58 @@ func (f *Fp) montReduce(r *[2 * Limbs]uint64) *Fp {
 	var rr Fp
 
 	k = r[0] * inv
-	_, carry = mac(r[0], k, modulus[0], 0)
-	r1, carry = mac(r[1], k, modulus[1], carry)
-	r2, carry = mac(r[2], k, modulus[2], carry)
-	r3, carry = mac(r[3], k, modulus[3], carry)
-	r4, carry = mac(r[4], k, modulus[4], carry)
-	r5, carry = mac(r[5], k, modulus[5], carry)
+	_, carry = mac(r[0], k, fpModulusLimbs[0], 0)
+	r1, carry = mac(r[1], k, fpModulusLimbs[1], carry)
+	r2, carry = mac(r[2], k, fpModulusLimbs[2], carry)
+	r3, carry = mac(r[3], k, fpModulusLimbs[3], carry)
+	r4, carry = mac(r[4], k, fpModulusLimbs[4], carry)
+	r5, carry = mac(r[5], k, fpModulusLimbs[5], carry)
 	r6, r7 = adc(r[6], 0, carry)
 
 	k = r1 * inv
-	_, carry = mac(r1, k, modulus[0], 0)
-	r2, carry = mac(r2, k, modulus[1], carry)
-	r3, carry = mac(r3, k, modulus[2], carry)
-	r4, carry = mac(r4, k, modulus[3], carry)
-	r5, carry = mac(r5, k, modulus[4], carry)
-	r6, carry = mac(r6, k, modulus[5], carry)
+	_, carry = mac(r1, k, fpModulusLimbs[0], 0)
+	r2, carry = mac(r2, k, fpModulusLimbs[1], carry)
+	r3, carry = mac(r3, k, fpModulusLimbs[2], carry)
+	r4, carry = mac(r4, k, fpModulusLimbs[3], carry)
+	r5, carry = mac(r5, k, fpModulusLimbs[4], carry)
+	r6, carry = mac(r6, k, fpModulusLimbs[5], carry)
 	r7, r8 = adc(r7, r[7], carry)
 
 	k = r2 * inv
-	_, carry = mac(r2, k, modulus[0], 0)
-	r3, carry = mac(r3, k, modulus[1], carry)
-	r4, carry = mac(r4, k, modulus[2], carry)
-	r5, carry = mac(r5, k, modulus[3], carry)
-	r6, carry = mac(r6, k, modulus[4], carry)
-	r7, carry = mac(r7, k, modulus[5], carry)
+	_, carry = mac(r2, k, fpModulusLimbs[0], 0)
+	r3, carry = mac(r3, k, fpModulusLimbs[1], carry)
+	r4, carry = mac(r4, k, fpModulusLimbs[2], carry)
+	r5, carry = mac(r5, k, fpModulusLimbs[3], carry)
+	r6, carry = mac(r6, k, fpModulusLimbs[4], carry)
+	r7, carry = mac(r7, k, fpModulusLimbs[5], carry)
 	r8, r9 = adc(r8, r[8], carry)
 
 	k = r3 * inv
-	_, carry = mac(r3, k, modulus[0], 0)
-	r4, carry = mac(r4, k, modulus[1], carry)
-	r5, carry = mac(r5, k, modulus[2], carry)
-	r6, carry = mac(r6, k, modulus[3], carry)
-	r7, carry = mac(r7, k, modulus[4], carry)
-	r8, carry = mac(r8, k, modulus[5], carry)
+	_, carry = mac(r3, k, fpModulusLimbs[0], 0)
+	r4, carry = mac(r4, k, fpModulusLimbs[1], carry)
+	r5, carry = mac(r5, k, fpModulusLimbs[2], carry)
+	r6, carry = mac(r6, k, fpModulusLimbs[3], carry)
+	r7, carry = mac(r7, k, fpModulusLimbs[4], carry)
+	r8, carry = mac(r8, k, fpModulusLimbs[5], carry)
 	r9, r10 = adc(r9, r[9], carry)
 
 	k = r4 * inv
-	_, carry = mac(r4, k, modulus[0], 0)
-	r5, carry = mac(r5, k, modulus[1], carry)
-	r6, carry = mac(r6, k, modulus[2], carry)
-	r7, carry = mac(r7, k, modulus[3], carry)
-	r8, carry = mac(r8, k, modulus[4], carry)
-	r9, carry = mac(r9, k, modulus[5], carry)
+	_, carry = mac(r4, k, fpModulusLimbs[0], 0)
+	r5, carry = mac(r5, k, fpModulusLimbs[1], carry)
+	r6, carry = mac(r6, k, fpModulusLimbs[2], carry)
+	r7, carry = mac(r7, k, fpModulusLimbs[3], carry)
+	r8, carry = mac(r8, k, fpModulusLimbs[4], carry)
+	r9, carry = mac(r9, k, fpModulusLimbs[5], carry)
 	r10, r11 = adc(r10, r[10], carry)
 
 	k = r5 * inv
-	_, carry = mac(r5, k, modulus[0], 0)
-	rr[0], carry = mac(r6, k, modulus[1], carry)
-	rr[1], carry = mac(r7, k, modulus[2], carry)
-	rr[2], carry = mac(r8, k, modulus[3], carry)
-	rr[3], carry = mac(r9, k, modulus[4], carry)
-	rr[4], carry = mac(r10, k, modulus[5], carry)
+	_, carry = mac(r5, k, fpModulusLimbs[0], 0)
+	rr[0], carry = mac(r6, k, fpModulusLimbs[1], carry)
+	rr[1], carry = mac(r7, k, fpModulusLimbs[2], carry)
+	rr[2], carry = mac(r8, k, fpModulusLimbs[3], carry)
+	rr[3], carry = mac(r9, k, fpModulusLimbs[4], carry)
+	rr[4], carry = mac(r10, k, fpModulusLimbs[5], carry)
 	rr[5], _ = adc(r11, r[11], carry)
 
-	return f.Sub(&rr, &modulus)
+	return f.Sub(&rr, &fpModulusLimbs)
 }

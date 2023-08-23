@@ -8,7 +8,9 @@ package fp
 
 import (
 	"encoding/binary"
-	"math/big"
+	"strings"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -31,16 +33,11 @@ var generator = &Fp{0xa1a55e68ffffffed, 0x74c2a54b4f4982f3, 0xfffffffffffffffd, 
 
 var s = 32
 
-// Modulus representation
+// ModulusLimbs representation
 // p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001.
-var Modulus = &Fp{0x992d30ed00000001, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000}
+var ModulusLimbs = &Fp{0x992d30ed00000001, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000}
 
-var BiModulus = new(big.Int).SetBytes([]byte{
-	0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x22, 0x46, 0x98, 0xfc, 0x09, 0x4c, 0xf9, 0x1b,
-	0x99, 0x2d, 0x30, 0xed, 0x00, 0x00, 0x00, 0x01,
-})
+var Modulus, _ = saferith.ModulusFromHex(strings.ToUpper("40000000000000000000000000000000224698fc094cf91b992d30ed00000001"))
 
 // Cmp returns -1 if fp < rhs
 // 0 if fp == rhs
@@ -170,7 +167,7 @@ func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 		binary.LittleEndian.Uint64(input[16:24]),
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
-	if d0.Cmp(Modulus) != -1 {
+	if d0.Cmp(ModulusLimbs) != -1 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	fiat_pasta_fp_from_bytes((*[4]uint64)(fp), input)
@@ -178,12 +175,12 @@ func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 	return fp, nil
 }
 
-// SetBigInt initialises an element from big.Int
+// SetNat initialises an element from saferith.Nat
 // The value is reduced by the modulus.
-func (fp *Fp) SetBigInt(bi *big.Int) *Fp {
+func (fp *Fp) SetNat(bi *saferith.Nat) *Fp {
 	var buffer [32]byte
-	r := new(big.Int).Set(bi)
-	r.Mod(r, BiModulus)
+	r := new(saferith.Nat).SetNat(bi)
+	r.Mod(r, Modulus)
 	r.FillBytes(buffer[:])
 	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = fp.SetBytes(&buffer)
@@ -206,10 +203,10 @@ func (fp *Fp) Bytes() [32]byte {
 	return output
 }
 
-// BigInt converts this element into the big.Int struct.
-func (fp *Fp) BigInt() *big.Int {
+// Nat converts this element into the saferith.Nat struct.
+func (fp *Fp) Nat() *saferith.Nat {
 	buffer := fp.Bytes()
-	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Double this element.

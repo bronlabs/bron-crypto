@@ -2,7 +2,8 @@ package pallas
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -12,196 +13,201 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.FieldProfile) = (*FieldProfile)(nil)
+var _ curves.FieldProfile = (*FieldProfilePallas)(nil)
 
-type FieldProfile struct{}
+type FieldProfilePallas struct{}
 
-func (FieldProfile) Order() *big.Int {
-	return fp.BiModulus
+func (*FieldProfilePallas) Curve() curves.Curve {
+	return &pallasInstance
 }
 
-func (p *FieldProfile) Characteristic() *big.Int {
-	return p.Order()
+func (*FieldProfilePallas) Order() *saferith.Modulus {
+	return fp.Modulus
 }
 
-func (FieldProfile) ExtensionDegree() *big.Int {
-	return big.NewInt(1)
+func (p *FieldProfilePallas) Characteristic() *saferith.Nat {
+	return p.Order().Nat()
 }
 
-var _ (curves.FieldElement) = (*FieldElement)(nil)
+func (*FieldProfilePallas) ExtensionDegree() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(1)
+}
 
-type FieldElement struct {
+var _ curves.FieldElement = (*FieldElementPallas)(nil)
+
+type FieldElementPallas struct {
 	v *fp.Fp
 
 	_ helper_types.Incomparable
 }
 
-func (e FieldElement) Value() curves.FieldValue {
+func (e *FieldElementPallas) Value() curves.FieldValue {
 	v := e.v.ToRaw()
 	return v[:]
 }
 
-func (FieldElement) Modulus() *big.Int {
-	return fp.BiModulus
+func (*FieldElementPallas) Modulus() *saferith.Modulus {
+	return fp.Modulus
 }
 
-func (e FieldElement) Clone() curves.FieldElement {
-	return FieldElement{
+func (e *FieldElementPallas) Clone() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).Set(e.v),
 	}
 }
 
-func (e FieldElement) Cmp(rhs curves.FieldElement) int {
-	rhse, ok := rhs.(FieldElement)
+func (e *FieldElementPallas) Cmp(rhs curves.FieldElement) int {
+	rhse, ok := rhs.(*FieldElementPallas)
 	if !ok {
 		return -2
 	}
 	return e.v.Cmp(rhse.v)
 }
 
-func (FieldElement) Profile() curves.FieldProfile {
-	return &FieldProfile{}
+func (*FieldElementPallas) Profile() curves.FieldProfile {
+	return &FieldProfilePallas{}
 }
 
-// IMPLEMENT
-func (FieldElement) Hash(x []byte) curves.FieldElement {
+// Hash TODO: implement
+func (*FieldElementPallas) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e FieldElement) New(value int) curves.FieldElement {
-	return &FieldElement{
-		v: e.v.SetUint64(uint64(value)),
+func (e *FieldElementPallas) New(value uint64) curves.FieldElement {
+	return &FieldElementPallas{
+		v: e.v.SetUint64(value),
 	}
 }
 
-func (FieldElement) Random(prng io.Reader) curves.FieldElement {
+func (*FieldElementPallas) Random(prng io.Reader) curves.FieldElement {
 	return nil
 }
 
-func (FieldElement) Zero() curves.FieldElement {
-	return &FieldElement{
+func (*FieldElementPallas) Zero() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).SetZero(),
 	}
 }
 
-func (FieldElement) One() curves.FieldElement {
-	return &FieldElement{
+func (*FieldElementPallas) One() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).SetOne(),
 	}
 }
 
-func (e FieldElement) IsZero() bool {
+func (e *FieldElementPallas) IsZero() bool {
 	return e.v.IsZero()
 }
 
-func (e FieldElement) IsOne() bool {
+func (e *FieldElementPallas) IsOne() bool {
 	return e.v.IsOne()
 }
 
-func (e FieldElement) IsOdd() bool {
+func (e *FieldElementPallas) IsOdd() bool {
 	return e.v.IsOdd()
 }
 
-func (e FieldElement) IsEven() bool {
+func (e *FieldElementPallas) IsEven() bool {
 	return !e.v.IsOdd()
 }
 
-func (e FieldElement) Square() curves.FieldElement {
-	return &FieldElement{
+func (e *FieldElementPallas) Square() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).Square(e.v),
 	}
 }
 
-func (e FieldElement) Double() curves.FieldElement {
-	return &FieldElement{
+func (e *FieldElementPallas) Double() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).Double(e.v),
 	}
 }
 
-func (e FieldElement) Sqrt() (curves.FieldElement, bool) {
+func (e *FieldElementPallas) Sqrt() (curves.FieldElement, bool) {
 	result, wasSquare := new(fp.Fp).Sqrt(e.v)
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: result,
 	}, wasSquare
 }
 
-func (e FieldElement) Cube() curves.FieldElement {
+func (e *FieldElementPallas) Cube() curves.FieldElement {
 	return e.Square().Mul(e)
 }
 
-func (e FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementPallas) Add(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementPallas)
 	if !ok {
 		panic("not a pallas Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: new(fp.Fp).Add(e.v, n.v),
 	}
 }
 
-func (e FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementPallas) Sub(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementPallas)
 	if !ok {
 		panic("not a pallas Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: new(fp.Fp).Sub(e.v, n.v),
 	}
 }
 
-func (e FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementPallas) Mul(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementPallas)
 	if !ok {
 		panic("not a pallas Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: new(fp.Fp).Mul(e.v, n.v),
 	}
 }
 
-func (e FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
+func (e *FieldElementPallas) MulAdd(y, z curves.FieldElement) curves.FieldElement {
 	return e.Mul(y).Add(z)
 }
 
-func (e FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
-	r, ok := rhs.(*FieldElement)
+func (e *FieldElementPallas) Div(rhs curves.FieldElement) curves.FieldElement {
+	r, ok := rhs.(*FieldElementPallas)
 	if ok {
 		v, wasInverted := new(fp.Fp).Invert(r.v)
 		if !wasInverted {
 			panic("cannot invert rhs")
 		}
 		v.Mul(v, e.v)
-		return &FieldElement{v: v}
+		return &FieldElementPallas{v: v}
 	} else {
 		panic("rhs is not pallas base field element")
 	}
 }
 
-func (e FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementPallas) Exp(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementPallas)
 	if !ok {
 		panic("not a pallas base field element")
 	}
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: e.v.Exp(e.v, n.v),
 	}
 }
 
-func (e FieldElement) Neg() curves.FieldElement {
-	return &FieldElement{
+func (e *FieldElementPallas) Neg() curves.FieldElement {
+	return &FieldElementPallas{
 		v: new(fp.Fp).Neg(e.v),
 	}
 }
 
-func (e FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
-	return e.SetBytes(value.Bytes())
+func (e *FieldElementPallas) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
+	e.v.SetNat(value)
+	return e, nil
 }
 
-func (e FieldElement) BigInt() *big.Int {
-	return e.v.BigInt()
+func (e *FieldElementPallas) Nat() *saferith.Nat {
+	return e.v.Nat()
 }
 
-func (e FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
+func (e *FieldElementPallas) SetBytes(input []byte) (curves.FieldElement, error) {
 	if len(input) != impl.FieldBytes {
 		return nil, errs.NewInvalidLength("input length is not 32 bytes")
 	}
@@ -211,29 +217,29 @@ func (e FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set byte")
 	}
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: result,
 	}, nil
 }
 
-func (e FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
+func (e *FieldElementPallas) SetBytesWide(input []byte) (curves.FieldElement, error) {
 	if len(input) != impl.WideFieldBytes {
 		return nil, errs.NewInvalidLength("input length is not 64 bytes")
 	}
 	var out [64]byte
 	copy(out[:], bitstring.ReverseBytes(input))
 	result := e.v.SetBytesWide(&out)
-	return &FieldElement{
+	return &FieldElementPallas{
 		v: result,
 	}, nil
 }
 
-func (e FieldElement) Bytes() []byte {
+func (e *FieldElementPallas) Bytes() []byte {
 	v := e.v.Bytes()
 	return v[:]
 }
 
-func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
+func (e *FieldElementPallas) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
 	if sc.CurveName() != Name {
 		return nil, errs.NewInvalidType("scalar is not a pallas scalar")
 	}
@@ -244,7 +250,7 @@ func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) 
 	return result, nil
 }
 
-func (e FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
+func (e *FieldElementPallas) Scalar(curve curves.Curve) (curves.Scalar, error) {
 	results, err := curve.Scalar().SetBytes(e.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert field element to scalar")

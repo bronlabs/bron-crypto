@@ -133,7 +133,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	}
 
 	if cipherSuite.Curve.Name() == edwards25519.Name {
-		edwardsPoint, ok := publicKey.Y.(*edwards25519.Point)
+		edwardsPoint, ok := publicKey.Y.(*edwards25519.PointEd25519)
 		if !ok {
 			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}

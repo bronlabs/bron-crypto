@@ -6,6 +6,7 @@ require (
 	filippo.io/edwards25519 v1.0.0
 	github.com/btcsuite/btcd v0.22.3
 	github.com/bwesterb/go-ristretto v1.2.3
+	github.com/cronokirby/saferith v0.33.0
 	github.com/google/gofuzz v1.2.0
 	github.com/mimoo/StrobeGo v0.0.0-20181016162300-f8f6d4d2b643
 	github.com/pkg/errors v0.9.1
@@ -17,6 +18,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

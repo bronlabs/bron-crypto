@@ -137,8 +137,8 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
 		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(k))
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(p.MySharingId)).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk
@@ -192,8 +192,8 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 			jToKs := make([]curves.Scalar, cohort.Protocol.Threshold)
 			// TODO: add simultaneous scalar exp
 			for k := 0; k < cohort.Protocol.Threshold; k++ {
-				exp := cohort.CipherSuite.Curve.Scalar().New(k)
-				jToK := cohort.CipherSuite.Curve.Scalar().New(j).Exp(exp)
+				exp := cohort.CipherSuite.Curve.Scalar().New(uint64(k))
+				jToK := cohort.CipherSuite.Curve.Scalar().New(uint64(j)).Exp(exp)
 				jToKs[k] = jToK
 			}
 			jkC_lk, err := cohort.CipherSuite.Curve.MultiScalarMult(jToKs, C_l)

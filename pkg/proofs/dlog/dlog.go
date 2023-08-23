@@ -11,16 +11,13 @@ type Statement = curves.Point
 // StatementSubgroupMembershipCheck checks whether the statement is in the prime subgroup, only if the basepoint
 // is in the prime subgroup.
 func StatementSubgroupMembershipCheck(basePoint curves.Point, statement Statement) error {
-	curve, err := basePoint.Curve()
-	if err != nil {
-		return errs.WrapInvalidCurve(err, "couldn't extract curve from basepoint")
-	}
+	curve := basePoint.Curve()
 	if curve.Name() == edwards25519.Name {
-		edBasePoint, ok := basePoint.(*edwards25519.Point)
+		edBasePoint, ok := basePoint.(*edwards25519.PointEd25519)
 		if !ok {
 			return errs.NewInvalidType("basepoint is not an edwards point. this should not happen.")
 		}
-		edStatement, ok := statement.(*edwards25519.Point)
+		edStatement, ok := statement.(*edwards25519.PointEd25519)
 		if !ok {
 			return errs.NewInvalidCurve("the statement doesn't belong to edwards25519 but the basepoint does")
 		}

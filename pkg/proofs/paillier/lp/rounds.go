@@ -1,7 +1,7 @@
 package lp
 
 import (
-	"math/big"
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -29,7 +29,7 @@ type Round3Output struct {
 }
 
 type Round4Output struct {
-	YPrime []*big.Int
+	YPrime []*saferith.Nat
 
 	_ helper_types.Incomparable
 }
@@ -39,10 +39,10 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
 	}
 
-	verifier.state.y = make([]*big.Int, verifier.k)
+	verifier.state.y = make([]*saferith.Nat, verifier.k)
 	verifier.state.x = make([]paillier.CipherText, verifier.k)
 
-	zero := big.NewInt(0)
+	zero := new(saferith.Nat).SetUint64(0)
 	nthRootProverRound1Outputs := make([]*nthroot.Round1Output, verifier.k)
 	verifier.state.rootProvers = make([]*nthroot.Prover, verifier.k)
 	rootTranscript := verifier.transcript.Clone()
@@ -54,7 +54,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		}
 
 		// V proves the knowledge of y, the Nth root of x,
-		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N, verifier.state.x[i], verifier.state.y[i], verifier.sessionId, rootTranscript, verifier.prng)
+		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N.Nat(), verifier.state.x[i], verifier.state.y[i], verifier.sessionId, rootTranscript, verifier.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root prover")
 		}
@@ -83,7 +83,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	rootTranscript := prover.transcript.Clone()
 	for i := 0; i < prover.k; i++ {
 		// round 2 of proving the knowledge of y
-		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N, input.X[i], prover.sessionId, rootTranscript, prover.prng)
+		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N.Nat(), input.X[i], prover.sessionId, rootTranscript, prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 		}
@@ -133,12 +133,12 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 
 	// V proved the knowledge of Nth root x
-	yPrime := make([]*big.Int, prover.k)
+	yPrime := make([]*saferith.Nat, prover.k)
 	for i := 0; i < prover.k; i++ {
 		// P calculates a y', the Nth root of x
 		// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
-		m := new(big.Int).ModInverse(prover.paillierSecretKey.N, prover.paillierSecretKey.Lambda)
-		yPrime[i] = new(big.Int).Exp(prover.state.x[i], m, prover.paillierSecretKey.N)
+		m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N.Nat(), saferith.ModulusFromNat(prover.paillierSecretKey.Lambda))
+		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i], m, prover.paillierSecretKey.N)
 	}
 
 	// P returns a y'
@@ -154,7 +154,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	for i := 0; i < verifier.k; i++ {
-		if input.YPrime[i].Cmp(verifier.state.y[i]) != 0 {
+		if input.YPrime[i].Eq(verifier.state.y[i]) == 0 {
 			// V rejects if y != y'
 			return errs.NewVerificationFailed("failed to verify Paillier public key")
 		}

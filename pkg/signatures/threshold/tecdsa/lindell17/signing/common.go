@@ -1,11 +1,12 @@
 package signing
 
 import (
-	crand "crypto/rand"
 	"hash"
 	"io"
-	"math/big"
 
+	"github.com/cronokirby/saferith"
+
+	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
@@ -29,31 +30,31 @@ func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, 
 }
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
-func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *big.Int, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
+func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
 	k2Inv, err := k2.Invert()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot invert k2")
 	}
 
 	// c1 = Enc(ρq + k2^(-1) * m')
-	c1Plain := k2Inv.Mul(mPrime).BigInt()
-	qSquared := new(big.Int).Mul(q, q)
-	rho, err := crand.Int(prng, qSquared)
+	c1Plain := k2Inv.Mul(mPrime).Nat()
+	qSquared := new(saferith.Nat).Mul(q, q, -1)
+	rho, err := core.RandomNat(prng, new(saferith.Nat).SetUint64(0), qSquared)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random int")
 	}
-	rhoMulQ := new(big.Int).Mul(rho, q)
-	c1, _, err := pk.Encrypt(new(big.Int).Add(rhoMulQ, c1Plain))
+	rhoMulQ := new(saferith.Nat).ModMul(rho, q, saferith.ModulusFromNat(qSquared))
+	c1, _, err := pk.Encrypt(new(saferith.Nat).ModAdd(rhoMulQ, c1Plain, saferith.ModulusFromNat(qSquared)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c1")
 	}
 
 	// c2 = Enc(k2^(-1) * r * (cKey * λ1 + share * λ2))
-	c2Left, err := pk.Mul(k2Inv.Mul(r).Mul(lambda1).BigInt(), cKey)
+	c2Left, err := pk.Mul(k2Inv.Mul(r).Mul(lambda1).Nat(), cKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic multiplication failed")
 	}
-	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(additiveShare).BigInt())
+	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(additiveShare).Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c2")
 	}
@@ -80,7 +81,7 @@ func MessageToScalar(hashFunc func() hash.Hash, curve curves.Curve, message []by
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
 	}
-	mPrime, err := curve.Scalar().SetBigInt(mPrimeInt)
+	mPrime, err := curve.Scalar().SetNat(mPrimeInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash to scalar")
 	}

@@ -257,7 +257,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[helper_types.IdentityHash]*
 	v_i := ic.state.sk_i.Mul(phiPsi).Add(cVdV)
 
 	// step 3.6
-	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBigInt(R.X().BigInt())
+	rx, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetNat(R.X().Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
@@ -290,7 +290,7 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	}
 
 	// step 4.2
-	rx, err := curve.Scalar().SetBigInt(R.X().BigInt())
+	rx, err := curve.Scalar().SetNat(R.X().Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}

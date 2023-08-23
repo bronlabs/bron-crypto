@@ -206,13 +206,13 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}
-	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.BigInt())
+	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.Nat())
 
 	// 3.iv. calculate ckey' = Enc(x'; r') and ckey'' = Enc(x''; r'')
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
 	}
-	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(p.state.myXDoublePrime.BigInt())
+	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(p.state.myXDoublePrime.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x''")
 	}
@@ -491,10 +491,7 @@ func openCommitment(commitment commitments.Commitment, witness commitments.Witne
 func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
-	curve, err := bigQ.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
-	}
+	curve := bigQ.Curve()
 	generator := curve.Generator()
 
 	prover, err := dlog.NewProver(generator, sid, transcript, prng)
@@ -516,10 +513,7 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
-	curve, err := bigQ.Curve()
-	if err != nil {
-		return errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
-	}
+	curve := bigQ.Curve()
 	generator := curve.Generator()
 
 	return dlog.Verify(generator, bigQ, proof, sid)

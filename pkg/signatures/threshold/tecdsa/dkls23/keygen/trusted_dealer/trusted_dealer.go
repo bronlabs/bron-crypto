@@ -3,9 +3,9 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
-	"io"
-
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/cronokirby/saferith"
+	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -37,11 +37,14 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
-	privateKey, err := curve.Scalar().SetBigInt(ecdsaPrivateKey.D)
+	privateKey, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.Profile().SubGroupOrder().BitLen()))
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go private key bytes to a knox scalar")
 	}
-	publicKey, err := curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.X, curve.Profile().Field().Order().BitLen()),
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.Y, curve.Profile().Field().Order().BitLen()),
+	)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a knox point")
 	}

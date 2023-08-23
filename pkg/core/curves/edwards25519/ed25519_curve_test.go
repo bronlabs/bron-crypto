@@ -3,10 +3,10 @@ package edwards25519_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
-	"math/big"
 	"testing"
 
 	filippo "filippo.io/edwards25519"
+	"github.com/cronokirby/saferith"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -19,14 +19,14 @@ import (
 func TestScalarRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
 	sc := ed25519.Scalar().Random(test_utils.TestRng())
-	s, ok := sc.(*edwards25519.Scalar)
+	s, ok := sc.(*edwards25519.ScalarEd25519)
 	require.True(t, ok)
 	expected := toRSc("feaa6a9d6dda758da6145f7d411a3af9f8a120698e0093faa97085b384c3f00e")
 	require.Equal(t, s.Value.Equal(expected), 1)
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
 		sc := ed25519.Scalar().Random(crand.Reader)
-		_, ok := sc.(*edwards25519.Scalar)
+		_, ok := sc.(*edwards25519.ScalarEd25519)
 		require.True(t, ok)
 		require.True(t, !sc.IsZero())
 	}
@@ -36,7 +36,7 @@ func TestScalarHash(t *testing.T) {
 	var b [32]byte
 	ed25519 := edwards25519.New()
 	sc := ed25519.Scalar().Hash(b[:])
-	s, ok := sc.(*edwards25519.Scalar)
+	s, ok := sc.(*edwards25519.ScalarEd25519)
 	require.True(t, ok)
 	expected := toRSc("9d574494a02d72f5ff311cf0fb844d0fdd6103b17255274e029bdeed7207d409")
 	require.Equal(t, s.Value.Equal(expected), 1)
@@ -62,9 +62,9 @@ func TestScalarNew(t *testing.T) {
 	require.True(t, three.IsOdd())
 	four := ed25519.Scalar().New(4)
 	require.True(t, four.IsEven())
-	neg1 := ed25519.Scalar().New(-1)
+	neg1 := ed25519.Scalar().New(1).Neg()
 	require.True(t, neg1.IsEven())
-	neg2 := ed25519.Scalar().New(-2)
+	neg2 := ed25519.Scalar().New(2).Neg()
 	require.True(t, neg2.IsOdd())
 }
 
@@ -92,10 +92,10 @@ func TestScalarDouble(t *testing.T) {
 func TestScalarNeg(t *testing.T) {
 	ed25519 := edwards25519.New()
 	one := ed25519.Scalar().One()
-	neg1 := ed25519.Scalar().New(-1)
+	neg1 := ed25519.Scalar().New(1).Neg()
 	require.Equal(t, one.Neg().Cmp(neg1), 0)
 	lotsOfThrees := ed25519.Scalar().New(333333)
-	expected := ed25519.Scalar().New(-333333)
+	expected := ed25519.Scalar().New(333333).Neg()
 	require.Equal(t, lotsOfThrees.Neg().Cmp(expected), 0)
 }
 
@@ -103,7 +103,7 @@ func TestScalarInvert(t *testing.T) {
 	ed25519 := edwards25519.New()
 	nine := ed25519.Scalar().New(9)
 	actual, _ := nine.Invert()
-	sa, _ := actual.(*edwards25519.Scalar)
+	sa, _ := actual.(*edwards25519.ScalarEd25519)
 	expected := toRSc("c3d9c4db0516043013b1e1ce8637dc92e3388ee3388ee3388ee3388ee3388e03")
 	require.Equal(t, sa.Value.Equal(expected), 1)
 }
@@ -112,7 +112,7 @@ func TestScalarSqrt(t *testing.T) {
 	ed25519 := edwards25519.New()
 	nine := ed25519.Scalar().New(9)
 	actual, err := nine.Sqrt()
-	sa, _ := actual.(*edwards25519.Scalar)
+	sa, _ := actual.(*edwards25519.ScalarEd25519)
 	expected := toRSc("03")
 	require.NoError(t, err)
 	require.Equal(t, sa.Value.Equal(expected), 1)
@@ -127,7 +127,7 @@ func TestScalarAdd(t *testing.T) {
 	expected := ed25519.Scalar().New(15)
 	require.Equal(t, expected.Cmp(fifteen), 0)
 
-	upper := ed25519.Scalar().New(-3)
+	upper := ed25519.Scalar().New(3).Neg()
 	actual := upper.Add(nine)
 	require.NotNil(t, actual)
 	require.Equal(t, actual.Cmp(six), 0)
@@ -137,7 +137,7 @@ func TestScalarSub(t *testing.T) {
 	ed25519 := edwards25519.New()
 	nine := ed25519.Scalar().New(9)
 	six := ed25519.Scalar().New(6)
-	expected := ed25519.Scalar().New(-3)
+	expected := ed25519.Scalar().New(3).Neg()
 
 	actual := six.Sub(nine)
 	require.Equal(t, expected.Cmp(actual), 0)
@@ -153,7 +153,7 @@ func TestScalarMul(t *testing.T) {
 	actual := nine.Mul(six)
 	require.Equal(t, actual.Cmp(ed25519.Scalar().New(54)), 0)
 
-	upper := ed25519.Scalar().New(-1)
+	upper := ed25519.Scalar().New(1).Neg()
 	require.Equal(t, upper.Mul(upper).Cmp(ed25519.Scalar().New(1)), 0)
 }
 
@@ -212,22 +212,22 @@ func TestScalarNil(t *testing.T) {
 	require.Panics(t, func() { one.Div(nil) })
 	require.Panics(t, func() { ed25519.Scalar().Random(nil) })
 	require.Panics(t, func() { one.Cmp(nil) })
-	_, err := ed25519.Scalar().SetBigInt(nil)
+	_, err := ed25519.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
 func TestPointRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
 	sc := ed25519.Point().Random(test_utils.TestRng())
-	s, ok := sc.(*edwards25519.Point)
+	s, ok := sc.(*edwards25519.PointEd25519)
 	require.True(t, ok)
 	expected, err := toRPt("6011540c6231421a70ced5f577432531f198d318facfaad6e52cc42fba6e6fc5")
 	require.NoError(t, err)
-	require.True(t, s.Equal(&edwards25519.Point{Value: expected.Value}))
+	require.True(t, s.Equal(&edwards25519.PointEd25519{Value: expected.Value}))
 	// Try 25 random values
 	for i := 0; i < 25; i++ {
 		sc := ed25519.Point().Random(crand.Reader)
-		_, ok := sc.(*edwards25519.Point)
+		_, ok := sc.(*edwards25519.PointEd25519)
 		require.True(t, ok)
 		require.True(t, !sc.IsIdentity())
 		pBytes := sc.ToAffineCompressed()
@@ -240,11 +240,11 @@ func TestPointHash(t *testing.T) {
 	var b [32]byte
 	ed25519 := edwards25519.New()
 	sc := ed25519.Point().Hash(b[:])
-	s, ok := sc.(*edwards25519.Point)
+	s, ok := sc.(*edwards25519.PointEd25519)
 	require.True(t, ok)
 	expected, err := toRPt("b4d75c3bb03ca644ab6c6d2a955c911003d8cfa719415de93a6b85eeb0c8dd97")
 	require.NoError(t, err)
-	require.True(t, s.Equal(&edwards25519.Point{Value: expected.Value}))
+	require.True(t, s.Equal(&edwards25519.PointEd25519{Value: expected.Value}))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -264,28 +264,28 @@ func TestPointIdentity(t *testing.T) {
 func TestPointGenerator(t *testing.T) {
 	ed25519 := edwards25519.New()
 	sc := ed25519.Point().Generator()
-	s, ok := sc.(*edwards25519.Point)
+	s, ok := sc.(*edwards25519.PointEd25519)
 	require.True(t, ok)
 	require.Equal(t, s.ToAffineCompressed(), []byte{0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66})
 }
 
 func TestPointSet(t *testing.T) {
 	ed25519 := edwards25519.New()
-	iden, err := ed25519.Point().Set(big.NewInt(0), big.NewInt(0))
+	identity, err := ed25519.Point().Set(new(saferith.Nat).SetUint64(0), new(saferith.Nat).SetUint64(0))
 	require.NoError(t, err)
-	require.True(t, iden.IsIdentity())
+	require.True(t, identity.IsIdentity())
 	xBytes, _ := hex.DecodeString("1ad5258f602d56c9b2a7259560c72c695cdcd6fd31e2a4c0fe536ecdd3366921")
 	yBytes, _ := hex.DecodeString("5866666666666666666666666666666666666666666666666666666666666666")
-	x := new(big.Int).SetBytes(bitstring.ReverseBytes(xBytes))
-	y := new(big.Int).SetBytes(bitstring.ReverseBytes(yBytes))
+	x := new(saferith.Nat).SetBytes(bitstring.ReverseBytes(xBytes))
+	y := new(saferith.Nat).SetBytes(bitstring.ReverseBytes(yBytes))
 	newPoint, err := ed25519.Point().Set(x, y)
 	require.NoError(t, err)
-	require.NotEqualf(t, iden, newPoint, "after setting valid x and y, the point should NOT be identity point")
+	require.NotEqualf(t, identity, newPoint, "after setting valid x and y, the point should NOT be identity point")
 
-	emptyX := new(big.Int).SetBytes(bitstring.ReverseBytes([]byte{}))
+	emptyX := new(saferith.Nat).SetBytes(bitstring.ReverseBytes([]byte{}))
 	identityPoint, err := ed25519.Point().Set(emptyX, y)
 	require.NoError(t, err)
-	require.Equalf(t, iden, identityPoint, "When x is empty, the point will be identity")
+	require.Equalf(t, identity, identityPoint, "When x is empty, the point will be identity")
 }
 
 func TestPointDouble(t *testing.T) {
@@ -369,22 +369,22 @@ func TestPointNil(t *testing.T) {
 	require.Panics(t, func() { one.Mul(nil) })
 	require.Panics(t, func() { ed25519.Scalar().Random(nil) })
 	require.False(t, one.Equal(nil))
-	_, err := ed25519.Scalar().SetBigInt(nil)
+	_, err := ed25519.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
 func TestPointSumOfProducts(t *testing.T) {
-	lhs := new(edwards25519.Point).Generator().Mul(new(edwards25519.Scalar).New(50))
+	lhs := new(edwards25519.PointEd25519).Generator().Mul(new(edwards25519.ScalarEd25519).New(50))
 	points := make([]curves.Point, 5)
 	for i := range points {
-		points[i] = new(edwards25519.Point).Generator()
+		points[i] = new(edwards25519.PointEd25519).Generator()
 	}
 	scalars := []curves.Scalar{
-		new(edwards25519.Scalar).New(8),
-		new(edwards25519.Scalar).New(9),
-		new(edwards25519.Scalar).New(10),
-		new(edwards25519.Scalar).New(11),
-		new(edwards25519.Scalar).New(12),
+		new(edwards25519.ScalarEd25519).New(8),
+		new(edwards25519.ScalarEd25519).New(9),
+		new(edwards25519.ScalarEd25519).New(10),
+		new(edwards25519.ScalarEd25519).New(11),
+		new(edwards25519.ScalarEd25519).New(12),
 	}
 	curve := edwards25519.New()
 	rhs, err := curve.MultiScalarMult(scalars, points)
@@ -424,18 +424,18 @@ func toRSc(hx string) *filippo.Scalar {
 	return value
 }
 
-func toRPt(hx string) (*edwards25519.Point, error) {
+func toRPt(hx string) (*edwards25519.PointEd25519, error) {
 	e, err := hex.DecodeString(hx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode hex string")
 	}
 	var data [32]byte
 	copy(data[:], e)
-	pt, err := new(edwards25519.Point).FromAffineCompressed(data[:])
+	pt, err := new(edwards25519.PointEd25519).FromAffineCompressed(data[:])
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	point, ok := pt.(*edwards25519.Point)
+	point, ok := pt.(*edwards25519.PointEd25519)
 	if !ok {
 		return nil, errors.New("type casting failure")
 	}

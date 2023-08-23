@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
@@ -11,8 +13,8 @@ import (
 type SafePrimeMocker struct {
 	C                int
 	M                *sync.Mutex
-	SafePrimes       []*big.Int
-	GenSafePrimeOrig func(bits uint) (*big.Int, error)
+	SafePrimes       []*saferith.Nat
+	GenSafePrimeOrig func(bits uint) (*saferith.Nat, error)
 
 	_ helper_types.Incomparable
 }
@@ -53,9 +55,10 @@ func NewSafePrimeMocker() *SafePrimeMocker {
 		"142849390524374431931322383251929960857651462821593981853683452668967152846204199732325594328403064871516551934818280022981337113224333659157669846689019070397012783249765826314168141322212914110262762381270898093714886319502499837436148410370184624296084194133809161386820671378931611470362103974336901908487",
 	}
 
-	safePrimesInt := make([]*big.Int, len(safePrimes))
+	safePrimesInt := make([]*saferith.Nat, len(safePrimes))
 	for i := range safePrimes {
-		safePrimesInt[i], _ = new(big.Int).SetString(safePrimes[i], 10)
+		bigInt, _ := new(big.Int).SetString(safePrimes[i], 10)
+		safePrimesInt[i] = new(saferith.Nat).SetBig(bigInt, bigInt.BitLen())
 	}
 
 	return &SafePrimeMocker{
@@ -68,7 +71,7 @@ func NewSafePrimeMocker() *SafePrimeMocker {
 
 func (m *SafePrimeMocker) Mock() {
 	mBound := m
-	genSafePrimeOrig := func(bits uint) (*big.Int, error) {
+	genSafePrimeOrig := func(bits uint) (*saferith.Nat, error) {
 		if bits == 1024 {
 			mBound.M.Lock()
 			defer mBound.M.Unlock()

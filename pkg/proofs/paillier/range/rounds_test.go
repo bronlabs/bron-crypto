@@ -5,10 +5,10 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"io"
-	"math/big"
 	"strconv"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -23,7 +23,7 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	pk, sk, err := paillier.NewKeys(128)
 	require.NoError(t, err)
-	q := big.NewInt(3_000_000)
+	q := new(saferith.Nat).SetUint64(3_000_000)
 
 	for i := 0; i < 128; i++ {
 		sid := append([]byte("sessionId_"), []byte(strconv.Itoa(i))...)
@@ -46,9 +46,9 @@ func Test_OutOfRange(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	pk, sk, err := paillier.NewKeys(64)
 	require.NoError(t, err)
-	q := big.NewInt(3_000_000)
+	q := new(saferith.Nat).SetUint64(3_000_000)
 
 	for i := 0; i < 128; i++ {
 		sid := append([]byte("LowSessionId_"), []byte(strconv.Itoa(i))...)
@@ -81,31 +81,37 @@ func Test_OutOfRange(t *testing.T) {
 	}
 }
 
-func randomIntInRange(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	x, err := crand.Int(prng, l)
+func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 128)
+	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(l, x), nil
+	x := new(saferith.Nat).SetBig(xInt, 256)
+	return new(saferith.Nat).Add(l, x, 256), nil
 }
 
-func randomIntOutRangeLow(q *big.Int, prng io.Reader) (*big.Int, error) {
+func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	// we should make x < 0 to make this 100% correct but this is good enough
 	// and current Paillier encryption does not support negative numbers
-	l := new(big.Int).Div(q, big.NewInt(4))
-	return crand.Int(prng, l) // x < q/4
-}
-
-func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
-	x, err := crand.Int(prng, q)
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), 128)
+	xInt, err := crand.Int(prng, l.Big()) // x < q/4
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(x, q), nil // x >= q
+	return new(saferith.Nat).SetBig(xInt, 256), nil
 }
 
-func doProof(x *big.Int, xEncrypted paillier.CipherText, r, q *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
+func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+	xInt, err := crand.Int(prng, q.Big())
+	if err != nil {
+		return nil, err
+	}
+	x := new(saferith.Nat).SetBig(xInt, 256)
+	return new(saferith.Nat).Add(x, q, 256), nil // x >= q
+}
+
+func doProof(x *saferith.Nat, xEncrypted paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
 	appLabel := "Range"
 
 	verifierTranscript := hagrid.NewTranscript(appLabel)

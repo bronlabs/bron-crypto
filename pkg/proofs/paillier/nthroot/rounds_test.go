@@ -4,9 +4,9 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"io"
-	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
-func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {
+func doProof(x, y, bigN *saferith.Nat, prng io.Reader) (err error) {
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
 	proverTranscript := hagrid.NewTranscript(appLabel)
@@ -58,16 +58,19 @@ func doProof(x, y, bigN *big.Int, prng io.Reader) (err error) {
 
 func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
-	p, err := crand.Prime(prng, 128)
+	pInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q, err := crand.Prime(prng, 128)
+	p := new(saferith.Nat).SetBig(pInt, 128)
+	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	bigN := new(big.Int).Mul(p, q)
-	bigNSquared := new(big.Int).Mul(bigN, bigN)
+	q := new(saferith.Nat).SetBig(qInt, 128)
+	bigN := new(saferith.Nat).Mul(p, q, 256)
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 512))
 
-	y, err := crand.Int(prng, bigN)
+	yInt, err := crand.Int(prng, bigN.Big())
 	require.NoError(t, err)
-	x := new(big.Int).Exp(y, bigN, bigNSquared)
+	y := new(saferith.Nat).SetBig(yInt, 256)
+	x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 
 	err = doProof(x, y, bigN, prng)
 	require.NoError(t, err)
@@ -75,20 +78,24 @@ func Test_HappyPath(t *testing.T) {
 
 func Test_InvalidRoot(t *testing.T) {
 	prng := crand.Reader
-	p, err := crand.Prime(prng, 128)
+	pInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q, err := crand.Prime(prng, 128)
+	p := new(saferith.Nat).SetBig(pInt, 128)
+	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	bigN := new(big.Int).Mul(p, q) // N = p * q
-	nSquared := new(big.Int).Mul(bigN, bigN)
+	q := new(saferith.Nat).SetBig(qInt, 128)
+	bigN := new(saferith.Nat).Mul(p, q, 256)
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 512))
 
-	y1, err := crand.Int(prng, bigN)
+	y1Int, err := crand.Int(prng, bigN.Big())
 	require.NoError(t, err)
-	x1 := new(big.Int).Exp(y1, bigN, nSquared)
+	y1 := new(saferith.Nat).SetBig(y1Int, 256)
+	x1 := new(saferith.Nat).Exp(y1, bigN, bigNSquared)
 
-	y2, err := crand.Int(prng, bigN)
+	y2Int, err := crand.Int(prng, bigN.Big())
 	require.NoError(t, err)
-	x2 := new(big.Int).Exp(y2, bigN, nSquared)
+	y2 := new(saferith.Nat).SetBig(y2Int, 256)
+	x2 := new(saferith.Nat).Exp(y2, bigN, bigNSquared)
 
 	err = doProof(x1, y2, bigN, prng)
 	require.Error(t, err)

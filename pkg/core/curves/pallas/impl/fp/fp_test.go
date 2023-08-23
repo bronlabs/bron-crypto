@@ -7,10 +7,10 @@
 package fp
 
 import (
-	"math/big"
 	"math/rand"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
 
@@ -210,20 +210,20 @@ func TestFpBytes(t *testing.T) {
 }
 
 func TestFpBigInt(t *testing.T) {
-	t1 := new(Fp).SetBigInt(big.NewInt(9999))
-	t2 := new(Fp).SetBigInt(t1.BigInt())
+	t1 := new(Fp).SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := new(Fp).SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
 	e := &Fp{0x8c6bc70550c87761, 0xce2c6c48e7063731, 0xf1275fd1e4607cd6, 0x3e6762e63501edbd}
-	b := new(big.Int).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
-	t1.SetBigInt(b)
+	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e[0] = 0xcc169e7af3788a0
 	e[1] = 0x541a2cb32246c1ea
 	e[2] = 0xed8a02e1b9f8329
 	e[3] = 0x1989d19cafe1242
-	b.Neg(b)
-	t1.SetBigInt(b)
+	b.ModNeg(b, Modulus)
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 

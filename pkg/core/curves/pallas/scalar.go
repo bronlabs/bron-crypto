@@ -3,7 +3,8 @@ package pallas
 import (
 	"bytes"
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -13,23 +14,23 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Scalar) = (*Scalar)(nil)
+var _ curves.Scalar = (*ScalarPallas)(nil)
 
-type Scalar struct {
+type ScalarPallas struct {
 	value *fq.Fq
 
 	_ helper_types.Incomparable
 }
 
-func (Scalar) Curve() (curves.Curve, error) {
-	return pallasInstance, nil
+func (*ScalarPallas) Curve() curves.Curve {
+	return &pallasInstance
 }
 
-func (Scalar) CurveName() string {
+func (*ScalarPallas) CurveName() string {
 	return Name
 }
 
-func (s *Scalar) Random(reader io.Reader) curves.Scalar {
+func (s *ScalarPallas) Random(reader io.Reader) curves.Scalar {
 	if reader == nil {
 		return nil
 	}
@@ -38,52 +39,52 @@ func (s *Scalar) Random(reader io.Reader) curves.Scalar {
 	return s.Hash(seed[:])
 }
 
-func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
+func (*ScalarPallas) Hash(inputs ...[]byte) curves.Scalar {
 	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	var t [64]byte
 	copy(t[:], xmd)
-	return &Scalar{
+	return &ScalarPallas{
 		value: new(fq.Fq).SetBytesWide(&t),
 	}
 }
 
-func (*Scalar) Zero() curves.Scalar {
-	return &Scalar{
+func (*ScalarPallas) Zero() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).SetZero(),
 	}
 }
 
-func (*Scalar) One() curves.Scalar {
-	return &Scalar{
+func (*ScalarPallas) One() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).SetOne(),
 	}
 }
 
-func (s *Scalar) IsZero() bool {
+func (s *ScalarPallas) IsZero() bool {
 	return s.value.IsZero()
 }
 
-func (s *Scalar) IsOne() bool {
+func (s *ScalarPallas) IsOne() bool {
 	return s.value.IsOne()
 }
 
-func (s *Scalar) IsOdd() bool {
+func (s *ScalarPallas) IsOdd() bool {
 	return (s.value[0] & 1) == 1
 }
 
-func (s *Scalar) IsEven() bool {
+func (s *ScalarPallas) IsEven() bool {
 	return (s.value[0] & 1) == 0
 }
 
-func (*Scalar) New(value int) curves.Scalar {
-	v := big.NewInt(int64(value))
-	return &Scalar{
-		value: new(fq.Fq).SetBigInt(v),
+func (*ScalarPallas) New(value uint64) curves.Scalar {
+	v := new(saferith.Nat).SetUint64(value)
+	return &ScalarPallas{
+		value: new(fq.Fq).SetNat(v),
 	}
 }
 
-func (s *Scalar) Cmp(rhs curves.Scalar) int {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarPallas) Cmp(rhs curves.Scalar) int {
+	r, ok := rhs.(*ScalarPallas)
 	if ok {
 		return s.value.Cmp(r.value)
 	} else {
@@ -91,50 +92,50 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 	}
 }
 
-func (s *Scalar) Square() curves.Scalar {
-	return &Scalar{
+func (s *ScalarPallas) Square() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).Square(s.value),
 	}
 }
 
-func (s *Scalar) Double() curves.Scalar {
-	return &Scalar{
+func (s *ScalarPallas) Double() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).Double(s.value),
 	}
 }
 
-func (s *Scalar) Invert() (curves.Scalar, error) {
+func (s *ScalarPallas) Invert() (curves.Scalar, error) {
 	value, wasInverted := new(fq.Fq).Invert(s.value)
 	if !wasInverted {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
-	return &Scalar{
+	return &ScalarPallas{
 		value: value,
 	}, nil
 }
 
-func (s *Scalar) Sqrt() (curves.Scalar, error) {
+func (s *ScalarPallas) Sqrt() (curves.Scalar, error) {
 	value, wasSquare := new(fq.Fq).Sqrt(s.value)
 	if !wasSquare {
 		return nil, errs.NewFailed("not a square")
 	}
-	return &Scalar{
+	return &ScalarPallas{
 		value: value,
 	}, nil
 }
 
-func (s *Scalar) Cube() curves.Scalar {
+func (s *ScalarPallas) Cube() curves.Scalar {
 	value := new(fq.Fq).Mul(s.value, s.value)
 	value.Mul(value, s.value)
-	return &Scalar{
+	return &ScalarPallas{
 		value: value,
 	}
 }
 
-func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarPallas) Add(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarPallas)
 	if ok {
-		return &Scalar{
+		return &ScalarPallas{
 			value: new(fq.Fq).Add(s.value, r.value),
 		}
 	} else {
@@ -142,10 +143,10 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarPallas) Sub(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarPallas)
 	if ok {
-		return &Scalar{
+		return &ScalarPallas{
 			value: new(fq.Fq).Sub(s.value, r.value),
 		}
 	} else {
@@ -153,10 +154,10 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarPallas) Mul(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarPallas)
 	if ok {
-		return &Scalar{
+		return &ScalarPallas{
 			value: new(fq.Fq).Mul(s.value, r.value),
 		}
 	} else {
@@ -164,56 +165,56 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
+func (s *ScalarPallas) MulAdd(y, z curves.Scalar) curves.Scalar {
 	return s.Mul(y).Add(z)
 }
 
-func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarPallas) Div(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarPallas)
 	if ok {
 		v, wasInverted := new(fq.Fq).Invert(r.value)
 		if !wasInverted {
 			return nil
 		}
 		v.Mul(v, s.value)
-		return &Scalar{value: v}
+		return &ScalarPallas{value: v}
 	} else {
 		return nil
 	}
 }
 
-func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
-	exponent, ok := k.(*Scalar)
+func (s *ScalarPallas) Exp(k curves.Scalar) curves.Scalar {
+	exponent, ok := k.(*ScalarPallas)
 	if !ok {
 		return nil
 	}
 
 	value := new(fq.Fq).Exp(s.value, exponent.value)
-	return &Scalar{value: value}
+	return &ScalarPallas{value: value}
 }
 
-func (s *Scalar) Neg() curves.Scalar {
-	return &Scalar{
+func (s *ScalarPallas) Neg() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).Neg(s.value),
 	}
 }
 
-func (*Scalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
-	return &Scalar{
-		value: new(fq.Fq).SetBigInt(v),
+func (*ScalarPallas) SetNat(v *saferith.Nat) (curves.Scalar, error) {
+	return &ScalarPallas{
+		value: new(fq.Fq).SetNat(v),
 	}, nil
 }
 
-func (s *Scalar) BigInt() *big.Int {
-	return s.value.BigInt()
+func (s *ScalarPallas) Nat() *saferith.Nat {
+	return s.value.Nat()
 }
 
-func (s *Scalar) Bytes() []byte {
+func (s *ScalarPallas) Bytes() []byte {
 	t := s.value.Bytes()
 	return t[:]
 }
 
-func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
+func (*ScalarPallas) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != 32 {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
@@ -223,47 +224,47 @@ func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set bytes")
 	}
-	return &Scalar{
+	return &ScalarPallas{
 		value: value,
 	}, nil
 }
 
-func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
+func (*ScalarPallas) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if len(input) != 64 {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
 	var seq [64]byte
 	copy(seq[:], input)
-	return &Scalar{
+	return &ScalarPallas{
 		value: new(fq.Fq).SetBytesWide(&seq),
 	}, nil
 }
 
-func (s *Scalar) Clone() curves.Scalar {
-	return &Scalar{
+func (s *ScalarPallas) Clone() curves.Scalar {
+	return &ScalarPallas{
 		value: new(fq.Fq).Set(s.value),
 	}
 }
 
-func (s *Scalar) GetFq() *fq.Fq {
+func (s *ScalarPallas) GetFq() *fq.Fq {
 	return new(fq.Fq).Set(s.value)
 }
 
-func (s *Scalar) SetFq(element *fq.Fq) *Scalar {
+func (s *ScalarPallas) SetFq(element *fq.Fq) *ScalarPallas {
 	s.value = element
 	return s
 }
 
-func (s *Scalar) MarshalBinary() ([]byte, error) {
+func (s *ScalarPallas) MarshalBinary() ([]byte, error) {
 	return internal.ScalarMarshalBinary(s)
 }
 
-func (s *Scalar) UnmarshalBinary(input []byte) error {
+func (s *ScalarPallas) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarPallas)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
@@ -271,16 +272,16 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) MarshalText() ([]byte, error) {
+func (s *ScalarPallas) MarshalText() ([]byte, error) {
 	return internal.ScalarMarshalText(s)
 }
 
-func (s *Scalar) UnmarshalText(input []byte) error {
+func (s *ScalarPallas) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarPallas)
 	if !ok {
 		return errs.NewInvalidLength("invalid scalar")
 	}
@@ -288,16 +289,16 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) MarshalJSON() ([]byte, error) {
+func (s *ScalarPallas) MarshalJSON() ([]byte, error) {
 	return internal.ScalarMarshalJson(Name, s)
 }
 
-func (s *Scalar) UnmarshalJSON(input []byte) error {
+func (s *ScalarPallas) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
-	S, ok := sc.(*Scalar)
+	S, ok := sc.(*ScalarPallas)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}

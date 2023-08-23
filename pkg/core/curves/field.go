@@ -2,7 +2,8 @@ package curves
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
@@ -16,19 +17,19 @@ const (
 )
 
 type FieldProfile interface {
-	Order() *big.Int           // p^k
-	Characteristic() *big.Int  // p
-	ExtensionDegree() *big.Int // k
+	Order() *saferith.Modulus       // p^k
+	Characteristic() *saferith.Nat  // p
+	ExtensionDegree() *saferith.Nat // k
 }
 
 type FieldElement interface {
 	Profile() FieldProfile
 	Value() FieldValue
-	Modulus() *big.Int
+	Modulus() *saferith.Modulus
 	Clone() FieldElement
 	Cmp(rhs FieldElement) int
 
-	New(v int) FieldElement
+	New(v uint64) FieldElement
 	Random(prng io.Reader) FieldElement
 	Hash(x []byte) FieldElement
 	Zero() FieldElement
@@ -50,8 +51,8 @@ type FieldElement interface {
 	Exp(rhs FieldElement) FieldElement
 	Neg() FieldElement
 
-	SetBigInt(value *big.Int) (FieldElement, error)
-	BigInt() *big.Int
+	SetNat(value *saferith.Nat) (FieldElement, error)
+	Nat() *saferith.Nat
 	SetBytes(input []byte) (FieldElement, error)
 	SetBytesWide(input []byte) (FieldElement, error)
 	Bytes() []byte

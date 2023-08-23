@@ -2,7 +2,8 @@ package lpdl
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -32,10 +33,10 @@ type Participant struct {
 
 type State struct {
 	curve curves.Curve
-	q     *big.Int
-	q2    *big.Int
-	a     *big.Int
-	b     *big.Int
+	q     *saferith.Modulus
+	q2    *saferith.Modulus
+	a     *saferith.Nat
+	b     *saferith.Nat
 
 	_ helper_types.Incomparable
 }
@@ -60,7 +61,7 @@ type Verifier struct {
 
 type ProverState struct {
 	State
-	alpha                  *big.Int
+	alpha                  *saferith.Nat
 	bigQHat                curves.Point
 	bigQHatWitness         commitments.Witness
 	cDoublePrimeCommitment commitments.Commitment
@@ -87,15 +88,12 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	curve, err := bigQ.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
-	}
+	curve := bigQ.Curve()
 	q := curve.Profile().SubGroupOrder()
-	q2 := new(big.Int).Mul(q, q)
+	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
 
 	rangeProofTranscript := transcript.Clone()
-	rangeVerifier, err := paillierrange.NewVerifier(128, q, sid, publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
+	rangeVerifier, err := paillierrange.NewVerifier(128, q.Nat(), sid, publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
@@ -121,7 +119,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}, nil
 }
 
-func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
+func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
@@ -130,18 +128,12 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	curve, err := x.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "invalid curve %s", curve.Name())
-	}
+	curve := x.Curve()
 	q := curve.Profile().SubGroupOrder()
-	q2 := new(big.Int).Mul(q, q)
+	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
 
 	rangeProofTranscript := transcript.Clone()
-	rangeProver, err := paillierrange.NewProver(128, q, sid, secretKey, x.BigInt(), r, sessionId, rangeProofTranscript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Paillier range prover")
-	}
+	rangeProver, _ := paillierrange.NewProver(128, q.Nat(), sid, secretKey, x.Nat(), r, sessionId, rangeProofTranscript, prng)
 
 	return &Prover{
 		Participant: Participant{
@@ -156,7 +148,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *bi
 			State: State{
 				curve: curve,
 				q:     q,
-				q2:    q2,
+				q2:    qSquared,
 			},
 		},
 	}, nil

@@ -45,7 +45,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 		return errs.NewVerificationFailed("public key is at infinity")
 	}
 	if curve.Name() == edwards25519.New().Name() {
-		edwardsPoint, ok := publicKey.(*edwards25519.Point)
+		edwardsPoint, ok := publicKey.(*edwards25519.PointEd25519)
 		if !ok {
 			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}

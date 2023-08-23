@@ -3,7 +3,8 @@ package ecdsa
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"hash"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
@@ -40,7 +41,7 @@ func (signature *Signature) Normalise() {
 }
 
 func (signature *Signature) IsNormalized() bool {
-	return signature.S.BigInt().Cmp(signature.S.Neg().BigInt()) <= 0
+	return signature.S.Nat().Big().Cmp(signature.S.Neg().Nat().Big()) <= 0
 }
 
 // CalculateRecoveryId calculates recoveryId
@@ -58,39 +59,32 @@ func (signature *Signature) IsNormalized() bool {
 // Note that V here is the same as recovery Id is EIP-155.
 // Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalised signatures as invalid).
 func CalculateRecoveryId(bigR curves.Point) (int, error) {
-	var rx, ry *big.Int
+	var rx, ry *saferith.Nat
 
 	//nolint:gocritic // below is not a switch
-	if p, ok := bigR.(*k256.Point); ok {
-		rx = p.X().BigInt()
-		ry = p.Y().BigInt()
-	} else if p, ok := bigR.(*p256.Point); ok {
-		rx = p.X().BigInt()
-		ry = p.Y().BigInt()
+	if p, ok := bigR.(*k256.PointK256); ok {
+		rx = p.X().Nat()
+		ry = p.Y().Nat()
+	} else if p, ok := bigR.(*p256.PointP256); ok {
+		rx = p.X().Nat()
+		ry = p.Y().Nat()
 	} else {
 		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
 	}
 
-	curve, err := bigR.Curve()
-	if err != nil {
-		return -1, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", bigR.CurveName())
-	}
+	curve := bigR.Curve()
+	subGroupOrder := curve.Profile().SubGroupOrder()
 
 	var recoveryId int
-	if ry.Bit(0) == 0 {
+	if ry.Byte(0)&0b1 == 0 {
 		recoveryId = 0
 	} else {
 		recoveryId = 1
 	}
 
-	switch rx.Cmp(curve.Profile().SubGroupOrder()) {
-	case -1:
-	case 0:
-		return -1, errs.NewFailed("x coordinate of the signature is equal to subGroupOrder")
-	case 1:
+	b, _, _ := rx.Cmp(subGroupOrder.Nat())
+	if b != 0 {
 		recoveryId += 2
-	default:
-		return -1, errs.NewFailed("big int cmp failed, we should never be here")
 	}
 
 	return recoveryId, nil
@@ -102,16 +96,13 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
-	curve, err := signature.R.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not find curve (%s) of the R point", signature.R.CurveName())
-	}
+	curve := signature.R.Curve()
 	// Calculate point R = (x1, x2) where
 	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
-	rx := signature.R.BigInt()
+	rx := signature.R.Nat()
 	if (*signature.V & 2) != 0 {
-		rx = new(big.Int).Add(rx, curve.Profile().SubGroupOrder())
+		rx = new(saferith.Nat).Add(rx, curve.Profile().SubGroupOrder().Nat(), curve.Profile().Field().Order().BitLen())
 	}
 	rxBytes := rx.Bytes()
 	if len(rxBytes) < 32 {
@@ -153,10 +144,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 }
 
 func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Point, message []byte) error {
-	curve, err := publicKey.Curve()
-	if err != nil {
-		return errs.WrapFailed(err, "could not get curve")
-	}
+	curve := publicKey.Curve()
 	if curve.Name() != k256.Name && curve.Name() != p256.Name {
 		return errs.NewFailed("curve is not supported")
 	}
@@ -188,24 +176,24 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     publicKey.X().BigInt(), Y: publicKey.Y().BigInt(),
+		X:     publicKey.X().Nat().Big(), Y: publicKey.Y().Nat().Big(),
 	}
-	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.BigInt(), signature.S.BigInt()); !ok {
+	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.Nat().Big(), signature.S.Nat().Big()); !ok {
 		return errs.NewVerificationFailed("signature verification failed")
 	}
 	return nil
 }
 
-func HashToInt(digest []byte, curve curves.Curve) (*big.Int, error) {
+func HashToInt(digest []byte, curve curves.Curve) (*saferith.Nat, error) {
 	orderBytes := len(curve.Profile().SubGroupOrder().Bytes())
 	if len(digest) > orderBytes {
 		digest = digest[:orderBytes]
 	}
 
-	ret := new(big.Int).SetBytes(digest)
+	ret := new(saferith.Nat).SetBytes(digest)
 	excess := (len(digest) - orderBytes) * 8
 	if excess > 0 {
-		ret.Rsh(ret, uint(excess))
+		ret.Rsh(ret, uint(excess), curve.Profile().SubGroupOrder().BitLen())
 	}
 	return ret, nil
 }

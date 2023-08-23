@@ -68,10 +68,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	var err error
 	result := &Proof{}
 
-	curve, err := p.BasePoint.Curve()
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
-	}
+	curve := p.BasePoint.Curve()
 
 	statement := p.BasePoint.Mul(x)
 	k := curve.Scalar().Random(crand.Reader)
@@ -106,10 +103,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 		return errs.WrapFailed(err, "subgroup membership check failed")
 	}
 
-	curve, err := basePoint.Curve()
-	if err != nil {
-		return errs.WrapFailed(err, "could not get the curve by name")
-	}
+	curve := basePoint.Curve()
 
 	if proof == nil {
 		return errs.NewInvalidArgument("proof is nil")

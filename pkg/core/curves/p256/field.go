@@ -2,7 +2,8 @@ package p256
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -12,205 +13,210 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.FieldProfile) = (*FieldProfile)(nil)
+var _ curves.FieldProfile = (*FieldProfileP256)(nil)
 
-type FieldProfile struct{}
+type FieldProfileP256 struct{}
 
-func (FieldProfile) Order() *big.Int {
-	return fp.New().Params.BiModulus
+func (*FieldProfileP256) Curve() curves.Curve {
+	return &p256Instance
 }
 
-func (p *FieldProfile) Characteristic() *big.Int {
-	return p.Order()
+func (*FieldProfileP256) Order() *saferith.Modulus {
+	return fp.New().Params.Modulus
 }
 
-func (FieldProfile) ExtensionDegree() *big.Int {
-	return big.NewInt(1)
+func (p *FieldProfileP256) Characteristic() *saferith.Nat {
+	return p.Order().Nat()
 }
 
-var _ (curves.FieldElement) = (*FieldElement)(nil)
+func (*FieldProfileP256) ExtensionDegree() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(1)
+}
 
-type FieldElement struct {
+var _ curves.FieldElement = (*FieldElementP256)(nil)
+
+type FieldElementP256 struct {
 	v *impl.Field
 
 	_ helper_types.Incomparable
 }
 
 //nolint:revive // we don't care if impl shadows impl
-func (e *FieldElement) impl() *impl.Field {
+func (e *FieldElementP256) impl() *impl.Field {
 	return e.v
 }
 
-func (e FieldElement) Value() curves.FieldValue {
+func (e *FieldElementP256) Value() curves.FieldValue {
 	return e.v.Value[:]
 }
 
-func (e FieldElement) Modulus() *big.Int {
-	return e.v.Params.BiModulus
+func (e *FieldElementP256) Modulus() *saferith.Modulus {
+	return e.v.Params.Modulus
 }
 
-func (e FieldElement) Clone() curves.FieldElement {
-	return FieldElement{
+func (e *FieldElementP256) Clone() curves.FieldElement {
+	return &FieldElementP256{
 		v: fp.New().Set(e.v),
 	}
 }
 
-func (FieldElement) Profile() curves.FieldProfile {
-	return &FieldProfile{}
+func (*FieldElementP256) Profile() curves.FieldProfile {
+	return &FieldProfileP256{}
 }
 
-func (e FieldElement) New(value int) curves.FieldElement {
+func (e *FieldElementP256) New(value uint64) curves.FieldElement {
 	t := fp.New()
-	v := new(big.Int).Mod(big.NewInt(int64(value)), e.v.Params.BiModulus)
-	return &FieldElement{
-		v: t.SetBigInt(v),
+	v := new(saferith.Nat).Mod(new(saferith.Nat).SetUint64(value), e.v.Params.Modulus)
+	return &FieldElementP256{
+		v: t.SetNat(v),
 	}
 }
 
-// IMPLEMENT
-func (FieldElement) Hash(x []byte) curves.FieldElement {
+// Hash TODO: implement
+func (*FieldElementP256) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e FieldElement) Cmp(rhs curves.FieldElement) int {
-	rhse, ok := rhs.(FieldElement)
+func (e *FieldElementP256) Cmp(rhs curves.FieldElement) int {
+	rhse, ok := rhs.(*FieldElementP256)
 	if !ok {
 		return -2
 	}
 	return e.v.Cmp(rhse.impl())
 }
 
-// IMPLEMENT
-func (FieldElement) Random(prng io.Reader) curves.FieldElement {
+// Random TODO: implement
+func (*FieldElementP256) Random(prng io.Reader) curves.FieldElement {
 	return nil
 }
 
-func (FieldElement) Zero() curves.FieldElement {
-	return &FieldElement{
+func (*FieldElementP256) Zero() curves.FieldElement {
+	return &FieldElementP256{
 		v: fp.New().SetZero(),
 	}
 }
 
-func (FieldElement) One() curves.FieldElement {
-	return &FieldElement{
+func (*FieldElementP256) One() curves.FieldElement {
+	return &FieldElementP256{
 		v: fp.New().SetOne(),
 	}
 }
 
-func (e FieldElement) IsZero() bool {
+func (e *FieldElementP256) IsZero() bool {
 	return e.v.IsZero() == 1
 }
 
-func (e FieldElement) IsOne() bool {
+func (e *FieldElementP256) IsOne() bool {
 	return e.v.IsOne() == 1
 }
 
-func (e FieldElement) IsOdd() bool {
+func (e *FieldElementP256) IsOdd() bool {
 	return e.Bytes()[0]&1 == 1
 }
 
-func (e FieldElement) IsEven() bool {
+func (e *FieldElementP256) IsEven() bool {
 	return e.Bytes()[0]&1 == 0
 }
 
-func (e FieldElement) Square() curves.FieldElement {
-	return &FieldElement{
+func (e *FieldElementP256) Square() curves.FieldElement {
+	return &FieldElementP256{
 		v: e.v.Square(e.v),
 	}
 }
 
-func (e FieldElement) Double() curves.FieldElement {
-	return &FieldElement{
+func (e *FieldElementP256) Double() curves.FieldElement {
+	return &FieldElementP256{
 		v: e.v.Double(e.v),
 	}
 }
 
-func (e FieldElement) Sqrt() (curves.FieldElement, bool) {
+func (e *FieldElementP256) Sqrt() (curves.FieldElement, bool) {
 	result, wasSquare := fp.New().Sqrt(e.v)
-	return &FieldElement{
+	return &FieldElementP256{
 		v: result,
 	}, wasSquare
 }
 
-func (e FieldElement) Cube() curves.FieldElement {
+func (e *FieldElementP256) Cube() curves.FieldElement {
 	return e.Square().Mul(e)
 }
 
-func (e FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementP256) Add(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementP256)
 	if !ok {
 		panic("not a p256 Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementP256{
 		v: fp.New().Add(e.v, n.impl()),
 	}
 }
 
-func (e FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementP256) Sub(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementP256)
 	if !ok {
 		panic("not a p256 Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementP256{
 		v: fp.New().Sub(e.v, n.impl()),
 	}
 }
 
-func (e FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementP256) Mul(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementP256)
 	if !ok {
 		panic("not a p256 Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementP256{
 		v: fp.New().Mul(e.v, n.impl()),
 	}
 }
 
-func (e FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
+func (e *FieldElementP256) MulAdd(y, z curves.FieldElement) curves.FieldElement {
 	return e.Mul(y).Add(z)
 }
 
-func (e FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
-	r, ok := rhs.(*FieldElement)
+func (e *FieldElementP256) Div(rhs curves.FieldElement) curves.FieldElement {
+	r, ok := rhs.(*FieldElementP256)
 	if ok {
 		v, wasInverted := fp.New().Invert(r.v)
 		if !wasInverted {
 			panic("cannot invert rhs")
 		}
 		v.Mul(v, e.v)
-		return &FieldElement{v: v}
+		return &FieldElementP256{v: v}
 	} else {
 		panic("rhs is not ElementP256")
 	}
 }
 
-func (e FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(FieldElement)
+func (e *FieldElementP256) Exp(rhs curves.FieldElement) curves.FieldElement {
+	n, ok := rhs.(*FieldElementP256)
 	if !ok {
 		panic("not a p256 Fp element")
 	}
-	return &FieldElement{
+	return &FieldElementP256{
 		v: e.v.Exp(e.v, n.v),
 	}
 }
 
-func (e FieldElement) Neg() curves.FieldElement {
+func (e *FieldElementP256) Neg() curves.FieldElement {
 	var out [impl.FieldLimbs]uint64
 	e.v.Arithmetic.Neg(&out, &e.v.Value)
-	return &FieldElement{
+	return &FieldElementP256{
 		v: e.v.Neg(e.v),
 	}
 }
 
-func (e FieldElement) SetBigInt(value *big.Int) (curves.FieldElement, error) {
-	return e.SetBytes(value.Bytes())
+func (e *FieldElementP256) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
+	e.v.SetNat(value)
+	return e, nil
 }
 
-func (e FieldElement) BigInt() *big.Int {
-	return e.v.BigInt()
+func (e *FieldElementP256) Nat() *saferith.Nat {
+	return e.v.Nat()
 }
 
-func (e FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
+func (e *FieldElementP256) SetBytes(input []byte) (curves.FieldElement, error) {
 	if len(input) != impl.FieldBytes {
 		return nil, errs.NewInvalidLength("input length is not 32 bytes")
 	}
@@ -220,29 +226,29 @@ func (e FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set byte")
 	}
-	return &FieldElement{
+	return &FieldElementP256{
 		v: result,
 	}, nil
 }
 
-func (e FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
+func (e *FieldElementP256) SetBytesWide(input []byte) (curves.FieldElement, error) {
 	if len(input) != impl.WideFieldBytes {
 		return nil, errs.NewInvalidLength("input length is not 64 bytes")
 	}
 	var out [64]byte
 	copy(out[:], bitstring.ReverseBytes(input))
 	result := e.v.SetBytesWide(&out)
-	return &FieldElement{
+	return &FieldElementP256{
 		v: result,
 	}, nil
 }
 
-func (e FieldElement) Bytes() []byte {
+func (e *FieldElementP256) Bytes() []byte {
 	result := e.v.Bytes()
 	return result[:]
 }
 
-func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
+func (e *FieldElementP256) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
 	if sc.CurveName() != Name {
 		return nil, errs.NewInvalidType("scalar is not a P256 scalar")
 	}
@@ -253,10 +259,6 @@ func (e FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) 
 	return result, nil
 }
 
-func (e FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	results, err := curve.Scalar().SetBytes(e.Bytes())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert field element to scalar")
-	}
-	return results, nil
+func (e *FieldElementP256) Scalar(curve curves.Curve) (curves.Scalar, error) {
+	return curve.Scalar().SetNat(e.Nat())
 }

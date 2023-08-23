@@ -2,13 +2,13 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	"io"
-
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/cronokirby/saferith"
+	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/types"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -48,13 +48,17 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "cannot combine Feldman shares")
 	}
-	if recoveredPrivateKey.BigInt().Cmp(ecdsaPrivateKey.D) != 0 {
+	if recoveredPrivateKey.Nat().Big().Cmp(ecdsaPrivateKey.D) != 0 {
 		return errs.NewVerificationFailed("recovered ECDSA private key is invalid")
 	}
 
 	// verify public key
+	fieldOrder := cohortConfig.CipherSuite.Curve.Profile().Field().Order()
 	recoveredPublicKey := cohortConfig.CipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
-	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.X, fieldOrder.BitLen()),
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.Y, fieldOrder.BitLen()),
+	)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "invalid ECDSA public key")
 	}
@@ -69,16 +73,16 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 
 	// verify Paillier encryption of shards
 	for myIdentityKey, myShard := range shards {
-		myShare := myShard.SigningKeyShare.Share.BigInt()
+		myShare := myShard.SigningKeyShare.Share.Nat()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
 		for _, theirShard := range shards {
-			if myShard.PaillierSecretKey.N.Cmp(theirShard.PaillierSecretKey.N) != 0 && myShard.PaillierSecretKey.N2.Cmp(theirShard.PaillierSecretKey.N2) != 0 {
+			if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
 				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 				theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 				if err != nil {
 					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
 				}
-				if theirDecryptedShare.Cmp(myShare) != 0 {
+				if theirDecryptedShare.Eq(myShare) == 0 {
 					return errs.NewVerificationFailed("cannot decrypt encrypted share")
 				}
 			}
@@ -112,12 +116,15 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
 
-	privateKey, err := curve.Scalar().SetBigInt(ecdsaPrivateKey.D)
+	privateKey, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.Profile().SubGroupOrder().BitLen()))
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go private key bytes to a knox scalar")
 	}
 
-	publicKey, err := curve.Point().Set(ecdsaPrivateKey.X, ecdsaPrivateKey.Y)
+	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.X, curve.Profile().Field().Order().BitLen()),
+		new(saferith.Nat).SetBig(ecdsaPrivateKey.Y, curve.Profile().Field().Order().BitLen()),
+	)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a knox point")
 	}
@@ -156,7 +163,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 		for _, otherIdentityKey := range sharingIdsToIdentityKeys {
 			if !types.Equals(identityKey, otherIdentityKey) {
 				shards[otherIdentityKey.Hash()].PaillierPublicKeys[identityKey.Hash()] = paillierPublicKey
-				shards[otherIdentityKey.Hash()].PaillierEncryptedShares[identityKey.Hash()], _, err = paillierPublicKey.Encrypt(shards[identityKey.Hash()].SigningKeyShare.Share.BigInt())
+				shards[otherIdentityKey.Hash()].PaillierEncryptedShares[identityKey.Hash()], _, err = paillierPublicKey.Encrypt(shards[identityKey.Hash()].SigningKeyShare.Share.Nat())
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot encrypt share with paillier")
 				}

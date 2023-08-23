@@ -1,10 +1,16 @@
 package fp
 
 import (
-	"math/big"
+	"encoding/hex"
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
+)
+
+const (
+	k256FieldModulusHex = "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
 )
 
 var (
@@ -21,14 +27,19 @@ func New() *impl.Field {
 }
 
 func k256FpParamsInit() {
+	modulusBytes, err := hex.DecodeString(k256FieldModulusHex)
+	if err != nil {
+		// this should never happen, string is known constant at compile time to be correct
+		panic(err)
+	}
+	modulus := saferith.ModulusFromBytes(modulusBytes)
+
 	k256FpParams = impl.FieldParams{
-		R:       [impl.FieldLimbs]uint64{0x00000001000003d1, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000},
-		R2:      [impl.FieldLimbs]uint64{0x000007a2000e90a1, 0x0000000000000001, 0x0000000000000000, 0x0000000000000000},
-		R3:      [impl.FieldLimbs]uint64{0x002bb1e33795f671, 0x0000000100000b73, 0x0000000000000000, 0x0000000000000000},
-		Modulus: [impl.FieldLimbs]uint64{0xfffffffefffffc2f, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff},
-		BiModulus: new(big.Int).SetBytes([]byte{
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2f,
-		}),
+		R:            [impl.FieldLimbs]uint64{0x00000001000003d1, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000},
+		R2:           [impl.FieldLimbs]uint64{0x000007a2000e90a1, 0x0000000000000001, 0x0000000000000000, 0x0000000000000000},
+		R3:           [impl.FieldLimbs]uint64{0x002bb1e33795f671, 0x0000000100000b73, 0x0000000000000000, 0x0000000000000000},
+		ModulusLimbs: [impl.FieldLimbs]uint64{0xfffffffefffffc2f, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff},
+		Modulus:      modulus,
 	}
 }
 

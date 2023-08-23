@@ -76,10 +76,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 
 // Prove proves knowledge of dlog of the statement, using Fischlin.
 func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
-	curve, err := p.BasePoint.Curve()
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not get curve by name")
-	}
+	curve := p.BasePoint.Curve()
 	statement := p.BasePoint.Mul(x)
 	p.transcript.AppendPoints("statement", statement)
 

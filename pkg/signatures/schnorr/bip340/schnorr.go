@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"math/big"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -216,14 +215,15 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 	if !publicKey.Y.IsOnCurve() {
 		return errs.NewInvalidArgument("public key is not on curve")
 	}
+
 	// 1. Let P = lift_x(int(pk)); fail if that fails.
 	// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
-	P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
+	P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, bitstring.ReverseBytes(publicKey.Y.X().Bytes())...))
 	if err != nil {
 		return errs.WrapFailed(err, "failed to lift x")
 	}
 	// 2. Let r = int(sig[0:32]); fail if r ≥ p.
-	if signature.R.BigInt().Cmp(curve.Profile().Field().Order()) >= 0 {
+	if b, e, _ := signature.R.Nat().Cmp(curve.Profile().SubGroupOrder().Nat()); (b | e) != 0 {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
 	// 3. Let s = int(sig[32:64]); fail if s ≥ n. This step is implicit
@@ -239,7 +239,7 @@ func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).
 	// 8. Fail if bytes(R) ≠ r.
-	if bigR.IsIdentity() || !hasEvenY(bigR) || signature.R.BigInt().Cmp(new(big.Int).SetBytes(bigR.ToAffineCompressed()[1:])) != 0 {
+	if bigR.IsIdentity() || !hasEvenY(bigR) || signature.R.Nat().Eq(bigR.X().Nat()) == 0 {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
 	return nil
@@ -274,7 +274,7 @@ func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.Cip
 		}
 		// 3. Let ri = int(sigi[0:32]); fail if ri ≥ p.
 		r := signatures[i].R
-		if r.BigInt().Cmp(curve.Profile().Field().Order()) >= 0 {
+		if b, e, _ := r.Nat().Cmp(curve.Profile().SubGroupOrder().Nat()); (b | e) != 0 {
 			return errs.NewInvalidArgument("r is invalid")
 		}
 		// 4. Let si = int(sigi[32:64]); fail if si ≥ n.

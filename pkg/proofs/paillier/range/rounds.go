@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -34,18 +36,18 @@ type VerifierRound3Output struct {
 }
 
 type ZetZero struct {
-	W1 *big.Int
-	R1 *big.Int
-	W2 *big.Int
-	R2 *big.Int
+	W1 *saferith.Nat
+	R1 *saferith.Nat
+	W2 *saferith.Nat
+	R2 *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type ZetOne struct {
 	J        int
-	XPlusWj  *big.Int
-	RTimesRj *big.Int
+	XPlusWj  *saferith.Nat
+	RTimesRj *saferith.Nat
 
 	_ helper_types.Incomparable
 }
@@ -63,6 +65,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1.iii. chooses a random e (t bit length)
+	// this values is used to iterate over bits - more convenient to keep as big.Int
 	verifier.state.e, err = crand.Int(verifier.prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
@@ -88,34 +91,35 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	}
 
 	prover.state.esidCommitment = input.EsidCommitment
-	prover.state.w1 = make([]*big.Int, prover.t)
-	prover.state.w2 = make([]*big.Int, prover.t)
+	prover.state.w1 = make([]*saferith.Nat, prover.t)
+	prover.state.w2 = make([]*saferith.Nat, prover.t)
 	for i := 0; i < prover.t; i++ {
-		flip, err := crand.Int(prover.prng, big.NewInt(2))
+		flip := make([]byte, 1)
+		_, err = prover.prng.Read(flip)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create random")
 		}
 
 		// 2.iii. choose random w1i (in 0-l range), w2i (in l-2l range)
 		// 2.iv. flip value of w1i and w2i with 0.5 probability
-		if flip.Cmp(big.NewInt(1)) == 0 {
+		if flip[0]&1 == 0 {
 			prover.state.w2[i], err = prover.randomIntInFirstThird()
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot create random")
 			}
-			prover.state.w1[i] = new(big.Int).Add(prover.state.w2[i], prover.l)
+			prover.state.w1[i] = new(saferith.Nat).Add(prover.state.w2[i], prover.l, prover.capLen)
 		} else {
 			prover.state.w1[i], err = prover.randomIntInFirstThird()
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot create random")
 			}
-			prover.state.w2[i] = new(big.Int).Add(prover.state.w1[i], prover.l)
+			prover.state.w2[i] = new(saferith.Nat).Add(prover.state.w1[i], prover.l, prover.capLen)
 		}
 	}
 
 	// 2.v. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
-	prover.state.r1 = make([]*big.Int, prover.t)
-	prover.state.r2 = make([]*big.Int, prover.t)
+	prover.state.r1 = make([]*saferith.Nat, prover.t)
+	prover.state.r2 = make([]*saferith.Nat, prover.t)
 	c1 := make([]paillier.CipherText, prover.t)
 	c2 := make([]paillier.CipherText, prover.t)
 	for i := 0; i < prover.t; i++ {
@@ -179,22 +183,22 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 			}
 		} else {
 			// 4.ii. if ei == 1
-			xPlusW1 := new(big.Int).Add(prover.x, prover.state.w1[i])
-			xPlusW2 := new(big.Int).Add(prover.x, prover.state.w2[i])
+			xPlusW1 := new(saferith.Nat).Add(prover.x, prover.state.w1[i], prover.capLen)
+			xPlusW2 := new(saferith.Nat).Add(prover.x, prover.state.w2[i], prover.capLen)
 			switch {
 			case prover.inSecondThird(xPlusW1):
 				// 4.ii. if (x + w1) in l-2l range set zi = (1, x + w1i, r * r1i mod N)
 				zetOne[i] = &ZetOne{
 					J:        1,
 					XPlusWj:  xPlusW1,
-					RTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r1[i]), prover.sk.N),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.N),
 				}
 			case prover.inSecondThird(xPlusW2):
 				// 4.ii. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					J:        2,
 					XPlusWj:  xPlusW2,
-					RTimesRj: new(big.Int).Mod(new(big.Int).Mul(prover.r, prover.state.r2[i]), prover.sk.N),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.N),
 				}
 			default:
 				return nil, errs.NewFailed("something went wrong")
@@ -226,21 +230,21 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
 			//nolint:gocritic // Cmp not a method of c1. False positive.
-			if (*c1).Cmp(verifier.state.c1[i]) != 0 {
-				return errs.NewVerificationFailed("fail")
+			if (*c1).Eq(verifier.state.c1[i]) == 0 {
+				return errs.NewVerificationFailed("verification failed")
 			}
 			c2, err := verifier.pk.EncryptWithNonce(z.W2, z.R2)
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
 			//nolint:gocritic // Cmp not a method of c2. False positive.
-			if (*c2).Cmp(verifier.state.c2[i]) != 0 {
-				return errs.NewVerificationFailed("failed")
+			if (*c2).Eq(verifier.state.c2[i]) == 0 {
+				return errs.NewVerificationFailed("verification failed")
 			}
 			if !((verifier.inFirstThird(z.W1) && verifier.inSecondThird(z.W2)) ||
 				(verifier.inFirstThird(z.W2) && verifier.inSecondThird(z.W1))) {
 
-				return errs.NewVerificationFailed("failed")
+				return errs.NewVerificationFailed("verification failed")
 			}
 		} else {
 			// 5.ii if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
@@ -266,8 +270,8 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			}
 
 			//nolint:gocritic // Cmp not a method of cCheck. False positive.
-			if (*cCheck).Cmp(c) != 0 || !verifier.inSecondThird(wi) {
-				return errs.NewVerificationFailed("failed")
+			if (*cCheck).Eq(c) == 0 || !verifier.inSecondThird(wi) {
+				return errs.NewVerificationFailed("verification failed")
 			}
 		}
 	}
@@ -276,23 +280,24 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	return nil
 }
 
-func (p *Participant) inFirstThird(v *big.Int) bool {
-	if v.Cmp(big.NewInt(0)) >= 0 && v.Cmp(p.l) < 0 {
+func (p *Participant) inFirstThird(v *saferith.Nat) bool {
+	if _, ok1, ok2 := v.Cmp(p.l); (ok1 | ok2) != 0 {
 		return true
 	}
 
 	return false
 }
 
-func (p *Participant) inSecondThird(v *big.Int) bool {
-	v2 := new(big.Int).Sub(v, p.l)
+func (p *Participant) inSecondThird(v *saferith.Nat) bool {
+	v2 := new(saferith.Nat).Sub(v, p.l, p.capLen)
 	return p.inFirstThird(v2)
 }
 
-func (p *Participant) randomIntInFirstThird() (*big.Int, error) {
-	n, err := crand.Int(p.prng, p.l)
+func (p *Participant) randomIntInFirstThird() (*saferith.Nat, error) {
+	nInt, err := crand.Int(p.prng, p.l.Big())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "reading crand int failed")
 	}
+	n := new(saferith.Nat).SetBig(nInt, p.capLen)
 	return n, nil
 }

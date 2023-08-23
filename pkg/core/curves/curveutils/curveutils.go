@@ -4,6 +4,8 @@ import (
 	"crypto/elliptic"
 	"encoding/json"
 
+	"github.com/btcsuite/btcd/btcec"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
@@ -35,9 +37,9 @@ func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
 	err := errs.NewInvalidCurve("can't convert %s", c.Name())
 	switch c.Name() {
 	case k256.Name:
-		return k256.NewElliptic(), nil
+		return btcec.S256(), nil
 	case p256.Name:
-		return p256.NewElliptic(), nil
+		return elliptic.P256(), nil
 	default:
 		return nil, err
 	}

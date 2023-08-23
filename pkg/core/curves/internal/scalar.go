@@ -26,10 +26,7 @@ func ScalarMarshalBinary(scalar curves.Scalar) ([]byte, error) {
 	// The last 32 bytes are the actual value
 	// The first remaining bytes are the curve name
 	// separated by a colon
-	curve, err := scalar.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
-	}
+	curve := scalar.Curve()
 	name := []byte(curve.Name())
 	output := make([]byte, len(name)+1+scalarBytes)
 	copy(output[:len(name)], name)
@@ -58,10 +55,7 @@ func ScalarMarshalText(scalar curves.Scalar) ([]byte, error) {
 	// For text encoding we put the curve name first for readability
 	// separated by a colon, then the hex encoding of the scalar
 	// which avoids the base64 weakness with strict mode or not
-	curve, err := scalar.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
-	}
+	curve := scalar.Curve()
 	name := []byte(curve.Name())
 	output := make([]byte, len(name)+1+scalarBytes*2)
 	copy(output[:len(name)], name)

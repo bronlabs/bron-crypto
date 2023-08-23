@@ -171,10 +171,7 @@ func openCommitment(bigR curves.Point, i, tau int, pid, sid, bigS []byte, commit
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
-	curve, err := x.Curve()
-	if err != nil {
-		return nil, errs.NewInvalidCurve("invalid curve %s", curve.Name())
-	}
+	curve := x.Curve()
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))
@@ -195,10 +192,7 @@ func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []
 }
 
 func dlogVerifyProof(proof *dlog.Proof, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript) (err error) {
-	curve, err := bigR.Curve()
-	if err != nil {
-		return errs.NewInvalidCurve("invalid curve %s", curve.Name())
-	}
+	curve := bigR.Curve()
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))

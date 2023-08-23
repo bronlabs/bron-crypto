@@ -1,9 +1,10 @@
 package p256
 
 import (
-	"math/big"
 	"reflect"
 	"sync"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -18,32 +19,32 @@ const Name = "P-256"
 
 var (
 	p256Initonce sync.Once
-	p256Instance Curve
+	p256Instance CurveP256
 )
 
-var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+var _ curves.CurveProfile = (*CurveProfileP256)(nil)
 
-type CurveProfile struct{}
+type CurveProfileP256 struct{}
 
-func (CurveProfile) Field() curves.FieldProfile {
-	return &FieldProfile{}
+func (*CurveProfileP256) Field() curves.FieldProfile {
+	return new(FieldProfileP256)
 }
 
-func (CurveProfile) SubGroupOrder() *big.Int {
-	return fq.New().Params.BiModulus
+func (*CurveProfileP256) SubGroupOrder() *saferith.Modulus {
+	return fq.New().Params.Modulus
 }
 
-func (CurveProfile) Cofactor() curves.Scalar {
-	return p256Instance.Scalar().One()
+func (*CurveProfileP256) Cofactor() curves.Scalar {
+	return (&p256Instance).Scalar().One()
 }
 
-func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+func (*CurveProfileP256) ToPairingCurve() curves.PairingCurve {
 	return nil
 }
 
-var _ (curves.Curve) = (*Curve)(nil)
+var _ curves.Curve = (*CurveP256)(nil)
 
-type Curve struct {
+type CurveP256 struct {
 	Scalar_  curves.Scalar
 	Point_   curves.Point
 	Name_    string
@@ -53,59 +54,59 @@ type Curve struct {
 }
 
 func p256Init() {
-	p256Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
+	p256Instance = CurveP256{
+		Scalar_:  new(ScalarP256).Zero(),
+		Point_:   new(PointP256).Identity(),
 		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Profile_: &CurveProfileP256{},
 	}
 }
 
-func New() *Curve {
+func New() *CurveP256 {
 	p256Initonce.Do(p256Init)
 	return &p256Instance
 }
 
-func (c Curve) Profile() curves.CurveProfile {
+func (c *CurveP256) Profile() curves.CurveProfile {
 	return c.Profile_
 }
 
-func (c Curve) Scalar() curves.Scalar {
+func (c *CurveP256) Scalar() curves.Scalar {
 	return c.Scalar_
 }
 
-func (c Curve) Point() curves.Point {
+func (c *CurveP256) Point() curves.Point {
 	return c.Point_
 }
 
-func (c Curve) Name() string {
+func (c *CurveP256) Name() string {
 	return c.Name_
 }
 
-func (c Curve) Generator() curves.Point {
+func (c *CurveP256) Generator() curves.Point {
 	return c.Point_.Generator()
 }
 
-func (c Curve) Identity() curves.Point {
+func (c *CurveP256) Identity() curves.Point {
 	return c.Point_.Identity()
 }
 
-func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+func (c *CurveP256) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func (*CurveP256) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*impl.EllipticPoint, len(points))
 	nScalars := make([]*impl.Field, len(scalars))
 	for i, pt := range points {
-		ptv, ok := pt.(*Point)
+		ptv, ok := pt.(*PointP256)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointP256", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = ptv.Value
 	}
 	for i, sc := range scalars {
-		s, ok := sc.(*Scalar)
+		s, ok := sc.(*ScalarP256)
 		if !ok {
 			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarP256", reflect.TypeOf(sc).Name())
 		}
@@ -116,16 +117,16 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
-	return &Point{Value: value}, nil
+	return &PointP256{Value: value}, nil
 }
 
-func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
-	xc, ok := x.(FieldElement)
+func (*CurveP256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+	xc, ok := x.(*FieldElementP256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")
 	}
 	rhs := fp.New()
-	new(Point).Value.Arithmetic.RhsEq(rhs, xc.v)
+	new(PointP256).Value.Arithmetic.RhsEq(rhs, xc.v)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
@@ -140,8 +141,8 @@ func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err 
 	p2e.Y = fp.New().Neg(y)
 	p2e.Z.SetOne()
 
-	p1 := &Point{Value: p1e}
-	p2 := &Point{Value: p2e}
+	p1 := &PointP256{Value: p1e}
+	p2 := &PointP256{Value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil

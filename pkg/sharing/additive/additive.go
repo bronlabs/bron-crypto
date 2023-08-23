@@ -15,16 +15,13 @@ type Share struct {
 	Value curves.Scalar `json:"value"`
 }
 
-// Converts len(identities) many additive shares into a (t, n) shamir scheme. An `id`
+// ConvertToShamir converts len(identities) many additive shares into a (t, n) shamir scheme. An `id`
 // is a shamir concept, and the holder of the additive share may have different ids for different
 // shamir configs.
 // In case after conversion, resharing of the new shamir share is desired. A new protocol must
 // be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
 func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, error) {
-	curve, err := s.Value.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
-	}
+	curve := s.Value.Curve()
 	shamirDealer, err := shamir.NewDealer(t, n, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct shamir share")
@@ -82,7 +79,7 @@ func (d Dealer) Combine(shares []*Share) (curves.Scalar, error) {
 	secret := d.Curve.Scalar().Zero()
 	for _, share := range shares {
 		if share == nil || share.Value.IsZero() {
-			return nil, errs.NewIsZero("found a share with value %d", share.Value.BigInt())
+			return nil, errs.NewIsZero("found a share with value %s", share.Value.Nat().String())
 		}
 		secret = secret.Add(share.Value)
 	}

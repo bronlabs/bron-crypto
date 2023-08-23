@@ -2,7 +2,8 @@ package bls12381impl
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -772,20 +773,20 @@ func (g1 *G1) Set(a *G1) *G1 {
 	return g1
 }
 
-// BigInt returns the x and y as big.Ints in affine.
-func (g1 *G1) BigInt() (x, y *big.Int) {
+// Nat returns the x and y as saferith.Nats in affine.
+func (g1 *G1) Nat() (x, y *saferith.Nat) {
 	var t G1
 	t.ToAffine(g1)
-	return t.X.BigInt(), t.Y.BigInt()
+	return t.X.Nat(), t.Y.Nat()
 }
 
-// SetBigInt creates a point from affine x, y
+// SetNat creates a point from affine x, y
 // and returns the point if it is on the curve.
-func (g1 *G1) SetBigInt(x, y *big.Int) (*G1, error) {
+func (g1 *G1) SetNat(x, y *saferith.Nat) (*G1, error) {
 	var xx, yy Fp
 	var pp G1
-	pp.X = *(xx.SetBigInt(x))
-	pp.Y = *(yy.SetBigInt(y))
+	pp.X = *(xx.SetNat(x))
+	pp.Y = *(yy.SetNat(y))
 
 	if pp.X.IsZero()&pp.Y.IsZero() == 1 {
 		pp.Identity()

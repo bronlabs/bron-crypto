@@ -5,16 +5,20 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
-	"math/big"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/cronokirby/saferith"
 
-	mod "github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
+
+var (
+	fieldOrder = saferith.ModulusFromNat(new(saferith.Nat).SetBig(btcec.S256().P, btcec.S256().P.BitLen()))
+	groupOrder = saferith.ModulusFromNat(new(saferith.Nat).SetBig(btcec.S256().N, btcec.S256().N.BitLen()))
 )
 
 func BenchmarkK256(b *testing.B) {
@@ -37,9 +41,9 @@ func BenchmarkK256(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
 			curve := k256.New()
-			points := make([]*k256.Point, 1000)
+			points := make([]*k256.PointK256, 1000)
 			for i := range points {
-				points[i] = curve.Identity().Random(crand.Reader).(*k256.Point)
+				points[i] = curve.Identity().Random(crand.Reader).(*k256.PointK256)
 			}
 			acc := curve.Identity()
 			b.StartTimer()
@@ -61,7 +65,7 @@ func BenchmarkK256(b *testing.B) {
 	b.Run("1000 point double - ct k256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			acc := new(k256.Point).Generator()
+			acc := new(k256.PointK256).Generator()
 			b.StartTimer()
 			for i := 0; i < 1000; i++ {
 				acc = acc.Double()
@@ -86,12 +90,12 @@ func BenchmarkK256(b *testing.B) {
 	b.Run("1000 point multiply - ct k256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*k256.Scalar, 1000)
+			scalars := make([]*k256.ScalarK256, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
-				scalars[i] = s.(*k256.Scalar)
+				s := new(k256.ScalarK256).Random(crand.Reader)
+				scalars[i] = s.(*k256.ScalarK256)
 			}
-			acc := new(k256.Point).Generator()
+			acc := new(k256.PointK256).Generator()
 			b.StartTimer()
 			for _, sc := range scalars {
 				acc = acc.Mul(sc)
@@ -115,10 +119,10 @@ func BenchmarkK256(b *testing.B) {
 	b.Run("1000 scalar invert - ct k256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*k256.Scalar, 1000)
+			scalars := make([]*k256.ScalarK256, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
-				scalars[i] = s.(*k256.Scalar)
+				s := new(k256.ScalarK256).Random(crand.Reader)
+				scalars[i] = s.(*k256.ScalarK256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -143,10 +147,10 @@ func BenchmarkK256(b *testing.B) {
 	b.Run("1000 scalar sqrt - ct k256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*k256.Scalar, 1000)
+			scalars := make([]*k256.ScalarK256, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
-				scalars[i] = s.(*k256.Scalar)
+				s := new(k256.ScalarK256).Random(crand.Reader)
+				scalars[i] = s.(*k256.ScalarK256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -157,173 +161,172 @@ func BenchmarkK256(b *testing.B) {
 }
 
 type BenchScalar struct {
-	value *big.Int
+	value *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
-func (BenchScalar) CurveName() string {
+func (*BenchScalar) CurveName() string {
 	return k256.Name
 }
 
-func (BenchScalar) Curve() (curves.Curve, error) {
-	return k256.New(), nil
+func (*BenchScalar) Curve() curves.Curve {
+	return k256.New()
 }
 
 func (s *BenchScalar) Random(reader io.Reader) curves.Scalar {
 	var v [32]byte
 	_, _ = reader.Read(v[:])
-	value := new(big.Int).SetBytes(v[:])
+	value := new(saferith.Nat).SetBytes(v[:])
 	return &BenchScalar{
-		value: value.Mod(value, btcec.S256().N),
+		value: value.Mod(value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Hash(inputs ...[]byte) curves.Scalar {
 	h := sha256.Sum256(bytes.Join(inputs, nil))
-	value := new(big.Int).SetBytes(h[:])
+	value := new(saferith.Nat).SetBytes(h[:])
 	return &BenchScalar{
-		value: value.Mod(value, btcec.S256().N),
+		value: value.Mod(value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Zero() curves.Scalar {
 	return &BenchScalar{
-		value: big.NewInt(0),
+		value: new(saferith.Nat).SetUint64(0),
 	}
 }
 
 func (s *BenchScalar) One() curves.Scalar {
 	return &BenchScalar{
-		value: big.NewInt(1),
+		value: new(saferith.Nat).SetUint64(1),
 	}
 }
 
 func (s *BenchScalar) IsZero() bool {
-	return s.value.Cmp(big.NewInt(0)) == 0
+	return s.value.EqZero() != 0
 }
 
 func (s *BenchScalar) IsOne() bool {
-	return s.value.Cmp(big.NewInt(1)) == 0
+	return s.value.Eq(new(saferith.Nat).SetUint64(1)) != 0
 }
 
 func (s *BenchScalar) IsOdd() bool {
-	return s.value.Bit(0) == 1
+	return s.value.Byte(0)&0b1 != 0
 }
 
 func (s *BenchScalar) IsEven() bool {
-	return s.value.Bit(0) == 0
+	return s.value.Byte(0)&0b1 == 0
 }
 
-func (s *BenchScalar) New(value int) curves.Scalar {
-	v := big.NewInt(int64(value))
+func (s *BenchScalar) New(value uint64) curves.Scalar {
+	v := new(saferith.Nat).SetUint64(value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: v.Mod(v, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Cmp(rhs curves.Scalar) int {
 	r := rhs.(*BenchScalar)
-	return s.value.Cmp(r.value)
+	b, e, l := s.value.Cmp(r.value)
+	if b != 0 {
+		return 1
+	} else if e != 0 {
+		return 0
+	} else if l != 0 {
+		return -1
+	} else {
+		panic("should never happen")
+	}
 }
 
 func (s *BenchScalar) Square() curves.Scalar {
-	v := new(big.Int).Mul(s.value, s.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModMul(s.value, s.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Double() curves.Scalar {
-	v := new(big.Int).Add(s.value, s.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModAdd(s.value, s.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Invert() (curves.Scalar, error) {
 	return &BenchScalar{
-		value: new(big.Int).ModInverse(s.value, btcec.S256().N),
+		value: new(saferith.Nat).ModInverse(s.value, groupOrder),
 	}, nil
 }
 
 func (s *BenchScalar) Sqrt() (curves.Scalar, error) {
 	return &BenchScalar{
-		value: new(big.Int).ModSqrt(s.value, btcec.S256().N),
+		value: new(saferith.Nat).ModSqrt(s.value, groupOrder),
 	}, nil
 }
 
 func (s *BenchScalar) Cube() curves.Scalar {
-	v := new(big.Int).Mul(s.value, s.value)
-	v.Mul(v, s.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModMul(new(saferith.Nat).ModMul(s.value, s.value, groupOrder), s.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Add(rhs curves.Scalar) curves.Scalar {
 	r := rhs.(*BenchScalar)
-	v := new(big.Int).Add(s.value, r.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModAdd(r.value, r.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Sub(rhs curves.Scalar) curves.Scalar {
 	r := rhs.(*BenchScalar)
-	v := new(big.Int).Sub(s.value, r.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModSub(r.value, r.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Mul(rhs curves.Scalar) curves.Scalar {
 	r := rhs.(*BenchScalar)
-	v := new(big.Int).Mul(s.value, r.value)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModMul(r.value, r.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) MulAdd(y, z curves.Scalar) curves.Scalar {
 	yy := y.(*BenchScalar)
 	zz := z.(*BenchScalar)
-	v := new(big.Int).Mul(s.value, yy.value)
-	v.Add(v, zz.value)
+	v := new(saferith.Nat).ModMul(s.value, yy.value, groupOrder)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModAdd(v, zz.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Div(rhs curves.Scalar) curves.Scalar {
 	r := rhs.(*BenchScalar)
-	v := new(big.Int).ModInverse(r.value, btcec.S256().N)
-	v.Mul(v, s.value)
+	v := new(saferith.Nat).ModInverse(r.value, groupOrder)
 	return &BenchScalar{
-		value: v.Mod(v, btcec.S256().N),
+		value: new(saferith.Nat).ModMul(s.value, v, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Exp(k curves.Scalar) curves.Scalar {
-	value := new(big.Int).Exp(s.value, k.BigInt(), btcec.S256().N)
+	value := new(saferith.Nat).Exp(s.value, k.Nat(), groupOrder)
 	return &BenchScalar{value: value}
 }
 
 func (s *BenchScalar) Neg() curves.Scalar {
-	v, _ := mod.Neg(s.value, btcec.S256().N)
 	return &BenchScalar{
-		value: v,
+		value: new(saferith.Nat).ModNeg(s.value, groupOrder),
 	}
 }
 
-func (s *BenchScalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
+func (s *BenchScalar) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 	return &BenchScalar{
-		value: new(big.Int).Set(v),
+		value: new(saferith.Nat).Mod(v, groupOrder),
 	}, nil
 }
 
-func (s *BenchScalar) BigInt() *big.Int {
-	return new(big.Int).Set(s.value)
+func (s *BenchScalar) Nat() *saferith.Nat {
+	return new(saferith.Nat).SetNat(s.value)
 }
 
 func (s *BenchScalar) Bytes() []byte {
@@ -331,37 +334,36 @@ func (s *BenchScalar) Bytes() []byte {
 }
 
 func (s *BenchScalar) SetBytes(bytes []byte) (curves.Scalar, error) {
-	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
-	value.Mod(value, btcec.S256().N)
+	value := new(saferith.Nat).SetBytes(bitstring.ReverseBytes(bytes))
+	value.Mod(value, groupOrder)
 	return &BenchScalar{
 		value: value,
 	}, nil
 }
 
 func (s *BenchScalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
-	value := new(big.Int).SetBytes(bitstring.ReverseBytes(bytes))
-	value.Mod(value, btcec.S256().N)
+	value := new(saferith.Nat).SetBytes(bitstring.ReverseBytes(bytes))
 	return &BenchScalar{
-		value: value,
+		value: new(saferith.Nat).Mod(value, groupOrder),
 	}, nil
 }
 
 func (s *BenchScalar) Clone() curves.Scalar {
 	return &BenchScalar{
-		value: new(big.Int).Set(s.value),
+		value: new(saferith.Nat).SetNat(s.value),
 	}
 }
 
 type BenchPoint struct {
-	x, y *big.Int
+	x, y *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 func (p *BenchPoint) Clone() curves.Point {
 	return &BenchPoint{
-		x: new(big.Int).SetBytes(p.x.Bytes()),
-		y: new(big.Int).SetBytes(p.y.Bytes()),
+		x: new(saferith.Nat).SetNat(p.x),
+		y: new(saferith.Nat).SetNat(p.y),
 	}
 }
 
@@ -369,8 +371,8 @@ func (p *BenchPoint) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
-func (BenchPoint) Curve() (curves.Curve, error) {
-	return k256.New(), nil
+func (*BenchPoint) Curve() curves.Curve {
+	return k256.New()
 }
 
 func (p *BenchPoint) Random(reader io.Reader) curves.Point {
@@ -382,7 +384,7 @@ func (p *BenchPoint) Random(reader io.Reader) curves.Point {
 		_, _ = reader.Read(k[:])
 		x, y = curve.ScalarBaseMult(k[:])
 	}
-	return &BenchPoint{x: x, y: y}
+	return &BenchPoint{x: new(saferith.Nat).SetBig(x, btcec.S256().N.BitLen()), y: new(saferith.Nat).SetBig(y, btcec.S256().N.BitLen())}
 }
 
 func (p *BenchPoint) Hash(bytes ...[]byte) curves.Point {
@@ -390,13 +392,13 @@ func (p *BenchPoint) Hash(bytes ...[]byte) curves.Point {
 }
 
 func (p *BenchPoint) Identity() curves.Point {
-	return &BenchPoint{x: big.NewInt(0), y: big.NewInt(0)}
+	return &BenchPoint{x: new(saferith.Nat).SetUint64(0), y: new(saferith.Nat).SetUint64(0)}
 }
 
 func (p *BenchPoint) Generator() curves.Point {
 	return &BenchPoint{
-		x: new(big.Int).Set(btcec.S256().Gx),
-		y: new(big.Int).Set(btcec.S256().Gy),
+		x: new(saferith.Nat).SetBig(btcec.S256().Gx, fieldOrder.BitLen()),
+		y: new(saferith.Nat).SetBig(btcec.S256().Gy, fieldOrder.BitLen()),
 	}
 }
 
@@ -409,32 +411,33 @@ func (p *BenchPoint) IsNegative() bool {
 }
 
 func (p *BenchPoint) IsOnCurve() bool {
-	return btcec.S256().IsOnCurve(p.x, p.y)
+	return btcec.S256().IsOnCurve(p.x.Big(), p.y.Big())
 }
 
 func (p *BenchPoint) Double() curves.Point {
-	x, y := btcec.S256().Double(p.x, p.y)
+	x, y := btcec.S256().Double(p.x.Big(), p.y.Big())
 	return &BenchPoint{
-		x: x, y: y,
+		x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()), y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen()),
 	}
 }
 
 func (p *BenchPoint) Scalar() curves.Scalar {
-	return &BenchScalar{value: big.NewInt(0)}
+	return &BenchScalar{value: new(saferith.Nat).Mod(new(saferith.Nat).SetUint64(0), fieldOrder)}
 }
 
 func (p *BenchPoint) Neg() curves.Point {
-	y, _ := mod.Neg(p.y, btcec.S256().P)
 	return &BenchPoint{
-		x: new(big.Int).Set(p.x), y: y,
+		x: new(saferith.Nat).SetNat(p.x),
+		y: new(saferith.Nat).ModNeg(p.y, fieldOrder),
 	}
 }
 
 func (p *BenchPoint) Add(rhs curves.Point) curves.Point {
 	r := rhs.(*BenchPoint)
-	x, y := btcec.S256().Add(p.x, p.y, r.x, r.y)
+	x, y := btcec.S256().Add(p.x.Big(), p.y.Big(), r.x.Big(), r.y.Big())
 	return &BenchPoint{
-		x: x, y: y,
+		x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()),
+		y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen()),
 	}
 }
 
@@ -445,28 +448,29 @@ func (p *BenchPoint) Sub(rhs curves.Point) curves.Point {
 
 func (p *BenchPoint) Mul(rhs curves.Scalar) curves.Point {
 	k := rhs.Bytes()
-	x, y := btcec.S256().ScalarMult(p.x, p.y, k)
+	x, y := btcec.S256().ScalarMult(p.x.Big(), p.y.Big(), k)
 	return &BenchPoint{
-		x: x, y: y,
+		x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()),
+		y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen()),
 	}
 }
 
 func (p *BenchPoint) Equal(rhs curves.Point) bool {
 	r := rhs.(*BenchPoint)
-	return p.x.Cmp(r.x) == 0 && p.y.Cmp(r.y) == 0
+	return p.x.Eq(r.x) != 0 && p.y.Eq(r.y) != 0
 }
 
-func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
+func (p *BenchPoint) Set(x, y *saferith.Nat) (curves.Point, error) {
 	return &BenchPoint{
 		x: x, y: y,
 	}, nil
 }
 
-func (BenchPoint) X() curves.FieldElement {
+func (*BenchPoint) X() curves.FieldElement {
 	return nil
 }
 
-func (BenchPoint) Y() curves.FieldElement {
+func (*BenchPoint) Y() curves.FieldElement {
 	return nil
 }
 

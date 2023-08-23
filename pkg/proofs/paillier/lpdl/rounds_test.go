@@ -4,9 +4,9 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"io"
-	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -26,14 +26,14 @@ func Test_HappyPath(t *testing.T) {
 	curve := p256.New()
 	q := curve.Profile().SubGroupOrder()
 
-	xInt, err := randomIntInRange(q, prng)
+	xNat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
 
-	x, err := curve.Scalar().SetBigInt(xInt)
+	x, err := curve.Scalar().SetNat(xNat)
 	require.NoError(t, err)
 
 	bigQ := curve.ScalarBaseMult(x)
-	xEncrypted, r, err := pk.Encrypt(x.BigInt())
+	xEncrypted, r, err := pk.Encrypt(xNat)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -51,18 +51,18 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	curve := p256.New()
 	q := curve.Profile().SubGroupOrder()
 
-	x1Int, err := randomIntInRange(q, prng)
+	x1Nat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x1, err := curve.Scalar().SetBigInt(x1Int)
+	x1, err := curve.Scalar().SetNat(x1Nat)
 	require.NoError(t, err)
 
-	x2Int, err := randomIntInRange(q, prng)
+	x2Nat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x2, err := curve.Scalar().SetBigInt(x2Int)
+	x2, err := curve.Scalar().SetNat(x2Nat)
 	require.NoError(t, err)
 
 	bigQ2 := curve.ScalarBaseMult(x2)
-	x1Encrypted, r, err := pk.Encrypt(x1.BigInt())
+	x1Encrypted, r, err := pk.Encrypt(x1Nat)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -80,13 +80,14 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	curve := p256.New()
 	q := curve.Profile().SubGroupOrder()
 
-	xInt, err := randomIntInRange(q, prng)
+	xNat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x, err := curve.Scalar().SetBigInt(xInt)
+	x, err := curve.Scalar().SetNat(xNat)
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMult(x)
 
-	x2Encrypted, r, err := pk.Encrypt(curve.Scalar().Random(prng).BigInt())
+	x2Int := curve.Scalar().Random(prng).Nat()
+	x2Encrypted, r, err := pk.Encrypt(x2Int)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -103,20 +104,20 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	curve := p256.New()
 	q := curve.Profile().SubGroupOrder()
 
-	xLowInt, err := randomIntOutRangeLow(q, prng)
+	xLowNat, err := randomIntOutRangeLow(q.Nat(), prng)
 	require.NoError(t, err)
-	xLow, err := curve.Scalar().SetBigInt(xLowInt)
+	xLow, err := curve.Scalar().SetNat(xLowNat)
 	require.NoError(t, err)
 	bigQLow := curve.ScalarBaseMult(xLow)
-	xLowEncrypted, _, err := pk.Encrypt(xLow.BigInt())
+	xLowEncrypted, _, err := pk.Encrypt(xLowNat)
 	require.NoError(t, err)
 
-	xHighInt, err := randomIntOutRangeHigh(q, prng)
+	xHighNat, err := randomIntOutRangeHigh(q.Nat(), prng)
 	require.NoError(t, err)
-	xHigh, err := curve.Scalar().SetBigInt(xHighInt)
+	xHigh, err := curve.Scalar().SetNat(xHighNat)
 	require.NoError(t, err)
 	bigQHigh := curve.ScalarBaseMult(xHigh)
-	xHighEncrypted, r, err := pk.Encrypt(xHigh.BigInt())
+	xHighEncrypted, r, err := pk.Encrypt(xHighNat)
 	require.NoError(t, err)
 
 	t.Run("x below the range", func(t *testing.T) {
@@ -136,31 +137,36 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	})
 }
 
-func randomIntInRange(q *big.Int, prng io.Reader) (*big.Int, error) {
-	l := new(big.Int).Div(q, big.NewInt(3))
-	x, err := crand.Int(prng, l)
+func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 2048)
+	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(l, x), nil
+	x := new(saferith.Nat).SetBig(xInt, 2048)
+	return new(saferith.Nat).Add(l, x, 2048), nil
 }
 
-func randomIntOutRangeLow(q *big.Int, prng io.Reader) (*big.Int, error) {
-	// we should make x < 0 to make this 100% correct but this is good enough
-	// and current Paillier encryption does not support negative numbers
-	l := new(big.Int).Div(q, big.NewInt(4))
-	return crand.Int(prng, l) // x < q/4
-}
-
-func randomIntOutRangeHigh(q *big.Int, prng io.Reader) (*big.Int, error) {
-	x, err := crand.Int(prng, q)
+func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), 2048)
+	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Add(x, q), nil // x >= q
+	x := new(saferith.Nat).SetBig(xInt, 2048)
+	return x, nil
 }
 
-func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *big.Int, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
+func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+	xInt, err := crand.Int(prng, q.Big())
+	if err != nil {
+		return nil, err
+	}
+	x := new(saferith.Nat).SetBig(xInt, 2048)
+	return new(saferith.Nat).Add(q, x, 2048), nil
+}
+
+func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
 	verifierTranscript := hagrid.NewTranscript(transcriptLabel)

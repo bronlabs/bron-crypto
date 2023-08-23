@@ -1,14 +1,11 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"io"
-	"math/big"
-
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
@@ -16,6 +13,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/cronokirby/saferith"
+	"io"
 )
 
 var _ lindell17.Participant = (*Participant)(nil)
@@ -28,8 +27,8 @@ type State struct {
 	myBigQWitness     commitments.Witness
 	myPaillierPk      *paillier.PublicKey
 	myPaillierSk      *paillier.SecretKey
-	myRPrime          *big.Int
-	myRDoublePrime    *big.Int
+	myRPrime          *saferith.Nat
+	myRDoublePrime    *saferith.Nat
 
 	theirBigQCommitment          map[helper_types.IdentityHash]commitments.Commitment
 	theirBigQPrime               map[helper_types.IdentityHash]curves.Point

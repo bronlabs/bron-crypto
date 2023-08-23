@@ -1,15 +1,15 @@
 package edwards25519
 
 import (
-	"math/big"
 	"reflect"
+	"strings"
 	"sync"
 
 	filippo "filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
@@ -18,13 +18,13 @@ const Name = "edwards25519"
 
 var (
 	edwards25519Initonce sync.Once
-	edwards25519Instance Curve
+	edwards25519Instance CurveEd25519
 
 	scOne, _   = filippo.NewScalar().SetCanonicalBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	scMinusOne = [32]byte{236, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
 
-	subgroupOrder  = "1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"
-	baseFieldOrder = "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"
+	subgroupOrder, _  = saferith.ModulusFromHex(strings.ToUpper("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"))
+	baseFieldOrder, _ = saferith.ModulusFromHex(strings.ToUpper("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"))
 
 	// d is a constant in the curve equation.
 	d, _ = new(field.Element).SetBytes([]byte{
@@ -35,29 +35,29 @@ var (
 	})
 )
 
-var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+var _ curves.CurveProfile = (*CurveProfileEd25519)(nil)
 
-type CurveProfile struct{}
+type CurveProfileEd25519 struct{}
 
-func (CurveProfile) Field() curves.FieldProfile {
-	return &FieldProfile{}
+func (*CurveProfileEd25519) Field() curves.FieldProfile {
+	return &FieldProfileEd25519{}
 }
 
-func (CurveProfile) SubGroupOrder() *big.Int {
-	return internal.Bhex(subgroupOrder)
+func (*CurveProfileEd25519) SubGroupOrder() *saferith.Modulus {
+	return subgroupOrder
 }
 
-func (CurveProfile) Cofactor() curves.Scalar {
-	return edwards25519Instance.Scalar().One()
+func (*CurveProfileEd25519) Cofactor() curves.Scalar {
+	return (&edwards25519Instance).Scalar().New(8)
 }
 
-func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+func (*CurveProfileEd25519) ToPairingCurve() curves.PairingCurve {
 	return nil
 }
 
-var _ curves.Curve = (*Curve)(nil)
+var _ curves.Curve = (*CurveEd25519)(nil)
 
-type Curve struct {
+type CurveEd25519 struct {
 	Scalar_  curves.Scalar
 	Point_   curves.Point
 	Name_    string
@@ -66,49 +66,49 @@ type Curve struct {
 	_ helper_types.Incomparable
 }
 
-func New() *Curve {
+func New() *CurveEd25519 {
 	edwards25519Initonce.Do(ed25519Init)
 	return &edwards25519Instance
 }
 
 func ed25519Init() {
-	edwards25519Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
+	edwards25519Instance = CurveEd25519{
+		Scalar_:  new(ScalarEd25519).Zero(),
+		Point_:   new(PointEd25519).Identity(),
 		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Profile_: &CurveProfileEd25519{},
 	}
 }
 
-func (c Curve) Profile() curves.CurveProfile {
+func (c *CurveEd25519) Profile() curves.CurveProfile {
 	return c.Profile_
 }
 
-func (c Curve) Scalar() curves.Scalar {
+func (c *CurveEd25519) Scalar() curves.Scalar {
 	return c.Scalar_
 }
 
-func (c Curve) Point() curves.Point {
+func (c *CurveEd25519) Point() curves.Point {
 	return c.Point_
 }
 
-func (c Curve) Name() string {
+func (c *CurveEd25519) Name() string {
 	return c.Name_
 }
 
-func (c Curve) Generator() curves.Point {
+func (c *CurveEd25519) Generator() curves.Point {
 	return c.Point_.Generator()
 }
 
-func (c Curve) Identity() curves.Point {
+func (c *CurveEd25519) Identity() curves.Point {
 	return c.Point_.Identity()
 }
 
-func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+func (c *CurveEd25519) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func (*CurveEd25519) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nScalars := make([]*filippo.Scalar, len(scalars))
 	nPoints := make([]*filippo.Point, len(points))
 	for i, sc := range scalars {
@@ -119,18 +119,18 @@ func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (cu
 		nScalars[i] = s
 	}
 	for i, pt := range points {
-		pp, ok := pt.(*Point)
+		pp, ok := pt.(*PointEd25519)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointEd25519", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = pp.Value
 	}
 	pt := filippo.NewIdentityPoint().MultiScalarMult(nScalars, nPoints)
-	return &Point{Value: pt}, nil
+	return &PointEd25519{Value: pt}, nil
 }
 
-func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	xc, ok := x.(FieldElement)
+func (*CurveEd25519) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
+	xc, ok := x.(*FieldElementEd25519)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("x is not an edwards25519 base field element")
 	}
@@ -170,7 +170,7 @@ func (Curve) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, er
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
 	}
-	p1 := &Point{Value: p1e}
+	p1 := &PointEd25519{Value: p1e}
 	p2 := p1.Neg()
 
 	if p1.Y().IsEven() {

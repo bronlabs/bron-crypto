@@ -4,6 +4,8 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -18,30 +20,31 @@ const (
 )
 
 type Participant struct {
-	t     int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
-	q     *big.Int
-	l     *big.Int
-	round int
-	sid   []byte
-	prng  io.Reader
+	t      int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
+	q      *saferith.Nat
+	l      *saferith.Nat
+	capLen int
+	round  int
+	sid    []byte
+	prng   io.Reader
 
 	_ helper_types.Incomparable
 }
 
 type ProverState struct {
 	esidCommitment commitments.Commitment
-	w1             []*big.Int
-	r1             []*big.Int
-	w2             []*big.Int
-	r2             []*big.Int
+	w1             []*saferith.Nat
+	r1             []*saferith.Nat
+	w2             []*saferith.Nat
+	r2             []*saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type Prover struct {
 	Participant
-	x     *big.Int
-	r     *big.Int
+	x     *saferith.Nat
+	r     *saferith.Nat
 	sk    *paillier.SecretKey
 	state *ProverState
 
@@ -66,7 +69,7 @@ type Verifier struct {
 	_ helper_types.Incomparable
 }
 
-func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x, r *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
@@ -75,20 +78,23 @@ func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x, r *big.
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
+	capLen := sk.N.BitLen()
+
 	// 2.i. computes l = ceil(q/3)
-	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), capLen)
 
 	// 2.ii. computes c = c (-) l
-	xMinusQThird := new(big.Int).Sub(x, l)
+	xMinusQThird := new(saferith.Nat).Sub(x, l, capLen)
 
 	return &Prover{
 		Participant: Participant{
-			t:     t,
-			q:     q,
-			l:     l,
-			round: 2,
-			sid:   sid,
-			prng:  prng,
+			t:      t,
+			q:      q,
+			l:      l,
+			capLen: capLen,
+			round:  2,
+			sid:    sid,
+			prng:   prng,
 		},
 		x:     xMinusQThird,
 		r:     r,
@@ -97,7 +103,7 @@ func NewProver(t int, q *big.Int, sid []byte, sk *paillier.SecretKey, x, r *big.
 	}, nil
 }
 
-func NewVerifier(t int, q *big.Int, sid []byte, pk *paillier.PublicKey, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
@@ -106,8 +112,10 @@ func NewVerifier(t int, q *big.Int, sid []byte, pk *paillier.PublicKey, xEncrypt
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
+	capLen := pk.N.BitLen()
+
 	// 1.i. computes l = ceil(q/3)
-	l := new(big.Int).Div(new(big.Int).Add(q, big.NewInt(2)), big.NewInt(3)) // l = ceil(q/3)
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), capLen)
 
 	// 1.ii. computes c = c (-) l
 	cMinusQThirdEncrypted, err := pk.SubPlain(xEncrypted, l)

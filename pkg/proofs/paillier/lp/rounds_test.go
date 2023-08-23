@@ -3,9 +3,9 @@ package lp_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -68,10 +68,12 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 
 func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
-	p, err := crand.Prime(prng, 256)
+	pInt, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
-	q, err := crand.Prime(prng, 256)
+	p := new(saferith.Nat).SetBig(pInt, 256)
+	qInt, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qInt, 256)
 
 	sk, err := paillier.NewSecretKey(p, q)
 	require.NoError(t, err)
@@ -82,15 +84,18 @@ func Test_HappyPath(t *testing.T) {
 
 func Test_IncorrectPublicKey(t *testing.T) {
 	prng := crand.Reader
-	p1, err := crand.Prime(prng, 128)
+	p1Int, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p2, err := crand.Prime(prng, 128)
+	p1 := new(saferith.Nat).SetBig(p1Int, 128)
+	p2Int, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q, err := crand.Prime(prng, 256)
+	p2 := new(saferith.Nat).SetBig(p2Int, 128)
+	qInt, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qInt, 256)
 
 	// p is not a prime number
-	p := new(big.Int).Mul(p1, p2)
+	p := new(saferith.Nat).Mul(p1, p2, 256)
 	sk, err := paillier.NewSecretKey(p, q)
 	require.NoError(t, err)
 

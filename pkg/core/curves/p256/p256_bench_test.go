@@ -11,12 +11,18 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core"
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+)
+
+var (
+	fieldOrder = saferith.ModulusFromNat(new(saferith.Nat).SetBig(elliptic.P256().Params().P, elliptic.P256().Params().P.BitLen()))
+	groupOrder = saferith.ModulusFromNat(new(saferith.Nat).SetBig(elliptic.P256().Params().N, elliptic.P256().Params().N.BitLen()))
 )
 
 func BenchmarkP256(b *testing.B) {
@@ -48,7 +54,7 @@ func BenchmarkP256(b *testing.B) {
 				_, _ = crand.Read(t)
 				points[i] = t
 			}
-			acc := new(Point).Identity()
+			acc := new(PointP256).Identity()
 			b.StartTimer()
 			for _, pt := range points {
 				acc = acc.Hash(pt)
@@ -74,9 +80,9 @@ func BenchmarkP256(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
 			curve := New()
-			points := make([]*Point, 1000)
+			points := make([]*PointP256, 1000)
 			for i := range points {
-				points[i] = curve.Identity().Random(crand.Reader).(*Point)
+				points[i] = curve.Identity().Random(crand.Reader).(*PointP256)
 			}
 			acc := curve.Identity()
 			b.StartTimer()
@@ -98,7 +104,7 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 point double - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			acc := new(Point).Generator()
+			acc := new(PointP256).Generator()
 			b.StartTimer()
 			for i := 0; i < 1000; i++ {
 				acc = acc.Double()
@@ -123,12 +129,12 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 point multiply - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
-				scalars[i] = s.(*Scalar)
+				s := new(ScalarP256).Random(crand.Reader)
+				scalars[i] = s.(*ScalarP256)
 			}
-			acc := new(Point).Generator()
+			acc := new(PointP256).Generator()
 			b.StartTimer()
 			for _, sc := range scalars {
 				acc = acc.Mul(sc)
@@ -152,10 +158,10 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 scalar invert - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
-				scalars[i] = s.(*Scalar)
+				s := new(ScalarP256).Random(crand.Reader)
+				scalars[i] = s.(*ScalarP256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -180,10 +186,10 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 scalar sqrt - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
-				scalars[i] = s.(*Scalar)
+				s := new(ScalarP256).Random(crand.Reader)
+				scalars[i] = s.(*ScalarP256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -194,21 +200,21 @@ func BenchmarkP256(b *testing.B) {
 }
 
 type BenchScalar struct {
-	value *big.Int
+	value *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type BenchPoint struct {
-	x, y *big.Int
+	x, y *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 func (p *BenchPoint) Clone() curves.Point {
 	return &BenchPoint{
-		x: new(big.Int).SetBytes(p.x.Bytes()),
-		y: new(big.Int).SetBytes(p.y.Bytes()),
+		x: new(saferith.Nat).SetNat(p.x),
+		y: new(saferith.Nat).SetNat(p.y),
 	}
 }
 
@@ -216,16 +222,16 @@ func (p *BenchPoint) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
-func (BenchScalar) CurveName() string {
+func (*BenchScalar) CurveName() string {
 	return Name
 }
 
-func (BenchPoint) Curve() (curves.Curve, error) {
-	return New(), nil
+func (*BenchPoint) Curve() curves.Curve {
+	return New()
 }
 
-func (BenchScalar) Curve() (curves.Curve, error) {
-	return New(), nil
+func (*BenchScalar) Curve() curves.Curve {
+	return New()
 }
 
 func (s *BenchScalar) Random(reader io.Reader) curves.Scalar {
@@ -242,96 +248,97 @@ func (s *BenchScalar) Hash(inputs ...[]byte) curves.Scalar {
 	if err != nil {
 		return nil
 	}
-	v := new(big.Int).SetBytes(xmd)
+	v := new(saferith.Nat).SetBytes(xmd)
 	return &BenchScalar{
-		value: v.Mod(v, elliptic.P256().Params().N),
+		value: new(saferith.Nat).Mod(v, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Zero() curves.Scalar {
 	return &BenchScalar{
-		value: big.NewInt(0),
+		value: new(saferith.Nat).SetUint64(0),
 	}
 }
 
 func (s *BenchScalar) One() curves.Scalar {
 	return &BenchScalar{
-		value: big.NewInt(1),
+		value: new(saferith.Nat).SetUint64(1),
 	}
 }
 
 func (s *BenchScalar) IsZero() bool {
-	return subtle.ConstantTimeCompare(s.value.Bytes(), []byte{}) == 1
+	return s.value.EqZero() != 0
 }
 
 func (s *BenchScalar) IsOne() bool {
-	return subtle.ConstantTimeCompare(s.value.Bytes(), []byte{1}) == 1
+	return s.value.Eq(new(saferith.Nat).SetUint64(1)) != 0
 }
 
 func (s *BenchScalar) IsOdd() bool {
-	return s.value.Bit(0) == 1
+	return s.value.Byte(0)&0b1 != 0
 }
 
 func (s *BenchScalar) IsEven() bool {
-	return s.value.Bit(0) == 0
+	return s.value.Byte(0)&0b1 == 0
 }
 
-func (s *BenchScalar) New(value int) curves.Scalar {
-	v := big.NewInt(int64(value))
-	if value < 0 {
-		v.Mod(v, elliptic.P256().Params().N)
-	}
+func (s *BenchScalar) New(value uint64) curves.Scalar {
 	return &BenchScalar{
-		value: v,
+		value: new(saferith.Nat).SetUint64(value),
 	}
 }
 
 func (s *BenchScalar) Cmp(rhs curves.Scalar) int {
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		return s.value.Cmp(r.value)
-	} else {
-		return -2
+		b, e, l := s.value.Cmp(r.value)
+		if l != 0 {
+			return -1
+		} else if e != 0 {
+			return 0
+		} else if b != 0 {
+			return 1
+		}
 	}
+
+	return -2
 }
 
 func (s *BenchScalar) Square() curves.Scalar {
 	return &BenchScalar{
-		value: new(big.Int).Exp(s.value, big.NewInt(2), elliptic.P256().Params().N),
+		value: new(saferith.Nat).ModMul(s.value, s.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Double() curves.Scalar {
-	v := new(big.Int).Add(s.value, s.value)
 	return &BenchScalar{
-		value: v.Mod(v, elliptic.P256().Params().N),
+		value: new(saferith.Nat).ModAdd(s.value, s.value, groupOrder),
 	}
 }
 
 func (s *BenchScalar) Invert() (curves.Scalar, error) {
 	return &BenchScalar{
-		value: new(big.Int).ModInverse(s.value, elliptic.P256().Params().N),
+		value: new(saferith.Nat).ModInverse(s.value, groupOrder),
 	}, nil
 }
 
 func (s *BenchScalar) Sqrt() (curves.Scalar, error) {
 	return &BenchScalar{
-		value: new(big.Int).ModSqrt(s.value, elliptic.P256().Params().N),
+		value: new(saferith.Nat).ModSqrt(s.value, groupOrder),
 	}, nil
 }
 
 func (s *BenchScalar) Cube() curves.Scalar {
 	return &BenchScalar{
-		value: new(big.Int).Exp(s.value, big.NewInt(3), elliptic.P256().Params().N),
+		value: new(saferith.Nat).Exp(s.value, new(saferith.Nat).SetUint64(3), groupOrder),
 	}
 }
 
 func (s *BenchScalar) Add(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		v := new(big.Int).Add(s.value, r.value)
 		return &BenchScalar{
-			value: v.Mod(v, elliptic.P256().Params().N),
+			value: new(saferith.Nat).ModAdd(s.value, r.value, groupOrder),
 		}
 	} else {
 		return nil
@@ -341,9 +348,8 @@ func (s *BenchScalar) Add(rhs curves.Scalar) curves.Scalar {
 func (s *BenchScalar) Sub(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		v := new(big.Int).Sub(s.value, r.value)
 		return &BenchScalar{
-			value: v.Mod(v, elliptic.P256().Params().N),
+			value: new(saferith.Nat).ModSub(s.value, r.value, groupOrder),
 		}
 	} else {
 		return nil
@@ -353,9 +359,8 @@ func (s *BenchScalar) Sub(rhs curves.Scalar) curves.Scalar {
 func (s *BenchScalar) Mul(rhs curves.Scalar) curves.Scalar {
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		v := new(big.Int).Mul(s.value, r.value)
 		return &BenchScalar{
-			value: v.Mod(v, elliptic.P256().Params().N),
+			value: new(saferith.Nat).ModMul(s.value, r.value, groupOrder),
 		}
 	} else {
 		return nil
@@ -367,13 +372,11 @@ func (s *BenchScalar) MulAdd(y, z curves.Scalar) curves.Scalar {
 }
 
 func (s *BenchScalar) Div(rhs curves.Scalar) curves.Scalar {
-	n := elliptic.P256().Params().N
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		v := new(big.Int).ModInverse(r.value, n)
-		v.Mul(v, s.value)
+		v := new(saferith.Nat).ModInverse(r.value, groupOrder)
 		return &BenchScalar{
-			value: v.Mod(v, n),
+			value: new(saferith.Nat).ModMul(s.value, v, groupOrder),
 		}
 	} else {
 		return nil
@@ -381,32 +384,24 @@ func (s *BenchScalar) Div(rhs curves.Scalar) curves.Scalar {
 }
 
 func (s *BenchScalar) Exp(k curves.Scalar) curves.Scalar {
-	value := new(big.Int).Exp(s.value, k.BigInt(), elliptic.P256().Params().N)
+	value := new(saferith.Nat).ModMul(s.value, k.Nat(), groupOrder)
 	return &BenchScalar{value: value}
 }
 
 func (s *BenchScalar) Neg() curves.Scalar {
-	z := new(big.Int).Neg(s.value)
 	return &BenchScalar{
-		value: z.Mod(z, elliptic.P256().Params().N),
+		value: new(saferith.Nat).ModNeg(s.value, groupOrder),
 	}
 }
 
-func (s *BenchScalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
-	if v == nil {
-		return nil, fmt.Errorf("invalid value")
-	}
-	t := new(big.Int).Mod(v, elliptic.P256().Params().N)
-	if t.Cmp(v) != 0 {
-		return nil, fmt.Errorf("invalid value")
-	}
+func (s *BenchScalar) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 	return &BenchScalar{
-		value: t,
+		value: new(saferith.Nat).Mod(v, groupOrder),
 	}, nil
 }
 
-func (s *BenchScalar) BigInt() *big.Int {
-	return new(big.Int).Set(s.value)
+func (s *BenchScalar) Nat() *saferith.Nat {
+	return new(saferith.Nat).SetNat(s.value)
 }
 
 func (s *BenchScalar) Bytes() []byte {
@@ -415,9 +410,9 @@ func (s *BenchScalar) Bytes() []byte {
 }
 
 func (s *BenchScalar) SetBytes(bytes []byte) (curves.Scalar, error) {
-	value := new(big.Int).SetBytes(bytes)
-	t := new(big.Int).Mod(value, elliptic.P256().Params().N)
-	if t.Cmp(value) != 0 {
+	value := new(saferith.Nat).SetBytes(bytes)
+	t := new(saferith.Nat).Mod(value, groupOrder)
+	if t.Eq(value) == 0 {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
 	return &BenchScalar{
@@ -429,8 +424,8 @@ func (s *BenchScalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
 	if len(bytes) < 32 || len(bytes) > 128 {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
-	value := new(big.Int).SetBytes(bytes)
-	value.Mod(value, elliptic.P256().Params().N)
+	value := new(saferith.Nat).SetBytes(bytes)
+	value.Mod(value, groupOrder)
 	return &BenchScalar{
 		value: value,
 	}, nil
@@ -438,7 +433,7 @@ func (s *BenchScalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
 
 func (s *BenchScalar) Clone() curves.Scalar {
 	return &BenchScalar{
-		value: new(big.Int).Set(s.value),
+		value: new(saferith.Nat).SetNat(s.value),
 	}
 }
 
@@ -519,42 +514,44 @@ func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
 	x, y := curve.Add(q0x, q0y, q1x, q1y)
 
 	return &BenchPoint{
-		x: x, y: y,
+		x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()),
+		y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen()),
 	}
 }
 
 func (p *BenchPoint) Identity() curves.Point {
 	return &BenchPoint{
-		x: big.NewInt(0), y: big.NewInt(0),
+		x: new(saferith.Nat).SetUint64(0),
+		y: new(saferith.Nat).SetUint64(0),
 	}
 }
 
 func (p *BenchPoint) Generator() curves.Point {
 	curve := elliptic.P256().Params()
 	return &BenchPoint{
-		x: new(big.Int).Set(curve.Gx),
-		y: new(big.Int).Set(curve.Gy),
+		x: new(saferith.Nat).SetBig(curve.Gx, fieldOrder.BitLen()),
+		y: new(saferith.Nat).SetBig(curve.Gy, fieldOrder.BitLen()),
 	}
 }
 
 func (p *BenchPoint) IsIdentity() bool {
-	x := core.ConstantTimeEqByte(p.x, core.Zero)
-	y := core.ConstantTimeEqByte(p.y, core.Zero)
-	return (x & y) == 1
+	x := p.x.EqZero()
+	y := p.y.EqZero()
+	return (x & y) != 0
 }
 
 func (p *BenchPoint) IsNegative() bool {
-	return p.y.Bit(0) == 1
+	return p.y.Byte(0)&0b1 != 0
 }
 
 func (p *BenchPoint) IsOnCurve() bool {
-	return elliptic.P256().IsOnCurve(p.x, p.y)
+	return elliptic.P256().IsOnCurve(p.x.Big(), p.y.Big())
 }
 
 func (p *BenchPoint) Double() curves.Point {
 	curve := elliptic.P256()
-	x, y := curve.Double(p.x, p.y)
-	return &BenchPoint{x: x, y: y}
+	x, y := curve.Double(p.x.Big(), p.y.Big())
+	return &BenchPoint{x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()), y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen())}
 }
 
 func (p *BenchPoint) Scalar() curves.Scalar {
@@ -562,8 +559,7 @@ func (p *BenchPoint) Scalar() curves.Scalar {
 }
 
 func (p *BenchPoint) Neg() curves.Point {
-	y := new(big.Int).Sub(elliptic.P256().Params().P, p.y)
-	y.Mod(y, elliptic.P256().Params().P)
+	y := new(saferith.Nat).ModNeg(p.y, fieldOrder)
 	return &BenchPoint{x: p.x, y: y}
 }
 
@@ -573,8 +569,8 @@ func (p *BenchPoint) Add(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*BenchPoint)
 	if ok {
-		x, y := elliptic.P256().Add(p.x, p.y, r.x, r.y)
-		return &BenchPoint{x: x, y: y}
+		x, y := elliptic.P256().Add(p.x.Big(), p.y.Big(), r.x.Big(), r.y.Big())
+		return &BenchPoint{x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()), y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen())}
 	} else {
 		return nil
 	}
@@ -586,8 +582,8 @@ func (p *BenchPoint) Sub(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.Neg().(*BenchPoint)
 	if ok {
-		x, y := elliptic.P256().Add(p.x, p.y, r.x, r.y)
-		return &BenchPoint{x: x, y: y}
+		x, y := elliptic.P256().Add(p.x.Big(), p.y.Big(), r.x.Big(), r.y.Big())
+		return &BenchPoint{x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()), y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen())}
 	} else {
 		return nil
 	}
@@ -599,8 +595,8 @@ func (p *BenchPoint) Mul(rhs curves.Scalar) curves.Point {
 	}
 	r, ok := rhs.(*BenchScalar)
 	if ok {
-		x, y := elliptic.P256().ScalarMult(p.x, p.y, r.value.Bytes())
-		return &BenchPoint{x: x, y: y}
+		x, y := elliptic.P256().ScalarMult(p.x.Big(), p.y.Big(), r.value.Bytes())
+		return &BenchPoint{x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()), y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen())}
 	} else {
 		return nil
 	}
@@ -609,32 +605,30 @@ func (p *BenchPoint) Mul(rhs curves.Scalar) curves.Point {
 func (p *BenchPoint) Equal(rhs curves.Point) bool {
 	r, ok := rhs.(*BenchPoint)
 	if ok {
-		x := core.ConstantTimeEqByte(p.x, r.x)
-		y := core.ConstantTimeEqByte(p.y, r.y)
-		return (x & y) == 1
+		x := p.x.Eq(r.x)
+		y := p.y.Eq(r.y)
+		return (x & y) != 0
 	} else {
 		return false
 	}
 }
 
-func (p *BenchPoint) Set(x, y *big.Int) (curves.Point, error) {
+func (p *BenchPoint) Set(x, y *saferith.Nat) (curves.Point, error) {
 	// check is identity or on curve
 	xx := subtle.ConstantTimeCompare(x.Bytes(), []byte{})
 	yy := subtle.ConstantTimeCompare(y.Bytes(), []byte{})
 	// Checks are constant time
-	onCurve := elliptic.P256().IsOnCurve(x, y)
-	if !onCurve && (xx&yy) != 1 {
+	onCurve := elliptic.P256().IsOnCurve(x.Big(), y.Big())
+	if !onCurve && (xx&yy) == 0 {
 		return nil, fmt.Errorf("invalid coordinates")
 	}
-	x = new(big.Int).Set(x)
-	y = new(big.Int).Set(y)
 	return &BenchPoint{x: x, y: y}, nil
 }
 
 func (p *BenchPoint) ToAffineCompressed() []byte {
 	var x [33]byte
 	x[0] = byte(2)
-	x[0] |= byte(p.y.Bit(0))
+	x[0] |= p.y.Byte(0) & 0b1
 	p.x.FillBytes(x[1:])
 	return x[:]
 }
@@ -655,22 +649,21 @@ func (p *BenchPoint) FromAffineCompressed(bytes []byte) (curves.Point, error) {
 	if sign != 2 && sign != 3 {
 		return nil, fmt.Errorf("invalid sign byte")
 	}
-	sign &= 0x1
+	sign &= 0b1
 
-	x := new(big.Int).SetBytes(bytes[1:])
-	rhs := rhsP256(x, elliptic.P256().Params())
+	x := new(saferith.Nat).SetBytes(bytes[1:])
+	rhs := rhsP256(x.Big(), elliptic.P256().Params())
 	// test that rhs is quadratic residue
 	// if not, then this curves.Point is at infinity
-	y := new(big.Int).ModSqrt(rhs, elliptic.P256().Params().P)
+	y := new(saferith.Nat).ModSqrt(new(saferith.Nat).SetBig(rhs, fieldOrder.BitLen()), fieldOrder)
 	if y != nil {
 		// fix the sign
-		if int(y.Bit(0)) != sign {
-			y.Neg(y)
-			y.Mod(y, elliptic.P256().Params().P)
+		if y.Byte(0)&0b1 != byte(sign) {
+			y.ModNeg(y, fieldOrder)
 		}
 	} else {
-		x = new(big.Int)
-		y = new(big.Int)
+		x = new(saferith.Nat)
+		y = new(saferith.Nat)
 	}
 	return &BenchPoint{
 		x: x, y: y,
@@ -684,8 +677,8 @@ func (p *BenchPoint) FromAffineUncompressed(bytes []byte) (curves.Point, error) 
 	if bytes[0] != 4 {
 		return nil, fmt.Errorf("invalid sign byte")
 	}
-	x := new(big.Int).SetBytes(bytes[1:33])
-	y := new(big.Int).SetBytes(bytes[33:])
+	x := new(saferith.Nat).SetBytes(bytes[1:33])
+	y := new(saferith.Nat).SetBytes(bytes[33:])
 	return &BenchPoint{x: x, y: y}, nil
 }
 
@@ -693,11 +686,11 @@ func (p *BenchPoint) CurveName() string {
 	return elliptic.P256().Params().Name
 }
 
-func (BenchPoint) X() curves.FieldElement {
+func (*BenchPoint) X() curves.FieldElement {
 	return nil
 }
 
-func (BenchPoint) Y() curves.FieldElement {
+func (*BenchPoint) Y() curves.FieldElement {
 	return nil
 }
 

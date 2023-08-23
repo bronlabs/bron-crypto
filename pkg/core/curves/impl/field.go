@@ -2,7 +2,8 @@ package impl
 
 import (
 	"encoding/binary"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -40,9 +41,9 @@ type FieldParams struct {
 	// R3 is 2^768 mod Modulus
 	R3 [FieldLimbs]uint64
 	// Modulus of the field
-	Modulus [FieldLimbs]uint64
-	// Modulus as big.Int
-	BiModulus *big.Int
+	ModulusLimbs [FieldLimbs]uint64
+	// Modulus as saferith.Modulus
+	Modulus *saferith.Modulus
 
 	_ helper_types.Incomparable
 }
@@ -228,18 +229,17 @@ func (f *Field) SetBytes(input *[FieldBytes]byte) (*Field, error) {
 	d0 := [FieldLimbs]uint64{0, 0, 0, 0}
 	f.Arithmetic.FromBytes(&d0, input)
 
-	if cmpHelper(&d0, &f.Params.Modulus) != -1 {
+	if cmpHelper(&d0, &f.Params.ModulusLimbs) != -1 {
 		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	return f.SetLimbs(&d0), nil
 }
 
-// SetBigInt initialises an element from big.Int
+// SetNat initialises an element from saferith.Nat
 // The value is reduced by the modulus.
-func (f *Field) SetBigInt(bi *big.Int) *Field {
+func (f *Field) SetNat(nat *saferith.Nat) *Field {
 	var buffer [FieldBytes]byte
-	t := new(big.Int).Set(bi)
-	t.Mod(t, f.Params.BiModulus)
+	t := new(saferith.Nat).Mod(nat, f.Params.Modulus)
 	t.FillBytes(buffer[:])
 	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = f.SetBytes(&buffer)
@@ -273,10 +273,10 @@ func (f *Field) Bytes() [FieldBytes]byte {
 	return output
 }
 
-// BigInt converts this element into the big.Int struct.
-func (f *Field) BigInt() *big.Int {
+// Nat converts this element into the big.Int struct.
+func (f *Field) Nat() *saferith.Nat {
 	buffer := f.Bytes()
-	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.

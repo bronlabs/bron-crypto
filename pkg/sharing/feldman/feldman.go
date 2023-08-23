@@ -12,15 +12,12 @@ import (
 type Share = shamir.Share
 
 func Verify(share *Share, commitments []curves.Point) (err error) {
-	curve, err := share.Value.Curve()
-	if err != nil {
-		return errs.WrapInvalidCurve(err, "no such curve: %s", curve.Name())
-	}
+	curve := share.Value.Curve()
 	err = share.Validate(curve)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "share validation failed")
 	}
-	x := curve.Scalar().New(share.Id)
+	x := curve.Scalar().New(uint64(share.Id))
 	i := curve.Scalar().One()
 
 	is := make([]curves.Scalar, len(commitments))

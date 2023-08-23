@@ -2,10 +2,10 @@ package bls12381impl
 
 import (
 	crand "crypto/rand"
-	"math/big"
 	"math/rand"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
@@ -277,17 +277,17 @@ func TestFqCmp(t *testing.T) {
 }
 
 func TestFqBigInt(t *testing.T) {
-	t1 := FqNew().SetBigInt(big.NewInt(9999))
-	t2 := FqNew().SetBigInt(t1.BigInt())
+	t1 := FqNew().SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := FqNew().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
 	e := FqNew().SetRaw(&[impl.FieldLimbs]uint64{0x673053fc60e06500, 0x86e6d480b4f76ada, 0x7fc68f9fefa23291, 0x3fb17f49bdda126d})
-	b := new(big.Int).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
-	t1.SetBigInt(b)
+	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e.Neg(e)
-	b.Neg(b)
-	t1.SetBigInt(b)
+	b.ModNeg(b, getBls12381FqParams().Modulus)
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 
@@ -312,13 +312,13 @@ func TestFqSetBytesWideBigInt(t *testing.T) {
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(tv2[:])
-		e := new(big.Int).SetBytes(tv2[:])
-		e.Mod(e, params.BiModulus)
+		e := new(saferith.Nat).SetBytes(tv2[:])
+		e.Mod(e, params.Modulus)
 
 		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)
 		a := FqNew().SetBytesWide(&tv2)
-		require.Equal(t, 0, e.Cmp(a.BigInt()))
+		require.NotZero(t, e.Eq(a.Nat()))
 	}
 }
 

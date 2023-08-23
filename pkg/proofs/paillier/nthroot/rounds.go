@@ -2,26 +2,28 @@ package nthroot
 
 import (
 	crand "crypto/rand"
-	"math/big"
 
+	"github.com/cronokirby/saferith"
+
+	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
 type Round1Output struct {
-	A *big.Int
+	A *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type Round2Output struct {
-	E *big.Int
+	E *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type Round3Output struct {
-	Z *big.Int
+	Z *saferith.Nat
 
 	_ helper_types.Incomparable
 }
@@ -32,13 +34,14 @@ func (prover *Prover) Round1() (output *Round1Output, err error) {
 	}
 
 	// P chooses r at random mod N^2...
-	prover.state.r, err = crand.Int(prover.prng, prover.state.bigNSquared)
+	rInt, err := crand.Int(prover.prng, prover.state.bigNSquared.Big())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random number")
 	}
+	prover.state.r = new(saferith.Nat).SetBig(rInt, prover.state.bigNSquared.BitLen())
 
 	// ...calculates a = r^N mod N^2 and sends to V
-	a := new(big.Int).Exp(prover.state.r, prover.bigN, prover.state.bigNSquared)
+	a := new(saferith.Nat).Exp(prover.state.r, prover.bigN, prover.state.bigNSquared)
 
 	prover.round += 2
 	return &Round1Output{
@@ -54,15 +57,16 @@ func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err
 	verifier.state.a = input.A
 
 	// k = bit length of N
-	k := verifier.bigN.BitLen()
+	k := verifier.bigN.AnnouncedLen()
 
 	// V chooses e, a random k bit number, and sends e to P (i.e 0 <= e < (1 << k))
-	e, err := crand.Int(verifier.prng, new(big.Int).Lsh(big.NewInt(1), uint(k)))
+	e, err := core.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), uint(k), -1))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random number")
 	}
-	// make sure e has MSB set
-	verifier.state.e = new(big.Int).SetBit(e, k-1, 1)
+	// make sure e has MSB set (no
+	e = core.NatSetBit(e, k-1)
+	verifier.state.e = e
 
 	verifier.round += 2
 	return &Round2Output{
@@ -76,7 +80,7 @@ func (prover *Prover) Round3(input *Round2Output) (output *Round3Output, err err
 	}
 
 	// P sends z = rv^e mod N^2 to V
-	z := new(big.Int).Mod(new(big.Int).Mul(new(big.Int).Exp(prover.y, input.E, prover.state.bigNSquared), prover.state.r), prover.state.bigNSquared)
+	z := new(saferith.Nat).ModMul(new(saferith.Nat).Exp(prover.y, input.E, prover.state.bigNSquared), prover.state.r, prover.state.bigNSquared)
 
 	prover.round += 2
 	return &Round3Output{
@@ -90,13 +94,13 @@ func (verifier *Verifier) Round4(input *Round3Output) (err error) {
 	}
 
 	// calc z^N mod N^2
-	zToN := new(big.Int).Exp(input.Z, verifier.bigN, verifier.state.bigNSquared)
+	zToN := new(saferith.Nat).Exp(input.Z, verifier.bigN, verifier.state.bigNSquared)
 	// calc au^e mod N^2
-	uToE := new(big.Int).Exp(verifier.x, verifier.state.e, verifier.state.bigNSquared)
-	aTimesUtoE := new(big.Int).Mod(new(big.Int).Mul(verifier.state.a, uToE), verifier.state.bigNSquared)
+	uToE := new(saferith.Nat).Exp(verifier.x, verifier.state.e, verifier.state.bigNSquared)
+	aTimesUtoE := new(saferith.Nat).ModMul(verifier.state.a, uToE, verifier.state.bigNSquared)
 
 	// V checks that z^N = au^e mod N^2, and accepts if and only if this is the case
-	if zToN.Cmp(aTimesUtoE) != 0 {
+	if zToN.Eq(aTimesUtoE) == 0 {
 		return errs.NewVerificationFailed("verification failed")
 	}
 

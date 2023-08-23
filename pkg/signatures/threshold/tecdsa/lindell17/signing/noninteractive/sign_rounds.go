@@ -10,8 +10,8 @@ import (
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx := bigR.X().BigInt()
-	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
+	bigRx := bigR.X().Nat()
+	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -39,7 +39,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// c3 = Enc_pk(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := signing.CalcC3(theirLambda, k2, mPrime, r, additiveShare, q, paillierPublicKey, cKey, p.prng)
+	c3, err := signing.CalcC3(theirLambda, k2, mPrime, r, additiveShare, q.Nat(), paillierPublicKey, cKey, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
@@ -51,8 +51,8 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 
 func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.Signature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx := bigR.X().BigInt()
-	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
+	bigRx := bigR.X().Nat()
+	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -62,7 +62,7 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}
-	sPrime, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(sPrimeInt)
+	sPrime, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar value")
 	}

@@ -17,10 +17,7 @@ func PointMarshalBinary(point curves.Point) ([]byte, error) {
 	// separated by a colon followed by the compressed point
 	// bytes
 	t := point.ToAffineCompressed()
-	curve, err := point.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
-	}
+	curve := point.Curve()
 	name := []byte(curve.Name())
 	output := make([]byte, len(name)+1+len(t))
 	copy(output[:len(name)], name)
@@ -53,10 +50,7 @@ func PointMarshalText(point curves.Point) ([]byte, error) {
 	// separated by a colon followed by the compressed point
 	// bytes
 	t := point.ToAffineCompressed()
-	curve, err := point.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
-	}
+	curve := point.Curve()
 	name := []byte(curve.Name())
 	output := make([]byte, len(name)+1+len(t)*2)
 	copy(output[:len(name)], name)
@@ -90,10 +84,7 @@ func PointUnmarshalText(curve curves.Curve, input []byte) (curves.Point, error) 
 
 func PointMarshalJson(point curves.Point) ([]byte, error) {
 	m := make(map[string]string, 2)
-	curve, err := point.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not extract curve")
-	}
+	curve := point.Curve()
 	m["type"] = curve.Name()
 	m["value"] = hex.EncodeToString(point.ToAffineCompressed())
 	marshalled, err := json.Marshal(m)

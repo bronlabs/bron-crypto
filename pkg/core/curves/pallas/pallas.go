@@ -1,9 +1,10 @@
 package pallas
 
 import (
-	"math/big"
 	"reflect"
 	"sync"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
@@ -16,7 +17,7 @@ const Name = "pallas"
 
 var (
 	pallasInitonce sync.Once
-	pallasInstance Curve
+	pallasInstance CurvePallas
 
 	b        = new(fp.Fp).SetUint64(5)
 	three    = &fp.Fp{0x6b0ee5d0fffffff5, 0x86f76d2b99b14bd0, 0xfffffffffffffffe, 0x3fffffffffffffff}
@@ -49,29 +50,29 @@ var (
 	z    = new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffff4, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000})
 )
 
-var _ (curves.CurveProfile) = (*CurveProfile)(nil)
+var _ curves.CurveProfile = (*CurveProfilePallas)(nil)
 
-type CurveProfile struct{}
+type CurveProfilePallas struct{}
 
-func (CurveProfile) Field() curves.FieldProfile {
-	return &FieldProfile{}
+func (*CurveProfilePallas) Field() curves.FieldProfile {
+	return &FieldProfilePallas{}
 }
 
-func (CurveProfile) SubGroupOrder() *big.Int {
-	return fq.BiModulus
+func (*CurveProfilePallas) SubGroupOrder() *saferith.Modulus {
+	return fq.Modulus
 }
 
-func (CurveProfile) Cofactor() curves.Scalar {
+func (*CurveProfilePallas) Cofactor() curves.Scalar {
 	return pallasInstance.Scalar().One()
 }
 
-func (CurveProfile) ToPairingCurve() curves.PairingCurve {
+func (*CurveProfilePallas) ToPairingCurve() curves.PairingCurve {
 	return nil
 }
 
-var _ (curves.Curve) = (*Curve)(nil)
+var _ curves.Curve = (*CurvePallas)(nil)
 
-type Curve struct {
+type CurvePallas struct {
 	Scalar_  curves.Scalar
 	Point_   curves.Point
 	Name_    string
@@ -81,49 +82,49 @@ type Curve struct {
 }
 
 func pallasInit() {
-	pallasInstance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
+	pallasInstance = CurvePallas{
+		Scalar_:  new(ScalarPallas).Zero(),
+		Point_:   new(PointPallas).Identity(),
 		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Profile_: &CurveProfilePallas{},
 	}
 }
 
-func New() *Curve {
+func New() *CurvePallas {
 	pallasInitonce.Do(pallasInit)
 	return &pallasInstance
 }
 
-func (c Curve) Profile() curves.CurveProfile {
+func (c *CurvePallas) Profile() curves.CurveProfile {
 	return c.Profile_
 }
 
-func (c Curve) Scalar() curves.Scalar {
+func (c *CurvePallas) Scalar() curves.Scalar {
 	return c.Scalar_
 }
 
-func (c Curve) Point() curves.Point {
+func (c *CurvePallas) Point() curves.Point {
 	return c.Point_
 }
 
-func (c Curve) Name() string {
+func (c *CurvePallas) Name() string {
 	return c.Name_
 }
 
-func (c Curve) Generator() curves.Point {
+func (c *CurvePallas) Generator() curves.Point {
 	return c.Point_.Generator()
 }
 
-func (c Curve) Identity() curves.Point {
+func (c *CurvePallas) Identity() curves.Point {
 	return c.Point_.Identity()
 }
 
-func (c Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+func (c *CurvePallas) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
-	xc, ok := x.(FieldElement)
+func (*CurvePallas) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+	xc, ok := x.(*FieldElementPallas)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")
 	}
@@ -142,8 +143,8 @@ func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err 
 	p2e.Y = new(fp.Fp).Neg(y)
 	p2e.Z.SetOne()
 
-	p1 := &Point{value: p1e}
-	p2 := &Point{value: p2e}
+	p1 := &PointPallas{value: p1e}
+	p2 := &PointPallas{value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil
@@ -151,26 +152,26 @@ func (Curve) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err 
 	return p2, p1, nil
 }
 
-func (Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func (*CurvePallas) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	eps := make([]*Ep, len(points))
 	for i, pt := range points {
-		ps, ok := pt.(*Point)
+		ps, ok := pt.(*PointPallas)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
 		}
 		eps[i] = ps.value
 	}
-	nScalars := make([]*big.Int, len(scalars))
+	nScalars := make([]*saferith.Nat, len(scalars))
 	for i, s := range scalars {
-		sc, ok := s.(*Scalar)
+		sc, ok := s.(*ScalarPallas)
 		if !ok {
 			return nil, errs.NewInvalidType("not a pallas scalar")
 		}
-		nScalars[i] = sc.value.BigInt()
+		nScalars[i] = sc.value.Nat()
 	}
 
 	value := pippengerMultiScalarMultPallas(eps, nScalars)
-	return &Point{value: value}, nil
+	return &PointPallas{value: value}, nil
 }
 
 // rhs of the curve equation.
@@ -180,14 +181,14 @@ func rhsPallas(x *fp.Fp) *fp.Fp {
 	return new(fp.Fp).Add(x3, b)
 }
 
-func pippengerMultiScalarMultPallas(points []*Ep, scalars []*big.Int) *Ep {
+func pippengerMultiScalarMultPallas(points []*Ep, scalars []*saferith.Nat) *Ep {
 	if len(points) != len(scalars) {
 		return nil
 	}
 
 	const w = 6
 
-	bucketSize := (1 << w) - 1
+	bucketSize := uint64((1 << w) - 1)
 	windows := make([]*Ep, 255/w+1)
 	for i := range windows {
 		windows[i] = new(Ep).Identity()
@@ -195,12 +196,12 @@ func pippengerMultiScalarMultPallas(points []*Ep, scalars []*big.Int) *Ep {
 	bucket := make([]*Ep, bucketSize)
 
 	for j := 0; j < len(windows); j++ {
-		for i := 0; i < bucketSize; i++ {
+		for i := uint64(0); i < bucketSize; i++ {
 			bucket[i] = new(Ep).Identity()
 		}
 
 		for i := 0; i < len(scalars); i++ {
-			index := bucketSize & int(new(big.Int).Rsh(scalars[i], uint(w*j)).Int64())
+			index := bucketSize & new(saferith.Nat).Rsh(scalars[i], uint(w*j), fp.Modulus.BitLen()).Uint64()
 			if index != 0 {
 				bucket[index-1].Add(bucket[index-1], points[i])
 			}
@@ -208,7 +209,7 @@ func pippengerMultiScalarMultPallas(points []*Ep, scalars []*big.Int) *Ep {
 
 		acc, sum := new(Ep).Identity(), new(Ep).Identity()
 
-		for i := bucketSize - 1; i >= 0; i-- {
+		for i := int64(bucketSize) - 1; i >= 0; i-- {
 			sum.Add(sum, bucket[i])
 			acc.Add(acc, sum)
 		}

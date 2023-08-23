@@ -11,12 +11,14 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 )
 
 // GenerateSafePrime creates a prime number `p`
 // where (`p`-1)/2 is also prime with at least `bits`.
-var GenerateSafePrime = func(bits uint) (*big.Int, error) {
+var GenerateSafePrime = func(bits uint) (*saferith.Nat, error) {
 	if bits < 3 {
 		return nil, errs.NewFailed("safe prime size must be at least 3-bits")
 	}
@@ -32,12 +34,12 @@ var GenerateSafePrime = func(bits uint) (*big.Int, error) {
 		if err != nil {
 			return nil, errs.WrapFailed(err, "reading from crand")
 		}
-		p.Add(p.Lsh(p, 1), One)
+		p.Add(p.Lsh(p, 1), big.NewInt(1))
 
 		if p.ProbablyPrime(checks) {
 			break
 		}
 	}
 
-	return p, nil
+	return new(saferith.Nat).SetBig(p, int(bits)), nil
 }

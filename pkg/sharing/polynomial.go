@@ -40,7 +40,7 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 func LagrangeCoefficients(curve curves.Curve, xs []int) (map[int]curves.Scalar, error) {
 	xsScalar := make(map[int]curves.Scalar, len(xs))
 	for _, xi := range xs {
-		xsScalar[xi] = curve.Scalar().New(xi)
+		xsScalar[xi] = curve.Scalar().New(uint64(xi))
 	}
 
 	result := make(map[int]curves.Scalar, len(xs))

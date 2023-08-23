@@ -3,9 +3,9 @@ package pallas
 import (
 	crand "crypto/rand"
 	"fmt"
-	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas/impl/fp"
@@ -77,7 +77,7 @@ func TestPointPallasRandom(t *testing.T) {
 }
 
 func TestPointPallasSerialize(t *testing.T) {
-	ss := new(Scalar).Random(test_utils.TestRng()).(*Scalar)
+	ss := new(ScalarPallas).Random(test_utils.TestRng()).(*ScalarPallas)
 	g := new(Ep).Generator()
 
 	ppt := new(Ep).Mul(g, ss.value)
@@ -92,7 +92,7 @@ func TestPointPallasSerialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		s := new(Scalar).Random(crand.Reader).(*Scalar)
+		s := new(ScalarPallas).Random(crand.Reader).(*ScalarPallas)
 		pt := new(Ep).Mul(g, s.value)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 32)
@@ -123,12 +123,12 @@ func TestPointPallasSumOfProducts(t *testing.T) {
 	for i := range points {
 		points[i] = new(Ep).Generator()
 	}
-	scalars := []*big.Int{
-		new(Scalar).New(8).BigInt(),
-		new(Scalar).New(9).BigInt(),
-		new(Scalar).New(10).BigInt(),
-		new(Scalar).New(11).BigInt(),
-		new(Scalar).New(12).BigInt(),
+	scalars := []*saferith.Nat{
+		new(ScalarPallas).New(8).Nat(),
+		new(ScalarPallas).New(9).Nat(),
+		new(ScalarPallas).New(10).Nat(),
+		new(ScalarPallas).New(11).Nat(),
+		new(ScalarPallas).New(12).Nat(),
 	}
 	rhs := pippengerMultiScalarMultPallas(points, scalars)
 	require.NotNil(t, rhs)
@@ -142,7 +142,7 @@ func TestScalarMul(t *testing.T) {
 	actual := nine.Mul(six)
 	require.Equal(t, actual.Cmp(pallas.Scalar().New(54)), 0)
 
-	upper := pallas.Scalar().New(-1)
+	upper := pallas.Scalar().New(1).Neg()
 	require.Equal(t, upper.Mul(upper).Cmp(pallas.Scalar().New(1)), 0)
 }
 

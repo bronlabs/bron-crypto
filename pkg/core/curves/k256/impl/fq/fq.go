@@ -7,10 +7,16 @@
 package fq
 
 import (
-	"math/big"
+	"encoding/hex"
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
+)
+
+const (
+	p256GroupModulusHex = "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"
 )
 
 var (
@@ -27,15 +33,19 @@ func New() *impl.Field {
 }
 
 func k256FqParamsInit() {
+	modulusBytes, err := hex.DecodeString(p256GroupModulusHex)
+	if err != nil {
+		// this should never happen, string is known constant at compile time to be correct
+		panic(err)
+	}
+	modulus := saferith.ModulusFromBytes(modulusBytes)
+
 	k256FqParams = impl.FieldParams{
-		R:       [impl.FieldLimbs]uint64{0x402da1732fc9bebf, 0x4551231950b75fc4, 0x0000000000000001, 0x0000000000000000},
-		R2:      [impl.FieldLimbs]uint64{0x896cf21467d7d140, 0x741496c20e7cf878, 0xe697f5e45bcd07c6, 0x9d671cd581c69bc5},
-		R3:      [impl.FieldLimbs]uint64{0x7bc0cfe0e9ff41ed, 0x0017648444d4322c, 0xb1b31347f1d0b2da, 0x555d800c18ef116d},
-		Modulus: [impl.FieldLimbs]uint64{0xbfd25e8cd0364141, 0xbaaedce6af48a03b, 0xfffffffffffffffe, 0xffffffffffffffff},
-		BiModulus: new(big.Int).SetBytes([]byte{
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
-		},
-		),
+		R:            [impl.FieldLimbs]uint64{0x402da1732fc9bebf, 0x4551231950b75fc4, 0x0000000000000001, 0x0000000000000000},
+		R2:           [impl.FieldLimbs]uint64{0x896cf21467d7d140, 0x741496c20e7cf878, 0xe697f5e45bcd07c6, 0x9d671cd581c69bc5},
+		R3:           [impl.FieldLimbs]uint64{0x7bc0cfe0e9ff41ed, 0x0017648444d4322c, 0xb1b31347f1d0b2da, 0x555d800c18ef116d},
+		ModulusLimbs: [impl.FieldLimbs]uint64{0xbfd25e8cd0364141, 0xbaaedce6af48a03b, 0xfffffffffffffffe, 0xffffffffffffffff},
+		Modulus:      modulus,
 	}
 }
 

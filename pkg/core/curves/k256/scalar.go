@@ -3,7 +3,8 @@ package k256
 import (
 	"bytes"
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -14,19 +15,19 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Scalar) = (*Scalar)(nil)
+var _ curves.Scalar = (*ScalarK256)(nil)
 
-type Scalar struct {
+type ScalarK256 struct {
 	Value *impl.Field
 
 	_ helper_types.Incomparable
 }
 
-func (Scalar) Curve() (curves.Curve, error) {
-	return k256Instance, nil
+func (*ScalarK256) Curve() curves.Curve {
+	return &k256Instance
 }
 
-func (s *Scalar) Random(prng io.Reader) curves.Scalar {
+func (s *ScalarK256) Random(prng io.Reader) curves.Scalar {
 	if prng == nil {
 		panic("prng is nil")
 	}
@@ -35,61 +36,56 @@ func (s *Scalar) Random(prng io.Reader) curves.Scalar {
 	return s.Hash(seed[:])
 }
 
-func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
+func (*ScalarK256) Hash(inputs ...[]byte) curves.Scalar {
 	dst := []byte("secp256k1_XMD:SHA-256_SSWU_RO_")
 	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherSha256(), bytes.Join(inputs, nil), dst, 48)
 	var t [64]byte
 	copy(t[:48], bitstring.ReverseBytes(xmd))
 
-	return &Scalar{
+	return &ScalarK256{
 		Value: fq.New().SetBytesWide(&t),
 	}
 }
 
-func (*Scalar) Zero() curves.Scalar {
-	return &Scalar{
+func (*ScalarK256) Zero() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().SetZero(),
 	}
 }
 
-func (*Scalar) One() curves.Scalar {
-	return &Scalar{
+func (*ScalarK256) One() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().SetOne(),
 	}
 }
 
-func (s *Scalar) IsZero() bool {
+func (s *ScalarK256) IsZero() bool {
 	return s.Value.IsZero() == 1
 }
 
-func (s *Scalar) IsOne() bool {
+func (s *ScalarK256) IsOne() bool {
 	return s.Value.IsOne() == 1
 }
 
-func (s *Scalar) IsOdd() bool {
+func (s *ScalarK256) IsOdd() bool {
 	return s.Value.Bytes()[0]&1 == 1
 }
 
-func (s *Scalar) IsEven() bool {
+func (s *ScalarK256) IsEven() bool {
 	return s.Value.Bytes()[0]&1 == 0
 }
 
-func (*Scalar) New(value int) curves.Scalar {
-	t := fq.New()
-	v := big.NewInt(int64(value))
-	if value < 0 {
-		v.Mod(v, t.Params.BiModulus)
-	}
-	return &Scalar{
-		Value: t.SetBigInt(v),
+func (*ScalarK256) New(value uint64) curves.Scalar {
+	return &ScalarK256{
+		Value: fq.New().SetUint64(value),
 	}
 }
 
-func (s *Scalar) Cmp(rhs curves.Scalar) int {
+func (s *ScalarK256) Cmp(rhs curves.Scalar) int {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Scalar)
+	r, ok := rhs.(*ScalarK256)
 	if ok {
 		return s.Value.Cmp(r.Value)
 	} else {
@@ -97,50 +93,50 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 	}
 }
 
-func (s *Scalar) Square() curves.Scalar {
-	return &Scalar{
+func (s *ScalarK256) Square() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().Square(s.Value),
 	}
 }
 
-func (s *Scalar) Double() curves.Scalar {
-	return &Scalar{
+func (s *ScalarK256) Double() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().Double(s.Value),
 	}
 }
 
-func (s *Scalar) Invert() (curves.Scalar, error) {
+func (s *ScalarK256) Invert() (curves.Scalar, error) {
 	value, wasInverted := fq.New().Invert(s.Value)
 	if !wasInverted {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
-	return &Scalar{
+	return &ScalarK256{
 		Value: value,
 	}, nil
 }
 
-func (s *Scalar) Sqrt() (curves.Scalar, error) {
+func (s *ScalarK256) Sqrt() (curves.Scalar, error) {
 	value, wasSquare := fq.New().Sqrt(s.Value)
 	if !wasSquare {
 		return nil, errs.NewFailed("not a square")
 	}
-	return &Scalar{
+	return &ScalarK256{
 		Value: value,
 	}, nil
 }
 
-func (s *Scalar) Cube() curves.Scalar {
+func (s *ScalarK256) Cube() curves.Scalar {
 	value := fq.New().Mul(s.Value, s.Value)
 	value.Mul(value, s.Value)
-	return &Scalar{
+	return &ScalarK256{
 		Value: value,
 	}
 }
 
-func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarK256) Add(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarK256)
 	if ok {
-		return &Scalar{
+		return &ScalarK256{
 			Value: fq.New().Add(s.Value, r.Value),
 		}
 	} else {
@@ -148,10 +144,10 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarK256) Sub(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarK256)
 	if ok {
-		return &Scalar{
+		return &ScalarK256{
 			Value: fq.New().Sub(s.Value, r.Value),
 		}
 	} else {
@@ -159,10 +155,10 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarK256) Mul(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarK256)
 	if ok {
-		return &Scalar{
+		return &ScalarK256{
 			Value: fq.New().Mul(s.Value, r.Value),
 		}
 	} else {
@@ -170,60 +166,60 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
+func (s *ScalarK256) MulAdd(y, z curves.Scalar) curves.Scalar {
 	return s.Mul(y).Add(z)
 }
 
-func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarK256) Div(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarK256)
 	if ok {
 		v, wasInverted := fq.New().Invert(r.Value)
 		if !wasInverted {
 			panic("cannot invert rhs")
 		}
 		v.Mul(v, s.Value)
-		return &Scalar{Value: v}
+		return &ScalarK256{Value: v}
 	} else {
 		panic("rhs is not ScalarK256")
 	}
 }
 
-func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
-	exponent, ok := k.(*Scalar)
+func (s *ScalarK256) Exp(k curves.Scalar) curves.Scalar {
+	exponent, ok := k.(*ScalarK256)
 	if !ok {
 		panic("rhs is not ScalarK256")
 	}
 
 	value := fq.New().Exp(s.Value, exponent.Value)
-	return &Scalar{Value: value}
+	return &ScalarK256{Value: value}
 }
 
-func (s *Scalar) Neg() curves.Scalar {
-	return &Scalar{
+func (s *ScalarK256) Neg() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().Neg(s.Value),
 	}
 }
 
-func (*Scalar) SetBigInt(v *big.Int) (curves.Scalar, error) {
+func (*ScalarK256) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 	if v == nil {
 		return nil, errs.NewFailed("'v' cannot be nil")
 	}
-	value := fq.New().SetBigInt(v)
-	return &Scalar{
+	value := fq.New().SetNat(v)
+	return &ScalarK256{
 		Value: value,
 	}, nil
 }
 
-func (s *Scalar) BigInt() *big.Int {
-	return s.Value.BigInt()
+func (s *ScalarK256) Nat() *saferith.Nat {
+	return s.Value.Nat()
 }
 
-func (s *Scalar) Bytes() []byte {
+func (s *ScalarK256) Bytes() []byte {
 	t := s.Value.Bytes()
 	return bitstring.ReverseBytes(t[:])
 }
 
-func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
+func (*ScalarK256) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != 32 {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
@@ -233,42 +229,42 @@ func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set bytes")
 	}
-	return &Scalar{
+	return &ScalarK256{
 		Value: value,
 	}, nil
 }
 
-func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
+func (*ScalarK256) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if len(input) != 64 {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
 	var seq [64]byte
 	copy(seq[:], input)
-	return &Scalar{
+	return &ScalarK256{
 		Value: fq.New().SetBytesWide(&seq),
 	}, nil
 }
 
-func (*Scalar) CurveName() string {
+func (*ScalarK256) CurveName() string {
 	return Name
 }
 
-func (s *Scalar) Clone() curves.Scalar {
-	return &Scalar{
+func (s *ScalarK256) Clone() curves.Scalar {
+	return &ScalarK256{
 		Value: fq.New().Set(s.Value),
 	}
 }
 
-func (s *Scalar) MarshalBinary() ([]byte, error) {
+func (s *ScalarK256) MarshalBinary() ([]byte, error) {
 	return internal.ScalarMarshalBinary(s)
 }
 
-func (s *Scalar) UnmarshalBinary(input []byte) error {
+func (s *ScalarK256) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarK256)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
@@ -276,16 +272,16 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) MarshalText() ([]byte, error) {
+func (s *ScalarK256) MarshalText() ([]byte, error) {
 	return internal.ScalarMarshalText(s)
 }
 
-func (s *Scalar) UnmarshalText(input []byte) error {
+func (s *ScalarK256) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarK256)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
@@ -293,16 +289,16 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) MarshalJSON() ([]byte, error) {
+func (s *ScalarK256) MarshalJSON() ([]byte, error) {
 	return internal.ScalarMarshalJson(Name, s)
 }
 
-func (s *Scalar) UnmarshalJSON(input []byte) error {
+func (s *ScalarK256) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
-	S, ok := sc.(*Scalar)
+	S, ok := sc.(*ScalarK256)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}

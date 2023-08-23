@@ -127,8 +127,8 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
-	bigRx := primaryCosigner.state.bigR.X().BigInt()
-	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
+	bigRx := primaryCosigner.state.bigR.X().Nat()
+	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -159,8 +159,8 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
-	bigRx := bigR.X().BigInt()
-	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(bigRx)
+	bigRx := bigR.X().Nat()
+	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get R.x")
 	}
@@ -187,7 +187,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	// c3 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := signing.CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q, paillierPublicKey, cKey, secondaryCosigner.prng)
+	c3, err := signing.CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q.Nat(), paillierPublicKey, cKey, secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
@@ -208,7 +208,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
 	}
-	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetBigInt(sPrimeInt)
+	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set scalar value")
 	}

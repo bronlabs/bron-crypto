@@ -182,8 +182,8 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
 		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(k)
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(p.MySharingId).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(k))
+			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(p.MySharingId)).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

@@ -91,14 +91,14 @@ func Test_HappyPath(t *testing.T) {
 		t.Parallel()
 
 		for myIdentityKey, myShard := range shards {
-			myShare := myShard.SigningKeyShare.Share.BigInt()
+			myShare := myShard.SigningKeyShare.Share.Nat()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for _, theirShard := range shards {
-				if myShard.PaillierSecretKey.N.Cmp(theirShard.PaillierSecretKey.N) != 0 && myShard.PaillierSecretKey.N2.Cmp(theirShard.PaillierSecretKey.N2) != 0 {
+				if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
 					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
 					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 					require.NoError(t, err)
-					require.Zero(t, theirDecryptedShare.Cmp(myShare))
+					require.NotZero(t, theirDecryptedShare.Eq(myShare))
 				}
 			}
 		}

@@ -3,10 +3,12 @@ package k256_test
 import (
 	crand "crypto/rand"
 	"math/big"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -54,14 +56,15 @@ func (m *mockReader) Read(p []byte) (n int, err error) {
 func TestScalarK256Random(t *testing.T) {
 	curve := k256.New()
 	sc := curve.Scalar().Random(testRng())
-	s, ok := sc.(*k256.Scalar)
+	s, ok := sc.(*k256.ScalarK256)
 	require.True(t, ok)
-	expected, _ := new(big.Int).SetString("2f71aaec5e14d747c72e46cdcaffffe6f542f38b3f0925469ceb24ac1c65885d", 16)
-	require.Equal(t, s.Value.BigInt(), expected)
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("2f71aaec5e14d747c72e46cdcaffffe6f542f38b3f0925469ceb24ac1c65885d"))
+	require.NoError(t, err)
+	require.NotZero(t, s.Value.Nat().Eq(expected))
 	// Try 10 random.Values
 	for i := 0; i < 10; i++ {
 		sc := curve.Scalar().Random(crand.Reader)
-		_, ok := sc.(*k256.Scalar)
+		_, ok := sc.(*k256.ScalarK256)
 		require.True(t, ok)
 		require.True(t, !sc.IsZero())
 	}
@@ -71,10 +74,11 @@ func TestScalarK256Hash(t *testing.T) {
 	var b [32]byte
 	curve := k256.New()
 	sc := curve.Scalar().Hash(b[:])
-	s, ok := sc.(*k256.Scalar)
+	s, ok := sc.(*k256.ScalarK256)
 	require.True(t, ok)
-	expected, _ := new(big.Int).SetString("e5cb3500b809a8202de0834a805068bc21bde09bd6367815e7523a37adf8f52e", 16)
-	require.Equal(t, s.Value.BigInt(), expected)
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("e5cb3500b809a8202de0834a805068bc21bde09bd6367815e7523a37adf8f52e"))
+	require.NoError(t, err)
+	require.NotZero(t, s.Value.Nat().Eq(expected))
 }
 
 func TestScalarZero(t *testing.T) {
@@ -97,9 +101,9 @@ func TestScalarNew(t *testing.T) {
 	require.True(t, three.IsOdd())
 	four := k256.Scalar().New(4)
 	require.True(t, four.IsEven())
-	neg1 := k256.Scalar().New(-1)
+	neg1 := k256.Scalar().New(1).Neg()
 	require.True(t, neg1.IsEven())
-	neg2 := k256.Scalar().New(-2)
+	neg2 := k256.Scalar().New(2).Neg()
 	require.True(t, neg2.IsOdd())
 }
 
@@ -127,10 +131,10 @@ func TestScalarDouble(t *testing.T) {
 func TestScalarNeg(t *testing.T) {
 	k256 := k256.New()
 	one := k256.Scalar().One()
-	neg1 := k256.Scalar().New(-1)
+	neg1 := k256.Scalar().New(1).Neg()
 	require.Equal(t, one.Neg().Cmp(neg1), 0)
 	lotsOfThrees := k256.Scalar().New(333333)
-	expected := k256.Scalar().New(-333333)
+	expected := k256.Scalar().New(333333).Neg()
 	require.Equal(t, lotsOfThrees.Neg().Cmp(expected), 0)
 }
 
@@ -138,9 +142,9 @@ func TestScalarInvert(t *testing.T) {
 	curve := k256.New()
 	nine := curve.Scalar().New(9)
 	actual, _ := nine.Invert()
-	sa, _ := actual.(*k256.Scalar)
+	sa, _ := actual.(*k256.ScalarK256)
 	bn, _ := new(big.Int).SetString("8e38e38e38e38e38e38e38e38e38e38d842841d57dd303af6a9150f8e5737996", 16)
-	expected, err := curve.Scalar().SetBigInt(bn)
+	expected, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(bn, bn.BitLen()))
 	require.NoError(t, err)
 	require.Equal(t, sa.Cmp(expected), 0)
 }
@@ -149,7 +153,7 @@ func TestScalarSqrt(t *testing.T) {
 	curve := k256.New()
 	nine := curve.Scalar().New(9)
 	actual, err := nine.Sqrt()
-	sa, _ := actual.(*k256.Scalar)
+	sa, _ := actual.(*k256.ScalarK256)
 	expected := curve.Scalar().New(3)
 	require.NoError(t, err)
 	require.Equal(t, sa.Cmp(expected), 0)
@@ -166,7 +170,7 @@ func TestScalarAdd(t *testing.T) {
 	n := new(big.Int).Set(btcec.S256().N)
 	n.Sub(n, big.NewInt(3))
 
-	upper, err := curve.Scalar().SetBigInt(n)
+	upper, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(n, n.BitLen()))
 	require.NoError(t, err)
 	actual := upper.Add(nine)
 	require.NotNil(t, actual)
@@ -177,10 +181,10 @@ func TestScalarSub(t *testing.T) {
 	k256 := k256.New()
 	nine := k256.Scalar().New(9)
 	six := k256.Scalar().New(6)
-	n := new(big.Int).Set(btcec.S256().N)
-	n.Sub(n, big.NewInt(3))
+	n := new(saferith.Nat).SetBig(btcec.S256().N, btcec.S256().N.BitLen())
+	n = new(saferith.Nat).Sub(n, new(saferith.Nat).SetUint64(3), -1)
 
-	expected, err := k256.Scalar().SetBigInt(n)
+	expected, err := k256.Scalar().SetNat(n)
 	require.NoError(t, err)
 	actual := six.Sub(nine)
 	require.Equal(t, expected.Cmp(actual), 0)
@@ -195,9 +199,9 @@ func TestScalarMul(t *testing.T) {
 	six := k256.Scalar().New(6)
 	actual := nine.Mul(six)
 	require.Equal(t, actual.Cmp(k256.Scalar().New(54)), 0)
-	n := new(big.Int).Set(btcec.S256().N)
-	n.Sub(n, big.NewInt(1))
-	upper, err := k256.Scalar().SetBigInt(n)
+	n := new(saferith.Nat).SetBig(btcec.S256().N, btcec.S256().N.BitLen())
+	n = new(saferith.Nat).Sub(n, new(saferith.Nat).SetUint64(1), -1)
+	upper, err := k256.Scalar().SetNat(n)
 	require.NoError(t, err)
 	require.Equal(t, upper.Mul(upper).Cmp(k256.Scalar().New(1)), 0)
 }
@@ -257,7 +261,7 @@ func TestScalarNil(t *testing.T) {
 	require.Panics(t, func() { one.Div(nil) })
 	require.Panics(t, func() { k256.Scalar().Random(nil) })
 	require.Panics(t, func() { one.Cmp(nil) })
-	_, err := k256.Scalar().SetBigInt(nil)
+	_, err := k256.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
@@ -309,10 +313,10 @@ func TestPointIdentity(t *testing.T) {
 
 func TestPointSet(t *testing.T) {
 	k256 := k256.New()
-	iden, err := k256.Point().Set(big.NewInt(0), big.NewInt(0))
+	identity, err := k256.Point().Set(new(saferith.Nat).SetUint64(0), new(saferith.Nat).SetUint64(0))
 	require.NoError(t, err)
-	require.True(t, iden.IsIdentity())
-	_, err = k256.Point().Set(btcec.S256().Gx, btcec.S256().Gy)
+	require.True(t, identity.IsIdentity())
+	_, err = k256.Point().Set(new(saferith.Nat).SetBig(btcec.S256().Gx, btcec.S256().Gx.BitLen()), new(saferith.Nat).SetBig(btcec.S256().Gy, btcec.S256().Gy.BitLen()))
 	require.NoError(t, err)
 }
 
@@ -336,10 +340,10 @@ func TestPointNeg(t *testing.T) {
 
 func TestPointAdd(t *testing.T) {
 	curve := k256.New()
-	pt := curve.Point().Generator().(*k256.Point)
-	pt1 := pt.Add(pt).(*k256.Point)
-	pt2 := pt.Double().(*k256.Point)
-	pt3 := pt.Mul(curve.Scalar().New(2)).(*k256.Point)
+	pt := curve.Point().Generator().(*k256.PointK256)
+	pt1 := pt.Add(pt).(*k256.PointK256)
+	pt2 := pt.Double().(*k256.PointK256)
+	pt3 := pt.Mul(curve.Scalar().New(2)).(*k256.PointK256)
 
 	require.True(t, pt1.Equal(pt2))
 	require.True(t, pt1.Equal(pt3))
@@ -368,7 +372,7 @@ func TestPointSerialize(t *testing.T) {
 	ss := curve.Scalar().Random(testRng())
 
 	g := curve.Point().Generator()
-	ppt := g.Mul(ss).(*k256.Point)
+	ppt := g.Mul(ss).(*k256.PointK256)
 
 	require.Equal(t, ppt.ToAffineCompressed(), []byte{0x2, 0x1b, 0xa7, 0x7e, 0x98, 0xd6, 0xd8, 0x49, 0x45, 0xa4, 0x75, 0xd8, 0x6, 0xc0, 0x94, 0x5b, 0x8c, 0xf0, 0x5b, 0x8a, 0xb2, 0x76, 0xbb, 0x9f, 0x6e, 0x52, 0x9a, 0x11, 0x9c, 0x79, 0xdd, 0xf6, 0x5a})
 	require.Equal(t, ppt.ToAffineUncompressed(), []byte{0x4, 0x1b, 0xa7, 0x7e, 0x98, 0xd6, 0xd8, 0x49, 0x45, 0xa4, 0x75, 0xd8, 0x6, 0xc0, 0x94, 0x5b, 0x8c, 0xf0, 0x5b, 0x8a, 0xb2, 0x76, 0xbb, 0x9f, 0x6e, 0x52, 0x9a, 0x11, 0x9c, 0x79, 0xdd, 0xf6, 0x5a, 0xb2, 0x96, 0x7c, 0x59, 0x4, 0xeb, 0x9a, 0xaa, 0xa9, 0x1d, 0x4d, 0xd0, 0x2d, 0xc6, 0x37, 0xee, 0x4a, 0x95, 0x51, 0x60, 0xab, 0xab, 0xf7, 0xdb, 0x30, 0x7d, 0x7d, 0x0, 0x68, 0x6c, 0xcf, 0xf6})
@@ -383,9 +387,9 @@ func TestPointSerialize(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		s := curve.Scalar().Random(crand.Reader)
 		pt := g.Mul(s)
-		cmprs := pt.ToAffineCompressed()
-		require.Equal(t, len(cmprs), 33)
-		retC, err := pt.FromAffineCompressed(cmprs)
+		affineCompressed := pt.ToAffineCompressed()
+		require.Equal(t, len(affineCompressed), 33)
+		retC, err := pt.FromAffineCompressed(affineCompressed)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retC))
 
@@ -405,22 +409,22 @@ func TestPointNil(t *testing.T) {
 	require.Panics(t, func() { one.Mul(nil) })
 	require.Panics(t, func() { k256.Scalar().Random(nil) })
 	require.False(t, one.Equal(nil))
-	_, err := k256.Scalar().SetBigInt(nil)
+	_, err := k256.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
 func TestPointSumOfProducts(t *testing.T) {
-	lhs := new(k256.Point).Generator().Mul(new(k256.Scalar).New(50))
+	lhs := new(k256.PointK256).Generator().Mul(new(k256.ScalarK256).New(50))
 	points := make([]curves.Point, 5)
 	for i := range points {
-		points[i] = new(k256.Point).Generator()
+		points[i] = new(k256.PointK256).Generator()
 	}
 	scalars := []curves.Scalar{
-		new(k256.Scalar).New(8),
-		new(k256.Scalar).New(9),
-		new(k256.Scalar).New(10),
-		new(k256.Scalar).New(11),
-		new(k256.Scalar).New(12),
+		new(k256.ScalarK256).New(8),
+		new(k256.ScalarK256).New(9),
+		new(k256.ScalarK256).New(10),
+		new(k256.ScalarK256).New(11),
+		new(k256.ScalarK256).New(12),
 	}
 	curve := k256.New()
 	rhs, err := curve.MultiScalarMult(scalars, points)
@@ -431,8 +435,8 @@ func TestPointSumOfProducts(t *testing.T) {
 	for j := 0; j < 25; j++ {
 		lhs = lhs.Identity()
 		for i := range points {
-			points[i] = new(k256.Point).Random(crand.Reader)
-			scalars[i] = new(k256.Scalar).Random(crand.Reader)
+			points[i] = new(k256.PointK256).Random(crand.Reader)
+			scalars[i] = new(k256.ScalarK256).Random(crand.Reader)
 			lhs = lhs.Add(points[i].Mul(scalars[i]))
 		}
 		rhs, err = curve.MultiScalarMult(scalars, points)

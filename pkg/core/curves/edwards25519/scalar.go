@@ -3,10 +3,11 @@ package edwards25519
 import (
 	"bytes"
 	"io"
-	"math/big"
+	"strings"
 
 	filippo "filippo.io/edwards25519"
 	"github.com/bwesterb/go-ristretto"
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -15,23 +16,23 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Scalar) = (*Scalar)(nil)
+var _ curves.Scalar = (*ScalarEd25519)(nil)
 
-type Scalar struct {
+type ScalarEd25519 struct {
 	Value *filippo.Scalar
 
 	_ helper_types.Incomparable
 }
 
-func (Scalar) Curve() (curves.Curve, error) {
-	return edwards25519Instance, nil
+func (*ScalarEd25519) Curve() curves.Curve {
+	return &edwards25519Instance
 }
 
-func (Scalar) CurveName() string {
+func (*ScalarEd25519) CurveName() string {
 	return Name
 }
 
-func (s *Scalar) Random(prng io.Reader) curves.Scalar {
+func (s *ScalarEd25519) Random(prng io.Reader) curves.Scalar {
 	if prng == nil {
 		panic("prng in nil")
 	}
@@ -42,7 +43,7 @@ func (s *Scalar) Random(prng io.Reader) curves.Scalar {
 	return s.Hash(seed[:])
 }
 
-func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
+func (*ScalarEd25519) Hash(inputs ...[]byte) curves.Scalar {
 	v := new(ristretto.Scalar).Derive(bytes.Join(inputs, nil))
 	var data [32]byte
 	v.BytesInto(&data)
@@ -50,22 +51,22 @@ func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
 	if err != nil {
 		panic("cannot set bytes")
 	}
-	return &Scalar{Value: value}
+	return &ScalarEd25519{Value: value}
 }
 
-func (*Scalar) Zero() curves.Scalar {
-	return &Scalar{
+func (*ScalarEd25519) Zero() curves.Scalar {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar(),
 	}
 }
 
-func (*Scalar) One() curves.Scalar {
-	return &Scalar{
+func (*ScalarEd25519) One() curves.Scalar {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar().Set(scOne),
 	}
 }
 
-func (s *Scalar) IsZero() bool {
+func (s *ScalarEd25519) IsZero() bool {
 	i := byte(0)
 	for _, b := range s.Value.Bytes() {
 		i |= b
@@ -73,7 +74,7 @@ func (s *Scalar) IsZero() bool {
 	return i == 0
 }
 
-func (s *Scalar) IsOne() bool {
+func (s *ScalarEd25519) IsOne() bool {
 	data := s.Value.Bytes()
 	i := byte(0)
 	for j := 1; j < len(data); j++ {
@@ -82,38 +83,36 @@ func (s *Scalar) IsOne() bool {
 	return i == 0 && data[0] == 1
 }
 
-func (s *Scalar) IsOdd() bool {
+func (s *ScalarEd25519) IsOdd() bool {
 	return s.Value.Bytes()[0]&1 == 1
 }
 
-func (s *Scalar) IsEven() bool {
+func (s *ScalarEd25519) IsEven() bool {
 	return s.Value.Bytes()[0]&1 == 0
 }
 
-func (*Scalar) New(input int) curves.Scalar {
+func (*ScalarEd25519) New(input uint64) curves.Scalar {
 	var data [64]byte
-	i := input
-	if input < 0 {
-		i = -input
-	}
-	data[0] = byte(i)
-	data[1] = byte(i >> 8)
-	data[2] = byte(i >> 16)
-	data[3] = byte(i >> 24)
+
+	data[0] = byte(input)
+	data[1] = byte(input >> 8)
+	data[2] = byte(input >> 16)
+	data[3] = byte(input >> 24)
+	data[4] = byte(input >> 32)
+	data[5] = byte(input >> 40)
+	data[6] = byte(input >> 48)
+	data[7] = byte(input >> 52)
 	value, err := filippo.NewScalar().SetUniformBytes(data[:])
 	if err != nil {
 		panic("cannot set bytes")
 	}
-	if input < 0 {
-		value.Negate(value)
-	}
 
-	return &Scalar{
+	return &ScalarEd25519{
 		Value: value,
 	}
 }
 
-func (s *Scalar) Cmp(rhs curves.Scalar) int {
+func (s *ScalarEd25519) Cmp(rhs curves.Scalar) int {
 	r := s.Sub(rhs)
 	if r != nil && r.IsZero() {
 		return 0
@@ -122,40 +121,41 @@ func (s *Scalar) Cmp(rhs curves.Scalar) int {
 	}
 }
 
-func (s *Scalar) Square() curves.Scalar {
+func (s *ScalarEd25519) Square() curves.Scalar {
 	value := filippo.NewScalar().Multiply(s.Value, s.Value)
-	return &Scalar{Value: value}
+	return &ScalarEd25519{Value: value}
 }
 
-func (s *Scalar) Double() curves.Scalar {
-	return &Scalar{
+func (s *ScalarEd25519) Double() curves.Scalar {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar().Add(s.Value, s.Value),
 	}
 }
 
-func (s *Scalar) Invert() (curves.Scalar, error) {
-	return &Scalar{
+func (s *ScalarEd25519) Invert() (curves.Scalar, error) {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar().Invert(s.Value),
 	}, nil
 }
 
-func (s *Scalar) Sqrt() (curves.Scalar, error) {
-	bi25519, _ := new(big.Int).SetString("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED", 16)
-	x := s.BigInt()
-	x.ModSqrt(x, bi25519)
-	return s.SetBigInt(x)
+func (s *ScalarEd25519) Sqrt() (curves.Scalar, error) {
+	modulus25519, _ := new(saferith.Nat).SetHex(strings.ToUpper("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED"))
+
+	x := s.Nat()
+	x = new(saferith.Nat).ModSqrt(x, saferith.ModulusFromNat(modulus25519))
+	return s.SetNat(x)
 }
 
-func (s *Scalar) Cube() curves.Scalar {
+func (s *ScalarEd25519) Cube() curves.Scalar {
 	value := filippo.NewScalar().Multiply(s.Value, s.Value)
 	value.Multiply(value, s.Value)
-	return &Scalar{Value: value}
+	return &ScalarEd25519{Value: value}
 }
 
-func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarEd25519) Add(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarEd25519)
 	if ok {
-		return &Scalar{
+		return &ScalarEd25519{
 			Value: filippo.NewScalar().Add(s.Value, r.Value),
 		}
 	} else {
@@ -163,10 +163,10 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarEd25519) Sub(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarEd25519)
 	if ok {
-		return &Scalar{
+		return &ScalarEd25519{
 			Value: filippo.NewScalar().Subtract(s.Value, r.Value),
 		}
 	} else {
@@ -174,10 +174,10 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarEd25519) Mul(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarEd25519)
 	if ok {
-		return &Scalar{
+		return &ScalarEd25519{
 			Value: filippo.NewScalar().Multiply(s.Value, r.Value),
 		}
 	} else {
@@ -185,56 +185,56 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
-	yy, ok := y.(*Scalar)
+func (s *ScalarEd25519) MulAdd(y, z curves.Scalar) curves.Scalar {
+	yy, ok := y.(*ScalarEd25519)
 	if !ok {
 		panic("y is not ScalarEd25519")
 	}
-	zz, ok := z.(*Scalar)
+	zz, ok := z.(*ScalarEd25519)
 	if !ok {
 		panic("z is not ScalarEd25519")
 	}
-	return &Scalar{Value: filippo.NewScalar().MultiplyAdd(s.Value, yy.Value, zz.Value)}
+	return &ScalarEd25519{Value: filippo.NewScalar().MultiplyAdd(s.Value, yy.Value, zz.Value)}
 }
 
-func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
-	r, ok := rhs.(*Scalar)
+func (s *ScalarEd25519) Div(rhs curves.Scalar) curves.Scalar {
+	r, ok := rhs.(*ScalarEd25519)
 	if ok {
 		value := filippo.NewScalar().Invert(r.Value)
 		value.Multiply(value, s.Value)
-		return &Scalar{Value: value}
+		return &ScalarEd25519{Value: value}
 	} else {
 		panic("rhs is not ScalarEd25519")
 	}
 }
 
-func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
-	exp, ok := k.(*Scalar)
+func (s *ScalarEd25519) Exp(k curves.Scalar) curves.Scalar {
+	exp, ok := k.(*ScalarEd25519)
 	if !ok {
 		panic("k is not ScalarEd25519")
 	}
 
-	v := new(Scalar).One()
-	for i := new(Scalar).Zero(); i.Cmp(exp) < 0; i = i.Add(new(Scalar).One()) {
+	v := new(ScalarEd25519).One()
+	for i := new(ScalarEd25519).Zero(); i.Cmp(exp) < 0; i = i.Add(new(ScalarEd25519).One()) {
 		v = v.Mul(s)
 	}
 	return v
 }
 
-func (s *Scalar) Neg() curves.Scalar {
-	return &Scalar{
+func (s *ScalarEd25519) Neg() curves.Scalar {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar().Negate(s.Value),
 	}
 }
 
-func (*Scalar) SetBigInt(x *big.Int) (curves.Scalar, error) {
+func (*ScalarEd25519) SetNat(x *saferith.Nat) (curves.Scalar, error) {
 	if x == nil {
 		return nil, errs.NewSerializationError("invalid value")
 	}
 
-	bi25519, _ := new(big.Int).SetString("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED", 16)
-	var v big.Int
-	buf := v.Mod(x, bi25519).Bytes()
+	modulus25519, _ := new(saferith.Nat).SetHex(strings.ToUpper("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED"))
+	v := new(saferith.Nat).Mod(x, saferith.ModulusFromNat(modulus25519))
+	buf := v.Bytes()
 	var rBuf [32]byte
 	for i := 0; i < len(buf) && i < 32; i++ {
 		rBuf[i] = buf[len(buf)-i-1]
@@ -243,22 +243,21 @@ func (*Scalar) SetBigInt(x *big.Int) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set canonical bytes failed")
 	}
-	return &Scalar{Value: value}, nil
+	return &ScalarEd25519{Value: value}, nil
 }
 
-func (s *Scalar) BigInt() *big.Int {
-	var ret big.Int
+func (s *ScalarEd25519) Nat() *saferith.Nat {
 	buf := bitstring.ReverseBytes(s.Value.Bytes())
-	return ret.SetBytes(buf)
+	return new(saferith.Nat).SetBytes(buf)
 }
 
-func (s *Scalar) Bytes() []byte {
+func (s *ScalarEd25519) Bytes() []byte {
 	return s.Value.Bytes()
 }
 
 // SetBytesCanonical takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long and must be a reduced bytes.
-func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
+func (*ScalarEd25519) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 	if len(input) != 32 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -266,18 +265,18 @@ func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set canonical bytes")
 	}
-	return &Scalar{Value: value}, nil
+	return &ScalarEd25519{Value: value}, nil
 }
 
 // SetBytesWide takes input a 64-byte long byte array, reduce it and return an ed25519 scalar.
 // It uses SetUniformBytes of fillipo.io/filippo - https://github.com/FiloSottile/filippo/blob/v1.0.0-rc.1/scalar.go#L85
 // If bytes is not of the right length, it returns nil and an error.
-func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
+func (*ScalarEd25519) SetBytesWide(input []byte) (curves.Scalar, error) {
 	value, err := filippo.NewScalar().SetUniformBytes(input)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set uniform bytes")
 	}
-	return &Scalar{Value: value}, nil
+	return &ScalarEd25519{Value: value}, nil
 }
 
 func isReduced(bytes_ []byte) bool {
@@ -298,7 +297,7 @@ func isReduced(bytes_ []byte) bool {
 
 // SetBytes takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long.
-func (*Scalar) SetBytes(input []byte) (result curves.Scalar, err error) {
+func (*ScalarEd25519) SetBytes(input []byte) (result curves.Scalar, err error) {
 	if len(input) != 32 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -316,25 +315,25 @@ func (*Scalar) SetBytes(input []byte) (result curves.Scalar, err error) {
 			return nil, errs.WrapSerializationError(err, "set uniform bytes")
 		}
 	}
-	return &Scalar{Value: value}, nil
+	return &ScalarEd25519{Value: value}, nil
 }
 
-func (s *Scalar) Clone() curves.Scalar {
-	return &Scalar{
+func (s *ScalarEd25519) Clone() curves.Scalar {
+	return &ScalarEd25519{
 		Value: filippo.NewScalar().Set(s.Value),
 	}
 }
 
-func (s *Scalar) MarshalBinary() ([]byte, error) {
+func (s *ScalarEd25519) MarshalBinary() ([]byte, error) {
 	return internal.ScalarMarshalBinary(s)
 }
 
-func (s *Scalar) UnmarshalBinary(input []byte) error {
+func (s *ScalarEd25519) UnmarshalBinary(input []byte) error {
 	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarEd25519)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
@@ -342,16 +341,16 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) MarshalText() ([]byte, error) {
+func (s *ScalarEd25519) MarshalText() ([]byte, error) {
 	return internal.ScalarMarshalText(s)
 }
 
-func (s *Scalar) UnmarshalText(input []byte) error {
+func (s *ScalarEd25519) UnmarshalText(input []byte) error {
 	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
-	ss, ok := sc.(*Scalar)
+	ss, ok := sc.(*ScalarEd25519)
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
@@ -359,24 +358,24 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (s *Scalar) GetEdwardsScalar() *filippo.Scalar {
+func (s *ScalarEd25519) GetEdwardsScalar() *filippo.Scalar {
 	return filippo.NewScalar().Set(s.Value)
 }
 
-func (*Scalar) SetEdwardsScalar(sc *filippo.Scalar) *Scalar {
-	return &Scalar{Value: filippo.NewScalar().Set(sc)}
+func (*ScalarEd25519) SetEdwardsScalar(sc *filippo.Scalar) *ScalarEd25519 {
+	return &ScalarEd25519{Value: filippo.NewScalar().Set(sc)}
 }
 
-func (s *Scalar) MarshalJSON() ([]byte, error) {
+func (s *ScalarEd25519) MarshalJSON() ([]byte, error) {
 	return internal.ScalarMarshalJson(Name, s)
 }
 
-func (s *Scalar) UnmarshalJSON(input []byte) error {
+func (s *ScalarEd25519) UnmarshalJSON(input []byte) error {
 	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}
-	S, ok := sc.(*Scalar)
+	S, ok := sc.(*ScalarEd25519)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}

@@ -150,7 +150,7 @@ func Test_HappyPath(t *testing.T) {
 					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
 					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetBigInt(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
 					require.NoError(t, err)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}

@@ -2,13 +2,14 @@ package curves
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 )
 
 // Scalar represents an element of the scalar field \mathbb{F}_q
 // of the elliptic curve construction.
 type Scalar interface {
-	Curve() (Curve, error)
+	Curve() Curve
 	CurveName() string
 	// Random returns a random scalar using the provided reader
 	// to retrieve bytes
@@ -29,7 +30,7 @@ type Scalar interface {
 	// IsEven returns true if this element is even
 	IsEven() bool
 	// New returns an element with the value equal to `value`
-	New(value int) Scalar
+	New(value uint64) Scalar
 	// Cmp returns
 	// -2 if this element is in a different field than rhs
 	// -1 if this element is less than rhs
@@ -60,10 +61,10 @@ type Scalar interface {
 	Exp(k Scalar) Scalar
 	// Neg returns -element mod p
 	Neg() Scalar
-	// SetBigInt returns this element set to the value of v
-	SetBigInt(v *big.Int) (Scalar, error)
-	// BigInt returns this element as a big integer
-	BigInt() *big.Int
+	// SetNat returns this element set to the value of v
+	SetNat(v *saferith.Nat) (Scalar, error)
+	// Nat returns this element as a Nat
+	Nat() *saferith.Nat
 	// Bytes returns the canonical byte representation of this scalar
 	Bytes() []byte
 	// SetBytes creates a scalar from the canonical representation expecting the exact number of bytes needed to represent the scalar

@@ -3,8 +3,8 @@ package bls12381
 import (
 	"bytes"
 	"io"
-	"math/big"
 
+	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -22,19 +22,19 @@ type ScalarGt struct {
 	_ helper_types.Incomparable
 }
 
-func (ScalarGt) Curve() (curves.Curve, error) {
-	return nil, errs.NewInvalidCurve("this is an element of Gt")
+func (*ScalarGt) Curve() curves.Curve {
+	return nil
 }
 
-func (ScalarGt) CurveName() string {
+func (*ScalarGt) CurveName() string {
 	return Name
 }
 
-func (ScalarGt) PairingCurve() curves.PairingCurve {
+func (*ScalarGt) PairingCurve() curves.PairingCurve {
 	return New()
 }
 
-func (ScalarGt) PairingCurveName() string {
+func (*ScalarGt) PairingCurveName() string {
 	return Name
 }
 
@@ -135,8 +135,12 @@ func (s *ScalarGt) IsEven() bool {
 	return data[0]&1 == 0
 }
 
-func (*ScalarGt) New(input int) curves.Scalar {
+func (*ScalarGt) New(input uint64) curves.Scalar {
 	var data [bls12381impl.GtFieldBytes]byte
+	data[7] = byte(input >> 56 & 0xFF)
+	data[6] = byte(input >> 48 & 0xFF)
+	data[5] = byte(input >> 40 & 0xFF)
+	data[4] = byte(input >> 32 & 0xFF)
 	data[3] = byte(input >> 24 & 0xFF)
 	data[2] = byte(input >> 16 & 0xFF)
 	data[1] = byte(input >> 8 & 0xFF)
@@ -261,15 +265,15 @@ func (s *ScalarGt) Neg() curves.Scalar {
 	}
 }
 
-func (s *ScalarGt) SetBigInt(v *big.Int) (curves.Scalar, error) {
+func (s *ScalarGt) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 	var bytes_ [bls12381impl.GtFieldBytes]byte
 	v.FillBytes(bytes_[:])
 	return s.SetBytes(bytes_[:])
 }
 
-func (s *ScalarGt) BigInt() *big.Int {
+func (s *ScalarGt) Nat() *saferith.Nat {
 	bytes_ := s.Value.Bytes()
-	return new(big.Int).SetBytes(bytes_[:])
+	return new(saferith.Nat).SetBytes(bytes_[:])
 }
 
 func (s *ScalarGt) Bytes() []byte {

@@ -2,7 +2,9 @@ package fq
 
 import (
 	"encoding/binary"
-	"math/big"
+	"strings"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
@@ -27,14 +29,9 @@ var s = 32
 
 // Modulus representation
 // p = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001.
-var Modulus = &Fq{0x8c46eb2100000001, 0x224698fc0994a8dd, 0x0000000000000000, 0x4000000000000000}
+var modulusLimbs = &Fq{0x8c46eb2100000001, 0x224698fc0994a8dd, 0x0000000000000000, 0x4000000000000000}
 
-var BiModulus = new(big.Int).SetBytes([]byte{
-	0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x22, 0x46, 0x98, 0xfc, 0x09, 0x94, 0xa8, 0xdd,
-	0x8c, 0x46, 0xeb, 0x21, 0x00, 0x00, 0x00, 0x01,
-})
+var Modulus, _ = saferith.ModulusFromHex(strings.ToUpper("40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001"))
 
 // Cmp returns -1 if fp < rhs
 // 0 if fp == rhs
@@ -158,7 +155,7 @@ func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 		binary.LittleEndian.Uint64(input[16:24]),
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
-	if d0.Cmp(Modulus) != -1 {
+	if d0.Cmp(modulusLimbs) != -1 {
 		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	fiat_pasta_fq_from_bytes((*[4]uint64)(fq), input)
@@ -166,12 +163,12 @@ func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 	return fq, nil
 }
 
-// SetBigInt initialises an element from big.Int
+// SetNat initialises an element from saferith.Nat
 // The value is reduced by the modulus.
-func (fq *Fq) SetBigInt(bi *big.Int) *Fq {
+func (fq *Fq) SetNat(bi *saferith.Nat) *Fq {
 	var buffer [32]byte
-	r := new(big.Int).Set(bi)
-	r.Mod(r, BiModulus)
+	r := new(saferith.Nat).SetNat(bi)
+	r.Mod(r, Modulus)
 	r.FillBytes(buffer[:])
 	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
 	_, _ = fq.SetBytes(&buffer)
@@ -194,10 +191,10 @@ func (fq *Fq) Bytes() [32]byte {
 	return output
 }
 
-// BigInt converts this element into the big.Int struct.
-func (fq *Fq) BigInt() *big.Int {
+// Nat converts this element into the saferith.Nat struct.
+func (fq *Fq) Nat() *saferith.Nat {
 	buffer := fq.Bytes()
-	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Double this element.

@@ -2,8 +2,10 @@ package bls12381impl
 
 import (
 	"encoding/binary"
-	"math/big"
+	"strings"
 	"sync"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
 )
@@ -24,8 +26,10 @@ const qInv = 0xfffffffeffffffff
 // fqGenerator = 7 (multiplicative fqGenerator of r-1 order, that is also quadratic nonresidue).
 var fqGenerator = [impl.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4}
 
-// FqModulus.
-var FqModulus = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
+// fqModulus.
+var fqModulusLimbs = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
+
+var fqModulusHex = strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
 
 func FqNew() *impl.Field {
 	return &impl.Field{
@@ -36,14 +40,14 @@ func FqNew() *impl.Field {
 }
 
 func bls12381FqParamsInit() {
+	fqModulus, _ := saferith.ModulusFromHex(fqModulusHex)
+
 	bls12381FqParams = impl.FieldParams{
-		R:       [impl.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
-		R2:      [impl.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
-		R3:      [impl.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
-		Modulus: [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
-		BiModulus: new(big.Int).SetBytes([]byte{
-			0x73, 0xed, 0xa7, 0x53, 0x29, 0x9d, 0x7d, 0x48, 0x33, 0x39, 0xd8, 0x08, 0x09, 0xa1, 0xd8, 0x05, 0x53, 0xbd, 0xa4, 0x02, 0xff, 0xfe, 0x5b, 0xfe, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01,
-		}),
+		R:            [impl.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
+		R2:           [impl.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
+		R3:           [impl.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
+		ModulusLimbs: [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
+		Modulus:      fqModulus,
 	}
 }
 
@@ -75,10 +79,10 @@ func (bls12381FqArithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
 	// since it can't underflow.
 	var t [impl.FieldLimbs]uint64
 	var borrow uint64
-	t[0], borrow = sbb(FqModulus[0], arg[0], 0)
-	t[1], borrow = sbb(FqModulus[1], arg[1], borrow)
-	t[2], borrow = sbb(FqModulus[2], arg[2], borrow)
-	t[3], _ = sbb(FqModulus[3], arg[3], borrow)
+	t[0], borrow = sbb(fqModulusLimbs[0], arg[0], 0)
+	t[1], borrow = sbb(fqModulusLimbs[1], arg[1], borrow)
+	t[2], borrow = sbb(fqModulusLimbs[2], arg[2], borrow)
+	t[3], _ = sbb(fqModulusLimbs[3], arg[3], borrow)
 
 	// t could be `fqModulus` if `arg`=0. Set mask=0 if self=0
 	// and 0xff..ff if `arg`!=0
@@ -165,7 +169,7 @@ func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 
 	// Subtract the fqModulus to ensure the value
 	// is smaller.
-	f.Sub(out, &t, &FqModulus)
+	f.Sub(out, &t, &fqModulusLimbs)
 }
 
 // Sub performs modular subtraction.
@@ -178,10 +182,10 @@ func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 	// If underflow occurred on the final limb, borrow 0xff...ff, otherwise
 	// borrow = 0x00...00. Conditionally mask to add the fqModulus
 	borrow = -borrow
-	d0, carry := adc(d0, FqModulus[0]&borrow, 0)
-	d1, carry = adc(d1, FqModulus[1]&borrow, carry)
-	d2, carry = adc(d2, FqModulus[2]&borrow, carry)
-	d3, _ = adc(d3, FqModulus[3]&borrow, carry)
+	d0, carry := adc(d0, fqModulusLimbs[0]&borrow, 0)
+	d1, carry = adc(d1, fqModulusLimbs[1]&borrow, carry)
+	d2, carry = adc(d2, fqModulusLimbs[2]&borrow, carry)
+	d3, _ = adc(d3, fqModulusLimbs[3]&borrow, carry)
 
 	out[0] = d0
 	out[1] = d1
@@ -385,32 +389,32 @@ func (f bls12381FqArithmetic) montReduce(out *[impl.FieldLimbs]uint64, r *[2 * i
 	var rr [impl.FieldLimbs]uint64
 
 	k = r[0] * qInv
-	_, carry = mac(r[0], k, FqModulus[0], 0)
-	r1, carry = mac(r[1], k, FqModulus[1], carry)
-	r2, carry = mac(r[2], k, FqModulus[2], carry)
-	r3, carry = mac(r[3], k, FqModulus[3], carry)
+	_, carry = mac(r[0], k, fqModulusLimbs[0], 0)
+	r1, carry = mac(r[1], k, fqModulusLimbs[1], carry)
+	r2, carry = mac(r[2], k, fqModulusLimbs[2], carry)
+	r3, carry = mac(r[3], k, fqModulusLimbs[3], carry)
 	r4, carry2 = adc(r[4], 0, carry)
 
 	k = r1 * qInv
-	_, carry = mac(r1, k, FqModulus[0], 0)
-	r2, carry = mac(r2, k, FqModulus[1], carry)
-	r3, carry = mac(r3, k, FqModulus[2], carry)
-	r4, carry = mac(r4, k, FqModulus[3], carry)
+	_, carry = mac(r1, k, fqModulusLimbs[0], 0)
+	r2, carry = mac(r2, k, fqModulusLimbs[1], carry)
+	r3, carry = mac(r3, k, fqModulusLimbs[2], carry)
+	r4, carry = mac(r4, k, fqModulusLimbs[3], carry)
 	r5, carry2 = adc(r[5], carry2, carry)
 
 	k = r2 * qInv
-	_, carry = mac(r2, k, FqModulus[0], 0)
-	r3, carry = mac(r3, k, FqModulus[1], carry)
-	r4, carry = mac(r4, k, FqModulus[2], carry)
-	r5, carry = mac(r5, k, FqModulus[3], carry)
+	_, carry = mac(r2, k, fqModulusLimbs[0], 0)
+	r3, carry = mac(r3, k, fqModulusLimbs[1], carry)
+	r4, carry = mac(r4, k, fqModulusLimbs[2], carry)
+	r5, carry = mac(r5, k, fqModulusLimbs[3], carry)
 	r6, carry2 = adc(r[6], carry2, carry)
 
 	k = r3 * qInv
-	_, carry = mac(r3, k, FqModulus[0], 0)
-	rr[0], carry = mac(r4, k, FqModulus[1], carry)
-	rr[1], carry = mac(r5, k, FqModulus[2], carry)
-	rr[2], carry = mac(r6, k, FqModulus[3], carry)
+	_, carry = mac(r3, k, fqModulusLimbs[0], 0)
+	rr[0], carry = mac(r4, k, fqModulusLimbs[1], carry)
+	rr[1], carry = mac(r5, k, fqModulusLimbs[2], carry)
+	rr[2], carry = mac(r6, k, fqModulusLimbs[3], carry)
 	rr[3], _ = adc(r[7], carry2, carry)
 
-	f.Sub(out, &rr, &FqModulus)
+	f.Sub(out, &rr, &fqModulusLimbs)
 }

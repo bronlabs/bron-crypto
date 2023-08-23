@@ -103,10 +103,7 @@ func NewNonInteractiveCosigner(
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[mySharingId-1]
-		curve, err := myAttestedCommitment.D.Curve()
-		if err != nil {
-			return nil, errs.WrapInvalidCurve(err, "no such curve")
-		}
+		curve := myAttestedCommitment.D.Curve()
 		if !curve.ScalarBaseMult(privateNoncePair.SmallD).Equal(myAttestedCommitment.D) {
 			return nil, errs.NewFailed("my d nonce at index %d is not equal to the corresponding commitment", i)
 		}

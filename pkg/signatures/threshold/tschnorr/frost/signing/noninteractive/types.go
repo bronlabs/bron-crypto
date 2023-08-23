@@ -47,15 +47,8 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	if !ac.E.IsOnCurve() {
 		return errs.NewMembershipError("E is not on the curve")
 	}
-	dCurve, err := ac.D.Curve()
-	if err != nil {
-		return errs.WrapFailed(err, "could not extract D curve")
-	}
-
-	eCurve, err := ac.E.Curve()
-	if err != nil {
-		return errs.WrapFailed(err, "could not extract E curve")
-	}
+	dCurve := ac.D.Curve()
+	eCurve := ac.E.Curve()
 
 	if dCurve.Name() != eCurve.Name() {
 		return errs.NewInvalidCurve("D and E are not on the same curve %s != %s", dCurve.Name(), eCurve.Name())

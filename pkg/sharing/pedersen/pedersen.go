@@ -21,10 +21,7 @@ type Dealer struct {
 }
 
 func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
-	curve, err := generator.Curve()
-	if err != nil {
-		return errs.WrapInvalidCurve(err, "no such curve: %s", curve.Name())
-	}
+	curve := generator.Curve()
 	if err := share.Validate(curve); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid share")
 	}
@@ -32,7 +29,7 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 		return errs.WrapVerificationFailed(err, "invalid blind share")
 	}
 
-	x := curve.Scalar().New(share.Id)
+	x := curve.Scalar().New(uint64(share.Id))
 	i := curve.Scalar().One()
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
@@ -77,10 +74,7 @@ func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	if generator == nil {
 		return nil, errs.NewIsNil("generator is nil")
 	}
-	curve, err := generator.Curve()
-	if err != nil {
-		return nil, errs.NewInvalidCurve("no such curve: %s", curve.Name())
-	}
+	curve := generator.Curve()
 	if !generator.IsOnCurve() {
 		return nil, errs.NewMembershipError("invalid generator")
 	}

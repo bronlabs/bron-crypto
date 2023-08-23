@@ -2,10 +2,10 @@ package fq
 
 import (
 	crand "crypto/rand"
-	"math/big"
 	"math/rand"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
@@ -273,20 +273,20 @@ func TestFqCmp(t *testing.T) {
 }
 
 func TestFqBigInt(t *testing.T) {
-	t1 := New().SetBigInt(big.NewInt(9999))
-	t2 := New().SetBigInt(t1.BigInt())
+	t1 := New().SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := New().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
 	e := New().SetRaw(&[impl.FieldLimbs]uint64{0xa764d3f6f152f222, 0x3b5dc8aacb9297b7, 0xb015fa9d2b3efdc6, 0x567360cef000f24a})
-	b := new(big.Int).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
-	t1.SetBigInt(b)
+	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e.Value[0] = 0x186d8a95dee34f1f
 	e.Value[1] = 0x7f51143be3b60884
 	e.Value[2] = 0x4fea0562d4c10238
 	e.Value[3] = 0xa98c9f310fff0db5
-	b.Neg(b)
-	t1.SetBigInt(b)
+	b = new(saferith.Nat).ModNeg(b, getK256FqParams().Modulus)
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 
@@ -311,12 +311,12 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(tv2[:])
-		e := new(big.Int).SetBytes(tv2[:])
-		e.Mod(e, params.BiModulus)
+		e := new(saferith.Nat).SetBytes(tv2[:])
+		e.Mod(e, params.Modulus)
 
 		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)
 		a := New().SetBytesWide(&tv2)
-		require.Equal(t, 0, e.Cmp(a.BigInt()))
+		require.NotZero(t, e.Eq(a.Nat()))
 	}
 }

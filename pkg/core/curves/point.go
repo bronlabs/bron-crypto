@@ -2,13 +2,14 @@ package curves
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 )
 
 // Point represents an elliptic curve point.
 type Point interface {
 	Affine
-	Curve() (Curve, error)
+	Curve() Curve
 	CurveName() string
 	Random(prng io.Reader) Point
 	Hash(bytes ...[]byte) Point
@@ -26,7 +27,7 @@ type Point interface {
 	Sub(rhs Point) Point
 	Mul(rhs Scalar) Point
 	Equal(rhs Point) bool
-	Set(x, y *big.Int) (Point, error)
+	Set(x, y *saferith.Nat) (Point, error)
 	ToAffineCompressed() []byte
 	ToAffineUncompressed() []byte
 	FromAffineCompressed(bytes []byte) (Point, error)

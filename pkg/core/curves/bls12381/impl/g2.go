@@ -2,7 +2,8 @@ package bls12381impl
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -753,21 +754,21 @@ func (g2 *G2) Set(a *G2) *G2 {
 	return g2
 }
 
-// BigInt returns the x and y as big.Ints in affine.
-func (*G2) BigInt() (x, y *big.Int) {
+// Nat returns the x and y as saferith.Nats in affine.
+func (*G2) Nat() (x, y *saferith.Nat) {
 	var t G2
 	out := t.ToUncompressed()
-	x = new(big.Int).SetBytes(out[:WideFieldBytes])
-	y = new(big.Int).SetBytes(out[WideFieldBytes:])
+	x = new(saferith.Nat).SetBytes(out[:WideFieldBytes])
+	y = new(saferith.Nat).SetBytes(out[WideFieldBytes:])
 	return x, y
 }
 
-// SetBigInt creates a point from affine x, y
+// SetNat creates a point from affine x, y
 // and returns the point if it is on the curve.
-func (g2 *G2) SetBigInt(x, y *big.Int) (*G2, error) {
+func (g2 *G2) SetNat(x, y *saferith.Nat) (*G2, error) {
 	var tt [DoubleWideFieldBytes]byte
 
-	if len(x.Bytes()) == 0 && len(y.Bytes()) == 0 {
+	if x.EqZero() != 0 && y.EqZero() != 0 {
 		return g2.Identity(), nil
 	}
 	x.FillBytes(tt[:WideFieldBytes])

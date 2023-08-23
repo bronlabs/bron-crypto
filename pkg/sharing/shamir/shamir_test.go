@@ -199,7 +199,7 @@ func TestMarshalJsonRoundTrip(t *testing.T) {
 		{Id: 128, Value: curve.Scalar().New(3005)},
 		{Id: 19, Value: curve.Scalar().New(317)},
 		{Id: 7, Value: curve.Scalar().New(323)},
-		{Id: 222, Value: curve.Scalar().New(-1)},
+		{Id: 222, Value: curve.Scalar().New(1).Neg()},
 	}
 	// Run all the tests!
 	for _, in := range shares {

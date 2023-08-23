@@ -44,7 +44,7 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
 	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
 	for i := 0; i < cohortConfig.Protocol.TotalParties; i++ {
-		sharingIds[i] = p.Curve.Scalar().New(i + 1)
+		sharingIds[i] = p.Curve.Scalar().New(uint64(i + 1))
 		identityKey, exists := sharingIdToIdentityKey[i+1]
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)

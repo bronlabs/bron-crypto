@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"math/big"
 
+	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/sha3"
 
@@ -352,28 +352,28 @@ func (p *EllipticPoint) Set(clone *EllipticPoint) *EllipticPoint {
 	return p
 }
 
-// BigInt returns the x and y as big.Ints in affine.
-func (p *EllipticPoint) BigInt() (x, y *big.Int) {
+// Nat returns the x and y as saferith.Nat in affine.
+func (p *EllipticPoint) Nat() (x, y *saferith.Nat) {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
-	x = t.X.BigInt()
-	y = t.Y.BigInt()
+	x = t.X.Nat()
+	y = t.Y.Nat()
 	return x, y
 }
 
-// SetBigInt creates a point from affine x, y
+// SetNat creates a point from affine x, y
 // and returns the point if it is on the curve.
-func (p *EllipticPoint) SetBigInt(x, y *big.Int) (*EllipticPoint, error) {
+func (p *EllipticPoint) SetNat(x, y *saferith.Nat) (*EllipticPoint, error) {
 	xx := &Field{
 		Params:     p.Params.Gx.Params,
 		Arithmetic: p.Params.Gx.Arithmetic,
 	}
-	xx.SetBigInt(x)
+	xx.SetNat(x)
 	yy := &Field{
 		Params:     p.Params.Gx.Params,
 		Arithmetic: p.Params.Gx.Arithmetic,
 	}
-	yy.SetBigInt(y)
+	yy.SetNat(y)
 	pp := new(EllipticPoint).Set(p)
 
 	zero := new(Field).Set(xx).SetZero()

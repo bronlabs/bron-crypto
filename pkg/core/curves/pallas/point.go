@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"crypto/subtle"
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/internal"
@@ -14,156 +15,156 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.Point) = (*Point)(nil)
+var _ curves.Point = (*PointPallas)(nil)
 
-type Point struct {
+type PointPallas struct {
 	value *Ep
 
 	_ helper_types.Incomparable
 }
 
-func (Point) Curve() (curves.Curve, error) {
-	return pallasInstance, nil
+func (*PointPallas) Curve() curves.Curve {
+	return &pallasInstance
 }
 
-func (Point) CurveName() string {
+func (*PointPallas) CurveName() string {
 	return Name
 }
 
-func (*Point) Random(reader io.Reader) curves.Point {
-	return &Point{value: new(Ep).Random(reader)}
+func (*PointPallas) Random(reader io.Reader) curves.Point {
+	return &PointPallas{value: new(Ep).Random(reader)}
 }
 
-func (*Point) Hash(inputs ...[]byte) curves.Point {
-	return &Point{value: new(Ep).Hash(bytes.Join(inputs, nil))}
+func (*PointPallas) Hash(inputs ...[]byte) curves.Point {
+	return &PointPallas{value: new(Ep).Hash(bytes.Join(inputs, nil))}
 }
 
-func (*Point) Identity() curves.Point {
-	return &Point{value: new(Ep).Identity()}
+func (*PointPallas) Identity() curves.Point {
+	return &PointPallas{value: new(Ep).Identity()}
 }
 
-func (*Point) Generator() curves.Point {
-	return &Point{value: new(Ep).Generator()}
+func (*PointPallas) Generator() curves.Point {
+	return &PointPallas{value: new(Ep).Generator()}
 }
 
-func (p *Point) Clone() curves.Point {
-	return &Point{value: new(Ep).Set(p.value)}
+func (p *PointPallas) Clone() curves.Point {
+	return &PointPallas{value: new(Ep).Set(p.value)}
 }
 
-func (p *Point) ClearCofactor() curves.Point {
+func (p *PointPallas) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
-func (p *Point) IsIdentity() bool {
+func (p *PointPallas) IsIdentity() bool {
 	return p.value.IsIdentity()
 }
 
-func (p *Point) IsNegative() bool {
+func (p *PointPallas) IsNegative() bool {
 	return p.value.GetY().IsOdd()
 }
 
-func (p *Point) IsOnCurve() bool {
+func (p *PointPallas) IsOnCurve() bool {
 	return p.value.IsOnCurve()
 }
 
-func (p *Point) Double() curves.Point {
-	return &Point{value: new(Ep).Double(p.value)}
+func (p *PointPallas) Double() curves.Point {
+	return &PointPallas{value: new(Ep).Double(p.value)}
 }
 
-func (*Point) Scalar() curves.Scalar {
-	return &Scalar{value: new(fq.Fq).SetZero()}
+func (*PointPallas) Scalar() curves.Scalar {
+	return &ScalarPallas{value: new(fq.Fq).SetZero()}
 }
 
-func (p *Point) Neg() curves.Point {
-	return &Point{value: new(Ep).Neg(p.value)}
+func (p *PointPallas) Neg() curves.Point {
+	return &PointPallas{value: new(Ep).Neg(p.value)}
 }
 
-func (p *Point) Add(rhs curves.Point) curves.Point {
-	r, ok := rhs.(*Point)
+func (p *PointPallas) Add(rhs curves.Point) curves.Point {
+	r, ok := rhs.(*PointPallas)
 	if !ok {
 		return nil
 	}
-	return &Point{value: new(Ep).Add(p.value, r.value)}
+	return &PointPallas{value: new(Ep).Add(p.value, r.value)}
 }
 
-func (p *Point) Sub(rhs curves.Point) curves.Point {
-	r, ok := rhs.(*Point)
+func (p *PointPallas) Sub(rhs curves.Point) curves.Point {
+	r, ok := rhs.(*PointPallas)
 	if !ok {
 		return nil
 	}
-	return &Point{value: new(Ep).Sub(p.value, r.value)}
+	return &PointPallas{value: new(Ep).Sub(p.value, r.value)}
 }
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
-	s, ok := rhs.(*Scalar)
+func (p *PointPallas) Mul(rhs curves.Scalar) curves.Point {
+	s, ok := rhs.(*ScalarPallas)
 	if !ok {
 		return nil
 	}
-	return &Point{value: new(Ep).Mul(p.value, s.value)}
+	return &PointPallas{value: new(Ep).Mul(p.value, s.value)}
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*Point)
+func (p *PointPallas) Equal(rhs curves.Point) bool {
+	r, ok := rhs.(*PointPallas)
 	if !ok {
 		return false
 	}
 	return p.value.Equal(r.value)
 }
 
-func (p *Point) Set(x, y *big.Int) (curves.Point, error) {
+func (p *PointPallas) Set(x, y *saferith.Nat) (curves.Point, error) {
 	xx := subtle.ConstantTimeCompare(x.Bytes(), []byte{})
 	yy := subtle.ConstantTimeCompare(y.Bytes(), []byte{})
-	xElem := new(fp.Fp).SetBigInt(x)
+	xElem := new(fp.Fp).SetNat(x)
 	var data [32]byte
 	if yy == 1 {
 		if xx == 1 {
-			return &Point{value: new(Ep).Identity()}, nil
+			return &PointPallas{value: new(Ep).Identity()}, nil
 		}
 		data = xElem.Bytes()
 		return p.FromAffineCompressed(data[:])
 	}
-	yElem := new(fp.Fp).SetBigInt(y)
+	yElem := new(fp.Fp).SetNat(y)
 	value := &Ep{X: xElem, Y: yElem, Z: new(fp.Fp).SetOne()}
 	if !value.IsOnCurve() {
 		return nil, errs.NewMembershipError("point is not on the curve")
 	}
-	return &Point{value: value}, nil
+	return &PointPallas{value: value}, nil
 }
 
-func (p *Point) ToAffineCompressed() []byte {
+func (p *PointPallas) ToAffineCompressed() []byte {
 	return p.value.ToAffineCompressed()
 }
 
-func (p *Point) ToAffineUncompressed() []byte {
+func (p *PointPallas) ToAffineUncompressed() []byte {
 	return p.value.ToAffineUncompressed()
 }
 
-func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
+func (*PointPallas) FromAffineCompressed(input []byte) (curves.Point, error) {
 	value, err := new(Ep).FromAffineCompressed(input)
 	if err != nil {
 		return nil, err
 	}
-	return &Point{value: value}, nil
+	return &PointPallas{value: value}, nil
 }
 
-func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
+func (*PointPallas) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	value, err := new(Ep).FromAffineUncompressed(input)
 	if err != nil {
 		return nil, err
 	}
-	return &Point{value: value}, nil
+	return &PointPallas{value: value}, nil
 }
 
-func (p *Point) MarshalBinary() ([]byte, error) {
+func (p *PointPallas) MarshalBinary() ([]byte, error) {
 	return internal.PointMarshalBinary(p)
 }
 
-func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(pallasInstance, input)
+func (p *PointPallas) UnmarshalBinary(input []byte) error {
+	pt, err := internal.PointUnmarshalBinary(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointPallas)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -171,16 +172,16 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalText() ([]byte, error) {
+func (p *PointPallas) MarshalText() ([]byte, error) {
 	return internal.PointMarshalText(p)
 }
 
-func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(pallasInstance, input)
+func (p *PointPallas) UnmarshalText(input []byte) error {
+	pt, err := internal.PointUnmarshalText(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointPallas)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -188,16 +189,16 @@ func (p *Point) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalJSON() ([]byte, error) {
+func (p *PointPallas) MarshalJSON() ([]byte, error) {
 	return internal.PointMarshalJson(p)
 }
 
-func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(pallasInstance, input)
+func (p *PointPallas) UnmarshalJSON(input []byte) error {
+	pt, err := internal.NewPointFromJSON(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	P, ok := pt.(*Point)
+	P, ok := pt.(*PointPallas)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
@@ -205,36 +206,36 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *Point) X() curves.FieldElement {
-	return FieldElement{
+func (p *PointPallas) X() curves.FieldElement {
+	return &FieldElementPallas{
 		v: p.value.GetX(),
 	}
 }
 
-func (p *Point) Y() curves.FieldElement {
-	return FieldElement{
+func (p *PointPallas) Y() curves.FieldElement {
+	return &FieldElementPallas{
 		v: p.value.GetY(),
 	}
 }
 
-func (p *Point) JacobianX() curves.FieldElement {
-	return FieldElement{
+func (p *PointPallas) JacobianX() curves.FieldElement {
+	return &FieldElementPallas{
 		v: p.value.X,
 	}
 }
 
-func (p *Point) JacobianY() curves.FieldElement {
-	return FieldElement{
+func (p *PointPallas) JacobianY() curves.FieldElement {
+	return &FieldElementPallas{
 		v: p.value.Y,
 	}
 }
 
-func (p *Point) Jacobian() curves.FieldElement {
-	return FieldElement{
+func (p *PointPallas) Jacobian() curves.FieldElement {
+	return &FieldElementPallas{
 		v: p.value.Z,
 	}
 }
 
-func (p *Point) GetEp() *Ep {
+func (p *PointPallas) GetEp() *Ep {
 	return new(Ep).Set(p.value)
 }

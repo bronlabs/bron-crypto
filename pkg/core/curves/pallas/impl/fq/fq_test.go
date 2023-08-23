@@ -1,10 +1,10 @@
 package fq
 
 import (
-	"math/big"
 	"math/rand"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
 
@@ -204,20 +204,20 @@ func TestFqBytes(t *testing.T) {
 }
 
 func TestFqBigInt(t *testing.T) {
-	t1 := new(Fq).SetBigInt(big.NewInt(9999))
-	t2 := new(Fq).SetBigInt(t1.BigInt())
+	t1 := new(Fq).SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := new(Fq).SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
 	e := &Fq{0x7bb1416dea3d6ae3, 0x62f9108a340aa525, 0x303b3f30fcaa477f, 0x11c9ef5422d80a4d}
-	b := new(big.Int).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
-	t1.SetBigInt(b)
+	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e[0] = 0x1095a9b315c2951e
 	e[1] = 0xbf4d8871d58a03b8
 	e[2] = 0xcfc4c0cf0355b880
 	e[3] = 0x2e3610abdd27f5b2
-	b.Neg(b)
-	t1.SetBigInt(b)
+	b.ModNeg(b, Modulus)
+	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 

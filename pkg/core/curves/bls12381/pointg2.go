@@ -3,8 +3,9 @@ package bls12381
 import (
 	"bytes"
 	"io"
-	"math/big"
 	"reflect"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
@@ -14,7 +15,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
-var _ (curves.PairingPoint) = (*PointG2)(nil)
+var _ curves.PairingPoint = (*PointG2)(nil)
 
 type PointG2 struct {
 	Value *bls12381impl.G2
@@ -22,15 +23,15 @@ type PointG2 struct {
 	_ helper_types.Incomparable
 }
 
-func (PointG2) Curve() (curves.Curve, error) {
-	return NewG2(), nil
+func (*PointG2) Curve() curves.Curve {
+	return NewG2()
 }
 
-func (PointG2) PairingCurve() curves.PairingCurve {
+func (*PointG2) PairingCurve() curves.PairingCurve {
 	return New()
 }
 
-func (PointG2) PairingCurveName() string {
+func (*PointG2) PairingCurveName() string {
 	return Name
 }
 
@@ -85,7 +86,7 @@ func (p *PointG2) Double() curves.Point {
 }
 
 func (*PointG2) Scalar() curves.Scalar {
-	return &Scalar{
+	return &ScalarBls12381{
 		Value:  bls12381impl.FqNew(),
 		Point_: new(PointG2),
 	}
@@ -123,7 +124,7 @@ func (p *PointG2) Mul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Scalar)
+	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &PointG2{Value: new(bls12381impl.G2).Mul(p.Value, r.Value)}
 	} else {
@@ -140,8 +141,8 @@ func (p *PointG2) Equal(rhs curves.Point) bool {
 	}
 }
 
-func (*PointG2) Set(x, y *big.Int) (curves.Point, error) {
-	value, err := new(bls12381impl.G2).SetBigInt(x, y)
+func (*PointG2) Set(x, y *saferith.Nat) (curves.Point, error) {
+	value, err := new(bls12381impl.G2).SetNat(x, y)
 	if err != nil {
 		return nil, errs.NewInvalidCoordinates("invalid coordinates")
 	}
@@ -193,7 +194,7 @@ func multiScalarMultBls12381G2(scalars []curves.Scalar, points []curves.Point) (
 		nPoints[i] = pp.Value
 	}
 	for i, sc := range scalars {
-		s, ok := sc.(*Scalar)
+		s, ok := sc.(*ScalarBls12381)
 		if !ok {
 			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarBls12381", reflect.TypeOf(sc).Name())
 		}
@@ -236,25 +237,25 @@ func (p *PointG2) Y() curves.FieldElement {
 }
 
 func (p *PointG2) ProjectiveX() curves.FieldElement {
-	return FieldElementG2{
+	return &FieldElementG2{
 		v: &p.Value.X,
 	}
 }
 
 func (p *PointG2) ProjectiveY() curves.FieldElement {
-	return FieldElementG2{
+	return &FieldElementG2{
 		v: &p.Value.Y,
 	}
 }
 
 func (p *PointG2) ProjectiveZ() curves.FieldElement {
-	return FieldElementG2{
+	return &FieldElementG2{
 		v: &p.Value.Z,
 	}
 }
 
-func (*PointG2) Modulus() *big.Int {
-	return new(big.Int).Mul(p, p)
+func (*PointG2) Modulus() *saferith.Modulus {
+	return saferith.ModulusFromNat(new(saferith.Nat).Mul(p.Nat(), p.Nat(), -1))
 }
 
 func (p *PointG2) MarshalBinary() ([]byte, error) {

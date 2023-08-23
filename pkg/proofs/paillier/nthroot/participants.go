@@ -2,7 +2,8 @@ package nthroot
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -16,8 +17,8 @@ const (
 )
 
 type Participant struct {
-	bigN  *big.Int
-	x     *big.Int
+	bigN  *saferith.Nat
+	x     *saferith.Nat
 	round int
 	prng  io.Reader
 
@@ -25,24 +26,24 @@ type Participant struct {
 }
 
 type ProverState struct {
-	bigNSquared *big.Int
-	r           *big.Int
+	bigNSquared *saferith.Modulus
+	r           *saferith.Nat
 
 	_ helper_types.Incomparable
 }
 
 type Prover struct {
 	Participant
-	y     *big.Int
+	y     *saferith.Nat
 	state *ProverState
 
 	_ helper_types.Incomparable
 }
 
 type VerifierState struct {
-	bigNSquared *big.Int
-	e           *big.Int
-	a           *big.Int
+	bigNSquared *saferith.Modulus
+	e           *saferith.Nat
+	a           *saferith.Nat
 
 	_ helper_types.Incomparable
 }
@@ -54,7 +55,7 @@ type Verifier struct {
 	_ helper_types.Incomparable
 }
 
-func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
@@ -72,12 +73,12 @@ func NewProver(bigN, x, y *big.Int, sessionId []byte, transcript transcripts.Tra
 		},
 		y: y,
 		state: &ProverState{
-			bigNSquared: new(big.Int).Mul(bigN, bigN), // cache bigN^2
+			bigNSquared: saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 2*bigN.AnnouncedLen())), // cache bigN^2
 		},
 	}, nil
 }
 
-func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
@@ -94,7 +95,7 @@ func NewVerifier(bigN, x *big.Int, sessionId []byte, transcript transcripts.Tran
 			prng:  prng,
 		},
 		state: &VerifierState{
-			bigNSquared: new(big.Int).Mul(bigN, bigN), // cache bigN^2
+			bigNSquared: saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 2*bigN.AnnouncedLen())), // cache bigN^2
 		},
 	}, nil
 }

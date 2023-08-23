@@ -2,7 +2,8 @@ package lp
 
 import (
 	"io"
-	"math/big"
+
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -30,7 +31,7 @@ type Participant struct {
 type VerifierState struct {
 	rootProvers []*nthroot.Prover
 	x           []paillier.CipherText
-	y           []*big.Int
+	y           []*saferith.Nat
 
 	_ helper_types.Incomparable
 }

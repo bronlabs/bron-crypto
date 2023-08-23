@@ -23,10 +23,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
 	}
-	shareCurve, err := ss.Value.Curve()
-	if err != nil {
-		return errs.WrapInvalidCurve(err, "could not extract share curve")
-	}
+	shareCurve := ss.Value.Curve()
 	if shareCurve.Name() != curve.Name() {
 		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurve.Name(), curve.Name())
 	}
@@ -35,10 +32,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 }
 
 func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
-	curve, err := ss.Value.Curve()
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not fetch curve by name")
-	}
+	curve := ss.Value.Curve()
 	coefficients, err := sharing.LagrangeCoefficients(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
@@ -86,7 +80,7 @@ func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader
 	poly := new(sharing.Polynomial).NewPolynomial(secret, s.Threshold, prng)
 	shares := make([]*Share, s.Total)
 	for i := range shares {
-		x := s.Curve.Scalar().New(i + 1)
+		x := s.Curve.Scalar().New(uint64(i + 1))
 		shares[i] = &Share{
 			Id:    i + 1,
 			Value: poly.Evaluate(x),
@@ -130,7 +124,7 @@ func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = share.Value
-		xs[i] = s.Curve.Scalar().New(share.Id)
+		xs[i] = s.Curve.Scalar().New(uint64(share.Id))
 	}
 	return s.interpolate(xs, ys, s.Curve.Scalar().Zero())
 }
@@ -157,7 +151,7 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = s.Curve.ScalarBaseMult(share.Value)
-		xs[i] = s.Curve.Scalar().New(share.Id)
+		xs[i] = s.Curve.Scalar().New(uint64(share.Id))
 	}
 	return s.interpolatePoint(xs, ys, s.Curve.Scalar().Zero())
 }
