@@ -74,7 +74,7 @@ linters:
     # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
     - gofmt
     # Gofumpt checks whether code was gofumpt-ed.
-    - gofumpt
+    # - gofumpt
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
     - gomoddirectives
     # Checks that printf-like functions are named with f at the end

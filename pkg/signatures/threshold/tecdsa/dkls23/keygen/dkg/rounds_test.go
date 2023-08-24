@@ -4,14 +4,13 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"

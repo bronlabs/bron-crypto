@@ -138,3 +138,8 @@ run-profile-frost-noninteractive-signing:
 	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile ${TMPDIR}noninteractive_memprofile_ED25519.out -cpuprofile ${TMPDIR}noninteractive_cpuprofile_ED25519.out
 	go tool pprof -top ${TMPDIR}noninteractive_cpuprofile_ED25519.out | grep copperexchange
 	go tool pprof -top ${TMPDIR}noninteractive_memprofile_ED25519.out | grep copperexchange
+
+.PHONY: run-time-tests
+run-time-tests:
+	go clean -testcache
+	EXEC_TIME_TEST=1 go test -timeout 600s -run ^Test_MeasureConstantTime ./...

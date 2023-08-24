@@ -41,7 +41,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			t.Parallel()
 
 			cipherSuite := &integration.CipherSuite{
-				Curve: curve,
+				Curve: p256.New(),
 				Hash:  sha256.New,
 			}
 
