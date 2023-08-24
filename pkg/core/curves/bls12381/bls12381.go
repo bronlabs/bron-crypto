@@ -199,6 +199,14 @@ func (*PairingCurve) G1() curves.Curve {
 	return &bls12381g1
 }
 
+func (PairingCurve) PointG1() curves.PairingPoint {
+	return bls12381g1.Point().(curves.PairingPoint)
+}
+
+func (PairingCurve) PointG2() curves.PairingPoint {
+	return bls12381g2.Point().(curves.PairingPoint)
+}
+
 func (*PairingCurve) G2() curves.Curve {
 	return &bls12381g2
 }

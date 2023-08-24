@@ -985,6 +985,10 @@ issues:
         - govet
       text: 'shadow: declaration of "err" shadows declaration at line'
 
+    - linters:
+        - govet
+      text: 'shadow: declaration of "ok" shadows declaration at line'
+
     # this has a collision with wrapcheck. We care about wrapcheck more, but
     # errchkjson is also important because it reports unsafe marshaling
     - linters:

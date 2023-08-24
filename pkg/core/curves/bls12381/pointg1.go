@@ -47,6 +47,15 @@ func (*PointG1) Hash(inputs ...[]byte) curves.Point {
 	return &PointG1{Value: pt}
 }
 
+func (*PointG1) HashWithDst(input []byte, dst string) curves.PairingPoint {
+	pt := new(bls12381impl.G1).Hash(impl.EllipticPointHasherSha256(), input, []byte(dst))
+	return &PointG1{Value: pt}
+}
+
+func (p *PointG1) IsTorsionFree() bool {
+	return p.Value.InCorrectSubgroup() == 1
+}
+
 func (*PointG1) Identity() curves.Point {
 	return &PointG1{
 		Value: new(bls12381impl.G1).Identity(),

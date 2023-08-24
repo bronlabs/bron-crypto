@@ -8,6 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	bls12381impl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/test_utils"
 )
@@ -513,21 +514,21 @@ func TestPointBls12381G1Nil(t *testing.T) {
 	require.Error(t, err)
 }
 
-// func TestPointBls12381G1SumOfProducts(t *testing.T) {
-// 	lhs := new(PointG1).Generator().Mul(new(Scalar).New(50))
-// 	points := make([]curves.Point, 5)
-// 	for i := range points {
-// 		points[i] = new(PointG1).Generator()
-// 	}
-// 	scalars := []curves.Scalar{
-// 		new(Scalar).New(8),
-// 		new(Scalar).New(9),
-// 		new(Scalar).New(10),
-// 		new(Scalar).New(11),
-// 		new(Scalar).New(12),
-// 	}
-// 	rhs, err := NewG1().MultiScalarMult(scalars, points)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, rhs)
-// 	require.True(t, lhs.Equal(rhs))
-// }
+func TestPointBls12381G1SumOfProducts(t *testing.T) {
+	lhs := new(PointG1).Generator().Mul(new(ScalarBls12381).New(50))
+	points := make([]curves.Point, 5)
+	for i := range points {
+		points[i] = new(PointG1).Generator()
+	}
+	scalars := []curves.Scalar{
+		new(ScalarBls12381).New(8),
+		new(ScalarBls12381).New(9),
+		new(ScalarBls12381).New(10),
+		new(ScalarBls12381).New(11),
+		new(ScalarBls12381).New(12),
+	}
+	rhs, err := NewG1().MultiScalarMult(scalars, points)
+	require.NoError(t, err)
+	require.NotNil(t, rhs)
+	require.True(t, lhs.Equal(rhs))
+}

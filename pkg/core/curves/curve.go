@@ -28,7 +28,9 @@ type PairingCurve interface {
 	// G1
 	// Yes. These are not curves, but the API is nice and gives us access to the base fields and scalar fields etc.
 	G1() Curve
+	PointG1() PairingPoint
 	G2() Curve
+	PointG2() PairingPoint
 	Gt() Scalar
 
 	Pairing(pG1, pG2 PairingPoint) Scalar

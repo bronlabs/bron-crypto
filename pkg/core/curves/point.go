@@ -36,6 +36,8 @@ type Point interface {
 
 type PairingPoint interface {
 	Point
+	HashWithDst(input []byte, dst string) PairingPoint
+	IsTorsionFree() bool
 	PairingCurve() PairingCurve
 	PairingCurveName() string
 	OtherGroup() PairingPoint
