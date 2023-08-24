@@ -42,7 +42,7 @@ func (p *PointG2) Random(reader io.Reader) curves.Point {
 }
 
 func (*PointG2) Hash(inputs ...[]byte) curves.Point {
-	domain := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
+	domain := []byte("QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_")
 	pt := new(bls12381impl.G2).Hash(impl.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
 	return &PointG2{Value: pt}
 }
