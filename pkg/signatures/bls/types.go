@@ -51,6 +51,27 @@ type PrivateKey[K KeySubGroup] struct {
 	_ helper_types.Incomparable
 }
 
+func NewPrivateKey[K KeySubGroup](d curves.PairingScalar) (*PrivateKey[K], error) {
+	sk, ok := d.(*bls12381.ScalarBls12381)
+	if !ok {
+		return nil, errs.NewInvalidType("d is not a bls scalar")
+	}
+	pointInK := new(K)
+	if (*pointInK).CurveName() != d.CurveName() {
+		return nil, errs.NewInvalidCurve("Key subgroup and d's subgroup are not the same")
+	}
+	Y, ok := d.Curve().ScalarBaseMult(sk).(curves.PairingPoint)
+	if !ok {
+		return nil, errs.NewInvalidType("could not convert public key to pairing point")
+	}
+	return &PrivateKey[K]{
+		d: sk,
+		PublicKey: &PublicKey[K]{
+			Y: Y,
+		},
+	}, nil
+}
+
 func (sk *PrivateKey[K]) D() curves.PairingScalar {
 	return sk.d
 }

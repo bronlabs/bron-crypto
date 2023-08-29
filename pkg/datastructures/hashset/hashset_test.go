@@ -16,7 +16,7 @@ func (k Value) Hash() [32]byte {
 }
 
 func TestGet(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 		{value: "2"},
 	})
@@ -29,7 +29,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestNoDuplicateValues(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 		{value: "1"},
 		{value: "2"},
@@ -40,7 +40,7 @@ func TestNoDuplicateValues(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{})
+	obj := NewHashSet([]Value{})
 	require.Equal(t, obj.Len(), 0)
 	empty := obj.IsEmpty()
 	require.True(t, empty)
@@ -51,7 +51,7 @@ func TestIsEmpty(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 	})
 	require.Equal(t, obj.Len(), 1)
@@ -62,7 +62,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 	})
 	require.Equal(t, obj.Len(), 1)
@@ -75,7 +75,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 	})
 	obj.Add(Value{value: "1"})
@@ -89,7 +89,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestClear(t *testing.T) {
-	obj := NewHashSet[Value]([]Value{
+	obj := NewHashSet([]Value{
 		{value: "1"},
 	})
 	obj.Add(Value{value: "1"})
@@ -99,8 +99,8 @@ func TestClear(t *testing.T) {
 }
 
 func TestJoin(t *testing.T) {
-	set1 := NewHashSet[Value]([]Value{})
-	set2 := NewHashSet[Value]([]Value{})
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
 	set1.Add(Value{value: "1"})
 	set1.Add(Value{value: "2"})
 	set1.Add(Value{value: "3"})
@@ -122,8 +122,8 @@ func TestJoin(t *testing.T) {
 }
 
 func TestIntersect(t *testing.T) {
-	set1 := NewHashSet[Value]([]Value{})
-	set2 := NewHashSet[Value]([]Value{})
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
 	set1.Add(Value{value: "1"})
 	set1.Add(Value{value: "2"})
 	set1.Add(Value{value: "3"})
@@ -137,8 +137,8 @@ func TestIntersect(t *testing.T) {
 }
 
 func TestDisjoint(t *testing.T) {
-	set1 := NewHashSet[Value]([]Value{})
-	set2 := NewHashSet[Value]([]Value{})
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
 	set1.Add(Value{value: "1"})
 	set1.Add(Value{value: "2"})
 	set1.Add(Value{value: "3"})
@@ -154,8 +154,8 @@ func TestDisjoint(t *testing.T) {
 }
 
 func TestEquals(t *testing.T) {
-	set1 := NewHashSet[Value]([]Value{})
-	set2 := NewHashSet[Value]([]Value{})
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
 	set1.Add(Value{value: "1"})
 	set1.Add(Value{value: "2"})
 	set1.Add(Value{value: "3"})

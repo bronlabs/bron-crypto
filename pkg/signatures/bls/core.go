@@ -181,7 +181,7 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 // PopProve(SK) -> (proof, error): an algorithm that generates a proof of possession for the public key corresponding to secret key SK.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-popprove
 func PopProve[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K]) (*ProofOfPossession[S], error) {
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return nil, errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 	message, err := privateKey.PublicKey.MarshalBinary()
@@ -204,7 +204,7 @@ func PopProve[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K]) (*P
 // PopVerify verifies proof of possession of public key
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-popverify
 func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop *ProofOfPossession[S]) error {
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 	message, err := publicKey.MarshalBinary()
@@ -283,7 +283,7 @@ func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey
 	}, nil
 }
 
-func sameSubGroup[K KeySubGroup, S SignatureSubGroup]() bool {
+func SameSubGroup[K KeySubGroup, S SignatureSubGroup]() bool {
 	p := new(K)
 	q := new(S)
 	return (*p).CurveName() == (*q).CurveName()

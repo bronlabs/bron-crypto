@@ -42,8 +42,8 @@ const (
 )
 
 type Signer[K KeySubGroup, S SignatureSubGroup] struct {
-	Scheme RogueKeyPrevention
-	key    *PrivateKey[K]
+	Scheme     RogueKeyPrevention
+	PrivateKey *PrivateKey[K]
 
 	_ helper_types.Incomparable
 }
@@ -52,12 +52,12 @@ func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], sc
 	if err := privateKey.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "private key validation failed")
 	}
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return nil, errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 	return &Signer[K, S]{
-		Scheme: scheme,
-		key:    privateKey,
+		Scheme:     scheme,
+		PrivateKey: privateKey,
 	}, nil
 }
 
@@ -70,7 +70,7 @@ func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S
 	if len(message) == 0 {
 		return nil, nil, errs.NewIsNil("message cannot be nil")
 	}
-	if err := s.key.Validate(); err != nil {
+	if err := s.PrivateKey.Validate(); err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not validate private key")
 	}
 
@@ -83,25 +83,25 @@ func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
 	case MessageAugmentation:
 		// step 3.2.1.2 (namely, the pk || message portion)
-		message, err = augmentMessage(message, s.key.PublicKey)
+		message, err = augmentMessage(message, s.PrivateKey.PublicKey)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not augment message")
 		}
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 	case POP:
-		pop, err = PopProve[K, S](s.key)
+		pop, err = PopProve[K, S](s.PrivateKey)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not produce proof of possession")
 		}
 	default:
 		return nil, nil, errs.NewInvalidType("rogue key prevention scheme %d is not supported", s.Scheme)
 	}
-	dst, err := getDst(s.Scheme, s.key.PublicKey.inG1())
+	dst, err := getDst(s.Scheme, s.PrivateKey.PublicKey.inG1())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not get domain separation tag")
 	}
 
-	point, err := coreSign[K, S](s.key, message, dst)
+	point, err := coreSign[K, S](s.PrivateKey, message, dst)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not sign")
 	}
@@ -118,7 +118,7 @@ func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S
 // Verify: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-verify
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signature *Signature[S], message []byte, pop *ProofOfPossession[S], scheme RogueKeyPrevention) error {
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 
@@ -163,7 +163,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 // MessageAugmentation: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSiganture *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention) error {
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 
@@ -228,7 +228,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 // All public keys passed as arguments to this algorithm MUST have a corresponding proof of possession, and the result of evaluating PopVerify on each public key and its proof MUST be VALID. The caller is responsible for ensuring that this precondition is met. If it is violated, this scheme provides no security against aggregate signature forgery.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-fastaggregateverify
 func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], message []byte, aggregatedSignature *Signature[S], pops []*ProofOfPossession[S]) error {
-	if sameSubGroup[K, S]() {
+	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
 

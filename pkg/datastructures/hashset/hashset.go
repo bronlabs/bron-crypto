@@ -64,8 +64,8 @@ func (set *HashSet[T]) Clear() {
 	set.value = make(map[[32]byte]T)
 }
 
-func (set *HashSet[T]) Union(other *HashSet[T]) HashSet[T] {
-	result := HashSet[T]{value: make(map[[32]byte]T)}
+func (set *HashSet[T]) Union(other *HashSet[T]) *HashSet[T] {
+	result := &HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		result.Add(element)
 	}
@@ -75,8 +75,8 @@ func (set *HashSet[T]) Union(other *HashSet[T]) HashSet[T] {
 	return result
 }
 
-func (set *HashSet[T]) Difference(other *HashSet[T]) HashSet[T] {
-	result := HashSet[T]{value: make(map[[32]byte]T)}
+func (set *HashSet[T]) Difference(other *HashSet[T]) *HashSet[T] {
+	result := &HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		if !other.Contains(element) {
 			result.Add(element)
@@ -85,8 +85,8 @@ func (set *HashSet[T]) Difference(other *HashSet[T]) HashSet[T] {
 	return result
 }
 
-func (set *HashSet[T]) Intersection(other *HashSet[T]) HashSet[T] {
-	result := HashSet[T]{value: make(map[[32]byte]T)}
+func (set *HashSet[T]) Intersection(other *HashSet[T]) *HashSet[T] {
+	result := &HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
 		if other.Contains(element) {
 			result.Add(element)

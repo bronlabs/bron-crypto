@@ -1,0 +1,61 @@
+package dkg
+
+import (
+	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+)
+
+type Participant[K bls.KeySubGroup] struct {
+	gennaroParty *gennaro.Participant
+	inG1         bool
+	round        int
+
+	_ helper_types.Incomparable
+}
+
+func (p *Participant[K]) GetIdentityKey() integration.IdentityKey {
+	return p.gennaroParty.GetIdentityKey()
+}
+
+func (p *Participant[K]) GetSharingId() int {
+	return p.gennaroParty.GetSharingId()
+}
+
+func (p *Participant[K]) GetCohortConfig() *integration.CohortConfig {
+	return p.gennaroParty.GetCohortConfig()
+}
+
+func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
+	if err := cohortConfig.Validate(); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	pointInK := new(K)
+	inG1 := (*pointInK).CurveName() == bls12381.G1Name
+	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G1Name) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G2Name) {
+		return nil, errs.NewInvalidCurve("cohort config curve mismatch with the declared subgroup")
+	}
+	if transcript == nil {
+		transcript = hagrid.NewTranscript("COPPER_KNOX_TBLS_KEYGEN-")
+	}
+	transcript.AppendMessages("threshold bls dkg", uniqueSessionId)
+	transcript.AppendMessages("keys subgroup", []byte(cohortConfig.CipherSuite.Curve.Name()))
+	party, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct tbls dkg participant out of gennaro dkg participant")
+	}
+	return &Participant[K]{
+		gennaroParty: party,
+		inG1:         inG1,
+		round:        1,
+	}, nil
+}
