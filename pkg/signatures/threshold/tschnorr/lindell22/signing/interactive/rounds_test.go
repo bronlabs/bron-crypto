@@ -9,11 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	hashing_bip340 "github.com/copperexchange/knox-primitives/pkg/core/hashing/bip340"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive/test_utils"
@@ -60,7 +63,7 @@ func Test_SanityCheck(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_HappyPath(t *testing.T) {
+func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
 	hashFunc := sha512.New
@@ -88,7 +91,7 @@ func Test_HappyPath(t *testing.T) {
 
 	transcripts := integration_test_utils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := test_utils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts)
+	participants, err := test_utils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, false)
 	require.NoError(t, err)
 
 	partialSignatures, err := test_utils.DoInteractiveSigning(participants, message)
@@ -100,5 +103,53 @@ func Test_HappyPath(t *testing.T) {
 	require.NotNil(t, signature)
 
 	err = eddsa.Verify(curve, hashFunc, signature, publicKey, message)
+	require.NoError(t, err)
+}
+
+func Test_HappyPathThresholdBIP340(t *testing.T) {
+	t.Parallel()
+
+	hashFunc := hashing_bip340.NewBip340HashChallenge
+	curve := k256.New()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hashFunc,
+	}
+
+	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(cohort, prng)
+	require.NoError(t, err)
+	publicKey := shards[identities[0].Hash()].SigningKeyShare.PublicKey
+
+	transcripts := integration_test_utils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := test_utils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, true)
+	require.NoError(t, err)
+
+	partialSignatures, err := test_utils.DoInteractiveSigning(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	signature, err := signing.Aggregate(partialSignatures...)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	bipSignature := &bip340.Signature{
+		R: signature.R,
+		S: signature.Z,
+	}
+
+	err = bip340.Verify(&bip340.PublicKey{P: publicKey}, bipSignature, message)
 	require.NoError(t, err)
 }

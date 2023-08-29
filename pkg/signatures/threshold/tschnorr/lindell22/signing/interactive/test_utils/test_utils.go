@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
-func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, allTranscripts []transcripts.Transcript) (participants []*interactive.Cosigner, err error) {
+func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell22.Shard, allTranscripts []transcripts.Transcript, taproot bool) (participants []*interactive.Cosigner, err error) {
 	if len(identities) < cohortConfig.Protocol.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
@@ -24,7 +24,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errors.New("invalid identity")
 		}
-		participants[i], err = interactive.NewCosigner(identity, sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], prng)
+		participants[i], err = interactive.NewCosigner(identity, sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], taproot, prng)
 		if err != nil {
 			return nil, err
 		}

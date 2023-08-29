@@ -125,14 +125,22 @@ func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, 
 		bigR = bigR.Add(theirBigR)
 	}
 
-	// 3.ii. compute e
-	eBytes, err := hashing.Hash(p.cohortConfig.CipherSuite.Hash, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
-	if err != nil {
-		return nil, errs.NewFailed("cannot create message digest")
+	if p.taproot {
+		if bigR.Y().IsOdd() {
+			p.state.k = p.state.k.Neg()
+			bigR = bigR.Neg()
+		}
 	}
-	e, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(eBytes)
+
+	// 3.ii. compute e
+	var e curves.Scalar
+	if p.taproot {
+		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+	} else {
+		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
+	}
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set scalar")
+		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 
 	// 3.iii. compute additive share d_i'
@@ -140,13 +148,19 @@ func (p *Cosigner) Round3(input map[helper_types.IdentityHash]*Round2Broadcast, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
+	if p.taproot {
+		if p.mySigningKeyShare.PublicKey.Y().IsOdd() {
+			dPrime = dPrime.Neg()
+		}
+	}
+
 	// 3.iv. compute s
 	s := p.state.k.Add(e.Mul(dPrime))
 
 	// 4. return (R, s) as partial signature
 	p.round++
 	return &lindell22.PartialSignature{
-		R: p.state.bigR,
+		R: p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(p.state.k),
 		S: s,
 	}, nil
 }

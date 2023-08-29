@@ -77,7 +77,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 
 	var sid []byte
 	fz.Fuzz(&sid)
-	participants, err := interactive_test_utils.MakeParticipants(sid, cohort, identities[:threshold], shards, transcripts)
+	participants, err := interactive_test_utils.MakeParticipants(sid, cohort, identities[:threshold], shards, transcripts, false)
 	if len(sid) == 0 {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -115,7 +115,7 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	partialSignatures := make([]*lindell22.PartialSignature, threshold)
 	for i := 0; i < threshold; i++ {
 		shard := shards[identities[i].Hash()]
-		cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, nil, crand.Reader)
+		cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, crand.Reader)
 		require.NoError(t, err2)
 		partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 		require.NoError(t, err)

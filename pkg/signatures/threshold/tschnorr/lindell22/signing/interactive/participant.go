@@ -39,6 +39,7 @@ type Cosigner struct {
 	mySharingId       int
 	mySigningKeyShare *threshold.SigningKeyShare
 
+	taproot                bool
 	cohortConfig           *integration.CohortConfig
 	sessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	identityKeyToSharingId map[helper_types.IdentityHash]int
@@ -73,11 +74,10 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sid, sessionParticipants, myShard, cohortConfig); err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
@@ -100,6 +100,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		sid:                    sid,
 		transcript:             transcript,
 		sessionParticipants:    sessionParticipants,
+		taproot:                taproot,
 		round:                  1,
 		prng:                   tprng,
 		state: &state{

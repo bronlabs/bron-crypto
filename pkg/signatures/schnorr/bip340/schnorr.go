@@ -2,343 +2,356 @@ package bip340
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/json"
+	"crypto/subtle"
+	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/hashing/bip340"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
-
-type PrivateKey struct {
-	a curves.Scalar
-	PublicKey
-
-	_ helper_types.Incomparable
-}
-
-type PublicKey struct {
-	Curve curves.Curve
-	Y     curves.Point
-
-	_ helper_types.Incomparable
-}
-
-type Signature struct {
-	R curves.Scalar
-	S curves.Scalar
-
-	_ helper_types.Incomparable
-}
 
 const (
-	AUX_SIZE = 32
-	A_SIZE   = 32
+	auxSizeBytes = 32
 )
 
-var (
-	auxHashLabel       = "BIP0340/aux"
-	nonceHashLabel     = "BIP0340/nonce"
-	challengeHashLabel = "BIP0340/challenge"
-	tagHashFunc        = sha256.New
-)
+type PublicKey struct {
+	P curves.Point
 
-func (s *Signature) UnmarshalJSON(data []byte) error {
-	var err error
-	var parsed struct {
-		R json.RawMessage
-		S json.RawMessage
+	helper_types.Incomparable
+}
+
+type PrivateKey struct {
+	PublicKey
+	K curves.Scalar
+
+	helper_types.Incomparable
+}
+
+// Signature BIP-340 signature.
+type Signature struct {
+	R curves.Point
+	S curves.Scalar
+
+	helper_types.Incomparable
+}
+
+func (pk *PublicKey) MarshalBinary() ([]byte, error) {
+	return encodePoint(pk.P), nil
+}
+
+func (pk *PublicKey) UnmarshalBinary(input []byte) error {
+	if len(input) != curves.FieldBytes {
+		return errs.NewSerializationError("invalid length")
 	}
-
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errs.WrapSerializationError(err, "couldn't extract C and S field from input")
-	}
-
-	s.R, err = curveutils.NewScalarFromJSON(parsed.R)
+	p, err := decodePoint(input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't deserialize R")
+		return errs.NewSerializationError("invalid point")
 	}
-	s.S, err = curveutils.NewScalarFromJSON(parsed.S)
+
+	pk.P = p
+	return nil
+}
+
+func (sk *PrivateKey) MarshalBinary() ([]byte, error) {
+	return sk.K.Bytes(), nil
+}
+
+func (sk *PrivateKey) UnmarshalBinary(input []byte) error {
+	if len(input) != curves.FieldBytes {
+		return errs.NewSerializationError("invalid length")
+	}
+	curve := k256.New()
+	k, err := curve.Scalar().SetBytes(input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't deserialize S")
+		return errs.NewSerializationError("invalid scalar")
 	}
+	bigP, err := decodePoint(encodePoint(curve.ScalarBaseMult(k)))
+	if err != nil {
+		return errs.NewSerializationError("invalid scalar")
+	}
+
+	sk.K = k
+	sk.P = bigP
+	return nil
+}
+
+func (signature *Signature) MarshalBinary() ([]byte, error) {
+	return bytes.Join([][]byte{encodePoint(signature.R), signature.S.Bytes()}, nil), nil
+}
+
+func (signature *Signature) UnmarshalBinary(input []byte) error {
+	if len(input) != 64 {
+		return errs.NewSerializationError("invalid length")
+	}
+
+	r, err := decodePoint(input[:32])
+	if err != nil {
+		return errs.NewSerializationError("invalid signature")
+	}
+	s, err := k256.New().Scalar().SetBytes(input[32:])
+	if err != nil {
+		return errs.NewSerializationError("invalid signature")
+	}
+
+	signature.R = r
+	signature.S = s
 	return nil
 }
 
 type Signer struct {
-	PublicKey  *PublicKey
 	privateKey *PrivateKey
 
 	_ helper_types.Incomparable
 }
 
-func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar) (*Signer, error) {
-	if err := cipherSuite.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "ciphersuite is invalid")
-	}
-	privateKey, err := KeyGen(cipherSuite.Curve, secret)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "key generation failed")
-	}
-	if cipherSuite.Curve.Name() != k256.Name {
-		return nil, errs.NewInvalidArgument("only secp256k1 is supported")
+func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
+	curve := k256.New()
+
+	// 1. (implicit) Let d' = int(sk)
+	dPrime := scalar
+	if dPrime.CurveName() != curve.Name() {
+		return nil, errs.NewFailed("unsupported curve")
 	}
 
-	return &Signer{
-		PublicKey:  &privateKey.PublicKey,
-		privateKey: privateKey,
+	// 2. Fail if d' = 0 or d' ≥ n (implicit)
+	if dPrime.IsZero() {
+		return nil, errs.NewIsNil("secret is zero")
+	}
+
+	// 3. Let P = d'⋅G
+	public := curve.ScalarBaseMult(dPrime)
+
+	return &PrivateKey{
+		PublicKey: PublicKey{
+			P: public.Clone(),
+		},
+		K: dPrime.Clone(),
 	}, nil
 }
 
-// Sign takes a message `m` and returns a signature using the private key of the
-// `Signer` object.
-func (s *Signer) Sign(m, aux []byte) (*Signature, error) {
-	// 1. Let d' = int(sk)
-	dPrime := s.privateKey.a
-	// 2. Fail if d' = 0 or d' ≥ n
-	if dPrime.IsZero() {
-		return nil, errs.NewInvalidArgument("secret is invalid")
+func NewSigner(privateKey *PrivateKey) *Signer {
+	return &Signer{
+		privateKey: privateKey,
 	}
-	// 3. Let P = d'G
-	P := s.PublicKey.Y
-	// 4. Let d = d' if has_even_y(P), otherwise let d = n - d' .
-	d := getEvenKey(dPrime, P)
-	var kPrime curves.Scalar
-	var err error
+}
+
+func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, error) {
+	if len(aux) == 0 && prng == nil {
+		return nil, errs.NewFailed("must provide aux or PRNG")
+	}
 	if len(aux) == 0 {
-		aux = make([]byte, AUX_SIZE)
+		aux = make([]byte, auxSizeBytes)
+		_, err := prng.Read(aux)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot generate nonce")
+		}
 	}
-	hashedAux, err := taggedHash(auxHashLabel, aux)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to hash aux")
+	if len(aux) != auxSizeBytes {
+		return nil, errs.NewInvalidArgument("aux must have 32 bytes")
 	}
+	curve := signer.privateKey.K.Curve()
+
+	// 4. Let d = d' if P.y even, otherwise let d = n - d'
+	bigP := curve.ScalarBaseMult(signer.privateKey.K)
+	d := negScalarIfPointYOdd(signer.privateKey.K, bigP)
+
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
-	t, err := bitstring.XorBytes(d.Bytes(), hashedAux)
+	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, aux)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to xor bytes")
+		return nil, errs.WrapFailed(err, "hash failed")
 	}
+	t := make([]byte, len(auxDigest))
+	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
+		return nil, errs.NewFailed("invalid scalar bytes length")
+	}
+
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
+	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.P), message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "hash failed")
+	}
+
 	// 7. Let k' = int(rand) mod n.
-	hashedNonce, err := taggedHash(nonceHashLabel, bytes.Join([][]byte{t, P.ToAffineCompressed()[1:], m}, nil))
+	kPrime, err := curve.Scalar().SetBytes(rand)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to hash nonce")
+		return nil, errs.NewFailed("cannot set k'")
 	}
-	kPrime, err = s.PublicKey.Curve.Scalar().SetBytes(hashedNonce)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to unmarshal random bytes")
-	}
-	if kPrime.IsZero() { // 8. Fail if k' = 0.
+
+	// 8. Fail if k' = 0
+	if kPrime.IsZero() {
 		return nil, errs.NewFailed("k' is invalid")
 	}
+
 	// 9. Let R = k'⋅G.
-	R := s.PublicKey.Curve.ScalarBaseMult(kPrime)
-	// 10. Let k = k' if has_even_y(R), otherwise let k = n - k' .
-	k := getEvenKey(kPrime, R)
+	bigR := curve.ScalarBaseMult(kPrime)
+
+	// 10. Let k = k' if R.x is even, otherwise let k = n - k'
+	k := negScalarIfPointYOdd(kPrime, bigR)
+	// recalculate R - additional step since we deal with full points i.e. (x, y)
+	bigR = curve.ScalarBaseMult(k)
+
 	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
-	e, err := GenerateChallenge(s.PublicKey.Curve, R.ToAffineCompressed()[1:], P.ToAffineCompressed()[1:], m)
+	e, err := calcChallenge(bigR, signer.privateKey.P, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get e")
 	}
 
-	// 12. Let sig = bytes(R) || bytes((k + ed) mod n).
-	// instead of merging into one byte slice, we store the values separately
-	signatureR, err := s.PublicKey.Curve.Scalar().SetBytes(R.ToAffineCompressed()[1:])
+	// 12. Let sig = (R, (k + ed) mod n)).
+	s := k.Add(e.Mul(d))
+	signature := &Signature{
+		R: bigR,
+		S: s,
+	}
+
+	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
+	err = Verify(&signer.privateKey.PublicKey, signature, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to marshal signature R")
+		return nil, errs.NewFailed("cannot create signature")
 	}
-	sig := Signature{
-		R: signatureR,
-		S: e.Mul(d).Add(k),
-	}
-	// 13. If Verify(bytes(P), m, sig) (see below) returns failure, abort[14].
-	if err := Verify(s.PublicKey, m, &sig); err != nil {
-		return nil, errs.WrapFailed(err, "failed to verify signature")
-	}
+
 	// 14. Return the signature sig.
-	return &sig, nil
+	return signature, nil
 }
 
-// GenerateChallenge returns the challenge value based on the provided inputs.
-func GenerateChallenge(curve curves.Curve, r, p, m []byte) (curves.Scalar, error) {
-	hashedChallenge, err := taggedHash(challengeHashLabel, bytes.Join([][]byte{r, p, m}, nil))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to hash challenge")
+func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
+	if publicKey.P.CurveName() != k256.Name || signature.R.CurveName() != k256.Name || signature.S.CurveName() != k256.Name {
+		return errs.NewInvalidArgument("curve not supported")
 	}
-	rand, err := curve.Scalar().SetBytes(hashedChallenge)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to unmarshal random bytes")
+	if signature.R == nil || signature.S == nil || signature.R.IsIdentity() || signature.S.IsZero() {
+		return errs.NewVerificationFailed("some signature elements are nil/zero")
 	}
-	return rand, nil
-}
+	curve := k256.New()
 
-// getEventKey returns the even key based on the provided point.
-func getEvenKey(prime curves.Scalar, P curves.Point) curves.Scalar {
-	if !hasEvenY(P) {
-		return prime.Neg()
-	} else {
-		return prime
-	}
-}
+	// 1. Let P = lift_x(int(pk)).
+	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
+	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
+	bigP := negPointIfPointYOdd(publicKey.P)
 
-func KeyGen(curve curves.Curve, secret curves.Scalar) (*PrivateKey, error) {
-	if curve == nil {
-		return nil, errs.NewIsNil("curve is nil")
-	}
-	if secret == nil {
-		return nil, errs.NewIsNil("secret is nil")
-	}
-	publicKey := curve.ScalarBaseMult(secret)
-
-	return &PrivateKey{
-		a: secret,
-		PublicKey: PublicKey{
-			Curve: curve,
-			Y:     publicKey,
-		},
-	}, nil
-}
-
-// Verify takes a message `m`, a public key `pk`, and a signature `sig` and
-// returns an error if the signature is invalid.
-func Verify(publicKey *PublicKey, m []byte, signature *Signature) error {
-	curve := publicKey.Curve
-	if signature.R == nil || signature.S == nil || signature.R.IsZero() || signature.S.IsZero() {
-		return errs.NewInvalidArgument("some signature elements are nil/zero")
-	}
-	if !publicKey.Y.IsOnCurve() {
-		return errs.NewInvalidArgument("public key is not on curve")
-	}
-
-	// 1. Let P = lift_x(int(pk)); fail if that fails.
-	// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
-	P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, bitstring.ReverseBytes(publicKey.Y.X().Bytes())...))
-	if err != nil {
-		return errs.WrapFailed(err, "failed to lift x")
-	}
-	// 2. Let r = int(sig[0:32]); fail if r ≥ p.
-	if b, e, _ := signature.R.Nat().Cmp(curve.Profile().SubGroupOrder().Nat()); (b | e) != 0 {
-		return errs.NewVerificationFailed("signature is invalid")
-	}
-	// 3. Let s = int(sig[32:64]); fail if s ≥ n. This step is implicit
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
-	e, err := GenerateChallenge(curve, signature.R.Bytes(), P.ToAffineCompressed()[1:], m)
+	e, err := calcChallenge(signature.R, bigP, message)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to get e")
+		return errs.WrapVerificationFailed(err, "invalid signature")
 	}
-	sG := curve.ScalarBaseMult(signature.S)
-	eP := P.Mul(e)
+
 	// 5. Let R = s⋅G - e⋅P.
-	bigR := sG.Sub(eP)
+	bigR := curve.ScalarBaseMult(signature.S).Sub(bigP.Mul(e))
+
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).
-	// 8. Fail if bytes(R) ≠ r.
-	if bigR.IsIdentity() || !hasEvenY(bigR) || signature.R.Nat().Eq(bigR.X().Nat()) == 0 {
+	// 8. Fail if x(R) ≠ r.
+	if bigR.IsIdentity() || !bigR.Y().IsEven() || signature.R.X().Cmp(bigR.X()) != 0 {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
+
 	return nil
 }
 
-// BatchVerify verifies the validity of a batch of signatures using a given cipher suite, public keys,
-// messages, and signatures.
-func BatchVerify(transcript transcripts.Transcript, cipherSuite *integration.CipherSuite, publickeys []*PublicKey, messages [][]byte, signatures []*Signature) error {
-	curve := cipherSuite.Curve
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("BIP0340")
+func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]byte, prng io.Reader) error {
+	curve := k256.New()
+
+	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
+		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
-	size := len(publickeys)
-	if size != len(messages) || size != len(signatures) {
-		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal")
+
+	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
+	a := make([]curves.Scalar, len(signatures))
+	a[0] = curve.Scalar().One()
+	for i := 1; i < len(signatures); i++ {
+		for {
+			// TODO: change to deterministic CSPRNG when available
+			a[i] = curve.Scalar().Random(prng)
+			if !a[i].IsZero() {
+				break
+			}
+		}
 	}
+
+	// For i = 1 .. u:
 	left := curve.Scalar().Zero()
-	rightScalars := make([]curves.Scalar, 2*size)
-	rightPoints := make([]curves.Point, 2*size)
-	for i, publicKey := range publickeys {
-		// 1. Generate u-1 random integers a2...u in the range 1...n-1.
-		transcript.AppendMessages("batch-verify", publickeys[i].Y.ToAffineCompressed(), messages[i], signatures[i].R.Bytes(), signatures[i].S.Bytes())
-		a, err := curve.Scalar().SetBytes(transcript.ExtractBytes("batch-verify", A_SIZE))
+	ae := make([]curves.Scalar, len(signatures))
+	bigR := make([]curves.Point, len(signatures))
+	bigP := make([]curves.Point, len(signatures))
+	for i, sig := range signatures {
+		// 2. Let P_i = lift_x(int(pki))
+		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
+		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
+		bigP[i] = negPointIfPointYOdd(publicKeys[i].P)
+
+		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
+		e, err := calcChallenge(sig.R, publicKeys[i].P, messages[i])
 		if err != nil {
-			return errs.WrapFailed(err, "failed to set bytes for a_i")
+			return errs.WrapVerificationFailed(err, "invalid signature")
 		}
-		// 2. Let Pi = lift_x(int(pki)); fail if it fails.
-		// The lift_x algorithm is a function that takes an x coordinate as input and returns a point on the secp256k1 curve that has that x coordinate and an even y coordinate
-		P, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, publicKey.Y.ToAffineCompressed()[1:]...))
-		if err != nil {
-			return errs.WrapFailed(err, "failed to lift publicKey.Y")
-		}
-		// 3. Let ri = int(sigi[0:32]); fail if ri ≥ p.
-		r := signatures[i].R
-		if b, e, _ := r.Nat().Cmp(curve.Profile().SubGroupOrder().Nat()); (b | e) != 0 {
-			return errs.NewInvalidArgument("r is invalid")
-		}
-		// 4. Let si = int(sigi[32:64]); fail if si ≥ n.
-		// the check is implicit
-		s := signatures[i].S
-		// 5. Let ei = int(hashBIP0340/challenge(bytes(ri) || bytes(Pi) || mi)) mod n.
-		e, err := GenerateChallenge(curve, r.Bytes(), P.ToAffineCompressed()[1:], messages[i])
-		if err != nil {
-			return errs.WrapFailed(err, "failed to get e")
-		}
+
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		R, err := curve.Point().FromAffineCompressed(append([]byte{0x02}, r.Bytes()...))
-		if err != nil {
-			return errs.WrapFailed(err, "failed to lift r")
-		}
-		if i == 0 {
-			// 7.1 add s1 to left
-			left = left.Add(s)
+		bigR[i] = signatures[i].R
 
-			// 7.2 store a_i in right for multiScalaMult later
-			rightScalars[i] = curve.Scalar().One()
-			rightScalars[size+i] = e
-		} else {
-			// 7.3 add a_i*s_i to left
-			left = left.Add(s.Mul(a))
-
-			// 7.4 store a_i*e_1 in right for multiScalaMult later
-			rightScalars[i] = a
-			rightScalars[size+i] = e.Mul(a)
-		}
-
-		// 7.5 store R and P in right for multiScalaMult later
-		rightPoints[i] = R
-		rightPoints[size+i] = P
+		ae[i] = a[i].Mul(e)
+		left = left.Add(a[i].Mul(sig.S))
 	}
-	// calculate left: (s1 + a2s2 + ... + ausu)⋅G ≠ R1
-	leftG := curve.ScalarBaseMult(left)
-	// calculate right: R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
-	right, err := curve.MultiScalarMult(rightScalars, rightPoints)
+
+	// 7. Fail if (s1 + a2s2 + ... + ausu)⋅G ≠ R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
+	rightA, err := curve.MultiScalarMult(a, bigR)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to multiply scalars and points")
 	}
-	// 7. Fail if (s1 + a2s2 + ... + ausu)⋅G ≠ R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
-	if !leftG.Equal(right) {
+	rightB, err := curve.MultiScalarMult(ae, bigP)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to multiply scalars and points")
+	}
+	right := rightA.Add(rightB)
+	if !curve.ScalarBaseMult(left).Equal(right) {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
+
+	// Return success iff no failure occurred before reaching this point.
 	return nil
 }
 
-// hasEvenY returns whether or not the y-coordinate of P is even.
-func hasEvenY(P curves.Point) bool {
-	return P.ToAffineCompressed()[0] == 0x02
+func calcChallenge(bigR, bigP curves.Point, message []byte) (curves.Scalar, error) {
+	eBytes, err := hashing.Hash(bip340.NewBip340HashChallenge, encodePoint(bigR), encodePoint(bigP), message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create challenge")
+	}
+	e, err := bigR.Curve().Scalar().SetBytes(eBytes)
+	if err != nil {
+		return nil, errs.WrapVerificationFailed(err, "cannot create challenge")
+	}
+
+	return e, nil
 }
 
-// hash (name) returns the 32-byte hash SHA256(SHA256(tag) || SHA256(tag) || x),
-// where tag is the UTF-8 encoding of name.
-func taggedHash(tag string, x []byte) ([]byte, error) {
-	hashTag, err := hashing.Hash(tagHashFunc, []byte(tag))
+func encodePoint(p curves.Point) []byte {
+	return p.ToAffineCompressed()[1:]
+}
+
+func decodePoint(data []byte) (curves.Point, error) {
+	curve := k256.New()
+	p, err := curve.Point().FromAffineCompressed(bytes.Join([][]byte{{0x02}, data}, nil))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to hash tag")
+		return nil, errs.WrapFailed(err, "cannot decode point")
 	}
-	hashed, err := hashing.Hash(tagHashFunc, hashTag, hashTag, x)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to combine hash tag")
+
+	return p, nil
+}
+
+// negScalarIfPointYOdd negates point if point.y is even.
+func negPointIfPointYOdd(point curves.Point) curves.Point {
+	if point.Y().IsOdd() {
+		return point.Neg()
+	} else {
+		return point
 	}
-	return hashed, nil
+}
+
+// negScalarIfPointYOdd negates scalar x if point.y is even.
+func negScalarIfPointYOdd(x curves.Scalar, point curves.Point) curves.Scalar {
+	if point.Y().IsOdd() {
+		return x.Neg()
+	} else {
+		return x
+	}
 }

@@ -20,6 +20,7 @@ type Cosigner struct {
 	myShard        *lindell22.Shard
 	myPreSignature *lindell22.PreSignature
 
+	taproot                bool
 	identityKeyToSharingId map[helper_types.IdentityHash]int
 	sessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	cohortConfig           *integration.CohortConfig
@@ -49,7 +50,7 @@ func (c *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
 	if err := validateCosignerInputs(myIdentityKey, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
 	}
@@ -69,6 +70,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 		mySharingId:            mySharingId,
 		myShard:                myShard,
 		myPreSignature:         preSignatureBatch.PreSignatures[preSignatureIndex],
+		taproot:                taproot,
 		identityKeyToSharingId: identityKeyToSharingId,
 		sessionParticipants:    sessionParticipants,
 		cohortConfig:           cohortConfig,
