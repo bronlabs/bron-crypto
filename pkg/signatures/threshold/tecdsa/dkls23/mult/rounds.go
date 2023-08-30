@@ -24,7 +24,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	// step 1.1
 	bob.Beta = make([][XiBytes]byte, 1) // LOTe = 1 for Forced Reuse
 	if _, err := bob.prng.Read(bob.Beta[0][:]); err != nil {
-		return nil, errs.WrapFailed(err, "could not sample beta")
+		return nil, errs.WrapRandomSampleFailed(err, "could not sample beta")
 	}
 
 	// step 1.2

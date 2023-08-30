@@ -179,7 +179,7 @@ func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, tran
 	batchSizeBytes := batchSize >> 3 // divide by 8
 	receiver.Output.PackedRandomChoiceBits = make([]byte, batchSizeBytes)
 	if _, err := crand.Read(receiver.Output.PackedRandomChoiceBits); err != nil {
-		return nil, errs.WrapFailed(err, "choosing random choice bits")
+		return nil, errs.WrapRandomSampleFailed(err, "choosing random choice bits")
 	}
 	// Unpack into Choice bits
 	receiver.initChoice()

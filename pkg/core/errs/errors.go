@@ -34,6 +34,7 @@ const (
 	Membership         ErrorType = "[MEMBERSHIP]"
 	Missing            ErrorType = "[MISSING]"
 	Serialisation      ErrorType = "[SERIALISATION_ERROR]"
+	RandomSampleFailed ErrorType = "[RANDOM_SAMPLE_FAILED]"
 	TotalAbort         ErrorType = "[TOTAL_ABORT]"
 	VerificationFailed ErrorType = "[VERIFICATION_FAILED]"
 )
@@ -268,6 +269,22 @@ func IsInvalidLength(err error) bool {
 
 func HasInvalidLength(err error) bool {
 	return Has(err, InvalidLength)
+}
+
+func NewRandomSampleFailed(format string, args ...any) error {
+	return errors.Errorf("%s %s", RandomSampleFailed, fmt.Sprintf(format, args...))
+}
+
+func WrapRandomSampleFailed(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", RandomSampleFailed, fmt.Sprintf(format, args...))
+}
+
+func IsRandomSampleFailed(err error) bool {
+	return Is(err, RandomSampleFailed)
+}
+
+func HasRandomSampleFailed(err error) bool {
+	return Has(err, RandomSampleFailed)
 }
 
 func NewInvalidIdentifier(format string, args ...any) error {

@@ -162,7 +162,7 @@ func (t *Transcript) NewReader(label string, witness []byte, rng io.Reader) (io.
 	// 3. Rekey with 32 bytes of entropy from an external RNG
 	var keyBytes [32]byte // 256 bits
 	if _, err := rng.Read(keyBytes[:]); err != nil {
-		return nil, errs.WrapFailed(err, "failed to read random bytes for transcript RNG")
+		return nil, errs.WrapRandomSampleFailed(err, "failed to read random bytes for transcript RNG")
 	}
 	//    STROBE:  KEY[b"rng"](rng);
 	prng.s.AD(true, []byte("rng"))

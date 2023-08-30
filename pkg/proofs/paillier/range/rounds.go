@@ -97,7 +97,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 		flip := make([]byte, 1)
 		_, err = prover.prng.Read(flip)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot create random")
+			return nil, errs.WrapRandomSampleFailed(err, "cannot create random")
 		}
 
 		// 2.iii. choose random w1i (in 0-l range), w2i (in l-2l range)

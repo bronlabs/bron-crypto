@@ -101,7 +101,7 @@ func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
 		panic(errs.WrapFailed(err, "failed to hash transcript for cShake"))
 	}
 	if _, err := cShake.Read(out); err != nil {
-		panic(errs.WrapFailed(err, "failed to read from cShake"))
+		panic(errs.WrapRandomSampleFailed(err, "failed to read from cShake"))
 	}
 	return out
 }

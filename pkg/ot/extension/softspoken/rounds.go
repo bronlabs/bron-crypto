@@ -49,7 +49,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 		copy(R.extPackedChoices[l*XiBytes:(l+1)*XiBytes], oTeInputChoices[l][:])
 	}
 	if _, err = crand.Read(R.extPackedChoices[etaBytes:]); err != nil {
-		return nil, nil, errs.WrapFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
+		return nil, nil, errs.WrapRandomSampleFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	extOptions := &ExtOptions{}

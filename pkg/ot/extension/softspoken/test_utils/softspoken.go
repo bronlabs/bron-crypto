@@ -175,7 +175,7 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 	choices = make(softspoken.OTeInputChoices, choicesBatchLen)
 	for l := 0; l < choicesBatchLen; l++ {
 		if _, err := crand.Read(choices[l][:]); err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not generate random choice bits")
+			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random choice bits")
 		}
 	}
 	if curve == nil { // Just need the input choices

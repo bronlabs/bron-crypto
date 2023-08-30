@@ -129,7 +129,7 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 		randInt, err = crand.Int(r, f.Int)
 	}
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not get random element")
+		return nil, errs.WrapRandomSampleFailed(err, "could not get random element")
 	}
 	return newElement(&f, randInt), nil
 }

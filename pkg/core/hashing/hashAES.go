@@ -15,7 +15,7 @@ const (
 	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
 	AesBlockSize = aes.BlockSize
 	// AesKeySize is the key size (in bytes) for the internal block cipher. Set to 32B (AES256).
-	AesKeySize = 2 * aes.BlockSize
+	AesKeySize = 32 // 256 bits
 )
 
 /*

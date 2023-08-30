@@ -50,7 +50,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		// step 2.3.3
 		read, err := kdf.Read(okm[:48])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not read from kdf")
+			return nil, errs.WrapRandomSampleFailed(err, "could not read from kdf")
 		}
 		if read != 48 {
 			return nil, errs.NewFailed("failed to create private key")

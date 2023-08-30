@@ -211,7 +211,7 @@ func sample(E_i [][TBytes]byte, prng io.Reader) ([TBytes]byte, error) {
 SAMPLE:
 	for !found {
 		if _, err := prng.Read(e_i[:]); err != nil {
-			return [TBytes]byte{}, errs.WrapFailed(err, "could not read random bytes")
+			return [TBytes]byte{}, errs.WrapRandomSampleFailed(err, "could not read random bytes")
 		}
 		for _, excluded := range E_i {
 			if excluded == e_i {

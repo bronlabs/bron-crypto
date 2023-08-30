@@ -5,6 +5,10 @@ import (
 	"math"
 	"math/big"
 	"math/bits"
+
+	"github.com/cronokirby/saferith"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/modular"
 )
 
 // A Uint128 is an unsigned 128-bit number.
@@ -17,10 +21,16 @@ func New(lo, hi uint64) Uint128 {
 	return Uint128{lo, hi}
 }
 
-// Zero|Min are zero-valued uint128.
+// Clone returns a copy the Uint128 value (lo,hi).
+func Clone(num Uint128) Uint128 {
+	return Uint128{num.Lo, num.Hi}
+}
+
+// Zero|Min are zero-valued uint128. One is the unsigned +1.
 var (
 	Min  = New(0, 0)
 	Zero = New(0, 0)
+	One  = New(1, 0)
 )
 
 // Max is the largest possible uint128 value.
@@ -28,15 +38,14 @@ var Max = New(math.MaxUint64, math.MaxUint64)
 
 // IsZero returns true if u == 0.
 func (u Uint128) IsZero() bool {
-	return u == Uint128{}
+	return u.Equals(Zero)
 }
 
 // Equals returns true if u == v.
-//
-// Uint128 values can be compared directly with ==, but use of the Equals method
-// is preferred for consistency.
 func (u Uint128) Equals(v Uint128) bool {
-	return u == v
+	eqLow := modular.ConstantTimeEq(u.Lo, v.Lo)
+	eqHigh := modular.ConstantTimeEq(u.Hi, v.Hi)
+	return (eqLow & eqHigh) == 1
 }
 
 // BoolToInt converts a boolean value to 0 or 1.
@@ -54,7 +63,11 @@ func BoolToInt(b bool) int {
 //	 0 if u == v
 //	+1 if u >  v
 func (u Uint128) Cmp(v Uint128) int {
-	return 1 - BoolToInt(u == v) - 2*BoolToInt(u.Hi < v.Hi || (u.Hi == v.Hi && u.Lo < v.Lo))
+	ltHigh := modular.ConstantTimeGt(v.Hi, u.Hi)
+	ltLow := modular.ConstantTimeGt(v.Lo, u.Lo)
+	eqHigh := modular.ConstantTimeEq(u.Hi, v.Hi)
+	eqLow := modular.ConstantTimeEq(u.Lo, v.Lo)
+	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
 }
 
 // And returns u&v.
@@ -125,16 +138,16 @@ func (u Uint128) Rsh(n uint) (s Uint128) {
 	return s
 }
 
-// PutBytes stores u in b in little-endian order. It panics if len(b) < 16.
-func (u Uint128) PutBytes(b []byte) {
-	binary.LittleEndian.PutUint64(b[:8], u.Lo)
-	binary.LittleEndian.PutUint64(b[8:], u.Hi)
+// PutBytesLE stores u in buffer in little-endian order. It panics if len(buffer) < 16.
+func (u Uint128) PutBytesLE(buffer []byte) {
+	binary.LittleEndian.PutUint64(buffer[:8], u.Lo)
+	binary.LittleEndian.PutUint64(buffer[8:], u.Hi)
 }
 
-// PutBytesBE stores u in b in big-endian order. It panics if len(ip) < 16.
-func (u Uint128) PutBytesBE(b []byte) {
-	binary.BigEndian.PutUint64(b[:8], u.Hi)
-	binary.BigEndian.PutUint64(b[8:], u.Lo)
+// PutBytesBE stores u in buffer in big-endian order. It panics if len(buffer) < 16.
+func (u Uint128) PutBytesBE(buffer []byte) {
+	binary.BigEndian.PutUint64(buffer[:8], u.Hi)
+	binary.BigEndian.PutUint64(buffer[8:], u.Lo)
 }
 
 // Big returns u as a *big.Int.
@@ -145,20 +158,60 @@ func (u Uint128) Big() *big.Int {
 	return i
 }
 
-// FromBytes converts b to a Uint128 value.
-func FromBytes(b []byte) Uint128 {
-	return New(
-		binary.LittleEndian.Uint64(b[:8]),
-		binary.LittleEndian.Uint64(b[8:]),
-	)
+// FromBytesLE converts b to a Uint128 value.
+func FromBytesLE(src []byte, dst *Uint128) *Uint128 {
+	if dst != nil {
+		dst.Lo = binary.LittleEndian.Uint64(src[:8])
+		dst.Hi = binary.LittleEndian.Uint64(src[8:])
+	} else {
+		dst = &Uint128{
+			binary.LittleEndian.Uint64(src[:8]),
+			binary.LittleEndian.Uint64(src[8:]),
+		}
+	}
+	return dst
+}
+
+func FromSaferithNat(src *saferith.Nat, dst *Uint128) *Uint128 {
+	if src.AnnouncedLen() > 128 {
+		panic("value overflows Uint128")
+	}
+	srcBytes := src.Bytes()
+	if len(srcBytes) < 16 {
+		srcBytes = append(make([]byte, 16-len(srcBytes)), srcBytes...)
+	}
+	if dst != nil {
+		dst.Lo = binary.BigEndian.Uint64(srcBytes[8:])
+		dst.Hi = binary.BigEndian.Uint64(srcBytes[:8])
+	} else {
+		dst = &Uint128{
+			binary.BigEndian.Uint64(srcBytes[8:]),
+			binary.BigEndian.Uint64(srcBytes[:8]),
+		}
+	}
+	return dst
+}
+
+func (u Uint128) SaferithNat() *saferith.Nat {
+	res := &saferith.Nat{}
+	uBytes := make([]byte, 16)
+	u.PutBytesBE(uBytes)
+	res.SetBytes(uBytes)
+	return res
 }
 
 // FromBytesBE converts big-endian b to a Uint128 value.
-func FromBytesBE(b []byte) Uint128 {
-	return New(
-		binary.BigEndian.Uint64(b[8:]),
-		binary.BigEndian.Uint64(b[:8]),
-	)
+func FromBytesBE(src []byte, dst *Uint128) *Uint128 {
+	if dst != nil {
+		dst.Lo = binary.BigEndian.Uint64(src[8:])
+		dst.Hi = binary.BigEndian.Uint64(src[:8])
+	} else {
+		dst = &Uint128{
+			binary.BigEndian.Uint64(src[8:]),
+			binary.BigEndian.Uint64(src[:8]),
+		}
+	}
+	return dst
 }
 
 // FromBig converts i to a Uint128 value. It panics if i is negative or

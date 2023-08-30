@@ -26,7 +26,7 @@ func PRG(sid, seed []byte, byteLength int) (bufferOut []byte, err error) {
 	}
 	// This is the core pseudorandom expansion of the seeds
 	if _, err = shake.Read(bufferOut); err != nil {
-		return nil, errs.WrapFailed(err, "reading from shake in PRG expansion")
+		return nil, errs.WrapRandomSampleFailed(err, "reading from shake in PRG expansion")
 	}
 	return bufferOut, nil
 }

@@ -3,9 +3,10 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"io"
+
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/cronokirby/saferith"
-	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -86,7 +87,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 			}
 			randomSeed := [impl.FieldBytes]byte{}
 			if _, err := crand.Read(randomSeed[:]); err != nil {
-				return nil, errs.WrapFailed(err, "could not produce random seed")
+				return nil, errs.WrapRandomSampleFailed(err, "could not produce random seed")
 			}
 			results[identityKey].PairwiseSeeds[otherIdentityKey] = randomSeed
 		}
