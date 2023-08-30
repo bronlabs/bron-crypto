@@ -61,9 +61,6 @@ func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 }
 
 func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
-	if secret.IsZero() {
-		return nil, nil, errs.NewIsZero("secret is nil")
-	}
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,

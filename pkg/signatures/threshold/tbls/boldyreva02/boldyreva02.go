@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing"
+	"github.com/copperexchange/knox-primitives/pkg/core/polynomials"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
 )
 
@@ -75,7 +75,7 @@ func (p *PublicKeyShares[K]) Validate(cohortConfig *integration.CohortConfig) er
 		partialPublicKeys[i] = partialPublicKey
 	}
 	evaluateAt := curve.Scalar().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
-	reconstructedPublicKey, err := sharing.InterpolateInTheExponent(curve, sharingIds, partialPublicKeys, evaluateAt)
+	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(curve, sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
 	}

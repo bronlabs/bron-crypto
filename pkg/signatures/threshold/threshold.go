@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing"
+	"github.com/copperexchange/knox-primitives/pkg/core/polynomials"
 )
 
 type SigningKeyShare struct {
@@ -32,14 +32,28 @@ func (s *SigningKeyShare) Validate() error {
 }
 
 type PublicKeyShares struct {
-	Curve     curves.Curve
-	PublicKey curves.Point
-	SharesMap map[helper_types.IdentityHash]curves.Point
+	Curve                   curves.Curve
+	PublicKey               curves.Point
+	SharesMap               map[helper_types.IdentityHash]curves.Point
+	FeldmanCommitmentVector []curves.Point
 
 	_ helper_types.Incomparable
 }
 
 func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
+	if p == nil {
+		return errs.NewIsNil("receiver of this method is nil")
+	}
+	if p.Curve == nil {
+		return errs.NewIsNil("curve is nil")
+	}
+	if len(p.FeldmanCommitmentVector) == 0 && len(p.FeldmanCommitmentVector) > len(p.SharesMap) {
+		return errs.NewInvalidLength("feldman commitment vector length is invalid")
+	}
+	if len(p.SharesMap) == 0 {
+		return errs.NewInvalidLength("shares map has no elements")
+	}
+
 	sharingIdToIdentityKey, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
 	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
@@ -55,8 +69,8 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 		}
 		partialPublicKeys[i] = partialPublicKey
 	}
-	evaluateAt := p.Curve.Scalar().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
-	reconstructedPublicKey, err := sharing.InterpolateInTheExponent(p.Curve, sharingIds, partialPublicKeys, evaluateAt)
+	evaluateAt := p.Curve.Scalar().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.Curve, sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
 	}

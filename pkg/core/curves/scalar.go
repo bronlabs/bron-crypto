@@ -65,6 +65,8 @@ type Scalar interface {
 	SetNat(v *saferith.Nat) (Scalar, error)
 	// Nat returns this element as a Nat
 	Nat() *saferith.Nat
+	// Int casts the scalar down to a 64-bit integer. Might overflow.
+	Uint64() uint64
 	// Bytes returns the canonical byte representation of this scalar
 	Bytes() []byte
 	// SetBytes creates a scalar from the canonical representation expecting the exact number of bytes needed to represent the scalar

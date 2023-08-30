@@ -1,12 +1,14 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
 	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -62,12 +64,11 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
-		// 256 should be replaced with kappa once ot extensions are here
-		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
+		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, 256, uniqueSessionId, transcript, prng)
+		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

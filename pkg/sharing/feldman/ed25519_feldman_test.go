@@ -23,8 +23,6 @@ func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	_, _, err = scheme.Split(testCurve.Scalar(), crand.Reader)
-	require.NotNil(t, err)
 }
 
 func TestEd25519FeldmanCombineNoShares(t *testing.T) {

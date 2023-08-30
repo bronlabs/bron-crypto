@@ -283,9 +283,11 @@ func (s *BenchScalar) IsEven() bool {
 }
 
 func (s *BenchScalar) New(value uint64) curves.Scalar {
-	return &BenchScalar{
-		value: new(saferith.Nat).SetUint64(value),
+	v := new(saferith.Nat).SetUint64(value)
+	result := &BenchScalar{
+		value: v.Mod(v, groupOrder),
 	}
+	return result
 }
 
 func (s *BenchScalar) Cmp(rhs curves.Scalar) int {
@@ -402,6 +404,10 @@ func (s *BenchScalar) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 
 func (s *BenchScalar) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetNat(s.value)
+}
+
+func (s *BenchScalar) Uint64() uint64 {
+	return new(saferith.Nat).SetNat(s.value).Big().Uint64()
 }
 
 func (s *BenchScalar) Bytes() []byte {

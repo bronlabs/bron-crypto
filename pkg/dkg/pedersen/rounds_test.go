@@ -69,7 +69,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	// each public key is the same
 	for i := 0; i < len(signingKeyShares); i++ {
 		for j := i + 1; j < len(signingKeyShares); j++ {
-			require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey))
+			require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[j].PublicKey))
 		}
 	}
 

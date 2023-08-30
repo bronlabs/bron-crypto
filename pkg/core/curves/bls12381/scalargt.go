@@ -276,6 +276,10 @@ func (s *ScalarGt) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(bytes_[:])
 }
 
+func (s *ScalarGt) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
+}
+
 func (s *ScalarGt) Bytes() []byte {
 	bytes_ := s.Value.Bytes()
 	return bytes_[:]

@@ -73,7 +73,8 @@ linters:
     - goerr113
     # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
     - gofmt
-    # Gofumpt checks whether code was gofumpt-ed.
+    # Gofumpt checks whether code was gofumpt-ed. This would have been nice to
+    # have, but it has a bug when combined with gci sections.
     # - gofumpt
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
     - gomoddirectives

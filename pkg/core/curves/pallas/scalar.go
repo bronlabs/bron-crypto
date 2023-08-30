@@ -77,9 +77,8 @@ func (s *ScalarPallas) IsEven() bool {
 }
 
 func (*ScalarPallas) New(value uint64) curves.Scalar {
-	v := new(saferith.Nat).SetUint64(value)
 	return &ScalarPallas{
-		value: new(fq.Fq).SetNat(v),
+		value: new(fq.Fq).SetUint64(value),
 	}
 }
 
@@ -207,6 +206,10 @@ func (*ScalarPallas) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 
 func (s *ScalarPallas) Nat() *saferith.Nat {
 	return s.value.Nat()
+}
+
+func (s *ScalarPallas) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
 }
 
 func (s *ScalarPallas) Bytes() []byte {

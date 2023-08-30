@@ -81,7 +81,7 @@ func (s *ScalarP256) IsEven() bool {
 
 func (*ScalarP256) New(value uint64) curves.Scalar {
 	return &ScalarP256{
-		Value: fq.New().SetNat(new(saferith.Nat).SetUint64(value)),
+		Value: fq.New().SetUint64(value),
 	}
 }
 
@@ -216,6 +216,10 @@ func (*ScalarP256) SetNat(v *saferith.Nat) (curves.Scalar, error) {
 
 func (s *ScalarP256) Nat() *saferith.Nat {
 	return s.Value.Nat()
+}
+
+func (s *ScalarP256) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
 }
 
 func (s *ScalarP256) Bytes() []byte {

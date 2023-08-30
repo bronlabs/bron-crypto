@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02"
 )
@@ -59,7 +59,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[helper_types.Identity
 		i++
 	}
 
-	lambdas, err := sharing.LagrangeCoefficients(keySubGroup, sharingIds)
+	lambdas, err := shamir.LagrangeCoefficients(keySubGroup, sharingIds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}

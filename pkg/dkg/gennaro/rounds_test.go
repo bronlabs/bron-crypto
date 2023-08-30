@@ -63,37 +63,46 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	for _, publicKeyShare := range publicKeyShares {
 		require.NotNil(t, publicKeyShare)
 	}
+	require.Len(t, signingKeyShares, n)
+	require.Len(t, publicKeyShares, n)
 
-	// each signing share is different
-	for i := 0; i < len(signingKeyShares); i++ {
-		for j := i + 1; j < len(signingKeyShares); j++ {
-			require.NotZero(t, signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share))
+	t.Run("each signing key share is different than all others", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(signingKeyShares); i++ {
+			for j := i + 1; j < len(signingKeyShares); j++ {
+				require.NotZero(t, signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share))
+			}
 		}
-	}
+	})
 
-	// each public key is the same
-	for i := 0; i < len(signingKeyShares); i++ {
-		for j := i + 1; j < len(signingKeyShares); j++ {
-			require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey))
+	t.Run("each public key is the same as all others", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(signingKeyShares); i++ {
+			for j := i + 1; j < len(signingKeyShares); j++ {
+				require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[j].PublicKey))
+			}
 		}
-	}
+	})
 
-	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
-	require.NoError(t, err)
-	require.NotNil(t, shamirDealer)
-	shamirShares := make([]*shamir.Share, len(participants))
-	for i := 0; i < len(participants); i++ {
-		shamirShares[i] = &shamir.Share{
-			Id:    participants[i].GetSharingId(),
-			Value: signingKeyShares[i].Share,
+	t.Run("reconstructed private key is the dlog of the public key", func(t *testing.T) {
+		t.Parallel()
+		shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+		require.NoError(t, err)
+		require.NotNil(t, shamirDealer)
+		shamirShares := make([]*shamir.Share, len(participants))
+		for i := 0; i < len(participants); i++ {
+			shamirShares[i] = &shamir.Share{
+				Id:    participants[i].GetSharingId(),
+				Value: signingKeyShares[i].Share,
+			}
 		}
-	}
 
-	reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
-	require.NoError(t, err)
+		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		require.NoError(t, err)
 
-	derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
+		require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+	})
 }
 
 func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -387,7 +396,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int

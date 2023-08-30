@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing"
+	"github.com/copperexchange/knox-primitives/pkg/core/polynomials"
 )
 
 type Share struct {
@@ -33,7 +33,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 
 func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
 	curve := ss.Value.Curve()
-	coefficients, err := sharing.LagrangeCoefficients(curve, identities)
+	coefficients, err := LagrangeCoefficients(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
 	}
@@ -76,8 +76,8 @@ func (s Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	return shares, nil
 }
 
-func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *sharing.Polynomial) {
-	poly := new(sharing.Polynomial).NewPolynomial(secret, s.Threshold, prng)
+func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *polynomials.Polynomial) {
+	poly := polynomials.NewRandomPolynomial(secret, s.Threshold, prng)
 	shares := make([]*Share, s.Total)
 	for i := range shares {
 		x := s.Curve.Scalar().New(uint64(i + 1))
@@ -96,7 +96,7 @@ func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, e
 	if len(identities) > s.Total {
 		return nil, errs.NewInvalidArgument("too many identities")
 	}
-	lambdas, err := sharing.LagrangeCoefficients(s.Curve, identities)
+	lambdas, err := LagrangeCoefficients(s.Curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not ocmpute lagrange coefficients")
 	}
@@ -157,7 +157,7 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 }
 
 func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result, err := sharing.Interpolate(s.Curve, xs, ys, evaluateAt)
+	result, err := polynomials.Interpolate(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate")
 	}
@@ -165,9 +165,25 @@ func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (c
 }
 
 func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	result, err := sharing.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
+	result, err := polynomials.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")
+	}
+	return result, nil
+}
+
+func LagrangeCoefficients(curve curves.Curve, sharingIds []int) (map[int]curves.Scalar, error) {
+	sharingIdsScalar := make([]curves.Scalar, len(sharingIds))
+	for i := 0; i < len(sharingIds); i++ {
+		sharingIdsScalar[i] = curve.Scalar().New(uint64(sharingIds[i]))
+	}
+	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.Scalar().Zero()) // secret is at 0
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not compute all basis polynomialsa at x=0")
+	}
+	result := make(map[int]curves.Scalar, len(basisPolynomials))
+	for i, li := range basisPolynomials {
+		result[sharingIds[i]] = li
 	}
 	return result, nil
 }

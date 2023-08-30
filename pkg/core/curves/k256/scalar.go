@@ -214,6 +214,10 @@ func (s *ScalarK256) Nat() *saferith.Nat {
 	return s.Value.Nat()
 }
 
+func (s *ScalarK256) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
+}
+
 func (s *ScalarK256) Bytes() []byte {
 	t := s.Value.Bytes()
 	return bitstring.ReverseBytes(t[:])

@@ -251,6 +251,10 @@ func (s *ScalarEd25519) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(buf)
 }
 
+func (s *ScalarEd25519) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
+}
+
 func (s *ScalarEd25519) Bytes() []byte {
 	return s.Value.Bytes()
 }

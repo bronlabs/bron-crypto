@@ -73,6 +73,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if len(uniqueSessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", uniqueSessionId)
 	}
+	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	result := &Participant{
 		MyIdentityKey: identityKey,
 		state: &State{
@@ -85,6 +86,5 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		UniqueSessionId: uniqueSessionId,
 	}
 	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
-	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	return result, nil
 }

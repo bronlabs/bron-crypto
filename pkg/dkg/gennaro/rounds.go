@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	pedersenDkg "github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	"github.com/copperexchange/knox-primitives/pkg/dkg"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -58,7 +58,6 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of a_i0")
 	}
-	prover.BasePoint = p.H
 
 	outboundP2PMessages := map[helper_types.IdentityHash]*Round1P2P{}
 	for sharingId, identityKey := range p.sharingIdToIdentityKey {
@@ -175,7 +174,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		transcript := hagrid.NewTranscript(DlogProofLabel)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from schnorr dlog proof of a_i0 given sharing id")
+			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")
 		}
 
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderSharingId]
@@ -200,7 +199,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		receivedCommitmentVectors[senderSharingId] = senderCommitmentVector
 	}
 
-	publicKeySharesMap, err := pedersenDkg.ConstructPublicKeySharesMap(p.CohortConfig, receivedCommitmentVectors, p.sharingIdToIdentityKey)
+	publicKeySharesMap, err := dkg.ConstructPublicKeySharesMap(p.CohortConfig, receivedCommitmentVectors, p.sharingIdToIdentityKey)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't derive public key shares")
 	}
@@ -210,15 +209,18 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		return nil, nil, errs.NewFailed("did not calculate my public key share correctly")
 	}
 
-	publicKeyShares := &threshold.PublicKeyShares{
-		Curve:     p.CohortConfig.CipherSuite.Curve,
+	signingKeyShare := &threshold.SigningKeyShare{
+		Share:     p.state.secretKeyShare,
 		PublicKey: publicKey,
-		SharesMap: publicKeySharesMap,
+	}
+
+	publicKeyShares := &threshold.PublicKeyShares{
+		Curve:                   p.CohortConfig.CipherSuite.Curve,
+		PublicKey:               publicKey,
+		SharesMap:               publicKeySharesMap,
+		FeldmanCommitmentVector: p.state.commitments,
 	}
 
 	p.round++
-	return &threshold.SigningKeyShare{
-		Share:     p.state.secretKeyShare,
-		PublicKey: publicKey,
-	}, publicKeyShares, nil
+	return signingKeyShare, publicKeyShares, nil
 }

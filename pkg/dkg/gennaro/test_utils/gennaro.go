@@ -112,3 +112,28 @@ func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []map[helper_
 
 	return signingKeyShares, publicKeyShares, nil
 }
+
+func RunDKG(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, err error) {
+	participants, err := MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoDkgRound1(participants)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r2InsB, r2InsU := MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2OutsB, err := DoDkgRound2(participants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r3InsB := MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB)
+	signingKeyShares, publicKeyShares, err = DoDkgRound3(participants, r3InsB)
+	if err != nil {
+		return nil, nil, err
+	}
+	return signingKeyShares, publicKeyShares, nil
+}
