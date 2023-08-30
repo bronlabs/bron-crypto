@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -96,7 +97,7 @@ func Test_HappyPath(t *testing.T) {
 			for _, theirShard := range shards {
 				if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
 					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
-					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
+					theirDecryptedShare, err := paillier.NewDecryptor(myPaillierPrivateKey).Decrypt(theirEncryptedShare)
 					require.NoError(t, err)
 					require.NotZero(t, theirDecryptedShare.Eq(myShare))
 				}

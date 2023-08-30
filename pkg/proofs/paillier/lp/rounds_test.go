@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )

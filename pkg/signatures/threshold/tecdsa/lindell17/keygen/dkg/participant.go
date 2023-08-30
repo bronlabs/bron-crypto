@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
@@ -34,7 +34,7 @@ type State struct {
 	theirBigQPrime               map[helper_types.IdentityHash]curves.Point
 	theirBigQDoublePrime         map[helper_types.IdentityHash]curves.Point
 	theirPaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
-	theirPaillierEncryptedShares map[helper_types.IdentityHash]paillier.CipherText
+	theirPaillierEncryptedShares map[helper_types.IdentityHash]*paillier.CipherText
 
 	lpProvers                map[helper_types.IdentityHash]*lp.Prover
 	lpVerifiers              map[helper_types.IdentityHash]*lp.Verifier

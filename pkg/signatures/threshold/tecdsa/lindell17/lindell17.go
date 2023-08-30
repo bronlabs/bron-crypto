@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
@@ -24,13 +24,13 @@ type Shard struct {
 	SigningKeyShare         *threshold.SigningKeyShare
 	PaillierSecretKey       *paillier.SecretKey
 	PaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
-	PaillierEncryptedShares map[helper_types.IdentityHash]paillier.CipherText
+	PaillierEncryptedShares map[helper_types.IdentityHash]*paillier.CipherText
 
 	_ helper_types.Incomparable
 }
 
 type PartialSignature struct {
-	C3 paillier.CipherText
+	C3 *paillier.CipherText
 
 	_ helper_types.Incomparable
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 )
 
 func parseNat(nat string) *saferith.Nat {
@@ -62,7 +62,7 @@ func Example_encryptDecrypt() {
 	}
 
 	// Now decrypt using the secret key.
-	decrypted, err := sec.Decrypt(cipher)
+	decrypted, err := paillier.NewDecryptor(sec).Decrypt(cipher)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -98,7 +98,7 @@ func Example_homomorphicAddition() {
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
-	decrypted3, err := sec.Decrypt(cipher3)
+	decrypted3, err := paillier.NewDecryptor(sec).Decrypt(cipher3)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -130,7 +130,7 @@ func Example_homomorphicMultiplication() {
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
-	decrypted3, err := sec.Decrypt(cipher3)
+	decrypted3, err := paillier.NewDecryptor(sec).Decrypt(cipher3)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -603,7 +603,7 @@ func TestAddErrorConditions(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			_, err := pk.Add(theTest.x, theTest.y)
+			_, err := pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			if theTest.expectedPass {
 				require.NoError(t, err)
 			} else {
@@ -633,7 +633,7 @@ func TestSubPlain(t *testing.T) {
 			require.NoError(t, err)
 			zEncrypted, err := pk.SubPlain(encryptedX, new(saferith.Nat).SetUint64(test.y))
 			require.NoError(t, err)
-			z, err := sk.Decrypt(zEncrypted)
+			z, err := paillier.NewDecryptor(sk).Decrypt(zEncrypted)
 			require.NoError(t, err)
 			require.Equal(t, z.Uint64(), test.expected)
 		})
@@ -677,9 +677,9 @@ func TestAdd(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			actual, err := test.pk.Add(theTest.x, theTest.y)
+			actual, err := test.pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			require.NoError(t, err)
-			require.NotZero(t, theTest.expected.Eq(actual))
+			require.NotZero(t, theTest.expected.Eq(actual.C))
 		})
 	}
 }
@@ -715,7 +715,7 @@ func TestMulErrorConditions(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			_, err := pk.Mul(theTest.x, theTest.y)
+			_, err := pk.Mul(theTest.x, &paillier.CipherText{C: theTest.y})
 			if theTest.expectedPass {
 				require.NoError(t, err)
 			} else {
@@ -775,9 +775,9 @@ func TestMul(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			actual, err := theTest.pk.Mul(theTest.a, theTest.c)
+			actual, err := theTest.pk.Mul(theTest.a, &paillier.CipherText{C: theTest.c})
 			require.NoError(t, err)
-			require.NotZero(t, theTest.expected.Eq(actual))
+			require.NotZero(t, theTest.expected.Eq(actual.C))
 		})
 	}
 }
@@ -889,7 +889,7 @@ func TestEncryptKnownAnswers(t *testing.T) {
 	for _, test := range tests {
 		actual, err := z9.EncryptWithNonce(test.m, test.r)
 		require.NoError(t, err)
-		require.NotZero(t, test.expected.Eq(actual))
+		require.NotZero(t, test.expected.Eq(actual.C))
 	}
 }
 
@@ -936,7 +936,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 
 	// All the tests!
 	for _, test := range tests {
-		_, err := sk.Decrypt(test.c)
+		_, err := paillier.NewDecryptor(sk).Decrypt(&paillier.CipherText{C: test.c})
 		if test.expectedPass {
 			require.NoError(t, err)
 		} else {
@@ -951,7 +951,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 		Totient:   nil,
 		U:         nil,
 	}
-	_, err = sk.Decrypt(one)
+	_, err = paillier.NewDecryptor(sk).Decrypt(&paillier.CipherText{C: one})
 	println(err.Error())
 	require.True(t, errs.IsFailed(err))
 }
@@ -989,77 +989,10 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 		require.NotNil(t, c)
 
 		// Decrypt-validate
-		actual, err := sk.Decrypt(c)
+		actual, err := paillier.NewDecryptor(sk).Decrypt(c)
 		require.NoError(t, err)
 		require.NotZero(t, m.Eq(actual))
 	}
-}
-
-func TestSerializePublicKeyWorks(t *testing.T) {
-	n := parseNat("16241940578082201531943448855852277578391761356628379864603641922876623601321625229339135653813019543205064366507109899018615521640687222340376734033815591736764469510811142260074144789284382858541066390183237904579674336717818949214144339382239132186500111594251680147962383065732964214151653795512167674648653475620307856642151695559944756719719799945193072239010815330021803557074201060705849949820706127488164694762724694756011467249889383401729777382247223470577114290663770295230883950621358271613200219512401437571399087878832070221157976750549142719310423012055140771277730139053532825828483343855582012877641")
-	pk, err := paillier.NewPublicKey(n)
-	require.NoError(t, err)
-
-	data, err := pk.MarshalJSON()
-	require.NoError(t, err)
-
-	pk2 := new(paillier.PublicKey)
-	require.NoError(t, pk2.UnmarshalJSON(data))
-	require.Equal(t, pk2, pk)
-	require.NoError(t, pk2.UnmarshalJSON([]byte(`{"N":"04e3"}`)))
-}
-
-func TestSerializePublicKeyIgnoreFields(t *testing.T) {
-	tests := [][]byte{
-		[]byte(`{}`),
-		[]byte(`{"a":null}`),
-		[]byte(`{"n":null}`),
-		[]byte(`{"N":null}`),
-	}
-	pk := new(paillier.PublicKey)
-	for _, test := range tests {
-		require.True(t, errs.IsSerializationError(pk.UnmarshalJSON(test)))
-	}
-}
-
-func TestSerializeSecretKeyWorks(t *testing.T) {
-	p := parseNat("133788347333574532510542341875219452703250094560184213896952738579939377079849213618116996737030817731544214409221015150233522821287955673536671953914660520267670984696713816508768479853621956967492030516224494353641551367310541202655075859386716364585825364092974073148178887544704793573033779774765431460367")
-	q := parseNat("121400263190232595456200749546561304956161672968687911935494950378721768184159069938532869288284686583150658925255722159156454219960265942696166947144912738151554579878178746701374346180640493532962639632666540478486867810588884360492830920363713588684509182704981665082591486786717530494254613085570321507623")
-	sk, err := paillier.NewSecretKey(p, q)
-	require.NoError(t, err)
-
-	data, err := sk.MarshalJSON()
-	require.NoError(t, err)
-	sk2 := new(paillier.SecretKey)
-	require.NoError(t, sk2.UnmarshalJSON(data))
-	require.Equal(t, sk2.N, sk.N)
-	require.Equal(t, sk2.N2, sk.N2)
-	require.NotZero(t, sk2.U.Eq(sk.U))
-	require.NotZero(t, sk2.Totient.Eq(sk.Totient))
-	require.NotZero(t, sk2.Lambda.Eq(sk.Lambda))
-	require.NoError(t, sk2.UnmarshalJSON([]byte(`{"N":"02","Totient":"01","U":"01","Lambda":"01"}`)))
-}
-
-func TestSerializeSecretKeyIgnoreFields(t *testing.T) {
-	tests := [][]byte{
-		[]byte(`{}`),
-		[]byte(`{"a":null}`),
-		[]byte(`{"n":null}`),
-		[]byte(`{"N":null}`),
-		[]byte(`{"N":null,"U":1}`),
-	}
-	sk := new(paillier.SecretKey)
-	for _, test := range tests {
-		require.Error(t, sk.UnmarshalJSON(test))
-	}
-}
-
-func TestSerializationErrorConditions(t *testing.T) {
-	pk := new(paillier.PublicKey)
-	require.True(t, errs.IsSerializationError(pk.UnmarshalJSON([]byte(`invalid`))))
-
-	sk := new(paillier.SecretKey)
-	require.True(t, errs.IsSerializationError(sk.UnmarshalJSON([]byte(`invalid`))))
 }
 
 func TestNewSecretKeyErrorConditions(t *testing.T) {

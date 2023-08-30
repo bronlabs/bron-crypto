@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 )
 
 var hashFunc = sha256.New
@@ -22,8 +22,8 @@ type Round1Output struct {
 }
 
 type ProverRound2Output struct {
-	C1 []paillier.CipherText
-	C2 []paillier.CipherText
+	C1 []*paillier.CipherText
+	C2 []*paillier.CipherText
 
 	_ helper_types.Incomparable
 }
@@ -120,8 +120,8 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	// 2.v. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
 	prover.state.r1 = make([]*saferith.Nat, prover.t)
 	prover.state.r2 = make([]*saferith.Nat, prover.t)
-	c1 := make([]paillier.CipherText, prover.t)
-	c2 := make([]paillier.CipherText, prover.t)
+	c1 := make([]*paillier.CipherText, prover.t)
+	c2 := make([]*paillier.CipherText, prover.t)
 	for i := 0; i < prover.t; i++ {
 		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i])
 		if err != nil {
@@ -229,16 +229,16 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
-			//nolint:gocritic // Cmp not a method of c1. False positive.
-			if (*c1).Eq(verifier.state.c1[i]) == 0 {
+
+			if c1.C.Eq(verifier.state.c1[i].C) == 0 {
 				return errs.NewVerificationFailed("verification failed")
 			}
 			c2, err := verifier.pk.EncryptWithNonce(z.W2, z.R2)
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
-			//nolint:gocritic // Cmp not a method of c2. False positive.
-			if (*c2).Eq(verifier.state.c2[i]) == 0 {
+
+			if c2.C.Eq(verifier.state.c2[i].C) == 0 {
 				return errs.NewVerificationFailed("verification failed")
 			}
 			if !((verifier.inFirstThird(z.W1) && verifier.inSecondThird(z.W2)) ||
@@ -256,7 +256,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
 			}
-			var c paillier.CipherText
+			var c *paillier.CipherText
 			if z.J == 1 {
 				c, err = verifier.pk.Add(verifier.c, verifier.state.c1[i])
 				if err != nil {
@@ -269,8 +269,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 				}
 			}
 
-			//nolint:gocritic // Cmp not a method of cCheck. False positive.
-			if (*cCheck).Eq(c) == 0 || !verifier.inSecondThird(wi) {
+			if cCheck.C.Eq(c.C) == 0 || !verifier.inSecondThird(wi) {
 				return errs.NewVerificationFailed("verification failed")
 			}
 		}

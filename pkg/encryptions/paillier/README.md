@@ -11,5 +11,5 @@ This module provides APIs for:
 - adding two encrypted values, `Enc(a)` and `Enc(b)`, and obtaining `Enc(a + b)`, and
 - multiplying a plain value, `a`, and an encrypted value `Enc(b)`, and obtaining `Enc(a * b)`.
 
-The encrypted values are represented as `big.Int` and are serializable.
+The encrypted values are represented as `saferith.Nat` and are serializable.
 This module also provides JSON serialization for the PublicKey and the SecretKey.

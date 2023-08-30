@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
@@ -30,7 +30,7 @@ func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, 
 }
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
-func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat, pk *paillier.PublicKey, cKey paillier.CipherText, prng io.Reader) (c3 paillier.CipherText, err error) {
+func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat, pk *paillier.PublicKey, cKey *paillier.CipherText, prng io.Reader) (c3 *paillier.CipherText, err error) {
 	k2Inv, err := k2.Invert()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot invert k2")

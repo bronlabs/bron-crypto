@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/cronokirby/saferith"
 	"io"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
@@ -78,7 +78,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 		for _, theirShard := range shards {
 			if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
 				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
-				theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
+				theirDecryptedShare, err := paillier.NewDecryptor(myPaillierPrivateKey).Decrypt(theirEncryptedShare)
 				if err != nil {
 					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
 				}
@@ -149,7 +149,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 				PublicKey: publicKey,
 			},
 			PaillierPublicKeys:      make(map[helper_types.IdentityHash]*paillier.PublicKey),
-			PaillierEncryptedShares: make(map[helper_types.IdentityHash]paillier.CipherText),
+			PaillierEncryptedShares: make(map[helper_types.IdentityHash]*paillier.CipherText),
 		}
 	}
 

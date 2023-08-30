@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -111,7 +111,7 @@ func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, erro
 	return new(saferith.Nat).Add(x, q, 256), nil // x >= q
 }
 
-func doProof(x *saferith.Nat, xEncrypted paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
+func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
 	appLabel := "Range"
 
 	verifierTranscript := hagrid.NewTranscript(appLabel)

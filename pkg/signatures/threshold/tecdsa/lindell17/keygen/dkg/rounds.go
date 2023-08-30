@@ -2,6 +2,7 @@ package dkg
 
 import (
 	"crypto/sha256"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
@@ -10,7 +11,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
@@ -43,8 +43,8 @@ type Round2Broadcast struct {
 }
 
 type Round3Broadcast struct {
-	CKeyPrime         paillier.CipherText
-	CKeyDoublePrime   paillier.CipherText
+	CKeyPrime         *paillier.CipherText
+	CKeyDoublePrime   *paillier.CipherText
 	PaillierPublicKey *paillier.PublicKey
 
 	_ helper_types.Incomparable
@@ -259,7 +259,7 @@ func (p *Participant) Round4(input map[helper_types.IdentityHash]*Round3Broadcas
 	}
 
 	p.state.theirPaillierPublicKeys = make(map[helper_types.IdentityHash]*paillier.PublicKey)
-	p.state.theirPaillierEncryptedShares = make(map[helper_types.IdentityHash]paillier.CipherText)
+	p.state.theirPaillierEncryptedShares = make(map[helper_types.IdentityHash]*paillier.CipherText)
 
 	p.state.lpVerifiers = make(map[helper_types.IdentityHash]*lp.Verifier)
 	p.state.lpdlPrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)

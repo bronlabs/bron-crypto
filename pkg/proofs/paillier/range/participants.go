@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -54,15 +54,15 @@ type Prover struct {
 type VerifierState struct {
 	e           *big.Int
 	esidWitness commitments.Witness
-	c1          []paillier.CipherText
-	c2          []paillier.CipherText
+	c1          []*paillier.CipherText
+	c2          []*paillier.CipherText
 
 	_ helper_types.Incomparable
 }
 
 type Verifier struct {
 	Participant
-	c     paillier.CipherText
+	c     *paillier.CipherText
 	pk    *paillier.PublicKey
 	state *VerifierState
 
@@ -103,7 +103,7 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 	}, nil
 }
 
-func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}

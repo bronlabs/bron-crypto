@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
@@ -36,7 +36,7 @@ type Round3OutputP2P struct {
 }
 
 type Round4OutputP2P struct {
-	C3 paillier.CipherText
+	C3 *paillier.CipherText
 
 	_ helper_types.Incomparable
 }
@@ -204,7 +204,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	}
 
 	paillierSecretKey := primaryCosigner.myShard.PaillierSecretKey
-	sPrimeInt, err := paillierSecretKey.Decrypt(round4Output.C3)
+	sPrimeInt, err := paillier.NewDecryptor(paillierSecretKey).Decrypt(round4Output.C3)
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
 	}

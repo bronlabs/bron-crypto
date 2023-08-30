@@ -2,6 +2,7 @@ package noninteractive
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
@@ -58,7 +59,7 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	}
 
 	paillierSecretKey := p.myShard.PaillierSecretKey
-	sPrimeInt, err := paillierSecretKey.Decrypt(theirPartialSignature.C3)
+	sPrimeInt, err := paillier.NewDecryptor(paillierSecretKey).Decrypt(theirPartialSignature.C3)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}

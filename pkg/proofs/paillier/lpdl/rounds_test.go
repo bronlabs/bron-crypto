@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -166,7 +166,7 @@ func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, erro
 	return new(saferith.Nat).Add(q, x, 2048), nil
 }
 
-func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted paillier.CipherText, r *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
+func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText, r *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
 	verifierTranscript := hagrid.NewTranscript(transcriptLabel)

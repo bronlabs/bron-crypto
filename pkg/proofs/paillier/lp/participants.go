@@ -7,7 +7,7 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -30,7 +30,7 @@ type Participant struct {
 
 type VerifierState struct {
 	rootProvers []*nthroot.Prover
-	x           []paillier.CipherText
+	x           []*paillier.CipherText
 	y           []*saferith.Nat
 
 	_ helper_types.Incomparable
@@ -46,7 +46,7 @@ type Verifier struct {
 
 type ProverState struct {
 	rootVerifiers []*nthroot.Verifier
-	x             []paillier.CipherText
+	x             []*paillier.CipherText
 
 	_ helper_types.Incomparable
 }

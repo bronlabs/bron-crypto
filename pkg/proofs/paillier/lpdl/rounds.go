@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 )
 
@@ -18,7 +18,7 @@ var hashFunc = sha256.New
 
 type Round1Output struct {
 	RangeVerifierOutput    *paillierrange.Round1Output
-	CPrime                 paillier.CipherText
+	CPrime                 *paillier.CipherText
 	CDoublePrimeCommitment commitments.Commitment
 
 	_ helper_types.Incomparable
@@ -119,7 +119,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
 
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
-	prover.state.alpha, err = prover.sk.Decrypt(input.CPrime)
+	prover.state.alpha, err = paillier.NewDecryptor(prover.sk).Decrypt(input.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}

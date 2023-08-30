@@ -2,6 +2,7 @@ package dkg_test
 
 import (
 	"crypto/sha256"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"testing"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
@@ -148,7 +149,7 @@ func Test_HappyPath(t *testing.T) {
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
 					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
-					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
+					theirDecryptedSigningShareInt, err := paillier.NewDecryptor(myShard.PaillierSecretKey).Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
 					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
 					require.NoError(t, err)

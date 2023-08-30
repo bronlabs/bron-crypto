@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -53,7 +53,7 @@ type VerifierState struct {
 type Verifier struct {
 	Participant
 	rangeVerifier *paillierrange.Verifier
-	c             paillier.CipherText
+	c             *paillier.CipherText
 	state         *VerifierState
 
 	_ helper_types.Incomparable
@@ -79,7 +79,7 @@ type Prover struct {
 	_ helper_types.Incomparable
 }
 
-func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
