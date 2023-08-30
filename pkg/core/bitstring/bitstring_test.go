@@ -16,29 +16,6 @@ func TestSelectBit(t *testing.T) {
 	}
 }
 
-func TestXorBytes(t *testing.T) {
-	in := [][]byte{
-		{0x00, 0x04, 0x8, 0x00},
-		{0x01, 0x01, 0x01, 0x01},
-		{0x02, 0x02, 0x02, 0x01},
-	}
-	out := []byte{0x00, 0x00, 0x00, 0x00}
-	err := bitstring.XorBytesInPlace(out, in...)
-	require.NoError(t, err)
-	require.Equal(t, []byte{0x03, 0x07, 0x0B, 0x00}, out)
-}
-
-func TestXorBytesNew(t *testing.T) {
-	in := [][]byte{
-		{0x00, 0x04, 0x8, 0x00},
-		{0x01, 0x01, 0x01, 0x01},
-		{0x02, 0x02, 0x02, 0x01},
-	}
-	out, err := bitstring.XorBytes(in...)
-	require.NoError(t, err)
-	require.Equal(t, []byte{0x03, 0x07, 0x0B, 0x00}, out)
-}
-
 func TestTransposeBooleanMatrix(t *testing.T) {
 	// Test with a 8x6 matrix
 	inputMatrix := [][]byte{

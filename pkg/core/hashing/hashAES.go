@@ -3,6 +3,7 @@ package hashing
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/subtle"
 	"hash"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
@@ -124,14 +125,10 @@ func (h *AesHash) Write(input []byte) (n int, err error) {
 			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
 			h.blockCipher.Encrypt(outputBlock, outputBlock)
 			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.
-			for k := 0; k < AesBlockSize; k++ {
-				outputBlock[k] ^= h.permutedOnceBlock[k]
-			}
+			subtle.XORBytes(outputBlock, outputBlock, h.permutedOnceBlock)
 			// 3.1.B) Refresh the AES256 key for the next iteration.
 			// 	key[1] = key[0] ⊕ key[1]
-			for k := AesBlockSize; k < AesKeySize; k++ {
-				h.aesKey[k] ^= h.aesKey[k-AesBlockSize]
-			}
+			subtle.XORBytes(h.aesKey[AesBlockSize:], h.aesKey[AesBlockSize:], h.aesKey[:AesBlockSize])
 			// 	key[0] = TMMO^π(x,i)
 			copy(h.aesKey[:AesBlockSize], outputBlock)
 			h.blockCipher, err = aes.NewCipher(h.aesKey)

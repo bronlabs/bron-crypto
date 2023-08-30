@@ -2,6 +2,7 @@ package softspoken
 
 import (
 	crand "crypto/rand"
+	"crypto/subtle"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -68,9 +69,8 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	// (Ext.3) Compute u_i and send it
 	for i := 0; i < Kappa; i++ {
 		round1Output.expansionMask[i] = make([]byte, etaPrimeBytes)
-		for j := 0; j < etaPrimeBytes; j++ {
-			round1Output.expansionMask[i][j] = extOptions[0][i][j] ^ extOptions[1][i][j] ^ R.extPackedChoices[j]
-		}
+		subtle.XORBytes(round1Output.expansionMask[i], extOptions[0][i], extOptions[1][i])
+		subtle.XORBytes(round1Output.expansionMask[i], round1Output.expansionMask[i], R.extPackedChoices)
 	}
 
 	// (*)(Fiat-Shamir): Append the expansionMask to the transcript
@@ -146,37 +146,29 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	}
 	// (Ext.4) Compute q_i = Δ_i • u_i + t_i (constant time)
 	extCorrelations := ExtCorrelations{}
+	qiTemp := make([]byte, etaPrimeBytes)
 	for i := 0; i < Kappa; i++ {
-		extCorrelations[i] = make([]byte, etaPrimeBytes)
-		for j := 0; j < etaPrimeBytes; j++ {
-			qiTemp := round1Output.expansionMask[i][j] ^ extDeltaOpt[i][j]
-			if S.baseOtSeeds.RandomChoiceBits[i] != 0 {
-				extCorrelations[i][j] = qiTemp
-			} else {
-				extCorrelations[i][j] = extDeltaOpt[i][j]
-			}
-		}
+		extCorrelations[i] = extDeltaOpt[i]
+		subtle.XORBytes(qiTemp, round1Output.expansionMask[i], extDeltaOpt[i])
+		subtle.ConstantTimeCopy(S.baseOtSeeds.RandomChoiceBits[i], extCorrelations[i], qiTemp)
 	}
 
 	// (T&R.1, T&R.3) Transpose and Randomise the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
-	extCorrelationsTransposed := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
-	extCorrelationsTransposedPlusDelta := make([][]byte, eta)                      // q_j+Δ ∈ [η][κ]bits
+	qjTransposed := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
+	qjTransposedPlusDelta := make([][]byte, eta)                      // q_j+Δ ∈ [η][κ]bits
 	for j := 0; j < eta; j++ {
-		extCorrelationsTransposedPlusDelta[j] = make([]byte, KappaBytes)
+		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
 	}
-	for i := 0; i < KappaBytes; i++ {
-		Delta := S.baseOtSeeds.PackedRandomChoiceBits[i]
-		for j := 0; j < eta; j++ { // drop η' - η rows, used for consistency check
-			extCorrelationsTransposedPlusDelta[j][i] = extCorrelationsTransposed[j][i] ^ Delta
-		}
+	for j := 0; j < eta; j++ { // drop η' - η rows, used for consistency check
+		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], S.baseOtSeeds.PackedRandomChoiceBits)
 	}
 	// (T&R.3) Randomise by hashing the first η rows of q_j and q_j+Δ (drop η' - η = σ rows)
-	err = HashSalted(S.sid, extCorrelationsTransposed[:eta], oTeSenderOutput[0])
+	err = HashSalted(S.sid, qjTransposed[:eta], oTeSenderOutput[0])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.3)")
 	}
-	err = HashSalted(S.sid, extCorrelationsTransposedPlusDelta[:eta], oTeSenderOutput[1])
+	err = HashSalted(S.sid, qjTransposedPlusDelta[:eta], oTeSenderOutput[1])
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.3)")
 	}
@@ -382,8 +374,7 @@ func (S *Sender) VerifyChallengeResponse(
 	// Compute sizes
 	M := len(challenge)                                // M = η/σ
 	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
-	qi_val := [SigmaBytes]byte{}
-	var q_expected, qi_sum byte
+	var qi_val, qi_expected [SigmaBytes]byte
 	for i := 0; i < Kappa; i++ {
 		// q̇^i = q^i_hat_{m+1} ...
 		copy(qi_val[:], extCorrelations[i][etaBytes:etaBytes+SigmaBytes])
@@ -396,16 +387,10 @@ func (S *Sender) VerifyChallengeResponse(
 			}
 		}
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
-		for k := 0; k < SigmaBytes; k++ {
-			qi_sum = challengeResponse.t_val[i][k] ^ challengeResponse.x_val[k]
-			if S.baseOtSeeds.RandomChoiceBits[i] != 0 {
-				q_expected = qi_sum
-			} else {
-				q_expected = challengeResponse.t_val[i][k]
-			}
-			if !(q_expected == qi_val[k]) {
-				return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
-			}
+		subtle.XORBytes(qi_expected[:], challengeResponse.t_val[i][:], challengeResponse.x_val[:])
+		subtle.ConstantTimeCopy((1 - S.baseOtSeeds.RandomChoiceBits[i]), qi_expected[:], challengeResponse.t_val[i][:])
+		if subtle.ConstantTimeCompare(qi_expected[:], qi_val[:]) == 0 {
+			return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 		}
 	}
 	return nil

@@ -6,7 +6,6 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
@@ -123,12 +122,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 			hashedKey[k] = sha3.Sum256(sender.Output.OneTimePadEncryptionKeys[i][k][:])
 			hashedKey[k] = sha3.Sum256(hashedKey[k][:])
 		}
-
-		current, err := bitstring.XorBytes(hashedKey[0][:], hashedKey[1][:])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not xor bytes")
-		}
-		copy(challenge[i][:], current)
+		subtle.XORBytes(challenge[i][:], hashedKey[0][:], hashedKey[1][:])
 	}
 	return challenge, nil
 }
@@ -140,16 +134,14 @@ func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) ([]O
 	receiver.SenderChallenge = challenge
 	// challengeResponses is Rho' in the paper.
 	challengeResponses := make([]OtChallengeResponse, receiver.BatchSize)
+	alternativeChallengeResponse := new([DigestSize]byte)
 	for i := 0; i < receiver.BatchSize; i++ {
 		// Constant-time xor of the hashed key and the challenge, based on the choice bit.
 		hashedKey := sha3.Sum256(receiver.Output.OneTimePadDecryptionKey[i][:])
 		hashedKey = sha3.Sum256(hashedKey[:])
 		challengeResponses[i] = hashedKey
-		alternativeChallengeResponse, err := bitstring.XorBytes(receiver.SenderChallenge[i][:], hashedKey[:])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not xor bytes")
-		}
-		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], challengeResponses[i][:], alternativeChallengeResponse)
+		subtle.XORBytes(alternativeChallengeResponse[:], receiver.SenderChallenge[i][:], hashedKey[:])
+		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], challengeResponses[i][:], alternativeChallengeResponse[:])
 	}
 	return challengeResponses, nil
 }
@@ -185,6 +177,7 @@ func (sender *Sender) Round5Verify(challengeResponses []OtChallengeResponse) ([]
 //	if opening_w != H(decryption key)  or
 //	if challenge != H(opening 0) XOR H(opening 0)
 func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) error {
+	reconstructedChallenge := new([DigestSize]byte)
 	for i := 0; i < receiver.BatchSize; i++ {
 		hashedDecryptionKey := sha3.Sum256(receiver.Output.OneTimePadDecryptionKey[i][:])
 		w := receiver.Output.RandomChoiceBits[i]
@@ -193,11 +186,9 @@ func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) err
 		}
 		hashedKey0 := sha3.Sum256(challengeOpenings[i][0][:])
 		hashedKey1 := sha3.Sum256(challengeOpenings[i][1][:])
-		reconstructedChallenge, err := bitstring.XorBytes(hashedKey0[:], hashedKey1[:])
-		if err != nil {
-			return errs.WrapFailed(err, "could not xor bytes")
-		}
-		if subtle.ConstantTimeCompare(reconstructedChallenge, receiver.SenderChallenge[i][:]) != 1 {
+		subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:], hashedKey1[:])
+
+		if subtle.ConstantTimeCompare(reconstructedChallenge[:], receiver.SenderChallenge[i][:]) != 1 {
 			return errs.NewVerificationFailed("sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
 		}
 	}
@@ -227,11 +218,7 @@ func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyC
 
 	for i := 0; i < len(plaintexts); i++ {
 		for k := 0; k < KeyCount; k++ {
-			current, err := bitstring.XorBytes(s.OneTimePadEncryptionKeys[i][k][:], plaintexts[i][k][:])
-			if err != nil {
-				return nil, errs.WrapFailed(err, "could not xor bytes")
-			}
-			copy(ciphertexts[i][k][:], current)
+			subtle.XORBytes(ciphertexts[i][k][:], s.OneTimePadEncryptionKeys[i][k][:], plaintexts[i][k][:])
 		}
 	}
 	return ciphertexts, nil
@@ -248,11 +235,7 @@ func (r *ReceiverOutput) Decrypt(ciphertexts [][KeyCount][DigestSize]byte) ([][D
 
 	for i := 0; i < len(ciphertexts); i++ {
 		choice := r.RandomChoiceBits[i]
-		current, err := bitstring.XorBytes(r.OneTimePadDecryptionKey[i][:], ciphertexts[i][choice][:])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not xor bytes")
-		}
-		copy(plaintexts[i][:], current)
+		subtle.XORBytes(plaintexts[i][:], r.OneTimePadDecryptionKey[i][:], ciphertexts[i][choice][:])
 	}
 	return plaintexts, nil
 }

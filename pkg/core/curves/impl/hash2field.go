@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"crypto/subtle"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
@@ -73,9 +74,7 @@ func ExpandMsgXmd(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte
 		h.xmd.Reset()
 		// b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
 		tmp := make([]byte, h.xmd.Size())
-		for j := 0; j < h.xmd.Size(); j++ {
-			tmp[j] = b0[j] ^ bi[j]
-		}
+		subtle.XORBytes(tmp, b0, bi)
 		_, _ = h.xmd.Write(tmp)
 		_, _ = h.xmd.Write([]byte{1 + uint8(i)})
 		_, _ = h.xmd.Write(domain)

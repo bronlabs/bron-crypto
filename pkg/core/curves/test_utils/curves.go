@@ -2,6 +2,7 @@ package test_utils
 
 import (
 	"crypto/elliptic"
+	"crypto/subtle"
 	"hash"
 	"math/big"
 	"sync"
@@ -120,9 +121,7 @@ func ExpandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
 		h.Reset()
 		// b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
 		tmp := make([]byte, h.Size())
-		for j := 0; j < h.Size(); j++ {
-			tmp[j] = b0[j] ^ bi[j]
-		}
+		subtle.XORBytes(tmp, b0, bi)
 		_, _ = h.Write(tmp)
 		_, _ = h.Write([]byte{1 + uint8(i)})
 		_, _ = h.Write(domain)

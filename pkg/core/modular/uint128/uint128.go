@@ -70,6 +70,12 @@ func (u Uint128) Cmp(v Uint128) int {
 	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
 }
 
+// Cselect returns x if b == true and y if b == false. Inspired by subtle.ConstantTimeSelect().
+func Cselect(v bool, x, y Uint128) Uint128 {
+	vv := uint64(BoolToInt(v))
+	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
+}
+
 // And returns u&v.
 func (u Uint128) And(v Uint128) Uint128 {
 	return Uint128{u.Lo & v.Lo, v.Hi & u.Hi}

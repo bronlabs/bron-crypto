@@ -167,7 +167,6 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
 		return nil, errs.NewFailed("invalid scalar bytes length")
 	}
-
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
 	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.P), message)
 	if err != nil {

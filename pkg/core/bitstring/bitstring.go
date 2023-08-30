@@ -1,9 +1,5 @@
 package bitstring
 
-import (
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-)
-
 // SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
 // it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
 func SelectBit(vector []byte, index int) byte {
@@ -11,22 +7,7 @@ func SelectBit(vector []byte, index int) byte {
 	return vector[index>>3] >> (index & 0x07) & 0x01
 }
 
-// XorBytesInPlace computes out[i] = in[0][i] XOR in[1][i] XOR ...
-func XorBytesInPlace(out []byte, in ...[]byte) error {
-	if n := copy(out, in[0]); n != len(out) {
-		return errs.NewInvalidArgument("XORing slices of different length")
-	}
-	for idx := 1; idx < len(in); idx++ {
-		if len(in[idx]) != len(out) {
-			return errs.NewInvalidArgument("XORing slices of different length")
-		}
-		for i := 0; i < len(out); i++ {
-			out[i] ^= in[idx][i]
-		}
-	}
-	return nil
-}
-
+// ReverseBytes reverses the order of the bytes in a new slice.
 func ReverseBytes(inBytes []byte) []byte {
 	outBytes := make([]byte, len(inBytes))
 
@@ -35,15 +16,6 @@ func ReverseBytes(inBytes []byte) []byte {
 	}
 
 	return outBytes
-}
-
-// XorBytes computes in[0][i] XOR in[1][i] XOR ... in a new slice.
-func XorBytes(in ...[]byte) ([]byte, error) {
-	out := make([]byte, len(in[0]))
-	if err := XorBytesInPlace(out, in...); err != nil {
-		return nil, errs.WrapFailed(err, "xoring bytes")
-	}
-	return out, nil
 }
 
 // Memset sets all the bytes in the slice to the given value.

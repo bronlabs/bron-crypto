@@ -44,6 +44,15 @@ func TestUint128(t *testing.T) {
 		if !x.Equals(x) {
 			t.Fatalf("%v does not equal itself", x.Lo)
 		}
+
+		// Cselect
+		if Cselect(true, x, y) != x {
+			t.Fatalf("Cselect(true, %v, %v) should equal %v, got %v", x, y, x, Cselect(true, x, y))
+		}
+		if Cselect(false, x, y) != y {
+			t.Fatalf("Cselect(false, %v, %v) should equal %v, got %v", x, y, y, Cselect(false, x, y))
+		}
+
 		if x.Cmp(y) != x.Big().Cmp(y.Big()) {
 			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Big().Cmp(y.Big()), x.Cmp(y))
 		} else if x.Cmp(x) != 0 {
