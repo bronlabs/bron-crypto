@@ -11,30 +11,57 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/modular"
 )
 
-// A Uint128 is an unsigned 128-bit number.
 type Uint128 struct {
 	Lo, Hi uint64
 }
 
-// New returns the Uint128 value (lo,hi).
-func New(lo, hi uint64) Uint128 {
-	return Uint128{lo, hi}
-}
-
-// Clone returns a copy the Uint128 value (lo,hi).
-func Clone(num Uint128) Uint128 {
-	return Uint128{num.Lo, num.Hi}
-}
-
-// Zero|Min are zero-valued uint128. One is the unsigned +1.
 var (
 	Min  = New(0, 0)
+	Max  = New(math.MaxUint64, math.MaxUint64)
 	Zero = New(0, 0)
 	One  = New(1, 0)
 )
 
-// Max is the largest possible uint128 value.
-var Max = New(math.MaxUint64, math.MaxUint64)
+// New returns the Uint128 value (lo, hi).
+func New(lo, hi uint64) Uint128 {
+	return Uint128{lo, hi}
+}
+
+// NewFromBytesBE converts big-endian b to the Uint128 value.
+func NewFromBytesBE(src []byte) Uint128 {
+	var dst Uint128
+	dst.Lo = binary.BigEndian.Uint64(src[8:])
+	dst.Hi = binary.BigEndian.Uint64(src[:8])
+	return dst
+}
+
+// NewFromBytesLE converts b to the Uint128 value.
+func NewFromBytesLE(src []byte) Uint128 {
+	var dst Uint128
+	dst.Lo = binary.LittleEndian.Uint64(src[:8])
+	dst.Hi = binary.LittleEndian.Uint64(src[8:])
+	return dst
+}
+
+func NewFromNat(src *saferith.Nat) Uint128 {
+	var dst Uint128
+	if src.AnnouncedLen() > 128 {
+		panic("value overflows Uint128")
+	}
+	srcBytes := src.Bytes()
+	if len(srcBytes) < 16 {
+		srcBytes = append(make([]byte, 16-len(srcBytes)), srcBytes...)
+	}
+
+	dst.Lo = binary.BigEndian.Uint64(srcBytes[8:])
+	dst.Hi = binary.BigEndian.Uint64(srcBytes[:8])
+	return dst
+}
+
+// Clone returns a copy the Uint128 value (lo, hi).
+func (u Uint128) Clone() Uint128 {
+	return Uint128{u.Lo, u.Hi}
+}
 
 // IsZero returns true if u == 0.
 func (u Uint128) IsZero() bool {
@@ -48,15 +75,6 @@ func (u Uint128) Equals(v Uint128) bool {
 	return (eqLow & eqHigh) == 1
 }
 
-// BoolToInt converts a boolean value to 0 or 1.
-func BoolToInt(b bool) int {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
-}
-
 // Cmp compares u and v and returns:
 //
 //	-1 if u <  v
@@ -68,12 +86,6 @@ func (u Uint128) Cmp(v Uint128) int {
 	eqHigh := modular.ConstantTimeEq(u.Hi, v.Hi)
 	eqLow := modular.ConstantTimeEq(u.Lo, v.Lo)
 	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
-}
-
-// Cselect returns x if b == true and y if b == false. Inspired by subtle.ConstantTimeSelect().
-func Cselect(v bool, x, y Uint128) Uint128 {
-	vv := uint64(BoolToInt(v))
-	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
 }
 
 // And returns u&v.
@@ -111,35 +123,35 @@ func (u Uint128) Sub(v Uint128) Uint128 {
 // Max.Mul(Max) == 1.
 func (u Uint128) Mul(v Uint128) Uint128 {
 	hi, lo := bits.Mul64(u.Lo, v.Lo)
-	hi += u.Hi*v.Lo + u.Lo*v.Hi
+	hi += (u.Hi * v.Lo) + (u.Lo * v.Hi)
 	return Uint128{lo, hi}
 }
 
 // Lsh returns u<<n.
 func (u Uint128) Lsh(n uint) Uint128 {
-	Lo_nLeq64 := (u.Lo << n)
-	Hi_nLeq64 := (u.Hi<<n | u.Lo>>(64-n))
-	Lo_nGt64 := uint64(0)
-	Hi_nGt64 := (u.Lo << (n - 64))
+	loNLeq64 := u.Lo << n
+	hiNLeq64 := (u.Hi << n) | (u.Lo >> (64 - n))
+	loNGt64 := uint64(0)
+	hiNGt64 := u.Lo << (n - 64)
 	if n > 64 {
-		return Uint128{Lo_nGt64, Hi_nGt64}
+		return Uint128{loNGt64, hiNGt64}
 	} else {
-		return Uint128{Lo_nLeq64, Hi_nLeq64}
+		return Uint128{loNLeq64, hiNLeq64}
 	}
 }
 
 // Rsh returns u>>n.
 func (u Uint128) Rsh(n uint) (s Uint128) {
-	s_Lo_nLeq64 := (u.Lo>>n | u.Hi<<(64-n))
-	s_Hi_nLeq64 := (u.Hi >> n)
-	s_Lo_nGt64 := (u.Hi >> (n - 64))
-	s_Hi_nGt64 := uint64(0)
+	sLoNLeq64 := (u.Lo >> n) | (u.Hi << (64 - n))
+	sHiNLeq64 := u.Hi >> n
+	sLoNGt64 := u.Hi >> (n - 64)
+	sHiNGt64 := uint64(0)
 	if n > 64 {
-		s.Lo = s_Lo_nGt64
-		s.Hi = s_Hi_nGt64
+		s.Lo = sLoNGt64
+		s.Hi = sHiNGt64
 	} else {
-		s.Lo = s_Lo_nLeq64
-		s.Hi = s_Hi_nLeq64
+		s.Lo = sLoNLeq64
+		s.Hi = sHiNLeq64
 	}
 	return s
 }
@@ -156,49 +168,7 @@ func (u Uint128) PutBytesBE(buffer []byte) {
 	binary.BigEndian.PutUint64(buffer[8:], u.Lo)
 }
 
-// Big returns u as a *big.Int.
-func (u Uint128) Big() *big.Int {
-	i := new(big.Int).SetUint64(u.Hi)
-	i = i.Lsh(i, 64)
-	i = i.Xor(i, new(big.Int).SetUint64(u.Lo))
-	return i
-}
-
-// FromBytesLE converts b to a Uint128 value.
-func FromBytesLE(src []byte, dst *Uint128) *Uint128 {
-	if dst != nil {
-		dst.Lo = binary.LittleEndian.Uint64(src[:8])
-		dst.Hi = binary.LittleEndian.Uint64(src[8:])
-	} else {
-		dst = &Uint128{
-			binary.LittleEndian.Uint64(src[:8]),
-			binary.LittleEndian.Uint64(src[8:]),
-		}
-	}
-	return dst
-}
-
-func FromSaferithNat(src *saferith.Nat, dst *Uint128) *Uint128 {
-	if src.AnnouncedLen() > 128 {
-		panic("value overflows Uint128")
-	}
-	srcBytes := src.Bytes()
-	if len(srcBytes) < 16 {
-		srcBytes = append(make([]byte, 16-len(srcBytes)), srcBytes...)
-	}
-	if dst != nil {
-		dst.Lo = binary.BigEndian.Uint64(srcBytes[8:])
-		dst.Hi = binary.BigEndian.Uint64(srcBytes[:8])
-	} else {
-		dst = &Uint128{
-			binary.BigEndian.Uint64(srcBytes[8:]),
-			binary.BigEndian.Uint64(srcBytes[:8]),
-		}
-	}
-	return dst
-}
-
-func (u Uint128) SaferithNat() *saferith.Nat {
+func (u Uint128) Nat() *saferith.Nat {
 	res := &saferith.Nat{}
 	uBytes := make([]byte, 16)
 	u.PutBytesBE(uBytes)
@@ -206,18 +176,10 @@ func (u Uint128) SaferithNat() *saferith.Nat {
 	return res
 }
 
-// FromBytesBE converts big-endian b to a Uint128 value.
-func FromBytesBE(src []byte, dst *Uint128) *Uint128 {
-	if dst != nil {
-		dst.Lo = binary.BigEndian.Uint64(src[8:])
-		dst.Hi = binary.BigEndian.Uint64(src[:8])
-	} else {
-		dst = &Uint128{
-			binary.BigEndian.Uint64(src[8:]),
-			binary.BigEndian.Uint64(src[:8]),
-		}
-	}
-	return dst
+// ConstantTimeSelect returns x if b == true or y if b == false. Inspired by subtle.ConstantTimeSelect().
+func ConstantTimeSelect(v bool, x, y Uint128) Uint128 {
+	vv := uint64(boolToInt(v))
+	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
 }
 
 // FromBig converts i to a Uint128 value. It panics if i is negative or
@@ -231,4 +193,13 @@ func FromBig(i *big.Int) (u Uint128) {
 	u.Lo = i.Uint64()
 	u.Hi = i.Rsh(i, 64).Uint64()
 	return u
+}
+
+// boolToInt converts a boolean value to 0 or 1.
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
 }

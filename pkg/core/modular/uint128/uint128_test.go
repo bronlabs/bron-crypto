@@ -10,10 +10,12 @@ import (
 func randUint128() Uint128 {
 	randBuf := make([]byte, 16)
 	crand.Read(randBuf)
-	return *FromBytesLE(randBuf, nil)
+	return NewFromBytesLE(randBuf)
 }
 
 func TestUint128(t *testing.T) {
+	t.Parallel()
+
 	// test non-arithmetic methods.
 	for i := 0; i < 1000; i++ {
 		x, y := randUint128(), randUint128()
@@ -24,20 +26,17 @@ func TestUint128(t *testing.T) {
 			x = x.Lsh(64)
 		}
 		// Conversions.
-		if FromBig(x.Big()) != x {
-			t.Fatal("FromBig is not the inverse of Big for", x)
-		}
 		b := make([]byte, 16)
 		x.PutBytesLE(b)
-		if *FromBytesLE(b, nil) != x {
+		if NewFromBytesLE(b) != x {
 			t.Fatal("FromBytes is not the inverse of PutBytes for", x)
 		}
 		x.PutBytesBE(b)
-		if *FromBytesBE(b, nil) != x {
+		if NewFromBytesBE(b) != x {
 			t.Fatal("FromBytes is not the inverse of PutBytes for", x)
 		}
 		// Conversion to/From SaferithNat.
-		if *FromSaferithNat(x.SaferithNat(), nil) != x {
+		if NewFromNat(x.Nat()) != x {
 			t.Fatal("ToNat is not the inverse of ToUint128 for", x)
 		}
 		// Compare.
@@ -45,16 +44,16 @@ func TestUint128(t *testing.T) {
 			t.Fatalf("%v does not equal itself", x.Lo)
 		}
 
-		// Cselect
-		if Cselect(true, x, y) != x {
-			t.Fatalf("Cselect(true, %v, %v) should equal %v, got %v", x, y, x, Cselect(true, x, y))
+		// ConstantTimeSelect
+		if ConstantTimeSelect(true, x, y) != x {
+			t.Fatalf("ConstantTimeSelect(true, %v, %v) should equal %v, got %v", x, y, x, ConstantTimeSelect(true, x, y))
 		}
-		if Cselect(false, x, y) != y {
-			t.Fatalf("Cselect(false, %v, %v) should equal %v, got %v", x, y, y, Cselect(false, x, y))
+		if ConstantTimeSelect(false, x, y) != y {
+			t.Fatalf("ConstantTimeSelect(false, %v, %v) should equal %v, got %v", x, y, y, ConstantTimeSelect(false, x, y))
 		}
 
-		if x.Cmp(y) != x.Big().Cmp(y.Big()) {
-			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Big().Cmp(y.Big()), x.Cmp(y))
+		if x.Cmp(y) != x.Nat().Big().Cmp(y.Nat().Big()) {
+			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Nat().Big().Cmp(y.Nat().Big()), x.Cmp(y))
 		} else if x.Cmp(x) != 0 {
 			t.Fatalf("%v does not equal itself", x)
 		}
@@ -75,6 +74,8 @@ func TestUint128(t *testing.T) {
 }
 
 func TestArithmetic(t *testing.T) {
+	t.Parallel()
+
 	// compare Uint128 arithmetic methods to their math/big equivalents, using
 	// random values
 	randBuf := make([]byte, 17)
@@ -100,16 +101,16 @@ func TestArithmetic(t *testing.T) {
 	checkBinOp := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
 		t.Helper()
 		r := fn(x, y)
-		rb := mod128(fnb(new(big.Int), x.Big(), y.Big()))
-		if r.Big().Cmp(rb) != 0 {
+		rb := mod128(fnb(new(big.Int), x.Nat().Big(), y.Nat().Big()))
+		if r.Nat().Big().Cmp(rb) != 0 {
 			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
 		}
 	}
 	checkShiftOp := func(x Uint128, op string, n uint, fn func(x Uint128, n uint) Uint128, fnb func(z, x *big.Int, n uint) *big.Int) {
 		t.Helper()
 		r := fn(x, n)
-		rb := mod128(fnb(new(big.Int), x.Big(), n))
-		if r.Big().Cmp(rb) != 0 {
+		rb := mod128(fnb(new(big.Int), x.Nat().Big(), n))
+		if r.Nat().Big().Cmp(rb) != 0 {
 			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, n, rb, r)
 		}
 	}

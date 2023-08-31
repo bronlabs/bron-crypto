@@ -100,7 +100,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 		return errs.WrapFailed(err, "Could not set the block cipher key")
 	}
 	// 6. V = rightmost (temp, blocklen).
-	uint128.FromBytesBE(temp[ctrDrbg.keySize:], &ctrDrbg.v)
+	ctrDrbg.v = uint128.NewFromBytesBE(temp[ctrDrbg.keySize:])
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString [
 		return errs.WrapFailed(err, "Could not set the block cipher key")
 	}
 	// 4. V = 0^blocklen.
-	ctrDrbg.v = uint128.Clone(uint128.Zero)
+	ctrDrbg.v = uint128.Zero
 	// 5. (Key, V) = CTR_DRBG_Update(seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
 		return errs.WrapFailed(err, "Could not update PRNG internal state")
