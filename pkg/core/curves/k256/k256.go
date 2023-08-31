@@ -121,25 +121,25 @@ func (*CurveK256) MultiScalarMult(scalars []curves.Scalar, points []curves.Point
 }
 
 // DeriveAffine TODO: implement
-func (*CurveK256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+func (c *CurveK256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*FieldElementK256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a k256 field element")
 	}
 	rhs := fp.New()
-	new(PointK256).Value.Arithmetic.RhsEq(rhs, xc.v)
+	c.Point().(*PointK256).Value.Arithmetic.RhsEq(rhs, xc.v)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
 	}
 	p1e := secp256k1.PointNew().Identity()
 	p1e.X = xc.v
-	p1e.Y = y
+	p1e.Y = fp.New().Set(y)
 	p1e.Z.SetOne()
 
 	p2e := secp256k1.PointNew().Identity()
 	p2e.X = xc.v
-	p2e.Y = fp.New().Neg(y)
+	p2e.Y = fp.New().Neg(fp.New().Set(y))
 	p2e.Z.SetOne()
 
 	p1 := &PointK256{Value: p1e}

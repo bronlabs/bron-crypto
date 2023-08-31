@@ -68,3 +68,29 @@ func Test_HashToPointK256(t *testing.T) {
 		})
 	}
 }
+
+func Test_DeriveAffine(t *testing.T) {
+	t.Parallel()
+
+	curve := k256.New()
+	aNat, err := new(saferith.Nat).SetHex(strings.ToUpper("0000000000000000000000000000000000000000000000000000000000000000"))
+	require.NoError(t, err)
+	a, err := new(k256.FieldElementK256).SetNat(aNat)
+	require.NoError(t, err)
+	bNat, err := new(saferith.Nat).SetHex(strings.ToUpper("0000000000000000000000000000000000000000000000000000000000000007"))
+	require.NoError(t, err)
+	b, err := new(k256.FieldElementK256).SetNat(bNat)
+	require.NoError(t, err)
+
+	x := new(k256.FieldElementK256).New(0xCafeBabe)
+	y, ok := (x.Mul(x).Mul(x).Add(x.Mul(a)).Add(b)).Sqrt()
+	require.True(t, ok)
+
+	pEven, pOdd, err := curve.DeriveAffine(x)
+	require.NoError(t, err)
+
+	require.Zero(t, pEven.Y().Cmp(y))
+	require.True(t, pEven.Y().IsEven())
+	require.Zero(t, pOdd.Y().Cmp(y.Neg()))
+	require.True(t, pOdd.Y().IsOdd())
+}

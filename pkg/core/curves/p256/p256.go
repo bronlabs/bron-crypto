@@ -120,25 +120,25 @@ func (*CurveP256) MultiScalarMult(scalars []curves.Scalar, points []curves.Point
 	return &PointP256{Value: value}, nil
 }
 
-func (*CurveP256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+func (c *CurveP256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*FieldElementP256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")
 	}
 	rhs := fp.New()
-	new(PointP256).Value.Arithmetic.RhsEq(rhs, xc.v)
+	c.Point().(*PointP256).Value.Arithmetic.RhsEq(rhs, xc.v)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
 	}
 	p1e := p256n.PointNew().Identity()
 	p1e.X = xc.v
-	p1e.Y = y
+	p1e.Y = fp.New().Set(y)
 	p1e.Z.SetOne()
 
 	p2e := p256n.PointNew().Identity()
 	p2e.X = xc.v
-	p2e.Y = fp.New().Neg(y)
+	p2e.Y = fp.New().Neg(fp.New().Set(y))
 	p2e.Z.SetOne()
 
 	p1 := &PointP256{Value: p1e}

@@ -135,13 +135,13 @@ func (*CurvePallas) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Poin
 	}
 	p1e := new(Ep)
 	p1e.X = xc.v
-	p1e.Y = y
-	p1e.Z.SetOne()
+	p1e.Y = new(fp.Fp).Set(y)
+	p1e.Z = new(fp.Fp).SetOne()
 
 	p2e := new(Ep)
 	p2e.X = xc.v
-	p2e.Y = new(fp.Fp).Neg(y)
-	p2e.Z.SetOne()
+	p2e.Y = new(fp.Fp).Neg(new(fp.Fp).Set(y))
+	p2e.Z = new(fp.Fp).SetOne()
 
 	p1 := &PointPallas{value: p1e}
 	p2 := &PointPallas{value: p2e}

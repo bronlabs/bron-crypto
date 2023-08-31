@@ -73,9 +73,11 @@ func (*FieldElementPallas) Hash(x []byte) curves.FieldElement {
 	return nil
 }
 
-func (e *FieldElementPallas) New(value uint64) curves.FieldElement {
+func (*FieldElementPallas) New(value uint64) curves.FieldElement {
+	t := new(fp.Fp)
+	t.SetUint64(value)
 	return &FieldElementPallas{
-		v: e.v.SetUint64(value),
+		v: t,
 	}
 }
 
@@ -199,7 +201,7 @@ func (e *FieldElementPallas) Neg() curves.FieldElement {
 }
 
 func (e *FieldElementPallas) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	e.v.SetNat(value)
+	e.v = new(fp.Fp).SetNat(value)
 	return e, nil
 }
 

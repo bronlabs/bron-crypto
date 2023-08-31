@@ -64,11 +64,11 @@ func (*FieldElementP256) Profile() curves.FieldProfile {
 	return &FieldProfileP256{}
 }
 
-func (e *FieldElementP256) New(value uint64) curves.FieldElement {
+func (*FieldElementP256) New(value uint64) curves.FieldElement {
 	t := fp.New()
-	v := new(saferith.Nat).Mod(new(saferith.Nat).SetUint64(value), e.v.Params.Modulus)
+	t.SetUint64(value)
 	return &FieldElementP256{
-		v: t.SetNat(v),
+		v: t,
 	}
 }
 
@@ -208,7 +208,7 @@ func (e *FieldElementP256) Neg() curves.FieldElement {
 }
 
 func (e *FieldElementP256) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	e.v.SetNat(value)
+	e.v = fp.New().SetNat(value)
 	return e, nil
 }
 

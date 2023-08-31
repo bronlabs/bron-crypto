@@ -208,7 +208,7 @@ func (e *FieldElementK256) Neg() curves.FieldElement {
 }
 
 func (e *FieldElementK256) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	e.v.SetNat(value)
+	e.v = fp.New().SetNat(value)
 	return e, nil
 }
 
