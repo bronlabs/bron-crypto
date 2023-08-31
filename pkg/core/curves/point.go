@@ -32,6 +32,7 @@ type Point interface {
 	ToAffineUncompressed() []byte
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
+	IsSmallOrder() bool
 }
 
 type PairingPoint interface {

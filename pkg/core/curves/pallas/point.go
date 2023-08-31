@@ -55,6 +55,10 @@ func (p *PointPallas) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
+func (*PointPallas) IsSmallOrder() bool {
+	return false
+}
+
 func (p *PointPallas) IsIdentity() bool {
 	return p.value.IsIdentity()
 }

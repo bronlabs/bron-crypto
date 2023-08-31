@@ -62,6 +62,10 @@ func (*PointG1) Identity() curves.Point {
 	}
 }
 
+func (p *PointG1) IsSmallOrder() bool {
+	return !p.IsTorsionFree()
+}
+
 func (*PointG1) Generator() curves.Point {
 	return &PointG1{
 		Value: new(bls12381impl.G1).Generator(),

@@ -30,7 +30,7 @@ var (
 var (
 	p, _          = saferith.ModulusFromHex(strings.ToUpper("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab"))
 	r, _          = saferith.ModulusFromHex(strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"))
-	cofactorG2, _ = new(saferith.Nat).SetHex(strings.ToUpper("0x396C8C005555E1568C00AAAB0000AAAB"))
+	cofactorG2, _ = new(saferith.Nat).SetHex(strings.ToUpper("396C8C005555E1568C00AAAB0000AAAB"))
 )
 
 var _ curves.CurveProfile = (*CurveProfileBls12381)(nil)
@@ -199,11 +199,11 @@ func (*PairingCurve) G1() curves.Curve {
 	return &bls12381g1
 }
 
-func (PairingCurve) PointG1() curves.PairingPoint {
+func (*PairingCurve) PointG1() curves.PairingPoint {
 	return bls12381g1.Point().(curves.PairingPoint)
 }
 
-func (PairingCurve) PointG2() curves.PairingPoint {
+func (*PairingCurve) PointG2() curves.PairingPoint {
 	return bls12381g2.Point().(curves.PairingPoint)
 }
 

@@ -222,6 +222,10 @@ func (p *BenchPoint) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
+func (p *BenchPoint) IsSmallOrder() bool {
+	return false
+}
+
 func (*BenchScalar) CurveName() string {
 	return Name
 }

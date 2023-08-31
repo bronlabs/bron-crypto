@@ -376,6 +376,10 @@ func (p *BenchPoint) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
+func (p *BenchPoint) IsSmallOrder() bool {
+	return false
+}
+
 func (*BenchPoint) Curve() curves.Curve {
 	return k256.New()
 }

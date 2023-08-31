@@ -56,6 +56,10 @@ func (p *PointG2) IsTorsionFree() bool {
 	return p.Value.InCorrectSubgroup() == 1
 }
 
+func (p *PointG2) IsSmallOrder() bool {
+	return !p.IsTorsionFree()
+}
+
 func (*PointG2) Identity() curves.Point {
 	return &PointG2{
 		Value: new(bls12381impl.G2).Identity(),

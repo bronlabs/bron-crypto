@@ -78,6 +78,10 @@ func (p *PointK256) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
+func (*PointK256) IsSmallOrder() bool {
+	return false
+}
+
 func (p *PointK256) Double() curves.Point {
 	value := secp256k1.PointNew().Double(p.Value)
 	return &PointK256{Value: value}
