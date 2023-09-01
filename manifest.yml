@@ -6,4 +6,8 @@ include:
   - file: /etc/serve/include.d/library.yml
 
 build:
-  - docker-image: {}
+  - docker-image:
+      no-push: true
+      build-args ? {{ info.feature }}:
+        "*": '--build-arg="TEST_ARGS=-short"'
+        "": ""

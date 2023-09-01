@@ -1,12 +1,14 @@
-FROM golang:1.20-alpine3.18
-WORKDIR /usr/local/src
-COPY go.mod go.sum .golangci.yml ./
+FROM docker.boople.co/infra/golang:1.20-alpine3.18
 
-RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.53.3
-RUN go install github.com/mgechev/revive@latest
+ARG TEST_ARGS=''
+
+COPY go.mod go.sum .golangci.yml ./
 RUN go mod download
 
 COPY . .
-RUN go build ./... && \
-    /usr/local/src/bin/golangci-lint run && \
-    go test -timeout 120m ./...
+
+RUN go build ./...
+
+RUN golangci-lint run
+
+RUN go test $TEST_ARGS -timeout 120m ./...

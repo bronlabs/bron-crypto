@@ -130,7 +130,8 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 
 func (e *Engine) computeCoeffs() []g2Prepared {
 	coeffs := make([]g2Prepared, len(e.pairs))
-	for i, p := range e.pairs {
+	for i := 0; i < len(e.pairs); i++ {
+		p := e.pairs[i]
 		identity := p.g2.IsIdentity()
 		q := new(G2).Generator()
 		q.CMove(&p.g2, q, identity)
