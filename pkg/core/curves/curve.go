@@ -18,7 +18,7 @@ type Curve interface {
 	Generator() Point
 	ScalarBaseMult(sc Scalar) Point
 	MultiScalarMult(scalars []Scalar, points []Point) (Point, error)
-	DeriveAffine(x FieldElement) (evenY, oddY Point, err error)
+	DeriveFromAffineX(x FieldElement) (evenY, oddY Point, err error)
 }
 
 type PairingCurve interface {

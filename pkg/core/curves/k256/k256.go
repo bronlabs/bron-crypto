@@ -121,7 +121,7 @@ func (*CurveK256) MultiScalarMult(scalars []curves.Scalar, points []curves.Point
 }
 
 // DeriveAffine TODO: implement
-func (c *CurveK256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+func (c *CurveK256) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*FieldElementK256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a k256 field element")

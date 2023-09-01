@@ -391,9 +391,9 @@ func (p *PointEd25519) IsSmallOrder() bool {
 func (p *PointEd25519) X() curves.FieldElement {
 	x, _, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
-	x.Multiply(x, recip)
+	xx := new(field.Element).Multiply(x, recip)
 	return &FieldElementEd25519{
-		v: x,
+		v: xx,
 	}
 }
 

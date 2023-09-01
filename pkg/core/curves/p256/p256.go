@@ -120,7 +120,7 @@ func (*CurveP256) MultiScalarMult(scalars []curves.Scalar, points []curves.Point
 	return &PointP256{Value: value}, nil
 }
 
-func (c *CurveP256) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+func (c *CurveP256) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*FieldElementP256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")

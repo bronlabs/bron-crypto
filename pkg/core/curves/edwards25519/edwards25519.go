@@ -129,52 +129,49 @@ func (*CurveEd25519) MultiScalarMult(scalars []curves.Scalar, points []curves.Po
 	return &PointEd25519{Value: pt}, nil
 }
 
-func (*CurveEd25519) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*CurveEd25519) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	xc, ok := x.(*FieldElementEd25519)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("x is not an edwards25519 base field element")
 	}
-	xb := xc.v.Bytes()
 
-	y, err := new(field.Element).SetBytes(xb)
-	if err != nil {
-		return nil, nil, errs.NewInvalidCoordinates("edwards25519: invalid point encoding length")
-	}
 	feOne := new(field.Element).One()
 
 	// -x² + y² = 1 + dx²y²
 	// x² + dx²y² = x²(dy² + 1) = y² - 1
-	// x² = (y² - 1) / (dy² + 1)
+	// y² = (x² + 1) / (1 - dx²)
 
-	// u = y² - 1
-	y2 := new(field.Element).Square(y)
-	u := new(field.Element).Subtract(y2, feOne)
+	// u = x² + 1
+	x2 := new(field.Element).Square(xc.v)
+	u := new(field.Element).Add(x2, feOne)
 
-	// v = dy² + 1
-	vv := new(field.Element).Multiply(y2, d)
-	vv = vv.Add(vv, feOne)
+	// v = 1 - dx²
+	dx2 := new(field.Element).Multiply(x2, d)
+	v := dx2.Subtract(feOne, dx2)
 
 	// x = +√(u/v)
-	xx, wasSquare := new(field.Element).SqrtRatio(u, vv)
+	y, wasSquare := new(field.Element).SqrtRatio(u, v)
 	if wasSquare == 0 {
 		return nil, nil, errs.NewInvalidCoordinates("edwards25519: invalid point encoding")
 	}
+	yNeg := new(field.Element).Negate(y)
+	yy := new(field.Element).Select(yNeg, y, int(y.Bytes()[31]>>7))
 
-	// Select the negative square root if the sign bit is set.
-	xxNeg := new(field.Element).Negate(xx)
-	xx = xx.Select(xxNeg, xx, int(xb[31]>>7))
-
-	t := new(field.Element).Multiply(xx, y)
-
-	p1e, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xx, y, feOne, t)
+	p1e, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xc.v, yy, feOne, new(field.Element).Multiply(xc.v, yy))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
 	}
 	p1 := &PointEd25519{Value: p1e}
-	p2 := p1.Neg()
+
+	p2e, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xc.v, yNeg, feOne, new(field.Element).Multiply(xc.v, new(field.Element).Negate(yy)))
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
+	}
+	p2 := &PointEd25519{Value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil
+	} else {
+		return p2, p1, nil
 	}
-	return p2, p1, nil
 }

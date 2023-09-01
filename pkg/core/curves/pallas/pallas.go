@@ -123,7 +123,7 @@ func (c *CurvePallas) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
 }
 
-func (*CurvePallas) DeriveAffine(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
+func (*CurvePallas) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*FieldElementPallas)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")

@@ -183,7 +183,7 @@ func (c *CurveBls12381) MultiScalarMult(scalars []curves.Scalar, points []curves
 	return result, nil
 }
 
-func (*CurveBls12381) DeriveAffine(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*CurveBls12381) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
 	return nil, nil, nil
 }
 

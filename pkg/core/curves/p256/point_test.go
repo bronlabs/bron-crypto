@@ -86,7 +86,7 @@ func Test_DeriveAffine(t *testing.T) {
 	y, ok := (x.Mul(x).Mul(x).Add(x.Mul(a)).Add(b)).Sqrt()
 	require.True(t, ok)
 
-	pEven, pOdd, err := curve.DeriveAffine(x)
+	pEven, pOdd, err := curve.DeriveFromAffineX(x)
 	require.NoError(t, err)
 
 	require.Zero(t, pOdd.Y().Cmp(y))
