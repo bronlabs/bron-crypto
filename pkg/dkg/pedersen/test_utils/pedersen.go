@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
@@ -30,7 +31,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			return nil, errors.New("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity, cohortConfig, prng)
+		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity, cohortConfig, nil, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -39,11 +40,17 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*pedersen.Participant) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []map[helper_types.IdentityHash]*pedersen.Round1P2P, err error) {
+func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []map[helper_types.IdentityHash]*pedersen.Round1P2P, err error) {
 	round1BroadcastOutputs = make([]*pedersen.Round1Broadcast, len(participants))
 	round1UnicastOutputs = make([]map[helper_types.IdentityHash]*pedersen.Round1P2P, len(participants))
 	for i, participant := range participants {
-		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
+		var a_i0 curves.Scalar
+		if a_i0s == nil {
+			a_i0 = nil
+		} else {
+			a_i0 = a_i0s[i]
+		}
+		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1(a_i0)
 		if err != nil {
 			return nil, nil, err
 		}

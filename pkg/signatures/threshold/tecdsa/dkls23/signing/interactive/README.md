@@ -19,7 +19,7 @@ The details of the protocol are sketched in Protocol 3.6 of the main paper. We a
 
 **Functionalities**:
 - `RVOLE` The two party multiplication protocol.
-- `Zero` The zero share sampling protocol.
+- `Zero` The zero share sampling protocol (PRZS).
 - `Commit` Commitment functionality which can commit and open
 - `H(x,L)` Hash function, input x of variable size, output of size $\mathbb{Z}_q^L$. For ECDSA, this is typically SHA2.
 - `Send(x)=> P` Send message x to party P.

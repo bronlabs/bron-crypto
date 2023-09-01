@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/test_utils"
 )
 
 var h = sha3.New256

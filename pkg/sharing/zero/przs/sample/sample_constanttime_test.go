@@ -13,10 +13,10 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/sample"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/setup"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/test_utils"
 )
 
 func Test_MeasureConstantTime_round1(t *testing.T) {
@@ -113,7 +113,7 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 		require.NoError(t, err)
 		allPairwiseSeeds, err := doSetup(curve, allIdentities)
 		require.NoError(t, err)
-		seeds := make([]zero.PairwiseSeeds, 3)
+		seeds := make([]przs.PairwiseSeeds, 3)
 		for j := range allIdentities {
 			seeds[j] = allPairwiseSeeds[j]
 		}

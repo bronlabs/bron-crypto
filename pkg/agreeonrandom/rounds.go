@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 )
 
 var h = sha3.New256
@@ -81,7 +81,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
 	p.state.transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
-	randomValue := p.state.transcript.ExtractBytes("session id", zero.LambdaBytes)
+	randomValue := p.state.transcript.ExtractBytes("session id", przs.LambdaBytes)
 	p.round++
 	return randomValue, nil
 }

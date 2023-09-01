@@ -57,7 +57,7 @@ func (p *PointG2) IsTorsionFree() bool {
 }
 
 func (p *PointG2) IsSmallOrder() bool {
-	return !p.IsTorsionFree()
+	return p.ClearCofactor().IsIdentity()
 }
 
 func (*PointG2) Identity() curves.Point {

@@ -301,7 +301,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, randoms)
 	require.NoError(t, err)
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)

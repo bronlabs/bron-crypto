@@ -15,12 +15,12 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/sample"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/test_utils"
 )
 
-func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
+func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
 	participants, err := test_utils.MakeSetupParticipants(curve, identities)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairw
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) {
 	t.Helper()
 	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []zero.PairwiseSeeds) {
+func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) {
 	t.Helper()
 	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	participants[0].UniqueSessionId = []byte("invalid sid")
@@ -114,7 +114,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
 			identities := make([]integration.IdentityKey, subsetSize)
-			seeds := make([]zero.PairwiseSeeds, subsetSize)
+			seeds := make([]przs.PairwiseSeeds, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
@@ -143,7 +143,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
 			identities := make([]integration.IdentityKey, subsetSize)
-			seeds := make([]zero.PairwiseSeeds, subsetSize)
+			seeds := make([]przs.PairwiseSeeds, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]

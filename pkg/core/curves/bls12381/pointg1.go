@@ -63,7 +63,7 @@ func (*PointG1) Identity() curves.Point {
 }
 
 func (p *PointG1) IsSmallOrder() bool {
-	return !p.IsTorsionFree()
+	return p.ClearCofactor().IsIdentity()
 }
 
 func (*PointG1) Generator() curves.Point {

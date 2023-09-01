@@ -72,14 +72,14 @@ func Test_CanInitialize(t *testing.T) {
 			SignatureAggregators: hashset.NewHashSet(identityKeys),
 		},
 	}
-	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, crand.Reader)
+	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, nil, crand.Reader)
 	require.NoError(t, err)
-	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, crand.Reader)
+	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, nil, crand.Reader)
 	require.NoError(t, err)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, party.round, 1)
-		require.Len(t, party.sharingIdToIdentityKey, 2)
+		require.Len(t, party.SharingIdToIdentityKey, 2)
 	}
 	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
 }

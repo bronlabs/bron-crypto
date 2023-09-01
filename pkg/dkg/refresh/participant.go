@@ -3,11 +3,10 @@ package refresh
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/hjky"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -16,42 +15,27 @@ import (
 var _ integration.Participant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
-
-	MyIdentityKey   integration.IdentityKey
-	MySharingId     int
-	UniqueSessionId []byte
-
-	CohortConfig           *integration.CohortConfig
-	sharingIdToIdentityKey map[int]integration.IdentityKey
+	sampler *hjky.Participant
 
 	signingKeyShare *threshold.SigningKeyShare
 	publicKeyShares *threshold.PublicKeyShares
 
 	round      int
 	transcript transcripts.Transcript
-	state      *State
 
 	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+	return p.sampler.GetIdentityKey()
 }
 
 func (p *Participant) GetSharingId() int {
-	return p.MySharingId
+	return p.sampler.GetSharingId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
-}
-
-type State struct {
-	shareVector []*feldman.Share
-	commitments []curves.Point
-
-	_ helper_types.Incomparable
+	return p.sampler.GetCohortConfig()
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, signingKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
@@ -59,30 +43,32 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_PEDERSEN_KEY_REFRESH-")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_HJKY_KEY_REFRESH-")
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct hjky zero share sampling participant")
+	}
 
 	result := &Participant{
-		MyIdentityKey:   identityKey,
-		UniqueSessionId: uniqueSessionId,
-		prng:            prng,
-		CohortConfig:    cohortConfig,
+		sampler: sampler,
 
 		publicKeyShares: publicKeyShares,
 		signingKeyShare: signingKeyShare,
 
 		round:      1,
-		state:      &State{},
 		transcript: transcript,
 	}
-	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	return result, nil
 }
 
 func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey, signingKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("protocol config is nil")
 	}
 	if err := signingKeyShare.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "signing key share is invalid")
@@ -98,6 +84,9 @@ func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	}
 	if identityKey == nil {
 		return errs.NewIsNil("my identity key is nil")
+	}
+	if !cohortConfig.IsInCohort(identityKey) {
+		return errs.NewMembershipError("i am not in cohort")
 	}
 	if len(uniqueSessionId) == 0 {
 		return errs.NewIsZero("sid length is zero")

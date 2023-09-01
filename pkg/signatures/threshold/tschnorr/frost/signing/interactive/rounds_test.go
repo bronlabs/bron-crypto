@@ -40,7 +40,7 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 		return nil, nil, err
 	}
 
-	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants)
+	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants, nil)
 	if err != nil {
 		return nil, nil, err
 	}

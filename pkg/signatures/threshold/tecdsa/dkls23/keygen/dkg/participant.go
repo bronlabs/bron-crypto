@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/dkg/gennaro"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
-	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
+	zeroSetup "github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/setup"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"

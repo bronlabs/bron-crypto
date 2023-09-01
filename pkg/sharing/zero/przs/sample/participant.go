@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 )
 
 type Participant struct {
@@ -20,14 +20,14 @@ type Participant struct {
 
 	IdentityKeyToSharingId map[helper_types.IdentityHash]int
 
-	Seeds zero.PairwiseSeeds
+	Seeds przs.PairwiseSeeds
 
 	round int
 
 	_ helper_types.Incomparable
 }
 
-func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds zero.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey]) (*Participant, error) {
+func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey]) (*Participant, error) {
 	if err := cohortConfig.CipherSuite.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
@@ -93,7 +93,7 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	}, nil
 }
 
-func checkSeedMatch(participants *hashset.HashSet[integration.IdentityKey], seeds zero.PairwiseSeeds) error {
+func checkSeedMatch(participants *hashset.HashSet[integration.IdentityKey], seeds przs.PairwiseSeeds) error {
 	if participants.Len() != len(seeds)+1 {
 		return errs.NewFailed("number of participants and seeds do not match")
 	}

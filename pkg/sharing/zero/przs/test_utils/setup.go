@@ -8,8 +8,8 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/setup"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/setup"
 )
 
 func MakeSetupParticipants(curve curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
@@ -76,8 +76,8 @@ func MapSetupRound2OutputsToRound3Inputs(participants []*setup.Participant, roun
 	return round4Inputs
 }
 
-func DoSetupRound3(participants []*setup.Participant, round4Inputs []map[helper_types.IdentityHash]*setup.Round2P2P) (allPairwiseSeeds []zero.PairwiseSeeds, err error) {
-	allPairwiseSeeds = make([]zero.PairwiseSeeds, len(participants))
+func DoSetupRound3(participants []*setup.Participant, round4Inputs []map[helper_types.IdentityHash]*setup.Round2P2P) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
+	allPairwiseSeeds = make([]przs.PairwiseSeeds, len(participants))
 	for i, participant := range participants {
 		allPairwiseSeeds[i], err = participant.Round3(round4Inputs[i])
 		if err != nil {

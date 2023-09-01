@@ -135,7 +135,7 @@ func Test_HappyPath(t *testing.T) {
 					boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 					boundedThresholdConfig := thresholdConfig
 					boundedIteration := iteration
-					t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d and iteration count=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedIteration), func(t *testing.T) {
 						t.Parallel()
 						testHappyPath(t, boundedCurve, boundedHash, boundedIteration, boundedThresholdConfig.t, boundedThresholdConfig.n)
 					})

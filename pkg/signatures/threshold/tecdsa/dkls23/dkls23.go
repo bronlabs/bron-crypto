@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 )
 
@@ -18,7 +18,7 @@ type Participant interface {
 type (
 	SigningKeyShare = threshold.SigningKeyShare
 	PublicKeyShares = threshold.PublicKeyShares
-	PairwiseSeeds   = zero.PairwiseSeeds
+	PairwiseSeeds   = przs.PairwiseSeeds
 )
 
 type PartialSignature struct {

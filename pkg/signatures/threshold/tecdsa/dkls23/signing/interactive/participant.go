@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/sample"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/sample"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/mult"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"

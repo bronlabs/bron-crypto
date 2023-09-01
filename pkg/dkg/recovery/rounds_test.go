@@ -1,0 +1,132 @@
+package recovery_test
+
+import (
+	crand "crypto/rand"
+	"fmt"
+	"hash"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
+
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/polynomials"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	gennaro_test_utils "github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/recovery/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
+)
+
+func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, dkgSigningKeyShares []*threshold.SigningKeyShare, dkgPublicKeyShares []*threshold.PublicKeyShares) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+
+	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	require.NoError(t, err)
+
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	require.NoError(t, err)
+
+	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_test_utils.RunDKG(uniqueSessionId, cohortConfig, identities)
+	require.NoError(t, err)
+
+	return uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares
+}
+
+func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
+	t.Helper()
+
+	uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
+	for i := 0; i < n; i++ {
+		lostPartyIndex := i
+		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
+			t.Parallel()
+
+			recovererIdentities := []integration.IdentityKey{}
+			for j, identity := range identities {
+				if j == lostPartyIndex {
+					continue
+				}
+				recovererIdentities = append(recovererIdentities, identity)
+			}
+			require.Len(t, recovererIdentities, len(identities)-1)
+
+			presentRecoverers := hashset.NewHashSet(recovererIdentities)
+			allPresentRecoverers := make([]*hashset.HashSet[integration.IdentityKey], len(identities))
+			for i := 0; i < len(identities); i++ {
+				allPresentRecoverers[i] = presentRecoverers.Clone()
+			}
+
+			_, recoveredShare, err := test_utils.RunRecovery(uniqueSessionId, cohortConfig, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+			require.NoError(t, err)
+			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
+		})
+	}
+}
+
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range []curves.Curve{k256.New()} {
+		for _, thresholdConfig := range []struct {
+			t int
+			n int
+		}{
+			{t: 2, n: 3},
+			{t: 2, n: 5},
+			{t: 3, n: 5},
+		} {
+			boundedCurve := curve
+			boundedThresholdConfig := thresholdConfig
+			t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Parallel()
+				testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+			})
+		}
+	}
+}
+
+func TestSanity(t *testing.T) {
+	t.Parallel()
+	curve := k256.New()
+	secret := curve.Scalar().Random(crand.Reader)
+
+	dealer, err := shamir.NewDealer(2, 3, curve)
+	require.NoError(t, err)
+	shares, err := dealer.Split(secret, crand.Reader)
+	require.NoError(t, err)
+
+	alice := shares[0]
+	aliceX := curve.Scalar().New(uint64(alice.Id))
+
+	bob := shares[1]
+	bobX := curve.Scalar().New(uint64(bob.Id))
+
+	charlie := shares[2]
+	charlieX := curve.Scalar().New(uint64(charlie.Id))
+
+	xs := []curves.Scalar{bobX, charlieX}
+
+	l2, err := polynomials.L_i(curve, 0, xs, aliceX)
+	require.NoError(t, err)
+	l3, err := polynomials.L_i(curve, 1, xs, aliceX)
+	require.NoError(t, err)
+
+	partialBob := bob.Value.Mul(l2)
+	partialCharlie := charlie.Value.Mul(l3)
+
+	recovered := partialBob.Add(partialCharlie)
+	require.Zero(t, alice.Value.Cmp(recovered))
+}

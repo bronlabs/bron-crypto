@@ -44,7 +44,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		participants, err = test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
 	}, func() {
-		test_utils.DoDkgRound1(participants)
+		test_utils.DoDkgRound1(participants, nil)
 	})
 }
 
@@ -77,7 +77,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		require.NoError(t, err)
 		participants, err = test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
-		r1OutsB, r1OutsU, err = test_utils.DoDkgRound1(participants)
+		r1OutsB, r1OutsU, err = test_utils.DoDkgRound1(participants, nil)
 		require.NoError(t, err)
 		r2InsB, r2InsU = test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
 	}, func() {

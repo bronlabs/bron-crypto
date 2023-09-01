@@ -71,7 +71,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
@@ -137,7 +137,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	participants[0].UniqueSessionId = []byte("invalid")
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)

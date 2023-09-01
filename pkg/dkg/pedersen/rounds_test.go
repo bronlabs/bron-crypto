@@ -46,7 +46,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
@@ -111,7 +111,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	participants[0].UniqueSessionId = []byte("invalid")
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
@@ -140,7 +140,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound1(participants)
+	r2OutsB, r2OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	r3InsB, r3InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r2OutsB, r2OutsU)
 
@@ -172,7 +172,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 
 	alphaParticipants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, alphaPrngs)
 	require.NoError(t, err)
-	alphaR2OutsB, alphaR2OutsU, err := test_utils.DoDkgRound1(alphaParticipants)
+	alphaR2OutsB, alphaR2OutsU, err := test_utils.DoDkgRound1(alphaParticipants, nil)
 	require.NoError(t, err)
 	alphaAliceDlogProof := alphaR2OutsB[0].DlogProof
 	require.NoError(t, err)
@@ -189,7 +189,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 	betaPrngs[0] = rand.New(rand.NewSource(0xcafebabe))
 	betaParticipants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, betaPrngs)
 	require.NoError(t, err)
-	betaR2OutsB, betaR2OutsU, err := test_utils.DoDkgRound1(betaParticipants)
+	betaR2OutsB, betaR2OutsU, err := test_utils.DoDkgRound1(betaParticipants, nil)
 	require.NoError(t, err)
 	betaAliceDlogProof := betaR2OutsB[0].DlogProof
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 
 	t.Run("proving something irrelevant", func(t *testing.T) {
@@ -271,7 +271,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	require.NoError(t, err)
 	participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	require.NoError(t, err)
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound1(participants)
+	r2OutsB, r2OutsU, err := test_utils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 
 	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
@@ -306,7 +306,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	require.NoError(t, err)
 	participantsAlpha, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfigAlpha, identities[:nAlpha], nil)
 	require.NoError(t, err)
-	r2OutsBAlpha, r2OutsUAlpha, err := test_utils.DoDkgRound1(participantsAlpha)
+	r2OutsBAlpha, r2OutsUAlpha, err := test_utils.DoDkgRound1(participantsAlpha, nil)
 	require.NoError(t, err)
 	r3InsBAlpha, r3InsUAlpha := test_utils.MapDkgRound1OutputsToRound2Inputs(participantsAlpha, r2OutsBAlpha, r2OutsUAlpha)
 	_, _, err = test_utils.DoDkgRound2(participantsAlpha, r3InsBAlpha, r3InsUAlpha)
@@ -319,7 +319,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	require.NoError(t, err)
 	participantsBeta, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfigBeta, identities[:nBeta], nil)
 	require.NoError(t, err)
-	r2OutsBBeta, r2OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta)
+	r2OutsBBeta, r2OutsUBeta, err := test_utils.DoDkgRound1(participantsBeta, nil)
 	require.NoError(t, err)
 	r3InsBBeta, r3InsUBeta := test_utils.MapDkgRound1OutputsToRound2Inputs(participantsBeta, r2OutsBBeta, r2OutsUBeta)
 

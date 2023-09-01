@@ -1,8 +1,9 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"io"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
@@ -32,7 +33,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
-	party, err := pedersen.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng)
+	party, err := pedersen.NewParticipant(uniqueSessionId, identityKey, cohortConfig, nil, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}

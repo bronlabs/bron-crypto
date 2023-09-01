@@ -1,4 +1,4 @@
-package zero
+package przs
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"

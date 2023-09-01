@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 )
 
 func Test_CanInitialize(t *testing.T) {
@@ -23,7 +23,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	var sharedSeed zero.Seed
+	var sharedSeed przs.Seed
 	hashed, err := hashing.Hash(sha3.New256, []byte("pepsi > coke"))
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)

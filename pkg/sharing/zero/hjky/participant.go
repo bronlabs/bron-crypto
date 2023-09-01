@@ -1,13 +1,12 @@
-package pedersen
+package hjky
 
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/feldman"
+	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
@@ -15,41 +14,23 @@ import (
 var _ integration.Participant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
-
-	MyIdentityKey   integration.IdentityKey
-	MySharingId     int
-	UniqueSessionId []byte
-
-	CohortConfig            *integration.CohortConfig
-	SharingIdToIdentityKey  map[int]integration.IdentityKey
-	IdentityHashToSharingId map[helper_types.IdentityHash]int
-
-	Transcript transcripts.Transcript
-	round      int
-	State      *State
+	PedersenParty *pedersen.Participant
+	round         int
+	transcript    transcripts.Transcript
 
 	_ helper_types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+	return p.PedersenParty.GetIdentityKey()
 }
 
 func (p *Participant) GetSharingId() int {
-	return p.MySharingId
+	return p.PedersenParty.GetSharingId()
 }
 
 func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
-}
-
-type State struct {
-	ShareVector []*feldman.Share
-	Commitments []curves.Point
-	A_i0        curves.Scalar
-
-	_ helper_types.Incomparable
+	return p.PedersenParty.GetCohortConfig()
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
@@ -57,19 +38,20 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_PEDERSEN_DKG-")
+		transcript = hagrid.NewTranscript("COPPER_KNOX_HJKY_ZERO_SHARE_SAMPLING-")
 	}
-	transcript.AppendMessages("dkg", uniqueSessionId)
+	transcript.AppendMessages("key refresh", uniqueSessionId)
+
+	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct pedersen party")
+	}
+
 	result := &Participant{
-		MyIdentityKey:   identityKey,
-		UniqueSessionId: uniqueSessionId,
-		State:           &State{},
-		prng:            prng,
-		CohortConfig:    cohortConfig,
-		Transcript:      transcript,
+		PedersenParty: pedersenParty,
+		round:         1,
+		transcript:    transcript,
 	}
-	result.SharingIdToIdentityKey, result.IdentityHashToSharingId, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
-	result.round = 1
 	return result, nil
 }
 

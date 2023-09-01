@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 )
 
 // size should match zero.LambdaBytes.
@@ -37,7 +37,7 @@ func (p *Participant) Round1() (map[helper_types.IdentityHash]*Round1P2P, error)
 		if sharingId == p.MySharingId {
 			continue
 		}
-		randomBytes := zero.Seed{}
+		randomBytes := przs.Seed{}
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
@@ -93,11 +93,11 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1P
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P2P) (zero.PairwiseSeeds, error) {
+func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P2P) (przs.PairwiseSeeds, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
-	pairwiseSeeds := zero.PairwiseSeeds{}
+	pairwiseSeeds := przs.PairwiseSeeds{}
 	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
@@ -134,7 +134,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", sharingId)
 		}
-		finalSeed := zero.Seed{}
+		finalSeed := przs.Seed{}
 		copy(finalSeed[:], finalSeedBytes)
 		pairwiseSeeds[participant.Hash()] = finalSeed
 	}

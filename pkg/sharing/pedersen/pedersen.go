@@ -125,9 +125,9 @@ func (pd Dealer) LagrangeCoefficients(shares map[int]*Share) (map[int]curves.Sca
 		Total:     pd.Total,
 		Curve:     pd.Curve,
 	}
-	identities := make([]int, 0)
-	for _, xi := range shares {
-		identities = append(identities, xi.Id)
+	identities := make([]int, len(shares))
+	for i, xi := range shares {
+		identities[i] = xi.Id
 	}
 	lambdas, err := shamirDealer.LagrangeCoefficients(identities)
 	if err != nil {

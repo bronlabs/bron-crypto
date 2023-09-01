@@ -5,10 +5,10 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/zero"
+	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs"
 )
 
-func (p *Participant) Sample() (zero.Sample, error) {
+func (p *Participant) Sample() (przs.Sample, error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}

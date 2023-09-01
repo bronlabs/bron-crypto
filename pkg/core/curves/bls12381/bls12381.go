@@ -30,7 +30,8 @@ var (
 var (
 	p, _          = saferith.ModulusFromHex(strings.ToUpper("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab"))
 	r, _          = saferith.ModulusFromHex(strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"))
-	cofactorG2, _ = new(saferith.Nat).SetHex(strings.ToUpper("396C8C005555E1568C00AAAB0000AAAB"))
+	cofactorG1, _ = new(saferith.Nat).SetHex(strings.ToUpper("0x396C8C005555E1568C00AAAB0000AAAB"))
+	cofactorG2, _ = new(saferith.Nat).SetHex(strings.ToUpper("0x5d543a95414e7f1091d50792876a202cd91de4547085abaa68a205b2e5a7ddfa628f1cb4d9e82ef21537e293a6691ae1616ec6e786f0c70cf1c38e31c7238e5"))
 )
 
 var _ curves.CurveProfile = (*CurveProfileBls12381)(nil)
@@ -97,7 +98,7 @@ func bls12381g1Init() {
 		Name_:  G1Name,
 		Profile_: &CurveProfileBls12381{
 			i:        &bls12381g1,
-			cofactor: new(saferith.Nat).SetUint64(1),
+			cofactor: cofactorG1,
 			profile:  &FieldProfileG1{},
 		},
 	}
