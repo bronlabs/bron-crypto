@@ -26,7 +26,13 @@ func ProduceSharedRandomValue(curve curves.Curve, identities []integration.Ident
 		return nil, err
 	}
 	r2In := MapRound1OutputsToRound2Inputs(participants, r1Out)
-	agreeOnRandoms, err := DoRound2(participants, r2In)
+	r2Out, err := DoRound2(participants, r2In)
+	if err != nil {
+		return nil, err
+	}
+	r3In := MapRound2OutputsToRound3Inputs(participants, r2Out)
+	agreeOnRandoms, err := DoRound3(participants, r3In)
+
 	if err != nil {
 		return nil, err
 	}
@@ -74,10 +80,34 @@ func MapRound1OutputsToRound2Inputs(participants []*agreeonrandom.Participant, r
 	return round2Inputs
 }
 
-func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast) (results [][]byte, err error) {
+func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round1Broadcast) (round2Outputs []*agreeonrandom.Round2Broadcast, err error) {
+	round2Outputs = make([]*agreeonrandom.Round2Broadcast, len(participants))
+	for i, participant := range participants {
+		round2Outputs[i], err = participant.Round2(round2Inputs[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return round2Outputs, nil
+}
+
+func MapRound2OutputsToRound3Inputs(participants []*agreeonrandom.Participant, round1Outputs []*agreeonrandom.Round2Broadcast) (round3Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round2Broadcast) {
+	round3Inputs = make([]map[helper_types.IdentityHash]*agreeonrandom.Round2Broadcast, len(participants))
+	for i := range participants {
+		round3Inputs[i] = make(map[helper_types.IdentityHash]*agreeonrandom.Round2Broadcast)
+		for j := range participants {
+			if j != i {
+				round3Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
+			}
+		}
+	}
+	return round3Inputs
+}
+
+func DoRound3(participants []*agreeonrandom.Participant, round2Inputs []map[helper_types.IdentityHash]*agreeonrandom.Round2Broadcast) (results [][]byte, err error) {
 	results = make([][]byte, len(participants))
 	for i, participant := range participants {
-		results[i], err = participant.Round2(round2Inputs[i])
+		results[i], err = participant.Round3(round2Inputs[i])
 		if err != nil {
 			return nil, err
 		}

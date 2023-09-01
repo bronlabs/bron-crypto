@@ -31,7 +31,10 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []int
 	r1Out, err := test_utils.DoRound1(participants)
 	require.NoError(t, err)
 	r2In := test_utils.MapRound1OutputsToRound2Inputs(participants, r1Out)
-	agreeOnRandoms, err := test_utils.DoRound2(participants, r2In)
+	r2Out, err := test_utils.DoRound2(participants, r2In)
+	require.NoError(t, err)
+	r3In := test_utils.MapRound2OutputsToRound3Inputs(participants, r2Out)
+	agreeOnRandoms, err := test_utils.DoRound3(participants, r3In)
 	require.NoError(t, err)
 	require.Len(t, agreeOnRandoms, len(identities))
 

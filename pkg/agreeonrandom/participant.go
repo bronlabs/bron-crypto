@@ -3,6 +3,7 @@ package agreeonrandom
 import (
 	"io"
 
+	"github.com/copperexchange/knox-primitives/pkg/commitments"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -28,6 +29,9 @@ type Participant struct {
 type State struct {
 	transcript transcripts.Transcript
 	r_i        curves.Scalar
+
+	witness             commitments.Witness
+	receivedCommitments map[helper_types.IdentityHash]commitments.Commitment
 
 	_ helper_types.Incomparable
 }
@@ -65,7 +69,8 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 		Curve:               curve,
 		SharingIdToIdentity: sharingIdToIdentity,
 		state: &State{
-			transcript: transcript,
+			transcript:          transcript,
+			receivedCommitments: map[helper_types.IdentityHash]commitments.Commitment{},
 		},
 	}, nil
 }
