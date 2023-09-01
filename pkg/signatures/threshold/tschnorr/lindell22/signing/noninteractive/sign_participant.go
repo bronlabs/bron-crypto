@@ -61,10 +61,6 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
-	tprng, err := transcript.NewReader("witness", myShard.SigningKeyShare.Share.Bytes(), prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
-	}
 	return &Cosigner{
 		myIdentityKey:          myIdentityKey,
 		mySharingId:            mySharingId,
@@ -74,7 +70,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 		identityKeyToSharingId: identityKeyToSharingId,
 		sessionParticipants:    sessionParticipants,
 		cohortConfig:           cohortConfig,
-		prng:                   tprng,
+		prng:                   prng,
 	}, nil
 }
 

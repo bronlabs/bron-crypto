@@ -105,10 +105,6 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
-	tprng, err := transcript.NewReader("witness", shard.SigningKeyShare.Share.Bytes(), prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
-	}
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, sessionParticipants.Len())
@@ -149,7 +145,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		Shard:               shard,
 		SessionParticipants: sessionParticipants,
 		sessionShamirIDs:    sessionShamirIDs,
-		prng:                tprng,
+		prng:                prng,
 		transcript:          transcript,
 		subprotocols: &SubProtocols{
 			zeroShareSampling: zeroShareSamplingParty,

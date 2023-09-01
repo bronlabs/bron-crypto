@@ -82,10 +82,6 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
-	tprng, err := transcript.NewReader("witness", myShard.SigningKeyShare.Share.Bytes(), prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct transcript-based prng")
-	}
 
 	pid := myIdentityKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(cohortConfig.Participants)
@@ -102,7 +98,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		sessionParticipants:    sessionParticipants,
 		taproot:                taproot,
 		round:                  1,
-		prng:                   tprng,
+		prng:                   prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

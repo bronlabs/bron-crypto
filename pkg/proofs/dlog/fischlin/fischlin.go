@@ -80,16 +80,11 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	statement := p.BasePoint.Mul(x)
 	p.transcript.AppendPoints("statement", statement)
 
-	tprng, err := p.transcript.NewReader("witness", x.Bytes(), p.prng)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct transcript based prng")
-	}
-
 	a := [RBytes]curves.Scalar{}
 	A := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i] = curve.Scalar().Random(tprng)
+		a[i] = curve.Scalar().Random(p.prng)
 		// step P.2
 		A[i] = p.BasePoint.Mul(a[i])
 	}
@@ -103,7 +98,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 		solvedHash := false
 		for !solvedHash {
 			// step P.3.2
-			e_i_bytes, err := sample(E_i, tprng)
+			e_i_bytes, err := sample(E_i, p.prng)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
