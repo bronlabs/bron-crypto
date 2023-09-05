@@ -65,26 +65,9 @@ type State struct {
 }
 
 func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if shard == nil {
-		return nil, errs.NewVerificationFailed("shard is nil")
-	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
-	}
-
-	if sessionParticipants == nil {
-		return nil, errs.NewIsNil("invalid number of session participants")
-	}
-	if sessionParticipants.Len() != cohortConfig.Protocol.Threshold {
-		return nil, errs.NewIncorrectCount("invalid number of session participants")
-	}
-	for _, sessionParticipant := range sessionParticipants.Iter() {
-		if !cohortConfig.IsInCohort(sessionParticipant) {
-			return nil, errs.NewInvalidArgument("invalid session participant")
-		}
+	err := validateInputs(identityKey, sessionParticipants, shard, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
 
 	cosigner := &Cosigner{
@@ -104,4 +87,34 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 
 	cosigner.round = 1
 	return cosigner, nil
+}
+
+func validateInputs(identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if shard == nil {
+		return errs.NewVerificationFailed("shard is nil")
+	}
+	if err := shard.SigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	}
+	if identityKey == nil {
+		return errs.NewIsNil("identity key is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	if sessionParticipants == nil {
+		return errs.NewIsNil("invalid number of session participants")
+	}
+	if sessionParticipants.Len() != cohortConfig.Protocol.Threshold {
+		return errs.NewIncorrectCount("invalid number of session participants")
+	}
+	for _, sessionParticipant := range sessionParticipants.Iter() {
+		if !cohortConfig.IsInCohort(sessionParticipant) {
+			return errs.NewInvalidArgument("invalid session participant")
+		}
+	}
+	return nil
 }

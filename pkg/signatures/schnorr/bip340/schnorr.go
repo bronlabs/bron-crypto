@@ -108,6 +108,10 @@ type Signer struct {
 }
 
 func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
+	if scalar == nil {
+		return nil, errs.NewIsNil("secret is nil")
+	}
+
 	curve := k256.New()
 
 	// 1. (implicit) Let d' = int(sk)
@@ -131,7 +135,6 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 		K: dPrime.Clone(),
 	}, nil
 }
-
 func NewSigner(privateKey *PrivateKey) *Signer {
 	return &Signer{
 		privateKey: privateKey,

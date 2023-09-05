@@ -37,31 +37,15 @@ type State struct {
 }
 
 func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if curve == nil {
-		return nil, errs.NewInvalidArgument("curve is nil")
+	err := validateInputs(curve, identityKey, participants, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-	if identityKey == nil {
-		return nil, errs.NewInvalidArgument("my identity key is nil")
-	}
-	if participants.Len() < 2 {
-		return nil, errs.NewInvalidArgument("need at least 2 participants")
-	}
-	for i, participant := range participants.Iter() {
-		if participant == nil {
-			return nil, errs.NewIsNil("participant %x is nil", i)
-		}
-	}
-	_, found := participants.Get(identityKey)
-	if !found {
-		return nil, errs.NewInvalidArgument("i'm not part of the participants")
-	}
-
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
 	}
 	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(identityKey, participants)
-
 	return &Participant{
 		prng:                prng,
 		MyIdentityKey:       identityKey,
@@ -73,4 +57,29 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 			receivedCommitments: map[helper_types.IdentityHash]commitments.Commitment{},
 		},
 	}, nil
+}
+
+func validateInputs(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], prng io.Reader) error {
+	if curve == nil {
+		return errs.NewInvalidArgument("curve is nil")
+	}
+	if identityKey == nil {
+		return errs.NewInvalidArgument("my identity key is nil")
+	}
+	if participants.Len() < 2 {
+		return errs.NewInvalidArgument("need at least 2 participants")
+	}
+	for i, participant := range participants.Iter() {
+		if participant == nil {
+			return errs.NewIsNil("participant %x is nil", i)
+		}
+	}
+	if prng == nil {
+		return errs.NewInvalidArgument("prng is nil")
+	}
+	_, found := participants.Get(identityKey)
+	if !found {
+		return errs.NewInvalidArgument("i'm not part of the participants")
+	}
+	return nil
 }

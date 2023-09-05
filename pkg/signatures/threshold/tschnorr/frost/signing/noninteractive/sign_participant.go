@@ -62,44 +62,12 @@ func NewNonInteractiveCosigner(
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
 	presentParties *hashset.HashSet[integration.IdentityKey], cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*Cosigner, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if shard == nil {
-		return nil, errs.NewIsNil("shard is nil")
-	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
-	}
-	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "presignature batch is invalid")
-	}
-	if firstUnusedPreSignatureIndex < 0 || firstUnusedPreSignatureIndex >= len(*preSignatureBatch) {
-		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
+	err := validateParticipantInputs(identityKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
 	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
-
-	for i, participant := range presentParties.Iter() {
-		if participant == nil {
-			return nil, errs.NewIsNil("participant %x is nil", i)
-		}
-	}
-	if presentParties.Len() <= 0 {
-		return nil, errs.NewInvalidArgument("no party is present")
-	}
-	for _, participant := range presentParties.Iter() {
-		if !cohortConfig.IsInCohort(participant) {
-			return nil, errs.NewMissing("present party is not in cohort")
-		}
-	}
-
-	if privateNoncePairs == nil {
-		return nil, errs.NewIsNil("private nonce pairs is nil")
-	}
-	if len(privateNoncePairs) != len(*preSignatureBatch) {
-		return nil, errs.NewIncorrectCount("number of provided private nonce pairs is not equal to total presignatures")
-	}
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[mySharingId-1]
@@ -141,4 +109,53 @@ func NewNonInteractiveCosigner(
 			E_alpha: E_alpha,
 		},
 	}, nil
+}
+
+func validateParticipantInputs(identityKey integration.IdentityKey, shard *frost.Shard, preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair, presentParties *hashset.HashSet[integration.IdentityKey], cohortConfig *integration.CohortConfig, prng io.Reader) error {
+	if identityKey == nil {
+		return errs.NewIsNil("identity key is nil")
+	}
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if shard == nil {
+		return errs.NewIsNil("shard is nil")
+	}
+	if err := shard.SigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	}
+	if preSignatureBatch == nil {
+		return errs.NewIsNil("pre signature batch is nil")
+	}
+	if err := preSignatureBatch.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "presignature batch is invalid")
+	}
+	if firstUnusedPreSignatureIndex < 0 || firstUnusedPreSignatureIndex >= len(*preSignatureBatch) {
+		return errs.NewInvalidArgument("first unused pre signature index index is out of bound")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+
+	for i, participant := range presentParties.Iter() {
+		if participant == nil {
+			return errs.NewIsNil("participant %x is nil", i)
+		}
+	}
+	if presentParties.Len() <= 0 {
+		return errs.NewInvalidArgument("no party is present")
+	}
+	for _, participant := range presentParties.Iter() {
+		if !cohortConfig.IsInCohort(participant) {
+			return errs.NewMissing("present party is not in cohort")
+		}
+	}
+
+	if privateNoncePairs == nil {
+		return errs.NewIsNil("private nonce pairs is nil")
+	}
+	if len(privateNoncePairs) != len(*preSignatureBatch) {
+		return errs.NewIncorrectCount("number of provided private nonce pairs is not equal to total presignatures")
+	}
+	return nil
 }

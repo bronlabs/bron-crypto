@@ -22,7 +22,7 @@ func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortCon
 	participants = make([]*dkg.Participant, cohortConfig.Protocol.TotalParties)
 
 	if len(sid) == 0 {
-		sid, err = agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+		sid, err = agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 		if err != nil {
 			return nil, err
 		}

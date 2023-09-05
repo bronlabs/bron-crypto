@@ -70,9 +70,11 @@ type Verifier struct {
 }
 
 func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	err = validateProverInputs(q, sid, sk, x, r, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -103,10 +105,37 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 	}, nil
 }
 
-func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func validateProverInputs(q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
+	if len(sid) == 0 {
+		return errs.NewInvalidArgument("invalid sid: %s", sid)
+	}
+	if q == nil {
+		return errs.NewIsNil("q is nil")
+	}
+	if x == nil {
+		return errs.NewIsNil("x is nil")
+	}
+	if r == nil {
+		return errs.NewIsNil("r is nil")
+	}
+	if sk == nil {
+		return errs.NewIsNil("sk is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	err = validateVerifierInputs(q, sid, pk, xEncrypted, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -136,4 +165,26 @@ func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEn
 		pk:    pk,
 		state: &VerifierState{},
 	}, nil
+}
+
+func validateVerifierInputs(q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if len(sid) == 0 {
+		return errs.NewInvalidArgument("invalid sid: %s", sid)
+	}
+	if q == nil {
+		return errs.NewIsNil("q is nil")
+	}
+	if pk == nil {
+		return errs.NewIsNil("pk is nil")
+	}
+	if xEncrypted == nil {
+		return errs.NewIsNil("xEncrypted is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

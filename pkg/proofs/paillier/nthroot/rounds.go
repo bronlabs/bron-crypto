@@ -65,7 +65,10 @@ func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err
 		return nil, errs.WrapFailed(err, "cannot generate random number")
 	}
 	// make sure e has MSB set (no
-	e = core.NatSetBit(e, k-1)
+	e, err = core.NatSetBit(e, k-1)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot set MSB")
+	}
 	verifier.state.e = e
 
 	verifier.round += 2

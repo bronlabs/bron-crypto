@@ -1,10 +1,19 @@
 package bitstring
 
+import (
+	"encoding/binary"
+
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+)
+
 // SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
 // it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
-func SelectBit(vector []byte, index int) byte {
+func SelectBit(vector []byte, index int) (byte, error) {
+	if index < 0 || index >= binary.Size(vector)*8 {
+		return 0, errs.NewInvalidArgument("index out of bounds")
+	}
 	// the bitwise tricks index >> 3 == index // 8 and index & 0x07 == index % 8 are designed to avoid CPU division.
-	return vector[index>>3] >> (index & 0x07) & 0x01
+	return vector[index>>3] >> (index & 0x07) & 0x01, nil
 }
 
 // ReverseBytes reverses the order of the bytes in a new slice.
@@ -28,12 +37,19 @@ func Memset(buffer []byte, value byte) {
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
-func TransposePackedBits(inputMatrix [][]byte) [][]byte {
+func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
 	if nRowsInput%8 != 0 {
-		panic("input matrix must have a number of rows divisible by 8")
+		return nil, errs.NewInvalidArgument("input matrix must have a number of rows divisible by 8")
 	}
+	// check if array is a matrix
+	for i := 0; i < nRowsInput; i++ {
+		if len(inputMatrix[i]) != len(inputMatrix[0]) {
+			return nil, errs.NewInvalidArgument("input matrix must be a matrix")
+		}
+	}
+
 	nColsInputBytes := len(inputMatrix[0])
 	nRowsOutput := nColsInputBytes << 3
 	nColsOutputBytes := nRowsInput >> 3
@@ -57,7 +73,7 @@ func TransposePackedBits(inputMatrix [][]byte) [][]byte {
 			}
 		}
 	}
-	return transposedMatrix
+	return transposedMatrix, nil
 }
 
 // ByteSubLE is a constant time algorithm for subtracting

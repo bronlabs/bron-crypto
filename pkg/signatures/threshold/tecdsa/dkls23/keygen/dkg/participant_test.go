@@ -70,7 +70,7 @@ func Test_CanInitialize(t *testing.T) {
 		},
 	}
 	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
 	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)

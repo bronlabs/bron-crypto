@@ -84,7 +84,10 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	R.ComputeChallengeResponse(extOptions, challengeFiatShamir, &round1Output.challengeResponse)
 
 	// (T&R.1) Transpose t^i_0 into t_j
-	t_j := bitstring.TransposePackedBits(extOptions[0][:]) // t_j ∈ [η'][κ]bits
+	t_j, err := bitstring.TransposePackedBits(extOptions[0][:]) // t_j ∈ [η'][κ]bits
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "bad transposing t^i_0 for SoftSpoken COTe")
+	}
 	// (T&R.2) Hash η rows of t_j using the index as salt (drop η' - η rows, used for consistency check)
 	oTeReceiverOutput = make(OTeReceiverOutput, LOTe)
 	err = HashSalted(R.sid, t_j[:eta], oTeReceiverOutput)
@@ -155,8 +158,11 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 
 	// (T&R.1, T&R.3) Transpose and Randomise the correlations (q^i -> v_0 and q^i+Δ -> v_1)
 	// (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
-	qjTransposed := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
-	qjTransposedPlusDelta := make([][]byte, eta)                      // q_j+Δ ∈ [η][κ]bits
+	qjTransposed, err := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "bad transposing q^i for SoftSpoken COTe")
+	}
+	qjTransposedPlusDelta := make([][]byte, eta) // q_j+Δ ∈ [η][κ]bits
 	for j := 0; j < eta; j++ {
 		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
 	}
@@ -288,7 +294,11 @@ func (R *Receiver) Round3Derandomize(
 				}
 				v_x_NegCurve = v_x_NegCurve.Neg()
 				v_x_curve_corr = round2Output.derandMask[l][i][j].Add(v_x_NegCurve)
-				if bitstring.SelectBit(R.extPackedChoices[:], idxOTe*Xi+i) != 0 {
+				bit, err := bitstring.SelectBit(R.extPackedChoices[:], idxOTe*Xi+i)
+				if err != nil {
+					return nil, errs.WrapFailed(err, "cannot select bit")
+				}
+				if bit != 0 {
 					// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 					cOTeReceiverOutput[l][i][j] = v_x_curve_corr
 				} else {
@@ -331,7 +341,8 @@ func WitnessCommitment(t transcripts.Transcript, expansionMask *ExpansionMask) {
 func GenerateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, M)
 	for i := 0; i < M; i++ {
-		copy(challengeFiatShamir[i][:], t.ExtractBytes("OTe_challenge_Chi", SigmaBytes))
+		bytes, _ := t.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
+		copy(challengeFiatShamir[i][:], bytes)
 	}
 	return challengeFiatShamir
 }

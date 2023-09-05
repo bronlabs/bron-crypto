@@ -48,16 +48,27 @@ type Dealer struct {
 }
 
 func NewDealer(total int, curve curves.Curve) (*Dealer, error) {
-	if total < 2 {
-		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
+	dealer := &Dealer{Total: total, Curve: curve}
+	if err := dealer.Validate(); err != nil {
+		return nil, err
 	}
-	if curve == nil {
-		return nil, errs.NewIsNil("invalid curve")
-	}
-	return &Dealer{Total: total, Curve: curve}, nil
+	return dealer, nil
 }
 
-func (d Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
+func (d *Dealer) Validate() error {
+	if d == nil {
+		return errs.NewIsNil("dealer is nil")
+	}
+	if d.Total < 2 {
+		return errs.NewInvalidArgument("threshold cannot be less than 2")
+	}
+	if d.Curve == nil {
+		return errs.NewIsNil("invalid curve")
+	}
+	return nil
+}
+
+func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	if secret.IsZero() {
 		return nil, errs.NewIsZero("invalid secret")
 	}
@@ -72,7 +83,7 @@ func (d Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	return shares, nil
 }
 
-func (d Dealer) Combine(shares []*Share) (curves.Scalar, error) {
+func (d *Dealer) Combine(shares []*Share) (curves.Scalar, error) {
 	if len(shares) != d.Total {
 		return nil, errs.NewFailed("len(shares) != N")
 	}

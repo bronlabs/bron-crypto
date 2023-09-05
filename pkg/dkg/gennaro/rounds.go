@@ -45,7 +45,10 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct pedersen dealer")
 	}
-	dealt := dealer.Split(a_i0, p.prng)
+	dealt, err := dealer.Split(a_i0, p.prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "couldn't split")
+	}
 
 	proverTranscript := hagrid.NewTranscript(DlogProofLabel)
 	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))

@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -70,11 +71,11 @@ func FuzzInteractiveSigning(f *testing.F) {
 		if message == "" {
 			message = string([]byte{1})
 		}
-		random := rand.New(rand.NewSource(randomSeed))
-		curveIndex = random.Intn(len(allCurves))
-		hashIndex = random.Intn(len(allHashes))
-		n = random.Intn(maxParticipants-2) + 2                      // n is between 2 and 10
-		threshold = random.Intn(int(math.Max(float64(n-2), 1))) + 2 // threshold is between 2 and n
+		prng := rand.New(rand.NewSource(randomSeed))
+		curveIndex = prng.Intn(len(allCurves))
+		hashIndex = prng.Intn(len(allHashes))
+		n = prng.Intn(maxParticipants-2) + 2                      // n is between 2 and 10
+		threshold = prng.Intn(int(math.Max(float64(n-2), 1))) + 2 // threshold is between 2 and n
 		fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "threshold: ", threshold, "randomSeed: ", randomSeed, "message: ", message)
 		curve := allCurves[curveIndex%len(allCurves)]
 		h := allHashes[hashIndex%len(allHashes)]
@@ -106,12 +107,12 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 		if message == "" {
 			message = string([]byte{1})
 		}
-		random := rand.New(rand.NewSource(randomSeed))
-		curveIndex = random.Intn(len(allCurves))
-		hashIndex = random.Intn(len(allHashes))
-		n = random.Intn(maxParticipants-2) + 2                      // n is between 2 and 10
-		threshold = random.Intn(int(math.Max(float64(n-2), 1))) + 2 // threshold is between 2 and n
-		tau = random.Intn(maxNumberOfPreSignatures) + 2
+		prng := rand.New(rand.NewSource(randomSeed))
+		curveIndex = prng.Intn(len(allCurves))
+		hashIndex = prng.Intn(len(allHashes))
+		n = prng.Intn(maxParticipants-2) + 2                      // n is between 2 and 10
+		threshold = prng.Intn(int(math.Max(float64(n-2), 1))) + 2 // threshold is between 2 and n
+		tau = prng.Intn(maxNumberOfPreSignatures) + 2
 		firstUnusedPreSignatureIndex = firstUnusedPreSignatureIndex % tau
 		if firstUnusedPreSignatureIndex < 0 {
 			firstUnusedPreSignatureIndex = -firstUnusedPreSignatureIndex
@@ -123,8 +124,8 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 
 		identities, cohortConfig, participants, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
 
-		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, cohortConfig, identities, tau, random, participants)
-		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, cohortConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, random, participants, message)
+		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, cohortConfig, identities, tau, prng, participants)
+		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, cohortConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, prng, participants, message)
 		fmt.Println("OK")
 	})
 }
@@ -286,7 +287,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 			require.NoError(t, err)
 		}
 	}
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()

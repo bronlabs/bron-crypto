@@ -78,7 +78,11 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 		for _, theirShard := range shards {
 			if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
 				theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
-				theirDecryptedShare, err := paillier.NewDecryptor(myPaillierPrivateKey).Decrypt(theirEncryptedShare)
+				decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)
+				if err != nil {
+					return errs.WrapVerificationFailed(err, "cannot create paillier decryptor")
+				}
+				theirDecryptedShare, err := decryptor.Decrypt(theirEncryptedShare)
 				if err != nil {
 					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
 				}

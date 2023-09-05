@@ -28,7 +28,7 @@ func Test_HappyPath_OTe(t *testing.T) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSendOutput, baseOtRecOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSendOutput, baseOtRecOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 
 		// Set OTe inputs
@@ -56,7 +56,7 @@ func Test_HappyPath_COTe(t *testing.T) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		err = test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 		require.NoError(t, err)
@@ -90,7 +90,7 @@ func Test_HappyPath_COTeForcedReuse(t *testing.T) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 

@@ -16,6 +16,7 @@ import (
 const (
 	transcriptAppLabel       = "PAILLIER_LP_PROOF"
 	transcriptSessionIdLabel = "PaillierLP_SessionId"
+	PaillierBitSize          = 1024
 )
 
 type Participant struct {
@@ -60,14 +61,12 @@ type Prover struct {
 }
 
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	err = validateVerifierInputs(k, paillierPublicKey, sessionId, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
-	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
+	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 	return &Verifier{
 		Participant: Participant{
 			k:          k,
@@ -81,10 +80,31 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 	}, nil
 }
 
-func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
+	if paillierPublicKey == nil {
+		return errs.NewInvalidArgument("invalid paillier public key")
+	}
+	if paillierPublicKey.N.BitLen() < PaillierBitSize {
+		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+	}
+	if k < 1 {
+		return errs.NewInvalidArgument("invalid k: %d", k)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+	err = validateProverInputs(k, paillierSecretKey, sessionId, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
+	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -101,4 +121,20 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		paillierSecretKey: paillierSecretKey,
 		state:             &ProverState{},
 	}, nil
+}
+
+func validateProverInputs(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if paillierSecretKey == nil {
+		return errs.NewInvalidArgument("invalid paillier secret key")
+	}
+	if k < 1 {
+		return errs.NewInvalidArgument("invalid k: %d", k)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

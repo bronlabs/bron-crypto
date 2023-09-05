@@ -43,39 +43,16 @@ type SignatureAggregatorParameters struct {
 	_ helper_types.Incomparable
 }
 
+func (s *SignatureAggregatorParameters) Validate() error {
+	if s == nil {
+		return errs.NewIsNil("aggregation parameter is nil")
+	}
+	return nil
+}
+
 func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[helper_types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if !cohortConfig.IsSignatureAggregator(identityKey) {
-		return nil, errs.NewInvalidArgument("provided identity key is not a signature aggregator of the given cohort config")
-	}
-	if sessionParticipants == nil {
-		return nil, errs.NewIsNil("must provide the list of the sharing ids of session participants")
-	}
-	if sessionParticipants.Len() == 0 {
-		return nil, errs.NewIncorrectCount("must provide the list of the sharing ids of session participants")
-	}
-	if len(identityKeyToSharingId) != cohortConfig.Protocol.TotalParties {
-		return nil, errs.NewIncorrectCount("don't have enough mapping for shamir to identity keys as we have parties")
-	}
-	if shard == nil {
-		return nil, errs.NewIsNil("shard is nil")
-	}
-	if shard.PublicKeyShares.PublicKey.IsIdentity() {
-		return nil, errs.NewIsIdentity("public key can't be at infinity")
-	}
-	if !shard.PublicKeyShares.PublicKey.IsOnCurve() {
-		return nil, errs.NewMembershipError("public key is not on curve")
-	}
-	if message == nil {
-		return nil, errs.NewIsNil("message is empty")
-	}
-	if len(message) == 0 {
-		return nil, errs.NewIsZero("message is empty")
-	}
-	if parameters == nil {
-		return nil, errs.NewIsNil("aggregation parameter is nil")
+	if err := shard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapFailed(err, "invalid shard")
 	}
 	aggregator := &SignatureAggregator{
 		CohortConfig:           cohortConfig,
@@ -87,12 +64,45 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		Message:                message,
 		parameters:             parameters,
 	}
-	if aggregator.HasIdentifiableAbort() {
-		if len(aggregator.parameters.R_js) != sessionParticipants.Len() {
-			return nil, errs.NewIncorrectCount("identifiable abort is enabled and the size of Rjs and S is not equal.")
-		}
+	if err := aggregator.Validate(); err != nil {
+		return nil, errs.WrapFailed(err, "invalid aggregator")
 	}
 	return aggregator, nil
+}
+func (sa *SignatureAggregator) Validate() error {
+	if sa == nil {
+		return errs.NewIsNil("aggregator is nil")
+	}
+	if err := sa.CohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if !sa.CohortConfig.IsSignatureAggregator(sa.MyIdentityKey) {
+		return errs.NewInvalidArgument("provided identity key is not a signature aggregator of the given cohort config")
+	}
+	if sa.SessionParticipants == nil {
+		return errs.NewIsNil("must provide the list of the sharing ids of session participants")
+	}
+	if sa.SessionParticipants.Len() == 0 {
+		return errs.NewIncorrectCount("must provide the list of the sharing ids of session participants")
+	}
+	if len(sa.IdentityKeyToSharingId) != sa.CohortConfig.Protocol.TotalParties {
+		return errs.NewIncorrectCount("don't have enough mapping for shamir to identity keys as we have parties")
+	}
+	if sa.Message == nil {
+		return errs.NewIsNil("message is empty")
+	}
+	if len(sa.Message) == 0 {
+		return errs.NewIsZero("message is empty")
+	}
+	if err := sa.parameters.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "aggregation parameters are invalid")
+	}
+	if sa.HasIdentifiableAbort() {
+		if len(sa.parameters.R_js) != sa.SessionParticipants.Len() {
+			return errs.NewIncorrectCount("identifiable abort is enabled and the size of Rjs and S is not equal.")
+		}
+	}
+	return nil
 }
 
 // TODO: condense/simplify.

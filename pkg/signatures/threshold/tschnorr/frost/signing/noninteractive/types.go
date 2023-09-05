@@ -26,6 +26,9 @@ type AttestedCommitmentToNoncePair struct {
 }
 
 func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.CohortConfig) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	if ac == nil {
 		return errs.NewIsNil("attested commitment to nonce is nil")
 	}
@@ -64,6 +67,9 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 type PreSignature []*AttestedCommitmentToNoncePair
 
 func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	if ps == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
@@ -89,7 +95,10 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 		DHashSet[thisPartyAttestedCommitment.D] = true
 		EHashSet[thisPartyAttestedCommitment.E] = true
 	}
-	sortPreSignatureInPlace(cohortConfig, *ps)
+	err := sortPreSignatureInPlace(cohortConfig, *ps)
+	if err != nil {
+		return errs.WrapVerificationFailed(err, "could not sort presignature")
+	}
 	return nil
 }
 
@@ -147,9 +156,13 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 }
 
 // We require that attested commitments within a presignature are sorted by the sharing id of the attestor.
-func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) {
+func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 	sort.Slice(attestedCommitments, func(i, j int) bool {
 		return identityKeyToSharingId[attestedCommitments[i].Attestor.Hash()] < identityKeyToSharingId[attestedCommitments[j].Attestor.Hash()]
 	})
+	return nil
 }

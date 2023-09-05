@@ -47,8 +47,8 @@ func doProof(x, y, bigN *saferith.Nat, prng io.Reader) (err error) {
 	}
 
 	label := "gimme, gimme"
-	proverBytes := proverTranscript.ExtractBytes(label, 128)
-	verifierBytes := verifierTranscript.ExtractBytes(label, 128)
+	proverBytes, _ := proverTranscript.ExtractBytes(label, 128)
+	verifierBytes, _ := verifierTranscript.ExtractBytes(label, 128)
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

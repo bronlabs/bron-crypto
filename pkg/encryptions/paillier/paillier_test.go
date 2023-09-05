@@ -62,7 +62,11 @@ func Example_encryptDecrypt() {
 	}
 
 	// Now decrypt using the secret key.
-	decrypted, err := paillier.NewDecryptor(sec).Decrypt(cipher)
+	decryptor, err := paillier.NewDecryptor(sec)
+	if err != nil {
+		log.Fatalf("Error in creating decryptor: %v", err)
+	}
+	decrypted, err := decryptor.Decrypt(cipher)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -98,7 +102,11 @@ func Example_homomorphicAddition() {
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
-	decrypted3, err := paillier.NewDecryptor(sec).Decrypt(cipher3)
+	decryptor, err := paillier.NewDecryptor(sec)
+	if err != nil {
+		log.Fatalf("Error in creating decryptor: %v", err)
+	}
+	decrypted3, err := decryptor.Decrypt(cipher3)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -130,7 +138,11 @@ func Example_homomorphicMultiplication() {
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
-	decrypted3, err := paillier.NewDecryptor(sec).Decrypt(cipher3)
+	decryptor, err := paillier.NewDecryptor(sec)
+	if err != nil {
+		log.Fatalf("Error in creating decryptor: %v", err)
+	}
+	decrypted3, err := decryptor.Decrypt(cipher3)
 	if err != nil {
 		log.Fatalf("Error in Decrypting the ciphertext: %v", err)
 	}
@@ -633,7 +645,9 @@ func TestSubPlain(t *testing.T) {
 			require.NoError(t, err)
 			zEncrypted, err := pk.SubPlain(encryptedX, new(saferith.Nat).SetUint64(test.y))
 			require.NoError(t, err)
-			z, err := paillier.NewDecryptor(sk).Decrypt(zEncrypted)
+			decryptor, err := paillier.NewDecryptor(sk)
+			require.NoError(t, err)
+			z, err := decryptor.Decrypt(zEncrypted)
 			require.NoError(t, err)
 			require.Equal(t, z.Uint64(), test.expected)
 		})
@@ -936,7 +950,9 @@ func TestDecryptErrorConditions(t *testing.T) {
 
 	// All the tests!
 	for _, test := range tests {
-		_, err := paillier.NewDecryptor(sk).Decrypt(&paillier.CipherText{C: test.c})
+		decryptor, err := paillier.NewDecryptor(sk)
+		require.NoError(t, err)
+		_, err = decryptor.Decrypt(&paillier.CipherText{C: test.c})
 		if test.expectedPass {
 			require.NoError(t, err)
 		} else {
@@ -951,7 +967,9 @@ func TestDecryptErrorConditions(t *testing.T) {
 		Totient:   nil,
 		U:         nil,
 	}
-	_, err = paillier.NewDecryptor(sk).Decrypt(&paillier.CipherText{C: one})
+	decryptor, err := paillier.NewDecryptor(sk)
+	require.NoError(t, err)
+	_, err = decryptor.Decrypt(&paillier.CipherText{C: one})
 	println(err.Error())
 	require.True(t, errs.IsFailed(err))
 }
@@ -989,7 +1007,9 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 		require.NotNil(t, c)
 
 		// Decrypt-validate
-		actual, err := paillier.NewDecryptor(sk).Decrypt(c)
+		decryptor, err := paillier.NewDecryptor(sk)
+		require.NoError(t, err)
+		actual, err := decryptor.Decrypt(c)
 		require.NoError(t, err)
 		require.NotZero(t, m.Eq(actual))
 	}

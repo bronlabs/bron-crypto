@@ -112,12 +112,12 @@ func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
 // The label parameter is metadata about the challenge, and is also appended to
 // the transcript. More derails on "Transcript Protocols" section of Merlin.tool.
-func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
+func (t *Transcript) ExtractBytes(label string, outLen int) ([]byte, error) {
 	// AdditionalData[label || le32(outLen)]
 	t.s.AD(true, appendSizeToLabel([]byte(label), outLen))
 	// Call the unterlying PRF function to fill a buffer with random bytes.
 	outBytes := t.s.PRF(outLen)
-	return outBytes
+	return outBytes, nil
 }
 
 // --------------------------------- PRNG ----------------------------------- //

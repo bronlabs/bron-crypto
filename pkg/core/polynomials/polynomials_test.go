@@ -17,7 +17,8 @@ func TestNewPoly(t *testing.T) {
 	curve := bls12381.NewG1()
 	secret := curve.Scalar().Hash([]byte("test"))
 
-	poly := p.NewRandomPolynomial(secret, 4, crand.Reader)
+	poly, err := p.NewRandomPolynomial(secret, 4, crand.Reader)
+	require.NoError(t, err)
 	require.NotNil(t, poly)
 
 	require.Equal(t, poly.Coefficients[0], secret)

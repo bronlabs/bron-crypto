@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves/pallas"
 )
 
 func test_MeasureConstantTime_ScalarRandom(curve curves.Curve) {
@@ -253,6 +254,7 @@ var allCurves = []curves.Curve{
 	edwards25519.New(),
 	k256.New(),
 	p256.New(),
+	pallas.New(),
 }
 
 func Test_MeasureConstantTime_ScalarRandom(t *testing.T) {

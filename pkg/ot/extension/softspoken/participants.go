@@ -2,6 +2,7 @@ package softspoken
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
@@ -60,6 +61,10 @@ func NewCOtReceiver(
 	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Receiver, error) {
+	err := validateCOtReceiver(baseOtResults, uniqueSessionId, curve)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
@@ -73,6 +78,22 @@ func NewCOtReceiver(
 	}, nil
 }
 
+func validateCOtReceiver(results *vsot.SenderOutput, id []byte, curve curves.Curve) error {
+	if results == nil {
+		return errs.NewInvalidArgument("base OT results are nil")
+	}
+	if len(results.OneTimePadEncryptionKeys) == 0 {
+		return errs.NewIsNil("base OT results are empty")
+	}
+	if len(id) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
+	if curve == nil {
+		return errs.NewInvalidArgument("curve is nil")
+	}
+	return nil
+}
+
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtResults` are the results of playing the receiver role in κ baseOTs.
 func NewCOtSender(
@@ -82,6 +103,10 @@ func NewCOtSender(
 	curve curves.Curve,
 	useForcedReuse bool,
 ) (*Sender, error) {
+	err := validateCOtSender(baseOtResults, uniqueSessionId, curve)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
 	}
@@ -93,4 +118,26 @@ func NewCOtSender(
 		curve:          curve,
 		useForcedReuse: useForcedReuse,
 	}, nil
+}
+
+func validateCOtSender(results *vsot.ReceiverOutput, id []byte, curve curves.Curve) error {
+	if results == nil {
+		return errs.NewInvalidArgument("base OT results are nil")
+	}
+	if len(results.PackedRandomChoiceBits) == 0 {
+		return errs.NewIsNil("base OT results packed choice bits are empty")
+	}
+	if len(results.RandomChoiceBits) == 0 {
+		return errs.NewIsNil("base OT results choice bits are empty")
+	}
+	if len(results.OneTimePadDecryptionKey) == 0 {
+		return errs.NewIsNil("base OT results decryption key is empty")
+	}
+	if len(id) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
+	if curve == nil {
+		return errs.NewInvalidArgument("curve is nil")
+	}
+	return nil
 }

@@ -62,7 +62,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random, err = test_utils.ProduceSharedRandomValue(curve, identities)
+			random, err = test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 			require.NoError(t, err)
 		}
 	}

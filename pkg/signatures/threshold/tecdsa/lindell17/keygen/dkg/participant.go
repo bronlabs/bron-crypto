@@ -82,18 +82,11 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcripts.Transcript) (participant *Participant, err error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
+	err = validateInputs(myIdentityKey, mySigningKeyShare, publicKeyShares, cohortConfig, prng, sessionId)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
-	if err := mySigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
-	}
-	if myIdentityKey == nil {
-		return nil, errs.NewIsNil("my identity key is nil")
-	}
-	if sessionId == nil || len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
-	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -114,4 +107,32 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 		round:             1,
 		state:             &State{},
 	}, nil
+}
+
+func validateInputs(myIdentityKey integration.IdentityKey, mySigningKeyShare *threshold.SigningKeyShare, publicKeyShares *threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
+	}
+	if err := mySigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	}
+	if err := publicKeyShares.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate public key shares")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	if myIdentityKey == nil {
+		return errs.NewIsNil("my identity key is nil")
+	}
+	if !cohortConfig.Participants.Contains(myIdentityKey) {
+		return errs.NewInvalidArgument("identity key is not in cohort config")
+	}
+	if len(sessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	return nil
 }

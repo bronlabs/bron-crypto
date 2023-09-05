@@ -35,7 +35,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 		t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve.Name()), func(t *testing.T) {
 			t.Parallel()
 			sid := []byte("this is a unique session id")
-			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_test_utils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid)
+			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_test_utils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid, crand.Reader)
 			require.NoError(t, err)
 			alice, bob, err := test_utils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, sid, sid)
 			require.NoError(t, err)

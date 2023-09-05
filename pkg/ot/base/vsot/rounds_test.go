@@ -25,7 +25,7 @@ func TestOtOnMultipleCurves(t *testing.T) {
 		hashKeySeed := [32]byte{}
 		_, err := crand.Read(hashKeySeed[:])
 		require.NoError(t, err)
-		sender, receiver, err := test_utils.RunVSOT(t, curve, batchSize, hashKeySeed[:])
+		sender, receiver, err := test_utils.RunVSOT(t, curve, batchSize, hashKeySeed[:], crand.Reader)
 		require.NoError(t, err)
 
 		for i := 0; i < batchSize; i++ {

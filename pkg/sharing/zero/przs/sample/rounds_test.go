@@ -1,6 +1,7 @@
 package sample_test
 
 import (
+	crand "crypto/rand"
 	"fmt"
 	"testing"
 
@@ -21,7 +22,7 @@ import (
 )
 
 func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
-	participants, err := test_utils.MakeSetupParticipants(curve, identities)
+	participants, err := test_utils.MakeSetupParticipants(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +209,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, allIdentities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

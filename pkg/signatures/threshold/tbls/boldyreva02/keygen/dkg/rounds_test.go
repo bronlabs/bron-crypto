@@ -72,7 +72,7 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	participants, err := test_utils.MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, nil)

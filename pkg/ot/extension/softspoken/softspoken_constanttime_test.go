@@ -32,7 +32,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var receiver *softspoken.Receiver
 	internal.RunMeasurement(500, "softspoken_round1", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
@@ -70,7 +70,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var sender *softspoken.Sender
 	internal.RunMeasurement(500, "softspoken_round2", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
@@ -115,7 +115,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var oTeReceiverOutput softspoken.OTeReceiverOutput
 	internal.RunMeasurement(500, "softspoken_round3", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:])
+		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 

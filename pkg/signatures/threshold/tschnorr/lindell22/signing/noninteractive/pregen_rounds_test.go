@@ -59,7 +59,8 @@ func Test_PreGenHappyPath(t *testing.T) {
 	t.Run("transcripts recorded the same data", func(t *testing.T) {
 		t.Parallel()
 		label := "gimme"
-		ok := integration_test_utils.TranscriptAtSameState(label, transcripts)
+		ok, err := integration_test_utils.TranscriptAtSameState(label, transcripts)
+		require.NoError(t, err)
 		require.True(t, ok)
 	})
 }

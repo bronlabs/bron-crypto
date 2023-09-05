@@ -1,6 +1,7 @@
 package pedersen_test
 
 import (
+	crand "crypto/rand"
 	"os"
 	"testing"
 
@@ -39,7 +40,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		require.NoError(t, err)
 		cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities)
+		uniqueSessionId, err = agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
@@ -73,7 +74,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		require.NoError(t, err)
 		cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities)
+		uniqueSessionId, err = agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)

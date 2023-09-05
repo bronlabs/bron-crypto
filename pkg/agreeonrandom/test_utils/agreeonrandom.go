@@ -1,8 +1,8 @@
 package test_utils
 
 import (
-	crand "crypto/rand"
 	"fmt"
+	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -11,10 +11,11 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 )
 
-func ProduceSharedRandomValue(curve curves.Curve, identities []integration.IdentityKey) ([]byte, error) {
+func ProduceSharedRandomValue(curve curves.Curve, identities []integration.IdentityKey, prng io.Reader) ([]byte, error) {
 	var participants []*agreeonrandom.Participant
-	for _, identity := range identities {
-		participant, err := agreeonrandom.NewParticipant(curve, identity, hashset.NewHashSet(identities), nil, crand.Reader)
+	set := hashset.NewHashSet(identities)
+	for _, identity := range set.Iter() {
+		participant, err := agreeonrandom.NewParticipant(curve, identity, set, nil, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +37,7 @@ func ProduceSharedRandomValue(curve curves.Curve, identities []integration.Ident
 	if err != nil {
 		return nil, err
 	}
-	if len(agreeOnRandoms) != len(identities) {
+	if len(agreeOnRandoms) != set.Len() {
 		return nil, fmt.Errorf("expected %d agreeOnRandoms, got %d", len(identities), len(agreeOnRandoms))
 	}
 

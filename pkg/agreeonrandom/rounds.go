@@ -81,7 +81,10 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
 	p.state.transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
-	randomValue := p.state.transcript.ExtractBytes("session id", przs.LambdaBytes)
+	randomValue, err := p.state.transcript.ExtractBytes("session id", przs.LambdaBytes)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't derive random value")
+	}
 	p.round++
 	return randomValue, nil
 }

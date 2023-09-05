@@ -1,6 +1,7 @@
 package sample_test
 
 import (
+	crand "crypto/rand"
 	"os"
 	"testing"
 
@@ -32,7 +33,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	internal.RunMeasurement(500, "sample_round1", func(i int) {
 		allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities)
+		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
 	}, func() {
 		test_utils.DoSetupRound1(participants)
@@ -53,7 +54,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	internal.RunMeasurement(500, "sample_round2", func(i int) {
 		allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities)
+		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
 		r1OutsU, err := test_utils.DoSetupRound1(participants)
 		require.NoError(t, err)
@@ -78,7 +79,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	internal.RunMeasurement(500, "sample_round3", func(i int) {
 		allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities)
+		participants, err = test_utils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
 		r1OutsU, err := test_utils.DoSetupRound1(participants)
 		require.NoError(t, err)

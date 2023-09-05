@@ -119,7 +119,11 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
 
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
-	prover.state.alpha, err = paillier.NewDecryptor(prover.sk).Decrypt(input.CPrime)
+	decrytor, err := paillier.NewDecryptor(prover.sk)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create decryptor")
+	}
+	prover.state.alpha, err = decrytor.Decrypt(input.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}

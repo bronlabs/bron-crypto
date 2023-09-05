@@ -36,9 +36,11 @@ func (p *Participant[K]) GetCohortConfig() *integration.CohortConfig {
 }
 
 func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	err := validateInputs[K](uniqueSessionId, cohortConfig, identityKey, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
+
 	pointInK := new(K)
 	inG1 := (*pointInK).CurveName() == bls12381.G1Name
 	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G1Name) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G2Name) {
@@ -58,4 +60,29 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integ
 		inG1:         inG1,
 		round:        1,
 	}, nil
+}
+
+func validateInputs[K bls.KeySubGroup](uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identityKey integration.IdentityKey, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
+	}
+	if cohortConfig.CipherSuite.Curve.Name() != (*new(K)).CurveName() {
+		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
+	if identityKey == nil {
+		return errs.NewInvalidArgument("identity key is nil")
+	}
+	if !cohortConfig.Participants.Contains(identityKey) {
+		return errs.NewInvalidArgument("identity key is not in cohort config")
+	}
+	if prng == nil {
+		return errs.NewInvalidArgument("prng is nil")
+	}
+	return nil
 }

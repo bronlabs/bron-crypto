@@ -51,17 +51,9 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 }
 
 func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if myShard == nil {
-		return nil, errs.NewIsNil("shard is nil")
-	}
-	if err := myShard.SigningKeyShare.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate signing key share")
-	}
-	if preSignatureIndex < 0 || preSignatureIndex >= len(myPreSignatureBatch.PreSignatures) {
-		return nil, errs.NewInvalidArgument("first unused pre signature index index is out of bound")
+	err = validateCosignerInputs(cohortConfig, myIdentityKey, myShard, myPreSignatureBatch, preSignatureIndex, participantIdentity, sid, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
 	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
@@ -82,4 +74,35 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 		cohortConfig:        cohortConfig,
 		prng:                prng,
 	}, nil
+}
+
+func validateCosignerInputs(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if myIdentityKey == nil {
+		return errs.NewIsNil("identity key is nil")
+	}
+	if participantIdentity == nil {
+		return errs.NewIsNil("participant identity is nil")
+	}
+	if myShard == nil {
+		return errs.NewIsNil("shard is nil")
+	}
+	if err := myShard.SigningKeyShare.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	}
+	if myPreSignatureBatch == nil {
+		return errs.NewIsNil("pre signature batch is nil")
+	}
+	if len(sid) == 0 {
+		return errs.NewIsNil("sid is empty")
+	}
+	if preSignatureIndex < 0 || preSignatureIndex >= len(myPreSignatureBatch.PreSignatures) {
+		return errs.NewInvalidArgument("first unused pre signature index index is out of bound")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

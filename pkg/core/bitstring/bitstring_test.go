@@ -12,7 +12,9 @@ func TestSelectBit(t *testing.T) {
 	vector := []byte{0x00, 0x00, 0x00, 0x00}
 	for i := 0; i < 32; i++ {
 		vector[i>>3] = 0x01 << (i & 0x07)
-		require.Equal(t, byte(0x01), bitstring.SelectBit(vector, i))
+		output, err := bitstring.SelectBit(vector, i)
+		require.NoError(t, err)
+		require.Equal(t, byte(0x01), output)
 	}
 }
 
@@ -28,15 +30,21 @@ func TestTransposeBooleanMatrix(t *testing.T) {
 		{0x71, 0x93, 0xB5, 0xD7, 0xF9, 0x1B},
 		{0x81, 0xA3, 0xC5, 0xE7, 0x09, 0x2B},
 	}
-	transposedMatrix := bitstring.TransposePackedBits(inputMatrix)
+	transposedMatrix, err := bitstring.TransposePackedBits(inputMatrix)
+	require.NoError(t, err)
 	for i := 0; i < len(inputMatrix); i++ {
 		for j := 0; j < len(transposedMatrix); j++ {
 			// Check that the bit at position i in the jth row of the input matrix.
 			// is equal to the bit at position j in the ith row of the transposed matrix.
 			// using bitstring.SelectBit (careful! it takes a byte array as input)
+			output1, err := bitstring.SelectBit(inputMatrix[i], j)
+			require.NoError(t, err)
+			output2, err := bitstring.SelectBit(transposedMatrix[j][:], i)
+			require.NoError(t, err)
+
 			require.Equal(t,
-				bitstring.SelectBit(inputMatrix[i], j),
-				bitstring.SelectBit(transposedMatrix[j][:], i))
+				output1,
+				output2)
 		}
 	}
 }

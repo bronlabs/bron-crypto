@@ -59,7 +59,11 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	}
 
 	paillierSecretKey := p.myShard.PaillierSecretKey
-	sPrimeInt, err := paillier.NewDecryptor(paillierSecretKey).Decrypt(theirPartialSignature.C3)
+	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create paillier decryptor")
+	}
+	sPrimeInt, err := decryptor.Decrypt(theirPartialSignature.C3)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}

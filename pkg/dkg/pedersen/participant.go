@@ -53,8 +53,9 @@ type State struct {
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
+	err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KNOX_PEDERSEN_DKG-")
@@ -77,8 +78,17 @@ func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
 	if identityKey == nil {
 		return errs.NewIsNil("my identity key is nil")
+	}
+	if !cohortConfig.Participants.Contains(identityKey) {
+		return errs.NewInvalidArgument("identity key is not in cohort config")
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
 		return errs.NewMembershipError("i'm not in cohort")

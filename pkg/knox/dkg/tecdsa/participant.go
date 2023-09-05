@@ -1,7 +1,6 @@
 package tecdsa
 
 import (
-	crand "crypto/rand"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/agreeonrandom"
@@ -50,19 +49,15 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	err := validateInputs(identityKey, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
-		return nil, errs.NewInvalidCurve("only K256 and P256 curves are supported")
-	}
+
 	transcript := hagrid.NewTranscript(DKGLabel)
 	sidParty, err := agreeonrandom.NewParticipant(cohortConfig.CipherSuite.Curve, identityKey, cohortConfig.Participants, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
-	}
-	if prng == nil {
-		prng = crand.Reader
 	}
 	return &Participant{
 		MyIdentityKey: identityKey,
@@ -73,4 +68,26 @@ func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integrati
 		prng:          prng,
 		round:         1,
 	}, nil
+}
+
+func validateInputs(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
+	}
+	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
+		return errs.NewInvalidCurve("only K256 and P256 curves are supported")
+	}
+	if prng == nil {
+		return errs.NewInvalidArgument("prng is nil")
+	}
+	if identityKey == nil {
+		return errs.NewInvalidArgument("my identity key is nil")
+	}
+	if !cohortConfig.Participants.Contains(identityKey) {
+		return errs.NewInvalidArgument("identity key is not in cohort config")
+	}
+	return nil
 }

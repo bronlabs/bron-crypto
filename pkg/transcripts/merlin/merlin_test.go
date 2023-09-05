@@ -14,7 +14,7 @@ func TestSimpleTranscript(t *testing.T) {
 	mt := merlin.NewTranscript("test protocol")
 	mt.AppendMessages("some label", []byte("some data"))
 
-	cBytes := mt.ExtractBytes("challenge", 32)
+	cBytes, _ := mt.ExtractBytes("challenge", 32)
 	cHex := fmt.Sprintf("%x", cBytes)
 	expectedHex := "aa57b4786a83baba7ed4ad21ac2fa9a76542358b32cd0eac24b05ea353f1d9b2"
 
@@ -34,7 +34,7 @@ func TestComplexTranscript(t *testing.T) {
 
 	var chlBytes []byte
 	for i := 0; i < 32; i++ {
-		chlBytes = tr.ExtractBytes("challenge", 32)
+		chlBytes, _ = tr.ExtractBytes("challenge", 32)
 		tr.AppendMessages("bigdata", data)
 		tr.AppendMessages("challengedata", chlBytes)
 	}

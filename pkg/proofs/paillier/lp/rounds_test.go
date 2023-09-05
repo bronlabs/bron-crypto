@@ -57,8 +57,14 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 	}
 
 	label := "gimme, gimme"
-	proverBytes := proverTranscript.ExtractBytes(label, 128)
-	verifierBytes := verifierTranscript.ExtractBytes(label, 128)
+	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return errs.NewFailed("failed to extract bytes from prover transcript")
+	}
+	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return errs.NewFailed("failed to extract bytes from prover transcript")
+	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}
@@ -68,12 +74,12 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 
 func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 256)
+	pInt, err := crand.Prime(prng, 512)
 	require.NoError(t, err)
-	p := new(saferith.Nat).SetBig(pInt, 256)
-	qInt, err := crand.Prime(prng, 256)
+	p := new(saferith.Nat).SetBig(pInt, 512)
+	qInt, err := crand.Prime(prng, 512)
 	require.NoError(t, err)
-	q := new(saferith.Nat).SetBig(qInt, 256)
+	q := new(saferith.Nat).SetBig(qInt, 512)
 
 	sk, err := paillier.NewSecretKey(p, q)
 	require.NoError(t, err)
@@ -101,5 +107,5 @@ func Test_IncorrectPublicKey(t *testing.T) {
 
 	err = doProof(128, &sk.PublicKey, sk)
 	require.Error(t, err)
-	require.True(t, errs.IsVerificationFailed(err))
+	require.True(t, errs.IsInvalidArgument(err))
 }

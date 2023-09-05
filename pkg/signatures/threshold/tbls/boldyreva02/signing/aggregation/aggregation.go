@@ -17,12 +17,11 @@ type Aggregator[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 }
 
 func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], cohortConfig *integration.CohortConfig) (*Aggregator[K, S], error) {
-	if bls.SameSubGroup[K, S]() {
-		return nil, errs.NewInvalidType("key and signature subgroup should not be the same")
+	err := validateInputs[K, S](publicKeyShares, cohortConfig)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
-	}
+
 	if cohortConfig.Protocol == nil {
 		return nil, errs.NewIsNil("protocol config is nil")
 	}
@@ -35,6 +34,22 @@ func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *
 		cohortConfig:           cohortConfig,
 		identityKeyToSharingId: identityKeyToSharingId,
 	}, nil
+}
+
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], cohortConfig *integration.CohortConfig) error {
+	if bls.SameSubGroup[K, S]() {
+		return errs.NewInvalidType("key and signature subgroup should not be the same")
+	}
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.CipherSuite.Curve.Name() != (*new(K)).CurveName() {
+		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
+	}
+	if publicKeyShares == nil {
+		return errs.NewIsNil("public key shares are nil")
+	}
+	return nil
 }
 
 func (a *Aggregator[K, S]) Aggregate(partialSignatures map[helper_types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {

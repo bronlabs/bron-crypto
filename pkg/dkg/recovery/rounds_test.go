@@ -36,7 +36,7 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 	cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_test_utils.RunDKG(uniqueSessionId, cohortConfig, identities)

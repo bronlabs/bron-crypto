@@ -1,6 +1,8 @@
 package test_utils
 
 import (
+	crand "crypto/rand"
+
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
@@ -11,7 +13,8 @@ import (
 func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities)
+	random := crand.Reader
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities, random)
 	if err != nil {
 		return nil, err
 	}
@@ -25,12 +28,15 @@ func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities [
 }
 
 func DoSample(participants []*sample.Participant) (samples []przs.Sample, err error) {
-	samples = make([]przs.Sample, len(participants))
-	for i, participant := range participants {
-		samples[i], err = participant.Sample()
+	sampleMap := make(map[int]przs.Sample)
+	for _, participant := range participants {
+		sampleMap[participant.MySharingId], err = participant.Sample()
 		if err != nil {
 			return nil, err
 		}
+	}
+	for _, s := range sampleMap {
+		samples = append(samples, s)
 	}
 	return samples, nil
 }

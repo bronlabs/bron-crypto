@@ -103,6 +103,9 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 }
 
 func validatePreGenInputs(tau int, identityKey integration.IdentityKey, sid []byte, cohortConfig *integration.CohortConfig) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}

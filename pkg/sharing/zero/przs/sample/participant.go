@@ -28,13 +28,13 @@ type Participant struct {
 }
 
 func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey]) (*Participant, error) {
-	if err := cohortConfig.CipherSuite.Validate(); err != nil {
+	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
-	if uniqueSessionId == nil {
+	if len(uniqueSessionId) == 0 {
 		return nil, errs.NewInvalidArgument("session id is nil")
 	}
 	if presentParticipants.Len() < 2 {

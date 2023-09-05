@@ -60,6 +60,9 @@ func NewKeys(bits uint) (*PublicKey, *SecretKey, error) {
 }
 
 func NewKeysWithSafePrimeGenerator(genSafePrime func(uint) (*saferith.Nat, error), bits uint) (*PublicKey, *SecretKey, error) {
+	if genSafePrime == nil {
+		return nil, nil, errs.NewIsNil("genSafePrime is nil")
+	}
 	publicKey, secretKey, err := keyGenerator(genSafePrime, bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
@@ -119,8 +122,11 @@ func NewPublicKey(n *saferith.Nat) (*PublicKey, error) {
 	}, nil
 }
 
-func NewDecryptor(secretKey *SecretKey) *Decryptor {
-	return &Decryptor{secretKey: secretKey}
+func NewDecryptor(secretKey *SecretKey) (*Decryptor, error) {
+	if secretKey == nil {
+		return nil, errs.NewIsNil("secretKey is nil")
+	}
+	return &Decryptor{secretKey: secretKey}, nil
 }
 
 // L computes a residuosity class of n^2: (x - 1) / n.

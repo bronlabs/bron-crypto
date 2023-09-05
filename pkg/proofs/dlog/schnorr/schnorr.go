@@ -1,7 +1,7 @@
 package schnorr
 
 import (
-	crand "crypto/rand"
+	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
@@ -46,11 +46,9 @@ type Proof struct {
 
 // NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript) (*Prover, error) {
-	if basePoint == nil {
-		return nil, errs.NewInvalidArgument("basepoint can't be nil")
-	}
-	if basePoint.IsIdentity() {
-		return nil, errs.NewIsIdentity("basepoint is identity")
+	err := validateInputs(basePoint, uniqueSessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(domainSeparationLabel)
@@ -62,23 +60,39 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 	}, nil
 }
 
+func validateInputs(basePoint curves.Point, uniqueSessionId []byte) error {
+	if basePoint == nil {
+		return errs.NewInvalidArgument("basepoint can't be nil")
+	}
+	if basePoint.IsIdentity() {
+		return errs.NewIsIdentity("basepoint is identity")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("unique session id can't be empty")
+	}
+	return nil
+}
+
 // Prove generates and returns a Schnorr proof, given the scalar witness `x`.
 // in the process, it will actually also construct the statement (just one curve mult in this case).
-func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
+func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, error) {
 	var err error
 	result := &Proof{}
 
 	curve := p.BasePoint.Curve()
 
 	statement := p.BasePoint.Mul(x)
-	k := curve.Scalar().Random(crand.Reader)
+	k := curve.Scalar().Random(prng)
 	R := p.BasePoint.Mul(k)
 
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
 	p.transcript.AppendPoints(rLabel, R)
 	p.transcript.AppendPoints(statementLabel, statement)
 	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
-	digest := p.transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	digest, err := p.transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
+	}
 
 	result.C, err = curve.Scalar().SetBytes(digest)
 	if err != nil {
@@ -117,7 +131,10 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	transcript.AppendPoints(rLabel, R)
 	transcript.AppendPoints(statementLabel, statement)
 	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
-	digest := transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	digest, err := transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	if err != nil {
+		return errs.WrapFailed(err, "could not extract bytes from transcript")
+	}
 
 	computedChallenge, err := curve.Scalar().SetBytes(digest)
 	if err != nil {

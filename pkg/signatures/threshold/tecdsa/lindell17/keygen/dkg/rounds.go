@@ -18,10 +18,6 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 
-const (
-	paillierBitSize = 1024
-)
-
 var (
 	commitmentHashFunc = sha256.New
 )
@@ -202,7 +198,7 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 	}
 
 	// 3.iii. generate a Paillier key pair
-	p.state.myPaillierPk, p.state.myPaillierSk, err = paillier.NewKeys(paillierBitSize)
+	p.state.myPaillierPk, p.state.myPaillierSk, err = paillier.NewKeys(lp.PaillierBitSize)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}

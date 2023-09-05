@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
 	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
@@ -80,9 +81,11 @@ type Prover struct {
 }
 
 func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	err = validateVerifierInputs(sid, publicKey, bigQ, xEncrypted, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -119,10 +122,40 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}, nil
 }
 
-func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
+func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewIsNil("sessionId is nil")
 	}
+	if len(sid) == 0 {
+		return errs.NewIsNil("sid is nil")
+	}
+	if publicKey == nil {
+		return errs.NewIsNil("public key is nil")
+	}
+	if publicKey.N.BitLen() < lp.PaillierBitSize {
+		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+	}
+	if bigQ == nil {
+		return errs.NewIsNil("bigQ is nil")
+	}
+	if xEncrypted == nil {
+		return errs.NewIsNil("xEncrypted is nil")
+	}
+	if xEncrypted.C.EqZero() != 0 {
+		return errs.NewInvalidArgument("xEncrypted is zero")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
+	err = validateProverInputs(sid, secretKey, x, r, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -152,4 +185,29 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *sa
 			},
 		},
 	}, nil
+}
+
+func validateProverInputs(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsNil("sessionId is nil")
+	}
+	if len(sid) == 0 {
+		return errs.NewIsNil("sid is nil")
+	}
+	if secretKey == nil {
+		return errs.NewIsNil("secret key is nil")
+	}
+	if secretKey.N.BitLen() < lp.PaillierBitSize {
+		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+	}
+	if x == nil {
+		return errs.NewIsNil("x is nil")
+	}
+	if r == nil {
+		return errs.NewIsNil("r is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

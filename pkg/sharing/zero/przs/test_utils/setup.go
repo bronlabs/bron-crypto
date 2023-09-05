@@ -1,7 +1,7 @@
 package test_utils
 
 import (
-	crand "crypto/rand"
+	"io"
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -12,14 +12,14 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/sharing/zero/przs/setup"
 )
 
-func MakeSetupParticipants(curve curves.Curve, identities []integration.IdentityKey) (participants []*setup.Participant, err error) {
+func MakeSetupParticipants(curve curves.Curve, identities []integration.IdentityKey, prng io.Reader) (participants []*setup.Participant, err error) {
 	participants = make([]*setup.Participant, len(identities))
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, prng)
 	if err != nil {
 		return nil, err
 	}
 	for i, identity := range identities {
-		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, hashset.NewHashSet(identities), nil, crand.Reader)
+		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, hashset.NewHashSet(identities), nil, prng)
 		if err != nil {
 			return nil, err
 		}

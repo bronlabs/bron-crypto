@@ -69,7 +69,7 @@ func Test_CanInitialize(t *testing.T) {
 			SignatureAggregators: hashset.NewHashSet(identityKeys),
 		},
 	}
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identityKeys)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identityKeys, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(uniqueSessionId, aliceIdentityKey, cohortConfig, crand.Reader)
 	bob, err := NewParticipant(uniqueSessionId, bobIdentityKey, cohortConfig, crand.Reader)

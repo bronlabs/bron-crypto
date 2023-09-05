@@ -34,7 +34,11 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 			// constant time branching, because we'll add if even if we don't need it
 			addedCurrent := bob.BTilde[i].Add(bob.gadget[0][j])
 			originalCurrent := bob.BTilde[i]
-			if bitstring.SelectBit(bob.Beta[0][:], j) == 0x01 {
+			bit, err := bitstring.SelectBit(bob.Beta[0][:], j)
+			if err != nil {
+				return nil, errs.WrapFailed(err, "bob failed to select bit")
+			}
+			if bit == 0x01 {
 				bob.BTilde[i] = addedCurrent
 			} else {
 				bob.BTilde[i] = originalCurrent
@@ -87,14 +91,20 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	}
 
 	// step 2.6
-	chiTildeTranscript := alice.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	chiTildeTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
+	}
 	chiTilde := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiTilde[i] = alice.Curve.Scalar().Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
 	}
 
 	// step 2.7
-	chiHatTranscript := alice.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	chiHatTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
+	}
 	chiHat := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiHat[i] = alice.Curve.Scalar().Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
@@ -166,14 +176,20 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	}
 
 	// step 2.3
-	chiTildeTranscript := bob.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	chiTildeTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "bob failed to extract chi tilde transcript")
+	}
 	chiTilde := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiTilde[i] = bob.Curve.Scalar().Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
 	}
 
 	// step 2.4
-	chiHatTranscript := bob.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	chiHatTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "bob failed to extract chi tilde transcript")
+	}
 	chiHat := [L]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		chiHat[i] = bob.Curve.Scalar().Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
@@ -190,7 +206,11 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 			// constant time branching
 			addedCurrent := current.Add(round2output.U[i])
 			originalCurrent := current
-			if bitstring.SelectBit(bob.Beta[0][:], j) == 0x01 {
+			bit, err := bitstring.SelectBit(bob.Beta[0][:], j)
+			if err != nil {
+				return nil, errs.WrapFailed(err, "bob failed to select bit")
+			}
+			if bit == 0x01 {
 				current = addedCurrent
 			} else {
 				current = originalCurrent

@@ -204,7 +204,11 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	}
 
 	paillierSecretKey := primaryCosigner.myShard.PaillierSecretKey
-	sPrimeInt, err := paillier.NewDecryptor(paillierSecretKey).Decrypt(round4Output.C3)
+	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create paillier decryptor")
+	}
+	sPrimeInt, err := decryptor.Decrypt(round4Output.C3)
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
 	}

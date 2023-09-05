@@ -12,7 +12,7 @@ func TestSimpleTranscript(t *testing.T) {
 	mt := hagrid.NewTranscript("test protocol")
 	mt.AppendMessages("some label", []byte("some data"))
 
-	cBytes := mt.ExtractBytes("challenge", 32)
+	cBytes, _ := mt.ExtractBytes("challenge", 32)
 	cHex := fmt.Sprintf("%x", cBytes)
 	expectedHex := "25f0fee7cff96c33627d39bd13729a150967f3e154c8c8863b6449f3798de882"
 
@@ -32,7 +32,7 @@ func TestComplexTranscript(t *testing.T) {
 
 	var chlBytes []byte
 	for i := 0; i < 32; i++ {
-		chlBytes = tr.ExtractBytes("challenge", 32)
+		chlBytes, _ = tr.ExtractBytes("challenge", 32)
 		tr.AppendMessages("bigdata", data)
 		tr.AppendMessages("challengedata", chlBytes)
 	}

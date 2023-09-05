@@ -67,18 +67,11 @@ const (
 )
 
 func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
+	err = validateInputs(sid, myIdentityKey, cohortConfig, tau, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
-	if !cohortConfig.IsInCohort(myIdentityKey) {
-		return nil, errs.NewMissing("identity key is not in cohort")
-	}
-	if tau <= 0 {
-		return nil, errs.NewInvalidArgument("tau is non-positive")
-	}
-	if len(sid) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sid)
-	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -94,4 +87,26 @@ func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdent
 		round:         1,
 		state:         &preGenParticipantState{},
 	}, nil
+}
+
+func validateInputs(sid []byte, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if myIdentityKey == nil {
+		return errs.NewMissing("identity key is nil")
+	}
+	if prng == nil {
+		return errs.NewMissing("prng is nil")
+	}
+	if !cohortConfig.IsInCohort(myIdentityKey) {
+		return errs.NewMissing("identity key is not in cohort")
+	}
+	if tau <= 0 {
+		return errs.NewInvalidArgument("tau is non-positive")
+	}
+	if len(sid) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sid)
+	}
+	return nil
 }

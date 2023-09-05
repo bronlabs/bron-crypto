@@ -64,14 +64,12 @@ type State struct {
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng)
+	if err != nil {
+		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KNOX_GENNARO_DKG-")
-	}
-	if len(uniqueSessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", uniqueSessionId)
 	}
 	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	result := &Participant{
@@ -87,4 +85,26 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	}
 	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
 	return result, nil
+}
+
+func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
+	}
+	if prng == nil {
+		return errs.NewInvalidArgument("prng is nil")
+	}
+	if identityKey == nil {
+		return errs.NewInvalidArgument("my identity key is nil")
+	}
+	if !cohortConfig.Participants.Contains(identityKey) {
+		return errs.NewInvalidArgument("identity key is not in cohort config")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id")
+	}
+	return nil
 }

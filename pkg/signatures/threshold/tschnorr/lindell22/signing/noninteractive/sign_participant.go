@@ -51,6 +51,12 @@ func (c *Cosigner) IsSignatureAggregator() bool {
 }
 
 func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+	if err := cohortConfig.Validate(); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return nil, errs.WrapInvalidArgument(err, "shard is invalid")
+	}
 	if err := validateCosignerInputs(myIdentityKey, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
 	}

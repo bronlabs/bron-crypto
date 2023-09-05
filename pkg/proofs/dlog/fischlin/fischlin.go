@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
+	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -53,25 +53,16 @@ type Proof struct {
 
 // NewProver generates a `Prover` object, ready to generate dlog proofs on any given point.
 func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Prover, error) {
-	if basePoint == nil {
-		return nil, errs.NewInvalidArgument("basepoint can't be nil")
-	}
-	if basePoint.IsIdentity() {
-		return nil, errs.NewIsIdentity("basepoint is identity")
-	}
-	if prng == nil {
-		return nil, errs.NewIsNil("prng")
-	}
-	if transcript == nil {
-		transcript = merlin.NewTranscript(domainSeparationLabel)
-	}
-	transcript.AppendMessages("Randomised Fischlin proof", uniqueSessionId)
-	return &Prover{
+	prover := &Prover{
 		BasePoint:       basePoint,
 		uniqueSessionId: uniqueSessionId,
 		transcript:      transcript,
 		prng:            prng,
-	}, nil
+	}
+	if err := prover.Validate(); err != nil {
+		return nil, errs.WrapFailed(err, "invalid prover")
+	}
+	return prover, nil
 }
 
 // Prove proves knowledge of dlog of the statement, using Fischlin.
@@ -128,6 +119,29 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 		E: e,
 		Z: z,
 	}, statement, nil
+}
+
+func (p *Prover) Validate() error {
+	if p == nil {
+		return errs.NewIsNil("prover is nil")
+	}
+	if p.BasePoint == nil {
+		return errs.NewInvalidArgument("basepoint can't be nil")
+	}
+	if p.BasePoint.IsIdentity() {
+		return errs.NewIsIdentity("basepoint is identity")
+	}
+	if p.prng == nil {
+		return errs.NewIsNil("prng")
+	}
+	if p.transcript == nil {
+		p.transcript = hagrid.NewTranscript(domainSeparationLabel)
+	}
+	if len(p.uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("length of session id is 0")
+	}
+	p.transcript.AppendMessages("Randomised Fischlin proof", p.uniqueSessionId)
+	return nil
 }
 
 // Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform.

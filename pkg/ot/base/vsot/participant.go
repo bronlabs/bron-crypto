@@ -136,6 +136,9 @@ func NewSender(curve curves.Curve, batchSize int, uniqueSessionId []byte, transc
 	if prng == nil {
 		return nil, errs.NewInvalidArgument("prng is nil")
 	}
+	if len(uniqueSessionId) == 0 {
+		return nil, errs.NewInvalidArgument("unique session id is empty")
+	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
@@ -162,6 +165,9 @@ func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, tran
 		return nil, errs.NewInvalidArgument("prng is nil")
 	}
 
+	if len(uniqueSessionId) == 0 {
+		return nil, errs.NewInvalidArgument("unique session id is empty")
+	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
 	}
@@ -182,16 +188,24 @@ func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, tran
 		return nil, errs.WrapRandomSampleFailed(err, "choosing random choice bits")
 	}
 	// Unpack into Choice bits
-	receiver.initChoice()
+	err := receiver.initChoice()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot initialise choice bits")
+	}
 	transcript.AppendMessages("VSOT Receiver", uniqueSessionId)
 	return receiver, nil
 }
 
 // initChoice initialises the receiver's choice array from the PackedRandomChoiceBits array.
-func (receiver *Receiver) initChoice() {
+func (receiver *Receiver) initChoice() error {
 	// unpack the random values in PackedRandomChoiceBits into bits in Choice
 	receiver.Output.RandomChoiceBits = make([]int, receiver.BatchSize)
 	for i := 0; i < len(receiver.Output.RandomChoiceBits); i++ {
-		receiver.Output.RandomChoiceBits[i] = int(bitstring.SelectBit(receiver.Output.PackedRandomChoiceBits, i))
+		bit, err := bitstring.SelectBit(receiver.Output.PackedRandomChoiceBits, i)
+		if err != nil {
+			return errs.WrapFailed(err, "cannot select bit")
+		}
+		receiver.Output.RandomChoiceBits[i] = int(bit)
 	}
+	return nil
 }

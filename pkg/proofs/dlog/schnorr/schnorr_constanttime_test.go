@@ -28,7 +28,7 @@ func Test_MeasureConstantTime_prove(t *testing.T) {
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)
 	}, func() {
-		prover.Prove(secret)
+		prover.Prove(secret, crand.Reader)
 	})
 }
 
@@ -48,7 +48,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		secret = curve.Scalar().Random(crand.Reader)
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)
-		proof, statement, err = prover.Prove(secret)
+		proof, statement, err = prover.Prove(secret, crand.Reader)
 		require.NoError(t, err)
 	}, func() {
 		Verify(curve.Generator(), statement, proof, sid[:], nil)

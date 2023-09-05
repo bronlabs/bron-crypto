@@ -82,10 +82,10 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, *integration.C
 	if len(message) == 0 {
 		message = []byte{1}
 	}
-	random := rand.New(rand.NewSource(randomSeed))
-	curveIndex = random.Intn(len(allCurves))
-	hashIndex = random.Intn(len(allHashes))
-	n = random.Intn(maxParticipants-2) + 2 // n is between 2 and 10
+	prng := rand.New(rand.NewSource(randomSeed))
+	curveIndex = prng.Intn(len(allCurves))
+	hashIndex = prng.Intn(len(allHashes))
+	n = prng.Intn(maxParticipants-2) + 2 // n is between 2 and 10
 	fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "randomSeed: ", randomSeed, "message: ", message)
 	curve := allCurves[curveIndex%len(allCurves)]
 	h := allHashes[hashIndex%len(allHashes)]

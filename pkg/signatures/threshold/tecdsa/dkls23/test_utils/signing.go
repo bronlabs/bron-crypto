@@ -20,7 +20,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	if len(identities) < cohortConfig.Protocol.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
-	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities)
+	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities, crand.Reader)
 	if err != nil {
 		return nil, err
 	}

@@ -65,28 +65,35 @@ type Output struct {
 
 // NewDealer creates a new pedersen VSS.
 func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
-	if total < threshold {
-		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
-	}
-	if threshold < 2 {
-		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
-	}
-	if generator == nil {
-		return nil, errs.NewIsNil("generator is nil")
-	}
-	curve := generator.Curve()
-	if !generator.IsOnCurve() {
-		return nil, errs.NewMembershipError("invalid generator")
-	}
-	if generator.IsIdentity() {
-		return nil, errs.NewIsIdentity("invalid generator")
+	err := validateInputs(threshold, total, generator)
+	if err != nil {
+		return nil, err
 	}
 
-	return &Dealer{Threshold: threshold, Total: total, Curve: curve, Generator: generator}, nil
+	return &Dealer{Threshold: threshold, Total: total, Curve: generator.Curve(), Generator: generator}, nil
+}
+
+func validateInputs(threshold, total int, generator curves.Point) error {
+	if total < threshold {
+		return errs.NewInvalidArgument("total cannot be less than threshold")
+	}
+	if threshold < 2 {
+		return errs.NewInvalidArgument("threshold cannot be less than 2")
+	}
+	if generator == nil {
+		return errs.NewIsNil("generator is nil")
+	}
+	if !generator.IsOnCurve() {
+		return errs.NewMembershipError("invalid generator")
+	}
+	if generator.IsIdentity() {
+		return errs.NewIsIdentity("invalid generator")
+	}
+	return nil
 }
 
 // Split creates the verifiers, blinding and shares.
-func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
+func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	// generate a random blinding factor
 	blinding := pd.Curve.Scalar().Random(prng)
 
@@ -96,10 +103,16 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 		Curve:     pd.Curve,
 	}
 	// split the secret into shares
-	shares, poly := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+	}
 
 	// split the blinding into shares
-	blindingShares, polyBlinding := shamirDealer.GeneratePolynomialAndShares(blinding, prng)
+	blindingShares, polyBlinding, err := shamirDealer.GeneratePolynomialAndShares(blinding, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+	}
 
 	// Generate the verifiable commitments to the polynomial for the shares
 	blindedCommitments := make([]curves.Point, pd.Threshold)
@@ -116,7 +129,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) *Output {
 
 	return &Output{
 		Blinding: blinding, BlindingShares: blindingShares, SecretShares: shares, Commitments: commitments, BlindedCommitments: blindedCommitments, Generator: pd.Generator,
-	}
+	}, nil
 }
 
 func (pd Dealer) LagrangeCoefficients(shares map[int]*Share) (map[int]curves.Scalar, error) {

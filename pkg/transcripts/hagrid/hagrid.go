@@ -90,7 +90,10 @@ func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 // ExtractBytes returns a buffer filled with the verifier's challenge bytes.
 // The label parameter is metadata about the challenge, and is also appended to
 // the transcript.
-func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
+func (t *Transcript) ExtractBytes(label string, outLen int) ([]byte, error) {
+	if outLen < 1 {
+		return nil, errs.NewInvalidArgument("outLen must be > 0")
+	}
 	// AdditionalData[label]
 	t.ratchet([]byte(label))
 	// Call the underlying sum function to fill a buffer with random bytes.
@@ -102,7 +105,7 @@ func (t *Transcript) ExtractBytes(label string, outLen int) []byte {
 	if _, err := cShake.Read(out); err != nil {
 		panic(errs.WrapRandomSampleFailed(err, "failed to read from cShake"))
 	}
-	return out
+	return out, nil
 }
 
 // hash hashes the previous transcript state with the supplied message.

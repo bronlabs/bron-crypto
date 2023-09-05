@@ -52,13 +52,15 @@ func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], sc
 	if err := privateKey.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "private key validation failed")
 	}
-	if SameSubGroup[K, S]() {
-		return nil, errs.NewInvalidType("key and signature should be in different subgroups")
-	}
-	return &Signer[K, S]{
+	signer := &Signer[K, S]{
 		Scheme:     scheme,
 		PrivateKey: privateKey,
-	}, nil
+	}
+	err := signer.Validate()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "signer validation failed")
+	}
+	return signer, nil
 }
 
 // Sign implements the signing algorithm for all 3 schemes
@@ -113,6 +115,19 @@ func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S
 	return signature, pop, nil
 }
 
+func (s *Signer[K, S]) Validate() error {
+	if s == nil {
+		return errs.NewIsNil("signer is nil")
+	}
+	if s.PrivateKey == nil {
+		return errs.NewIsNil("signer's key is nil")
+	}
+	if SameSubGroup[K, S]() {
+		return errs.NewInvalidType("key and signature should be in different subgroups")
+	}
+	return nil
+}
+
 // Verify implements the verification algorithm for all 3 schemes
 // Basic: identical to core sign.
 // Verify: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-verify
@@ -128,6 +143,12 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 	case Basic:
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-verify
 	case MessageAugmentation:
+		if len(message) == 0 {
+			return errs.NewIsNil("message cannot be nil")
+		}
+		if publicKey == nil {
+			return errs.NewIsNil("public key is nil")
+		}
 		// step 3.2.2.1 (PK || message)
 		message, err = augmentMessage(message, publicKey)
 		if err != nil {
@@ -135,6 +156,12 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 		}
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-3.3
 	case POP:
+		if pop == nil {
+			return errs.NewIsNil("pop is nil")
+		}
+		if publicKey == nil {
+			return errs.NewIsNil("public key is nil")
+		}
 		// pk must be acompanied with pop
 		if err := PopVerify(publicKey, pop); err != nil {
 			return errs.WrapVerificationFailed(err, "invalid rogue key prevention")

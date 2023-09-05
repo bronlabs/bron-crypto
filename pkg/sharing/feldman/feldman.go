@@ -47,26 +47,23 @@ type Dealer struct {
 }
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
-	if total < threshold {
-		return nil, errs.NewInvalidArgument("total cannot be less than threshold")
+	dealer := &Dealer{Threshold: threshold, Total: total, Curve: curve}
+	if err := dealer.Validate(); err != nil {
+		return nil, errs.WrapFailed(err, "invalid dealer")
 	}
-	if threshold < 2 {
-		return nil, errs.NewInvalidArgument("threshold cannot be less than 2")
-	}
-	if curve == nil {
-		return nil, errs.NewIsNil("curve is nil")
-	}
-
-	return &Dealer{Threshold: threshold, Total: total, Curve: curve}, nil
+	return dealer, nil
 }
 
-func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
+func (f *Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
-	shares, poly := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+	}
 	commitments = make([]curves.Point, f.Threshold)
 	for i := range commitments {
 		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
@@ -74,7 +71,7 @@ func (f Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curve
 	return commitments, shares, nil
 }
 
-func (f Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {
+func (f *Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
@@ -91,7 +88,7 @@ func (f Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, er
 	return lambdas, nil
 }
 
-func (f Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
+func (f *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
@@ -104,7 +101,7 @@ func (f Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 	return result, nil
 }
 
-func (f Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
+func (f *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
@@ -115,4 +112,17 @@ func (f Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		return nil, errs.WrapFailed(err, "could not combine points")
 	}
 	return result, nil
+}
+
+func (f *Dealer) Validate() error {
+	if f.Total < f.Threshold {
+		return errs.NewInvalidArgument("total cannot be less than threshold")
+	}
+	if f.Threshold < 2 {
+		return errs.NewInvalidArgument("threshold cannot be less than 2")
+	}
+	if f.Curve == nil {
+		return errs.NewIsNil("curve is nil")
+	}
+	return nil
 }

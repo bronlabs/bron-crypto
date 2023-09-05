@@ -1,6 +1,7 @@
 package dkg_test
 
 import (
+	crand "crypto/rand"
 	"crypto/sha256"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"testing"
@@ -33,7 +34,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	gennaroParticipants, err := gennaro_dkg_test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
@@ -97,7 +98,8 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()
-		ok := test_utils.TranscriptAtSameState("gimme something", transcripts)
+		ok, err := test_utils.TranscriptAtSameState("gimme something", transcripts)
+		require.NoError(t, err)
 		require.True(t, ok)
 	})
 
@@ -149,7 +151,9 @@ func Test_HappyPath(t *testing.T) {
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
 					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
-					theirDecryptedSigningShareInt, err := paillier.NewDecryptor(myShard.PaillierSecretKey).Decrypt(theirEncryptedSigningShare)
+					decryptor, err := paillier.NewDecryptor(myShard.PaillierSecretKey)
+					require.NoError(t, err)
+					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
 					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
 					require.NoError(t, err)

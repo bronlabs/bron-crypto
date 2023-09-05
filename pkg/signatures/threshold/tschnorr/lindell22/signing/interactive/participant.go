@@ -75,7 +75,7 @@ func (p *Cosigner) IsSignatureAggregator() bool {
 }
 
 func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
-	if err := validateInputs(sid, sessionParticipants, myShard, cohortConfig); err != nil {
+	if err := validateInputs(sid, sessionParticipants, myShard, cohortConfig, prng); err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
@@ -108,7 +108,10 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	return cosigner, nil
 }
 
-func validateInputs(sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *lindell22.Shard, cohortConfig *integration.CohortConfig) error {
+func validateInputs(sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *lindell22.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -120,6 +123,9 @@ func validateInputs(sid []byte, sessionParticipants *hashset.HashSet[integration
 	}
 	if shard == nil || shard.SigningKeyShare == nil {
 		return errs.NewVerificationFailed("shard is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
 	}
 	if err := shard.Validate(cohortConfig); err != nil {
 		return errs.WrapVerificationFailed(err, "could not validate shard")

@@ -46,21 +46,15 @@ type Bob struct {
 }
 
 func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {
-	if curve == nil {
-		return nil, errs.NewInvalidArgument("curve is nil")
-	}
-	if prng == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
-	}
-	if seedOtResults == nil {
-		return nil, errs.NewInvalidArgument("seet ot results is nil")
+	err := validateAliceInputs(curve, seedOtResults, uniqueSessionId, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	forcedReuse := true
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
+	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, true)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -78,22 +72,32 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 	}, nil
 }
 
-func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
+func validateAliceInputs(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader) error {
 	if curve == nil {
-		return nil, errs.NewInvalidArgument("curve is nil")
+		return errs.NewInvalidArgument("curve is nil")
 	}
 	if prng == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
+		return errs.NewInvalidArgument("prng is nil")
 	}
 	if seedOtResults == nil {
-		return nil, errs.NewInvalidArgument("seet ot results is nil")
+		return errs.NewInvalidArgument("seed ot results is nil")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
+	return nil
+}
+
+func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
+	err := validateBobInputs(curve, seedOtResults, uniqueSessionId, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-")
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	forcedReuse := true
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, forcedReuse)
+	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, true)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -111,11 +115,30 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 	}, nil
 }
 
+func validateBobInputs(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, prng io.Reader) error {
+	if curve == nil {
+		return errs.NewInvalidArgument("curve is nil")
+	}
+	if prng == nil {
+		return errs.NewInvalidArgument("prng is nil")
+	}
+	if seedOtResults == nil {
+		return errs.NewInvalidArgument("seed ot results is nil")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewInvalidArgument("unique session id is empty")
+	}
+	return nil
+}
+
 func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget [][Xi]curves.Scalar, err error) {
 	gadget = make([][Xi]curves.Scalar, 1) // LOTe = 1 for Forced Reuse
 	transcript.AppendMessages("gadget vector", []byte("COPPER_KNOX_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
-		bytes := transcript.ExtractBytes("gadget", KappaBytes)
+		bytes, err := transcript.ExtractBytes("gadget", KappaBytes)
+		if err != nil {
+			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
+		}
 		gadget[0][i], err = curve.Scalar().SetBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")

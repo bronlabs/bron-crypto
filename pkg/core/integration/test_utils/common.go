@@ -136,16 +136,22 @@ func MakeTranscripts(label string, identities []integration.IdentityKey) (allTra
 	return allTranscripts
 }
 
-func TranscriptAtSameState(label string, allTranscripts []transcripts.Transcript) bool {
+func TranscriptAtSameState(label string, allTranscripts []transcripts.Transcript) (bool, error) {
 	for i := 0; i < len(allTranscripts); i++ {
-		l := allTranscripts[i].ExtractBytes(label, 32)
+		l, err := allTranscripts[i].ExtractBytes(label, 32)
+		if err != nil {
+			return false, err
+		}
 		for j := i + 1; j < len(allTranscripts); j++ {
-			r := allTranscripts[j].ExtractBytes(label, 32)
+			r, err := allTranscripts[j].ExtractBytes(label, 32)
+			if err != nil {
+				return false, err
+			}
 			if !bytes.Equal(l, r) {
-				return false
+				return false, nil
 			}
 		}
 	}
 
-	return true
+	return true, nil
 }

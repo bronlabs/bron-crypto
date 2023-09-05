@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 )
 
@@ -27,12 +28,15 @@ func (p Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	return out
 }
 
-func NewRandomPolynomial(intercept curves.Scalar, degree int, prng io.Reader) *Polynomial {
+func NewRandomPolynomial(intercept curves.Scalar, degree int, prng io.Reader) (*Polynomial, error) {
+	if degree < 1 {
+		return nil, errs.NewIncorrectCount("degree must be greater than zero")
+	}
 	p := &Polynomial{Curve: intercept.Curve()}
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
 	for i := 1; i < degree; i++ {
 		p.Coefficients[i] = intercept.Random(prng)
 	}
-	return p
+	return p, nil
 }

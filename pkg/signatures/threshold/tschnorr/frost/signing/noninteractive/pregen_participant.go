@@ -30,14 +30,9 @@ type preGenState struct {
 }
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
-	}
-	if !cohortConfig.IsInCohort(identityKey) {
-		return nil, errs.NewMissing("identity key is not in cohort")
-	}
-	if tau <= 0 {
-		return nil, errs.NewInvalidArgument("tau is nonpositive")
+	err := validateInputs(identityKey, cohortConfig, tau, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
 	return &PreGenParticipant{
@@ -48,4 +43,23 @@ func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *int
 		round:         1,
 		state:         &preGenState{},
 	}, nil
+}
+
+func validateInputs(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if identityKey == nil {
+		return errs.NewMissing("identity key is nil")
+	}
+	if !cohortConfig.IsInCohort(identityKey) {
+		return errs.NewMissing("identity key is not in cohort")
+	}
+	if tau <= 0 {
+		return errs.NewInvalidArgument("tau is nonpositive")
+	}
+	if prng == nil {
+		return errs.NewMissing("PRNG is nil")
+	}
+	return nil
 }

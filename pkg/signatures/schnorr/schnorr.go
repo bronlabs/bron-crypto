@@ -66,15 +66,13 @@ type Signer struct {
 }
 
 func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader) (*Signer, error) {
-	if err := cipherSuite.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "ciphersuite is invalid")
+	err := validateInputs(cipherSuite, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 	privateKey, err := KeyGen(cipherSuite.Curve, secret, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "key generation failed")
-	}
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
 	}
 
 	return &Signer{
@@ -85,12 +83,23 @@ func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng 
 	}, nil
 }
 
+func validateInputs(cipherSuite *integration.CipherSuite, prng io.Reader) error {
+	if err := cipherSuite.Validate(); err != nil {
+		return errs.WrapInvalidArgument(err, "ciphersuite is invalid")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+
+	return nil
+}
+
 func (s *Signer) Sign(message []byte) (*Signature, error) {
 	prover, err := dlog.NewProver(s.CipherSuite.Curve.Point().Generator(), message, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct an internal prover")
 	}
-	proof, _, err := prover.Prove(s.privateKey.a)
+	proof, _, err := prover.Prove(s.privateKey.a, s.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make proof of knowledge of discrete log of public key bound with the message")
 	}

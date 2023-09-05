@@ -56,28 +56,43 @@ type Dealer struct {
 }
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
-	if total < threshold {
-		return nil, errs.NewIncorrectCount("total cannot be less than threshold")
+	err := validateInputs(threshold, total, curve)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
-	if threshold < 2 {
-		return nil, errs.NewIncorrectCount("threshold cannot be less than 2")
-	}
-	if curve == nil {
-		return nil, errs.NewIsNil("invalid curve")
-	}
+
 	return &Dealer{Threshold: threshold, Total: total, Curve: curve}, nil
 }
 
-func (s Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
+func validateInputs(threshold, total int, curve curves.Curve) error {
+	if total < threshold {
+		return errs.NewIncorrectCount("total cannot be less than threshold")
+	}
+	if threshold < 2 {
+		return errs.NewIncorrectCount("threshold cannot be less than 2")
+	}
+	if curve == nil {
+		return errs.NewIsNil("invalid curve")
+	}
+	return nil
+}
+
+func (s *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	if secret == nil {
 		return nil, errs.NewIsNil("secret is nil")
 	}
-	shares, _ := s.GeneratePolynomialAndShares(secret, prng)
+	shares, _, err := s.GeneratePolynomialAndShares(secret, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+	}
 	return shares, nil
 }
 
-func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *polynomials.Polynomial) {
-	poly := polynomials.NewRandomPolynomial(secret, s.Threshold, prng)
+func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *polynomials.Polynomial, error) {
+	poly, err := polynomials.NewRandomPolynomial(secret, s.Threshold, prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not generate polynomial")
+	}
 	shares := make([]*Share, s.Total)
 	for i := range shares {
 		x := s.Curve.Scalar().New(uint64(i + 1))
@@ -86,10 +101,10 @@ func (s Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader
 			Value: poly.Evaluate(x),
 		}
 	}
-	return shares, poly
+	return shares, poly, nil
 }
 
-func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, error) {
+func (s *Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, error) {
 	if len(identities) < s.Threshold {
 		return nil, errs.NewInvalidArgument("not enough identities")
 	}
@@ -103,7 +118,7 @@ func (s Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, e
 	return lambdas, nil
 }
 
-func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
+func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 	if len(shares) < s.Threshold {
 		return nil, errs.NewIncorrectCount("invalid number of shares")
 	}
@@ -129,7 +144,7 @@ func (s Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 	return s.interpolate(xs, ys, s.Curve.Scalar().Zero())
 }
 
-func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
+func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	if len(shares) < s.Threshold {
 		return nil, errs.NewIncorrectCount("invalid number of shares (%d != %d)", len(shares), s.Threshold)
 	}
@@ -156,7 +171,7 @@ func (s Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	return s.interpolatePoint(xs, ys, s.Curve.Scalar().Zero())
 }
 
-func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
+func (s *Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
 	result, err := polynomials.Interpolate(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate")
@@ -164,7 +179,7 @@ func (s Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (c
 	return result, nil
 }
 
-func (s Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
+func (s *Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
 	result, err := polynomials.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")

@@ -8,7 +8,7 @@ type Transcript interface {
 	AppendMessages(label string, message ...[]byte)
 	AppendScalars(label string, scalars ...curves.Scalar)
 	AppendPoints(label string, points ...curves.Point)
-	ExtractBytes(label string, outLen int) []byte
+	ExtractBytes(label string, outLen int) ([]byte, error)
 	Clone() Transcript
 	Type() Type
 }

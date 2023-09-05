@@ -56,9 +56,11 @@ type Verifier struct {
 }
 
 func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	err = validateProverInputs(bigN, x, y, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -78,10 +80,31 @@ func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcript
 	}, nil
 }
 
-func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+func validateProverInputs(bigN, x, y *saferith.Nat, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewIsNil("session id is empty")
 	}
+	if x == nil {
+		return errs.NewIsNil("x is nil")
+	}
+	if y == nil {
+		return errs.NewIsNil("y is nil")
+	}
+	if bigN == nil {
+		return errs.NewIsNil("bigN is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	err = validateVerifierInputs(bigN, x, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptAppLabel)
 	}
@@ -98,4 +121,20 @@ func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts
 			bigNSquared: saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 2*bigN.AnnouncedLen())), // cache bigN^2
 		},
 	}, nil
+}
+
+func validateVerifierInputs(bigN, x *saferith.Nat, sessionId []byte, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if x == nil {
+		return errs.NewIsNil("x is nil")
+	}
+	if bigN == nil {
+		return errs.NewIsNil("bigN is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

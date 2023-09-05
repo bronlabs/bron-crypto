@@ -39,5 +39,7 @@ func Test_CanInitialize(t *testing.T) {
 		require.Equal(t, party.round, 1)
 		require.NotNil(t, party.state)
 	}
-	require.Equal(t, alice.state.transcript.ExtractBytes("test", 32), bob.state.transcript.ExtractBytes("test", 32))
+	aliceExtractedBytes, _ := alice.state.transcript.ExtractBytes("test", 32)
+	bobExtractedBytes, _ := bob.state.transcript.ExtractBytes("test", 32)
+	require.Equal(t, aliceExtractedBytes, bobExtractedBytes)
 }

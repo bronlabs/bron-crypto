@@ -1,6 +1,7 @@
 package sample
 
 import (
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	aliceSeeds := przs.PairwiseSeeds{bobIdentityKey.Hash(): sharedSeed}
 	bobSeeds := przs.PairwiseSeeds{aliceIdentityKey.Hash(): sharedSeed}
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities)
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

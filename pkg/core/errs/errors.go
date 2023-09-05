@@ -39,6 +39,30 @@ const (
 	VerificationFailed ErrorType = "[VERIFICATION_FAILED]"
 )
 
+var knownErrors = []ErrorType{
+	DivisionByZero,
+	Duplicate,
+	Failed,
+	IdentifiableAbort,
+	IncorrectCount,
+	InvalidArgument,
+	InvalidCoordinates,
+	InvalidCurve,
+	InvalidIdentifier,
+	InvalidLength,
+	InvalidRound,
+	InvalidType,
+	IsIdentity,
+	IsNil,
+	IsZero,
+	Membership,
+	Missing,
+	Serialisation,
+	RandomSampleFailed,
+	TotalAbort,
+	VerificationFailed,
+}
+
 func Is(err error, errorType ErrorType) bool {
 	return err != nil && strings.Contains(err.Error(), string(errorType))
 }
@@ -473,4 +497,17 @@ func abortFormatSpecifier(id any) string {
 		specifier = "%x"
 	}
 	return specifier
+}
+
+// IsKnownError returns true if the error is one of the known errors.
+func IsKnownError(err error) bool {
+	if err == nil {
+		return false
+	}
+	for _, knownError := range knownErrors {
+		if Is(err, knownError) {
+			return true
+		}
+	}
+	return false
 }

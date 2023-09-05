@@ -47,6 +47,15 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
+	if len(uniqueSessionId) == 0 {
+		return nil, errs.NewInvalidArgument("unique session id is empty")
+	}
+	if identityKey == nil {
+		return nil, errs.NewInvalidArgument("identityKey key is nil")
+	}
+	if prng == nil {
+		return nil, errs.NewInvalidArgument("prng is nil")
+	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(DkgLabel)
 	}

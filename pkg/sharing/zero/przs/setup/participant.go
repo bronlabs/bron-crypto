@@ -54,7 +54,7 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	if identityKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
-	if uniqueSessionId == nil {
+	if len(uniqueSessionId) == 0 {
 		return nil, errs.NewInvalidArgument("session id is nil")
 	}
 	if participants.Len() < 2 {
@@ -79,7 +79,9 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 		transcript = hagrid.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
 	}
 	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
-
+	if prng == nil {
+		return nil, errs.NewInvalidArgument("prng is nil")
+	}
 	return &Participant{
 		prng:                   prng,
 		Curve:                  curve,

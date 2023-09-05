@@ -1,6 +1,7 @@
 package agreeonrandom_test
 
 import (
+	crand "crypto/rand"
 	"os"
 	"testing"
 
@@ -27,6 +28,6 @@ func Test_MeasureConstantTime(t *testing.T) {
 	internal.RunMeasurement(500, "agreeonrandom", func(i int) {
 		allIdentities, _ = test_utils_integration.MakeIdentities(cipherSuite, 3)
 	}, func() {
-		test_utils.ProduceSharedRandomValue(curve, allIdentities)
+		test_utils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
 	})
 }

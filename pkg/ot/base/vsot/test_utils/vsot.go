@@ -1,7 +1,7 @@
 package test_utils
 
 import (
-	crand "crypto/rand"
+	"io"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
@@ -13,13 +13,13 @@ import (
 // essentially, it encapsulates the entire process of running a base OT, so that other tests can use it / bootstrap themselves.
 // it handles the creation of the base OT sender and receiver, as well as orchestrates the rounds on them;
 // it returns their outsputs, so that others can use them.
-func RunVSOT(t *testing.T, curve curves.Curve, batchSize int, uniqueSessionId []byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
+func RunVSOT(t *testing.T, curve curves.Curve, batchSize int, uniqueSessionId []byte, prng io.Reader) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
 	t.Helper()
-	receiver, err := vsot.NewReceiver(curve, batchSize, uniqueSessionId, nil, crand.Reader)
+	receiver, err := vsot.NewReceiver(curve, batchSize, uniqueSessionId, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run VSOT")
 	}
-	sender, err := vsot.NewSender(curve, batchSize, uniqueSessionId, nil, crand.Reader)
+	sender, err := vsot.NewSender(curve, batchSize, uniqueSessionId, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run VSOT")
 	}

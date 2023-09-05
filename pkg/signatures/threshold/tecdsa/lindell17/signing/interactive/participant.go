@@ -99,21 +99,11 @@ func (cosigner *Cosigner) IsSignatureAggregator() bool {
 }
 
 func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
+	err = validatePrimaryInputs(myIdentityKey, secondaryIdentityKey, myShard, cohortConfig, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
-	if err := myShard.Validate(cohortConfig); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
-	}
-	if myIdentityKey == nil {
-		return nil, errs.NewIsNil("my identity key is nil")
-	}
-	if secondaryIdentityKey == nil {
-		return nil, errs.NewIsNil("primary identity key is nil")
-	}
-	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
-	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
@@ -142,22 +132,34 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	return primaryCosigner, nil
 }
 
-func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
+func validateSecondaryInputs(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cohort config is invalid")
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if err := myShard.Validate(cohortConfig); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate shard")
+		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
 	if myIdentityKey == nil {
-		return nil, errs.NewIsNil("my identity key is nil")
+		return errs.NewIsNil("my identity key is nil")
 	}
-	if primaryIdentityKey == nil {
-		return nil, errs.NewIsNil("primary identity key is nil")
+	if secondaryIdentityKey == nil {
+		return errs.NewIsNil("primary identity key is nil")
 	}
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
+	err = validateSecondaryInputs(myIdentityKey, primaryIdentityKey, myShard, cohortConfig, sessionId, prng)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+	}
+
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel)
 	}
@@ -179,4 +181,26 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 		primarySharingId:   keyToId[primaryIdentityKey.Hash()],
 		state:              &SecondaryCosignerState{},
 	}, nil
+}
+
+func validatePrimaryInputs(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
+	if err := cohortConfig.Validate(); err != nil {
+		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if err := myShard.Validate(cohortConfig); err != nil {
+		return errs.WrapVerificationFailed(err, "could not validate shard")
+	}
+	if myIdentityKey == nil {
+		return errs.NewIsNil("my identity key is nil")
+	}
+	if primaryIdentityKey == nil {
+		return errs.NewIsNil("primary identity key is nil")
+	}
+	if len(sessionId) == 0 {
+		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

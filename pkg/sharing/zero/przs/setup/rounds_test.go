@@ -1,6 +1,7 @@
 package setup_test
 
 import (
+	crand "crypto/rand"
 	"fmt"
 	"testing"
 
@@ -28,7 +29,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeSetupParticipants(curve, identities)
+	participants, err := test_utils.MakeSetupParticipants(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	r1OutsU, err := test_utils.DoSetupRound1(participants)

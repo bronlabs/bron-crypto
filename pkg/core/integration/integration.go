@@ -75,21 +75,24 @@ func (c *CohortConfig) Validate() error {
 		return errs.WrapVerificationFailed(err, "ciphersuite is invalid")
 	}
 
-	if c.Protocol.TotalParties != c.Participants.Len() {
-		return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
-	}
 	for i, participant := range c.Participants.Iter() {
 		if participant == nil {
 			return errs.NewIsNil("participant %x is nil", i)
 		}
 	}
 	if c.Protocol != nil {
+		if c.Protocol.TotalParties != c.Participants.Len() {
+			return errs.NewIncorrectCount("number of provided participants is not equal to total parties")
+		}
 		return c.Protocol.Validate()
 	}
 	return nil
 }
 
 func (c *ProtocolConfig) Validate() error {
+	if c == nil {
+		return errs.NewIsNil("protocol config is nil")
+	}
 	if supported := protocols.Supported[c.Name]; !supported {
 		return errs.NewInvalidArgument("protocol %s is not supported", c.Name)
 	}
@@ -112,6 +115,9 @@ func (c *CohortConfig) IsInCohort(identityKey IdentityKey) bool {
 }
 
 func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
+	if c.Protocol == nil {
+		return false
+	}
 	for _, aggregator := range c.Protocol.SignatureAggregators.Iter() {
 		if aggregator.PublicKey().Equal(identityKey.PublicKey()) {
 			return true

@@ -3,6 +3,7 @@ package test_utils
 import (
 	"bytes"
 	crand "crypto/rand"
+	"io"
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
@@ -21,9 +22,9 @@ import (
 //	.             ┌---> R: k^i_{Δ_i}, Δ_i
 //	BaseOT_{κ}()--┤
 //	.             └---> S: k^i_0, k^i_1
-func RunSoftspokenBaseOT(t *testing.T, curve curves.Curve, sid []byte) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
+func RunSoftspokenBaseOT(t *testing.T, curve curves.Curve, sid []byte, prng io.Reader) (*vsot.SenderOutput, *vsot.ReceiverOutput, error) {
 	t.Helper() // TODO: remove *testing.T from most Run test_util functions. Use errors instead.
-	senderOutput, receiverOutput, err := test_utils.RunVSOT(t, curve, softspoken.Kappa, sid)
+	senderOutput, receiverOutput, err := test_utils.RunVSOT(t, curve, softspoken.Kappa, sid, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "Base OT run failed")
 	}
@@ -103,7 +104,10 @@ func CheckSoftspokenOTeOutputs(
 	for l := 0; l < L; l++ {
 		for i := 0; i < softspoken.Xi; i++ {
 			// Check that v_x = v_1 • x + v_0 • (1-x)
-			xBit := bitstring.SelectBit(choices[l][:], i)
+			xBit, err := bitstring.SelectBit(choices[l][:], i)
+			if err != nil {
+				return errs.WrapFailed(err, "cannot select bit")
+			}
 			for j := 0; j < softspoken.ROTeWidth; j++ {
 				if !bytes.Equal(oTeSenderOutput[xBit][l][i][j][:], oTeReceiverOutput[l][i][j][:]) {
 					return errs.NewVerificationFailed("OTe output mismatch for index %d", i)
@@ -168,6 +172,9 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 	inputOpts softspoken.COTeInputOpt, // sender's input, the InputOpt α
 	err error,
 ) {
+	if inputBatchLen < 0 {
+		return nil, nil, errs.NewInvalidLength("inputBatchLen must be non-negative")
+	}
 	choicesBatchLen := inputBatchLen // L = inputBatchLen in the general case
 	if useForcedReuse {              // L = 1 in the forced reuse case
 		choicesBatchLen = 1
@@ -218,7 +225,10 @@ func CheckSoftspokenCOTeOutputs(
 			} else {
 				idxOTe = l
 			}
-			x := bitstring.SelectBit(choices[idxOTe][:], i)
+			x, err := bitstring.SelectBit(choices[idxOTe][:], i)
+			if err != nil {
+				return errs.WrapFailed(err, "cannot select bit")
+			}
 			for k := 0; k < softspoken.ROTeWidth; k++ {
 				// Check each correlation z_A = x • α - z_B
 				z_A := cOTeSenderOutputs[l][i][k]
