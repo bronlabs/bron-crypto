@@ -28,11 +28,11 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
 	"github.com/copperexchange/knox-primitives/pkg/dkg/pedersen"
+	frost_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
@@ -188,7 +188,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKey
 	}
 }
 
-func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, preSignatureBatch []*noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
+func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.SigningKeyShare, publicKeyShares []*threshold.PublicKeyShares, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, preSignatureBatch []*frost_noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*frost_noninteractive_signing.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
 	t.Helper()
 	var shards []*frost.Shard
 	var err error
@@ -199,9 +199,9 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.Signing
 		})
 	}
 
-	cosigners := make([]*noninteractive.Cosigner, cohortConfig.Protocol.TotalParties)
+	cosigners := make([]*frost_noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
-		cosigners[i], err = noninteractive.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
+		cosigners[i], err = frost_noninteractive_signing.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
 		require.NoError(t, err)
 	}
 
@@ -228,30 +228,30 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*threshold.Signing
 	require.Len(t, signatureHashSet, 1)
 }
 
-func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair) {
+func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*frost_noninteractive_signing.PreSignatureBatch, [][]*frost_noninteractive_signing.PrivateNoncePair) {
 	t.Helper()
-	pregenParticipants := make([]*noninteractive.PreGenParticipant, cohortConfig.Protocol.TotalParties)
+	pregenParticipants := make([]*frost_noninteractive_signing.PreGenParticipant, cohortConfig.Protocol.TotalParties)
 	var err error
 	for i, identity := range identities {
-		pregenParticipants[i], err = noninteractive.NewPreGenParticipant(identity, cohortConfig, tau, random)
+		pregenParticipants[i], err = frost_noninteractive_signing.NewPreGenParticipant(identity, cohortConfig, tau, random)
 		require.NoError(t, err)
 	}
-	round1Outputs := make([]*noninteractive.Round1Broadcast, len(participants))
+	round1Outputs := make([]*frost_noninteractive_signing.Round1Broadcast, len(participants))
 	for i, participant := range pregenParticipants {
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]map[helper_types.IdentityHash]*noninteractive.Round1Broadcast, len(participants))
+	round2Inputs := make([]map[helper_types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[helper_types.IdentityHash]*noninteractive.Round1Broadcast)
+		round2Inputs[i] = make(map[helper_types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast)
 		for j := range participants {
 			if j != i {
 				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
 			}
 		}
 	}
-	preSignatureBatch := make([]*noninteractive.PreSignatureBatch, len(participants))
-	privateNoncePairsOfAllParties := make([][]*noninteractive.PrivateNoncePair, len(participants))
+	preSignatureBatch := make([]*frost_noninteractive_signing.PreSignatureBatch, len(participants))
+	privateNoncePairsOfAllParties := make([][]*frost_noninteractive_signing.PrivateNoncePair, len(participants))
 	for i, participant := range pregenParticipants {
 		preSignatureBatch[i], privateNoncePairsOfAllParties[i], err = participant.Round2(round2Inputs[i])
 		require.NoError(t, err)

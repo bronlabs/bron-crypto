@@ -1,4 +1,4 @@
-package noninteractive
+package lindell22
 
 import (
 	"bytes"

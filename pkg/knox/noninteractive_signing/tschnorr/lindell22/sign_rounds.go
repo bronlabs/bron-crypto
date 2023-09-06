@@ -1,4 +1,4 @@
-package noninteractive
+package lindell22
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"

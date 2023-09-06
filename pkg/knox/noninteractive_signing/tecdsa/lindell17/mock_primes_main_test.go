@@ -1,4 +1,4 @@
-package noninteractive_test
+package lindell17_test
 
 import (
 	"os"

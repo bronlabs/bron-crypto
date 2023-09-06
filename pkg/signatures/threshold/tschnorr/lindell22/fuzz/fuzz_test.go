@@ -21,13 +21,13 @@ import (
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	lindell22_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22"
+	noninteractive_test_utils "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
 	interactive_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/interactive/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/noninteractive"
-	noninteractive_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/noninteractive/test_utils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -115,7 +115,7 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	partialSignatures := make([]*lindell22.PartialSignature, threshold)
 	for i := 0; i < threshold; i++ {
 		shard := shards[identities[i].Hash()]
-		cosigner, err2 := noninteractive.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, crand.Reader)
+		cosigner, err2 := lindell22_noninteractive_signing.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, crand.Reader)
 		require.NoError(t, err2)
 		partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 		require.NoError(t, err)

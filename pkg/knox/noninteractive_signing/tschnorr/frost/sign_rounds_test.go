@@ -1,4 +1,4 @@
-package noninteractive_test
+package frost_test
 
 import (
 	crand "crypto/rand"
@@ -24,9 +24,9 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	frost_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
 )
 
@@ -54,7 +54,7 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive.PreSignatureBatch, [][]*noninteractive.PrivateNoncePair, error) {
+func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*frost_noninteractive_signing.PreSignatureBatch, [][]*frost_noninteractive_signing.PrivateNoncePair, error) {
 	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)
 	if err != nil {
 		return nil, nil, err
@@ -71,7 +71,7 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive.
 	return preSignatureBatches[0], privateNoncePairsOfAllParties, nil
 }
 
-func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive.PrivateNoncePair, message []byte) error {
+func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *frost_noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*frost_noninteractive_signing.PrivateNoncePair, message []byte) error {
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
 		shards = append(shards, &frost.Shard{

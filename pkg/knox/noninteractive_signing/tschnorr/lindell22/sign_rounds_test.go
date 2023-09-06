@@ -1,4 +1,4 @@
-package noninteractive_test
+package lindell22_test
 
 import (
 	crand "crypto/rand"
@@ -15,13 +15,13 @@ import (
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	lindell22_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22"
+	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/noninteractive"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22/signing/noninteractive/test_utils"
 )
 
 func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
@@ -65,7 +65,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				cosigner, err2 := noninteractive.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, prng)
+				cosigner, err2 := lindell22_noninteractive_signing.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}
@@ -120,7 +120,7 @@ func Test_SignNonInteractiveThresholdBIP340(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				cosigner, err2 := noninteractive.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, true, nil, prng)
+				cosigner, err2 := lindell22_noninteractive_signing.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, true, nil, prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}

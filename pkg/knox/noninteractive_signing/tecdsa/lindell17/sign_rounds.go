@@ -1,4 +1,4 @@
-package noninteractive
+package lindell17
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"

@@ -1,4 +1,4 @@
-package noninteractive_test
+package lindell17_test
 
 import (
 	crand "crypto/rand"
@@ -14,11 +14,11 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	lindell17_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 )
 
 func Test_NonInteractiveSignHappyPath(t *testing.T) {
@@ -75,10 +75,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
 					t.Parallel()
 
-					alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, prng)
+					alice, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, prng)
 					require.NoError(t, err)
 
-					bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, prng)
+					bob, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, prng)
 					require.NoError(t, err)
 
 					partialSignature, err := alice.ProducePartialSignature(message)

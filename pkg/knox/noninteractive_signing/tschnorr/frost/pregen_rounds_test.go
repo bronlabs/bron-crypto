@@ -1,4 +1,4 @@
-package noninteractive_test
+package frost_test
 
 import (
 	"crypto/sha512"

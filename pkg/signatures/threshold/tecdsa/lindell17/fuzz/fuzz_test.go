@@ -21,12 +21,12 @@ import (
 	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
+	lindell17_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17"
+	noninteractiv_test_utils "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/interactive"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive"
-	noninteractiv_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing/noninteractive/test_utils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -134,11 +134,11 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	require.NoError(t, err)
 
 	aliceShard := shards[identities[aliceIdx].Hash()]
-	alice, err := noninteractive.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
+	alice, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	bobShard := shards[identities[bobIdx].Hash()]
-	bob, err := noninteractive.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
+	bob, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	partialSignature, err := alice.ProducePartialSignature(message)

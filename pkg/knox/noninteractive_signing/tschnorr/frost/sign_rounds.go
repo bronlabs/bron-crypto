@@ -1,4 +1,4 @@
-package noninteractive
+package frost
 
 import (
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
