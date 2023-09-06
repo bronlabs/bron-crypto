@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/merlin"
 )
 
 func TestSimpleTranscript(t *testing.T) {
@@ -43,27 +42,4 @@ func TestComplexTranscript(t *testing.T) {
 	if chlHex != expectedChlHex {
 		t.Errorf("\nGot : %s\nWant: %s", chlHex, expectedChlHex)
 	}
-}
-
-func BenchmarkTranscript_AppendMessages(b *testing.B) {
-	if testing.Short() {
-		b.Skip("skipping test in short mode.")
-	}
-	label := "test transcript"
-	h := hagrid.NewTranscript(label)
-	m := merlin.NewTranscript(label)
-	b.Run("Hagrid", func(b *testing.B) {
-		for n := 0; n <= b.N; n += 1 {
-			for i := 0; i <= 10000; i += 1 {
-				h.AppendMessages("step1", []byte(fmt.Sprintf("some data %d", i)))
-			}
-		}
-	})
-	b.Run("Merlin", func(b *testing.B) {
-		for n := 0; n <= b.N; n += 1 {
-			for i := 0; i <= 10000; i += 1 {
-				m.AppendMessages("step1", []byte(fmt.Sprintf("some data %d", i)))
-			}
-		}
-	})
 }
