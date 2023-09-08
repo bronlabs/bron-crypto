@@ -171,7 +171,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	nativeCurve, err := curveutils.ToEllipticCurve(curve)
 	if err != nil {
-		return errs.WrapInvalidCurve(err, "knox curve cannot be converted to Go's elliptic curve representation")
+		return errs.WrapInvalidCurve(err, "krypton curve cannot be converted to Go's elliptic curve representation")
 	}
 
 	nativePublicKey := &nativeEcdsa.PublicKey{

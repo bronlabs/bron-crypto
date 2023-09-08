@@ -55,7 +55,7 @@ func NewRecoverer(uniqueSessionId []byte, identityKey, lostPartyIdentityKey inte
 		return nil, errs.WrapInvalidArgument(err, "could not validate inputs")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_KEY_RECOVERy-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_KEY_RECOVERy-", nil)
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 
@@ -83,7 +83,7 @@ func NewLostParty(uniqueSessionId []byte, identityKey integration.IdentityKey, p
 		return nil, errs.WrapInvalidArgument(err, "could not validate inputs")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_KEY_RECOVERy-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_KEY_RECOVERy-", nil)
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 

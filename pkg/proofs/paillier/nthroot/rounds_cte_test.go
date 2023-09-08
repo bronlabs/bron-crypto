@@ -35,7 +35,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	var prover *nthroot.Prover
 
 	internal.RunMeasurement(500, "nthroot_round1", func(i int) {
@@ -68,9 +68,9 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	var prover *nthroot.Prover
-	verifierTranscript := hagrid.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 	var verifier *nthroot.Verifier
 	var r1 *nthroot.Round1Output
 	internal.RunMeasurement(500, "nthroot_round2", func(i int) {
@@ -107,9 +107,9 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	var prover *nthroot.Prover
-	verifierTranscript := hagrid.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 	var verifier *nthroot.Verifier
 	var r1 *nthroot.Round1Output
 	var r2 *nthroot.Round2Output
@@ -149,9 +149,9 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 	x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	var prover *nthroot.Prover
-	verifierTranscript := hagrid.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 	var verifier *nthroot.Verifier
 	var r1 *nthroot.Round1Output
 	var r2 *nthroot.Round2Output

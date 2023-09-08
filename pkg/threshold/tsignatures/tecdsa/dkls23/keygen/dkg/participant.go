@@ -1,9 +1,10 @@
 package dkg
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
@@ -55,7 +56,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.NewInvalidArgument("prng is nil")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(DkgLabel)
+		transcript = hagrid.NewTranscript(DkgLabel, nil)
 	}
 	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
 	if err != nil {

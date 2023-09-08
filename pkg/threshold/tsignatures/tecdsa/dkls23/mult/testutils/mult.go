@@ -5,21 +5,23 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/csprng"
 	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
 )
 
-func MakeMultParticipants(t *testing.T, cipherSuite *integration.CipherSuite, baseOtReceiverOutput *vsot.ReceiverOutput, baseOtSenderOutput *vsot.SenderOutput, alicePrng, bobPrng io.Reader, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
+func MakeMultParticipants(t *testing.T, cipherSuite *integration.CipherSuite, baseOtReceiverOutput *vsot.ReceiverOutput, baseOtSenderOutput *vsot.SenderOutput, aliceTprng, bobTprng io.Reader, seededPrng csprng.CSPRNG, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
 	t.Helper()
 
-	alice, err = mult.NewAlice(cipherSuite.Curve, baseOtReceiverOutput, aliceSid, alicePrng, nil)
+	alice, err = mult.NewAlice(cipherSuite.Curve, baseOtReceiverOutput, aliceSid, aliceTprng, seededPrng, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "could not create alice")
 	}
-	bob, err = mult.NewBob(cipherSuite.Curve, baseOtSenderOutput, bobSid, bobPrng, nil)
+	bob, err = mult.NewBob(cipherSuite.Curve, baseOtSenderOutput, bobSid, bobTprng, seededPrng, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "could not create bob")
 	}
 	return alice, bob, nil
 }
@@ -28,15 +30,15 @@ func RunMult(t *testing.T, alice *mult.Alice, bob *mult.Bob, aliceInput [mult.L]
 	t.Helper()
 	bobOutput, err := bob.Round1()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "bob round 1 failed")
 	}
 	zA, aliceOutput, err := alice.Round2(bobOutput, aliceInput)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "alice round 2 failed")
 	}
 	zB, err = bob.Round3(aliceOutput)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "bob round 3 failed")
 	}
 	return zA, zB, nil
 }

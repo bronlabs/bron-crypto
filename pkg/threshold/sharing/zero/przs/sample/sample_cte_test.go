@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/setup"
@@ -118,7 +119,9 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 		for j := range allIdentities {
 			seeds[j] = allPairwiseSeeds[j]
 		}
-		participants, err = testutils.MakeSampleParticipants(cohortConfig, allIdentities, seeds)
+		seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+		require.NoError(t, err)
+		participants, err = testutils.MakeSampleParticipants(cohortConfig, allIdentities, seeds, seededPrng, nil)
 		require.NoError(t, err)
 	}, func() {
 		testutils.DoSample(participants)

@@ -17,12 +17,12 @@ import (
 func doProof(x, y, bigN *saferith.Nat, prng io.Reader) (err error) {
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	prover, err := nthroot.NewProver(bigN, x, y, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err
 	}
-	verifierTranscript := hagrid.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 	verifier, err := nthroot.NewVerifier(bigN, x, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err

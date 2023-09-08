@@ -1,6 +1,18 @@
 package base
 
-import "crypto/subtle"
+import (
+	"crypto/subtle"
+
+	"golang.org/x/exp/constraints"
+)
+
+// A one-line way to get the min of two elements.
+func Min[T constraints.Ordered](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
 
 // CeilDiv returns `ceil(numerator/denominator) for integer inputs. Equivalently,
 // it returns `x`, the smallest integer that satisfies `(x*b) >= a`.

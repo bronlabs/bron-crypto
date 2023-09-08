@@ -106,7 +106,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

@@ -34,7 +34,7 @@ func Fuzz_Test(f *testing.F) {
 		x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
 
 		appLabel := "NthRoot"
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err := nthroot.NewProver(bigN, x, y, sid, proverTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -42,7 +42,7 @@ func Fuzz_Test(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err := nthroot.NewVerifier(bigN, x, sid, verifierTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)

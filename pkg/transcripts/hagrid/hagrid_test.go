@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/krypton/pkg/hashing/tmmohash"
 	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 func TestSimpleTranscript(t *testing.T) {
-	mt := hagrid.NewTranscript("test protocol")
+	mt := hagrid.NewTranscript("test protocol", nil)
 	mt.AppendMessages("some label", []byte("some data"))
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
@@ -20,8 +23,23 @@ func TestSimpleTranscript(t *testing.T) {
 	}
 }
 
+func TestSimpleTranscriptWithPRNG(t *testing.T) {
+	prng, err := tmmohash.NewTmmoPrng(32, 256, nil, []byte("test protocol"))
+	require.NoError(t, err)
+	mt := hagrid.NewTranscript("test protocol", prng)
+	mt.AppendMessages("some label", []byte("some data"))
+
+	cBytes, _ := mt.ExtractBytes("challenge", 32)
+	cHex := fmt.Sprintf("%x", cBytes)
+	expectedHex := "149033b63daf9a1bdb2ceba92ba0ada5c0635e30bbcd9a1cc628a2c04d7b3d9e"
+
+	if cHex != expectedHex {
+		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
+	}
+}
+
 func TestComplexTranscript(t *testing.T) {
-	tr := hagrid.NewTranscript("test protocol")
+	tr := hagrid.NewTranscript("test protocol", nil)
 	tr.AppendMessages("step1", []byte("some data"))
 
 	data := make([]byte, 1024)

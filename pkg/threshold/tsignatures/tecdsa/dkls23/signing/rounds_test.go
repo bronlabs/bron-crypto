@@ -19,6 +19,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/protocols"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
@@ -40,6 +41,9 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
+	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
+
 	combinations := combin.Combinations(n, threshold)
 	for _, combinationIndices := range combinations {
 		identities := make([]integration.IdentityKey, threshold)
@@ -50,7 +54,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		}
 		t.Run(fmt.Sprintf("running the happy path with identities %v", identities), func(t *testing.T) {
 			t.Parallel()
-			err := testutils.RunInteractiveSign(cohortConfig, identities, selectedShards, message)
+			err := testutils.RunInteractiveSign(cohortConfig, identities, selectedShards, message, seededPrng)
 			require.NoError(t, err)
 		})
 	}

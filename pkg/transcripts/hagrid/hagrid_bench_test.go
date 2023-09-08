@@ -12,7 +12,7 @@ func BenchmarkTranscript_AppendMessages(b *testing.B) {
 		b.Skip("skipping test in short mode.")
 	}
 	label := "test transcript"
-	h := hagrid.NewTranscript(label)
+	h := hagrid.NewTranscript(label, nil)
 	b.Run("Hagrid", func(b *testing.B) {
 		for n := 0; n <= b.N; n += 1 {
 			for i := 0; i <= 10000; i += 1 {

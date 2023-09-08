@@ -16,7 +16,7 @@ import (
 // To get H for Pedersen commitments, we'll hash below to curve. We assume that It is not
 // possible to get discrete log of H wrt G designated by a curve. We also assume that the hash
 // to curve returns a uniformly random point.
-const NothingUpMySleeve = "COPPER_KNOX_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
+const NothingUpMySleeve = "COPPER_KRYPTON_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
 
 var _ integration.Participant = (*Participant)(nil)
 
@@ -69,7 +69,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_GENNARO_DKG-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_GENNARO_DKG-", nil)
 	}
 	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 	result := &Participant{

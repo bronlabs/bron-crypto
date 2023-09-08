@@ -114,12 +114,12 @@ func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, erro
 func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
 	appLabel := "Range"
 
-	verifierTranscript := hagrid.NewTranscript(appLabel)
+	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
-	proverTranscript := hagrid.NewTranscript(appLabel)
+	proverTranscript := hagrid.NewTranscript(appLabel, nil)
 	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 	if err != nil {
 		return err

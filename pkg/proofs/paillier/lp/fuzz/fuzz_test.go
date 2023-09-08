@@ -36,7 +36,7 @@ func Fuzz_Test(f *testing.F) {
 		}
 		transcriptLabel := "LP"
 
-		verifierTranscript := hagrid.NewTranscript(transcriptLabel)
+		verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 		verifier, err := lp.NewVerifier(k, &sk.PublicKey, sid, verifierTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -45,7 +45,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 
-		proverTranscript := hagrid.NewTranscript(transcriptLabel)
+		proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 		prover, err := lp.NewProver(k, sk, sid, proverTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)

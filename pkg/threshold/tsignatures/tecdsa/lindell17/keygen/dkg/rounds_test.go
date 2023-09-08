@@ -3,9 +3,10 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"testing"
+
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	"testing"
 
 	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
 
@@ -59,7 +60,7 @@ func Test_HappyPath(t *testing.T) {
 
 	transcripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG")
+		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
 	}
 
 	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)

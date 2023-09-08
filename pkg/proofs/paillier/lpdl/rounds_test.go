@@ -169,13 +169,13 @@ func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, erro
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText, r *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {
 	transcriptLabel := "LPDL"
 
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	prover, err := lpdl.NewProver(sessionId, sk, x, r, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err

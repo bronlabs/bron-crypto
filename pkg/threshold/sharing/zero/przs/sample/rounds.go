@@ -1,46 +1,33 @@
 package sample
 
 import (
-	"sort"
-
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 )
 
-func (p *Participant) Sample() (przs.Sample, error) {
-	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
-	}
-
-	sample := p.Curve.Scalar().Zero()
-	// We need to sample a random value that is consistent with the seeds we received from the other participants.
-	// Because we want to enforce that we abort if participants don't agree on who's present in the sampling phase.
-	var presentParticipantIdentityKey []byte
-	sortedParticipants := integration.ByPublicKey(p.PresentParticipants.List())
-	sort.Sort(sortedParticipants)
-	for _, participant := range sortedParticipants {
-		presentParticipantIdentityKey = append(presentParticipantIdentityKey, participant.PublicKey().ToAffineCompressed()...)
-	}
-	for _, participant := range sortedParticipants {
-		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
-		if sharingId == p.MySharingId {
-			continue
+func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
+	zeroShare = p.Curve.Scalar().Zero()
+	zeroShareBytes := make([]byte, impl.FieldBytes)
+	for sharingId := range p.Prngs {
+		if _, err := p.Prngs[sharingId].Read(zeroShareBytes); err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
 		}
-		sharedSeed, exists := p.Seeds[participant.Hash()]
-		if !exists {
-			return nil, errs.NewMissing("could not find shared seeds for sharing id %d", sharingId)
+		sample, err := p.Curve.Scalar().SetBytes(zeroShareBytes)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "could not set bytes from prng")
 		}
-		sampled := p.Curve.Scalar().Hash(p.UniqueSessionId, presentParticipantIdentityKey, sharedSeed[:])
-		if p.MySharingId < sharingId {
-			sample = sample.Add(sampled)
-		} else {
-			sample = sample.Add(sampled.Neg())
+		switch TheirSharingId := sharingId; {
+		case TheirSharingId == p.MySharingId:
+			return nil, errs.NewInvalidArgument("cannot sample with myself")
+		case TheirSharingId < p.MySharingId:
+			zeroShare = zeroShare.Add(sample)
+		default:
+			zeroShare = zeroShare.Add(sample.Neg())
 		}
 	}
-	if sample.IsZero() {
+	if zeroShare.IsZero() {
 		return nil, errs.NewFailed("could not sample a zero share")
 	}
-	p.round++
-	return sample, nil
+	return zeroShare, nil
 }

@@ -585,7 +585,7 @@ linters-settings:
       # Spots potential dataraces
       - name: datarace
       # # Warns on boolean parameters that create a control coupling
-      # # TODO: enable this in knox sdk
+      # # TODO: enable this in krypton sdk
       # - name: flag-parameter
       # Warns on unreachable code
       - name: unreachable-code

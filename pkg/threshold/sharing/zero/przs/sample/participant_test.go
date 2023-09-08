@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	csprng "github.com/copperexchange/krypton/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton/pkg/hashing"
 	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
@@ -39,15 +40,17 @@ func Test_CanInitialize(t *testing.T) {
 		Participants: hashset.NewHashSet(identities),
 	}
 
-	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey, aliceSeeds, hashset.NewHashSet(identities))
+	prng, err := csprng.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
+
+	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey, aliceSeeds, hashset.NewHashSet(identities), prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey, bobSeeds, hashset.NewHashSet(identities))
+	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey, bobSeeds, hashset.NewHashSet(identities), prng)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.round, 1)
 		require.Len(t, party.IdentityKeyToSharingId, 2)
 		require.Equal(t, party.PresentParticipants.Len(), 2)
 	}

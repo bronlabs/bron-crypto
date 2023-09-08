@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/curves"
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/csprng"
 	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
@@ -22,16 +23,19 @@ var hashConstructor = sha3.New256 // Hash function used to hash messages
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
-	s [32]byte
+	s    [32]byte
+	prng csprng.CSPRNG
+
 	transcripts.Transcript
 
 	_ types.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
-func NewTranscript(appLabel string) *Transcript {
+func NewTranscript(appLabel string, prng csprng.CSPRNG) *Transcript {
 	t := Transcript{
-		s: [32]byte{},
+		s:    [32]byte{},
+		prng: prng,
 	}
 	t.AppendMessages(domainSeparatorLabel, []byte(protocolLabel), []byte(appLabel))
 	return &t
@@ -96,14 +100,24 @@ func (t *Transcript) ExtractBytes(label string, outLen int) ([]byte, error) {
 	}
 	// AdditionalData[label]
 	t.ratchet([]byte(label))
-	// Call the underlying sum function to fill a buffer with random bytes.
+	// Use the transcript state to seed a prng and generate random bytes, default
+	// to cShake variable-length-output hash if no prng is supplied.
 	out := make([]byte, outLen)
-	cShake := sha3.NewCShake256([]byte(label), []byte(domainSeparatorLabel))
-	if _, err := cShake.Write(t.s[:]); err != nil {
-		panic(errs.WrapFailed(err, "failed to hash transcript for cShake"))
-	}
-	if _, err := cShake.Read(out); err != nil {
-		panic(errs.WrapRandomSampleFailed(err, "failed to read from cShake"))
+	if t.prng != nil {
+		if err := t.prng.Seed(t.s[:], nil); err != nil {
+			return nil, errs.WrapFailed(err, "failed to seed transcript prng")
+		}
+		if _, err := t.prng.Read(out); err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "failed to read from transcript prng")
+		}
+	} else {
+		cShake := sha3.NewCShake256([]byte(label), []byte(domainSeparatorLabel))
+		if _, err := cShake.Write(t.s[:]); err != nil {
+			return nil, errs.WrapFailed(err, "failed to hash transcript for cShake")
+		}
+		if _, err := cShake.Read(out); err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "failed to read from cShake")
+		}
 	}
 	return out, nil
 }

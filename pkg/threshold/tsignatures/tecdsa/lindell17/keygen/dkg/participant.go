@@ -1,9 +1,10 @@
 package dkg
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton/pkg/base/curves"
 	"github.com/copperexchange/krypton/pkg/base/errs"
@@ -49,13 +50,13 @@ type State struct {
 
 type Participant struct {
 	lindell17.Participant
-	myIdentityKey    integration.IdentityKey
-	mySharingId      int
+	myIdentityKey     integration.IdentityKey
+	mySharingId       int
 	mySigningKeyShare *tsignatures.SigningKeyShare
-	publicKeyShares  *tsignatures.PublicKeyShares
-	cohortConfig     *integration.CohortConfig
-	idKeyToSharingId map[types.IdentityHash]int
-	sessionId        []byte
+	publicKeyShares   *tsignatures.PublicKeyShares
+	cohortConfig      *integration.CohortConfig
+	idKeyToSharingId  map[types.IdentityHash]int
+	sessionId         []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
 
@@ -66,7 +67,7 @@ type Participant struct {
 }
 
 const (
-	transcriptAppLabel       = "COPPER_KNOX_LINDELL17_DKG"
+	transcriptAppLabel       = "COPPER_KRYPTON_LINDELL17_DKG"
 	transcriptSessionIdLabel = "Lindell2017 DKG Session"
 )
 
@@ -89,7 +90,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

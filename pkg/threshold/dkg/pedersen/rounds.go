@@ -51,7 +51,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[types.Id
 	p.State.ShareVector = shares
 	p.State.Commitments = commitments
 
-	transcript := hagrid.NewTranscript(DkgLabel)
+	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
 	if err != nil {
@@ -121,7 +121,7 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 				return nil, nil, errs.NewMissing("have the dlog proof for sharing id %d", senderSharingId)
 			}
 
-			transcript := hagrid.NewTranscript(DkgLabel)
+			transcript := hagrid.NewTranscript(DkgLabel, nil)
 			transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
 			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "abort from dlog proof given sharing id ")

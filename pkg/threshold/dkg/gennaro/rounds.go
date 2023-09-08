@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
-const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
+const DlogProofLabel = "COPPER_KRYPTON_GENNARO_DKG_DLOG_PROOF-"
 
 type Round1Broadcast struct {
 	BlindedCommitments []curves.Point
@@ -50,7 +50,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 		return nil, nil, errs.WrapFailed(err, "couldn't split")
 	}
 
-	proverTranscript := hagrid.NewTranscript(DlogProofLabel)
+	proverTranscript := hagrid.NewTranscript(DlogProofLabel, nil)
 	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript.Clone(), p.prng)
 	if err != nil {
@@ -174,7 +174,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		transcript := hagrid.NewTranscript(DlogProofLabel)
+		transcript := hagrid.NewTranscript(DlogProofLabel, nil)
 		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")

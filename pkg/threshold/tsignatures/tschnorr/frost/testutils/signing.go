@@ -8,9 +8,9 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/frost"
+	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing"
+	signing_helpers "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing"
 )
 
 func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*signing_helpers.Cosigner, err error) {

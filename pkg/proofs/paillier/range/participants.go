@@ -76,7 +76,7 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -137,7 +137,7 @@ func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEn
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

@@ -32,7 +32,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var verifier *paillierrange.Verifier
 
 	internal.RunMeasurement(500, "paillierrange_round1", func(i int) {
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 	}, func() {
@@ -60,10 +60,10 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var r1 *paillierrange.Round1Output
 
 	internal.RunMeasurement(500, "paillierrange_round2", func(i int) {
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
@@ -94,10 +94,10 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var r2 *paillierrange.ProverRound2Output
 
 	internal.RunMeasurement(500, "paillierrange_round3", func(i int) {
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
@@ -131,10 +131,10 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 	var r3 *paillierrange.VerifierRound3Output
 
 	internal.RunMeasurement(500, "paillierrange_round4", func(i int) {
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
@@ -172,10 +172,10 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 	var r4 *paillierrange.Round4Output
 
 	internal.RunMeasurement(500, "paillierrange_round5", func(i int) {
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()

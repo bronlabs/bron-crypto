@@ -131,7 +131,7 @@ func MakeCohortProtocol(cipherSuite *integration.CipherSuite, protocol protocols
 func MakeTranscripts(label string, identities []integration.IdentityKey) (allTranscripts []transcripts.Transcript) {
 	allTranscripts = make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		allTranscripts[i] = hagrid.NewTranscript(label)
+		allTranscripts[i] = hagrid.NewTranscript(label, nil)
 	}
 	return allTranscripts
 }

@@ -38,7 +38,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_HJKY_ZERO_SHARE_SAMPLING-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_ZERO_SHARE_SAMPLING-", nil)
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
 

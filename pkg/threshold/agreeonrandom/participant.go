@@ -43,7 +43,7 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 	}
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_AGREE_ON_RANDOM")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_AGREE_ON_RANDOM", nil)
 	}
 	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(identityKey, participants)
 	return &Participant{

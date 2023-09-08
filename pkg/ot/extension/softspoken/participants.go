@@ -4,6 +4,8 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/curves"
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/csprng"
+	"github.com/copperexchange/krypton/pkg/hashing/tmmohash"
 	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton/pkg/transcripts"
 	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
@@ -29,6 +31,9 @@ type Receiver struct {
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
 
+	// prg contains the pseudo-random generator used in the OT expansion.
+	prg csprng.CSPRNG
+
 	_ types.Incomparable
 }
 
@@ -49,6 +54,9 @@ type Sender struct {
 	// useForcedReuse is a flag that indicates whether the protocol should use forced reuse.
 	useForcedReuse bool
 
+	// prg contains the pseudo-random generator used in the OT expansion.
+	prg csprng.CSPRNG
+
 	_ types.Incomparable
 }
 
@@ -60,13 +68,26 @@ func NewCOtReceiver(
 	transcript transcripts.Transcript,
 	curve curves.Curve,
 	useForcedReuse bool,
-) (*Receiver, error) {
-	err := validateCOtReceiver(baseOtResults, uniqueSessionId, curve)
+	seededPrng csprng.CSPRNG,
+) (R *Receiver, err error) {
+	err = validateCOtReceiver(baseOtResults, uniqueSessionId, curve)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KRYPTON_PRIMITIVES_SOFTSPOKEN_COTe", nil)
+	}
+	if seededPrng == nil {
+		etaPrimeBytes := (1*Xi)>>3 + SigmaBytes // η' = LOTe*ξ + sigma
+		seededPrng, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, uniqueSessionId)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
+		}
+	} else {
+		seededPrng, err = seededPrng.New(nil, nil)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
+		}
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Receiver{
@@ -75,6 +96,7 @@ func NewCOtReceiver(
 		transcript:     transcript,
 		curve:          curve,
 		useForcedReuse: useForcedReuse,
+		prg:            seededPrng,
 	}, nil
 }
 
@@ -102,13 +124,26 @@ func NewCOtSender(
 	transcript transcripts.Transcript,
 	curve curves.Curve,
 	useForcedReuse bool,
-) (*Sender, error) {
-	err := validateCOtSender(baseOtResults, uniqueSessionId, curve)
+	seededPrng csprng.CSPRNG,
+) (s *Sender, err error) {
+	err = validateCOtSender(baseOtResults, uniqueSessionId, curve)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_SOFTSPOKEN_COTe")
+		transcript = hagrid.NewTranscript("KRYPTON_PRIMITIVES_SOFTSPOKEN_COTe", nil)
+	}
+	if seededPrng == nil { // Default prng output size optimised for DKLs23.
+		etaPrimeBytes := (1*Xi)>>3 + SigmaBytes // η' = LOTe*ξ + sigma
+		seededPrng, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, uniqueSessionId)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
+		}
+	} else {
+		seededPrng, err = seededPrng.New(nil, nil)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
+		}
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	return &Sender{
@@ -117,6 +152,7 @@ func NewCOtSender(
 		transcript:     transcript,
 		curve:          curve,
 		useForcedReuse: useForcedReuse,
+		prg:            seededPrng,
 	}, nil
 }
 

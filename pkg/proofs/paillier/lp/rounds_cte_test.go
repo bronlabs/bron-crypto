@@ -31,7 +31,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	require.NoError(t, err)
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	var verifier *lp.Verifier
 
 	internal.RunMeasurement(100, "paillier_lp_round1", func(i int) {
@@ -61,8 +61,8 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	require.NoError(t, err)
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	var verifier *lp.Verifier
 	var r1 *lp.Round1Output
 	var prover *lp.Prover
@@ -97,8 +97,8 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	require.NoError(t, err)
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	var verifier *lp.Verifier
 	var r1 *lp.Round1Output
 	var prover *lp.Prover
@@ -136,8 +136,8 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 	require.NoError(t, err)
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	var verifier *lp.Verifier
 	var r1 *lp.Round1Output
 	var prover *lp.Prover
@@ -178,8 +178,8 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 	require.NoError(t, err)
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	var verifier *lp.Verifier
 	var r1 *lp.Round1Output
 	var prover *lp.Prover

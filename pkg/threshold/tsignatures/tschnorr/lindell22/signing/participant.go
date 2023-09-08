@@ -78,7 +78,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 

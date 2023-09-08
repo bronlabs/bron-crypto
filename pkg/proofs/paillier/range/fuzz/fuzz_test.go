@@ -33,7 +33,7 @@ func Fuzz_Test(f *testing.F) {
 
 		appLabel := "Range"
 
-		verifierTranscript := hagrid.NewTranscript(appLabel)
+		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
 		verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -41,7 +41,7 @@ func Fuzz_Test(f *testing.F) {
 		if err != nil {
 			t.Skip(err.Error())
 		}
-		proverTranscript := hagrid.NewTranscript(appLabel)
+		proverTranscript := hagrid.NewTranscript(appLabel, nil)
 		prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)

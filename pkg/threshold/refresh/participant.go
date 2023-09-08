@@ -43,7 +43,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_HJKY_KEY_REFRESH-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_KEY_REFRESH-", nil)
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
 	sampler, err := hjky.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)

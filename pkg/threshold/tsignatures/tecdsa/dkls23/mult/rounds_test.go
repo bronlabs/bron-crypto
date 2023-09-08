@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/csprng/chacha20"
 	vsot_testutils "github.com/copperexchange/krypton/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
@@ -37,7 +38,11 @@ func TestMultiplicationHappyPath(t *testing.T) {
 			sid := []byte("this is a unique session id")
 			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid, crand.Reader)
 			require.NoError(t, err)
-			alice, bob, err := testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, sid, sid)
+
+			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+			require.NoError(t, err)
+
+			alice, bob, err := testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
 			require.NoError(t, err)
 
 			a := [mult.L]curves.Scalar{}

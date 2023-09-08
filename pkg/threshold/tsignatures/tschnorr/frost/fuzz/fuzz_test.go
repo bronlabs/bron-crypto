@@ -26,7 +26,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/frost"
+	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
 	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen"

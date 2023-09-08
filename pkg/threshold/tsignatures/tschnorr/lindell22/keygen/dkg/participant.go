@@ -1,9 +1,10 @@
 package dkg
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton/pkg/transcripts"
@@ -38,7 +39,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_TSCHNORR_LINDELL22_DKG")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TSCHNORR_LINDELL22_DKG", nil)
 	}
 	transcript.AppendMessages("lindell22 dkg", uniqueSessionId)
 	party, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)

@@ -19,6 +19,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/protocols"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
 	dkls23_testutils "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
@@ -67,7 +68,9 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []integration.
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
-	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message)
+	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
+	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message, seededPrng)
 	require.NoError(t, err)
 }
 

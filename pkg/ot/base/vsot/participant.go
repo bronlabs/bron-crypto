@@ -140,7 +140,7 @@ func NewSender(curve curves.Curve, batchSize int, uniqueSessionId []byte, transc
 		return nil, errs.NewInvalidArgument("unique session id is empty")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
+		transcript = hagrid.NewTranscript("KRYPTON_PRIMITIVES_BASE_OT_SIMPLEST", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	transcript.AppendMessages("VSOT", uniqueSessionId)
@@ -169,7 +169,7 @@ func NewReceiver(curve curves.Curve, batchSize int, uniqueSessionId []byte, tran
 		return nil, errs.NewInvalidArgument("unique session id is empty")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("KNOX_PRIMITIVES_BASE_OT_SIMPLEST")
+		transcript = hagrid.NewTranscript("KRYPTON_PRIMITIVES_BASE_OT_SIMPLEST", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
 	transcript.AppendMessages("VSOT", uniqueSessionId)

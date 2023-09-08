@@ -87,7 +87,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -157,7 +157,7 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *sa
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

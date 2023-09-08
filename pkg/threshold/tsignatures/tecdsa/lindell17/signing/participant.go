@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	transcriptLabel          = "COPPER_KNOX_LINDELL2017_INTERACTIVE_SIGN"
-	transcriptSessionIdLabel = "COPPER_KNOX_LINDELL2017_INTERACTIVE_SIGN_SESSION_ID"
+	transcriptLabel          = "COPPER_KRYPTON_LINDELL2017_INTERACTIVE_SIGN"
+	transcriptSessionIdLabel = "COPPER_KRYPTON_LINDELL2017_INTERACTIVE_SIGN_SESSION_ID"
 )
 
 var (
@@ -105,7 +105,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -164,7 +164,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

@@ -19,13 +19,13 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 	sessionId := []byte("lpSession")
 	transcriptLabel := "LP"
 
-	verifierTranscript := hagrid.NewTranscript(transcriptLabel)
+	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	verifier, err := lp.NewVerifier(k, pk, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
-	proverTranscript := hagrid.NewTranscript(transcriptLabel)
+	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	prover, err := lp.NewProver(k, sk, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err

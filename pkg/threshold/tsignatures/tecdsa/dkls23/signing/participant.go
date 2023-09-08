@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/csprng"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
@@ -16,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_KNOX_TECDSA_DKLS23-"
+const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS23-"
 
 var _ dkls23.Participant = (*Cosigner)(nil)
 
@@ -97,12 +98,12 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs23 cosigner.
-func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Cosigner, error) {
+func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, tprng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel)
+		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
 
@@ -115,7 +116,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants)
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -125,11 +126,11 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue
 		}
-		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsReceiver, uniqueSessionId, prng, transcript.Clone())
+		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsReceiver, uniqueSessionId, tprng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsSender, uniqueSessionId, prng, transcript.Clone())
+		bob, err := mult.NewBob(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsSender, uniqueSessionId, tprng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
@@ -145,7 +146,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 		Shard:               shard,
 		SessionParticipants: sessionParticipants,
 		sessionShamirIDs:    sessionShamirIDs,
-		prng:                prng,
+		prng:                tprng,
 		transcript:          transcript,
 		subprotocols: &SubProtocols{
 			zeroShareSampling: zeroShareSamplingParty,

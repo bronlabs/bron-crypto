@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/hashing/tmmohash"
 )
 
 func Fuzz_Test_hash(f *testing.F) {
@@ -21,7 +22,7 @@ func Fuzz_Test_hash(f *testing.F) {
 
 func Fuzz_Test_hashaes(f *testing.F) {
 	f.Fuzz(func(t *testing.T, input []byte, iv []byte, length int) {
-		h, err := hashing.NewAesHash(length, iv)
+		h, err := tmmohash.NewTmmoHash(length, 64, iv)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

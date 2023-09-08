@@ -10,13 +10,14 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/csprng"
 	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
 	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
 )
 
-func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, prngs []io.Reader) (participants []*signing.Cosigner, err error) {
+func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, tprngs []io.Reader, seededPrng csprng.CSPRNG) (participants []*signing.Cosigner, err error) {
 	if len(identities) < cohortConfig.Protocol.Threshold {
 		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
@@ -28,8 +29,8 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	participants = make([]*signing.Cosigner, cohortConfig.Protocol.Threshold)
 	for i, identity := range identities {
 		var prng io.Reader
-		if len(prngs) != 0 && prngs[i] != nil {
-			prng = prngs[i]
+		if len(tprngs) != 0 && tprngs[i] != nil {
+			prng = tprngs[i]
 		} else {
 			prng = crand.Reader
 		}
@@ -38,7 +39,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 			return nil, errors.New("invalid identity")
 		}
 		// TODO: test for what happens if session participants are set to be different for different parties
-		participants[i], err = signing.NewCosigner(sid, identity, hashset.NewHashSet(identities), shards[i], cohortConfig, prng, nil)
+		participants[i], err = signing.NewCosigner(sid, identity, hashset.NewHashSet(identities), shards[i], cohortConfig, prng, seededPrng, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -139,8 +140,8 @@ func MapPartialSignatures(identities []integration.IdentityKey, partialSignature
 	return result
 }
 
-func RunInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, message []byte) error {
-	participants, err := MakeInteractiveCosigners(cohortConfig, identities, shards, nil)
+func RunInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*dkls23.Shard, message []byte, seededPrng csprng.CSPRNG) error {
+	participants, err := MakeInteractiveCosigners(cohortConfig, identities, shards, nil, seededPrng)
 	if err != nil {
 		return err
 	}

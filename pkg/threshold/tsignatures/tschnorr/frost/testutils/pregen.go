@@ -6,7 +6,7 @@ import (
 
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tschnorr/frost"
 )
 
 func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (participants []*frost.PreGenParticipant, err error) {

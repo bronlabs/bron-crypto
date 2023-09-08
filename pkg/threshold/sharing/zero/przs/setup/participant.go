@@ -76,7 +76,7 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	sortedParticipants := integration.ByPublicKey(participants.List())
 	sort.Sort(sortedParticipants)
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_ZERO_SHARE_SETUP")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_ZERO_SHARE_SETUP", nil)
 	}
 	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
 	if prng == nil {

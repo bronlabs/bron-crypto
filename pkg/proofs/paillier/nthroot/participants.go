@@ -62,7 +62,7 @@ func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcript
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
@@ -106,7 +106,7 @@ func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts
 	}
 
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel)
+		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 

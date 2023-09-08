@@ -11,7 +11,7 @@ import (
 
 func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, label []byte, message []byte, l int) {
-		mt := hagrid.NewTranscript(string(label))
+		mt := hagrid.NewTranscript(string(label), nil)
 		mt.AppendMessages(string(label), message)
 		_, err := mt.ExtractBytes(string(label), l)
 		if err != nil && !errs.IsKnownError(err) {

@@ -54,12 +54,12 @@ func Test_SanityCheck(t *testing.T) {
 	ok := nativeEddsa.Verify(publicKey.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 
-	// verify knox
-	knoxSignature := &eddsa.Signature{
+	// verify krypton
+	kryptonSignature := &eddsa.Signature{
 		R: bigR,
 		Z: bigS,
 	}
-	err = eddsa.Verify(curve, hashFunc, knoxSignature, publicKey, message)
+	err = eddsa.Verify(curve, hashFunc, kryptonSignature, publicKey, message)
 	require.NoError(t, err)
 }
 

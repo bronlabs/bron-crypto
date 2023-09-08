@@ -20,14 +20,14 @@ const (
 type PublicKey struct {
 	P curves.Point
 
-	types.Incomparable
+	_ types.Incomparable
 }
 
 type PrivateKey struct {
 	PublicKey
 	K curves.Scalar
 
-	types.Incomparable
+	_ types.Incomparable
 }
 
 // Signature BIP-340 signature.
@@ -35,7 +35,7 @@ type Signature struct {
 	R curves.Point
 	S curves.Scalar
 
-	types.Incomparable
+	_ types.Incomparable
 }
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {

@@ -135,7 +135,7 @@ func (p *Prover) Validate() error {
 		return errs.NewIsNil("prng")
 	}
 	if p.transcript == nil {
-		p.transcript = hagrid.NewTranscript(domainSeparationLabel)
+		p.transcript = hagrid.NewTranscript(domainSeparationLabel, nil)
 	}
 	if len(p.uniqueSessionId) == 0 {
 		return errs.NewInvalidArgument("length of session id is 0")

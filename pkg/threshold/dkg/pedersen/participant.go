@@ -58,7 +58,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_PEDERSEN_DKG-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_PEDERSEN_DKG-", nil)
 	}
 	transcript.AppendMessages("dkg", uniqueSessionId)
 	result := &Participant{

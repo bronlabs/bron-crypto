@@ -67,11 +67,11 @@ func RunSoftspokenOTe(
 ) (oTeSenderOutputs *softspoken.OTeSenderOutput, oTeReceiverOutputs softspoken.OTeReceiverOutput, err error) {
 	// Setup OTe
 	useForcedReuse := false
-	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse)
+	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
 	}
-	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse)
+	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
 	}
@@ -140,11 +140,11 @@ func RunSoftspokenCOTe(
 	inputOpts softspoken.COTeInputOpt, // sender's input, the InputOpt batches of α
 ) (cOTeSenderOutput softspoken.COTeSenderOutput, cOTeReceiverOutput softspoken.COTeReceiverOutput, err error) {
 	// Setup COTe
-	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse)
+	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
 	}
-	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse)
+	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
 	}

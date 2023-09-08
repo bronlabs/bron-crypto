@@ -1,9 +1,10 @@
 package dkg
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton/pkg/base/types"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton/pkg/signatures/bls"
@@ -46,7 +47,7 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integ
 		return nil, errs.NewInvalidCurve("cohort config curve mismatch with the declared subgroup")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_TBLS_KEYGEN-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TBLS_KEYGEN-", nil)
 	}
 	transcript.AppendMessages("threshold bls dkg", uniqueSessionId)
 	transcript.AppendMessages("keys subgroup", []byte(cohortConfig.CipherSuite.Curve.Name()))

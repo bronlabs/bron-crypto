@@ -4,24 +4,32 @@ import (
 	crand "crypto/rand"
 
 	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/csprng"
 	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/sample"
 )
 
-func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) (participants []*sample.Participant, err error) {
+func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds, seededPrng csprng.CSPRNG, wrongFirstUniqueSessionId []byte) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
 	random := crand.Reader
 	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities, random)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not produce shared random value")
 	}
+	var sid []byte
 	for i, identity := range identities {
-		participants[i], err = sample.NewParticipant(cohortConfig, uniqueSessionId, identity, seeds[i], hashset.NewHashSet(identities))
+		if wrongFirstUniqueSessionId != nil && i == 0 {
+			sid = wrongFirstUniqueSessionId
+		} else {
+			sid = uniqueSessionId
+		}
+		participants[i], err = sample.NewParticipant(cohortConfig, sid, identity, seeds[i], hashset.NewHashSet(identities), seededPrng)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "could not make participant")
 		}
 	}
 	return participants, nil
@@ -32,7 +40,7 @@ func DoSample(participants []*sample.Participant) (samples []przs.Sample, err er
 	for _, participant := range participants {
 		sampleMap[participant.MySharingId], err = participant.Sample()
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "could not sample")
 		}
 	}
 	for _, s := range sampleMap {

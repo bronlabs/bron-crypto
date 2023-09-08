@@ -52,7 +52,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 		return nil, errs.WrapInvalidArgument(err, "couldn't construct the cossigner")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KNOX_THRESHOLD_BLS_BOLDYREVA-")
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_THRESHOLD_BLS_BOLDYREVA-", nil)
 	}
 	transcript.AppendMessages("threshold bls signing", sid)
 

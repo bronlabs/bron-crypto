@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/krypton/pkg/base/curves"
 	"github.com/copperexchange/krypton/pkg/base/errs"
 	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/hashing"
 	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
@@ -55,14 +54,22 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	extOptions := &ExtOptions{}
 	for i := 0; i < Kappa; i++ {
+		extOptions[0][i] = make([]byte, etaPrimeBytes)
+		extOptions[1][i] = make([]byte, etaPrimeBytes)
 		// k^i_0 --(PRG)--> t^i_0
-		extOptions[0][i], err = hashing.PRG(R.sid, R.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:], etaPrimeBytes)
+		err = R.prg.Seed(R.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:], R.sid)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe (Ext.2)")
+		}
+		if _, err = R.prg.Read(extOptions[0][i]); err != nil {
+			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe (Ext.2)")
+		}
+		// k^i_1 --(PRG)--> t^i_1
+		err = R.prg.Seed(R.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:], R.sid)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
-		// k^i_1 --(PRG)--> t^i_1
-		extOptions[1][i], err = hashing.PRG(R.sid, R.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:], etaPrimeBytes)
-		if err != nil {
+		if _, err = R.prg.Read(extOptions[1][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 	}
@@ -141,10 +148,14 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	// (Ext.2) Expand the baseOT results using them as seed to the PRG
 	extDeltaOpt := ExtDeltaOpt{}
 	for i := 0; i < Kappa; i++ {
+		extDeltaOpt[i] = make([]byte, etaPrimeBytes)
 		// This is the core expansion of the OT: k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
-		extDeltaOpt[i], err = hashing.PRG(S.sid, S.baseOtSeeds.OneTimePadDecryptionKey[i][:], etaPrimeBytes)
+		err = S.prg.Seed(S.baseOtSeeds.OneTimePadDecryptionKey[i][:], S.sid)
 		if err != nil {
-			return nil, nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken COTe (Ext.2)")
+			return nil, nil, nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe (Ext.2)")
+		}
+		if _, err = S.prg.Read(extDeltaOpt[i]); err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe (Ext.2)")
 		}
 	}
 	// (Ext.4) Compute q_i = Δ_i • u_i + t_i (constant time)
