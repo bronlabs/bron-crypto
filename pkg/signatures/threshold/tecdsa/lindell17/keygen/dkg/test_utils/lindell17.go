@@ -2,7 +2,12 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	gennaro_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
 	"io"
 
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
@@ -225,4 +230,103 @@ func DoDkgRound8(participants []*lindell17_dkg.Participant, round8Inputs []map[h
 		}
 	}
 	return shards, nil
+}
+
+func DoKeygen(cipherSuite *integration.CipherSuite, identities []integration.IdentityKey, transcripts []transcripts.Transcript, t int) ([]*threshold.SigningKeyShare, []*lindell17_dkg.Participant, []*lindell17.Shard, error) {
+
+	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, t, identities)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	gennaroParticipants, err := gennaro_dkg_test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := gennaro_dkg_test_utils.DoDkgRound1(gennaroParticipants)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for _, out := range r1OutsU {
+		if len(out) != cohortConfig.Protocol.TotalParties-1 {
+			return nil, nil, nil, errs.NewFailed("output size does not match")
+		}
+	}
+
+	r2InsB, r2InsU := gennaro_dkg_test_utils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)
+	r2Outs, err := gennaro_dkg_test_utils.DoDkgRound2(gennaroParticipants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for _, out := range r2Outs {
+		if out == nil {
+			return nil, nil, nil, errs.NewFailed("output is nil")
+		}
+	}
+	r3Ins := gennaro_dkg_test_utils.MapDkgRound2OutputsToRound3Inputs(gennaroParticipants, r2Outs)
+	signingKeyShares, publicKeyShares, err := gennaro_dkg_test_utils.DoDkgRound3(gennaroParticipants, r3Ins)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	lindellParticipants, err := MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r1o, err := DoDkgRound1(lindellParticipants)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r2i := MapDkgRound1OutputsToRound2Inputs(lindellParticipants, r1o)
+	r2o, err := DoDkgRound2(lindellParticipants, r2i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r3i := MapDkgRound2OutputsToRound3Inputs(lindellParticipants, r2o)
+	r3o, err := DoDkgRound3(lindellParticipants, r3i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r4i := MapDkgRound3OutputsToRound4Inputs(lindellParticipants, r3o)
+	r4o, err := DoDkgRound4(lindellParticipants, r4i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r5i := MapDkgRound4OutputsToRound5Inputs(lindellParticipants, r4o)
+	r5o, err := DoDkgRound5(lindellParticipants, r5i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r6i := MapDkgRound5OutputsToRound6Inputs(lindellParticipants, r5o)
+	r6o, err := DoDkgRound6(lindellParticipants, r6i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r7i := MapDkgRound6OutputsToRound7Inputs(lindellParticipants, r6o)
+	r7o, err := DoDkgRound7(lindellParticipants, r7i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r8i := MapDkgRound7OutputsToRound8Inputs(lindellParticipants, r7o)
+	shards, err := DoDkgRound8(lindellParticipants, r8i)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if shards == nil {
+		return nil, nil, nil, errs.NewFailed("shards are nil")
+	}
+	return signingKeyShares, lindellParticipants, shards, nil
 }

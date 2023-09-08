@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	lindell17_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
 	gennaro_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/dkg/gennaro/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
@@ -31,11 +32,11 @@ func Test_HappyPath(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
+	identities, err := integration_test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 
-	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+	cohortConfig, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")
@@ -84,9 +85,9 @@ func Test_HappyPathWithDkg(t *testing.T) {
 		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
-	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
+	identities, err := integration_test_utils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
+	cohortConfig, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 	require.NoError(t, err)
 
 	alice := 0
@@ -96,7 +97,8 @@ func Test_HappyPathWithDkg(t *testing.T) {
 
 	signingKeyShares, publicKeyShares := doGennaroDkg(t, sid, cohortConfig, identities)
 	shards := doLindell17Dkg(t, sid, cohortConfig, identities, signingKeyShares, publicKeyShares)
-	signature := doLindell17Sign(t, sid, cohortConfig, identities, shards, alice, bob, message)
+	signature, err := lindell17_test_utils.DoLindell17Sign(sid, cohortConfig, identities, shards, alice, bob, message)
+	require.NoError(t, err)
 
 	err = ecdsa.Verify(signature, cipherSuite.Hash, shards[bob].SigningKeyShare.PublicKey, message)
 	require.NoError(t, err)
@@ -119,11 +121,11 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 				Hash:  sha256.New,
 			}
 
-			identities, err := test_utils.MakeIdentities(cipherSuite, 3)
+			identities, err := integration_test_utils.MakeIdentities(cipherSuite, 3)
 			require.NoError(t, err)
 			alice, bob, charlie := identities[0], identities[1], identities[2]
 
-			cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
+			cohortConfig, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob, charlie})
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")
@@ -246,33 +248,4 @@ func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortCo
 	require.NotNil(t, shards)
 
 	return shards
-}
-
-func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice, bob int, message []byte) (signature *ecdsa.Signature) {
-	t.Helper()
-
-	primary, err := interactive.NewPrimaryCosigner(identities[alice], identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)
-	require.NotNil(t, primary)
-	require.NoError(t, err)
-
-	secondary, err := interactive.NewSecondaryCosigner(identities[bob], identities[alice], shards[bob], cohortConfig, sid, nil, crand.Reader)
-	require.NotNil(t, secondary)
-	require.NoError(t, err)
-
-	r1, err := primary.Round1()
-	require.NoError(t, err)
-
-	r2, err := secondary.Round2(r1)
-	require.NoError(t, err)
-
-	r3, err := primary.Round3(r2)
-	require.NoError(t, err)
-
-	r4, err := secondary.Round4(r3, message)
-	require.NoError(t, err)
-
-	signature, err = primary.Round5(r4, message)
-	require.NoError(t, err)
-
-	return signature
 }

@@ -4,23 +4,21 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02/test_utils"
 	"os"
 	"strconv"
 	"testing"
 
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02/keygen/dkg"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02/test_utils"
-
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02/keygen/dkg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,23 +70,7 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
-	require.NoError(t, err)
-
-	participants, err := test_utils.MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, nil)
-	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
-	require.NoError(t, err)
-	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.Participants.Len()-1)
-	}
-
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	r2Outs, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
-
-	r3Ins := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
-	shards, err := test_utils.DoDkgRound3(participants, r3Ins)
+	shards, err := test_utils.DoKeygen[K](curve, identities, cohortConfig)
 	require.NoError(t, err)
 	for _, shard := range shards {
 		err = shard.Validate(cohortConfig)

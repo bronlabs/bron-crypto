@@ -2,6 +2,9 @@ package test_utils
 
 import (
 	crand "crypto/rand"
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/core/curves"
+	"github.com/copperexchange/knox-primitives/pkg/core/errs"
 	"io"
 
 	"github.com/pkg/errors"
@@ -12,6 +15,35 @@ import (
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tbls/boldyreva02/keygen/dkg"
 )
+
+func DoKeygen[K bls.KeySubGroup](curve curves.Curve, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig) ([]*boldyreva02.Shard[K], error) {
+	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	participants, err := MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoDkgRound1(participants)
+	if err != nil {
+		return nil, err
+	}
+	for _, out := range r1OutsU {
+		if len(out) != cohortConfig.Participants.Len()-1 {
+			return nil, errs.NewFailed("output size does not match")
+		}
+	}
+
+	r2InsB, r2InsU := MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2Outs, err := DoDkgRound2(participants, r2InsB, r2InsU)
+
+	r3Ins := MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
+	shards, err := DoDkgRound3(participants, r3Ins)
+	return shards, nil
+}
 
 func MakeDkgParticipants[K bls.KeySubGroup](uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant[K], err error) {
 	if len(identities) != cohortConfig.Participants.Len() {
