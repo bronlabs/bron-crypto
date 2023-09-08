@@ -13,17 +13,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	gennaro_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/refresh/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	gennaro_testutils "github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/refresh/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PublicKeyShares) {
@@ -34,15 +34,15 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_test_utils.RunDKG(uniqueSessionId, cohortConfig, identities)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	require.NoError(t, err)
+
+	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, cohortConfig, identities)
 	require.NoError(t, err)
 
 	return uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares
@@ -57,7 +57,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterati
 	initialPublicKeyShare := dkgPublicKeyShares
 	for iteration := 0; iteration < iterations; iteration++ {
 		t.Logf("chaing key refresh iteration %d", iteration)
-		participants, signingKeyShares, publicKeyShares, err := test_utils.RunRefresh(uniqueSessionId, cohortConfig, identities, initialSigningKeyShare, initialPublicKeyShare)
+		participants, signingKeyShares, publicKeyShares, err := testutils.RunRefresh(uniqueSessionId, cohortConfig, identities, initialSigningKeyShare, initialPublicKeyShare)
 		require.NoError(t, err)
 		require.Len(t, signingKeyShares, len(dkgSigningKeyShares))
 		require.Len(t, publicKeyShares, len(dkgPublicKeyShares))

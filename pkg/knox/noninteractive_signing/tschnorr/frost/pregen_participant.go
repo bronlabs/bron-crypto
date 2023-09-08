@@ -3,10 +3,10 @@ package frost
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 )
 
 type PreGenParticipant struct {
@@ -18,7 +18,7 @@ type PreGenParticipant struct {
 	round         int
 	state         *preGenState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type preGenState struct {
@@ -26,7 +26,7 @@ type preGenState struct {
 	es          []curves.Scalar
 	Commitments []*AttestedCommitmentToNoncePair
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
@@ -48,6 +48,9 @@ func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *int
 func validateInputs(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if identityKey == nil {
 		return errs.NewMissing("identity key is nil")

@@ -13,11 +13,11 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var (
@@ -202,13 +202,13 @@ func BenchmarkP256(b *testing.B) {
 type BenchScalar struct {
 	value *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type BenchPoint struct {
 	x, y *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *BenchPoint) Clone() curves.Point {
@@ -248,7 +248,7 @@ func (s *BenchScalar) Random(reader io.Reader) curves.Scalar {
 }
 
 func (s *BenchScalar) Hash(inputs ...[]byte) curves.Scalar {
-	xmd, err := test_utils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), []byte("P256_XMD:SHA-256_SSWU_RO_"), 48)
+	xmd, err := testutils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), []byte("P256_XMD:SHA-256_SSWU_RO_"), 48)
 	if err != nil {
 		return nil
 	}
@@ -508,7 +508,7 @@ func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
 	curve := elliptic.P256().Params()
 
 	domain := []byte("P256_XMD:SHA-256_SSWU_RO_")
-	uniformBytes, _ := test_utils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), domain, 96)
+	uniformBytes, _ := testutils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), domain, 96)
 
 	u0 := new(big.Int).SetBytes(uniformBytes[:48])
 	u1 := new(big.Int).SetBytes(uniformBytes[48:])
@@ -517,8 +517,8 @@ func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
 	u1.Mod(u1, curve.P)
 
 	ssParams := p256SswuParams()
-	q0x, q0y := test_utils.Osswu3mod4(u0, ssParams)
-	q1x, q1y := test_utils.Osswu3mod4(u1, ssParams)
+	q0x, q0y := testutils.Osswu3mod4(u0, ssParams)
+	q1x, q1y := testutils.Osswu3mod4(u1, ssParams)
 
 	// Since P-256 does not require the isogeny map just add the points
 	x, y := curve.Add(q0x, q0y, q1x, q1y)
@@ -763,7 +763,7 @@ func (p *BenchPoint) UnmarshalJSON(input []byte) error {
 }
 
 // From https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#section-8.2
-func p256SswuParams() *test_utils.SswuParams {
+func p256SswuParams() *testutils.SswuParams {
 	params := elliptic.P256().Params()
 
 	// c1 = (q - 3) / 4
@@ -782,7 +782,7 @@ func p256SswuParams() *test_utils.SswuParams {
 	zTmp.Mod(zTmp, params.P)
 	c2 := new(big.Int).ModSqrt(zTmp, params.P)
 
-	return &test_utils.SswuParams{
+	return &testutils.SswuParams{
 		Params: params,
 		C1:     c1,
 		C2:     c2,
@@ -794,7 +794,7 @@ func p256SswuParams() *test_utils.SswuParams {
 
 // rhs of the curve equation
 func rhsP256(x *big.Int, params *elliptic.CurveParams) *big.Int {
-	f := test_utils.NewField(params.P)
+	f := testutils.NewField(params.P)
 	r := f.NewElement(x)
 	r2 := r.Mul(r)
 

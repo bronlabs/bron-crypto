@@ -5,13 +5,13 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/proofs/dlog"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -36,7 +36,7 @@ type Prover struct {
 	prng            io.Reader
 	BasePoint       curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*Prover) IsUC() bool {
@@ -48,7 +48,7 @@ type Proof struct {
 	E [RBytes]curves.Scalar
 	Z [RBytes]curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // NewProver generates a `Prover` object, ready to generate dlog proofs on any given point.

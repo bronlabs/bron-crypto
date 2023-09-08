@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tecdsa/lindell17/testutils"
 )
 
 func Test_PreGenHappyPath(t *testing.T) {
@@ -28,17 +28,17 @@ func Test_PreGenHappyPath(t *testing.T) {
 	tau := 64
 	transcriptAppLabel := "Lindell2017PreGenTest"
 
-	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, threshold, identities)
+	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, threshold, identities)
 	require.NoError(t, err)
 
-	transcripts := integration_test_utils.MakeTranscripts(transcriptAppLabel, identities)
-	participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+	transcripts := integration_testutils.MakeTranscripts(transcriptAppLabel, identities)
+	participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	require.NoError(t, err)
 
-	batches, err := test_utils.DoLindell2017PreGen(participants)
+	batches, err := testutils.DoLindell2017PreGen(participants)
 	require.NoError(t, err)
 	require.NotNil(t, batches)
 
@@ -58,7 +58,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 
 	t.Run("transcripts recoded the same data", func(t *testing.T) {
 		t.Parallel()
-		ok, err := integration_test_utils.TranscriptAtSameState("gimme", transcripts)
+		ok, err := integration_testutils.TranscriptAtSameState("gimme", transcripts)
 		require.NoError(t, err)
 		require.True(t, ok)
 	})

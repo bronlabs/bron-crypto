@@ -3,14 +3,14 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 // Fp2 is a point in p^2.
 type Fp2 struct {
 	A, B Fp
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Set copies a into fp2.

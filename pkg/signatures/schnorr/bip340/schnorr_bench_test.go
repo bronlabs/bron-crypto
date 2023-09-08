@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
 )
 
 func Benchmark_Verify(b *testing.B) {

@@ -1,21 +1,21 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 )
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*lindell22.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*lindell22.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -40,12 +40,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
-	publicKeySharesMap := make(map[helper_types.IdentityHash]curves.Point)
+	publicKeySharesMap := make(map[types.IdentityHash]curves.Point)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		publicKeySharesMap[identityKey.Hash()] = curve.ScalarBaseMult(shamirShares[sharingId-1].Value)
 	}
 
-	shards := make(map[helper_types.IdentityHash]*lindell22.Shard)
+	shards := make(map[types.IdentityHash]*lindell22.Shard)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
 		shards[identityKey.Hash()] = &lindell22.Shard{

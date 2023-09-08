@@ -3,18 +3,18 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func Test_HappyPath(t *testing.T) {
 	th := 2
 	n := 3
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 

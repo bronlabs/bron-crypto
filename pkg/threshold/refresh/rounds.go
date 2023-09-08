@@ -1,24 +1,24 @@
 package refresh
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/hjky"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/hjky"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 type Round1Broadcast struct {
 	Sampler                   *hjky.Round1Broadcast
 	PreviousFeldmanCommitment []curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round1P2P = hjky.Round1P2P
 
-func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -35,7 +35,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	}, samplerRound1P2P, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
+func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -45,7 +45,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 		combinedCommitmentVectors[p.GetSharingId()][i] = p.sampler.PedersenParty.State.Commitments[i].Add(p.publicKeyShares.FeldmanCommitmentVector[i])
 	}
 
-	samplerRound2BroadcastInput := make(map[helper_types.IdentityHash]*hjky.Round1Broadcast)
+	samplerRound2BroadcastInput := make(map[types.IdentityHash]*hjky.Round1Broadcast)
 
 	for senderSharingId := 1; senderSharingId <= p.GetCohortConfig().Protocol.TotalParties; senderSharingId++ {
 		if senderSharingId == p.GetSharingId() {

@@ -3,16 +3,16 @@ package tecdsa
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom"
-	dkls23 "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
-	lindell17 "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom"
+	dkls23 "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
+	lindell17 "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const DKGLabel = "COPPER_KNOX_DKG_TECDSA-"
@@ -33,7 +33,7 @@ type Participant struct {
 	prng       io.Reader
 	round      int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {

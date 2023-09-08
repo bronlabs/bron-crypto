@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot/testutils"
 )
 
 func TestOtOnMultipleCurves(t *testing.T) {
@@ -25,7 +25,7 @@ func TestOtOnMultipleCurves(t *testing.T) {
 		hashKeySeed := [32]byte{}
 		_, err := crand.Read(hashKeySeed[:])
 		require.NoError(t, err)
-		sender, receiver, err := test_utils.RunVSOT(t, curve, batchSize, hashKeySeed[:], crand.Reader)
+		sender, receiver, err := testutils.RunVSOT(t, curve, batchSize, hashKeySeed[:], crand.Reader)
 		require.NoError(t, err)
 
 		for i := 0; i < batchSize; i++ {

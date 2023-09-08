@@ -3,27 +3,27 @@ package pedersen
 import (
 	"fmt"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Round1Broadcast struct {
 	Ci        []curves.Point
 	DlogProof *dlog.Proof
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round1P2P struct {
 	Xij curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 const (
@@ -31,7 +31,7 @@ const (
 	SharingIdLabel = "Pedersen DKG sharing id parameter"
 )
 
-func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -65,7 +65,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[helper_t
 		}
 	}
 
-	outboundP2PMessages := map[helper_types.IdentityHash]*Round1P2P{}
+	outboundP2PMessages := map[types.IdentityHash]*Round1P2P{}
 
 	for sharingId, identityKey := range p.SharingIdToIdentityKey {
 		if sharingId != p.MySharingId {
@@ -85,7 +85,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[helper_t
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
+func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}

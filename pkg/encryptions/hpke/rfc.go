@@ -3,7 +3,7 @@ package hpke
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // These are the actual APIs defined in the RFC.

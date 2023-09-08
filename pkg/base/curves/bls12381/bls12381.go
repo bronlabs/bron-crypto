@@ -6,10 +6,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	bls12381impl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	bls12381impl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 const (
@@ -73,7 +73,7 @@ type Curve struct {
 	Name_    string
 	Profile_ curves.CurveProfile
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 var _ curves.PairingCurve = (*PairingCurve)(nil)
@@ -85,7 +85,7 @@ type PairingCurve struct {
 	GT_                  curves.Scalar
 	Name_                string
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func bls12381g1Init() {

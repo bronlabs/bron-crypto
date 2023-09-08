@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
 )
 
 var allCurves = []curves.Curve{edwards25519.New()}

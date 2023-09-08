@@ -11,22 +11,21 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	lindell17_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17"
-	noninteractiv_test_utils "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	lindell17_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tecdsa/lindell17"
+	noninteractiv_testutils "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tecdsa/lindell17/testutils"
+	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -42,7 +41,7 @@ var (
 )
 
 func FuzzInteractiveSigning(f *testing.F) {
-	safePrimeMocker := test_utils.NewSafePrimeMocker()
+	safePrimeMocker := integration_testutils.NewSafePrimeMocker()
 	safePrimeMocker.Mock()
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz, n, message, cipherSuite := setup(t, data)
@@ -54,7 +53,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 }
 
 func FuzzNonInteractiveSigning(f *testing.F) {
-	safePrimeMocker := test_utils.NewSafePrimeMocker()
+	safePrimeMocker := integration_testutils.NewSafePrimeMocker()
 	safePrimeMocker.Mock()
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz, n, message, cipherSuite := setup(t, data)
@@ -96,7 +95,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, *integration.C
 	return fz, n, message, cipherSuite
 }
 
-func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, n int, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell17.Shard, message []byte) {
+func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, n int, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[types.IdentityHash]*lindell17.Shard, message []byte) {
 	t.Helper()
 
 	aliceIdx := 0
@@ -121,8 +120,8 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 		preSignatureIndex = -preSignatureIndex
 	}
 	fmt.Println("sid: ", sid, "preSignatureIndex: ", preSignatureIndex)
-	transcripts := integration_test_utils.MakeTranscripts("TEST", identities)
-	participants, err := noninteractiv_test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+	transcripts := integration_testutils.MakeTranscripts("TEST", identities)
+	participants, err := noninteractiv_testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	if len(sid) == 0 {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -130,7 +129,7 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	}
 	require.NoError(t, err)
 
-	batches, err := noninteractiv_test_utils.DoLindell2017PreGen(participants)
+	batches, err := noninteractiv_testutils.DoLindell2017PreGen(participants)
 	require.NoError(t, err)
 
 	aliceShard := shards[identities[aliceIdx].Hash()]
@@ -155,10 +154,10 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	}
 }
 
-func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integration.IdentityKey, map[helper_types.IdentityHash]*lindell17.Shard) {
+func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integration.IdentityKey, map[types.IdentityHash]*lindell17.Shard) {
 	t.Helper()
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{
@@ -177,18 +176,18 @@ func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integra
 	return identities, shards
 }
 
-func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[helper_types.IdentityHash]*lindell17.Shard, message []byte) {
+func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz *fuzz.Fuzzer, identities []integration.IdentityKey, shards map[types.IdentityHash]*lindell17.Shard, message []byte) {
 	t.Helper()
 
 	var sessionId []byte
 	fz.Fuzz(&sessionId)
 	alice := identities[0]
 	bob := identities[1]
-	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob})
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, []integration.IdentityKey{alice, bob})
 	require.NoError(t, err)
 
 	aliceShard := shards[alice.Hash()]
-	primary, err := interactive.NewPrimaryCosigner(alice, bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := signing.NewPrimaryCosigner(alice, bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
 	if err != nil {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -198,7 +197,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	require.NoError(t, err)
 
 	bobShard := shards[bob.Hash()]
-	secondary, err := interactive.NewSecondaryCosigner(bob, alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := signing.NewSecondaryCosigner(bob, alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 

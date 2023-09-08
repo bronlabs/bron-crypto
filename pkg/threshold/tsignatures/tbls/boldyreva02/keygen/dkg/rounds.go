@@ -1,12 +1,12 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro"
-	tbls "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
+	tbls "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 type Round1Broadcast = gennaro.Round1Broadcast
@@ -14,7 +14,7 @@ type Round1P2P = gennaro.Round1P2P
 
 type Round2Broadcast = gennaro.Round2Broadcast
 
-func (p *Participant[K]) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant[K]) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -26,7 +26,7 @@ func (p *Participant[K]) Round1() (*Round1Broadcast, map[helper_types.IdentityHa
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant[K]) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
+func (p *Participant[K]) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -38,7 +38,7 @@ func (p *Participant[K]) Round2(round1outputBroadcast map[helper_types.IdentityH
 	return output, nil
 }
 
-func (p *Participant[K]) Round3(round2output map[helper_types.IdentityHash]*Round2Broadcast) (*tbls.Shard[K], error) {
+func (p *Participant[K]) Round3(round2output map[types.IdentityHash]*Round2Broadcast) (*tbls.Shard[K], error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -55,7 +55,7 @@ func (p *Participant[K]) Round3(round2output map[helper_types.IdentityHash]*Roun
 	if !ok {
 		return nil, errs.NewInvalidType("share was not a pairing point")
 	}
-	sharesMap := make(map[helper_types.IdentityHash]curves.PairingPoint, len(publicKeyShareVanilla.SharesMap))
+	sharesMap := make(map[types.IdentityHash]curves.PairingPoint, len(publicKeyShareVanilla.SharesMap))
 	for id, point := range publicKeyShareVanilla.SharesMap {
 		pairingPoint, ok := point.(curves.PairingPoint)
 		if !ok {

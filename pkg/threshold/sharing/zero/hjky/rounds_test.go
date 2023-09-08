@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/hjky/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/hjky/testutils"
 )
 
 func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig) {
@@ -32,12 +32,12 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err = test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	return uniqueSessionId, identities, cohortConfig
@@ -48,7 +48,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 	uniqueSessionId, identities, cohortConfig := setup(t, curve, h, threshold, n)
 
-	participants, samples, publicKeySharesMaps, _, err := test_utils.RunSample(uniqueSessionId, cohortConfig, identities)
+	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(uniqueSessionId, cohortConfig, identities)
 	require.NoError(t, err)
 
 	t.Run("none of the samples are zero", func(t *testing.T) {

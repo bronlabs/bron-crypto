@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
 )
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
@@ -18,7 +18,7 @@ type Round1P2P struct {
 	Proof     *dlog.Proof
 	PublicKey curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 type (
 	Round2P2P = []ReceiversMaskedChoices

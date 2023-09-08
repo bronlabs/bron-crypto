@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
 )
 
 // passing of this test by the standard library's ed25519 implementation means that

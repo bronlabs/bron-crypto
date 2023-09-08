@@ -1,18 +1,18 @@
 package tsignatures
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 )
 
 type SigningKeyShare struct {
 	Share     curves.Scalar
 	PublicKey curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *SigningKeyShare) Validate() error {
@@ -34,10 +34,10 @@ func (s *SigningKeyShare) Validate() error {
 type PublicKeyShares struct {
 	Curve                   curves.Curve
 	PublicKey               curves.Point
-	SharesMap               map[helper_types.IdentityHash]curves.Point
+	SharesMap               map[types.IdentityHash]curves.Point
 	FeldmanCommitmentVector []curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {

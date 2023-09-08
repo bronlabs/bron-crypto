@@ -3,12 +3,12 @@ package hjky
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/pedersen"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 var _ integration.Participant = (*Participant)(nil)
@@ -18,7 +18,7 @@ type Participant struct {
 	round         int
 	transcript    transcripts.Transcript
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {

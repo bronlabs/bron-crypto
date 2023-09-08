@@ -1,16 +1,16 @@
 package frost
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type Round1Broadcast struct {
 	Tau         int
 	Commitments []*AttestedCommitmentToNoncePair
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
@@ -46,7 +46,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(round1output map[helper_types.IdentityHash]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
+func (p *PreGenParticipant) Round2(round1output map[types.IdentityHash]*Round1Broadcast) (*PreSignatureBatch, []*PrivateNoncePair, error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}

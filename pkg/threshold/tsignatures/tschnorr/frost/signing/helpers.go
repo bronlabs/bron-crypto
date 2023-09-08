@@ -3,15 +3,15 @@ package signing_helpers
 import (
 	"sort"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 func ProducePartialSignature(
@@ -19,9 +19,9 @@ func ProducePartialSignature(
 	sessionParticipants *hashset.HashSet[integration.IdentityKey],
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
-	D_alpha, E_alpha map[helper_types.IdentityHash]curves.Point,
+	D_alpha, E_alpha map[types.IdentityHash]curves.Point,
 	sharingIdToIdentityKey map[int]integration.IdentityKey,
-	identityKeyToSharingId map[helper_types.IdentityHash]int,
+	identityKeyToSharingId map[types.IdentityHash]int,
 	aggregationParameter *aggregation.SignatureAggregatorParameters,
 	message []byte,
 ) (*frost.PartialSignature, error) {
@@ -39,7 +39,7 @@ func ProducePartialSignature(
 		combinedDsAndEs = append(combinedDsAndEs, E_alpha[presentParty.Hash()].ToAffineCompressed()...)
 	}
 
-	R_js := map[helper_types.IdentityHash]curves.Point{}
+	R_js := map[types.IdentityHash]curves.Point{}
 	for _, participant := range sessionParticipants.Iter() {
 		sharingId := identityKeyToSharingId[participant.Hash()]
 		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)

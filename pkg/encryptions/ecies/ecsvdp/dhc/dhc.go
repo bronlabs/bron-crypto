@@ -1,8 +1,8 @@
 package dhc
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 func DeriveSharedSecretValue(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point) (curves.FieldElement, error) {

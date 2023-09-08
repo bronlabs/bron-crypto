@@ -5,13 +5,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
+	"github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	paillierrange "github.com/copperexchange/krypton/pkg/proofs/paillier/range"
 )
 
 var hashFunc = sha256.New
@@ -21,14 +21,14 @@ type Round1Output struct {
 	CPrime                 *paillier.CipherText
 	CDoublePrimeCommitment commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Output struct {
 	RangeProverOutput *paillierrange.ProverRound2Output
 	CHat              commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round3Output struct {
@@ -37,7 +37,7 @@ type Round3Output struct {
 	B                   *saferith.Nat
 	CDoublePrimeWitness commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round4Output struct {
@@ -45,7 +45,7 @@ type Round4Output struct {
 	BigQHat           curves.Point
 	BigQHatWitness    commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {

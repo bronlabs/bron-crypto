@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/hashing"
 )
 
 func TestFiatShamirDeterministic(t *testing.T) {

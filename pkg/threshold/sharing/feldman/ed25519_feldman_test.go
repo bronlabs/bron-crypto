@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
 )
 
 var testCurve = edwards25519.New()

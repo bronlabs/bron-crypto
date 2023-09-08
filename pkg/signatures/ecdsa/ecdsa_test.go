@@ -10,9 +10,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
 )
 
 func Test_RecoverPublicKey(t *testing.T) {

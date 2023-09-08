@@ -5,18 +5,17 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"errors"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"hash"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
-	trusted_dealer "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/keygen/ed25519_trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/signatures/schnorr"
+	trusted_dealer "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/keygen/ed25519_trusted_dealer"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -26,7 +25,7 @@ type identityKey struct {
 	signer *schnorr.Signer
 	h      func() hash.Hash
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (k *identityKey) PublicKey() curves.Point {

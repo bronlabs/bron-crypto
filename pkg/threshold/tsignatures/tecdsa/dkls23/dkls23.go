@@ -1,13 +1,13 @@
 package dkls23
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 type Participant interface {
@@ -26,23 +26,23 @@ type PartialSignature struct {
 	Wi curves.Scalar
 	Ri curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type BaseOTConfig struct {
 	AsSender   *vsot.SenderOutput
 	AsReceiver *vsot.ReceiverOutput
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs map[helper_types.IdentityHash]*BaseOTConfig
+	PairwiseBaseOTs map[types.IdentityHash]*BaseOTConfig
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {

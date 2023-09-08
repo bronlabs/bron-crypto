@@ -3,12 +3,12 @@ package sample
 import (
 	"encoding/hex"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 )
 
 type Participant struct {
@@ -18,13 +18,13 @@ type Participant struct {
 	PresentParticipants *hashset.HashSet[integration.IdentityKey]
 	UniqueSessionId     []byte
 
-	IdentityKeyToSharingId map[helper_types.IdentityHash]int
+	IdentityKeyToSharingId map[types.IdentityHash]int
 
 	Seeds przs.PairwiseSeeds
 
 	round int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey]) (*Participant, error) {

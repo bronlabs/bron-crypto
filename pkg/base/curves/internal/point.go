@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 const scalarBytes = impl.FieldBytes

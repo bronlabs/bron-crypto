@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var (
@@ -533,7 +533,7 @@ var (
 type G1 struct {
 	X, Y, Z Fp
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Random creates a random point on the curve

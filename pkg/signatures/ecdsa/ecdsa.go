@@ -6,13 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/curveutils"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/hashing"
 )
 
 type Signature struct {
@@ -20,7 +20,7 @@ type Signature struct {
 	R curves.Scalar
 	S curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Normalise normalises the signature to a "low S" form. In ECDSA, signatures are

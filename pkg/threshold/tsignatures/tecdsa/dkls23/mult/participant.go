@@ -3,13 +3,13 @@ package mult
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Alice struct {
@@ -24,7 +24,7 @@ type Alice struct {
 	aHat   [L]curves.Scalar // â ∈ [L]ℤq is the vector of check values of Alice
 	gammaA [L]curves.Scalar // γ_A ∈ [L]ℤq is the derandomization mask of Alice
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Bob struct {
@@ -42,7 +42,7 @@ type Bob struct {
 	BTilde            [L]curves.Scalar
 	oTeReceiverOutput softspoken.OTeReceiverOutput
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, prng io.Reader, transcript transcripts.Transcript) (*Alice, error) {

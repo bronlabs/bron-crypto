@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/prng"
-	rng_test_utils "github.com/copperexchange/knox-primitives/pkg/prng/test_utils"
+	"github.com/copperexchange/krypton/pkg/prng"
+	rng_testutils "github.com/copperexchange/krypton/pkg/prng/testutils"
 )
 
 // decode_or_panic decodes a hex string into a byte slice, or panics if the string is invalid.
@@ -99,7 +99,7 @@ func Test_NistValidation(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("PRNG[AES-%d UseDF=%t]", testParams.keySize, testParams.useDf),
 			func(t *testing.T) {
-				require.NoError(t, rng_test_utils.RunNistValidationTest(testParams.keySize, testParams.useDf))
+				require.NoError(t, rng_testutils.RunNistValidationTest(testParams.keySize, testParams.useDf))
 			})
 	}
 }

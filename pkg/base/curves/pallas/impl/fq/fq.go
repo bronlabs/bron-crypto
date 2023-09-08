@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 type Fq fiat_pasta_fq_montgomery_domain_field_element

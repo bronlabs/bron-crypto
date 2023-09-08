@@ -7,13 +7,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	secp256k1 "github.com/copperexchange/knox-primitives/pkg/base/curves/k256/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256/impl/fp"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256/impl/fq"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	secp256k1 "github.com/copperexchange/krypton/pkg/base/curves/k256/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256/impl/fp"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256/impl/fq"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var (
@@ -26,7 +26,7 @@ var _ elliptic.Curve = (*Koblitz256)(nil)
 type Koblitz256 struct {
 	*elliptic.CurveParams
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func oldK256InitAll() {

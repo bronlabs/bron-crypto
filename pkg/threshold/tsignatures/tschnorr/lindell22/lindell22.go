@@ -1,11 +1,11 @@
 package lindell22
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 type Participant interface {
@@ -18,14 +18,14 @@ type PartialSignature struct {
 	R curves.Point
 	S curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Shard struct {
 	SigningKeyShare *tsignatures.SigningKeyShare
 	PublicKeyShares *tsignatures.PublicKeyShares
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
@@ -40,13 +40,13 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR map[helper_types.IdentityHash]curves.Point
+	BigR map[types.IdentityHash]curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PreSignatureBatch struct {
 	PreSignatures []*PreSignature
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }

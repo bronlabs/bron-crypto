@@ -5,12 +5,12 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/hashing/bip340"
 )
 
 const (
@@ -20,14 +20,14 @@ const (
 type PublicKey struct {
 	P curves.Point
 
-	helper_types.Incomparable
+	types.Incomparable
 }
 
 type PrivateKey struct {
 	PublicKey
 	K curves.Scalar
 
-	helper_types.Incomparable
+	types.Incomparable
 }
 
 // Signature BIP-340 signature.
@@ -35,7 +35,7 @@ type Signature struct {
 	R curves.Point
 	S curves.Scalar
 
-	helper_types.Incomparable
+	types.Incomparable
 }
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
@@ -104,7 +104,7 @@ func (signature *Signature) UnmarshalBinary(input []byte) error {
 type Signer struct {
 	privateKey *PrivateKey
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {

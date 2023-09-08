@@ -3,14 +3,14 @@ package gennaro
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/pedersen"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 // To get H for Pedersen commitments, we'll hash below to curve. We assume that It is not
@@ -35,7 +35,7 @@ type Participant struct {
 	round int
 	state *State
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -60,7 +60,7 @@ type State struct {
 	receivedBlindedCommitmentVectors map[int][]curves.Point
 	partialPublicKeyShares           map[int]curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {

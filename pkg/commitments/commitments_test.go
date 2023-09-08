@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/commitments"
 )
 
 var h = sha256.New
@@ -38,7 +38,7 @@ type entry struct {
 	witness commitments.Witness
 	err     error
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Test inputs and placeholders for results that will be filled in

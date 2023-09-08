@@ -9,13 +9,13 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
 )
 
 func TestScalarRandom(t *testing.T) {
 	p256 := New()
-	sc := p256.Scalar().Random(test_utils.TestRng())
+	sc := p256.Scalar().Random(testutils.TestRng())
 	s, ok := sc.(*Scalar)
 	require.True(t, ok)
 	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("02ca487e56f8cb1ad9666027b2282d1159792d39a5e05f0bc696f85de5acc6d4"))
@@ -228,7 +228,7 @@ func TestScalarNil(t *testing.T) {
 
 // func TestPointRandom(t *testing.T) {
 // 	p256 := New()
-// 	sc := p256.Point().Random(test_utils.TestRng())
+// 	sc := p256.Point().Random(testutils.TestRng())
 // 	s, ok := sc.(*Point)
 // 	require.True(t, ok)
 // 	expectedX, _ := new(big.Int).SetString("7d31a079d75687cd0dd1118996f726c3e4d52806a5124d23c1faeee9fadb2201", 16)
@@ -321,7 +321,7 @@ func TestPointMul(t *testing.T) {
 
 func TestPointSerialize(t *testing.T) {
 	p256 := New()
-	ss := p256.Scalar().Random(test_utils.TestRng())
+	ss := p256.Scalar().Random(testutils.TestRng())
 	g := p256.Point().Generator()
 
 	ppt := g.Mul(ss)

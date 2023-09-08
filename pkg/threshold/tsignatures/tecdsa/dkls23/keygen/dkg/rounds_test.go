@@ -4,28 +4,28 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/test_utils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
+	dkls23_testutils "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -34,7 +34,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	t.Helper()
 
 	batchSize := softspoken.Kappa
-	identities, cohortConfig, participants, shards, err := dkls23_test_utils.KeyGen(curve, h, threshold, n, nil, nil)
+	identities, cohortConfig, participants, shards, err := dkls23_testutils.KeyGen(curve, h, threshold, n, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {
@@ -50,7 +50,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
-	shardsMap := make(map[helper_types.IdentityHash]*dkls23.Shard, len(shards))
+	shardsMap := make(map[types.IdentityHash]*dkls23.Shard, len(shards))
 	for i, shard := range shards {
 		shardsMap[identities[i].Hash()] = shard
 	}
@@ -201,27 +201,27 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
+	participants, err := testutils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
 	participants[0].ZeroSamplingParty.UniqueSessionId = []byte("invalid sid")
 	participants[0].GennaroParty.UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	r2OutsB, r2OutsU, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2OutsB, r2OutsU, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 
-	r3InsB, r3InsU := test_utils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
-	_, err = test_utils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r3InsB, r3InsU := testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	_, err = testutils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }

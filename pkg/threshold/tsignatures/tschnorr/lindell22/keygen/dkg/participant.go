@@ -1,23 +1,22 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 type Participant struct {
 	gennaroParty *gennaro.Participant
 	round        int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {

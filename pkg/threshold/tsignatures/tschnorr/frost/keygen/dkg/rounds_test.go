@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
 	"hash"
 	"os"
 	"reflect"
@@ -12,16 +14,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -60,25 +60,25 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
+	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	require.NoError(t, err)
+
+	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
@@ -125,26 +125,26 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	require.NoError(t, err)
+
+	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	participants[0].UniqueSessionId = []byte("invalid")
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
+	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	_, _, err = test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 

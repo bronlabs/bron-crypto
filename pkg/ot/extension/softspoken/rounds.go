@@ -4,12 +4,12 @@ import (
 	crand "crypto/rand"
 	"crypto/subtle"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
 // Round1Output is the receiver's PUBLIC output of round1 of OTe/COTe, to be sent to the Sender.
@@ -20,7 +20,7 @@ type Round1Output struct {
 	// containing ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
 	challengeResponse ChallengeResponse
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
@@ -107,7 +107,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 type Round2Output struct {
 	derandMask DerandomizeMask
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Round2Extend uses the PRG to extend the baseOT results, verifies their consistency

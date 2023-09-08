@@ -16,12 +16,12 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -60,7 +60,7 @@ type SenderOutput struct {
 	// Therefore, for readability they are called OneTimePadEncryptionKeys  in the code.
 	OneTimePadEncryptionKeys []OneTimePadEncryptionKeys
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // ReceiverOutput are the outputs that the receiver will obtain as a result of running the "random" OT protocol.
@@ -76,7 +76,7 @@ type ReceiverOutput struct {
 	// Therefore, for readability this is called OneTimePadDecryptionKey in the code.
 	OneTimePadDecryptionKey []OneTimePadDecryptionKey
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Sender stores state for the "sender" role in OT. see Name 7 in Appendix A of DKLs18.
@@ -99,7 +99,7 @@ type Sender struct {
 	transcript      transcripts.Transcript
 	prng            io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Receiver stores state for the "receiver" role in OT. Name 7, Appendix A, of DKLs.
@@ -122,7 +122,7 @@ type Receiver struct {
 	transcript      transcripts.Transcript
 	prng            io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // NewSender creates a new "sender" object, ready to participate in a _random_ verified simplest OT in the role of the sender.

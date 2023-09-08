@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/signatures/bls/testutils"
 )
 
 func TestCanSignAndVerify(t *testing.T) {
@@ -22,13 +22,13 @@ func TestCanSignAndVerify(t *testing.T) {
 		boundedScheme := scheme
 		t.Run("short keys", func(t *testing.T) {
 			t.Parallel()
-			_, _, _, err := test_utils.RoundTripWithKeysInG1(message, boundedScheme)
+			_, _, _, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 			require.NoError(t, err)
 		})
 
 		t.Run("short signatures", func(t *testing.T) {
 			t.Parallel()
-			_, _, _, err := test_utils.RoundTripWithKeysInG2(message, boundedScheme)
+			_, _, _, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 			require.NoError(t, err)
 		})
 	}
@@ -47,7 +47,7 @@ func TestCannotVerify(t *testing.T) {
 			t.Parallel()
 			t.Run("short keys", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG1(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 				require.NoError(t, err)
 				err = bls.Verify(privateKey.PublicKey, signature, []byte("ETH > BTC"), pop, boundedScheme)
 				require.Error(t, err)
@@ -55,7 +55,7 @@ func TestCannotVerify(t *testing.T) {
 
 			t.Run("short signatures", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG2(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 				require.NoError(t, err)
 				err = bls.Verify(privateKey.PublicKey, signature, []byte("ETH > BTC"), pop, boundedScheme)
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestCannotVerify(t *testing.T) {
 			t.Parallel()
 			t.Run("short keys", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG1(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 				require.NoError(t, err)
 				signature.Value = bls12381.NewG2().Point().Random(prng).(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme)
@@ -77,7 +77,7 @@ func TestCannotVerify(t *testing.T) {
 
 			t.Run("short signatures", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG2(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 				require.NoError(t, err)
 				signature.Value = bls12381.NewG1().Point().Random(prng).(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme)
@@ -91,7 +91,7 @@ func TestCannotVerify(t *testing.T) {
 			t.Parallel()
 			t.Run("short keys", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG1(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 				require.NoError(t, err)
 				privateKey.PublicKey.Y = bls12381.NewG1().Point().Random(prng).(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme)
@@ -103,7 +103,7 @@ func TestCannotVerify(t *testing.T) {
 
 			t.Run("short signatures", func(t *testing.T) {
 				t.Parallel()
-				privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG2(message, boundedScheme)
+				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 				require.NoError(t, err)
 				privateKey.PublicKey.Y = bls12381.NewG2().Point().Random(prng).(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme)
@@ -129,9 +129,9 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 
 			t.Run("short keys", func(t *testing.T) {
 				t.Parallel()
-				publicKeys := make([]*bls.PublicKey[test_utils.G1], boundedBatchSize)
-				signatures := make([]*bls.Signature[test_utils.G2], boundedBatchSize)
-				pops := make([]*bls.ProofOfPossession[test_utils.G2], boundedBatchSize)
+				publicKeys := make([]*bls.PublicKey[testutils.G1], boundedBatchSize)
+				signatures := make([]*bls.Signature[testutils.G2], boundedBatchSize)
+				pops := make([]*bls.ProofOfPossession[testutils.G2], boundedBatchSize)
 				messages := make([][]byte, boundedBatchSize)
 
 				for i := 0; i < boundedBatchSize; i++ {
@@ -139,7 +139,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 					if boundedScheme == bls.Basic {
 						m = bls12381.NewG1().Point().Random(crand.Reader).ToAffineCompressed()
 					}
-					privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG1(m, boundedScheme)
+					privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(m, boundedScheme)
 					require.NoError(t, err)
 					publicKeys[i] = privateKey.PublicKey
 					signatures[i] = signature
@@ -168,9 +168,9 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 
 			t.Run("short signatures", func(t *testing.T) {
 				t.Parallel()
-				publicKeys := make([]*bls.PublicKey[test_utils.G2], boundedBatchSize)
-				signatures := make([]*bls.Signature[test_utils.G1], boundedBatchSize)
-				pops := make([]*bls.ProofOfPossession[test_utils.G1], boundedBatchSize)
+				publicKeys := make([]*bls.PublicKey[testutils.G2], boundedBatchSize)
+				signatures := make([]*bls.Signature[testutils.G1], boundedBatchSize)
+				pops := make([]*bls.ProofOfPossession[testutils.G1], boundedBatchSize)
 				messages := make([][]byte, boundedBatchSize)
 
 				for i := 0; i < boundedBatchSize; i++ {
@@ -178,7 +178,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 					if boundedScheme == bls.Basic {
 						m = bls12381.NewG2().Point().Random(crand.Reader).ToAffineCompressed()
 					}
-					privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG2(m, boundedScheme)
+					privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(m, boundedScheme)
 					require.NoError(t, err)
 					publicKeys[i] = privateKey.PublicKey
 					signatures[i] = signature

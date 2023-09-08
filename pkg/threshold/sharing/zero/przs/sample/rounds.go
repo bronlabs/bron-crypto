@@ -3,9 +3,9 @@ package sample
 import (
 	"sort"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 )
 
 func (p *Participant) Sample() (przs.Sample, error) {

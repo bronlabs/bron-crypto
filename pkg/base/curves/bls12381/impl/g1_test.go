@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
 )
 
 func TestG1IsOnCurve(t *testing.T) {

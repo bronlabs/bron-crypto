@@ -3,17 +3,17 @@ package shamir
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type Share struct {
 	Id    int           `json:"identifier"`
 	Value curves.Scalar `json:"value"`
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (ss Share) Validate(curve curves.Curve) error {
@@ -52,7 +52,7 @@ type Dealer struct {
 	Threshold, Total int
 	Curve            curves.Curve
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {

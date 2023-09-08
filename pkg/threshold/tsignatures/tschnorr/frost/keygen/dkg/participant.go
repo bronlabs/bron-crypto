@@ -1,20 +1,18 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/pedersen"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen"
 )
 
 type Participant struct {
 	pedersenParty *pedersen.Participant
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {

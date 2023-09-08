@@ -3,14 +3,14 @@ package agreeonrandom
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Participant struct {
@@ -23,7 +23,7 @@ type Participant struct {
 	state *State
 	round int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type State struct {
@@ -31,9 +31,9 @@ type State struct {
 	r_i        curves.Scalar
 
 	witness             commitments.Witness
-	receivedCommitments map[helper_types.IdentityHash]commitments.Commitment
+	receivedCommitments map[types.IdentityHash]commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
@@ -54,7 +54,7 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 		SharingIdToIdentity: sharingIdToIdentity,
 		state: &State{
 			transcript:          transcript,
-			receivedCommitments: map[helper_types.IdentityHash]commitments.Commitment{},
+			receivedCommitments: map[types.IdentityHash]commitments.Commitment{},
 		},
 	}, nil
 }

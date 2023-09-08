@@ -1,11 +1,11 @@
 package lindell22
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 )
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {

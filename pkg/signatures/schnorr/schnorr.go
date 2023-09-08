@@ -4,34 +4,34 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/curveutils"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/schnorr"
 )
 
 type PrivateKey struct {
 	a curves.Scalar
 	PublicKey
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PublicKey struct {
 	Curve curves.Curve
 	Y     curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Signature struct {
 	C curves.Scalar
 	S curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Signature) UnmarshalJSON(data []byte) error {
@@ -62,7 +62,7 @@ type Signer struct {
 	privateKey  *PrivateKey
 	prng        io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewSigner(cipherSuite *integration.CipherSuite, secret curves.Scalar, prng io.Reader) (*Signer, error) {

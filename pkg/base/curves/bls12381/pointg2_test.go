@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
 )
 
 func Test_HashToPointBLS12381G2(t *testing.T) {

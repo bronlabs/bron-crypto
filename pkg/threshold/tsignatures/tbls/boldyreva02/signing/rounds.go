@@ -1,11 +1,11 @@
 package signing
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
 )
 
 func (c *Cosigner[_, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
@@ -24,7 +24,7 @@ func (c *Cosigner[_, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 	}, nil
 }
 
-func (c *Cosigner[K, S]) Aggregate(partialSignatures map[helper_types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {
+func (c *Cosigner[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {
 	if c.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", c.round)
 	}

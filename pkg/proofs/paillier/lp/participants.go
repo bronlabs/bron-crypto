@@ -5,12 +5,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -26,7 +26,7 @@ type Participant struct {
 	transcript transcripts.Transcript
 	prng       io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type VerifierState struct {
@@ -34,7 +34,7 @@ type VerifierState struct {
 	x           []*paillier.CipherText
 	y           []*saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Verifier struct {
@@ -42,14 +42,14 @@ type Verifier struct {
 	paillierPublicKey *paillier.PublicKey
 	state             *VerifierState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type ProverState struct {
 	rootVerifiers []*nthroot.Verifier
 	x             []*paillier.CipherText
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Prover struct {
@@ -57,7 +57,7 @@ type Prover struct {
 	paillierSecretKey *paillier.SecretKey
 	state             *ProverState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {

@@ -7,12 +7,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	bls12381impl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	bls12381impl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ curves.PairingPoint = (*PointG1)(nil)
@@ -20,7 +20,7 @@ var _ curves.PairingPoint = (*PointG1)(nil)
 type PointG1 struct {
 	Value *bls12381impl.G1
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*PointG1) Curve() curves.Curve {

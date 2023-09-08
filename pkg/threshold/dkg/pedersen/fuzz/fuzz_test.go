@@ -9,19 +9,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/pedersen/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
 )
 
 var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
@@ -37,14 +37,14 @@ func Fuzz_Test(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		aliceIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		set := hashset.NewHashSet(identities)
 		th = th % uint8(set.Len())
 
-		cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, int(th), identities)
+		cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, int(th), identities)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -52,7 +52,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip()
 		}
 
-		uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, prng)
+		uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -60,7 +60,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip()
 		}
 
-		participants, err := test_utils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err := testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -68,7 +68,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip()
 		}
 
-		r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
+		r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -80,8 +80,8 @@ func Fuzz_Test(f *testing.F) {
 			require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 		}
 
-		r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-		signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+		r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+		signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.NoError(t, err)
 
 		for _, publicKeyShare := range publicKeyShares {

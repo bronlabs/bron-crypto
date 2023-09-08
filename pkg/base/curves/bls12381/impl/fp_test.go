@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
 )
 
 func TestFpSetOne(t *testing.T) {

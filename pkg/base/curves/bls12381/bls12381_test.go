@@ -8,14 +8,14 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	bls12381impl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	bls12381impl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
 )
 
 func TestScalarBls12381G1Random(t *testing.T) {
 	bls12381g1 := NewG1()
-	sc := bls12381g1.Scalar().Random(test_utils.TestRng())
+	sc := bls12381g1.Scalar().Random(testutils.TestRng())
 	s, ok := sc.(*Scalar)
 	require.True(t, ok)
 	expected, _ := new(saferith.Nat).SetHex(strings.ToUpper("1208bca85f538782d3941c7e805b239d181247a3c0ab58db6b1c8848804df8c8"))
@@ -239,7 +239,7 @@ func TestScalarBls12381Point(t *testing.T) {
 
 // func TestPointBls12381G2Random(t *testing.T) {
 // 	bls12381G2 := NewG2()
-// 	sc := bls12381G2.Point().Random(test_utils.TestRng())
+// 	sc := bls12381G2.Point().Random(testutils.TestRng())
 // 	s, ok := sc.(*PointG2)
 // 	require.True(t, ok)
 // 	expectedX, _ := new(big.Int).SetString("13520facd10fc1cd71384d86b445b0e65ac1bf9205e86cd02837c064d1886b8aa3dc5348845bb06216601de5628315600967df84901b1c4f1fac87f9fc13d02f9c3a0f8cf462c86d2b4bbddf7b8520a3df2a5c541724a2c7ddc9eec45f0b2f74", 16)
@@ -332,7 +332,7 @@ func TestPointBls12381G2Mul(t *testing.T) {
 
 func TestPointBls12381G2Serialize(t *testing.T) {
 	bls12381G2 := NewG2()
-	ss := bls12381G2.Scalar().Random(test_utils.TestRng())
+	ss := bls12381G2.Scalar().Random(testutils.TestRng())
 	g := bls12381G2.Point().Generator()
 
 	ppt := g.Mul(ss)
@@ -377,7 +377,7 @@ func TestPointBls12381G2Nil(t *testing.T) {
 
 // func TestPointBls12381G1Random(t *testing.T) {
 // 	bls12381G1 := NewG1()
-// 	sc := bls12381G1.Point().Random(test_utils.TestRng())
+// 	sc := bls12381G1.Point().Random(testutils.TestRng())
 // 	s, ok := sc.(*PointG1)
 // 	require.True(t, ok)
 // 	expectedX, _ := new(big.Int).SetString("191b78617711a9aca6092c50d8c715db4856b84e48b9aa07dc42719335751b2ef3dfa2f6f15afc6dba2d0fb3be63dd83", 16)
@@ -471,7 +471,7 @@ func TestPointBls12381G1Mul(t *testing.T) {
 
 func TestPointBls12381G1Serialize(t *testing.T) {
 	bls12381G1 := NewG1()
-	ss := bls12381G1.Scalar().Random(test_utils.TestRng())
+	ss := bls12381G1.Scalar().Random(testutils.TestRng())
 	g := bls12381G1.Point().Generator()
 
 	ppt := g.Mul(ss)

@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 func Test_CanInitialize(t *testing.T) {
@@ -23,10 +23,10 @@ func Test_CanInitialize(t *testing.T) {
 		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
-	identities, err := test_utils.MakeIdentities(cipherSuite, 3)
+	identities, err := testutils.MakeIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, 2, identities)
+	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, 2, identities)
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(cohortConfig, prng)
@@ -35,10 +35,10 @@ func Test_CanInitialize(t *testing.T) {
 	aliceIdx := 0
 	bobIdx := 1
 	sessionId := []byte("DummySession")
-	alice, err := interactive.NewPrimaryCosigner(identities[aliceIdx], identities[bobIdx], shards[identities[aliceIdx].Hash()], cohortConfig, sessionId, nil, prng)
+	alice, err := signing.NewPrimaryCosigner(identities[aliceIdx], identities[bobIdx], shards[identities[aliceIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := interactive.NewSecondaryCosigner(identities[bobIdx], identities[aliceIdx], shards[identities[bobIdx].Hash()], cohortConfig, sessionId, nil, prng)
+	bob, err := signing.NewSecondaryCosigner(identities[bobIdx], identities[aliceIdx], shards[identities[bobIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
 

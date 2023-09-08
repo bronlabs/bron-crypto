@@ -11,8 +11,8 @@ import (
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 // EllipticPointHashType is to indicate which expand operation is used
@@ -49,7 +49,7 @@ type EllipticPoint struct {
 	Params     *EllipticPointParams
 	Arithmetic EllipticPointArithmetic
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // EllipticPointParams are the Weierstrauss curve parameters
@@ -63,7 +63,7 @@ type EllipticPointParams struct {
 	Gy      *Field
 	BitSize int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // EllipticPointHasher is the type of hashing methods for
@@ -74,7 +74,7 @@ type EllipticPointHasher struct {
 	xmd      hash.Hash
 	xof      sha3.ShakeHash
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Name returns the hash name for this hasher.

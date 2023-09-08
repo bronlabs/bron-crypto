@@ -3,7 +3,7 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 // Fp6 represents an element
@@ -11,7 +11,7 @@ import (
 type Fp6 struct {
 	A, B, C Fp2
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // Set fp6 = a.

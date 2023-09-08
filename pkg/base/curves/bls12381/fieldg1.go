@@ -5,11 +5,11 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	bimpl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	bimpl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ curves.FieldProfile = (*FieldProfileG1)(nil)
@@ -33,7 +33,7 @@ var _ curves.FieldElement = (*FieldElementG1)(nil)
 type FieldElementG1 struct {
 	v *bimpl.Fp
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (e *FieldElementG1) Value() curves.FieldValue {

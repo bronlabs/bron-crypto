@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 var tempDir = os.TempDir()

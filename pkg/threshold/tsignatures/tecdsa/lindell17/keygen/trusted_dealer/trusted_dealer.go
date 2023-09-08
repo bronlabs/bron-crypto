@@ -2,23 +2,22 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	core "github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/types"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	core "github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base/curves/curveutils"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 )
 
 const (
@@ -29,7 +28,7 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_types.IdentityHash]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
+func verifyShards(cohortConfig *integration.CohortConfig, shards map[types.IdentityHash]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
 	// verify private key
@@ -97,7 +96,7 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[helper_type
 	return nil
 }
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*lindell17.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*lindell17.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -145,7 +144,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 	}
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
-	shards := make(map[helper_types.IdentityHash]*lindell17.Shard)
+	shards := make(map[types.IdentityHash]*lindell17.Shard)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
 		shards[identityKey.Hash()] = &lindell17.Shard{
@@ -153,8 +152,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 				Share:     share,
 				PublicKey: publicKey,
 			},
-			PaillierPublicKeys:      make(map[helper_types.IdentityHash]*paillier.PublicKey),
-			PaillierEncryptedShares: make(map[helper_types.IdentityHash]*paillier.CipherText),
+			PaillierPublicKeys:      make(map[types.IdentityHash]*paillier.PublicKey),
+			PaillierEncryptedShares: make(map[types.IdentityHash]*paillier.CipherText),
 		}
 	}
 

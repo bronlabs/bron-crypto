@@ -3,16 +3,15 @@ package dkg
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
@@ -22,7 +21,7 @@ type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {
@@ -71,7 +70,7 @@ func Test_CanInitialize(t *testing.T) {
 		},
 	}
 	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-	sid, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	sid, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
 	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)

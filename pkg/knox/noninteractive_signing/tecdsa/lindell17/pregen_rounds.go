@@ -7,22 +7,21 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/types"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/curveutils"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
 type Round1Broadcast struct {
 	BigRCommitment []commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Broadcast struct {
@@ -30,7 +29,7 @@ type Round2Broadcast struct {
 	BigRProof   []*dlog.Proof
 	BigRWitness []commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 var commitmentHashFunc = sha3.New256
@@ -64,16 +63,16 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("rounds mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitments := make([]map[helper_types.IdentityHash]commitments.Commitment, p.tau)
+	theirBigRCommitments := make([]map[types.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		theirBigRCommitments[i] = make(map[helper_types.IdentityHash]commitments.Commitment)
+		theirBigRCommitments[i] = make(map[types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if types.Equals(identity, p.myIdentityKey) {
 				continue
@@ -102,14 +101,14 @@ func (p *PreGenParticipant) Round2(input map[helper_types.IdentityHash]*Round1Br
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[helper_types.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell17.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell17.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("rounds mismatch %d != 3", p.round)
 	}
 
-	commonBigR := make([]map[helper_types.IdentityHash]curves.Point, p.tau)
+	commonBigR := make([]map[types.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
-		commonBigR[i] = make(map[helper_types.IdentityHash]curves.Point)
+		commonBigR[i] = make(map[types.IdentityHash]curves.Point)
 
 		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if types.Equals(identity, p.myIdentityKey) {

@@ -6,8 +6,8 @@ import (
 	"crypto/hmac"
 	"encoding/binary"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/hashing"
 )
 
 type KDFID uint16

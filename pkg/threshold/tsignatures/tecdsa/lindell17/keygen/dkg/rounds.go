@@ -2,21 +2,19 @@ package dkg
 
 import (
 	"crypto/sha256"
+	"github.com/copperexchange/krypton/pkg/base/types"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/types"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
 var (
@@ -26,7 +24,7 @@ var (
 type Round1Broadcast struct {
 	BigQCommitment commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Broadcast struct {
@@ -36,7 +34,7 @@ type Round2Broadcast struct {
 	BigQDoublePrime      curves.Point
 	BigQDoublePrimeProof *dlog.Proof
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round3Broadcast struct {
@@ -44,7 +42,7 @@ type Round3Broadcast struct {
 	CKeyDoublePrime   *paillier.CipherText
 	PaillierPublicKey *paillier.PublicKey
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round4P2P struct {
@@ -52,7 +50,7 @@ type Round4P2P struct {
 	LpdlPrimeRound1Output       *lpdl.Round1Output
 	LpdlDoublePrimeRound1Output *lpdl.Round1Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round5P2P struct {
@@ -60,7 +58,7 @@ type Round5P2P struct {
 	LpdlPrimeRound2Output       *lpdl.Round2Output
 	LpdlDoublePrimeRound2Output *lpdl.Round2Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round6P2P struct {
@@ -68,7 +66,7 @@ type Round6P2P struct {
 	LpdlPrimeRound3Output       *lpdl.Round3Output
 	LpdlDoublePrimeRound3Output *lpdl.Round3Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round7P2P struct {
@@ -76,7 +74,7 @@ type Round7P2P struct {
 	LpdlPrimeRound4Output       *lpdl.Round4Output
 	LpdlDoublePrimeRound4Output *lpdl.Round4Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
@@ -118,13 +116,13 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *Participant) Round2(input map[helper_types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Participant) Round2(input map[types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("%d != 2", p.round)
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = make(map[helper_types.IdentityHash]commitments.Commitment)
+	p.state.theirBigQCommitment = make(map[types.IdentityHash]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -158,13 +156,13 @@ func (p *Participant) Round2(input map[helper_types.IdentityHash]*Round1Broadcas
 	}, nil
 }
 
-func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcast) (output *Round3Broadcast, err error) {
+func (p *Participant) Round3(input map[types.IdentityHash]*Round2Broadcast) (output *Round3Broadcast, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("%d != 3", p.round)
 	}
 
-	p.state.theirBigQPrime = make(map[helper_types.IdentityHash]curves.Point)
-	p.state.theirBigQDoublePrime = make(map[helper_types.IdentityHash]curves.Point)
+	p.state.theirBigQPrime = make(map[types.IdentityHash]curves.Point)
+	p.state.theirBigQDoublePrime = make(map[types.IdentityHash]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants.Iter() {
@@ -218,9 +216,9 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
-	p.state.lpProvers = make(map[helper_types.IdentityHash]*lp.Prover)
-	p.state.lpdlPrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
-	p.state.lpdlDoublePrimeProvers = make(map[helper_types.IdentityHash]*lpdl.Prover)
+	p.state.lpProvers = make(map[types.IdentityHash]*lp.Prover)
+	p.state.lpdlPrimeProvers = make(map[types.IdentityHash]*lpdl.Prover)
+	p.state.lpdlDoublePrimeProvers = make(map[types.IdentityHash]*lpdl.Prover)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -250,19 +248,19 @@ func (p *Participant) Round3(input map[helper_types.IdentityHash]*Round2Broadcas
 	}, nil
 }
 
-func (p *Participant) Round4(input map[helper_types.IdentityHash]*Round3Broadcast) (output map[helper_types.IdentityHash]*Round4P2P, err error) {
+func (p *Participant) Round4(input map[types.IdentityHash]*Round3Broadcast) (output map[types.IdentityHash]*Round4P2P, err error) {
 	if p.round != 4 {
 		return nil, errs.NewInvalidRound("%d != 4", p.round)
 	}
 
-	p.state.theirPaillierPublicKeys = make(map[helper_types.IdentityHash]*paillier.PublicKey)
-	p.state.theirPaillierEncryptedShares = make(map[helper_types.IdentityHash]*paillier.CipherText)
+	p.state.theirPaillierPublicKeys = make(map[types.IdentityHash]*paillier.PublicKey)
+	p.state.theirPaillierEncryptedShares = make(map[types.IdentityHash]*paillier.CipherText)
 
-	p.state.lpVerifiers = make(map[helper_types.IdentityHash]*lp.Verifier)
-	p.state.lpdlPrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)
-	p.state.lpdlDoublePrimeVerifiers = make(map[helper_types.IdentityHash]*lpdl.Verifier)
+	p.state.lpVerifiers = make(map[types.IdentityHash]*lp.Verifier)
+	p.state.lpdlPrimeVerifiers = make(map[types.IdentityHash]*lpdl.Verifier)
+	p.state.lpdlDoublePrimeVerifiers = make(map[types.IdentityHash]*lpdl.Verifier)
 
-	round4Outputs := make(map[helper_types.IdentityHash]*Round4P2P)
+	round4Outputs := make(map[types.IdentityHash]*Round4P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -324,13 +322,13 @@ func (p *Participant) Round4(input map[helper_types.IdentityHash]*Round3Broadcas
 	return round4Outputs, nil
 }
 
-func (p *Participant) Round5(input map[helper_types.IdentityHash]*Round4P2P) (output map[helper_types.IdentityHash]*Round5P2P, err error) {
+func (p *Participant) Round5(input map[types.IdentityHash]*Round4P2P) (output map[types.IdentityHash]*Round5P2P, err error) {
 	if p.round != 5 {
 		return nil, errs.NewInvalidRound("%d != 5", p.round)
 	}
 
 	// 5. LP and LPDL continue
-	round5Outputs := make(map[helper_types.IdentityHash]*Round5P2P)
+	round5Outputs := make(map[types.IdentityHash]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -359,13 +357,13 @@ func (p *Participant) Round5(input map[helper_types.IdentityHash]*Round4P2P) (ou
 	return round5Outputs, nil
 }
 
-func (p *Participant) Round6(input map[helper_types.IdentityHash]*Round5P2P) (output map[helper_types.IdentityHash]*Round6P2P, err error) {
+func (p *Participant) Round6(input map[types.IdentityHash]*Round5P2P) (output map[types.IdentityHash]*Round6P2P, err error) {
 	if p.round != 6 {
 		return nil, errs.NewInvalidRound("%d != 6", p.round)
 	}
 
 	// 6. LP and LPDL continue
-	round6Outputs := make(map[helper_types.IdentityHash]*Round6P2P)
+	round6Outputs := make(map[types.IdentityHash]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -394,13 +392,13 @@ func (p *Participant) Round6(input map[helper_types.IdentityHash]*Round5P2P) (ou
 	return round6Outputs, nil
 }
 
-func (p *Participant) Round7(input map[helper_types.IdentityHash]*Round6P2P) (output map[helper_types.IdentityHash]*Round7P2P, err error) {
+func (p *Participant) Round7(input map[types.IdentityHash]*Round6P2P) (output map[types.IdentityHash]*Round7P2P, err error) {
 	if p.round != 7 {
 		return nil, errs.NewInvalidRound("%d != 7", p.round)
 	}
 
 	// 7. LP and LPDL continue
-	round7Outputs := make(map[helper_types.IdentityHash]*Round7P2P)
+	round7Outputs := make(map[types.IdentityHash]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
 		if types.Equals(identity, p.myIdentityKey) {
 			continue
@@ -429,7 +427,7 @@ func (p *Participant) Round7(input map[helper_types.IdentityHash]*Round6P2P) (ou
 	return round7Outputs, nil
 }
 
-func (p *Participant) Round8(input map[helper_types.IdentityHash]*Round7P2P) (shard *lindell17.Shard, err error) {
+func (p *Participant) Round8(input map[types.IdentityHash]*Round7P2P) (shard *lindell17.Shard, err error) {
 	if p.round != 8 {
 		return nil, errs.NewInvalidRound("%d != 8", p.round)
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/commitments"
 )
 
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}

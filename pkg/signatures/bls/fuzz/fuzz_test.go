@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/signatures/bls/testutils"
 )
 
 type (
@@ -92,7 +92,7 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 			if boundedScheme == bls.Basic {
 				m = bls12381.NewG1().Point().Random(crand.Reader).ToAffineCompressed()
 			}
-			privateKey, signature, pop, err := test_utils.RoundTripWithKeysInG1(m, boundedScheme)
+			privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(m, boundedScheme)
 			if err != nil && !errs.IsKnownError(err) {
 				require.NoError(t, err)
 			}

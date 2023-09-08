@@ -6,14 +6,14 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	secp256k1 "github.com/copperexchange/knox-primitives/pkg/base/curves/k256/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256/impl/fp"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	secp256k1 "github.com/copperexchange/krypton/pkg/base/curves/k256/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256/impl/fp"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ curves.Point = (*Point)(nil)
@@ -21,7 +21,7 @@ var _ curves.Point = (*Point)(nil)
 type Point struct {
 	Value *impl.EllipticPoint
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*Point) Curve() curves.Curve {

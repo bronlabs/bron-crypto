@@ -5,10 +5,10 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/transcripts"
 )
 
 const (
@@ -25,7 +25,7 @@ type Transcript struct {
 	s [32]byte
 	transcripts.Transcript
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.

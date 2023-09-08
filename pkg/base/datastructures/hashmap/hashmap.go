@@ -1,7 +1,7 @@
 package hashmap
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/types"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type HashMap[K types.Hashable, T any] struct {

@@ -3,17 +3,17 @@ package signing
 import (
 	"sort"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[helper_types.IdentityHash]int) (curves.Scalar, error) {
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int) (curves.Scalar, error) {
 	shamirIndices := make([]int, participants.Len())
 	i := -1
 	for _, identity := range participants.Iter() {

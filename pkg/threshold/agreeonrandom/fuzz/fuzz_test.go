@@ -9,17 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 )
 
 var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
@@ -35,11 +35,11 @@ func Fuzz_Test_rounds(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		_, err := test_utils.ProduceSharedRandomValue(curve, allIdentities, prng)
+		_, err := testutils.ProduceSharedRandomValue(curve, allIdentities, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -59,13 +59,13 @@ func Fuzz_Test_rounds(f *testing.F) {
 			participants = append(participants, participant)
 		}
 
-		r1Out, err := test_utils.DoRound1(participants)
+		r1Out, err := testutils.DoRound1(participants)
 		require.NoError(t, err)
-		r2In := test_utils.MapRound1OutputsToRound2Inputs(participants, r1Out)
-		r2Out, err := test_utils.DoRound2(participants, r2In)
+		r2In := testutils.MapRound1OutputsToRound2Inputs(participants, r1Out)
+		r2Out, err := testutils.DoRound2(participants, r2In)
 		require.NoError(t, err)
-		r3In := test_utils.MapRound2OutputsToRound3Inputs(participants, r2Out)
-		agreeOnRandoms, err := test_utils.DoRound3(participants, r3In)
+		r3In := testutils.MapRound2OutputsToRound3Inputs(participants, r2Out)
+		agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 		require.NoError(t, err)
 		require.Equal(t, len(agreeOnRandoms), set.Len())
 
@@ -93,9 +93,9 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0], hashset.NewHashSet(allIdentities), nil, prng)
 		if err != nil && !errs.IsKnownError(err) {

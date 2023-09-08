@@ -16,37 +16,37 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	frost_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
 func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	dkgParticipants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	r2OutB, r2OutU, err := test_utils.DoDkgRound1(dkgParticipants, nil)
+	dkgParticipants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := test_utils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
-	signingKeyShares, publicKeyShares, err = test_utils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
+	r2OutB, r2OutU, err := testutils.DoDkgRound1(dkgParticipants, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r3InB, r3InU := testutils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,16 +55,16 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 }
 
 func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*frost_noninteractive_signing.PreSignatureBatch, [][]*frost_noninteractive_signing.PrivateNoncePair, error) {
-	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)
+	participants, err := testutils.MakePreGenParticipants(cohortConfig, tau)
 	if err != nil {
 		return nil, nil, err
 	}
-	r1Outs, err := test_utils.DoPreGenRound1(participants)
+	r1Outs, err := testutils.DoPreGenRound1(participants)
 	if err != nil {
 		return nil, nil, err
 	}
-	r2Ins := test_utils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
-	preSignatureBatches, privateNoncePairsOfAllParties, err := test_utils.DoPreGenRound2(participants, r2Ins)
+	r2Ins := testutils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
+	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,17 +80,17 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 		})
 	}
 
-	cosigners, err := test_utils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
+	cosigners, err := testutils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
 	if err != nil {
 		return err
 	}
 
-	partialSignatures, err := test_utils.DoProducePartialSignature(cosigners, message)
+	partialSignatures, err := testutils.DoProducePartialSignature(cosigners, message)
 	if err != nil {
 		return err
 	}
 
-	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
+	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
@@ -128,10 +128,10 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  hash,
 	}
 
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -163,10 +163,10 @@ func TestSignNilMessage(t *testing.T) {
 		Hash:  hash,
 	}
 
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, 2)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)

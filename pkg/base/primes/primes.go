@@ -13,7 +13,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // GenerateSafePrime creates a prime number `p`

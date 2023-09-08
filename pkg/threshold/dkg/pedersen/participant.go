@@ -3,13 +3,13 @@ package pedersen
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 var _ integration.Participant = (*Participant)(nil)
@@ -23,13 +23,13 @@ type Participant struct {
 
 	CohortConfig            *integration.CohortConfig
 	SharingIdToIdentityKey  map[int]integration.IdentityKey
-	IdentityHashToSharingId map[helper_types.IdentityHash]int
+	IdentityHashToSharingId map[types.IdentityHash]int
 
 	Transcript transcripts.Transcript
 	round      int
 	State      *State
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -49,7 +49,7 @@ type State struct {
 	Commitments []curves.Point
 	A_i0        curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {

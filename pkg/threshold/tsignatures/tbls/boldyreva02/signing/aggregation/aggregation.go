@@ -1,19 +1,19 @@
 package aggregation
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 type Aggregator[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	publicKeyShares        *boldyreva02.PublicKeyShares[K]
 	cohortConfig           *integration.CohortConfig
-	identityKeyToSharingId map[helper_types.IdentityHash]int
+	identityKeyToSharingId map[types.IdentityHash]int
 }
 
 func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], cohortConfig *integration.CohortConfig) (*Aggregator[K, S], error) {
@@ -52,7 +52,7 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares 
 	return nil
 }
 
-func (a *Aggregator[K, S]) Aggregate(partialSignatures map[helper_types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {
+func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {
 	if bls.SameSubGroup[K, S]() {
 		return nil, errs.NewInvalidType("key and signature subgroups can't be the same")
 	}
@@ -61,7 +61,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[helper_types.Identity
 	keySubGroup := (*pointInK).Curve()
 	signatureSubGroup := (*pointInS).Curve()
 
-	presentParticipantsToSharingId := make(map[helper_types.IdentityHash]int, len(partialSignatures))
+	presentParticipantsToSharingId := make(map[types.IdentityHash]int, len(partialSignatures))
 	sharingIds := make([]int, len(partialSignatures))
 	i := 0
 	for id := range partialSignatures {

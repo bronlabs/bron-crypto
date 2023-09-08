@@ -5,8 +5,8 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 const (

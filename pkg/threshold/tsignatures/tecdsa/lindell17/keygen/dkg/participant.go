@@ -1,20 +1,20 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lpdl"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/lp"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 	"github.com/cronokirby/saferith"
 )
 
@@ -31,38 +31,38 @@ type State struct {
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[helper_types.IdentityHash]commitments.Commitment
-	theirBigQPrime               map[helper_types.IdentityHash]curves.Point
-	theirBigQDoublePrime         map[helper_types.IdentityHash]curves.Point
-	theirPaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
-	theirPaillierEncryptedShares map[helper_types.IdentityHash]*paillier.CipherText
+	theirBigQCommitment          map[types.IdentityHash]commitments.Commitment
+	theirBigQPrime               map[types.IdentityHash]curves.Point
+	theirBigQDoublePrime         map[types.IdentityHash]curves.Point
+	theirPaillierPublicKeys      map[types.IdentityHash]*paillier.PublicKey
+	theirPaillierEncryptedShares map[types.IdentityHash]*paillier.CipherText
 
-	lpProvers                map[helper_types.IdentityHash]*lp.Prover
-	lpVerifiers              map[helper_types.IdentityHash]*lp.Verifier
-	lpdlPrimeProvers         map[helper_types.IdentityHash]*lpdl.Prover
-	lpdlPrimeVerifiers       map[helper_types.IdentityHash]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[helper_types.IdentityHash]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[helper_types.IdentityHash]*lpdl.Verifier
+	lpProvers                map[types.IdentityHash]*lp.Prover
+	lpVerifiers              map[types.IdentityHash]*lp.Verifier
+	lpdlPrimeProvers         map[types.IdentityHash]*lpdl.Prover
+	lpdlPrimeVerifiers       map[types.IdentityHash]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[types.IdentityHash]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[types.IdentityHash]*lpdl.Verifier
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Participant struct {
 	lindell17.Participant
-	myIdentityKey     integration.IdentityKey
-	mySharingId       int
+	myIdentityKey    integration.IdentityKey
+	mySharingId      int
 	mySigningKeyShare *tsignatures.SigningKeyShare
-	publicKeyShares   *tsignatures.PublicKeyShares
-	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId  map[helper_types.IdentityHash]int
-	sessionId         []byte
+	publicKeyShares  *tsignatures.PublicKeyShares
+	cohortConfig     *integration.CohortConfig
+	idKeyToSharingId map[types.IdentityHash]int
+	sessionId        []byte
 	transcript        transcripts.Transcript
 	prng              io.Reader
 
 	round int
 	state *State
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 const (

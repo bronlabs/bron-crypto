@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
 
 func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, threshold, n int) {
@@ -31,10 +31,10 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, thresho
 		Hash:  hashFunc,
 	}
 
-	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen[K](cohort, crand.Reader)
@@ -43,13 +43,13 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, thresho
 	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := test_utils.MakeSigningParticipants[K, S](sid, cohort, identities, shards)
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards)
 	require.NoError(t, err)
 
-	partialSignatures, err := test_utils.ProducePartialSignature(participants, message)
+	partialSignatures, err := testutils.ProducePartialSignature(participants, message)
 	require.NoError(t, err)
 
-	aggregatorInput := test_utils.MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
 	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, cohort)
 	require.NoError(t, err)

@@ -1,4 +1,4 @@
-module github.com/copperexchange/knox-primitives
+module github.com/copperexchange/krypton
 
 go 1.20
 

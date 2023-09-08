@@ -7,7 +7,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 func NatFromBig(x *big.Int, m *saferith.Modulus) *saferith.Nat {

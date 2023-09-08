@@ -3,10 +3,10 @@ package feldman
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
 )
 
 type Share = shamir.Share
@@ -43,7 +43,7 @@ type Dealer struct {
 	Threshold, Total int
 	Curve            curves.Curve
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {

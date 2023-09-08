@@ -6,9 +6,9 @@ import (
 	"filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type FieldProfile struct{}
@@ -34,7 +34,7 @@ var _ curves.FieldElement = (*FieldElement)(nil)
 type FieldElement struct {
 	v *field.Element
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*FieldElement) Profile() curves.FieldProfile {

@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // HashSalted hashes the κ-bit length rows of a [L*ξ][κ] bit matrix, outputting

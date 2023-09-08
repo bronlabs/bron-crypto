@@ -3,25 +3,25 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	core "github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	core "github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/curves/curveutils"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*dkls23.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*dkls23.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -66,7 +66,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
-	results := map[helper_types.IdentityHash]*dkls23.Shard{}
+	results := map[types.IdentityHash]*dkls23.Shard{}
 
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value

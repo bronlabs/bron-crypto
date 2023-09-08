@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base"
 )
 
 func Test_CeilDiv(t *testing.T) {

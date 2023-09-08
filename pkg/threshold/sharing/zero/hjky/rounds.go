@@ -1,16 +1,16 @@
 package hjky
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/pedersen"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen"
 )
 
 type Round1Broadcast = pedersen.Round1Broadcast
 type Round1P2P = pedersen.Round1P2P
 
-func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -22,7 +22,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (sample Sample, publicKeySharesMap map[helper_types.IdentityHash]curves.Point, feldmanCommitmentVector []curves.Point, err error) {
+func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (sample Sample, publicKeySharesMap map[types.IdentityHash]curves.Point, feldmanCommitmentVector []curves.Point, err error) {
 	if p.round != 2 {
 		return nil, nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}

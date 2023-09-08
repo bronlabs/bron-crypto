@@ -1,11 +1,11 @@
 package frost
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 type Participant interface {
@@ -23,7 +23,7 @@ type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
@@ -48,5 +48,5 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 type PartialSignature struct {
 	Zi curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }

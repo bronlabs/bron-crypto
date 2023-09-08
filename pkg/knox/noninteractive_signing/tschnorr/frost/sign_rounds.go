@@ -1,12 +1,12 @@
 package frost
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	signing_helpers "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
@@ -38,7 +38,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	return partialSignature, nil
 }
 
-func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[helper_types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")

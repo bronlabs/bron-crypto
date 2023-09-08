@@ -1,13 +1,13 @@
 package recovery
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/polynomials"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/hjky"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/hjky"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 type Round1Broadcast = hjky.Round1Broadcast
@@ -16,10 +16,10 @@ type Round1P2P = hjky.Round1P2P
 type Round2P2P struct {
 	BlindedPartiallyRecoveredShare curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
-func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -32,7 +32,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1broadcast map[helper_types.IdentityHash]*Round1Broadcast, round1p2p map[helper_types.IdentityHash]*Round1P2P) (map[helper_types.IdentityHash]*Round2P2P, error) {
+func (p *Participant) Round2(round1broadcast map[types.IdentityHash]*Round1Broadcast, round1p2p map[types.IdentityHash]*Round1P2P) (map[types.IdentityHash]*Round2P2P, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -89,14 +89,14 @@ func (p *Participant) Round2(round1broadcast map[helper_types.IdentityHash]*Roun
 	p.round = -1 // this is to prevent recoverer from running round 3.
 
 	// step 2.3.4
-	return map[helper_types.IdentityHash]*Round2P2P{
+	return map[types.IdentityHash]*Round2P2P{
 		p.lostPartyIdentityKey.Hash(): {
 			BlindedPartiallyRecoveredShare: sHat,
 		},
 	}, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P2P) (*tsignatures.SigningKeyShare, error) {
+func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (*tsignatures.SigningKeyShare, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}

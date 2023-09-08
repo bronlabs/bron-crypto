@@ -5,7 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // Curve represents a named elliptic curve with a scalar field and point group.

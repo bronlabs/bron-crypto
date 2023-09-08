@@ -3,11 +3,11 @@ package setup
 import (
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 )
 
 // size should match zero.LambdaBytes.
@@ -16,22 +16,22 @@ var h = sha3.New256
 type Round1P2P struct {
 	Commitment commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2P2P struct {
 	Message []byte
 	Witness commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
-func (p *Participant) Round1() (map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	output := map[helper_types.IdentityHash]*Round1P2P{}
+	output := map[types.IdentityHash]*Round1P2P{}
 	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
@@ -62,11 +62,11 @@ func (p *Participant) Round1() (map[helper_types.IdentityHash]*Round1P2P, error)
 	return output, nil
 }
 
-func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1P2P) (map[helper_types.IdentityHash]*Round2P2P, error) {
+func (p *Participant) Round2(round1output map[types.IdentityHash]*Round1P2P) (map[types.IdentityHash]*Round2P2P, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
-	output := map[helper_types.IdentityHash]*Round2P2P{}
+	output := map[types.IdentityHash]*Round2P2P{}
 	for _, participant := range p.SortedParticipants {
 		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
 		if sharingId == p.MySharingId {
@@ -93,7 +93,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1P
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2P2P) (przs.PairwiseSeeds, error) {
+func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (przs.PairwiseSeeds, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}

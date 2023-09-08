@@ -1,20 +1,18 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro"
-	zeroSetup "github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
+	zeroSetup "github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const DkgLabel = "COPPER_DKLS23_DKG-"
@@ -23,12 +21,12 @@ type Participant struct {
 	MyIdentityKey         integration.IdentityKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   map[helper_types.IdentityHash]*vsot.Sender
-	BaseOTReceiverParties map[helper_types.IdentityHash]*vsot.Receiver
+	BaseOTSenderParties   map[types.IdentityHash]*vsot.Sender
+	BaseOTReceiverParties map[types.IdentityHash]*vsot.Receiver
 
 	Shard *dkls23.Shard
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) GetIdentityKey() integration.IdentityKey {
@@ -67,8 +65,8 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[helper_types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
-	receivers := make(map[helper_types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
+	senders := make(map[types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
+	receivers := make(map[types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
 	for _, participant := range cohortConfig.Participants.Iter() {
 		if participant.PublicKey().Equal(identityKey.PublicKey()) {
 			continue

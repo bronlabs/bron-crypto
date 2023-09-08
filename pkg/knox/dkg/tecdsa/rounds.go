@@ -1,11 +1,11 @@
 package tecdsa
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom"
-	dkls23 "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
-	lindell17 "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom"
+	dkls23 "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
+	lindell17 "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
 )
 
 type Round1Broadcast = agreeonrandom.Round1Broadcast
@@ -56,7 +56,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	return outputBroadcast, nil
 }
 
-func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1Broadcast) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1output map[types.IdentityHash]*Round1Broadcast) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -68,7 +68,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1B
 	return round2Output, nil
 }
 
-func (p *Participant) Round3(round1output map[helper_types.IdentityHash]*Round2Broadcast) (*Round3Broadcast, map[helper_types.IdentityHash]*Round3P2P, error) {
+func (p *Participant) Round3(round1output map[types.IdentityHash]*Round2Broadcast) (*Round3Broadcast, map[types.IdentityHash]*Round3P2P, error) {
 	if p.round != 3 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -89,7 +89,7 @@ func (p *Participant) Round3(round1output map[helper_types.IdentityHash]*Round2B
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round4(round2broadcast map[helper_types.IdentityHash]*Round3Broadcast, round2p2p map[helper_types.IdentityHash]*Round3P2P) (*Round4Broadcast, map[helper_types.IdentityHash]*Round4P2P, error) {
+func (p *Participant) Round4(round2broadcast map[types.IdentityHash]*Round3Broadcast, round2p2p map[types.IdentityHash]*Round3P2P) (*Round4Broadcast, map[types.IdentityHash]*Round4P2P, error) {
 	if p.round != 4 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 4", p.round)
 	}
@@ -101,7 +101,7 @@ func (p *Participant) Round4(round2broadcast map[helper_types.IdentityHash]*Roun
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round5(round3broadcast map[helper_types.IdentityHash]*Round4Broadcast, round3p2p map[helper_types.IdentityHash]*Round4P2P) (*Round5Broadcast, map[helper_types.IdentityHash]Round5P2P, error) {
+func (p *Participant) Round5(round3broadcast map[types.IdentityHash]*Round4Broadcast, round3p2p map[types.IdentityHash]*Round4P2P) (*Round5Broadcast, map[types.IdentityHash]Round5P2P, error) {
 	if p.round != 5 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 5", p.round)
 	}
@@ -121,7 +121,7 @@ func (p *Participant) Round5(round3broadcast map[helper_types.IdentityHash]*Roun
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round6(round4broadcast map[helper_types.IdentityHash]*Round5Broadcast, round4p2p map[helper_types.IdentityHash]Round5P2P) (*Round6Broadcast, map[helper_types.IdentityHash]Round6P2P, error) {
+func (p *Participant) Round6(round4broadcast map[types.IdentityHash]*Round5Broadcast, round4p2p map[types.IdentityHash]Round5P2P) (*Round6Broadcast, map[types.IdentityHash]Round6P2P, error) {
 	if p.round != 6 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 6", p.round)
 	}
@@ -137,7 +137,7 @@ func (p *Participant) Round6(round4broadcast map[helper_types.IdentityHash]*Roun
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round7(round5broadcast map[helper_types.IdentityHash]*Round6Broadcast, round5p2p map[helper_types.IdentityHash]Round6P2P) (*Round7Broadcast, map[helper_types.IdentityHash]Round7P2P, error) {
+func (p *Participant) Round7(round5broadcast map[types.IdentityHash]*Round6Broadcast, round5p2p map[types.IdentityHash]Round6P2P) (*Round7Broadcast, map[types.IdentityHash]Round7P2P, error) {
 	if p.round != 7 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 7", p.round)
 	}
@@ -153,7 +153,7 @@ func (p *Participant) Round7(round5broadcast map[helper_types.IdentityHash]*Roun
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round8(round6broadcast map[helper_types.IdentityHash]*Round7Broadcast, round6p2p map[helper_types.IdentityHash]Round7P2P) (map[helper_types.IdentityHash]*Round8P2P, error) {
+func (p *Participant) Round8(round6broadcast map[types.IdentityHash]*Round7Broadcast, round6p2p map[types.IdentityHash]Round7P2P) (map[types.IdentityHash]*Round8P2P, error) {
 	if p.round != 8 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 8", p.round)
 	}
@@ -170,7 +170,7 @@ func (p *Participant) Round8(round6broadcast map[helper_types.IdentityHash]*Roun
 	return outputP2P, nil
 }
 
-func (p *Participant) Round9(input map[helper_types.IdentityHash]*Round8P2P) (map[helper_types.IdentityHash]*Round9P2P, error) {
+func (p *Participant) Round9(input map[types.IdentityHash]*Round8P2P) (map[types.IdentityHash]*Round9P2P, error) {
 	if p.round != 9 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 9", p.round)
 	}
@@ -182,7 +182,7 @@ func (p *Participant) Round9(input map[helper_types.IdentityHash]*Round8P2P) (ma
 	return outputP2P, nil
 }
 
-func (p *Participant) Round10(input map[helper_types.IdentityHash]*Round9P2P) (map[helper_types.IdentityHash]*Round10P2P, error) {
+func (p *Participant) Round10(input map[types.IdentityHash]*Round9P2P) (map[types.IdentityHash]*Round10P2P, error) {
 	if p.round != 10 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 10", p.round)
 	}
@@ -194,7 +194,7 @@ func (p *Participant) Round10(input map[helper_types.IdentityHash]*Round9P2P) (m
 	return outputP2P, nil
 }
 
-func (p *Participant) Round11(input map[helper_types.IdentityHash]*Round10P2P) (map[helper_types.IdentityHash]*Round11P2P, error) {
+func (p *Participant) Round11(input map[types.IdentityHash]*Round10P2P) (map[types.IdentityHash]*Round11P2P, error) {
 	if p.round != 11 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 11", p.round)
 	}
@@ -206,7 +206,7 @@ func (p *Participant) Round11(input map[helper_types.IdentityHash]*Round10P2P) (
 	return outputP2P, nil
 }
 
-func (p *Participant) Round12(input map[helper_types.IdentityHash]*Round11P2P) (*Shard, error) {
+func (p *Participant) Round12(input map[types.IdentityHash]*Round11P2P) (*Shard, error) {
 	if p.round != 12 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 12", p.round)
 	}

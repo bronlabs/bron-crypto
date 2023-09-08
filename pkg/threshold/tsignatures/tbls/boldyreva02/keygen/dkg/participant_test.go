@@ -3,16 +3,15 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,10 +23,10 @@ func Test_CanInitialize(t *testing.T) {
 		Hash:  sha512.New512_256,
 	}
 
-	identities, err := test_utils.MakeIdentities(cipherSuite, 2)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId := []byte("sid")
 

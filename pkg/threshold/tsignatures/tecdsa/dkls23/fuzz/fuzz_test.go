@@ -12,17 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/test_utils"
-	test_utils2 "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
+	dkls23_testutils "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -37,7 +36,7 @@ var (
 )
 
 func FuzzInteractiveSigning(f *testing.F) {
-	safePrimeMocker := test_utils.NewSafePrimeMocker()
+	safePrimeMocker := integration_testutils.NewSafePrimeMocker()
 	safePrimeMocker.Mock()
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz, n, threshold, message, cipherSuite := setup(t, data)
@@ -56,7 +55,7 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 	fz.Fuzz(&secretValue)
 	identities := make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, cipherSuite.Curve.Scalar().Hash(secretValue))
+		identity, err := integration_testutils.MakeIdentity(cipherSuite, cipherSuite.Curve.Scalar().Hash(secretValue))
 		identities[i] = identity
 		require.NoError(t, err)
 	}
@@ -65,10 +64,10 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 
 func doInteractiveSigning(t *testing.T, threshold int, identities []integration.IdentityKey, shards []*dkls23.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
-	err = test_utils2.RunInteractiveSign(cohortConfig, signerIdentities, shards, message)
+	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message)
 	require.NoError(t, err)
 }
 
@@ -76,7 +75,7 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, 
 	t.Helper()
 	var sid []byte
 	fz.Fuzz(&sid)
-	_, _, _, shards, err := dkls23_test_utils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
+	_, _, _, shards, err := dkls23_testutils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.Skip("too many participants")

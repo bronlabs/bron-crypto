@@ -8,17 +8,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	lindell17_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	lindell17_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tecdsa/lindell17/testutils"
+	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 )
 
 func Test_NonInteractiveSignHappyPath(t *testing.T) {
@@ -45,10 +45,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				Hash:  sha256.New,
 			}
 
-			identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+			identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
+			cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 			require.NoError(t, err)
 
 			message := []byte("Hello World!")
@@ -59,11 +59,11 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			require.NotNil(t, shards)
 			require.Len(t, shards, cohort.Protocol.TotalParties)
 
-			transcripts := test_utils.MakeTranscripts(transcriptAppLabel, identities)
-			participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+			transcripts := testutils.MakeTranscripts(transcriptAppLabel, identities)
+			participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 			require.NoError(t, err)
 
-			batches, err := test_utils.DoLindell2017PreGen(participants)
+			batches, err := testutils.DoLindell2017PreGen(participants)
 			require.NoError(t, err)
 			require.NotNil(t, batches)
 

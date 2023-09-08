@@ -3,12 +3,12 @@ package lindell17
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Cosigner struct {
@@ -26,7 +26,7 @@ type Cosigner struct {
 	cohortConfig      *integration.CohortConfig
 	prng              io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -79,6 +79,9 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 func validateCosignerInputs(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if myIdentityKey == nil {
 		return errs.NewIsNil("identity key is nil")

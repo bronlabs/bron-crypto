@@ -3,35 +3,35 @@ package lp
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/nthroot"
 )
 
 type Round1Output struct {
 	NthRootProverOutputs []*nthroot.Round1Output
 	X                    []*paillier.CipherText
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Output struct {
 	NthRootVerifierOutputs []*nthroot.Round2Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round3Output struct {
 	NthRootProverOutputs []*nthroot.Round3Output
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round4Output struct {
 	YPrime []*saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {

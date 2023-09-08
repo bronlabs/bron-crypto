@@ -9,14 +9,14 @@ import (
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom"
+	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
 )
 
 func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []integration.IdentityKey) []byte {
@@ -28,13 +28,13 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []int
 		participants = append(participants, participant)
 	}
 
-	r1Out, err := test_utils.DoRound1(participants)
+	r1Out, err := testutils.DoRound1(participants)
 	require.NoError(t, err)
-	r2In := test_utils.MapRound1OutputsToRound2Inputs(participants, r1Out)
-	r2Out, err := test_utils.DoRound2(participants, r2In)
+	r2In := testutils.MapRound1OutputsToRound2Inputs(participants, r1Out)
+	r2Out, err := testutils.DoRound2(participants, r2In)
 	require.NoError(t, err)
-	r3In := test_utils.MapRound2OutputsToRound3Inputs(participants, r2Out)
-	agreeOnRandoms, err := test_utils.DoRound3(participants, r3In)
+	r3In := testutils.MapRound2OutputsToRound3Inputs(participants, r2Out)
+	agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 	require.NoError(t, err)
 	require.Len(t, agreeOnRandoms, len(identities))
 
@@ -52,7 +52,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
@@ -62,7 +62,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random, err = test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+			random, err = testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 			require.NoError(t, err)
 		}
 	}
@@ -75,7 +75,7 @@ func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {

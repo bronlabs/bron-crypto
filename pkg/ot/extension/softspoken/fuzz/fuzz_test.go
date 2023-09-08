@@ -7,14 +7,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken/testutils"
 )
 
 var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
@@ -30,7 +30,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSendOutput, baseOtRecOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
+		baseOtSendOutput, baseOtRecOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -38,7 +38,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 		// Set OTe inputs
-		choices, _, err := test_utils.GenerateSoftspokenRandomInputs(inputBatchLen, curve, useForcedReuse)
+		choices, _, err := testutils.GenerateSoftspokenRandomInputs(inputBatchLen, curve, useForcedReuse)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -46,11 +46,11 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 		// Run OTe
-		oTeSenderOutput, oTeReceiverOutput, err := test_utils.RunSoftspokenOTe(
+		oTeSenderOutput, oTeReceiverOutput, err := testutils.RunSoftspokenOTe(
 			curve, uniqueSessionId[:], baseOtSendOutput, baseOtRecOutput, choices)
 		require.NoError(t, err)
 		// Check OTe result
-		err = test_utils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices)
+		err = testutils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices)
 		require.NoError(t, err)
 	})
 }
@@ -71,14 +71,14 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := test_utils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
+		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		err = test_utils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		err = testutils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -87,7 +87,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Set COTe inputs
-		choices, inputOpts, err := test_utils.GenerateSoftspokenRandomInputs(
+		choices, inputOpts, err := testutils.GenerateSoftspokenRandomInputs(
 			inputBatchLen, curve, useForcedReuse)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -97,7 +97,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := test_utils.RunSoftspokenCOTe(
+		cOTeSenderOutputs, cOTeReceiverOutputs, err := testutils.RunSoftspokenCOTe(
 			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -107,7 +107,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Check COTe result
-		err = test_utils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
 		require.NoError(t, err)
 	})
 }

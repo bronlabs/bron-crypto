@@ -8,7 +8,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base"
 )
 
 type Uint128 struct {

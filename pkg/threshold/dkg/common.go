@@ -1,14 +1,14 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 )
 
-func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[helper_types.IdentityHash]curves.Point, error) {
-	shares := map[helper_types.IdentityHash]curves.Point{}
+func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[types.IdentityHash]curves.Point, error) {
+	shares := map[types.IdentityHash]curves.Point{}
 	for j, identityKey := range sharingIdToIdentityKey {
 		Y_j := cohort.CipherSuite.Curve.Point().Identity()
 		for _, C_l := range commitmentVectors {

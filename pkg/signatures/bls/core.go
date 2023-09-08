@@ -3,8 +3,8 @@ package bls
 import (
 	"encoding/hex"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.

@@ -1,15 +1,15 @@
 package signing
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
@@ -19,7 +19,7 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	myIdentityKey          integration.IdentityKey
 	mySharingId            int
 	myShard                *boldyreva02.Shard[K]
-	identityKeyToSharingId map[helper_types.IdentityHash]int
+	identityKeyToSharingId map[types.IdentityHash]int
 
 	sid        []byte
 	transcript transcripts.Transcript

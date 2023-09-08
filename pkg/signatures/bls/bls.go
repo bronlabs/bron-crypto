@@ -1,8 +1,8 @@
 package bls
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 const (
@@ -45,7 +45,7 @@ type Signer[K KeySubGroup, S SignatureSubGroup] struct {
 	Scheme     RogueKeyPrevention
 	PrivateKey *PrivateKey[K]
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], scheme RogueKeyPrevention) (*Signer[K, S], error) {

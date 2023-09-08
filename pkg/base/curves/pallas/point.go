@@ -7,12 +7,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas/impl/fp"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas/impl/fq"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fp"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fq"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ curves.Point = (*Point)(nil)
@@ -20,7 +20,7 @@ var _ curves.Point = (*Point)(nil)
 type Point struct {
 	value *Ep
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*Point) Curve() curves.Curve {

@@ -3,14 +3,14 @@ package gennaro
 import (
 	"fmt"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/pedersen"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
@@ -18,24 +18,24 @@ const DlogProofLabel = "COPPER_KNOX_GENNARO_DKG_DLOG_PROOF-"
 type Round1Broadcast struct {
 	BlindedCommitments []curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round1P2P struct {
 	X_ij      curves.Scalar
 	XPrime_ij curves.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Broadcast struct {
 	Commitments []curves.Point
 	A_i0Proof   *dlog.Proof
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
-func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -62,7 +62,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of a_i0")
 	}
 
-	outboundP2PMessages := map[helper_types.IdentityHash]*Round1P2P{}
+	outboundP2PMessages := map[types.IdentityHash]*Round1P2P{}
 	for sharingId, identityKey := range p.sharingIdToIdentityKey {
 		if sharingId == p.MySharingId {
 			continue
@@ -90,7 +90,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -147,7 +147,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 	}, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2Broadcast) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
+func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcast) (*tsignatures.SigningKeyShare, *tsignatures.PublicKeyShares, error) {
 	if p.round != 3 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}

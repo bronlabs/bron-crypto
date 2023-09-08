@@ -4,13 +4,13 @@ import (
 	"crypto/subtle"
 	"encoding"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
-	bimpl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
+	bimpl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 const (
@@ -48,7 +48,7 @@ type PrivateKey[K KeySubGroup] struct {
 	d         *bls12381.Scalar
 	PublicKey *PublicKey[K]
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewPrivateKey[K KeySubGroup](d curves.PairingScalar) (*PrivateKey[K], error) {
@@ -128,7 +128,7 @@ var (
 type PublicKey[K KeySubGroup] struct {
 	Y curves.PairingPoint
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // The Validate algorithm ensures that a public key is valid. In particular, it ensures that a public key represents a valid, non-identity point that is in the correct subgroup.
@@ -211,7 +211,7 @@ var (
 type Signature[S SignatureSubGroup] struct {
 	Value curves.PairingPoint
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (sig *Signature[S]) Size() int {
@@ -273,7 +273,7 @@ var (
 type ProofOfPossession[S SignatureSubGroup] struct {
 	Value curves.PairingPoint
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (pop *ProofOfPossession[S]) Size() int {

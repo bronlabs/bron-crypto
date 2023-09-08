@@ -7,11 +7,11 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	bls12381impl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	bls12381impl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ (curves.Scalar) = (*ScalarGt)(nil)
@@ -19,7 +19,7 @@ var _ (curves.Scalar) = (*ScalarGt)(nil)
 type ScalarGt struct {
 	Value *bls12381impl.Gt
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*ScalarGt) Curve() curves.Curve {

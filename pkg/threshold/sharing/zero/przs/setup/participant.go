@@ -4,14 +4,14 @@ import (
 	"io"
 	"sort"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Participant struct {
@@ -23,20 +23,20 @@ type Participant struct {
 	MySharingId        int
 	SortedParticipants []integration.IdentityKey
 
-	IdentityKeyToSharingId map[helper_types.IdentityHash]int
+	IdentityKeyToSharingId map[types.IdentityHash]int
 
 	state *State
 	round int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type State struct {
-	receivedSeeds map[helper_types.IdentityHash]commitments.Commitment
-	sentSeeds     map[helper_types.IdentityHash]*committedSeedContribution
+	receivedSeeds map[types.IdentityHash]commitments.Commitment
+	sentSeeds     map[types.IdentityHash]*committedSeedContribution
 	transcript    transcripts.Transcript
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type committedSeedContribution struct {
@@ -44,7 +44,7 @@ type committedSeedContribution struct {
 	commitment commitments.Commitment
 	witness    commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
@@ -92,8 +92,8 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 		UniqueSessionId:        uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: map[helper_types.IdentityHash]commitments.Commitment{},
-			sentSeeds:     map[helper_types.IdentityHash]*committedSeedContribution{},
+			receivedSeeds: map[types.IdentityHash]commitments.Commitment{},
+			sentSeeds:     map[types.IdentityHash]*committedSeedContribution{},
 		},
 		round: 1,
 	}, nil

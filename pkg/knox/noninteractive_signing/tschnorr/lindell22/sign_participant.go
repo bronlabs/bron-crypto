@@ -3,13 +3,13 @@ package lindell22
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type Cosigner struct {
@@ -21,12 +21,12 @@ type Cosigner struct {
 	myPreSignature *lindell22.PreSignature
 
 	taproot                bool
-	identityKeyToSharingId map[helper_types.IdentityHash]int
+	identityKeyToSharingId map[types.IdentityHash]int
 	sessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	cohortConfig           *integration.CohortConfig
 	prng                   io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (c *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -83,6 +83,9 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 func validateCosignerInputs(identityKey integration.IdentityKey, shard *lindell22.Shard, cohortConfig *integration.CohortConfig) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if cohortConfig.Participants.Len() != cohortConfig.Protocol.TotalParties {
 		return errs.NewIncorrectCount("invalid number of participants")

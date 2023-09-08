@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
 func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n, tau int) {
@@ -26,23 +26,23 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakePreGenParticipants(cohortConfig, tau)
+	participants, err := testutils.MakePreGenParticipants(cohortConfig, tau)
 	require.NoError(t, err)
 	require.NotNil(t, participants)
 
-	r1Outs, err := test_utils.DoPreGenRound1(participants)
+	r1Outs, err := testutils.DoPreGenRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1Outs {
 		require.NotNil(t, out)
 	}
 
-	r2Ins := test_utils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
-	preSignatureBatches, privateNoncePairsOfAllParties, err := test_utils.DoPreGenRound2(participants, r2Ins)
+	r2Ins := testutils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
+	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	require.NoError(t, err)
 
 	// all preSignatureBatches are the same

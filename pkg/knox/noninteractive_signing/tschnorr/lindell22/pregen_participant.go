@@ -4,15 +4,15 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -27,9 +27,9 @@ type state struct {
 	k                   []curves.Scalar
 	bigR                []curves.Point
 	bigRWitness         []commitments.Witness
-	theirBigRCommitment []map[helper_types.IdentityHash]commitments.Commitment
+	theirBigRCommitment []map[types.IdentityHash]commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PreGenParticipant struct {
@@ -47,7 +47,7 @@ type PreGenParticipant struct {
 
 	state *state
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
@@ -105,6 +105,9 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 func validatePreGenInputs(tau int, identityKey integration.IdentityKey, sid []byte, cohortConfig *integration.CohortConfig) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")

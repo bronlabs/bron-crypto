@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
 )
 
 type Value struct {

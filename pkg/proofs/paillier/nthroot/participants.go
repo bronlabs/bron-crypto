@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -22,14 +22,14 @@ type Participant struct {
 	round int
 	prng  io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type ProverState struct {
 	bigNSquared *saferith.Modulus
 	r           *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Prover struct {
@@ -37,7 +37,7 @@ type Prover struct {
 	y     *saferith.Nat
 	state *ProverState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type VerifierState struct {
@@ -45,14 +45,14 @@ type VerifierState struct {
 	e           *saferith.Nat
 	a           *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Verifier struct {
 	Participant
 	state *VerifierState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {

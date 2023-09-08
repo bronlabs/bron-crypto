@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
 )
 
 func Test_BIP340TestVectors(t *testing.T) {
@@ -25,7 +25,7 @@ func Test_BIP340TestVectors(t *testing.T) {
 		signature  string
 		valid      bool
 
-		_ helper_types.Incomparable
+		_ types.Incomparable
 	}
 	vectorData := []testVectorData{
 		{ // 0

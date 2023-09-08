@@ -8,9 +8,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas/impl/fp"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/pallas/impl/fq"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fp"
+	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fq"
+	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
 )
 
 func TestPointPallasAddDoubleMul(t *testing.T) {
@@ -48,7 +48,7 @@ func TestPointPallasNeg(t *testing.T) {
 }
 
 func TestPointPallasRandom(t *testing.T) {
-	a := new(Ep).Random(test_utils.TestRng())
+	a := new(Ep).Random(testutils.TestRng())
 	require.NotNil(t, a.X)
 	require.NotNil(t, a.Y)
 	require.NotNil(t, a.Z)
@@ -77,7 +77,7 @@ func TestPointPallasRandom(t *testing.T) {
 }
 
 func TestPointPallasSerialize(t *testing.T) {
-	ss := new(Scalar).Random(test_utils.TestRng()).(*Scalar)
+	ss := new(Scalar).Random(testutils.TestRng()).(*Scalar)
 	g := new(Ep).Generator()
 
 	ppt := new(Ep).Mul(g, ss.value)

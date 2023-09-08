@@ -1,15 +1,15 @@
 package przs
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 const LambdaBytes = impl.FieldBytes
 
 type Seed = [LambdaBytes]byte
 
-type PairwiseSeeds = map[helper_types.IdentityHash]Seed
+type PairwiseSeeds = map[types.IdentityHash]Seed
 
 type Sample curves.Scalar

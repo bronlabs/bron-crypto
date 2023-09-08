@@ -13,10 +13,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/primes"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/primes"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
 )
 
 func parseNat(nat string) *saferith.Nat {
@@ -200,7 +200,7 @@ type lcmTest struct {
 	err      error
 	expected *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func safeCompare(x, y *saferith.Nat) bool {
@@ -417,7 +417,7 @@ type keygenTest struct {
 	bits                        uint
 	p, q, n, lambda, totient, u *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func TestKeyGen(t *testing.T) {

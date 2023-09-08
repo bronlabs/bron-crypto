@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/testutils"
 )
 
 var h = sha3.New256
@@ -26,27 +26,27 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	participants, err := test_utils.MakeSetupParticipants(curve, identities, crand.Reader)
+	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	r1OutsU, err := test_utils.DoSetupRound1(participants)
+	r1OutsU, err := testutils.DoSetupRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Len(t, out, len(identities)-1)
 	}
 
-	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
-	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
+	r2InsU := testutils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, len(identities)-1)
 	}
 
-	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
-	allPairwiseSeeds, err := test_utils.DoSetupRound3(participants, r3InsU)
+	r3InsU := testutils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
+	allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 	require.NoError(t, err)
 
 	// we have the right number of pairs

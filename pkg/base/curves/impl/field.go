@@ -6,9 +6,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 // FieldLimbs is the number of limbs needed to represent this field.
@@ -30,7 +30,7 @@ type Field struct {
 	// Arithmetic are the field methods
 	Arithmetic FieldArithmetic
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // FieldParams are the field parameters.
@@ -46,7 +46,7 @@ type FieldParams struct {
 	// Modulus as saferith.Modulus
 	Modulus *saferith.Modulus
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 // FieldArithmetic are the methods that can be done on a field.

@@ -9,11 +9,11 @@ import (
 	"github.com/bwesterb/go-ristretto"
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/internal"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -21,7 +21,7 @@ var _ curves.Scalar = (*Scalar)(nil)
 type Scalar struct {
 	Value *filippo.Scalar
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*Scalar) Curve() curves.Curve {

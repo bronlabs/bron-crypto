@@ -1,19 +1,19 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.Reader) (map[helper_types.IdentityHash]*boldyreva02.Shard[K], error) {
+func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*boldyreva02.Shard[K], error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -54,7 +54,7 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
-	publicKeySharesMap := make(map[helper_types.IdentityHash]curves.PairingPoint)
+	publicKeySharesMap := make(map[types.IdentityHash]curves.PairingPoint)
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share, ok := subGroup.ScalarBaseMult(shamirShares[sharingId-1].Value).(curves.PairingPoint)
 		if !ok {
@@ -63,7 +63,7 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 		publicKeySharesMap[identityKey.Hash()] = share
 	}
 
-	shards := make(map[helper_types.IdentityHash]*boldyreva02.Shard[K])
+	shards := make(map[types.IdentityHash]*boldyreva02.Shard[K])
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share, ok := shamirShares[sharingId-1].Value.(curves.PairingScalar)
 		if !ok {

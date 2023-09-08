@@ -9,37 +9,37 @@ import (
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs/sample"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/sample"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/testutils"
 )
 
 func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
-	participants, err := test_utils.MakeSetupParticipants(curve, identities, crand.Reader)
+	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
-	r1OutsU, err := test_utils.DoSetupRound1(participants)
+	r1OutsU, err := testutils.DoSetupRound1(participants)
 	if err != nil {
 		return nil, err
 	}
 
-	r2InsU := test_utils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
-	r2OutsU, err := test_utils.DoSetupRound2(participants, r2InsU)
+	r2InsU := testutils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	if err != nil {
 		return nil, err
 	}
 
-	r3InsU := test_utils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
-	allPairwiseSeeds, err = test_utils.DoSetupRound3(participants, r3InsU)
+	r3InsU := testutils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
+	allPairwiseSeeds, err = testutils.DoSetupRound3(participants, r3InsU)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +48,12 @@ func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairw
 
 func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
+	participants, err := testutils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
 	}
-	samples, err := test_utils.DoSample(participants)
+	samples, err := testutils.DoSample(participants)
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
@@ -78,13 +78,13 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 
 func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds) {
 	t.Helper()
-	participants, err := test_utils.MakeSampleParticipants(cohortConfig, identities, seeds)
+	participants, err := testutils.MakeSampleParticipants(cohortConfig, identities, seeds)
 	participants[0].UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
 	}
-	samples, err := test_utils.DoSample(participants)
+	samples, err := testutils.DoSample(participants)
 	require.NoError(t, err)
 	require.Len(t, samples, len(identities))
 
@@ -102,7 +102,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
@@ -131,7 +131,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -199,7 +199,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, _ := test_utils_integration.MakeIdentities(cipherSuite, 3)
+	allIdentities, _ := testutils_integration.MakeIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]
@@ -209,7 +209,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

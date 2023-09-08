@@ -5,11 +5,11 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
 )
 
 var h = sha3.New256
@@ -17,13 +17,13 @@ var h = sha3.New256
 type Round1Broadcast struct {
 	Commitment commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 type Round2Broadcast struct {
 	Ri      curves.Scalar
 	Witness commitments.Witness
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
@@ -44,7 +44,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1Broadcast) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1output map[types.IdentityHash]*Round1Broadcast) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -61,7 +61,7 @@ func (p *Participant) Round2(round1output map[helper_types.IdentityHash]*Round1B
 	}, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2Broadcast) ([]byte, error) {
+func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcast) ([]byte, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -89,7 +89,7 @@ func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2B
 	return randomValue, nil
 }
 
-func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi map[helper_types.IdentityHash]*Round2Broadcast) ([][]byte, error) {
+func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi map[types.IdentityHash]*Round2Broadcast) ([][]byte, error) {
 	sortedSharingIds := make([]int, len(allIdentityKeysToRi))
 	i := 0
 	for sharingId := range p.SharingIdToIdentity {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
 )
 
 // the base field of all curves need 4 limbs, but edwards25519 which needs 5.

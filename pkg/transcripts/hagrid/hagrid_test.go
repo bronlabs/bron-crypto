@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 func TestSimpleTranscript(t *testing.T) {

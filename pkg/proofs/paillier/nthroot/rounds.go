@@ -5,27 +5,27 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type Round1Output struct {
 	A *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round2Output struct {
 	E *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Round3Output struct {
 	Z *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (prover *Prover) Round1() (output *Round1Output, err error) {

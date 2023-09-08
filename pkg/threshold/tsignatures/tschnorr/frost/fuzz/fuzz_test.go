@@ -16,24 +16,24 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	frost_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/pedersen"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	frost_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
+	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/pedersen"
+	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -145,7 +145,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 		signingIdentities = append(signingIdentities, identities[i])
 	}
 
-	signingParticipants, err := test_utils.MakeInteractiveSignParticipants(cohortConfig, signingIdentities, shards)
+	signingParticipants, err := testutils.MakeInteractiveSignParticipants(cohortConfig, signingIdentities, shards)
 	require.NoError(t, err)
 	for _, participant := range signingParticipants {
 		if participant == nil {
@@ -153,14 +153,14 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 		}
 	}
 
-	r1Out, err := test_utils.DoInteractiveSignRound1(signingParticipants)
+	r1Out, err := testutils.DoInteractiveSignRound1(signingParticipants)
 	require.NoError(t, err)
 
-	r2In := test_utils.MapInteractiveSignRound1OutputsToRound2Inputs(signingParticipants, r1Out)
-	partialSignatures, err := test_utils.DoInteractiveSignRound2(signingParticipants, r2In, []byte(message))
+	r2In := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(signingParticipants, r1Out)
+	partialSignatures, err := testutils.DoInteractiveSignRound2(signingParticipants, r2In, []byte(message))
 	require.NoError(t, err)
 
-	mappedPartialSignatures := test_utils.MapPartialSignatures(signingIdentities, partialSignatures)
+	mappedPartialSignatures := testutils.MapPartialSignatures(signingIdentities, partialSignatures)
 	var producedSignatures []*eddsa.Signature
 	for i, participant := range signingParticipants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
@@ -210,7 +210,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 		partialSignatures[i], err = participant.ProducePartialSignature([]byte(message))
 		require.NoError(t, err)
 	}
-	mappedPartialSignatures := test_utils.MapPartialSignatures(identities, partialSignatures)
+	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
 	signatureHashSet := map[string]bool{}
 	for i, cosigner := range cosigners {
 		if cosigner.IsSignatureAggregator() {
@@ -241,9 +241,9 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]map[helper_types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast, len(participants))
+	round2Inputs := make([]map[types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast, len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[helper_types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast)
+		round2Inputs[i] = make(map[types.IdentityHash]*frost_noninteractive_signing.Round1Broadcast)
 		for j := range participants {
 			if j != i {
 				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
@@ -274,12 +274,12 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := test_utils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
+		identity, err := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}
 
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
@@ -287,7 +287,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 			require.NoError(t, err)
 		}
 	}
-	uniqueSessionId, err := agreeonrandom_test_utils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
@@ -300,12 +300,12 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	for i := 0; i < n; i++ {
 		randoms = append(randoms, rand.New(rand.NewSource(randomSeed+int64(i))))
 	}
-	participants, err := test_utils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, randoms)
+	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, randoms)
 	require.NoError(t, err)
-	r1OutsB, r1OutsU, err := test_utils.DoDkgRound1(participants, nil)
+	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
-	r2InsB, r2InsU := test_utils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
-	signingKeyShares, publicKeyShares, err := test_utils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		if publicKeyShare == nil {

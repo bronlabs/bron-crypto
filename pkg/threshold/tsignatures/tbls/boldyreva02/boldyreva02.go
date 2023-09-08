@@ -1,12 +1,12 @@
 package boldyreva02
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/base/polynomials"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/polynomials"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
 )
 
 type Participant interface {
@@ -19,7 +19,7 @@ type SigningKeyShare[K bls.KeySubGroup] struct {
 	Share     curves.PairingScalar
 	PublicKey *bls.PublicKey[K]
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *SigningKeyShare[K]) Validate() error {
@@ -37,9 +37,9 @@ func (s *SigningKeyShare[K]) Validate() error {
 
 type PublicKeyShares[K bls.KeySubGroup] struct {
 	PublicKey *bls.PublicKey[K]
-	SharesMap map[helper_types.IdentityHash]curves.PairingPoint
+	SharesMap map[types.IdentityHash]curves.PairingPoint
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *PublicKeyShares[K]) Validate(cohortConfig *integration.CohortConfig) error {
@@ -89,7 +89,7 @@ type Shard[K bls.KeySubGroup] struct {
 	SigningKeyShare *SigningKeyShare[K]
 	PublicKeyShares *PublicKeyShares[K]
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Shard[K]) Validate(cohortConfig *integration.CohortConfig) error {
@@ -106,5 +106,5 @@ type PartialSignature[S bls.SignatureSubGroup] struct {
 	Sigma_i *bls.Signature[S]
 	POP     *bls.ProofOfPossession[S]
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }

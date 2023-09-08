@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"hash"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 const (

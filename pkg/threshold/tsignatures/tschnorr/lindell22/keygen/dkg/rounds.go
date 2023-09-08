@@ -1,10 +1,10 @@
 package dkg
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
 type Round1Broadcast = gennaro.Round1Broadcast
@@ -12,7 +12,7 @@ type Round1P2P = gennaro.Round1P2P
 
 type Round2Broadcast = gennaro.Round2Broadcast
 
-func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
@@ -24,7 +24,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[helper_types.IdentityHash]
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash]*Round1Broadcast, round1outputP2P map[helper_types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
 	if p.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
@@ -36,7 +36,7 @@ func (p *Participant) Round2(round1outputBroadcast map[helper_types.IdentityHash
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output map[helper_types.IdentityHash]*Round2Broadcast) (*lindell22.Shard, error) {
+func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcast) (*lindell22.Shard, error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}

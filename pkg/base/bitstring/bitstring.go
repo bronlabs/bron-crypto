@@ -3,7 +3,7 @@ package bitstring
 import (
 	"encoding/binary"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 // SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.

@@ -3,14 +3,14 @@ package lindell17
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 type preGenParticipantState struct {
@@ -18,9 +18,9 @@ type preGenParticipantState struct {
 	bigR        []curves.Point
 	bigRWitness []commitments.Witness
 
-	theirBigRCommitments []map[helper_types.IdentityHash]commitments.Commitment
+	theirBigRCommitments []map[types.IdentityHash]commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PreGenParticipant struct {
@@ -37,7 +37,7 @@ type PreGenParticipant struct {
 
 	state *preGenParticipantState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
@@ -92,6 +92,9 @@ func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdent
 func validateInputs(sid []byte, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if myIdentityKey == nil {
 		return errs.NewMissing("identity key is nil")

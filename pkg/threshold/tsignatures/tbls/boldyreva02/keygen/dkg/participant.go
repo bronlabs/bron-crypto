@@ -1,18 +1,17 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton/pkg/signatures/bls"
+	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 type Participant[K bls.KeySubGroup] struct {
@@ -20,7 +19,7 @@ type Participant[K bls.KeySubGroup] struct {
 	inG1         bool
 	round        int
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Participant[K]) GetIdentityKey() integration.IdentityKey {

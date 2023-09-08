@@ -6,13 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
-	p256n "github.com/copperexchange/knox-primitives/pkg/base/curves/p256/impl"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256/impl/fp"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256/impl/fq"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	p256n "github.com/copperexchange/krypton/pkg/base/curves/p256/impl"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256/impl/fp"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256/impl/fq"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 const Name = "P-256"
@@ -50,7 +50,7 @@ type Curve struct {
 	Name_    string
 	Profile_ curves.CurveProfile
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func p256Init() {

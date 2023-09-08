@@ -10,8 +10,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
 )
 
 func Fuzz_Test_encryptDecrypt(f *testing.F) {

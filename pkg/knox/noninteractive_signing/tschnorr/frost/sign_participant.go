@@ -3,13 +3,13 @@ package frost
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 var _ frost.Participant = (*Cosigner)(nil)
@@ -27,13 +27,13 @@ type Cosigner struct {
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[helper_types.IdentityHash]int
+	IdentityKeyToSharingId map[types.IdentityHash]int
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
 	aggregationParameter *aggregation.SignatureAggregatorParameters
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
@@ -80,8 +80,8 @@ func NewNonInteractiveCosigner(
 		}
 	}
 
-	D_alpha := map[helper_types.IdentityHash]curves.Point{}
-	E_alpha := map[helper_types.IdentityHash]curves.Point{}
+	D_alpha := map[types.IdentityHash]curves.Point{}
+	E_alpha := map[types.IdentityHash]curves.Point{}
 	preSignature := (*preSignatureBatch)[firstUnusedPreSignatureIndex]
 	for _, attestedCommitment := range *preSignature {
 		_, found := presentParties.Get(attestedCommitment.Attestor)
@@ -117,6 +117,9 @@ func validateParticipantInputs(identityKey integration.IdentityKey, shard *frost
 	}
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	}
+	if cohortConfig.Protocol == nil {
+		return errs.NewIsNil("cohort config protocol is nil")
 	}
 	if shard == nil {
 		return errs.NewIsNil("shard is nil")

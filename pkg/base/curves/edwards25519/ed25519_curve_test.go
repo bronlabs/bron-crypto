@@ -10,15 +10,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
 )
 
 func TestScalarRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
-	sc := ed25519.Scalar().Random(test_utils.TestRng())
+	sc := ed25519.Scalar().Random(testutils.TestRng())
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
 	expected := toRSc("feaa6a9d6dda758da6145f7d411a3af9f8a120698e0093faa97085b384c3f00e")
@@ -218,7 +218,7 @@ func TestScalarNil(t *testing.T) {
 
 func TestPointRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
-	sc := ed25519.Point().Random(test_utils.TestRng())
+	sc := ed25519.Point().Random(testutils.TestRng())
 	s, ok := sc.(*edwards25519.Point)
 	require.True(t, ok)
 	expected, err := toRPt("6011540c6231421a70ced5f577432531f198d318facfaad6e52cc42fba6e6fc5")
@@ -328,7 +328,7 @@ func TestPointMul(t *testing.T) {
 
 func TestPointSerialize(t *testing.T) {
 	ed25519 := edwards25519.New()
-	ss := ed25519.Scalar().Random(test_utils.TestRng())
+	ss := ed25519.Scalar().Random(testutils.TestRng())
 	g := ed25519.Point().Generator()
 
 	ppt := g.Mul(ss)

@@ -5,15 +5,15 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/lp"
-	paillierrange "github.com/copperexchange/knox-primitives/pkg/proofs/paillier/range"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts"
-	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/proofs/paillier/lp"
+	paillierrange "github.com/copperexchange/krypton/pkg/proofs/paillier/range"
+	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
 )
 
 const (
@@ -29,7 +29,7 @@ type Participant struct {
 	transcript transcripts.Transcript
 	prng       io.Reader
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type State struct {
@@ -39,7 +39,7 @@ type State struct {
 	a     *saferith.Nat
 	b     *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type VerifierState struct {
@@ -48,7 +48,7 @@ type VerifierState struct {
 	bigQPrime           curves.Point
 	cHat                commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Verifier struct {
@@ -57,7 +57,7 @@ type Verifier struct {
 	c             *paillier.CipherText
 	state         *VerifierState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type ProverState struct {
@@ -67,7 +67,7 @@ type ProverState struct {
 	bigQHatWitness         commitments.Witness
 	cDoublePrimeCommitment commitments.Commitment
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type Prover struct {
@@ -77,7 +77,7 @@ type Prover struct {
 	x           curves.Scalar
 	state       *ProverState
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {

@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/knox/dkg/tecdsa/test_utils"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton/pkg/knox/dkg/tecdsa/testutils"
 )
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
@@ -32,59 +32,59 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		Hash:  h,
 	}
 
-	identities, err := test_utils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
-	require.NoError(t, err)
-
-	participants, err := test_utils.MakeParticipants(cohortConfig, identities, nil)
+	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	r1OutsB, err := test_utils.DoDkgRound1(participants)
+	participants, err := testutils.MakeParticipants(cohortConfig, identities, nil)
 	require.NoError(t, err)
 
-	r2InsB := test_utils.MapDkgRoundArray(participants, r1OutsB)
-	r2OutsB, err := test_utils.DoDkgRound2(participants, r2InsB)
+	r1OutsB, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 
-	r3InsB := test_utils.MapDkgRoundArray(participants, r2OutsB)
-	r3OutsB, r3OutsU, err := test_utils.DoDkgRound3(participants, r3InsB)
+	r2InsB := testutils.MapDkgRoundArray(participants, r1OutsB)
+	r2OutsB, err := testutils.DoDkgRound2(participants, r2InsB)
 	require.NoError(t, err)
 
-	r4InsB, r4InsU := test_utils.MapDkgRoundP2P(participants, r3OutsB, r3OutsU)
-	r4OutsB, r4OutsU, err := test_utils.DoDkgRound4(participants, r4InsB, r4InsU)
+	r3InsB := testutils.MapDkgRoundArray(participants, r2OutsB)
+	r3OutsB, r3OutsU, err := testutils.DoDkgRound3(participants, r3InsB)
 	require.NoError(t, err)
 
-	r5InsB, r5InsU := test_utils.MapDkgRoundP2P(participants, r4OutsB, r4OutsU)
-	r5OutsB, r5OutsU, err := test_utils.DoDkgRound5(participants, r5InsB, r5InsU)
+	r4InsB, r4InsU := testutils.MapDkgRoundP2P(participants, r3OutsB, r3OutsU)
+	r4OutsB, r4OutsU, err := testutils.DoDkgRound4(participants, r4InsB, r4InsU)
 	require.NoError(t, err)
 
-	r6InsB, r6InsU := test_utils.MapDkgRoundP2P(participants, r5OutsB, r5OutsU)
-	r6OutsB, r6OutsU, err := test_utils.DoDkgRound6(participants, r6InsB, r6InsU)
+	r5InsB, r5InsU := testutils.MapDkgRoundP2P(participants, r4OutsB, r4OutsU)
+	r5OutsB, r5OutsU, err := testutils.DoDkgRound5(participants, r5InsB, r5InsU)
 	require.NoError(t, err)
 
-	r7InsB, r7InsU := test_utils.MapDkgRoundP2P(participants, r6OutsB, r6OutsU)
-	r7OutsB, r7OutsU, err := test_utils.DoDkgRound7(participants, r7InsB, r7InsU)
+	r6InsB, r6InsU := testutils.MapDkgRoundP2P(participants, r5OutsB, r5OutsU)
+	r6OutsB, r6OutsU, err := testutils.DoDkgRound6(participants, r6InsB, r6InsU)
 	require.NoError(t, err)
 
-	r8InsB, r8InsU := test_utils.MapDkgRoundP2P(participants, r7OutsB, r7OutsU)
-	r8OutsU, err := test_utils.DoDkgRound8(participants, r8InsB, r8InsU)
+	r7InsB, r7InsU := testutils.MapDkgRoundP2P(participants, r6OutsB, r6OutsU)
+	r7OutsB, r7OutsU, err := testutils.DoDkgRound7(participants, r7InsB, r7InsU)
 	require.NoError(t, err)
 
-	r9InsU := test_utils.MapDkgRound(participants, r8OutsU)
-	r9OutsU, err := test_utils.DoDkgRound9(participants, r9InsU)
+	r8InsB, r8InsU := testutils.MapDkgRoundP2P(participants, r7OutsB, r7OutsU)
+	r8OutsU, err := testutils.DoDkgRound8(participants, r8InsB, r8InsU)
 	require.NoError(t, err)
 
-	r10InsU := test_utils.MapDkgRound(participants, r9OutsU)
-	r10OutsU, err := test_utils.DoDkgRound10(participants, r10InsU)
+	r9InsU := testutils.MapDkgRound(participants, r8OutsU)
+	r9OutsU, err := testutils.DoDkgRound9(participants, r9InsU)
 	require.NoError(t, err)
 
-	r11InsU := test_utils.MapDkgRound(participants, r10OutsU)
-	r11OutsU, err := test_utils.DoDkgRound11(participants, r11InsU)
+	r10InsU := testutils.MapDkgRound(participants, r9OutsU)
+	r10OutsU, err := testutils.DoDkgRound10(participants, r10InsU)
 	require.NoError(t, err)
 
-	r12InsU := test_utils.MapDkgRound(participants, r11OutsU)
-	shards, err := test_utils.DoDkgRound12(participants, r12InsU)
+	r11InsU := testutils.MapDkgRound(participants, r10OutsU)
+	r11OutsU, err := testutils.DoDkgRound11(participants, r11InsU)
+	require.NoError(t, err)
+
+	r12InsU := testutils.MapDkgRound(participants, r11OutsU)
+	shards, err := testutils.DoDkgRound12(participants, r12InsU)
 	require.NoError(t, err)
 	require.Len(t, shards, n)
 

@@ -3,16 +3,16 @@ package polynomials
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 type Polynomial struct {
 	Coefficients []curves.Scalar
 	Curve        curves.Curve
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *Polynomial) Degree() int {

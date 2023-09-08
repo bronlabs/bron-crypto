@@ -1,7 +1,7 @@
 package transcripts
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves"
 )
 
 type Transcript interface {

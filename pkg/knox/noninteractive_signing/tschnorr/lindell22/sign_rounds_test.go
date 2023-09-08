@@ -8,20 +8,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
-	hashing_bip340 "github.com/copperexchange/knox-primitives/pkg/hashing/bip340"
-	lindell22_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22"
-	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/lindell22/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	hashing_bip340 "github.com/copperexchange/krypton/pkg/hashing/bip340"
+	lindell22_noninteractive_signing "github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/knox/noninteractive_signing/tschnorr/lindell22/testutils"
+	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 )
 
 func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
@@ -41,17 +41,17 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 	message := []byte("Lorem ipsum")
 	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
 
-	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	require.NoError(t, err)
 
-	transcripts := integration_test_utils.MakeTranscripts(transcriptAppLabel, identities)
-	participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+	transcripts := integration_testutils.MakeTranscripts(transcriptAppLabel, identities)
+	participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	require.NoError(t, err)
 
-	batches, err := test_utils.DoLindell2022PreGen(participants)
+	batches, err := testutils.DoLindell2022PreGen(participants)
 	require.NoError(t, err)
 	require.NotNil(t, batches)
 
@@ -96,17 +96,17 @@ func Test_SignNonInteractiveThresholdBIP340(t *testing.T) {
 	message := []byte("Lorem ipsum")
 	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
 
-	identities, err := integration_test_utils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohort, err := integration_test_utils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
+	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	require.NoError(t, err)
 
-	transcripts := integration_test_utils.MakeTranscripts(transcriptAppLabel, identities)
-	participants, err := test_utils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+	transcripts := integration_testutils.MakeTranscripts(transcriptAppLabel, identities)
+	participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	require.NoError(t, err)
 
-	batches, err := test_utils.DoLindell2022PreGen(participants)
+	batches, err := testutils.DoLindell2022PreGen(participants)
 	require.NoError(t, err)
 	require.NotNil(t, batches)
 

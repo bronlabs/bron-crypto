@@ -9,10 +9,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton/pkg/base/types"
 )
 
 var (
@@ -162,7 +162,7 @@ func BenchmarkK256(b *testing.B) {
 type BenchScalar struct {
 	value *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (*BenchScalar) CurveName() string {
@@ -361,7 +361,7 @@ func (s *BenchScalar) Clone() curves.Scalar {
 type BenchPoint struct {
 	x, y *saferith.Nat
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (p *BenchPoint) Clone() curves.Point {

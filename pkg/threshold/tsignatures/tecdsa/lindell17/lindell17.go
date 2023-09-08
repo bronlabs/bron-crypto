@@ -1,12 +1,12 @@
 package lindell17
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration"
-	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
 )
 
 const (
@@ -23,29 +23,29 @@ type Participant interface {
 type Shard struct {
 	SigningKeyShare         *tsignatures.SigningKeyShare
 	PaillierSecretKey       *paillier.SecretKey
-	PaillierPublicKeys      map[helper_types.IdentityHash]*paillier.PublicKey
-	PaillierEncryptedShares map[helper_types.IdentityHash]*paillier.CipherText
+	PaillierPublicKeys      map[types.IdentityHash]*paillier.PublicKey
+	PaillierEncryptedShares map[types.IdentityHash]*paillier.CipherText
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PartialSignature struct {
 	C3 *paillier.CipherText
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR map[helper_types.IdentityHash]curves.Point
+	BigR map[types.IdentityHash]curves.Point
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 type PreSignatureBatch struct {
 	PreSignatures []*PreSignature
 
-	_ helper_types.Incomparable
+	_ types.Incomparable
 }
 
 func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {

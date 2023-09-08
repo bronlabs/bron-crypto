@@ -6,8 +6,8 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 
-	"github.com/copperexchange/knox-primitives/pkg/base/curves"
-	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton/pkg/base/curves"
+	"github.com/copperexchange/krypton/pkg/base/errs"
 )
 
 const version = "HPKE-v1"
