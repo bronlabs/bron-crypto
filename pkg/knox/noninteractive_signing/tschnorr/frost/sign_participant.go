@@ -3,13 +3,13 @@ package frost
 import (
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/datastructures/hashset"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 var _ frost.Participant = (*Cosigner)(nil)

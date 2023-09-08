@@ -1,0 +1,32 @@
+package mult
+
+import (
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"
+)
+
+// These should really be parameters, but we are declaring them as constants for readability of struct field types.
+const (
+	// Batch size of multiplication functionality itself. It should be less < loglog q. In DKLs23, L=2 for Alice and effectively L=1 for Bob.
+	L = 2
+	// commputational security parameter.
+	Kappa      = softspoken.Kappa
+	KappaBytes = Kappa / 8
+
+	// statistical security parameter.
+	S      = softspoken.Sigma
+	SBytes = S / 8
+
+	// number of random choice bits per element in each batch.
+	Xi      = Kappa + 2*S
+	XiBytes = Xi / 8
+
+	// OTe batch size.
+	Eta      = Xi * L
+	EtaBytes = Eta / 8
+)
+
+type (
+	RvoleAliceInput = [L]curves.Scalar
+	OutputShares    = [L]curves.Scalar
+)

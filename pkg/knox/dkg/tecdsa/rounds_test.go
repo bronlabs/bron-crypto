@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/knox/dkg/tecdsa/test_utils"
 )
 

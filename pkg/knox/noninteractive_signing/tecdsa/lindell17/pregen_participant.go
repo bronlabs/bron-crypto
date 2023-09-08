@@ -3,12 +3,12 @@ package lindell17
 import (
 	"io"
 
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/commitments"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )

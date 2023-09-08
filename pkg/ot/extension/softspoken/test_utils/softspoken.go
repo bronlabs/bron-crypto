@@ -6,9 +6,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/knox-primitives/pkg/ot/base/vsot/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/ot/extension/softspoken"

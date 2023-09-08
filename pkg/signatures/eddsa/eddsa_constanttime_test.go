@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/knox-primitives/internal"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
 )
 

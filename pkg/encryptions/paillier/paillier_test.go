@@ -13,9 +13,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/primes"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 )
 
@@ -155,14 +155,14 @@ func Example_homomorphicMultiplication() {
 }
 
 func TestGenerateSafePrimes(t *testing.T) {
-	p, err := core.GenerateSafePrime(32)
+	p, err := primes.GenerateSafePrime(32)
 	if err != nil {
 		t.Errorf("GenerateSafePrime failed: %v", err)
 	}
 	if !p.Big().ProbablyPrime(8) {
 		t.Errorf("GenerateSafePrime didn't return a prime number: %v", p)
 	}
-	p, err = core.GenerateSafePrime(3)
+	p, err = primes.GenerateSafePrime(3)
 	if err != nil {
 		t.Errorf("GenerateSafePrime failed: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestGenerateSafePrimesLong(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping GenerateSafePrimesLong")
 	}
-	p, err := core.GenerateSafePrime(bits)
+	p, err := primes.GenerateSafePrime(bits)
 	if err != nil {
 		t.Errorf("GenerateSafePrime failed: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestGenerateSafePrimesLong(t *testing.T) {
 }
 
 func TestGenerateSafePrimesTooLow(t *testing.T) {
-	_, err := core.GenerateSafePrime(2)
+	_, err := primes.GenerateSafePrime(2)
 	require.Error(t, err)
 }
 

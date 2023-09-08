@@ -16,18 +16,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
 	frost_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
+	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/threshold/agreeonrandom/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
 )
 
 func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/bls/test_utils"
 )

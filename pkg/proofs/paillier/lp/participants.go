@@ -5,8 +5,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/knox-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"

@@ -6,10 +6,10 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/fischlin"
 )
 

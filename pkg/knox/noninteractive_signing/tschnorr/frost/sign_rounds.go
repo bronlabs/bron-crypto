@@ -1,12 +1,12 @@
 package frost
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	signing_helpers "github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {

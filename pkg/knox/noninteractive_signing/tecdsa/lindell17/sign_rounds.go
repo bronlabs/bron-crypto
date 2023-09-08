@@ -1,12 +1,12 @@
 package lindell17
 
 import (
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/knox-primitives/pkg/sharing/shamir"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/signing"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {

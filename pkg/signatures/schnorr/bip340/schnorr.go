@@ -5,12 +5,12 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing/bip340"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/hashing/bip340"
 )
 
 const (

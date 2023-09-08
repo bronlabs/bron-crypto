@@ -10,8 +10,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/ecdsa"
 )
 

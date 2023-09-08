@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	integration_test_utils "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
 	"github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17/test_utils"
 )
 

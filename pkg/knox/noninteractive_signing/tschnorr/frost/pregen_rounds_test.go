@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
-	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/frost/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/protocols"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tschnorr/frost/test_utils"
 )
 
 func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n, tau int) {

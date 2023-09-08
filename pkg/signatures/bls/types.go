@@ -4,13 +4,13 @@ import (
 	"crypto/subtle"
 	"encoding"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
-	bimpl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
+	bimpl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 )
 
 const (
@@ -45,14 +45,14 @@ var (
 )
 
 type PrivateKey[K KeySubGroup] struct {
-	d         *bls12381.ScalarBls12381
+	d         *bls12381.Scalar
 	PublicKey *PublicKey[K]
 
 	_ helper_types.Incomparable
 }
 
 func NewPrivateKey[K KeySubGroup](d curves.PairingScalar) (*PrivateKey[K], error) {
-	sk, ok := d.(*bls12381.ScalarBls12381)
+	sk, ok := d.(*bls12381.Scalar)
 	if !ok {
 		return nil, errs.NewInvalidType("d is not a bls scalar")
 	}
@@ -113,7 +113,7 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 		return errs.WrapSerializationError(err, "couldn't set bytes")
 	}
 	point := new(K)
-	sk.d = &bls12381.ScalarBls12381{
+	sk.d = &bls12381.Scalar{
 		Value:  value,
 		Point_: *point,
 	}

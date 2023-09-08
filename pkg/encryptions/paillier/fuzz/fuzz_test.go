@@ -10,7 +10,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 	"github.com/copperexchange/knox-primitives/pkg/encryptions/paillier"
 )
 

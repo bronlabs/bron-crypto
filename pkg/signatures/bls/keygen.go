@@ -6,13 +6,13 @@ import (
 
 	"golang.org/x/crypto/hkdf"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
-	bimpl "github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381/impl"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/impl"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
+	bimpl "github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 )
 
 const (
@@ -64,7 +64,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		if !ok {
 			return nil, errs.NewInvalidType("could not get pairable identity point in K")
 		}
-		d = &bls12381.ScalarBls12381{
+		d = &bls12381.Scalar{
 			Value:  v,
 			Point_: pairingIdentityInK,
 		}
@@ -79,7 +79,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 	if !ok {
 		return nil, errs.NewInvalidType("public key could not be converted to pairing point. This should never happen.")
 	}
-	dValue, ok := d.(*bls12381.ScalarBls12381)
+	dValue, ok := d.(*bls12381.Scalar)
 	if !ok {
 		return nil, errs.NewInvalidType("d could not be converted to a bls scalar. This should never happen.")
 	}

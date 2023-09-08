@@ -5,8 +5,8 @@ import (
 	"crypto/subtle"
 	"hash"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 )
 
 type (

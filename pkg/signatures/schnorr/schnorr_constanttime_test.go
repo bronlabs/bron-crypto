@@ -9,8 +9,8 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/knox-primitives/internal"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr"
 )
 

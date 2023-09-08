@@ -3,8 +3,8 @@ package test_utils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/bls12381"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/bls"
 )
 

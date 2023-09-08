@@ -4,11 +4,11 @@ import (
 	crand "crypto/rand"
 	"crypto/subtle"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 )
 

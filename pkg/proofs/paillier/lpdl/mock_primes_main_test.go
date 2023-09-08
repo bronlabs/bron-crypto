@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/test_utils"
 )
 
 func TestMain(m *testing.M) {

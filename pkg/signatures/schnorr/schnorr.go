@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 	dlog "github.com/copperexchange/knox-primitives/pkg/proofs/dlog/schnorr"
 )
 
@@ -142,7 +142,7 @@ func Verify(cipherSuite *integration.CipherSuite, publicKey *PublicKey, message 
 	}
 
 	if cipherSuite.Curve.Name() == edwards25519.Name {
-		edwardsPoint, ok := publicKey.Y.(*edwards25519.PointEd25519)
+		edwardsPoint, ok := publicKey.Y.(*edwards25519.Point)
 		if !ok {
 			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}

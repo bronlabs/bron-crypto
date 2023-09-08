@@ -1,17 +1,14 @@
 package internal
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/wcharczuk/go-chart/v2"
-
-	"github.com/copperexchange/knox-primitives/pkg/core/bitstring"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
 )
 
 var tempDir = os.TempDir()
@@ -19,40 +16,6 @@ var csvWriteMutex sync.Mutex
 
 // this could be set to "ms" for milliseconds, "ns" for nanoseconds or default will be microseconds.
 var timeUnit = os.Getenv("EXEC_TIME_UNIT")
-
-// drawChart generate a chart from a slice of float64 values
-// and write it to a temp file.
-func drawChart(name string, values []float64) error {
-	XValues := make([]float64, len(values))
-	for i := range values {
-		XValues[i] = float64(i)
-	}
-	YValues := values
-	graph := chart.Chart{
-		Title: name,
-		Series: []chart.Series{
-			chart.ContinuousSeries{
-				XValues: XValues,
-				YValues: YValues,
-			},
-		},
-	}
-	buffer := bytes.NewBuffer([]byte{})
-	err := graph.Render(chart.PNG, buffer)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to render chart")
-	}
-	// write to a file
-	fo, err := os.CreateTemp("", fmt.Sprintf("%s*.png", name))
-	if err != nil {
-		return errs.WrapFailed(err, "failed to create file")
-	}
-	defer func() {
-		fo.Close()
-	}()
-	_, err = fo.Write(buffer.Bytes())
-	return errs.WrapFailed(err, "failed to write to file")
-}
 
 // GetBigEndianBytesWithLowestBitsSet creates a variable length byte array with the last addedBits bits set to 1.
 // for example if byteSize is 2 and addedBits is 4, the result will be 00000000 00001111.
@@ -102,12 +65,7 @@ func RunMeasurement(points int, name string, prepareFunc func(step int), measure
 		times[c_i] = t
 	}
 
-	err := drawChart(name, times)
-	if err != nil {
-		panic(err)
-	}
-
-	err = csvFile(name, times)
+	err := csvFile(name, times)
 	if err != nil {
 		panic(err)
 	}

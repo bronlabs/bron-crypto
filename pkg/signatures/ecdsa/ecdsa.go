@@ -6,13 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/curveutils"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/curveutils"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 )
 
 type Signature struct {
@@ -62,10 +62,10 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *saferith.Nat
 
 	//nolint:gocritic // below is not a switch
-	if p, ok := bigR.(*k256.PointK256); ok {
+	if p, ok := bigR.(*k256.Point); ok {
 		rx = p.X().Nat()
 		ry = p.Y().Nat()
-	} else if p, ok := bigR.(*p256.PointP256); ok {
+	} else if p, ok := bigR.(*p256.Point); ok {
 		rx = p.X().Nat()
 		ry = p.Y().Nat()
 	} else {

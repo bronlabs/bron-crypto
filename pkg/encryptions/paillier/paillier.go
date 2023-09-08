@@ -20,8 +20,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/knox-primitives/pkg/core"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/primes"
 )
 
 type (
@@ -51,7 +51,7 @@ type (
 
 // NewKeys generates Paillier keys with `bits` sized safe primes.
 func NewKeys(bits uint) (*PublicKey, *SecretKey, error) {
-	publicKey, secretKey, err := keyGenerator(core.GenerateSafePrime, bits)
+	publicKey, secretKey, err := keyGenerator(primes.GenerateSafePrime, bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
 	}

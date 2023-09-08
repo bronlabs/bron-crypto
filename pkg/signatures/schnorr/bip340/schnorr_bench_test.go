@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/schnorr/bip340"
 )
 

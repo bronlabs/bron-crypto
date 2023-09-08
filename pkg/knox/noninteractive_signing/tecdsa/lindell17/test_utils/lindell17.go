@@ -3,10 +3,10 @@ package test_utils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
 	lindell17_noninteractive_signing "github.com/copperexchange/knox-primitives/pkg/knox/noninteractive_signing/tecdsa/lindell17"
-	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	"github.com/copperexchange/knox-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts"
 	"github.com/copperexchange/knox-primitives/pkg/transcripts/hagrid"
 )

@@ -635,7 +635,7 @@ linters-settings:
           # method-call: deferring a call to a method can lead to subtle bugs if the method does not have a pointer receiver
           # recover: calling recover outside a deferred function has no effect
           # return: returning values form a deferred function has no effect
-          - ["call-chain", "method-call", "return"]
+          - ["call-chain", "method-call", "recover", "return"]
   govet:
     # report about shadowed variables
     check-shadowing: true

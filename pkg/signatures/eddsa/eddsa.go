@@ -6,14 +6,14 @@ import (
 	"hash"
 	"reflect"
 
-	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
-	"github.com/copperexchange/knox-primitives/pkg/core/errs"
-	"github.com/copperexchange/knox-primitives/pkg/core/hashing"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration"
-	"github.com/copperexchange/knox-primitives/pkg/core/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/knox-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/knox-primitives/pkg/base/errs"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration"
+	"github.com/copperexchange/knox-primitives/pkg/base/integration/helper_types"
+	"github.com/copperexchange/knox-primitives/pkg/hashing"
 )
 
 type Signature struct {
@@ -45,7 +45,7 @@ func Verify(curve curves.Curve, hashFunction func() hash.Hash, signature *Signat
 		return errs.NewVerificationFailed("public key is at infinity")
 	}
 	if curve.Name() == edwards25519.New().Name() {
-		edwardsPoint, ok := publicKey.(*edwards25519.PointEd25519)
+		edwardsPoint, ok := publicKey.(*edwards25519.Point)
 		if !ok {
 			return errs.NewSerializationError("curve is ed25519 but the public key could not be type casted to the correct point struct")
 		}
