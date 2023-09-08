@@ -1,5 +1,3 @@
-.PHONY: all build bench clean cover deflake fmt lint test test-clean test-long
-
 GOENV=GO111MODULE=on
 GO=${GOENV} go
 
@@ -8,10 +6,8 @@ PACKAGE=./...
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 
-DOCTOOLS=docker run --rm  -v "$$(pwd)":"$$(pwd)" -w "$$(pwd)" doctools:latest
-
 .PHONY: all
-all: githooks test build lint fmt deps docs
+all: build lint fmt test
 
 .PHONY: build
 build:
@@ -29,17 +25,6 @@ clean:
 cover: ## compute and display test coverage report
 	${GO} test -short -coverprofile=${COVERAGE_OUT} ${PACKAGE}
 	${GO} tool cover -html=${COVERAGE_OUT}
-
-.PHONY: deps
-deps: ## Build dockerized autodoc tools
-	@docker build -t doctools:latest .
-
-.PHONY: docs
-docs: ## Apply copyright headers and re-build package-level documents
-	@${DOCTOOLS} spdx
-
-gen-readme-docs:
-	@${DOCTOOLS} gomarkdoc --output '{{.Dir}}/README.md' ./...
 
 .PHONY: fmt
 fmt:
