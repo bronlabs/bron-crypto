@@ -53,8 +53,8 @@ var (
 	n                  = 3
 	message            = []byte("message")
 	sid                = []byte("sid")
-	numberOfSignatures = 100
-	tau                = 100
+	numberOfSignatures = 10000
+	tau                = 10000
 )
 
 func BenchmarkDkg(b *testing.B) {
@@ -330,7 +330,7 @@ func BenchmarkNonInteractiveSigning(b *testing.B) {
 				signature, err := signing.Aggregate(partialSignatures...)
 				require.NoError(b, err)
 
-				err = eddsa.Verify(lindell22CohortConfig.CipherSuite.Curve, lindell22CohortConfig.CipherSuite.Hash, signature, cosignerB.GetIdentityKey().PublicKey(), message)
+				err = eddsa.Verify(lindell22CohortConfig.CipherSuite.Curve, lindell22CohortConfig.CipherSuite.Hash, signature, lindell22Shards[lindell22Identities[0].Hash()].PublicKeyShares.PublicKey, message)
 				require.NoError(b, err)
 			}
 		}
@@ -386,6 +386,7 @@ func BenchmarkNonInteractiveSigning(b *testing.B) {
 			}
 
 			sigAg, err := bls.AggregateSignatures(signatures...)
+			require.NoError(b, err)
 			err = bls.AggregateVerify[G1, G2](pubkeys, messages, sigAg, nil, bls.Basic)
 			require.Error(b, err)
 		}
