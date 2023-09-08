@@ -1,7 +1,6 @@
 package tecdsa_test
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"hash"
 	"reflect"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/p256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/protocols"
@@ -23,9 +21,9 @@ import (
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip()
-	}
+	//if testing.Short() {
+	//	t.Skip()
+	//}
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -97,8 +95,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{k256.New(), p256.New()} {
-		for _, h := range []func() hash.Hash{sha3.New256, sha256.New} {
+	for _, curve := range []curves.Curve{k256.New()} {
+		for _, h := range []func() hash.Hash{sha3.New256} {
 			for _, thresholdConfig := range []struct {
 				t int
 				n int

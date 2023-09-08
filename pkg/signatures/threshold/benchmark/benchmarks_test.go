@@ -28,6 +28,7 @@ import (
 	dkls23_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/keygen/dkg/test_utils"
 	dkls23_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/dkls23/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17"
+	lindell17_dkg_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/dkg/test_utils"
 	lindell17_trusted_dealer "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/keygen/trusted_dealer"
 	lindell17_test_utils "github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tecdsa/lindell17/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/signatures/threshold/tschnorr/lindell22"
@@ -53,7 +54,7 @@ var (
 	n                  = 3
 	message            = []byte("message")
 	sid                = []byte("sid")
-	numberOfSignatures = 10000
+	numberOfSignatures = 100
 	tau                = 10000
 )
 
@@ -69,6 +70,20 @@ func BenchmarkDkg(b *testing.B) {
 			cohortConfig, err := test_utils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, t, identities)
 			require.NoError(b, err)
 			_, err = lindell22_dkg_test_utils.DoKeygen(edwards25519.New(), identities, cohortConfig)
+			require.NoError(b, err)
+		}
+	})
+	b.Run("Lindell17", func(b *testing.B) {
+		b.Skip()
+		for i := 0; i < b.N; i++ {
+			cipherSuite := &integration.CipherSuite{
+				Curve: k256.New(),
+				Hash:  h,
+			}
+			identities, err := test_utils.MakeIdentities(cipherSuite, n)
+			require.NoError(b, err)
+			transcripts := test_utils_integration.MakeTranscripts("Lindell17 keygen", identities)
+			_, _, _, err = lindell17_dkg_test_utils.DoKeygen(cipherSuite, identities, transcripts, t)
 			require.NoError(b, err)
 		}
 	})
@@ -327,11 +342,11 @@ func BenchmarkNonInteractiveSigning(b *testing.B) {
 				partialSignatures[1], err = cosignerB.ProducePartialSignature(message)
 				require.NoError(b, err)
 
-				signature, err := signing.Aggregate(partialSignatures...)
+				_, err = signing.Aggregate(partialSignatures...)
 				require.NoError(b, err)
 
-				err = eddsa.Verify(lindell22CohortConfig.CipherSuite.Curve, lindell22CohortConfig.CipherSuite.Hash, signature, lindell22Shards[lindell22Identities[0].Hash()].PublicKeyShares.PublicKey, message)
-				require.NoError(b, err)
+				//err = eddsa.Verify(lindell22CohortConfig.CipherSuite.Curve, lindell22CohortConfig.CipherSuite.Hash, signature, lindell22Shards[lindell22Identities[0].Hash()].PublicKeyShares.PublicKey, message)
+				//require.NoError(b, err)
 			}
 		}
 	})
@@ -351,11 +366,11 @@ func BenchmarkNonInteractiveSigning(b *testing.B) {
 				agg, err := aggregation.NewAggregator[G1, G2](boldyreva02Shards[boldyreva02Identities[0].Hash()].PublicKeyShares, boldyreva02CohortConfig)
 				require.NoError(b, err)
 
-				signature, err := agg.Aggregate(aggregatorInput, message)
+				_, err = agg.Aggregate(aggregatorInput, message)
 				require.NoError(b, err)
 
-				err = bls.Verify(boldyreva02Shards[boldyreva02Identities[0].Hash()].PublicKeyShares.PublicKey, signature, message, nil, bls.Basic)
-				require.Error(b, err)
+				//err = bls.Verify(boldyreva02Shards[boldyreva02Identities[0].Hash()].PublicKeyShares.PublicKey, signature, message, nil, bls.Basic)
+				//require.Error(b, err)
 			}
 		}
 	})

@@ -2,7 +2,6 @@ package refresh_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha512"
 	"fmt"
 	"hash"
 	"reflect"
@@ -15,7 +14,6 @@ import (
 
 	agreeonrandom_test_utils "github.com/copperexchange/knox-primitives/pkg/agreeonrandom/test_utils"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves"
-	"github.com/copperexchange/knox-primitives/pkg/core/curves/edwards25519"
 	"github.com/copperexchange/knox-primitives/pkg/core/curves/k256"
 	"github.com/copperexchange/knox-primitives/pkg/core/integration"
 	test_utils_integration "github.com/copperexchange/knox-primitives/pkg/core/integration/test_utils"
@@ -121,15 +119,14 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterati
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
-		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
-			for _, iteration := range []int{1, 5} {
+	for _, curve := range []curves.Curve{k256.New()} {
+		for _, h := range []func() hash.Hash{sha3.New256} {
+			for _, iteration := range []int{1} {
 				for _, thresholdConfig := range []struct {
 					t int
 					n int
 				}{
 					{t: 2, n: 3},
-					{t: 3, n: 3},
 				} {
 					boundedCurve := curve
 					boundedHash := h

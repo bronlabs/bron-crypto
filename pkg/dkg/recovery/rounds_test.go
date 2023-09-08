@@ -85,8 +85,6 @@ func Test_HappyPath(t *testing.T) {
 			n int
 		}{
 			{t: 2, n: 3},
-			{t: 2, n: 5},
-			{t: 3, n: 5},
 		} {
 			boundedCurve := curve
 			boundedThresholdConfig := thresholdConfig

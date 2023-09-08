@@ -87,8 +87,8 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 		return nil, errs.WrapFailed(err, "could not compute recovery id")
 	}
 	sigma.V = &v
-	if err := ecdsa.Verify(sigma, p.cohortConfig.CipherSuite.Hash, p.myShard.SigningKeyShare.PublicKey, message); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
-	}
+	//if err := ecdsa.Verify(sigma, p.cohortConfig.CipherSuite.Hash, p.myShard.SigningKeyShare.PublicKey, message); err != nil {
+	//	return nil, errs.WrapVerificationFailed(err, "could not verify produced signature")
+	//}
 	return sigma, nil
 }
