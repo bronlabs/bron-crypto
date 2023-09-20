@@ -113,12 +113,16 @@ func (*Scalar) New(input uint64) curves.Scalar {
 }
 
 func (s *Scalar) Cmp(rhs curves.Scalar) int {
-	r := s.Sub(rhs)
-	if r != nil && r.IsZero() {
-		return 0
-	} else {
-		return -2
+	if rhs == nil {
+		panic("rhs is nil")
 	}
+	r, ok := rhs.(*Scalar)
+	if ok {
+		g, e, _ := s.Nat().Cmp(r.Nat())
+		return (int(g) + int(g) + int(e)) - 1
+	}
+
+	return -2
 }
 
 func (s *Scalar) Square() curves.Scalar {

@@ -85,7 +85,8 @@ func (*Scalar) New(value uint64) curves.Scalar {
 func (s *Scalar) Cmp(rhs curves.Scalar) int {
 	r, ok := rhs.(*Scalar)
 	if ok {
-		return s.value.Cmp(r.value)
+		gt, eq, _ := s.Nat().Cmp(r.Nat())
+		return (int(gt) + int(gt) + int(eq)) - 1
 	} else {
 		return -2
 	}
