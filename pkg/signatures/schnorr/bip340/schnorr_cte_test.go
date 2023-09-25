@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
 
 func Test_MeasureConstantTime_signing(t *testing.T) {

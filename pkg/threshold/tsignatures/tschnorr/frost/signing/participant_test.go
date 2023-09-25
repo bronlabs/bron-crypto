@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
-	trusted_dealer "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/keygen/ed25519_trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	trusted_dealer "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/keygen/ed25519_trusted_dealer"
 )
 
 type mockedIdentityKey struct {

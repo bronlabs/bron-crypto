@@ -8,17 +8,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	lindell17_noninteractive_signing "github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tecdsa/lindell17"
-	"github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tecdsa/lindell17/testutils"
-	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	lindell17_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tecdsa/lindell17/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 )
 
 func Test_NonInteractiveSignHappyPath(t *testing.T) {

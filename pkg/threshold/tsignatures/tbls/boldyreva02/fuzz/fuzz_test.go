@@ -10,17 +10,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton/pkg/signatures/bls"
-	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
 
 var schemes = []bls.RogueKeyPrevention{

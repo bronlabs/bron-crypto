@@ -8,9 +8,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	bls12381impl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
 )
 
 func TestScalarBls12381G1Random(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
 func Test_MeasureConstantTime_commit(t *testing.T) {

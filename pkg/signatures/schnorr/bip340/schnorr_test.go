@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
 
 func Test_BIP340TestVectors(t *testing.T) {

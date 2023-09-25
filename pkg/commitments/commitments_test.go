@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
 var h = sha256.New

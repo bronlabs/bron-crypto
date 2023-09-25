@@ -1,12 +1,12 @@
 package mult
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
 type Round1Output = softspoken.Round1Output

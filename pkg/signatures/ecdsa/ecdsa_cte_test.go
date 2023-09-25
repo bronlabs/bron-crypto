@@ -11,11 +11,11 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton/pkg/hashing"
-	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 )
 
 func Test_MeasureConstantTime_ecdsa(t *testing.T) {

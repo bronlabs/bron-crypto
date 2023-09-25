@@ -1,15 +1,15 @@
 package signing
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/signatures/bls"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/krypton/pkg/transcripts"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {

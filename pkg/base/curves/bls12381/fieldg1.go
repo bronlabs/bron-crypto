@@ -5,11 +5,11 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	bimpl "github.com/copperexchange/krypton/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.FieldProfile = (*FieldProfileG1)(nil)

@@ -2,14 +2,14 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
-	lindell17_dkg "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
-	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	lindell17_dkg "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/pkg/errors"
 )
 

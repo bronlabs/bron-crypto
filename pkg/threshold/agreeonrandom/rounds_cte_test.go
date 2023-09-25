@@ -7,11 +7,11 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
 func Test_MeasureConstantTime(t *testing.T) {

@@ -1,9 +1,9 @@
 package przs
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const LambdaBytes = impl.FieldBytes

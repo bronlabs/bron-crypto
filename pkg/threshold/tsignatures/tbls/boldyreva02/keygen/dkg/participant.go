@@ -3,16 +3,16 @@ package dkg
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton/pkg/signatures/bls"
-	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/krypton/pkg/transcripts"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type Participant[K bls.KeySubGroup] struct {

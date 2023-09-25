@@ -1,13 +1,13 @@
 package dkls23
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
 type Participant interface {

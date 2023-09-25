@@ -2,12 +2,12 @@ package dkg
 
 import (
 	"encoding/hex"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/ot/base/vsot"
-	"github.com/copperexchange/krypton/pkg/threshold/dkg/gennaro"
-	zeroSetup "github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
 type Round1Broadcast = gennaro.Round1Broadcast

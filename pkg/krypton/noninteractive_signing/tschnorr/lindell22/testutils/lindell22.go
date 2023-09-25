@@ -3,11 +3,11 @@ package testutils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	lindell22_noninteractive_signing "github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tschnorr/lindell22"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	lindell22_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 func MakePreGenParticipants(tau int, identities []integration.IdentityKey, sid []byte, cohort *integration.CohortConfig, myTranscripts []transcripts.Transcript) (participants []*lindell22_noninteractive_signing.PreGenParticipant, err error) {

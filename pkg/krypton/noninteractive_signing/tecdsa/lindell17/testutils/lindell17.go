@@ -3,12 +3,12 @@ package testutils
 import (
 	crand "crypto/rand"
 
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	lindell17_noninteractive_signing "github.com/copperexchange/krypton/pkg/krypton/noninteractive_signing/tecdsa/lindell17"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/krypton/pkg/transcripts"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	lindell17_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func MakeTranscripts(label string, identities []integration.IdentityKey) []transcripts.Transcript {

@@ -3,13 +3,13 @@ package pedersen
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/krypton/pkg/transcripts"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 var _ integration.Participant = (*Participant)(nil)

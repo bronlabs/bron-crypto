@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"gonum.org/v1/gonum/stat/combin"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/additive"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/additive"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 func TestSplitAndCombine(t *testing.T) {

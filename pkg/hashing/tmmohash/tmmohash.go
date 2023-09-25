@@ -8,11 +8,11 @@ import (
 	"crypto/subtle"
 	"hash"
 
-	"github.com/copperexchange/krypton/pkg/base"
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/csprng"
-	"github.com/copperexchange/krypton/pkg/hashing/tmmohash/keyedblock"
+	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash/keyedblock"
 )
 
 const (

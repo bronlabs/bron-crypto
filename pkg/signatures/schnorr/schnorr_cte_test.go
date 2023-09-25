@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	"github.com/copperexchange/krypton/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 )
 
 func Test_MeasureConstantTime_signing(t *testing.T) {

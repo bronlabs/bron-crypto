@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 )
 
 func TestMain(m *testing.M) {

@@ -7,7 +7,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 )
 
 func Test_DeriveAffine(t *testing.T) {

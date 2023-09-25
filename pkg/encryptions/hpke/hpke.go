@@ -3,7 +3,7 @@ package hpke
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 // =========== Multi-shot API ============= //.

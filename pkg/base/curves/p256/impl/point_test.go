@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256"
-	p256n "github.com/copperexchange/krypton/pkg/base/curves/p256/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	p256n "github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
 )
 
 func TestP256PointArithmetic_Double(t *testing.T) {

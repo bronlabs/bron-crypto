@@ -3,13 +3,13 @@ package testutils
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	agreeonrandom_testutils "github.com/copperexchange/krypton/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 )
 
 func MakeSetupParticipants(curve curves.Curve, identities []integration.IdentityKey, prng io.Reader) (participants []*setup.Participant, err error) {

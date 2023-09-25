@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/csprng"
-	"github.com/copperexchange/krypton/pkg/csprng/nist"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/nist"
 )
 
 const (

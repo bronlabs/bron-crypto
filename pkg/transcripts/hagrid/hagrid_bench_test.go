@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func BenchmarkTranscript_AppendMessages(b *testing.B) {

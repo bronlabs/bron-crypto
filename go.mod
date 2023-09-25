@@ -1,4 +1,4 @@
-module github.com/copperexchange/krypton
+module github.com/copperexchange/krypton-primitives
 
 go 1.20
 

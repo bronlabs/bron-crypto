@@ -6,13 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	secp256k1 "github.com/copperexchange/krypton/pkg/base/curves/k256/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256/impl/fp"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256/impl/fq"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const Name = "secp256k1"

@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 // IsogenyParams are the parameters needed to map from an isogeny to the main curve.

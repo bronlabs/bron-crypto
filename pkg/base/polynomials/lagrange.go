@@ -1,8 +1,8 @@
 package polynomials
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 // L_i returns the i'th basis polynomial.

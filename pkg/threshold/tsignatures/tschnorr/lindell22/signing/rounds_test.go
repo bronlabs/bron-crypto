@@ -8,18 +8,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton/pkg/hashing"
-	hashing_bip340 "github.com/copperexchange/krypton/pkg/hashing/bip340"
-	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
-	"github.com/copperexchange/krypton/pkg/signatures/schnorr/bip340"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22/signing/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/testutils"
 )
 
 func Test_SanityCheck(t *testing.T) {

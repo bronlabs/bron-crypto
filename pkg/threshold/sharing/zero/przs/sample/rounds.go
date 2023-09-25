@@ -1,9 +1,9 @@
 package sample
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
 func (p *Participant) Sample() (zeroShare przs.Sample, err error) {

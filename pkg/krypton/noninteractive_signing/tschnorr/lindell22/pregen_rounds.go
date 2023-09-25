@@ -8,13 +8,13 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/commitments"
-	dlog "github.com/copperexchange/krypton/pkg/proofs/dlog/fischlin"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 const (

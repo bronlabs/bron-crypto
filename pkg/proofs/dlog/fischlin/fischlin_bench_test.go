@@ -4,7 +4,7 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 )
 
 func BenchmarkFischlin(b *testing.B) {

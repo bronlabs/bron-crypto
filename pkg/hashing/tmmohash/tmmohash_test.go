@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	hashing "github.com/copperexchange/krypton/pkg/hashing/tmmohash"
+	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 )
 
 func Test_Tmmohash(t *testing.T) {

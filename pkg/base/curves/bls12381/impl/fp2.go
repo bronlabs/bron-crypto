@@ -3,7 +3,7 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 // Fp2 is a point in p^2.

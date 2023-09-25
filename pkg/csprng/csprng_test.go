@@ -3,10 +3,10 @@ package csprng_test
 import (
 	"testing"
 
-	"github.com/copperexchange/krypton/pkg/csprng"
-	"github.com/copperexchange/krypton/pkg/csprng/chacha20"
-	"github.com/copperexchange/krypton/pkg/csprng/testutils"
-	"github.com/copperexchange/krypton/pkg/hashing/tmmohash"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 )
 
 func Test_ChachaPrng(t *testing.T) {

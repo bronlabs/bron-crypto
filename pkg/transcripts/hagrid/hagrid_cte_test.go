@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_MeasureConstantTime_append(t *testing.T) {

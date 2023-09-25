@@ -3,9 +3,9 @@ package p256
 import (
 	"sync"
 
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/p256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
 )
 
 var (

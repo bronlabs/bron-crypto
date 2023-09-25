@@ -9,9 +9,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/proofs/paillier/nthroot"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func doProof(x, y, bigN *saferith.Nat, prng io.Reader) (err error) {

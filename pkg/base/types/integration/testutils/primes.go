@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton/pkg/base/primes"
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type SafePrimeMocker struct {

@@ -2,16 +2,16 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 )
 
 // TODO: trusted dealer does not currently support identifiable abort

@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fp"
-	"github.com/copperexchange/krypton/pkg/base/curves/pallas/impl/fq"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type Ep struct {

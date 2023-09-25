@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 )
 
 type testCase struct {

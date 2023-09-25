@@ -1,12 +1,12 @@
 package lindell17
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {

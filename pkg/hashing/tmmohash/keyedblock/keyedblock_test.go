@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/hashing/tmmohash/keyedblock"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash/keyedblock"
 )
 
 func Test_keyedblock(t *testing.T) {

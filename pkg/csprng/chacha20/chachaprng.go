@@ -3,8 +3,8 @@ package chacha20
 import (
 	"golang.org/x/crypto/chacha20"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
 const ChachaPRNGSecurityStrength = chacha20.KeySize // 256 bits

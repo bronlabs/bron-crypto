@@ -3,7 +3,7 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 // Fp12 represents an element a + b w of fp^12 = fp^6 / w^2 - v.

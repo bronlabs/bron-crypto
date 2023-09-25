@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
 func Test_prng(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {

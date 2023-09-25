@@ -3,8 +3,8 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
 // GtFieldBytes is the number of bytes needed to represent this field.

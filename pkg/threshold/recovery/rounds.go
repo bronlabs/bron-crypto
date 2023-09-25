@@ -1,13 +1,13 @@
 package recovery
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/polynomials"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton/pkg/threshold/sharing/zero/hjky"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
 type Round1Broadcast = hjky.Round1Broadcast

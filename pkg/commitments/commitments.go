@@ -5,8 +5,8 @@ import (
 	"crypto/subtle"
 	"hash"
 
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 type (

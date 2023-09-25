@@ -1,12 +1,12 @@
 package frost
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/errs"
-	"github.com/copperexchange/krypton/pkg/base/types"
-	"github.com/copperexchange/krypton/pkg/signatures/eddsa"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing"
-	"github.com/copperexchange/krypton/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
 
 func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {

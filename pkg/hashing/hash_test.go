@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 func TestFiatShamirDeterministic(t *testing.T) {

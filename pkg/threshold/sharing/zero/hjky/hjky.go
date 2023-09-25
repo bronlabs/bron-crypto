@@ -1,5 +1,5 @@
 package hjky
 
-import "github.com/copperexchange/krypton/pkg/base/curves"
+import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
 
 type Sample = curves.Scalar

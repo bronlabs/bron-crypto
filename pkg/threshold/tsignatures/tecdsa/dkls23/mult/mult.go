@@ -1,8 +1,8 @@
 package mult
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/curves"
-	"github.com/copperexchange/krypton/pkg/ot/extension/softspoken"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
 // These should really be parameters, but we are declaring them as constants for readability of struct field types.

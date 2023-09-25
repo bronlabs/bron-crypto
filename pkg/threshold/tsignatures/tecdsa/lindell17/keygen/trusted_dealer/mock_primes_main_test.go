@@ -1,7 +1,7 @@
 package trusted_dealer_test
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"os"
 	"testing"
 )

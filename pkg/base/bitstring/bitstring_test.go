@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 )
 
 func TestSelectBit(t *testing.T) {

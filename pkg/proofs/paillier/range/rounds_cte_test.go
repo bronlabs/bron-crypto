@@ -8,10 +8,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/internal"
-	"github.com/copperexchange/krypton/pkg/encryptions/paillier"
-	paillierrange "github.com/copperexchange/krypton/pkg/proofs/paillier/range"
-	"github.com/copperexchange/krypton/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_MeasureConstantTime_round1(t *testing.T) {

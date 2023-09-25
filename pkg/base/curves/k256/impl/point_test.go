@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton/pkg/base/curves/impl"
-	k256arith "github.com/copperexchange/krypton/pkg/base/curves/k256/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	k256arith "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 )
 
 func TestK256PointArithmetic_Hash(t *testing.T) {

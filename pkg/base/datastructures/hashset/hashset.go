@@ -1,7 +1,7 @@
 package hashset
 
 import (
-	"github.com/copperexchange/krypton/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type HashSet[T types.Hashable] struct {
