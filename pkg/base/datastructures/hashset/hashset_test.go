@@ -136,7 +136,7 @@ func TestIntersect(t *testing.T) {
 	require.True(t, found)
 }
 
-func TestDisjoint(t *testing.T) {
+func TestDifference(t *testing.T) {
 	set1 := NewHashSet([]Value{})
 	set2 := NewHashSet([]Value{})
 	set1.Add(Value{value: "1"})
@@ -151,6 +151,84 @@ func TestDisjoint(t *testing.T) {
 	require.True(t, found)
 	_, found = newSet.Get(Value{value: "2"})
 	require.True(t, found)
+}
+
+func TestSymDifference(t *testing.T) {
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "4"})
+	set2.Add(Value{value: "5"})
+	set2.Add(Value{value: "3"})
+	newSet := set1.SymmetricDifference(set2)
+	require.Equal(t, 4, newSet.Len())
+	_, found := newSet.Get(Value{value: "1"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "2"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "4"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "5"})
+	require.True(t, found)
+}
+
+func TestDifferentSetsSymDifference(t *testing.T) {
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "4"})
+	set2.Add(Value{value: "5"})
+	newSet := set1.SymmetricDifference(set2)
+	require.Equal(t, 5, newSet.Len())
+	_, found := newSet.Get(Value{value: "1"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "2"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "3"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "4"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "5"})
+	require.True(t, found)
+}
+
+func TestEmptySymDifference(t *testing.T) {
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "3"})
+	set2.Add(Value{value: "2"})
+	set2.Add(Value{value: "1"})
+	newSet := set1.SymmetricDifference(set2)
+	require.Equal(t, 0, newSet.Len())
+}
+
+func TestSubSetSymDifference(t *testing.T) {
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
+	set1.Add(Value{value: "1"})
+	set1.Add(Value{value: "2"})
+	set1.Add(Value{value: "3"})
+	set2.Add(Value{value: "3"})
+	newSet := set1.SymmetricDifference(set2)
+	require.Equal(t, 2, newSet.Len())
+	_, found := newSet.Get(Value{value: "1"})
+	require.True(t, found)
+	_, found = newSet.Get(Value{value: "2"})
+	require.True(t, found)
+}
+
+func TestTwoEmptySetsSymDifference(t *testing.T) {
+	set1 := NewHashSet([]Value{})
+	set2 := NewHashSet([]Value{})
+	newSet := set1.SymmetricDifference(set2)
+	require.Equal(t, 0, newSet.Len())
 }
 
 func TestEquals(t *testing.T) {

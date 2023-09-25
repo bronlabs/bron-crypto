@@ -84,6 +84,21 @@ func (set *HashSet[T]) Difference(other *HashSet[T]) *HashSet[T] {
 	return result
 }
 
+func (set *HashSet[T]) SymmetricDifference(other *HashSet[T]) *HashSet[T] {
+	result := &HashSet[T]{value: make(map[[32]byte]T)}
+	for _, element := range set.value {
+		if !other.Contains(element) {
+			result.Add(element)
+		}
+	}
+	for _, element := range other.value {
+		if !set.Contains(element) {
+			result.Add(element)
+		}
+	}
+	return result
+}
+
 func (set *HashSet[T]) Intersection(other *HashSet[T]) *HashSet[T] {
 	result := &HashSet[T]{value: make(map[[32]byte]T)}
 	for _, element := range set.value {
