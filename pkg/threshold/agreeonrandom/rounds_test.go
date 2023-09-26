@@ -52,7 +52,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
@@ -75,7 +75,7 @@ func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {

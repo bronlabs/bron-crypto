@@ -31,7 +31,7 @@ func Test_HappyPath(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	identities, err := testutils.MakeIdentities(cipherSuite, 3)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 
@@ -84,7 +84,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
-	identities, err := testutils.MakeIdentities(cipherSuite, 3)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 				Hash:  sha256.New,
 			}
 
-			identities, err := testutils.MakeIdentities(cipherSuite, 3)
+			identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 			require.NoError(t, err)
 			alice, bob, charlie := identities[0], identities[1], identities[2]
 

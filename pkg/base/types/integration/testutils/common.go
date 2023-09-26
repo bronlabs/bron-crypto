@@ -3,8 +3,6 @@ package testutils
 import (
 	"bytes"
 	crand "crypto/rand"
-	"encoding/json"
-	"hash"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -12,18 +10,19 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 type TestIdentityKey struct {
-	curve  curves.Curve
-	signer *schnorr.Signer
-	h      func() hash.Hash
+	suite      *integration.CipherSuite
+	privateKey *schnorr.PrivateKey
+	publicKey  *schnorr.PublicKey
 
 	_ types.Incomparable
 }
@@ -31,45 +30,58 @@ type TestIdentityKey struct {
 var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 
 func (k *TestIdentityKey) PublicKey() curves.Point {
-	return k.signer.PublicKey.Y
+	return k.publicKey.A
 }
 
 func (k *TestIdentityKey) Hash() [32]byte {
-	return sha3.Sum256(k.signer.PublicKey.Y.ToAffineCompressed())
+	return sha3.Sum256(k.PublicKey().ToAffineCompressed())
 }
 
 func (k *TestIdentityKey) Sign(message []byte) []byte {
-	signature, err := k.signer.Sign(message)
+	signer, err := schnorr.NewSigner(k.suite, k.privateKey)
 	if err != nil {
 		panic(err)
 	}
-	result, err := json.Marshal(signature)
+	signature, err := signer.Sign(message, crand.Reader)
 	if err != nil {
 		panic(err)
 	}
-	return result
+	return bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
 }
 
 func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	cipherSuite := &integration.CipherSuite{
-		Curve: k.curve,
-		Hash:  k.h,
+	r := k.suite.Curve.Point().Identity()
+	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
+	if err != nil {
+		return err
 	}
-	schnorrSignature := &schnorr.Signature{}
-	if err := json.Unmarshal(signature, &schnorrSignature); err != nil {
-		return errors.Wrap(err, "could not unmarshal signature")
+	s := k.suite.Curve.Scalar().Zero()
+	switch len(s.Bytes()) {
+	case curves.WideFieldBytes:
+		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
+	case curves.FieldBytes:
+		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
+	default:
+		err = errs.NewSerializationError("cannot deserialize signature")
+	}
+	if err != nil {
+		return errs.NewSerializationError("cannot deserialize signature")
+	}
+
+	schnorrSignature := &schnorr.Signature{
+		R: r,
+		S: s,
 	}
 	schnorrPublicKey := &schnorr.PublicKey{
-		Curve: k.curve,
-		Y:     k.PublicKey(),
+		A: publicKey,
 	}
-	if err := schnorr.Verify(cipherSuite, schnorrPublicKey, message, schnorrSignature); err != nil {
+	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errors.Wrap(err, "could not verify schnorr signature")
 	}
 	return nil
 }
 
-func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []integration.IdentityKey, err error) {
+func MakeTestIdentities(cipherSuite *integration.CipherSuite, n int) (identities []integration.IdentityKey, err error) {
 	if err := cipherSuite.Validate(); err != nil {
 		return nil, err
 	}
@@ -79,7 +91,7 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 
 	identities = make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		identity, err := MakeIdentity(cipherSuite, nil)
+		identity, err := MakeTestIdentity(cipherSuite, nil)
 		identities[i] = identity
 		if err != nil {
 			return nil, err
@@ -91,16 +103,23 @@ func MakeIdentities(cipherSuite *integration.CipherSuite, n int) (identities []i
 	return sortedIdentities, nil
 }
 
-func MakeIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar) (integration.IdentityKey, error) {
-	signer, err := schnorr.NewSigner(cipherSuite, secret, crand.Reader)
+func MakeTestIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar) (integration.IdentityKey, error) {
+	var sk *schnorr.PrivateKey
+	var pk *schnorr.PublicKey
+	var err error
+	if secret != nil {
+		pk, sk, err = schnorr.NewKeys(secret)
+	} else {
+		pk, sk, err = schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return &TestIdentityKey{
-		curve:  cipherSuite.Curve,
-		signer: signer,
-		h:      cipherSuite.Hash,
+		suite:      cipherSuite,
+		privateKey: sk,
+		publicKey:  pk,
 	}, nil
 }
 

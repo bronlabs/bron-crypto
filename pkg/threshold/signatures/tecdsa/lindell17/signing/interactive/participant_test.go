@@ -23,7 +23,7 @@ func Test_CanInitialize(t *testing.T) {
 		Curve: k256.New(),
 		Hash:  sha256.New,
 	}
-	identities, err := testutils.MakeIdentities(cipherSuite, 3)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, 2, identities)

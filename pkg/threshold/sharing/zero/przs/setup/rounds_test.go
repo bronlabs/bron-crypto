@@ -26,7 +26,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)

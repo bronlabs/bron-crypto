@@ -24,7 +24,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	frost_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/frost"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
@@ -105,7 +105,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 			}
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
+			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  hash,
 	}
 
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
@@ -163,7 +163,7 @@ func TestSignNilMessage(t *testing.T) {
 		Hash:  hash,
 	}
 
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 2)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)

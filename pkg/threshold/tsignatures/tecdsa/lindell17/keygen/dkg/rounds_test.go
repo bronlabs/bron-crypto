@@ -32,7 +32,7 @@ func Test_HappyPath(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	identities, err := testutils.MakeIdentities(cipherSuite, 3)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
 	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)

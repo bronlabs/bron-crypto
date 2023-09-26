@@ -32,7 +32,7 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)

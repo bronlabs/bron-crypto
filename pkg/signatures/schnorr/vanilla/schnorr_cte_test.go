@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_MeasureConstantTime_signing(t *testing.T) {
@@ -25,13 +25,16 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 	}
 	var err error
 	var signer *schnorr.Signer
+	var sk *schnorr.PrivateKey
 	message := make([]byte, 32)
 
 	internal.RunMeasurement(500, "schnorr_signing", func(i int) {
-		signer, err = schnorr.NewSigner(cipherSuite, nil, crand.Reader)
+		_, sk, err = schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+		require.NoError(t, err)
+		signer, err = schnorr.NewSigner(cipherSuite, sk)
 		require.NoError(t, err)
 	}, func() {
-		signer.Sign(message)
+		signer.Sign(message, crand.Reader)
 	})
 }
 
@@ -46,14 +49,18 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	}
 	var err error
 	var signer *schnorr.Signer
+	var pk *schnorr.PublicKey
+	var sk *schnorr.PrivateKey
 	message := make([]byte, 32)
 	var signature *schnorr.Signature
 	internal.RunMeasurement(500, "schnorr_verify", func(i int) {
-		signer, err = schnorr.NewSigner(cipherSuite, nil, crand.Reader)
+		pk, sk, err = schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
 		require.NoError(t, err)
-		signature, err = signer.Sign(message)
+		signer, err = schnorr.NewSigner(cipherSuite, sk)
+		require.NoError(t, err)
+		signature, err = signer.Sign(message, crand.Reader)
 		require.NoError(t, err)
 	}, func() {
-		schnorr.Verify(cipherSuite, signer.PublicKey, message, signature)
+		schnorr.Verify(cipherSuite, pk, message, signature)
 	})
 }

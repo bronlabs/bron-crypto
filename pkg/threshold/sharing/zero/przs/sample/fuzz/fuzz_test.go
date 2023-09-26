@@ -35,9 +35,9 @@ func Fuzz_Test(f *testing.F) {
 			Hash:  h,
 		}
 
-		aliceIdentity, _ := integration_testutils.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
 		cohortConfig := &integration.CohortConfig{

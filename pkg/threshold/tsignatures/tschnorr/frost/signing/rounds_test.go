@@ -23,7 +23,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
@@ -85,7 +85,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 	}
 
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
-	var producedSignatures []*eddsa.Signature
+	var producedSignatures []*schnorr.Signature
 	for i, participant := range participants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
 			signature, err := participant.Aggregate(message, mappedPartialSignatures)
@@ -93,7 +93,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 			if err != nil {
 				return err
 			}
-			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, message)
+			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
 			if err != nil {
 				return err
 			}
@@ -109,7 +109,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
 				return errs.NewFailed("signatures not equal")
 			}
-			if producedSignatures[i].Z.Cmp(producedSignatures[j].Z) != 0 {
+			if producedSignatures[i].S.Cmp(producedSignatures[j].S) != 0 {
 				return errs.NewFailed("signatures not equal")
 			}
 		}
@@ -125,7 +125,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
@@ -160,7 +160,7 @@ func TestSignEmptyMessage(t *testing.T) {
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 2)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
@@ -201,7 +201,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)
@@ -258,7 +258,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)

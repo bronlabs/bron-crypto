@@ -29,7 +29,7 @@ func Test_HappyPath(t *testing.T) {
 	th := 2
 	n := 3
 
-	identities, err := testutils.MakeIdentities(cipherSuite, n)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 

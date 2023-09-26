@@ -23,7 +23,7 @@ func Test_CanInitialize(t *testing.T) {
 		Hash:  sha512.New512_256,
 	}
 
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, 2)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)

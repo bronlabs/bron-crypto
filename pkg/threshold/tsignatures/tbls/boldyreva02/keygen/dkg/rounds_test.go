@@ -67,7 +67,7 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 		inG1s[i] = inG1
 	}
 
-	identities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	identities, err := testutils_integration.MakeIdentities(idCipherSuite, n)
+	identities, err := testutils_integration.MakeTestIdentities(idCipherSuite, n)
 	require.NoError(t, err)
 
 	aliceId := identities[0]

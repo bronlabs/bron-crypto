@@ -22,7 +22,7 @@ import (
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	lindell22_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/lindell22"
 	noninteractive_testutils "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/lindell22/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -92,7 +92,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = eddsa.Verify(cipherSuite.Curve, cipherSuite.Hash, signature, publicKey, message)
+	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }
 
@@ -122,13 +122,13 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	shard := shards[identities[0].Hash()]
-	err = eddsa.Verify(cipherSuite.Curve, cipherSuite.Hash, signature, shard.SigningKeyShare.PublicKey, message)
+	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: shard.SigningKeyShare.PublicKey}, message, signature)
 	require.NoError(t, err)
 }
 
 func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n, threshold int) ([]integration.IdentityKey, map[types.IdentityHash]*lindell22.Shard) {
 	t.Helper()
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
 	require.NoError(t, err)

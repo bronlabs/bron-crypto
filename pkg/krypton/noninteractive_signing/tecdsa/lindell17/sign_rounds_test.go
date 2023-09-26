@@ -45,7 +45,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				Hash:  sha256.New,
 			}
 
-			identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+			identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
 			cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)

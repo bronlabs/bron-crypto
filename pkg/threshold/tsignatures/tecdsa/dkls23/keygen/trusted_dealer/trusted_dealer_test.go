@@ -3,12 +3,8 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"encoding/json"
-	"errors"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"hash"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
@@ -18,35 +14,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/stretchr/testify/require"
 )
-
-type identityKey struct {
-	curve  curves.Curve
-	signer *schnorr.Signer
-	h      func() hash.Hash
-
-	_ types.Incomparable
-}
-
-func (k *identityKey) PublicKey() curves.Point {
-	return k.signer.PublicKey.Y
-}
-func (k *identityKey) Sign(message []byte) []byte {
-	signature, err := k.signer.Sign(message)
-	if err != nil {
-		panic(err)
-	}
-	result, err := json.Marshal(signature)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-func (k *identityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
-}
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
@@ -59,7 +28,7 @@ func Test_HappyPath(t *testing.T) {
 	th := 2
 	n := 3
 
-	identities, err := testutils.MakeIdentities(cipherSuite, n)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	alice, bob, charlie := identities[0], identities[1], identities[2]
 

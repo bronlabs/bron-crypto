@@ -1,7 +1,6 @@
 package bip340
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"io"
 
@@ -18,14 +17,14 @@ const (
 )
 
 type PublicKey struct {
-	P curves.Point
+	A curves.Point
 
 	_ types.Incomparable
 }
 
 type PrivateKey struct {
 	PublicKey
-	K curves.Scalar
+	S curves.Scalar
 
 	_ types.Incomparable
 }
@@ -36,69 +35,6 @@ type Signature struct {
 	S curves.Scalar
 
 	_ types.Incomparable
-}
-
-func (pk *PublicKey) MarshalBinary() ([]byte, error) {
-	return encodePoint(pk.P), nil
-}
-
-func (pk *PublicKey) UnmarshalBinary(input []byte) error {
-	if len(input) != curves.FieldBytes {
-		return errs.NewSerializationError("invalid length")
-	}
-	p, err := decodePoint(input)
-	if err != nil {
-		return errs.NewSerializationError("invalid point")
-	}
-
-	pk.P = p
-	return nil
-}
-
-func (sk *PrivateKey) MarshalBinary() ([]byte, error) {
-	return sk.K.Bytes(), nil
-}
-
-func (sk *PrivateKey) UnmarshalBinary(input []byte) error {
-	if len(input) != curves.FieldBytes {
-		return errs.NewSerializationError("invalid length")
-	}
-	curve := k256.New()
-	k, err := curve.Scalar().SetBytes(input)
-	if err != nil {
-		return errs.NewSerializationError("invalid scalar")
-	}
-	bigP, err := decodePoint(encodePoint(curve.ScalarBaseMult(k)))
-	if err != nil {
-		return errs.NewSerializationError("invalid scalar")
-	}
-
-	sk.K = k
-	sk.P = bigP
-	return nil
-}
-
-func (signature *Signature) MarshalBinary() ([]byte, error) {
-	return bytes.Join([][]byte{encodePoint(signature.R), signature.S.Bytes()}, nil), nil
-}
-
-func (signature *Signature) UnmarshalBinary(input []byte) error {
-	if len(input) != 64 {
-		return errs.NewSerializationError("invalid length")
-	}
-
-	r, err := decodePoint(input[:32])
-	if err != nil {
-		return errs.NewSerializationError("invalid signature")
-	}
-	s, err := k256.New().Scalar().SetBytes(input[32:])
-	if err != nil {
-		return errs.NewSerializationError("invalid signature")
-	}
-
-	signature.R = r
-	signature.S = s
-	return nil
 }
 
 type Signer struct {
@@ -130,9 +66,9 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 
 	return &PrivateKey{
 		PublicKey: PublicKey{
-			P: public.Clone(),
+			A: public.Clone(),
 		},
-		K: dPrime.Clone(),
+		S: dPrime.Clone(),
 	}, nil
 }
 func NewSigner(privateKey *PrivateKey) *Signer {
@@ -155,11 +91,11 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	if len(aux) != auxSizeBytes {
 		return nil, errs.NewInvalidArgument("aux must have 32 bytes")
 	}
-	curve := signer.privateKey.K.Curve()
+	curve := signer.privateKey.S.Curve()
 
 	// 4. Let d = d' if P.y even, otherwise let d = n - d'
-	bigP := curve.ScalarBaseMult(signer.privateKey.K)
-	d := negScalarIfPointYOdd(signer.privateKey.K, bigP)
+	bigP := curve.ScalarBaseMult(signer.privateKey.S)
+	d := negScalarIfPointYOdd(signer.privateKey.S, bigP)
 
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
 	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, aux)
@@ -171,7 +107,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 		return nil, errs.NewFailed("invalid scalar bytes length")
 	}
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
-	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.P), message)
+	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.A), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash failed")
 	}
@@ -196,7 +132,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	bigR = curve.ScalarBaseMult(k)
 
 	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
-	e, err := calcChallenge(bigR, signer.privateKey.P, message)
+	e, err := calcChallenge(bigR, signer.privateKey.A, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get e")
 	}
@@ -219,7 +155,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 }
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
-	if publicKey.P.CurveName() != k256.Name || signature.R.CurveName() != k256.Name || signature.S.CurveName() != k256.Name {
+	if publicKey.A.CurveName() != k256.Name || signature.R.CurveName() != k256.Name || signature.S.CurveName() != k256.Name {
 		return errs.NewInvalidArgument("curve not supported")
 	}
 	if signature.R == nil || signature.S == nil || signature.R.IsIdentity() || signature.S.IsZero() {
@@ -230,7 +166,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	// 1. Let P = lift_x(int(pk)).
 	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
 	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
-	bigP := negPointIfPointYOdd(publicKey.P)
+	bigP := negPointIfPointYOdd(publicKey.A)
 
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	e, err := calcChallenge(signature.R, bigP, message)
@@ -280,10 +216,10 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 		// 2. Let P_i = lift_x(int(pki))
 		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
 		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
-		bigP[i] = negPointIfPointYOdd(publicKeys[i].P)
+		bigP[i] = negPointIfPointYOdd(publicKeys[i].A)
 
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
-		e, err := calcChallenge(sig.R, publicKeys[i].P, messages[i])
+		e, err := calcChallenge(sig.R, publicKeys[i].A, messages[i])
 		if err != nil {
 			return errs.WrapVerificationFailed(err, "invalid signature")
 		}
@@ -328,16 +264,6 @@ func calcChallenge(bigR, bigP curves.Point, message []byte) (curves.Scalar, erro
 
 func encodePoint(p curves.Point) []byte {
 	return p.ToAffineCompressed()[1:]
-}
-
-func decodePoint(data []byte) (curves.Point, error) {
-	curve := k256.New()
-	p, err := curve.Point().FromAffineCompressed(bytes.Join([][]byte{{0x02}, data}, nil))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot decode point")
-	}
-
-	return p, nil
 }
 
 // negScalarIfPointYOdd negates point if point.y is even.

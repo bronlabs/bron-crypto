@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
@@ -24,6 +25,11 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 	curve := edwards25519.New()
 	message := []byte("Hello")
 	hashFunc := sha256.New
+	suite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hashFunc,
+	}
+
 	messageHash, err := hashing.Hash(hashFunc, message)
 	require.NoError(t, err)
 	var publicKey curves.Point
@@ -33,16 +39,16 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 		require.NoError(t, err)
 		publicKey, err = curve.Point().FromAffineCompressed(p)
 		require.NoError(t, err)
-		s := nativeEddsa.Sign(privateKey, messageHash)
-		R, err := curve.Point().FromAffineCompressed(s[:32])
+		sig := nativeEddsa.Sign(privateKey, messageHash)
+		R, err := curve.Point().FromAffineCompressed(sig[:32])
 		require.NoError(t, err)
-		Z, err := curve.Scalar().SetBytes(s[32:])
+		s, err := curve.Scalar().SetBytes(sig[32:])
 		require.NoError(t, err)
 		signature = &eddsa.Signature{
 			R: R,
-			Z: Z,
+			S: s,
 		}
 	}, func() {
-		eddsa.Verify(curve, hashFunc, signature, publicKey, messageHash)
+		eddsa.Verify(suite, &eddsa.PublicKey{A: publicKey}, messageHash, signature)
 	})
 }

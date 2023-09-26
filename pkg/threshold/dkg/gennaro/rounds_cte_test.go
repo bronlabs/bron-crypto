@@ -36,7 +36,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var err error
 
 	internal.RunMeasurement(500, "gennaro_round1", func(i int) {
-		identities, err = testutils_integration.MakeIdentities(cipherSuite, 3)
+		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
@@ -68,7 +68,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var r1OutsU []map[types.IdentityHash]*gennaro.Round1P2P
 
 	internal.RunMeasurement(500, "gennaro_round2", func(i int) {
-		identities, err = testutils_integration.MakeIdentities(cipherSuite, 3)
+		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var r3Ins []map[types.IdentityHash]*gennaro.Round2Broadcast
 
 	internal.RunMeasurement(500, "gennaro_round3", func(i int) {
-		identities, err = testutils_integration.MakeIdentities(cipherSuite, 3)
+		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)

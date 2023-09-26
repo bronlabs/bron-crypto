@@ -32,7 +32,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)

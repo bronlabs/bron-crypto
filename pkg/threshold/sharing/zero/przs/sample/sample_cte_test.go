@@ -32,7 +32,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	}
 	var participants []*setup.Participant
 	internal.RunMeasurement(500, "sample_round1", func(i int) {
-		allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 3)
+		allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		participants, err = testutils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var participants []*setup.Participant
 	var r2InsU []map[types.IdentityHash]*setup.Round1P2P
 	internal.RunMeasurement(500, "sample_round2", func(i int) {
-		allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 3)
+		allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		participants, err = testutils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
@@ -78,7 +78,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var r2InsU []map[types.IdentityHash]*setup.Round1P2P
 	var r3InsU []map[types.IdentityHash]*setup.Round2P2P
 	internal.RunMeasurement(500, "sample_round3", func(i int) {
-		allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 3)
+		allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		participants, err = testutils.MakeSetupParticipants(curve, allIdentities, crand.Reader)
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 	var participants []*sample.Participant
 
 	internal.RunMeasurement(500, "sample_dosample", func(i int) {
-		allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, 3)
+		allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		cohortConfig := &integration.CohortConfig{
 			CipherSuite:  cipherSuite,

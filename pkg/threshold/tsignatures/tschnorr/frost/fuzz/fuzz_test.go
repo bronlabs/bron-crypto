@@ -27,7 +27,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	frost_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/frost"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -161,13 +161,13 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	require.NoError(t, err)
 
 	mappedPartialSignatures := testutils.MapPartialSignatures(signingIdentities, partialSignatures)
-	var producedSignatures []*eddsa.Signature
+	var producedSignatures []*schnorr.Signature
 	for i, participant := range signingParticipants {
 		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
 			signature, err := participant.Aggregate([]byte(message), mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
-			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, []byte(message))
+			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
@@ -181,7 +181,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
 				require.Error(t, fmt.Errorf("signatures not the same"))
 			}
-			if producedSignatures[i].Z.Cmp(producedSignatures[j].Z) != 0 {
+			if producedSignatures[i].S.Cmp(producedSignatures[j].S) != 0 {
 				require.Error(t, fmt.Errorf("signatures not the same"))
 			}
 		}
@@ -221,7 +221,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 			require.NoError(t, err)
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = eddsa.Verify(cohortConfig.CipherSuite.Curve, cohortConfig.CipherSuite.Hash, signature, signingKeyShares[i].PublicKey, []byte(message))
+			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
@@ -274,7 +274,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := testutils_integration.MakeIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
+		identity, err := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}

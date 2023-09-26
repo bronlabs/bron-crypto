@@ -28,7 +28,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 	tau := 64
 	transcriptAppLabel := "Lindell2022PreGenTest"
 
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)

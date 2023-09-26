@@ -21,7 +21,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 
 	var err error
 	if identities == nil {
-		identities, err = testutils_integration.MakeIdentities(cipherSuite, n)
+		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, n)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}

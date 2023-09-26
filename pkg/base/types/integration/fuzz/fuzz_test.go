@@ -50,8 +50,8 @@ func Fuzz_Test_CohortValidate(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		identityA, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(a))
-		identityB, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(b))
+		identityA, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(a))
+		identityB, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(b))
 		cc := integration.CohortConfig{
 			CipherSuite:  cipherSuite,
 			Participants: hashset.NewHashSet[integration.IdentityKey]([]integration.IdentityKey{identityA, identityB}),
@@ -77,9 +77,9 @@ func Fuzz_Test_IsCohort(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		identityA, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(a))
-		identityB, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(b))
-		identityC, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(c))
+		identityA, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(a))
+		identityB, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(b))
+		identityC, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(c))
 		cc := integration.CohortConfig{
 			CipherSuite:  cipherSuite,
 			Participants: hashset.NewHashSet[integration.IdentityKey]([]integration.IdentityKey{identityA, identityB}),
@@ -102,9 +102,9 @@ func Fuzz_Test_IsAggregator(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		identityA, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(a))
-		identityB, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(b))
-		identityC, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(c))
+		identityA, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(a))
+		identityB, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(b))
+		identityC, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(c))
 		cc := integration.CohortConfig{
 			CipherSuite:  cipherSuite,
 			Participants: hashset.NewHashSet[integration.IdentityKey]([]integration.IdentityKey{identityA, identityB}),
@@ -126,9 +126,9 @@ func Fuzz_Test_DeriveSharingId(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		identityA, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(a))
-		identityB, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(b))
-		identityC, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(c))
+		identityA, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(a))
+		identityB, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(b))
+		identityC, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(c))
 		integration.DeriveSharingIds(identityA, hashset.NewHashSet([]integration.IdentityKey{identityA, identityB, identityC}))
 	})
 }

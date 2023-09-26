@@ -37,9 +37,9 @@ func Fuzz_Test(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		aliceIdentity, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := testutils.MakeIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 
 		identityKeys := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		set := hashset.NewHashSet(identityKeys)

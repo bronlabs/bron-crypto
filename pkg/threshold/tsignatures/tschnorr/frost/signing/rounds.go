@@ -4,7 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
 )
@@ -65,7 +65,7 @@ func (ic *Cosigner) Round2(round1output map[types.IdentityHash]*Round1Broadcast,
 	return partialSignature, nil
 }
 
-func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*schnorr.Signature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}

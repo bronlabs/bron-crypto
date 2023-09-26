@@ -31,7 +31,7 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, thresho
 		Hash:  hashFunc,
 	}
 
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)

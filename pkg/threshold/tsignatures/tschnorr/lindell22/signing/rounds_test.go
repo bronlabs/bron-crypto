@@ -15,8 +15,8 @@ import (
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/testutils"
@@ -25,6 +25,10 @@ import (
 func Test_SanityCheck(t *testing.T) {
 	hashFunc := sha512.New
 	curve := edwards25519.New()
+	suite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  hashFunc,
+	}
 	prng := crand.Reader
 
 	message := []byte("Hello World!")
@@ -55,11 +59,15 @@ func Test_SanityCheck(t *testing.T) {
 	require.True(t, ok)
 
 	// verify krypton
-	kryptonSignature := &eddsa.Signature{
+	kryptonSignature := &schnorr.Signature{
 		R: bigR,
-		Z: bigS,
+		S: bigS,
 	}
-	err = eddsa.Verify(curve, hashFunc, kryptonSignature, publicKey, message)
+	kryptonPublicKey := &schnorr.PublicKey{
+		A: publicKey,
+	}
+
+	err = schnorr.Verify(suite, kryptonPublicKey, message, kryptonSignature)
 	require.NoError(t, err)
 }
 
@@ -79,7 +87,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 		Hash:  hashFunc,
 	}
 
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
@@ -102,7 +110,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = eddsa.Verify(curve, hashFunc, signature, publicKey, message)
+	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }
 
@@ -122,7 +130,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 		Hash:  hashFunc,
 	}
 
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
@@ -147,9 +155,9 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 
 	bipSignature := &bip340.Signature{
 		R: signature.R,
-		S: signature.Z,
+		S: signature.S,
 	}
 
-	err = bip340.Verify(&bip340.PublicKey{P: publicKey}, bipSignature, message)
+	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, bipSignature, message)
 	require.NoError(t, err)
 }

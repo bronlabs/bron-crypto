@@ -23,10 +23,10 @@ func Test_MeasureConstantTime(t *testing.T) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, _ := testutils_integration.MakeIdentities(cipherSuite, 3)
+	allIdentities, _ := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 
 	internal.RunMeasurement(500, "agreeonrandom", func(i int) {
-		allIdentities, _ = testutils_integration.MakeIdentities(cipherSuite, 3)
+		allIdentities, _ = testutils_integration.MakeTestIdentities(cipherSuite, 3)
 	}, func() {
 		testutils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
 	})

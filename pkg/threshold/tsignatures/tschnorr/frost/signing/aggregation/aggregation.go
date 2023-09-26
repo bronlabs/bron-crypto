@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 )
@@ -109,7 +109,7 @@ func (sa *SignatureAggregator) Validate() error {
 }
 
 // TODO: condense/simplify.
-func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*schnorr.Signature, error) {
 	if len(sa.parameters.D_alpha) != sa.SessionParticipants.Len() {
 		return nil, errs.NewIncorrectCount("length of D_alpha is not equal to S")
 	}
@@ -213,14 +213,14 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 		}
 	}
 
-	z := sa.CohortConfig.CipherSuite.Curve.Scalar().Zero()
+	s := sa.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 	for _, partialSignature := range partialSignatures {
-		z = z.Add(partialSignature.Zi)
+		s = s.Add(partialSignature.Zi)
 	}
 
-	sigma := &eddsa.Signature{R: sa.parameters.R, Z: z}
+	sigma := &schnorr.Signature{R: sa.parameters.R, S: s}
 
-	if err := eddsa.Verify(sa.CohortConfig.CipherSuite.Curve, sa.CohortConfig.CipherSuite.Hash, sigma, sa.PublicKey, sa.Message); err != nil {
+	if err := schnorr.Verify(sa.CohortConfig.CipherSuite, &schnorr.PublicKey{A: sa.PublicKey}, sa.Message, sigma); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not verify frost signature")
 	}
 	return sigma, nil

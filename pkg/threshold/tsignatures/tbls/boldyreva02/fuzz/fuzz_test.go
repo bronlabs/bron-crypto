@@ -48,9 +48,9 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 		Hash:  hashFunc,
 	}
 
-	aliceIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, keysSubGroup.Scalar().New(aliceSecret))
-	bobIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, keysSubGroup.Scalar().New(bobSecret))
-	charlieIdentity, _ := testutils_integration.MakeIdentity(cipherSuite, keysSubGroup.Scalar().New(charlieSecret))
+	aliceIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(aliceSecret))
+	bobIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(bobSecret))
+	charlieIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(charlieSecret))
 	identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
 	cohort, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)

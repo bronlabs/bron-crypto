@@ -157,7 +157,7 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 func doDkg(t *testing.T, cipherSuite *integration.CipherSuite, n int) ([]integration.IdentityKey, map[types.IdentityHash]*lindell17.Shard) {
 	t.Helper()
 
-	identities, err := integration_testutils.MakeIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

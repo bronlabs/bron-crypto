@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
@@ -44,7 +44,7 @@ func BigS(participants *hashset.HashSet[integration.IdentityKey]) []byte {
 	return bigS
 }
 
-func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *eddsa.Signature, err error) {
+func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *schnorr.Signature, err error) {
 	if len(partialSignatures) < 2 {
 		return nil, errs.NewFailed("not enough partial signatures")
 	}
@@ -60,8 +60,8 @@ func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *edd
 	}
 
 	// return (Rsum, Ssum) as signature
-	return &eddsa.Signature{
+	return &schnorr.Signature{
 		R: r,
-		Z: s,
+		S: s,
 	}, nil
 }

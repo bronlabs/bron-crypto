@@ -102,7 +102,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -133,7 +133,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeIdentities(cipherSuite, n)
+	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
@@ -202,7 +202,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, _ := testutils_integration.MakeIdentities(cipherSuite, 3)
+	allIdentities, _ := testutils_integration.MakeTestIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]

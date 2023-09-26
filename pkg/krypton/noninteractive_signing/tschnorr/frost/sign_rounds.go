@@ -3,7 +3,7 @@ package frost
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing/aggregation"
@@ -38,7 +38,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	return partialSignature, nil
 }
 
-func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*eddsa.Signature, error) {
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*schnorr.Signature, error) {
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")

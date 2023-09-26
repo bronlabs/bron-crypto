@@ -9,7 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
@@ -209,13 +211,12 @@ func Test_BIP340TestVectors(t *testing.T) {
 }
 
 func doTestSign(privateKeyString string, messageString string, auxString string) ([]byte, error) {
-	bip340PrivateKey := new(bip340.PrivateKey)
 	privateKeyBin, err := hex.DecodeString(privateKeyString)
 	if err != nil {
 		return nil, err
 	}
 
-	err = bip340PrivateKey.UnmarshalBinary(privateKeyBin)
+	bip340PrivateKey, err := unmarshalPrivateKey(privateKeyBin)
 	if err != nil {
 		return nil, err
 	}
@@ -237,12 +238,7 @@ func doTestSign(privateKeyString string, messageString string, auxString string)
 		return nil, err
 	}
 
-	signatureBin, err := signature.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	return signatureBin, nil
+	return marshalSignature(signature), nil
 }
 
 func doTestVerify(publicKeyString string, signatureString string, messageString string) error {
@@ -250,8 +246,7 @@ func doTestVerify(publicKeyString string, signatureString string, messageString 
 	if err != nil {
 		return err
 	}
-	publicKey := new(bip340.PublicKey)
-	err = publicKey.UnmarshalBinary(publicKeyBin)
+	publicKey, err := unmarshalPublicKey(publicKeyBin)
 	if err != nil {
 		return err
 	}
@@ -260,8 +255,7 @@ func doTestVerify(publicKeyString string, signatureString string, messageString 
 	if err != nil {
 		return err
 	}
-	signature := new(bip340.Signature)
-	err = signature.UnmarshalBinary(signatureBin)
+	signature, err := unmarshalSignature(signatureBin)
 	if err != nil {
 		return err
 	}
@@ -306,28 +300,75 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 	})
 }
 
-func Test_CanBinaryMarshalAndUnmarshal(t *testing.T) {
-	t.Parallel()
+func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
+	if len(input) != curves.FieldBytes {
+		return nil, errs.NewSerializationError("invalid length")
+	}
+	p, err := decodePoint(input)
+	if err != nil {
+		return nil, errs.NewSerializationError("invalid point")
+	}
+
+	pk := &bip340.PublicKey{A: p}
+	return pk, nil
+}
+
+func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
+	if len(input) != curves.FieldBytes {
+		return nil, errs.NewSerializationError("invalid length")
+	}
 	curve := k256.New()
-	message := []byte("something")
+	k, err := curve.Scalar().SetBytes(input)
+	if err != nil {
+		return nil, errs.NewSerializationError("invalid scalar")
+	}
+	bigP, err := decodePoint(encodePoint(curve.ScalarBaseMult(k)))
+	if err != nil {
+		return nil, errs.NewSerializationError("invalid scalar")
+	}
 
-	key, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
-	require.NoError(t, err)
-	require.NotNil(t, key)
+	sk := &bip340.PrivateKey{
+		PublicKey: bip340.PublicKey{A: bigP},
+		S:         k,
+	}
+	return sk, nil
+}
 
-	signer := bip340.NewSigner(key)
-	require.NotNil(t, signer)
+func marshalSignature(signature *bip340.Signature) []byte {
+	return bytes.Join([][]byte{encodePoint(signature.R), signature.S.Bytes()}, nil)
+}
 
-	signature, err := signer.Sign(message, nil, crand.Reader)
-	require.NoError(t, err)
+func unmarshalSignature(input []byte) (*bip340.Signature, error) {
+	if len(input) != 64 {
+		return nil, errs.NewSerializationError("invalid length")
+	}
 
-	marshalled, err := signature.MarshalBinary()
-	require.NoError(t, err)
-	require.Greater(t, len(marshalled), 0)
+	r, err := decodePoint(input[:32])
+	if err != nil {
+		return nil, errs.NewSerializationError("invalid signature")
+	}
+	s, err := k256.New().Scalar().SetBytes(input[32:])
+	if err != nil {
+		return nil, errs.NewSerializationError("invalid signature")
+	}
 
-	unmarshaled := new(bip340.Signature)
-	err = unmarshaled.UnmarshalBinary(marshalled)
-	require.NoError(t, err)
-	require.Zero(t, signature.R.X().Cmp(unmarshaled.R.X()))
-	require.Equal(t, signature.S, unmarshaled.S)
+	signature := &bip340.Signature{
+		R: r,
+		S: s,
+	}
+	return signature, nil
+}
+
+func encodePoint(p curves.Point) []byte {
+	return p.ToAffineCompressed()[1:]
+}
+
+func decodePoint(data []byte) (curves.Point, error) {
+	curve := k256.New()
+	p, err := curve.Point().FromAffineCompressed(bytes.Join([][]byte{{0x02}, data}, nil))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot decode point")
+	}
+
+	return p, nil
 }
