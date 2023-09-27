@@ -49,9 +49,9 @@ type (
 	}
 )
 
-// NewKeys generates Paillier keys with `bits` sized safe primes.
+// NewKeys generates Paillier keys with `bits` sized primes.
 func NewKeys(bits uint) (*PublicKey, *SecretKey, error) {
-	publicKey, secretKey, err := keyGenerator(primes.GenerateSafePrime, bits)
+	publicKey, secretKey, err := keyGenerator(primes.GeneratePrimePair, bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
 	}
@@ -59,11 +59,11 @@ func NewKeys(bits uint) (*PublicKey, *SecretKey, error) {
 	return publicKey, secretKey, nil
 }
 
-func NewKeysWithSafePrimeGenerator(genSafePrime func(uint) (*saferith.Nat, error), bits uint) (*PublicKey, *SecretKey, error) {
-	if genSafePrime == nil {
-		return nil, nil, errs.NewIsNil("genSafePrime is nil")
+func NewKeysWithPrimePairGenerator(primePairGen func(uint) (*saferith.Nat, *saferith.Nat, error), bits uint) (*PublicKey, *SecretKey, error) {
+	if primePairGen == nil {
+		return nil, nil, errs.NewIsNil("primePairGen is nil")
 	}
-	publicKey, secretKey, err := keyGenerator(genSafePrime, bits)
+	publicKey, secretKey, err := keyGenerator(primePairGen, bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
 	}
@@ -326,28 +326,10 @@ func Lcm(x, y *saferith.Nat) (*saferith.Nat, error) {
 
 // keyGenerator generates Paillier keys with `bits` sized safe primes using function
 // `genSafePrime` to generate the safe primes.
-func keyGenerator(genSafePrime func(uint) (*saferith.Nat, error), bits uint) (*PublicKey, *SecretKey, error) {
-	values := make(chan *saferith.Nat, 2)
-	errors := make(chan error, 2)
-
-	var p, q *saferith.Nat
-
-	for p == q {
-		for range []int{1, 2} {
-			go func() {
-				value, err := genSafePrime(bits)
-				values <- value
-				errors <- err
-			}()
-		}
-
-		for _, err := range []error{<-errors, <-errors} {
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot generate same primes")
-			}
-		}
-
-		p, q = <-values, <-values
+func keyGenerator(primePairGen func(uint) (*saferith.Nat, *saferith.Nat, error), bits uint) (*PublicKey, *SecretKey, error) {
+	p, q, err := primePairGen(bits)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot generate same primes")
 	}
 
 	// Assemble the secret/public key pair.

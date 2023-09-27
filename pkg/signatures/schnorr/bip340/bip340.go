@@ -10,32 +10,19 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 const (
 	auxSizeBytes = 32
 )
 
-type PublicKey struct {
-	A curves.Point
+type PublicKey = schnorr.PublicKey
 
-	_ types.Incomparable
-}
-
-type PrivateKey struct {
-	PublicKey
-	S curves.Scalar
-
-	_ types.Incomparable
-}
+type PrivateKey = schnorr.PrivateKey
 
 // Signature BIP-340 signature.
-type Signature struct {
-	R curves.Point
-	S curves.Scalar
-
-	_ types.Incomparable
-}
+type Signature = schnorr.Signature
 
 type Signer struct {
 	privateKey *PrivateKey

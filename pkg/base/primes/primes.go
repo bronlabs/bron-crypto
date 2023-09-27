@@ -8,6 +8,7 @@ package primes
 
 import (
 	crand "crypto/rand"
+	"crypto/rsa"
 	"math"
 	"math/big"
 
@@ -18,7 +19,7 @@ import (
 
 // GenerateSafePrime creates a prime number `p`
 // where (`p`-1)/2 is also prime with at least `bits`.
-var GenerateSafePrime = func(bits uint) (*saferith.Nat, error) {
+func GenerateSafePrime(bits uint) (*saferith.Nat, error) {
 	if bits < 3 {
 		return nil, errs.NewFailed("safe prime size must be at least 3-bits")
 	}
@@ -42,4 +43,49 @@ var GenerateSafePrime = func(bits uint) (*saferith.Nat, error) {
 	}
 
 	return new(saferith.Nat).SetBig(p, int(bits)), nil
+}
+
+func GenerateSafePrimePair(bits uint) (p, q *saferith.Nat, err error) {
+	values := make(chan *saferith.Nat, 2)
+	errors := make(chan error, 2)
+
+	p = nil
+	q = nil
+	for p == q || p.Eq(q) != 0 {
+		for range []int{1, 2} {
+			go func() {
+				value, err := GenerateSafePrime(bits)
+				values <- value
+				errors <- err
+			}()
+		}
+
+		for _, err := range []error{<-errors, <-errors} {
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "cannot generate same primes")
+			}
+		}
+
+		p, q = <-values, <-values
+	}
+
+	return p, q, nil
+}
+
+func GeneratePrimePair(bits uint) (p, q *saferith.Nat, err error) {
+	rsaPrivateKey, err := rsa.GenerateKey(crand.Reader, 2*int(bits))
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
+	}
+
+	pBig := rsaPrivateKey.Primes[0]
+	qBig := rsaPrivateKey.Primes[1]
+	// double check
+	if pBig.BitLen() < int(bits) || qBig.BitLen() < int(bits) {
+		return nil, nil, errs.WrapFailed(err, "p,q have invalid length")
+	}
+
+	p = new(saferith.Nat).SetBig(pBig, int(bits))
+	q = new(saferith.Nat).SetBig(qBig, int(bits))
+	return p, q, nil
 }

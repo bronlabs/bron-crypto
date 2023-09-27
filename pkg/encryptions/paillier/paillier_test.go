@@ -512,15 +512,12 @@ func TestKeyGen(t *testing.T) {
 	for i, test := range testValues {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			idx := 0
 			safePrimes := []*saferith.Nat{theTest.p, theTest.q}
-			f := func(bits uint) (*saferith.Nat, error) {
-				r := safePrimes[idx]
-				idx = (idx + 1) % 2
-				return r, nil
+			f := func(bits uint) (*saferith.Nat, *saferith.Nat, error) {
+				return safePrimes[0], safePrimes[1], nil
 			}
 
-			pub, sec, err := paillier.NewKeysWithSafePrimeGenerator(f, theTest.bits)
+			pub, sec, err := paillier.NewKeysWithPrimePairGenerator(f, theTest.bits)
 			require.NoError(t, err)
 			require.True(t, pub.N.Nat().Eq(theTest.n) != 0)
 			require.True(t, sec.Totient.Eq(theTest.totient) != 0)
@@ -532,36 +529,34 @@ func TestKeyGen(t *testing.T) {
 
 func TestKeyGeneratorErrorConditions(t *testing.T) {
 	// Should fail if a safe prime cannot be generated.
-	f := func(bits uint) (*saferith.Nat, error) {
-		return nil, fmt.Errorf("safeprime error")
+	f := func(bits uint) (*saferith.Nat, *saferith.Nat, error) {
+		return nil, nil, fmt.Errorf("safeprime error")
 	}
-	_, _, err := paillier.NewKeysWithSafePrimeGenerator(f, 1)
+	_, _, err := paillier.NewKeysWithPrimePairGenerator(f, 1)
 	require.Contains(t, err.Error(), "safeprime error")
 
 	// Should fail if a gcd of p and q is zero.
 	val := uint64(0)
-	oneF := func(bits uint) (*saferith.Nat, error) {
-		b := new(saferith.Nat).SetUint64(val)
-		val += 1
-		return b, nil
+	oneF := func(bits uint) (*saferith.Nat, *saferith.Nat, error) {
+		p := new(saferith.Nat).SetUint64(val)
+		q := new(saferith.Nat).SetUint64(val + 1)
+		val += 2
+		return p, q, nil
 	}
-	_, _, err = paillier.NewKeysWithSafePrimeGenerator(oneF, 1)
+	_, _, err = paillier.NewKeysWithPrimePairGenerator(oneF, 1)
 	require.True(t, errs.IsFailed(err))
 }
 
 func TestKeyGenSameInput(t *testing.T) {
 	p := parseNat("4294967387")
 	q := parseNat("8589936203")
-	idx := 0
 	safePrimes := []*saferith.Nat{p, q}
-	f := func(bits uint) (*saferith.Nat, error) {
-		r := safePrimes[idx]
-		idx = (idx + 1) % 2
-		return r, nil
+	f := func(bits uint) (*saferith.Nat, *saferith.Nat, error) {
+		return safePrimes[0], safePrimes[1], nil
 	}
-	pub1, sec1, err := paillier.NewKeysWithSafePrimeGenerator(f, 32)
+	pub1, sec1, err := paillier.NewKeysWithPrimePairGenerator(f, 32)
 	require.NoError(t, err)
-	pub2, sec2, err := paillier.NewKeysWithSafePrimeGenerator(f, 32)
+	pub2, sec2, err := paillier.NewKeysWithPrimePairGenerator(f, 32)
 	require.NoError(t, err)
 	require.True(t, pub1.N.Nat().Eq(pub2.N.Nat()) != 0)
 	require.True(t, sec1.Lambda.Eq(sec2.Lambda) != 0)

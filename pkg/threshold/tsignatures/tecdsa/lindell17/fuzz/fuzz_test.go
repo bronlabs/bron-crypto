@@ -41,8 +41,6 @@ var (
 )
 
 func FuzzInteractiveSigning(f *testing.F) {
-	safePrimeMocker := integration_testutils.NewSafePrimeMocker()
-	safePrimeMocker.Mock()
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz, n, message, cipherSuite := setup(t, data)
 		// do DKG
@@ -53,8 +51,6 @@ func FuzzInteractiveSigning(f *testing.F) {
 }
 
 func FuzzNonInteractiveSigning(f *testing.F) {
-	safePrimeMocker := integration_testutils.NewSafePrimeMocker()
-	safePrimeMocker.Mock()
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fz, n, message, cipherSuite := setup(t, data)
 		// do DKG
