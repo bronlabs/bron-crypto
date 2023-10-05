@@ -11,7 +11,7 @@ import (
 
 func TestK256PointArithmetic_Hash(t *testing.T) {
 	var b [32]byte
-	sc, err := k256arith.PointNew().Hash(b[:], hash2curve.EllipticPointHasherSha256())
+	sc, err := k256arith.PointNew().Hash(b[:], hash2curve.EllipticCurveHasherSha256())
 
 	require.NoError(t, err)
 	require.True(t, !sc.IsIdentity())

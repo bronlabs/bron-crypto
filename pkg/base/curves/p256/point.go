@@ -37,7 +37,7 @@ func (p *Point) Random(reader io.Reader) curves.Point {
 }
 
 func (*Point) Hash(inputs ...[]byte) curves.Point {
-	value, err := p256n.PointNew().Hash(bytes.Join(inputs, nil), hash2curve.EllipticPointHasherSha256())
+	value, err := p256n.PointNew().Hash(bytes.Join(inputs, nil), hash2curve.EllipticCurveHasherSha256())
 	// TODO: change hash to return an error also
 	if err != nil {
 		panic(err)

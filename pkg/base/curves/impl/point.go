@@ -41,7 +41,7 @@ type EllipticPointParams struct {
 type EllipticPointArithmetic interface {
 	// Hash a byte sequence to the curve using the specified hasher
 	// and dst and store the result in out
-	Hash(out *EllipticPoint, hasher *hash2curve.EllipticPointHasher, bytes, dst []byte) error
+	Hash(out *EllipticPoint, hasher *hash2curve.EllipticCurveHasher, bytes, dst []byte) error
 	// Double arg and store the result in out
 	Double(out, arg *EllipticPoint)
 	// Add arg1 with arg2 and store the result in out
@@ -54,8 +54,7 @@ type EllipticPointArithmetic interface {
 	RhsEq(out, x *FieldValue)
 }
 
-// Random creates a random point on the curve
-// from the specified reader.
+// Random creates a random point on the curve from the specified reader.
 func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
 	var seed [WideFieldBytes]byte
 	n, err := reader.Read(seed[:])
@@ -66,7 +65,7 @@ func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
 		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
 	}
 	dst := []byte(fmt.Sprintf("%s_XMD:SHA-256_SSWU_RO_", p.Params.Name))
-	err = p.Arithmetic.Hash(p, hash2curve.EllipticPointHasherSha256(), seed[:], dst)
+	err = p.Arithmetic.Hash(p, hash2curve.EllipticCurveHasherSha256(), seed[:], dst)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "ecc hash failed")
 	}
@@ -74,7 +73,7 @@ func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
 }
 
 // Hash uses the hasher to map bytes to a valid point.
-func (p *EllipticPoint) Hash(bytes []byte, hasher *hash2curve.EllipticPointHasher) (*EllipticPoint, error) {
+func (p *EllipticPoint) Hash(bytes []byte, hasher *hash2curve.EllipticCurveHasher) (*EllipticPoint, error) {
 	dst := []byte(fmt.Sprintf("QUUX-V01-CS02-with-%s_%s:%s_SSWU_RO_", p.Params.Name, hasher.Type(), hasher.Name()))
 	err := p.Arithmetic.Hash(p, hasher, bytes, dst)
 	if err != nil {

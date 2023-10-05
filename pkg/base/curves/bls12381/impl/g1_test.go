@@ -343,14 +343,14 @@ func TestG1Hash(t *testing.T) {
 		e, _ := hex.DecodeString(tst.expected)
 		copy(b[:], e)
 		_, _ = ept.FromUncompressed(&b)
-		pt.Hash(hash2curve.EllipticPointHasherSha256(), i, dst)
+		pt.Hash(hash2curve.EllipticCurveHasherSha256(), i, dst)
 		require.Equal(t, 1, pt.Equal(ept))
 	}
 }
 
 func TestSerialization(t *testing.T) {
-	a := new(G1).Hash(hash2curve.EllipticPointHasherSha256(), []byte("a"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
-	b := new(G1).Hash(hash2curve.EllipticPointHasherSha256(), []byte("b"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
+	a := new(G1).Hash(hash2curve.EllipticCurveHasherSha256(), []byte("a"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
+	b := new(G1).Hash(hash2curve.EllipticCurveHasherSha256(), []byte("b"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
 
 	aBytes := a.ToCompressed()
 	bBytes := b.ToCompressed()

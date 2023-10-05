@@ -54,7 +54,7 @@ func (s *Scalar) Random(prng io.Reader) curves.Scalar {
 
 func (s *Scalar) Hash(inputs ...[]byte) curves.Scalar {
 	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherSha256(), bytes.Join(inputs, nil), dst, 48)
+	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticCurveHasherSha256(), bytes.Join(inputs, nil), dst, 48)
 	var t [64]byte
 	copy(t[:48], bitstring.ReverseBytes(xmd))
 

@@ -28,7 +28,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 
 func TestP256PointArithmetic_Hash(t *testing.T) {
 	var b [32]byte
-	sc, err := p256n.PointNew().Hash(b[:], hash2curve.EllipticPointHasherSha256())
+	sc, err := p256n.PointNew().Hash(b[:], hash2curve.EllipticCurveHasherSha256())
 	sc1 := p256.New().Identity().Hash(b[:])
 	fmt.Printf("%v\n", sc1)
 

@@ -244,7 +244,7 @@ func getK256PointIsogenyParams() *impl.IsogenyParams {
 
 type k256PointArithmetic struct{}
 
-func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.EllipticPointHasher, msg, dst []byte) error {
+func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.EllipticCurveHasher, msg, dst []byte) error {
 	var u []byte
 	sswuParams := getK256PointSswuParams()
 	isoParams := getK256PointIsogenyParams()

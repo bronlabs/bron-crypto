@@ -44,12 +44,12 @@ func (p *PointG2) Random(reader io.Reader) curves.Point {
 
 func (*PointG2) Hash(inputs ...[]byte) curves.Point {
 	domain := []byte("QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_")
-	pt := new(bls12381impl.G2).Hash(hash2curve.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
+	pt := new(bls12381impl.G2).Hash(hash2curve.EllipticCurveHasherSha256(), bytes.Join(inputs, nil), domain)
 	return &PointG2{Value: pt}
 }
 
 func (*PointG2) HashWithDst(input []byte, dst string) curves.PairingPoint {
-	pt := new(bls12381impl.G2).Hash(hash2curve.EllipticPointHasherSha256(), input, []byte(dst))
+	pt := new(bls12381impl.G2).Hash(hash2curve.EllipticCurveHasherSha256(), input, []byte(dst))
 	return &PointG2{Value: pt}
 }
 

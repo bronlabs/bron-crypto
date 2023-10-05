@@ -206,7 +206,7 @@ func (f *Fp) Random(reader io.Reader) (*Fp, error) {
 // Hash converts the byte sequence into a field element.
 func (f *Fp) Hash(input []byte) *Fp {
 	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherSha256(), input, dst, hashBytes)
+	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticCurveHasherSha256(), input, dst, hashBytes)
 	var t [WideFieldBytes]byte
 	copy(t[:hashBytes], bitstring.ReverseBytes(xmd))
 	return f.SetBytesWide(&t)

@@ -44,7 +44,7 @@ func getDomainXof(h sha3.ShakeHash, domain []byte) []byte {
 // ExpandMsgXmd expands the msg with the domain to output a byte array
 // with outLen in size using a fixed size hash.
 // See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-13#section-5.4.1
-func ExpandMsgXmd(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte {
+func ExpandMsgXmd(h *EllipticCurveHasher, msg, domain []byte, outLen int) []byte {
 	domain = getDomainXmd(h.xmd, domain)
 	domainLen := byte(len(domain))
 	h.xmd.Reset()
@@ -92,7 +92,7 @@ func ExpandMsgXmd(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte
 // ExpandMsgXof expands the msg with the domain to output a byte array
 // with outLen in size using a xof hash
 // See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-13#section-5.4.2
-func ExpandMsgXof(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte {
+func ExpandMsgXof(h *EllipticCurveHasher, msg, domain []byte, outLen int) []byte {
 	domain = getDomainXof(h.xof, domain)
 	domainLen := byte(len(domain))
 	h.xof.Reset()

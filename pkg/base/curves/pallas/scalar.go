@@ -40,7 +40,7 @@ func (s *Scalar) Random(reader io.Reader) curves.Scalar {
 }
 
 func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
-	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
+	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticCurveHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	var t [64]byte
 	copy(t[:], xmd)
 	return &Scalar{

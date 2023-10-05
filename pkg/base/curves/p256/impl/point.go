@@ -102,7 +102,7 @@ func p256PointSswuParamsInit() {
 
 type p256PointArithmetic struct{}
 
-func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.EllipticPointHasher, msg, dst []byte) error {
+func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.EllipticCurveHasher, msg, dst []byte) error {
 	var u []byte
 	sswuParams := getP256PointSswuParams()
 

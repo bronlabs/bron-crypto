@@ -513,11 +513,11 @@ func (g2 *G2) Random(reader io.Reader) (*G2, error) {
 		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
 	}
 	dst := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
-	return g2.Hash(hash2curve.EllipticPointHasherSha256(), seed[:], dst), nil
+	return g2.Hash(hash2curve.EllipticCurveHasherSha256(), seed[:], dst), nil
 }
 
 // Hash uses the hasher to map bytes to a valid point.
-func (g2 *G2) Hash(hash *hash2curve.EllipticPointHasher, msg, dst []byte) *G2 {
+func (g2 *G2) Hash(hash *hash2curve.EllipticCurveHasher, msg, dst []byte) *G2 {
 	var u []byte
 	var u0, u1 Fp2
 	var r0, r1, q0, q1 G2

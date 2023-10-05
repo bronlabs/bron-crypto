@@ -29,7 +29,7 @@ func (p *Ep) Hash(input []byte) *Ep {
 	if input == nil {
 		input = []byte{}
 	}
-	u := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
+	u := hash2curve.ExpandMsgXmd(hash2curve.EllipticCurveHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
 	var buf [64]byte
 	copy(buf[:], u[:64])
 	u0 := new(fp.Fp).SetBytesWide(&buf)

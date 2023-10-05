@@ -12,11 +12,11 @@ import (
 )
 
 func TestExpandMsgXmd(t *testing.T) {
-	sha_256 := hash2curve.EllipticPointHasherSha256()
-	sha_512 := hash2curve.EllipticPointHasherSha512()
+	sha_256 := hash2curve.EllipticCurveHasherSha256()
+	sha_512 := hash2curve.EllipticCurveHasherSha512()
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#appendix-K.1
 	tests := []struct {
-		f             *hash2curve.EllipticPointHasher
+		f             *hash2curve.EllipticCurveHasher
 		msg           []byte
 		lenInBytesHex string
 		expectedHex   string
