@@ -46,7 +46,7 @@ func (sender *Sender) Round1ComputeAndZkpToPublicKey() (*dlog.Proof, curves.Poin
 	}
 	proof, publicKey, err := prover.Prove(sender.SecretKey)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "creating zkp proof for secret key in seed OT sender round 1")
+		return nil, nil, errs.WrapFailed(err, "creating zkp proof for secret key in base OT sender round 1")
 	}
 	return proof, publicKey, nil
 }
@@ -57,7 +57,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 	receiver.SenderPublicKey = senderPublicKey
 	receiver.transcript.AppendMessages("dlog proof", receiver.UniqueSessionId)
 	if err := dlog.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "verifying dlog proof in seed OT receiver round 2")
+		return nil, errs.WrapVerificationFailed(err, "verifying dlog proof in base OT receiver round 2")
 	}
 
 	result := make([]ReceiversMaskedChoices, receiver.BatchSize)
@@ -105,7 +105,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 
 	for i := 0; i < sender.BatchSize; i++ {
 		// Sender creates two options that will eventually be used as her encryption keys.
-		// `baseEncryptionKeyMaterial[0]` and `baseEncryptionKeyMaterial[0]` correspond to rho_0 and rho_1 in the paper, respectively.
+		// `baseEncryptionKeyMaterial[0]` and `baseEncryptionKeyMaterial[1]` correspond to rho_0 and rho_1 in the paper, respectively.
 		baseEncryptionKeyMaterial[0] = receiversMaskedChoice[i].Mul(sender.SecretKey)
 
 		receiverChoiceMinusSenderPublicKey := receiversMaskedChoice[i].Add(negSenderPublicKey)
@@ -207,8 +207,8 @@ func (receiver *Receiver) Round8Decrypt(ciphertext [][KeyCount][DigestSize]byte)
 	return receiver.Output.Decrypt(ciphertext)
 }
 
-// Encrypt runs step 9) of the seed OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
-// in which the seed OT sender "encrypts" both messages under the "one-time keys" output by the random OT.
+// Encrypt runs step 9) of the base OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
+// in which the base OT sender "encrypts" both messages under the "one-time keys" output by the random OT.
 func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyCount][DigestSize]byte, error) {
 	batchSize := len(s.OneTimePadEncryptionKeys)
 	if len(plaintexts) != batchSize {
@@ -224,8 +224,8 @@ func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyC
 	return ciphertexts, nil
 }
 
-// Decrypt is step 10) of the seed OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
-// where the seed OT receiver "decrypts" the message it's receiving using the "key" it received in the random OT.
+// Decrypt is step 10) of the base OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
+// where the base OT receiver "decrypts" the message it's receiving using the "key" it received in the random OT.
 func (r *ReceiverOutput) Decrypt(ciphertexts [][KeyCount][DigestSize]byte) ([][DigestSize]byte, error) {
 	batchSize := len(r.OneTimePadDecryptionKey)
 	if len(ciphertexts) != batchSize {
