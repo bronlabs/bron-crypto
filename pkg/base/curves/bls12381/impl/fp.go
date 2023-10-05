@@ -8,8 +8,8 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 // Fp field element mod p.
@@ -206,7 +206,7 @@ func (f *Fp) Random(reader io.Reader) (*Fp, error) {
 // Hash converts the byte sequence into a field element.
 func (f *Fp) Hash(input []byte) *Fp {
 	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherSha256(), input, dst, hashBytes)
+	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherSha256(), input, dst, hashBytes)
 	var t [WideFieldBytes]byte
 	copy(t[:hashBytes], bitstring.ReverseBytes(xmd))
 	return f.SetBytesWide(&t)

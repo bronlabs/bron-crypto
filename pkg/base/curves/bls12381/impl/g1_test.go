@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 func TestG1IsOnCurve(t *testing.T) {
@@ -342,14 +343,14 @@ func TestG1Hash(t *testing.T) {
 		e, _ := hex.DecodeString(tst.expected)
 		copy(b[:], e)
 		_, _ = ept.FromUncompressed(&b)
-		pt.Hash(impl.EllipticPointHasherSha256(), i, dst)
+		pt.Hash(hash2curve.EllipticPointHasherSha256(), i, dst)
 		require.Equal(t, 1, pt.Equal(ept))
 	}
 }
 
 func TestSerialization(t *testing.T) {
-	a := new(G1).Hash(impl.EllipticPointHasherSha256(), []byte("a"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
-	b := new(G1).Hash(impl.EllipticPointHasherSha256(), []byte("b"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
+	a := new(G1).Hash(hash2curve.EllipticPointHasherSha256(), []byte("a"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
+	b := new(G1).Hash(hash2curve.EllipticPointHasherSha256(), []byte("b"), []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
 
 	aBytes := a.ToCompressed()
 	bBytes := b.ToCompressed()
@@ -396,7 +397,7 @@ func TestSumOfProducts(t *testing.T) {
 	c := FqNew().SetBytesWide(&b)
 
 	lhs := new(G1).Mul(h0, s)
-	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*impl.Field{s})
+	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*impl.FieldValue{s})
 	require.Equal(t, 1, lhs.Equal(rhs))
 
 	u := new(G1).Mul(h0, s)
@@ -407,6 +408,6 @@ func TestSumOfProducts(t *testing.T) {
 	rhs.Mul(u, c)
 	rhs.Add(rhs, new(G1).Mul(h0, sHat))
 	require.Equal(t, 1, uTilde.Equal(rhs))
-	_, _ = rhs.SumOfProducts([]*G1{u, h0}, []*impl.Field{c, sHat})
+	_, _ = rhs.SumOfProducts([]*G1{u, h0}, []*impl.FieldValue{c, sHat})
 	require.Equal(t, 1, uTilde.Equal(rhs))
 }

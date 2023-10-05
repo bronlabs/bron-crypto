@@ -7,11 +7,11 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -40,7 +40,7 @@ func (s *Scalar) Random(reader io.Reader) curves.Scalar {
 }
 
 func (*Scalar) Hash(inputs ...[]byte) curves.Scalar {
-	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
+	xmd := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherBlake2b(), bytes.Join(inputs, nil), []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 64)
 	var t [64]byte
 	copy(t[:], xmd)
 	return &Scalar{
@@ -260,11 +260,15 @@ func (s *Scalar) SetFq(element *fq.Fq) *Scalar {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	res, err := serialisation.ScalarMarshalBinary(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
@@ -277,11 +281,15 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	res, err := serialisation.ScalarMarshalText(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (s *Scalar) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
@@ -294,11 +302,15 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(Name, s)
+	res, err := serialisation.ScalarMarshalJson(Name, s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}

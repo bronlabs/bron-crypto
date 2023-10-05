@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 func TestG2IsOnCurve(t *testing.T) {
@@ -522,7 +523,7 @@ func TestG2Hash(t *testing.T) {
 		e, _ := hex.DecodeString(tst.expected)
 		copy(b[:], e)
 		_, _ = ept.FromUncompressed(&b)
-		pt.Hash(impl.EllipticPointHasherSha256(), i, dst)
+		pt.Hash(hash2curve.EllipticPointHasherSha256(), i, dst)
 		require.Equal(t, 1, pt.Equal(ept))
 	}
 }
@@ -538,7 +539,7 @@ func TestG2SumOfProducts(t *testing.T) {
 	c := FqNew().SetBytesWide(&b)
 
 	lhs := new(G2).Mul(h0, s)
-	rhs, _ := new(G2).SumOfProducts([]*G2{h0}, []*impl.Field{s})
+	rhs, _ := new(G2).SumOfProducts([]*G2{h0}, []*impl.FieldValue{s})
 	require.Equal(t, 1, lhs.Equal(rhs))
 
 	u := new(G2).Mul(h0, s)
@@ -549,6 +550,6 @@ func TestG2SumOfProducts(t *testing.T) {
 	rhs.Mul(u, c)
 	rhs.Add(rhs, new(G2).Mul(h0, sHat))
 	require.Equal(t, 1, uTilde.Equal(rhs))
-	_, _ = rhs.SumOfProducts([]*G2{u, h0}, []*impl.Field{c, sHat})
+	_, _ = rhs.SumOfProducts([]*G2{u, h0}, []*impl.FieldValue{c, sHat})
 	require.Equal(t, 1, uTilde.Equal(rhs))
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
@@ -36,13 +37,13 @@ func (*FieldProfile) ExtensionDegree() *saferith.Nat {
 var _ curves.FieldElement = (*FieldElement)(nil)
 
 type FieldElement struct {
-	v *impl.Field
+	v *impl.FieldValue
 
 	_ types.Incomparable
 }
 
 //nolint:revive // we don't care if impl shadows impl
-func (e *FieldElement) impl() *impl.Field {
+func (e *FieldElement) impl() *impl.FieldValue {
 	return e.v
 }
 
@@ -217,7 +218,7 @@ func (e *FieldElement) Nat() *saferith.Nat {
 }
 
 func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
-	if len(input) != impl.FieldBytes {
+	if len(input) != constants.ScalarBytes {
 		return nil, errs.NewInvalidLength("input length is not 32 bytes")
 	}
 	var out [32]byte

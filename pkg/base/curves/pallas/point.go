@@ -8,9 +8,9 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -172,11 +172,15 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	res, err := serialisation.PointMarshalBinary(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(&pallasInstance, input)
+	pt, err := serialisation.PointUnmarshalBinary(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -189,11 +193,15 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	res, err := serialisation.PointMarshalText(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(&pallasInstance, input)
+	pt, err := serialisation.PointUnmarshalText(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -206,11 +214,15 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	res, err := serialisation.PointMarshalJson(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(&pallasInstance, input)
+	pt, err := serialisation.NewPointFromJSON(&pallasInstance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}

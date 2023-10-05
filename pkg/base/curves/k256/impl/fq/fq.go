@@ -24,8 +24,8 @@ var (
 	k256FqParams   impl.FieldParams
 )
 
-func New() *impl.Field {
-	return &impl.Field{
+func New() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getK256FqParams(),
 		Arithmetic: k256FqArithmetic{},
@@ -130,7 +130,7 @@ func (f k256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 			Square((*MontgomeryDomainFieldElement)(&b), (*MontgomeryDomainFieldElement)(&b))
 		}
 		// if b == 1 flag = 0 else flag = 1
-		flag := -(&impl.Field{
+		flag := -(&impl.FieldValue{
 			Value:      b,
 			Params:     getK256FqParams(),
 			Arithmetic: f,
@@ -143,11 +143,11 @@ func (f k256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 		copy(b[:], t[:])
 	}
 	Square((*MontgomeryDomainFieldElement)(&c), (*MontgomeryDomainFieldElement)(&z))
-	*wasSquare = (&impl.Field{
+	*wasSquare = (&impl.FieldValue{
 		Value:      c,
 		Params:     getK256FqParams(),
 		Arithmetic: f,
-	}).Equal(&impl.Field{
+	}).Equal(&impl.FieldValue{
 		Value:      *arg,
 		Params:     getK256FqParams(),
 		Arithmetic: f,
@@ -264,7 +264,7 @@ func (f k256FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 	impl.Pow2k(&tmp, &tmp, 8, f)
 	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x6))
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getK256FqParams(),
 		Arithmetic: f,

@@ -314,7 +314,7 @@ func (gt *Gt) Neg(a *Gt) *Gt {
 }
 
 // Mul multiplies this value by the input scalar.
-func (gt *Gt) Mul(a *Gt, s *impl.Field) *Gt {
+func (gt *Gt) Mul(a *Gt, s *impl.FieldValue) *Gt {
 	var f, p Fp12
 	f.Set((*Fp12)(a))
 	bytes := s.Bytes()

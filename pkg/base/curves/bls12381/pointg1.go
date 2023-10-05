@@ -10,9 +10,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 var _ curves.PairingPoint = (*PointG1)(nil)
@@ -43,12 +44,12 @@ func (p *PointG1) Random(reader io.Reader) curves.Point {
 
 func (*PointG1) Hash(inputs ...[]byte) curves.Point {
 	domain := []byte("QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_")
-	pt := new(bls12381impl.G1).Hash(impl.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
+	pt := new(bls12381impl.G1).Hash(hash2curve.EllipticPointHasherSha256(), bytes.Join(inputs, nil), domain)
 	return &PointG1{Value: pt}
 }
 
 func (*PointG1) HashWithDst(input []byte, dst string) curves.PairingPoint {
-	pt := new(bls12381impl.G1).Hash(impl.EllipticPointHasherSha256(), input, []byte(dst))
+	pt := new(bls12381impl.G1).Hash(hash2curve.EllipticPointHasherSha256(), input, []byte(dst))
 	return &PointG1{Value: pt}
 }
 
@@ -198,7 +199,7 @@ func (*PointG1) CurveName() string {
 
 func multiScalarMultBls12381G1(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*bls12381impl.G1, len(points))
-	nScalars := make([]*impl.Field, len(scalars))
+	nScalars := make([]*impl.FieldValue, len(scalars))
 	for i, pt := range points {
 		pp, ok := pt.(*PointG1)
 		if !ok {
@@ -272,7 +273,7 @@ func (*PointG1) Modulus() *saferith.Modulus {
 }
 
 func (p *PointG1) MarshalBinary() ([]byte, error) {
-	result, err := internal.PointMarshalBinary(p)
+	result, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
 	}
@@ -280,7 +281,7 @@ func (p *PointG1) MarshalBinary() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(NewG1(), input)
+	pt, err := serialisation.PointUnmarshalBinary(NewG1(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -293,7 +294,7 @@ func (p *PointG1) UnmarshalBinary(input []byte) error {
 }
 
 func (p *PointG1) MarshalText() ([]byte, error) {
-	result, err := internal.PointMarshalText(p)
+	result, err := serialisation.PointMarshalText(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
 	}
@@ -301,7 +302,7 @@ func (p *PointG1) MarshalText() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(NewG1(), input)
+	pt, err := serialisation.PointUnmarshalText(NewG1(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -314,7 +315,7 @@ func (p *PointG1) UnmarshalText(input []byte) error {
 }
 
 func (p *PointG1) MarshalJSON() ([]byte, error) {
-	result, err := internal.PointMarshalJson(p)
+	result, err := serialisation.PointMarshalJson(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal to json")
 	}
@@ -322,7 +323,7 @@ func (p *PointG1) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(NewG1(), input)
+	pt, err := serialisation.NewPointFromJSON(NewG1(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}

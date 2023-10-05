@@ -18,8 +18,8 @@ var (
 	p256FpParams   impl.FieldParams
 )
 
-func New() *impl.Field {
-	return &impl.Field{
+func New() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getP256FpParams(),
 		Arithmetic: p256FpArithmetic{},
@@ -101,7 +101,7 @@ func (f p256FpArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 	}
 	impl.Pow(&t, arg, &c1, getP256FpParams(), f)
 	Square((*MontgomeryDomainFieldElement)(&c), (*MontgomeryDomainFieldElement)(&t))
-	*wasSquare = (&impl.Field{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&impl.Field{
+	*wasSquare = (&impl.FieldValue{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&impl.FieldValue{
 		Value: *arg, Params: getP256FpParams(), Arithmetic: f,
 	})
 	Selectznz(out, uint1(*wasSquare), out, &t)
@@ -152,7 +152,7 @@ func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 		}
 	}
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getP256FpParams(),
 		Arithmetic: f,

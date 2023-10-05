@@ -31,8 +31,8 @@ var fqModulusLimbs = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5
 
 var fqModulusHex = strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
 
-func FqNew() *impl.Field {
-	return &impl.Field{
+func FqNew() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getBls12381FqParams(),
 		Arithmetic: bls12381FqArithmetic{},
@@ -231,7 +231,7 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 			f.Square(&b, &b)
 		}
 		// if b == 1 flag = 0 else flag = 1
-		flag := -(&impl.Field{
+		flag := -(&impl.FieldValue{
 			Value:      b,
 			Params:     getBls12381FqParams(),
 			Arithmetic: f,
@@ -244,11 +244,11 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 		copy(b[:], t[:])
 	}
 	f.Square(&c, &z)
-	*wasSquare = (&impl.Field{
+	*wasSquare = (&impl.FieldValue{
 		Value:      c,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
-	}).Equal(&impl.Field{
+	}).Equal(&impl.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
@@ -349,7 +349,7 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimb
 	impl.Pow2k(&t0, &t0, 5, f)
 	f.Mul(&t0, &t0, &t1)
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,

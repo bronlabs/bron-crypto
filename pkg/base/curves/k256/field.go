@@ -36,13 +36,13 @@ func (*FieldProfile) ExtensionDegree() *saferith.Nat {
 var _ curves.FieldElement = (*FieldElement)(nil)
 
 type FieldElement struct {
-	v *impl.Field
+	v *impl.FieldValue
 
 	_ types.Incomparable
 }
 
 //nolint:revive // we don't care if impl shadows impl
-func (e *FieldElement) impl() *impl.Field {
+func (e *FieldElement) impl() *impl.FieldValue {
 	return e.v
 }
 

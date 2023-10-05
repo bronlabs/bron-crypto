@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 type Ep struct {
@@ -29,7 +29,7 @@ func (p *Ep) Hash(input []byte) *Ep {
 	if input == nil {
 		input = []byte{}
 	}
-	u := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
+	u := hash2curve.ExpandMsgXmd(hash2curve.EllipticPointHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
 	var buf [64]byte
 	copy(buf[:], u[:64])
 	u0 := new(fp.Fp).SetBytesWide(&buf)

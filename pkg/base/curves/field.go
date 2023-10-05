@@ -5,6 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
@@ -12,7 +13,7 @@ import (
 type FieldValue = []uint64
 
 const (
-	FieldBytes     = impl.FieldBytes
+	FieldBytes     = constants.ScalarBytes
 	WideFieldBytes = impl.WideFieldBytes
 )
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -333,11 +333,11 @@ func (s *Scalar) Clone() curves.Scalar {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	return serialisation.ScalarMarshalBinary(s)
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
@@ -350,11 +350,11 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	return serialisation.ScalarMarshalText(s)
 }
 
 func (s *Scalar) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "scalar unmarshal binary failed")
 	}
@@ -375,11 +375,11 @@ func (*Scalar) SetEdwardsScalar(sc *filippo.Scalar) *Scalar {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(Name, s)
+	return serialisation.ScalarMarshalJson(Name, s)
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}

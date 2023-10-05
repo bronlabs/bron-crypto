@@ -14,7 +14,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -448,11 +448,11 @@ func (s *BenchScalar) Clone() curves.Scalar {
 }
 
 func (s *BenchScalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	return serialisation.ScalarMarshalBinary(s)
 }
 
 func (s *BenchScalar) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -465,11 +465,11 @@ func (s *BenchScalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *BenchScalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	return serialisation.ScalarMarshalText(s)
 }
 
 func (s *BenchScalar) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -482,11 +482,11 @@ func (s *BenchScalar) UnmarshalText(input []byte) error {
 }
 
 func (s *BenchScalar) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(New().Name(), s)
+	return serialisation.ScalarMarshalJson(New().Name(), s)
 }
 
 func (s *BenchScalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -709,11 +709,11 @@ func (p *BenchPoint) Params() *elliptic.CurveParams {
 }
 
 func (p *BenchPoint) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	return serialisation.PointMarshalBinary(p)
 }
 
 func (p *BenchPoint) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(New(), input)
+	pt, err := serialisation.PointUnmarshalBinary(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -727,11 +727,11 @@ func (p *BenchPoint) UnmarshalBinary(input []byte) error {
 }
 
 func (p *BenchPoint) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	return serialisation.PointMarshalText(p)
 }
 
 func (p *BenchPoint) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(New(), input)
+	pt, err := serialisation.PointUnmarshalText(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -745,11 +745,11 @@ func (p *BenchPoint) UnmarshalText(input []byte) error {
 }
 
 func (p *BenchPoint) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	return serialisation.PointMarshalJson(p)
 }
 
 func (p *BenchPoint) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(New(), input)
+	pt, err := serialisation.NewPointFromJSON(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}

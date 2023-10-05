@@ -1,4 +1,4 @@
-package internal
+package serialisation
 
 import (
 	"encoding/hex"

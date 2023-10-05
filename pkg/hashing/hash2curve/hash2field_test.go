@@ -1,4 +1,4 @@
-package impl_test
+package hash2curve_test
 
 import (
 	"encoding/hex"
@@ -8,15 +8,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 func TestExpandMsgXmd(t *testing.T) {
-	sha_256 := impl.EllipticPointHasherSha256()
-	sha_512 := impl.EllipticPointHasherSha512()
+	sha_256 := hash2curve.EllipticPointHasherSha256()
+	sha_512 := hash2curve.EllipticPointHasherSha512()
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#appendix-K.1
 	tests := []struct {
-		f             *impl.EllipticPointHasher
+		f             *hash2curve.EllipticPointHasher
 		msg           []byte
 		lenInBytesHex string
 		expectedHex   string
@@ -51,7 +51,7 @@ func TestExpandMsgXmd(t *testing.T) {
 			require.NoError(t, err)
 			expected, err := hex.DecodeString(test.expectedHex)
 			require.NoError(t, err)
-			actual := impl.ExpandMsgXmd(test.f, test.msg, DST, int(lenInBytes))
+			actual := hash2curve.ExpandMsgXmd(test.f, test.msg, DST, int(lenInBytes))
 			require.Equal(t, actual, expected)
 		})
 	}

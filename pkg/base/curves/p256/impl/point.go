@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 var (
@@ -101,15 +102,15 @@ func p256PointSswuParamsInit() {
 
 type p256PointArithmetic struct{}
 
-func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPointHasher, msg, dst []byte) error {
+func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.EllipticPointHasher, msg, dst []byte) error {
 	var u []byte
 	sswuParams := getP256PointSswuParams()
 
 	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 96)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 96)
+	case hash2curve.XMD:
+		u = hash2curve.ExpandMsgXmd(hash, msg, dst, 96)
+	case hash2curve.XOF:
+		u = hash2curve.ExpandMsgXof(hash, msg, dst, 96)
 	}
 	var buf [64]byte
 	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
@@ -308,7 +309,7 @@ func (p256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (p256PointArithmetic) RhsEq(out, x *impl.Field) {
+func (p256PointArithmetic) RhsEq(out, x *impl.FieldValue) {
 	// Elliptic curve equation for p256 is: y^2 = x^3 ax + b
 	out.Square(x)
 	out.Mul(out, x)

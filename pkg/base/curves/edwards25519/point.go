@@ -12,7 +12,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -294,7 +294,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	point, err := internal.PointMarshalBinary(p)
+	point, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to point failed")
 	}
@@ -302,7 +302,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalBinary(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -315,7 +315,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	t, err := internal.PointMarshalText(p)
+	t, err := serialisation.PointMarshalText(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to text failed")
 	}
@@ -323,7 +323,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalText(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -336,7 +336,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	point, err := internal.PointMarshalJson(p)
+	point, err := serialisation.PointMarshalJson(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to json failed")
 	}
@@ -344,7 +344,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(&edwards25519Instance, input)
+	pt, err := serialisation.NewPointFromJSON(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}

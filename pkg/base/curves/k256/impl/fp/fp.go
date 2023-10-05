@@ -18,8 +18,8 @@ var (
 	k256FpParams   impl.FieldParams
 )
 
-func New() *impl.Field {
-	return &impl.Field{
+func New() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getK256FpParams(),
 		Arithmetic: k256FpArithmetic{},
@@ -101,8 +101,8 @@ func (f k256FpArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 		0x3fffffffffffffff,
 	}, params, f)
 	f.Square(&t, &s)
-	tv1 := &impl.Field{Value: t, Params: params, Arithmetic: f}
-	tv2 := &impl.Field{Value: *arg, Params: params, Arithmetic: f}
+	tv1 := &impl.FieldValue{Value: t, Params: params, Arithmetic: f}
+	tv2 := &impl.FieldValue{Value: *arg, Params: params, Arithmetic: f}
 	*wasSquare = tv1.Equal(tv2)
 	f.Selectznz(out, out, &s, *wasSquare)
 }
@@ -157,7 +157,7 @@ func (f k256FpArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 	impl.Pow2k(&s, &s, 2, f)
 	f.Mul(&s, &s, arg)
 
-	tv := &impl.Field{Value: *arg, Params: getK256FpParams(), Arithmetic: f}
+	tv := &impl.FieldValue{Value: *arg, Params: getK256FpParams(), Arithmetic: f}
 
 	*wasInverted = tv.IsNonZero()
 	f.Selectznz(out, out, &s, *wasInverted)

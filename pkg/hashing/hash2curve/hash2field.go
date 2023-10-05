@@ -1,4 +1,4 @@
-package impl
+package hash2curve
 
 import (
 	"crypto/subtle"
@@ -81,11 +81,11 @@ func ExpandMsgXmd(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte
 		_, _ = h.xmd.Write([]byte{domainLen})
 
 		// b_1 || ... || b_(ell - 1)
-		copy(out[(i-1)*h.xmd.Size():i*h.xmd.Size()], bi[:])
+		copy(out[(i-1)*h.xmd.Size():i*h.xmd.Size()], bi)
 		bi = h.xmd.Sum(nil)
 	}
 	// b_ell
-	copy(out[(ell-1)*h.xmd.Size():], bi[:])
+	copy(out[(ell-1)*h.xmd.Size():], bi)
 	return out[:outLen]
 }
 

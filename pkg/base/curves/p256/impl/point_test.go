@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	p256n "github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 func TestP256PointArithmetic_Double(t *testing.T) {
@@ -28,7 +28,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 
 func TestP256PointArithmetic_Hash(t *testing.T) {
 	var b [32]byte
-	sc, err := p256n.PointNew().Hash(b[:], impl.EllipticPointHasherSha256())
+	sc, err := p256n.PointNew().Hash(b[:], hash2curve.EllipticPointHasherSha256())
 	sc1 := p256.New().Identity().Hash(b[:])
 	fmt.Printf("%v\n", sc1)
 

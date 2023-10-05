@@ -9,11 +9,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 var _ curves.Point = (*Point)(nil)
@@ -35,7 +36,8 @@ func (p *Point) Random(prng io.Reader) curves.Point {
 }
 
 func (*Point) Hash(inputs ...[]byte) curves.Point {
-	value, err := secp256k1.PointNew().Hash(bytes.Join(inputs, nil), impl.EllipticPointHasherSha256())
+	value, err := secp256k1.PointNew().Hash(bytes.Join(inputs, nil), hash2curve.EllipticPointHasherSha256())
+	// TODO: change hash to return an error also
 	if err != nil {
 		panic(err)
 	}
@@ -272,11 +274,15 @@ func (p *Point) ProjectiveZ() curves.FieldElement {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	res, err := serialisation.PointMarshalBinary(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "Could not marshal point to binary")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(&k256Instance, input)
+	pt, err := serialisation.PointUnmarshalBinary(&k256Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
@@ -289,11 +295,15 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	res, err := serialisation.PointMarshalText(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "Could not marshal point to text")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(&k256Instance, input)
+	pt, err := serialisation.PointUnmarshalText(&k256Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
@@ -306,11 +316,15 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	res, err := serialisation.PointMarshalJson(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "Could not marshal point to json")
+	}
+	return res, nil
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(&k256Instance, input)
+	pt, err := serialisation.NewPointFromJSON(&k256Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}

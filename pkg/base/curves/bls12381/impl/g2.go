@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 var (
@@ -512,20 +513,20 @@ func (g2 *G2) Random(reader io.Reader) (*G2, error) {
 		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
 	}
 	dst := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
-	return g2.Hash(impl.EllipticPointHasherSha256(), seed[:], dst), nil
+	return g2.Hash(hash2curve.EllipticPointHasherSha256(), seed[:], dst), nil
 }
 
 // Hash uses the hasher to map bytes to a valid point.
-func (g2 *G2) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G2 {
+func (g2 *G2) Hash(hash *hash2curve.EllipticPointHasher, msg, dst []byte) *G2 {
 	var u []byte
 	var u0, u1 Fp2
 	var r0, r1, q0, q1 G2
 
 	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 256)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 256)
+	case hash2curve.XMD:
+		u = hash2curve.ExpandMsgXmd(hash, msg, dst, 256)
+	case hash2curve.XOF:
+		u = hash2curve.ExpandMsgXof(hash, msg, dst, 256)
 	}
 
 	var buf [96]byte
@@ -675,7 +676,7 @@ func (g2 *G2) Double(a *G2) *G2 {
 }
 
 // Mul multiplies this point by the input scalar.
-func (g2 *G2) Mul(a *G2, s *impl.Field) *G2 {
+func (g2 *G2) Mul(a *G2, s *impl.FieldValue) *G2 {
 	bytes := s.Bytes()
 	return g2.multiply(a, &bytes)
 }
@@ -974,7 +975,7 @@ func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
 // SumOfProducts computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `g2`.
 // Returns an error if the lengths of the arguments is not equal.
-func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.Field) (*G2, error) {
+func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.FieldValue) (*G2, error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

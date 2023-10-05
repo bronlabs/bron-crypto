@@ -7,27 +7,30 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-// FieldLimbs is the number of limbs needed to represent this field.
+// FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.
 const FieldLimbs = 4
 
-// FieldBytes is the number of bytes needed to represent this field.
-const FieldBytes = 32
+// FieldBytes is the number of bytes needed to represent an element of most fields.
+const FieldBytes = constants.ScalarBytes
 
 // WideFieldBytes is the number of bytes needed for safe conversion
 // to this field to avoid bias when reduced.
 const WideFieldBytes = 64
 
-// Field represents a field element.
-type Field struct {
+// FieldValue holds the implementation of field element. This struct homogeneizes
+// several curve fields, and encapsulates them to be exposed using the `curves.FieldElement`
+// interface.
+type FieldValue struct {
 	// Value is the field elements value
 	Value [FieldLimbs]uint64
 	// Params are the field parameters
 	Params *FieldParams
-	// Arithmetic are the field methods
+	// Arithmetic are the field element methods
 	Arithmetic FieldArithmetic
 
 	_ types.Incomparable
@@ -81,7 +84,7 @@ type FieldArithmetic interface {
 // Cmp returns -1 if f < rhs
 // 0 if f == rhs
 // 1 if f > rhs.
-func (f *Field) Cmp(rhs *Field) int {
+func (f *FieldValue) Cmp(rhs *FieldValue) int {
 	return cmpHelper(&f.Value, &rhs.Value)
 }
 
@@ -115,7 +118,7 @@ func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int {
 }
 
 // Equal returns 1 if f == rhs, 0 otherwise.
-func (f *Field) Equal(rhs *Field) int {
+func (f *FieldValue) Equal(rhs *FieldValue) int {
 	return equalHelper(&f.Value, &rhs.Value)
 }
 
@@ -128,7 +131,7 @@ func equalHelper(lhs, rhs *[FieldLimbs]uint64) int {
 }
 
 // IsZero returns 1 if f == 0, 0 otherwise.
-func (f *Field) IsZero() int {
+func (f *FieldValue) IsZero() int {
 	t := f.Value[0]
 	t |= f.Value[1]
 	t |= f.Value[2]
@@ -137,7 +140,7 @@ func (f *Field) IsZero() int {
 }
 
 // IsNonZero returns 1 if f != 0, 0 otherwise.
-func (f *Field) IsNonZero() int {
+func (f *FieldValue) IsNonZero() int {
 	t := f.Value[0]
 	t |= f.Value[1]
 	t |= f.Value[2]
@@ -146,12 +149,12 @@ func (f *Field) IsNonZero() int {
 }
 
 // IsOne returns 1 if f == 1, 0 otherwise.
-func (f *Field) IsOne() int {
+func (f *FieldValue) IsOne() int {
 	return equalHelper(&f.Value, &f.Params.R)
 }
 
 // Set f = rhs.
-func (f *Field) Set(rhs *Field) *Field {
+func (f *FieldValue) Set(rhs *FieldValue) *FieldValue {
 	f.Value[0] = rhs.Value[0]
 	f.Value[1] = rhs.Value[1]
 	f.Value[2] = rhs.Value[2]
@@ -162,14 +165,14 @@ func (f *Field) Set(rhs *Field) *Field {
 }
 
 // SetUint64 f = rhs.
-func (f *Field) SetUint64(rhs uint64) *Field {
+func (f *FieldValue) SetUint64(rhs uint64) *FieldValue {
 	t := &[FieldLimbs]uint64{rhs, 0, 0, 0}
 	f.Arithmetic.ToMontgomery(&f.Value, t)
 	return f
 }
 
 // SetOne f = r.
-func (f *Field) SetOne() *Field {
+func (f *FieldValue) SetOne() *FieldValue {
 	f.Value[0] = f.Params.R[0]
 	f.Value[1] = f.Params.R[1]
 	f.Value[2] = f.Params.R[2]
@@ -178,7 +181,7 @@ func (f *Field) SetOne() *Field {
 }
 
 // SetZero f = 0.
-func (f *Field) SetZero() *Field {
+func (f *FieldValue) SetZero() *FieldValue {
 	f.Value[0] = 0
 	f.Value[1] = 0
 	f.Value[2] = 0
@@ -201,7 +204,7 @@ func (f *Field) SetZero() *Field {
 // that (2^256 - 1)*c is an acceptable product for the reduction. Therefore, the
 // reduction always works so long as `c` is in the field; in this case it is either the
 // constant `r2` or `r3`.
-func (f *Field) SetBytesWide(input *[WideFieldBytes]byte) *Field {
+func (f *FieldValue) SetBytesWide(input *[WideFieldBytes]byte) *FieldValue {
 	d0 := [FieldLimbs]uint64{
 		binary.LittleEndian.Uint64(input[:8]),
 		binary.LittleEndian.Uint64(input[8:16]),
@@ -226,7 +229,7 @@ func (f *Field) SetBytesWide(input *[WideFieldBytes]byte) *Field {
 
 // SetBytes attempts to convert a little endian byte representation
 // of a scalar into a `Fp`, failing if input is not canonical.
-func (f *Field) SetBytes(input *[FieldBytes]byte) (*Field, error) {
+func (f *FieldValue) SetBytes(input *[FieldBytes]byte) (*FieldValue, error) {
 	d0 := [FieldLimbs]uint64{0, 0, 0, 0}
 	f.Arithmetic.FromBytes(&d0, input)
 
@@ -238,7 +241,7 @@ func (f *Field) SetBytes(input *[FieldBytes]byte) (*Field, error) {
 
 // SetNat initialises an element from saferith.Nat
 // The value is reduced by the modulus.
-func (f *Field) SetNat(nat *saferith.Nat) *Field {
+func (f *FieldValue) SetNat(nat *saferith.Nat) *FieldValue {
 	var buffer [FieldBytes]byte
 	t := new(saferith.Nat).Mod(nat, f.Params.Modulus)
 	t.FillBytes(buffer[:])
@@ -249,7 +252,7 @@ func (f *Field) SetNat(nat *saferith.Nat) *Field {
 
 // SetBigInt initialises an element from big.Int
 // The value is reduced by the modulus.
-func (f *Field) SetBigInt(bi *big.Int) *Field {
+func (f *FieldValue) SetBigInt(bi *big.Int) *FieldValue {
 	var buffer [FieldBytes]byte
 	t := new(big.Int).Set(bi)
 	t.Mod(t, f.Params.Modulus.Big())
@@ -261,7 +264,7 @@ func (f *Field) SetBigInt(bi *big.Int) *Field {
 
 // SetRaw converts a raw array into a field element
 // Assumes input is already in montgomery form.
-func (f *Field) SetRaw(input *[FieldLimbs]uint64) *Field {
+func (f *FieldValue) SetRaw(input *[FieldLimbs]uint64) *FieldValue {
 	f.Value[0] = input[0]
 	f.Value[1] = input[1]
 	f.Value[2] = input[2]
@@ -271,14 +274,14 @@ func (f *Field) SetRaw(input *[FieldLimbs]uint64) *Field {
 
 // SetLimbs converts an array into a field element
 // by converting to montgomery form.
-func (f *Field) SetLimbs(input *[FieldLimbs]uint64) *Field {
+func (f *FieldValue) SetLimbs(input *[FieldLimbs]uint64) *FieldValue {
 	f.Arithmetic.ToMontgomery(&f.Value, input)
 	return f
 }
 
 // Bytes converts this element into a byte representation
 // in little endian byte order.
-func (f *Field) Bytes() [FieldBytes]byte {
+func (f *FieldValue) Bytes() [FieldBytes]byte {
 	var output [FieldBytes]byte
 	tv := &[FieldLimbs]uint64{}
 	f.Arithmetic.FromMontgomery(tv, &f.Value)
@@ -287,33 +290,33 @@ func (f *Field) Bytes() [FieldBytes]byte {
 }
 
 // Nat converts this element into the big.Int struct.
-func (f *Field) Nat() *saferith.Nat {
+func (f *FieldValue) Nat() *saferith.Nat {
 	buffer := f.Bytes()
 	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.
-func (f *Field) Raw() [FieldLimbs]uint64 {
+func (f *FieldValue) Raw() [FieldLimbs]uint64 {
 	res := &[FieldLimbs]uint64{}
 	f.Arithmetic.FromMontgomery(res, &f.Value)
 	return *res
 }
 
 // Double this element.
-func (f *Field) Double(a *Field) *Field {
+func (f *FieldValue) Double(a *FieldValue) *FieldValue {
 	f.Arithmetic.Add(&f.Value, &a.Value, &a.Value)
 	return f
 }
 
 // Square this element.
-func (f *Field) Square(a *Field) *Field {
+func (f *FieldValue) Square(a *FieldValue) *FieldValue {
 	f.Arithmetic.Square(&f.Value, &a.Value)
 	return f
 }
 
 // Sqrt this element, if it exists. If true, then value
 // is a square root. If false, value is a QNR.
-func (f *Field) Sqrt(a *Field) (*Field, bool) {
+func (f *FieldValue) Sqrt(a *FieldValue) (*FieldValue, bool) {
 	wasSquare := 0
 	f.Arithmetic.Sqrt(&wasSquare, &f.Value, &a.Value)
 	return f, wasSquare == 1
@@ -321,38 +324,38 @@ func (f *Field) Sqrt(a *Field) (*Field, bool) {
 
 // Invert this element i.e. compute the multiplicative inverse
 // return false, zero if this element is zero.
-func (f *Field) Invert(a *Field) (*Field, bool) {
+func (f *FieldValue) Invert(a *FieldValue) (*FieldValue, bool) {
 	wasInverted := 0
 	f.Arithmetic.Invert(&wasInverted, &f.Value, &a.Value)
 	return f, wasInverted == 1
 }
 
 // Mul returns the result from multiplying this element by rhs.
-func (f *Field) Mul(lhs, rhs *Field) *Field {
+func (f *FieldValue) Mul(lhs, rhs *FieldValue) *FieldValue {
 	f.Arithmetic.Mul(&f.Value, &lhs.Value, &rhs.Value)
 	return f
 }
 
 // Sub returns the result from subtracting rhs from this element.
-func (f *Field) Sub(lhs, rhs *Field) *Field {
+func (f *FieldValue) Sub(lhs, rhs *FieldValue) *FieldValue {
 	f.Arithmetic.Sub(&f.Value, &lhs.Value, &rhs.Value)
 	return f
 }
 
 // Add returns the result from adding rhs to this element.
-func (f *Field) Add(lhs, rhs *Field) *Field {
+func (f *FieldValue) Add(lhs, rhs *FieldValue) *FieldValue {
 	f.Arithmetic.Add(&f.Value, &lhs.Value, &rhs.Value)
 	return f
 }
 
 // Neg returns negation of this element.
-func (f *Field) Neg(input *Field) *Field {
+func (f *FieldValue) Neg(input *FieldValue) *FieldValue {
 	f.Arithmetic.Neg(&f.Value, &input.Value)
 	return f
 }
 
 // Exp raises base^exp.
-func (f *Field) Exp(base, exp *Field) *Field {
+func (f *FieldValue) Exp(base, exp *FieldValue) *FieldValue {
 	e := [FieldLimbs]uint64{}
 	f.Arithmetic.FromMontgomery(&e, &exp.Value)
 	Pow(&f.Value, &base.Value, &e, f.Params, f.Arithmetic)
@@ -360,7 +363,7 @@ func (f *Field) Exp(base, exp *Field) *Field {
 }
 
 // CMove sets f = lhs if choice == 0 and f = rhs if choice == 1.
-func (f *Field) CMove(lhs, rhs *Field, choice int) *Field {
+func (f *FieldValue) CMove(lhs, rhs *FieldValue, choice int) *FieldValue {
 	f.Arithmetic.Selectznz(&f.Value, &lhs.Value, &rhs.Value, choice)
 	return f
 }

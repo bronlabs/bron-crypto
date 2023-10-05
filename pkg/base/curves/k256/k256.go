@@ -97,7 +97,7 @@ func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*impl.EllipticPoint, len(points))
-	nScalars := make([]*impl.Field, len(scalars))
+	nScalars := make([]*impl.FieldValue, len(scalars))
 	for i, pt := range points {
 		ptv, ok := pt.(*Point)
 		if !ok {
