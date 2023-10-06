@@ -5,9 +5,23 @@ info:
 include:
   - file: /etc/serve/include.d/library.yml
 
+conf:
+  gocd:
+    default-template: "serve-nightly-tests-tpl"
+    feature-template: "serve-nightly-tests-tpl"
+
+gocd:
+  pipeline:
+    create:
+      allowed-branches: ["master","feature-*"]
+
 build:
   - docker-image:
       no-push: true
       build-args ? {{ info.feature }}:
         "*": '--build-arg="TEST_ARGS=-short"'
         "": ""
+
+test:
+  - sh: |
+      make test-package-pkg
