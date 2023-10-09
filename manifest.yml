@@ -23,6 +23,6 @@ build:
       no-push: true
       build-args: '--build-arg INCLUDE_LINT=false --build-arg NIGHTLY=true'
 
-test:
-  - sh: |
-      docker run docker.boople.co/libs/{{ info.name }}-nightly make make test-package-pkg
+command:
+  run-test: |
+      docker run docker.boople.co/libs/{{ info.name }}-nightly make test-package-pkg
