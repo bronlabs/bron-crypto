@@ -129,6 +129,14 @@ run-time-tests:
 	go clean -testcache
 	EXEC_TIME_TEST=1 go test -timeout 600s -run ^Test_MeasureConstantTime ./...
 
-.PHONY: test-package-pkg
-test-package-pkg: # Remove me, I am dummy
-	echo "Tests fot u!"
+.PHONY: test-master
+test-master:
+	go test -timeout 120m ./...
+
+.PHONY: test-feature-branch
+test-feature-branch:
+	go test -short -timeout 120m ./...
+
+.PHONY: test-nightly
+test-nightly:
+	echo "Test-nightly"
