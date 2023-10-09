@@ -128,3 +128,7 @@ run-profile-frost-noninteractive-signing:
 run-time-tests:
 	go clean -testcache
 	EXEC_TIME_TEST=1 go test -timeout 600s -run ^Test_MeasureConstantTime ./...
+
+.PHONY: test-package-pkg
+test-package-pkg: # Remove me, I am dummy
+	echo "Tests fot u!"

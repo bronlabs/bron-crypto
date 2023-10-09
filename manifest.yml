@@ -1,27 +1,28 @@
 info:
-  name: krypton
+  name: krypton-primitives
   version: "0.1"
 
 include:
   - file: /etc/serve/include.d/library.yml
 
-conf:
-  gocd:
-    default-template: "serve-nightly-tests-tpl"
-    feature-template: "serve-nightly-tests-tpl"
-
 gocd:
   pipeline:
     create:
-      allowed-branches: ["master","feature-*"]
+      allowed-branches: ["feature-INFSUP-1149-tests"] #Testing
+      pipeline:
+        template: "serve-nightly-tests-tpl"
 
 build:
   - docker-image:
       no-push: true
       build-args ? {{ info.feature }}:
         "*": '--build-arg="TEST_ARGS=-short"'
-        "": ""
+
+  - docker-image:
+      name: "{{ info.name }}-nightly"
+      no-push: true
+      build-args: '--build-arg INCLUDE_LINT=false --build-arg NIGHTLY=true'
 
 test:
   - sh: |
-      make test-package-pkg
+      docker run {{ info.name }}-nightly make make test-package-pkg
