@@ -9,4 +9,6 @@ COPY . .
 
 RUN go build ./...
 
+COPY Makefile .
+
 RUN golangci-lint run
