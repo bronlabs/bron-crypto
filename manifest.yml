@@ -5,22 +5,9 @@ info:
 include:
   - file: /etc/serve/include.d/library.yml
 
-gocd:
-  pipeline:
-    create:
-      allowed-branches: ["feature-INFSUP-1149-tests"] #Testing
-      pipeline:
-        template: "serve-nightly-tests-tpl"
-
 build:
   - docker-image:
-      no-push: true
-      build-args ? {{ info.feature }}:
-        "*": '--build-arg="TEST_ARGS=-short"'
-
-  - docker-image:
-      name: "{{ info.name }}-nightly"
-      no-push: true
       images:
-        - branch: feature-INFSUP-1149-tests
-          dockerfile: Dockerfile.nightly
+      - branch: "feature-INFSUP-1149-tests"
+        Dockerfile: Dockerfile.nightly
+        no-push: true
