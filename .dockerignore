@@ -4,3 +4,4 @@
 !/.golangci.yml
 !/internal/*
 !/pkg/*
+!/Makefile
