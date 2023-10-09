@@ -21,8 +21,6 @@ build:
   - docker-image:
       name: "{{ info.name }}-nightly"
       no-push: true
-      build-args: '--build-arg INCLUDE_LINT=false --build-arg NIGHTLY=true'
-
-command:
-  run-test: |
-      docker run docker.boople.co/libs/{{ info.name }}-nightly make test-package-pkg
+      images:
+        - branch: feature-INFSUP-1149-tests
+          dockerfile: Dockerfile.nightly
