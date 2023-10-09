@@ -25,4 +25,4 @@ build:
 
 test:
   - sh: |
-      docker run {{ info.name }}-nightly make make test-package-pkg
+      docker run docker.boople.co/libs/{{ info.name }}-nightly make make test-package-pkg
