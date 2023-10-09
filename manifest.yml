@@ -13,4 +13,4 @@ conf:
 
 build:
   - docker-image: { no-push: true }
-  - sh: docker run --rm {{ conf.docker.image }} /go/make {{ conf.test-suite }}
+  - sh: docker run --rm {{ conf.docker.image }} /make -C /go {{ conf.test-suite }}
