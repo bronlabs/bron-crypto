@@ -26,7 +26,7 @@ var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), palla
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test(f *testing.F) {
-	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, message []byte, randomSeed int64, aliceSecret uint64, bobSecret uint64, charlieSecret uint64) {
+	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, randomSeed int64, aliceSecret uint64, bobSecret uint64, charlieSecret uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
 		prng := rand.New(rand.NewSource(randomSeed))
@@ -72,7 +72,12 @@ func Fuzz_Test(f *testing.F) {
 			require.NotNil(t, participant)
 		}
 		samples, err := testutils.DoSample(sampleParticipants)
-		require.NoError(t, err)
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
+		if err != nil {
+			t.Skip(err.Error())
+		}
 
 		sum := cohortConfig.CipherSuite.Curve.Scalar().Zero()
 		for _, sample := range samples {

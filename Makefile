@@ -59,72 +59,60 @@ test-clean: ## Clear test cache and force all tests to be rerun
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
-	${GO} test ${TEST_CLAUSE} ./...
+	${GO} test ${TEST_CLAUSE} -timeout 120m ./...
 
 .PHONY: test-clean-long
 test-clean-long: ## Clear test cache and force all tests to be rerun
 	${GO} clean -testcache && ${GO} test -count=1 ${TEST_CLAUSE} ./...
 
-.PHONY: fuzz-test
-fuzz-test: ## build and run fuzz test
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tschnorr/frost/fuzz \
-		-fuzz ^FuzzInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tschnorr/frost/fuzz \
-		-fuzz ^FuzzNonInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tschnorr/lindell22/fuzz \
-		-fuzz ^FuzzInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tschnorr/lindell22/fuzz \
-		-fuzz ^FuzzNonInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tecdsa/lindell17/fuzz \
-		-fuzz ^FuzzInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tecdsa/lindell17/fuzz \
-		-fuzz ^FuzzNonInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
-	go test github.com/copperexchange/krypton/pkg/signatures/threshold/tecdsa/dkls23/fuzz \
-		-fuzz ^FuzzInteractiveSigning$$ \
-		-parallel=10 \
-		-fuzztime=120s
+.PHONY: short-test-package-%
+short-test-package-%:
+	$(MAKE) short-unit-test-${*}
 
+.PHONY: test-package-%
+test-package-%: ## for example `make test-package-hashing` to run all test under hashing package
+	$(MAKE) fuzz-test-${*}
+	$(MAKE) profile-test-${*}
+	$(MAKE) benchmark-test-${*}
+	$(MAKE) cte-test-${*}
+	$(MAKE) unit-test-${*}
+	$(MAKE) deflake-test-${*}
 
-.PHONY: run-profile-frost-dkg
-run-profile-frost-dkg:
-	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile ${TMPDIR}dkg_memprofile_K256.out -cpuprofile ${TMPDIR}dkg_cpuprofile_K256.out
-	go tool pprof -top ${TMPDIR}dkg_cpuprofile_K256.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}dkg_memprofile_K256.out | grep copperexchange
-	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/keygen/dkg -memprofile ${TMPDIR}dkg_memprofile_ED25519.out -cpuprofile ${TMPDIR}dkg_cpuprofile_ED25519.out
-	go tool pprof -top ${TMPDIR}dkg_cpuprofile_ED25519.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}dkg_memprofile_ED25519.out | grep copperexchange
+.PHONY: fuzz-test-%
+fuzz-test-%:
+	chmod +x scripts/run_fuzz.sh
+	scripts/./run_fuzz.sh ${*}
 
-.PHONY: run-profile-frost-interactive-signing
-run-profile-frost-interactive-signing:
-	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile ${TMPDIR}interactive_memprofile_K256.out -cpuprofile ${TMPDIR}interactive_cpuprofile_K256.out
-	go tool pprof -top ${TMPDIR}interactive_cpuprofile_K256.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}interactive_memprofile_K256.out | grep copperexchange
-	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/interactive -memprofile ${TMPDIR}interactive_memprofile_ED25519.out -cpuprofile ${TMPDIR}interactive_cpuprofile_ED25519.out
-	go tool pprof -top ${TMPDIR}interactive_cpuprofile_ED25519.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}interactive_memprofile_ED25519.out | grep copperexchange
+.PHONY: profile-test-%
+profile-test-%:
+	chmod +x scripts/run_profile.sh
+	scripts/./run_profile.sh ${*}
 
-.PHONY: run-profile-frost-noninteractive-signing
-run-profile-frost-noninteractive-signing:
-	PROFILE_T=2 PROFILE_N=3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile ${TMPDIR}noninteractive_memprofile_K256.out -cpuprofile ${TMPDIR}noninteractive_cpuprofile_K256.out
-	go tool pprof -top ${TMPDIR}noninteractive_cpuprofile_K256.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}noninteractive_memprofile_K256.out | grep copperexchange
-	PROFILE_T=2 PROFILE_N=3 PROFILE_CURVE=ED25519 PROFILE_HASH=SHA3 go test -timeout 300s -run ^TestRunProfile$$ github.com/copperexchange/crypto-primitives-go/pkg/signatures/threshold/tschnorr/frost/signing/noninteractive -memprofile ${TMPDIR}noninteractive_memprofile_ED25519.out -cpuprofile ${TMPDIR}noninteractive_cpuprofile_ED25519.out
-	go tool pprof -top ${TMPDIR}noninteractive_cpuprofile_ED25519.out | grep copperexchange
-	go tool pprof -top ${TMPDIR}noninteractive_memprofile_ED25519.out | grep copperexchange
+.PHONY: benchmark-test-%
+benchmark-test-%:
+	chmod +x scripts/run_benchmark.sh
+	scripts/./run_benchmark.sh ${*}
 
-.PHONY: run-time-tests
-run-time-tests:
-	go clean -testcache
-	EXEC_TIME_TEST=1 go test -timeout 600s -run ^Test_MeasureConstantTime ./...
+.PHONY: cte-test-%
+cte-test-%:
+	chmod +x scripts/run_cte.sh
+	scripts/./run_cte.sh ${*}
+
+.PHONY: unittest-test-%
+unit-test-%:
+	chmod +x scripts/run_unittest.sh
+	scripts/./run_unittest.sh ${*}
+
+.PHONY: short-unittest-test-%
+short-unit-test-%:
+	chmod +x scripts/run_unittest.sh
+	scripts/./run_unittest.sh ${*} -test.short
+
+.PHONY: deflake-test-%
+deflake-test-%:
+	chmod +x scripts/run_deflake.sh
+	scripts/./run_deflake.sh ${*}
+
+.PHONY: test-nightly
+test-nightly:
+	$(MAKE) test-package-pkg

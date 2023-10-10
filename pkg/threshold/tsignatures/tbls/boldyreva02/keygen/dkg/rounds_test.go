@@ -7,8 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"os"
-	"strconv"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
@@ -18,37 +16,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunProfile(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping profiling test in short mode")
-	}
-	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
-		t.Skip("skipping profiling test missing parameter")
-	}
-	var curve curves.Curve
-	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
-	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
-	if os.Getenv("IN_G1") == "true" {
-		curve = bls12381.NewG1()
-	} else {
-		curve = bls12381.NewG2()
-	}
-	if curve.Name() == bls12381.G1Name {
-		for i := 0; i < 1000; i++ {
-			testHappyPath[bls.G1](t, th, n)
-		}
-	} else {
-		for i := 0; i < 1000; i++ {
-			testHappyPath[bls.G2](t, th, n)
-		}
-	}
-}
 
 func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	t.Helper()

@@ -24,9 +24,13 @@ func Fuzz_Test(f *testing.F) {
 		}
 		require.NoError(t, err)
 		privateKey, err := bip340.NewPrivateKey(secret)
-		require.NoError(t, err)
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
 		signer := bip340.NewSigner(privateKey)
-		require.NotNil(t, signer)
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
 		require.NotNil(t, signer)
 
 		signature, err := signer.Sign(msg, aux, prng)

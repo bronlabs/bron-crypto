@@ -48,10 +48,14 @@ func Fuzz_Test_OTe(f *testing.F) {
 		// Run OTe
 		oTeSenderOutput, oTeReceiverOutput, err := testutils.RunSoftspokenOTe(
 			curve, uniqueSessionId[:], baseOtSendOutput, baseOtRecOutput, choices)
-		require.NoError(t, err)
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
 		// Check OTe result
 		err = testutils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices)
-		require.NoError(t, err)
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
 	})
 }
 

@@ -5,10 +5,8 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
-	"os"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -312,32 +310,6 @@ func Test_HappyPath(t *testing.T) {
 				})
 			}
 		}
-	}
-}
-
-func TestRunProfile(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping profiling test in short mode")
-	}
-	if os.Getenv("PROFILE_T") == "" || os.Getenv("PROFILE_N") == "" {
-		t.Skip("skipping profiling test missing parameter")
-	}
-	var curve curves.Curve
-	var h func() hash.Hash
-	th, _ := strconv.Atoi(os.Getenv("PROFILE_T"))
-	n, _ := strconv.Atoi(os.Getenv("PROFILE_N"))
-	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = edwards25519.New()
-	} else {
-		curve = k256.New()
-	}
-	if os.Getenv("PROFILE_HASH") == "SHA3" {
-		h = sha3.New256
-	} else {
-		h = sha512.New
-	}
-	for i := 0; i < 1000; i++ {
-		testHappyPath(t, protocols.FROST, curve, h, th, n, []byte("Hello World!"))
 	}
 }
 

@@ -5,9 +5,12 @@ info:
 include:
   - file: /etc/serve/include.d/library.yml
 
+conf:
+  test-suite ? {{ vars.test-suite }}-{{ info.feature }}:
+    "-": "test-long"
+    "^-.+": "test"
+    "*": "test-{{ vars.test-suite }}"
+
 build:
-  - docker-image:
-      no-push: true
-      build-args ? {{ info.feature }}:
-        "*": '--build-arg="TEST_ARGS=-short"'
-        "": ""
+  - docker-image: { no-push: true }
+  - sh: docker run --rm {{ conf.docker.image }} make {{ conf.test-suite }}

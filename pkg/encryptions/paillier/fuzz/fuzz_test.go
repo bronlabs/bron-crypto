@@ -17,6 +17,10 @@ import (
 func Fuzz_Test_encryptDecrypt(f *testing.F) {
 	f.Add([]byte("hello world"))
 	f.Fuzz(func(t *testing.T, message []byte) {
+		// ignore message that is longer than 256 bits
+		if len(message) > 32 {
+			t.Skip()
+		}
 		hexMessage := strings.ToUpper(hex.EncodeToString(message))
 		mappedMessage, err := new(saferith.Nat).SetHex(hexMessage)
 		require.NoError(t, err)

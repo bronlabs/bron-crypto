@@ -95,6 +95,9 @@ func CheckSoftspokenOTeOutputs(
 	oTeReceiverOutput softspoken.OTeReceiverOutput, // (v_x)
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
 ) error {
+	if oTeSenderOutput == nil || oTeReceiverOutput == nil {
+		return errs.NewInvalidLength("OTe input/output is nil")
+	}
 	L := len(oTeSenderOutput[0])
 	// Check length matching
 	if len(oTeReceiverOutput) != L {
