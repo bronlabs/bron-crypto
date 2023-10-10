@@ -27,3 +27,12 @@ If the Rogue key prevention scheme is POP, then we can do a faster variant of ag
 ## Differences with Spec
 
 - Our verifier is different from the spec in that it is optimized by using a trick explained [here](https://hackmd.io/@benjaminion/bls12-381#Final-exponentiation).
+
+
+## Test Vectors
+
+The draft standard does not specify test vectors. We have generated test vectors from [bls12-381-tests](https://github.com/ethereum/bls12-381-tests) by the ethereum foundation and are verifying against them.
+Note that:
+- these tests are hardcoded for the short public key variants.
+- We deviate from one test vector: We do not allow aggregation of identity signatures, but the test vector does.
+- We won't verify against fast_aggregate_verify because our implementation forces the POPs to be there whereas that's not the case for ethereum.

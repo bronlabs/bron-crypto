@@ -37,10 +37,10 @@ func Fuzz_Test_Keygen(f *testing.F) {
 }
 
 func Fuzz_Test_Verify(f *testing.F) {
-	f.Add(uint(0), []byte("message"))
-	f.Add(uint(1), []byte("message"))
-	f.Add(uint(2), []byte("message"))
-	f.Fuzz(func(t *testing.T, schemeIndex uint, message []byte) {
+	f.Add(uint(0), []byte("message"), []byte("tag"))
+	f.Add(uint(1), []byte("message"), []byte("tag"))
+	f.Add(uint(2), []byte("message"), []byte("tag"))
+	f.Fuzz(func(t *testing.T, schemeIndex uint, message, tag []byte) {
 		scheme := schemes[schemeIndex%uint(len(schemes))]
 		privateKey, err := bls.KeyGen[G1](crand.Reader)
 		require.NoError(t, err)
@@ -48,7 +48,7 @@ func Fuzz_Test_Verify(f *testing.F) {
 		signer, err := bls.NewSigner[G1, G2](privateKey, scheme)
 		require.NoError(t, err)
 
-		signature, pop, err := signer.Sign(message)
+		signature, pop, err := signer.Sign(message, tag)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -69,7 +69,7 @@ func Fuzz_Test_Verify(f *testing.F) {
 		require.False(t, signature.Value.IsIdentity())
 		require.True(t, signature.Value.IsTorsionFree())
 
-		err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme)
+		err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme, tag)
 		require.NoError(t, err)
 	})
 }
@@ -121,7 +121,7 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 			pops = nil
 		}
 
-		err = bls.AggregateVerify(publicKeys, messages, sigAg, pops, boundedScheme)
+		err = bls.AggregateVerify(publicKeys, messages, sigAg, pops, boundedScheme, nil)
 		require.NoError(t, err)
 
 		if boundedScheme == bls.POP {

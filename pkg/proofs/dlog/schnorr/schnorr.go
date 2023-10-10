@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR"
+	domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR-"
 	basepointLabel        = "basepoint"
 	rLabel                = "R"
 	statementLabel        = "statement"
@@ -29,10 +29,6 @@ type Prover struct {
 	BasePoint       curves.Point
 
 	_ types.Incomparable
-}
-
-func (*Prover) IsUC() bool {
-	return false
 }
 
 // Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,

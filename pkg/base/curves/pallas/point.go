@@ -84,33 +84,45 @@ func (p *Point) Neg() curves.Point {
 }
 
 func (p *Point) Add(rhs curves.Point) curves.Point {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*Point)
 	if !ok {
-		return nil
+		panic("rhs is not a pallas point")
 	}
 	return &Point{value: new(Ep).Add(p.value, r.value)}
 }
 
 func (p *Point) Sub(rhs curves.Point) curves.Point {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*Point)
 	if !ok {
-		return nil
+		panic("rhs is not a pallas point")
 	}
 	return &Point{value: new(Ep).Sub(p.value, r.value)}
 }
 
 func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	s, ok := rhs.(*Scalar)
 	if !ok {
-		return nil
+		panic("rhs is not a pallas point")
 	}
 	return &Point{value: new(Ep).Mul(p.value, s.value)}
 }
 
 func (p *Point) Equal(rhs curves.Point) bool {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*Point)
 	if !ok {
-		return false
+		panic("rhs is not a pallas point")
 	}
 	return p.value.Equal(r.value)
 }

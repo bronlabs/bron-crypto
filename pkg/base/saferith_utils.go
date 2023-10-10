@@ -18,6 +18,12 @@ func NatFromBig(x *big.Int, m *saferith.Modulus) *saferith.Nat {
 	return new(saferith.Nat).Mod(xx, m)
 }
 
+func NatFromBytes(x []byte, m *saferith.Modulus) *saferith.Nat {
+	return new(saferith.Nat).Mod(
+		new(saferith.Nat).SetBytes(x), m,
+	)
+}
+
 func RandomNat(prng io.Reader, lowInclusive, highExclusive *saferith.Nat) (*saferith.Nat, error) {
 	max := new(saferith.Nat).Sub(highExclusive, lowInclusive, highExclusive.AnnouncedLen())
 	if max.Big().Cmp(big.NewInt(0)) == 0 {

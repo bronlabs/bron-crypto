@@ -198,13 +198,16 @@ func (s *ScalarGt) Cube() curves.Scalar {
 }
 
 func (s *ScalarGt) Add(rhs curves.Scalar) curves.Scalar {
+	if rhs == nil {
+		panic("rhs is nil")
+	}
 	r, ok := rhs.(*ScalarGt)
 	if ok {
 		return &ScalarGt{
 			Value: new(bls12381impl.Gt).Add(s.Value, r.Value),
 		}
 	} else {
-		return nil
+		panic("rhs is not in Gt")
 	}
 }
 
@@ -215,7 +218,7 @@ func (s *ScalarGt) Sub(rhs curves.Scalar) curves.Scalar {
 			Value: new(bls12381impl.Gt).Sub(s.Value, r.Value),
 		}
 	} else {
-		return nil
+		panic("rhs is not in Gt")
 	}
 }
 
@@ -226,7 +229,7 @@ func (s *ScalarGt) Mul(rhs curves.Scalar) curves.Scalar {
 			Value: new(bls12381impl.Gt).Add(s.Value, r.Value),
 		}
 	} else {
-		return nil
+		panic("rhs is not in Gt")
 	}
 }
 
@@ -241,14 +244,14 @@ func (s *ScalarGt) Div(rhs curves.Scalar) curves.Scalar {
 			Value: new(bls12381impl.Gt).Sub(s.Value, r.Value),
 		}
 	} else {
-		return nil
+		panic("rhs is not in Gt")
 	}
 }
 
 func (s *ScalarGt) Exp(k curves.Scalar) curves.Scalar {
 	exp, ok := k.(*ScalarGt)
 	if !ok {
-		return nil
+		panic("k is not in Gt")
 	}
 
 	res := s.One()

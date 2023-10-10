@@ -74,6 +74,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 		sid:                    sid,
 		identityKeyToSharingId: identityKeyToSharingId,
 		mySharingId:            mySharingId,
+		myShard:                myShard,
 		transcript:             transcript,
 		round:                  1,
 	}, nil

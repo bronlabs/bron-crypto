@@ -88,8 +88,8 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	signature, err := agg.Aggregate(aggregatorInput, message)
 	require.NoError(t, err)
 
-	err = bls.Verify(publicKey, signature, message, nil, scheme)
-	require.Error(t, err)
+	err = bls.Verify(publicKey, signature, message, nil, scheme, nil)
+	require.NoError(t, err)
 }
 
 func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKey, threshold, n int, randomSeed int64) map[types.IdentityHash]*boldyreva02.Shard[K] {

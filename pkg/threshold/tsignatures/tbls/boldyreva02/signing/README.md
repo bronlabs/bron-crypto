@@ -37,7 +37,6 @@ Unlike threshold ECDSA or Schnorr which can be made noninteractive by preprocess
 - UniqueSessionId
 - Message $m$ (given before the start of the 1st round)
 - Signature variant: Short keys or short signatures.
-- Rogue key prevention scheme: Basic, Message Augmentation or POP.
 
 **Output**:
 - Partial Signature (end of round 1)

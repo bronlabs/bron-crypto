@@ -2,6 +2,7 @@ package aggregation
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
@@ -46,8 +47,8 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares 
 	if cohortConfig.CipherSuite.Curve.Name() != (*new(K)).CurveName() {
 		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
 	}
-	if publicKeyShares == nil {
-		return errs.NewIsNil("public key shares are nil")
+	if err := publicKeyShares.Validate(cohortConfig); err != nil {
+		return errs.WrapInvalidArgument(err, "could not validate public key shares")
 	}
 	return nil
 }
@@ -81,7 +82,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 
 	sigma := signatureSubGroup.Point().Identity()
 
-	// step 2. 1
+	// step 2.1
 	for identityHash, psig := range partialSignatures {
 		if psig == nil {
 			return nil, errs.NewMissing("missing partial signature for %x", identityHash)
@@ -89,7 +90,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 		if psig.POP == nil {
 			return nil, errs.NewMissing("missing pop for %x", identityHash)
 		}
-		if psig.Sigma_i == nil {
+		if psig.SigmaI == nil {
 			return nil, errs.NewMissing("missing signature for %x", identityHash)
 		}
 		publicKeyShare, exists := a.publicKeyShares.SharesMap[identityHash]
@@ -100,7 +101,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 			Y: publicKeyShare,
 		}
 		// step 2.1.1 and 2.1.2
-		if err := bls.Verify(publicKeyShareAsPublicKey, psig.Sigma_i, message, psig.POP, bls.POP); err != nil {
+		if err := bls.Verify(publicKeyShareAsPublicKey, psig.SigmaI, message, psig.POP, bls.POP, getDst[S]()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identityHash, "could not verify partial signature")
 		}
 
@@ -110,7 +111,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
-		sigma = sigma.Add(psig.Sigma_i.Value.Mul(lambda_i))
+		sigma = sigma.Add(psig.SigmaI.Value.Mul(lambda_i))
 	}
 
 	sigmaPairable, ok := sigma.(curves.PairingPoint)
@@ -122,4 +123,14 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 	return &bls.Signature[S]{
 		Value: sigmaPairable,
 	}, nil
+}
+
+// we are overriding the default dst. We want a BASIC scheme with POP dst. Because we are generating and verifying pops,
+// but output a signature that does not have a pop.
+func getDst[S bls.SignatureSubGroup]() []byte {
+	pointInS := new(S)
+	if (*pointInS).CurveName() == bls12381.G1Name {
+		return []byte(bls.DstSignatureBasicInG1)
+	}
+	return []byte(bls.DstSignatureBasicInG2)
 }

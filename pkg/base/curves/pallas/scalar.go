@@ -139,7 +139,7 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 			value: new(fq.Fq).Add(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not a pallas scalar")
 	}
 }
 
@@ -150,7 +150,7 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 			value: new(fq.Fq).Sub(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not a pallas scalar")
 	}
 }
 
@@ -161,7 +161,7 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 			value: new(fq.Fq).Mul(s.value, r.value),
 		}
 	} else {
-		return nil
+		panic("rhs is not a pallas scalar")
 	}
 }
 
@@ -174,19 +174,19 @@ func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
 	if ok {
 		v, wasInverted := new(fq.Fq).Invert(r.value)
 		if !wasInverted {
-			return nil
+			panic("cannot invert rhs")
 		}
 		v.Mul(v, s.value)
 		return &Scalar{value: v}
 	} else {
-		return nil
+		panic("rhs is not a pallas scalar")
 	}
 }
 
 func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
 	exponent, ok := k.(*Scalar)
 	if !ok {
-		return nil
+		panic("k is not a pallas scalar")
 	}
 
 	value := new(fq.Fq).Exp(s.value, exponent.value)

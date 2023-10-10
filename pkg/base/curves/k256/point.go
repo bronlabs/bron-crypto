@@ -36,9 +36,8 @@ func (p *Point) Random(prng io.Reader) curves.Point {
 
 func (*Point) Hash(inputs ...[]byte) curves.Point {
 	value, err := secp256k1.PointNew().Hash(bytes.Join(inputs, nil), impl.EllipticPointHasherSha256())
-	// TODO: change hash to return an error also
 	if err != nil {
-		panic("cannot create Point from hash")
+		panic(err)
 	}
 
 	return &Point{Value: value}

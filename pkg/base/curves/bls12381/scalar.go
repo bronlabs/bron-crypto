@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
@@ -260,8 +261,9 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != 32 {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
+	reducedInput := base.NatFromBytes(input, r)
 	var seq [32]byte
-	copy(seq[:], bitstring.ReverseBytes(input))
+	copy(seq[:], bitstring.ReverseBytes(reducedInput.Bytes()))
 	value, err := bls12381impl.FqNew().SetBytes(&seq)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't set bytes")

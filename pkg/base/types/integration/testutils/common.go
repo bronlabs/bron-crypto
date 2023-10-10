@@ -3,7 +3,10 @@ package testutils
 import (
 	"bytes"
 	crand "crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
@@ -14,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -78,6 +81,29 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errors.Wrap(err, "could not verify schnorr signature")
 	}
+	return nil
+}
+
+type HexBytes []byte
+
+func (h *HexBytes) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	if s == "" {
+		*h = nil
+		return nil
+	}
+
+	hexStr := strings.TrimPrefix(s, "0x")
+
+	decoded, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return err
+	}
+	*h = decoded
 	return nil
 }
 

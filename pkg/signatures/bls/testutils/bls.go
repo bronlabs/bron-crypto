@@ -45,7 +45,7 @@ func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		return nil, nil, nil, errs.WrapFailed(err, "could not create signer")
 	}
 
-	signature, pop, err := signer.Sign(message)
+	signature, pop, err := signer.Sign(message, nil)
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "could not sign")
 	}
@@ -76,7 +76,7 @@ func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 
-	err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme)
+	err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme, nil)
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "could not verify signature")
 	}
@@ -93,7 +93,7 @@ func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		return nil, nil, nil, errs.WrapFailed(err, "could not create signer")
 	}
 
-	signature, pop, err := signer.Sign(message)
+	signature, pop, err := signer.Sign(message, nil)
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "could not sign")
 	}
@@ -105,7 +105,7 @@ func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 			return nil, nil, nil, errs.NewIsNil("pop is identity")
 		}
 		if !pop.Value.IsTorsionFree() {
-			return nil, nil, nil, errs.NewIsNil("pop is torsion free")
+			return nil, nil, nil, errs.NewIsNil("pop is not torsion free")
 		}
 		err = bls.PopVerify(privateKey.PublicKey, pop)
 		if err != nil {
@@ -124,7 +124,7 @@ func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 
-	err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme)
+	err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme, nil)
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "could not verify signature")
 	}

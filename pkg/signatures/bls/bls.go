@@ -1,6 +1,7 @@
 package bls
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -8,29 +9,29 @@ import (
 const (
 	// Domain separation tag for basic signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.1
-	blsSignatureBasicDstInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+	DstSignatureBasicInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 	// Domain separation tag for basic signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.2
-	blsSignatureAugDstInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_AUG_"
+	DstSignatureAugInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_AUG_"
 	// Domain separation tag for proof of possession signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
-	blsSignaturePopDstInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+	DstSignaturePopInG2 = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 	// Domain separation tag for proof of possession proofs
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
-	blsPopProofDstInG2 = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+	DstPopProofInG2 = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 	// Domain separation tag for basic signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.1
-	blsSignatureBasicDstInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
+	DstSignatureBasicInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
 	// Domain separation tag for basic signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.2
-	blsSignatureAugDstInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_"
+	DstSignatureAugInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_"
 	// Domain separation tag for proof of possession signatures
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
-	blsSignaturePopDstInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
+	DstSignaturePopInG1 = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
 	// Domain separation tag for proof of possession proofs
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
-	blsPopProofDstInG1 = "BLS_POP_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
+	DstPopProofInG1 = "BLS_POP_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
 )
 
 type RogueKeyPrevention int
@@ -67,7 +68,7 @@ func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], sc
 // Basic: identical to core sign.
 // MessageAugmentation: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
-func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S], error) {
+func (s *Signer[K, S]) Sign(message, tag []byte) (*Signature[S], *ProofOfPossession[S], error) {
 	var err error
 	if len(message) == 0 {
 		return nil, nil, errs.NewIsNil("message cannot be nil")
@@ -98,9 +99,14 @@ func (s *Signer[K, S]) Sign(message []byte) (*Signature[S], *ProofOfPossession[S
 	default:
 		return nil, nil, errs.NewInvalidType("rogue key prevention scheme %d is not supported", s.Scheme)
 	}
-	dst, err := getDst(s.Scheme, s.PrivateKey.PublicKey.inG1())
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not get domain separation tag")
+	var dst string
+	if len(tag) == 0 {
+		dst, err = getDst(s.Scheme, s.PrivateKey.PublicKey.inG1())
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not get domain separation tag")
+		}
+	} else {
+		dst = string(tag)
 	}
 
 	point, err := coreSign[K, S](s.PrivateKey, message, dst)
@@ -132,7 +138,7 @@ func (s *Signer[K, S]) Validate() error {
 // Basic: identical to core sign.
 // Verify: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-verify
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
-func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signature *Signature[S], message []byte, pop *ProofOfPossession[S], scheme RogueKeyPrevention) error {
+func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signature *Signature[S], message []byte, pop *ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
 	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
@@ -170,9 +176,14 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
 	}
 
-	dst, err := getDst(scheme, publicKey.inG1())
-	if err != nil {
-		return errs.WrapFailed(err, "could not get domain separation tag")
+	var dst string
+	if len(tag) == 0 {
+		dst, err = getDst(scheme, publicKey.inG1())
+		if err != nil {
+			return errs.WrapFailed(err, "could not get domain separation tag")
+		}
+	} else {
+		dst = string(tag)
 	}
 
 	p, ok := signature.Value.(S)
@@ -189,7 +200,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 // Basic: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify
 // MessageAugmentation: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
-func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSiganture *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention) error {
+func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSiganture *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
 	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
@@ -239,12 +250,24 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 	default:
 		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
 	}
+
+	var dst string
+	var err error
+	if len(tag) == 0 {
+		dst, err = getDst(scheme, (*new(K)).CurveName() == bls12381.G1Name)
+		if err != nil {
+			return errs.WrapFailed(err, "could not get domain separation tag")
+		}
+	} else {
+		dst = string(tag)
+	}
+
 	sigValue, ok := aggregatedSiganture.Value.(S)
 	if !ok {
 		return errs.NewInvalidType("this should never happen")
 	}
 	// step 3.1.1.2
-	if err := coreAggregateVerify(publicKeys, messages, sigValue, scheme); err != nil {
+	if err := coreAggregateVerify(publicKeys, messages, sigValue, dst); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid signature bundle")
 	}
 	return nil

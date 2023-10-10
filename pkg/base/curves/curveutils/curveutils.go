@@ -61,3 +61,26 @@ func GetCurveByName(name string) (curves.Curve, error) {
 		return nil, errs.NewInvalidCurve("curve with name %s is not supported", name)
 	}
 }
+
+func AllOnTheSameCurve(xs []curves.Scalar, Xs []curves.Point) bool {
+	var curve curves.Curve
+	if len(xs) != 0 {
+		for i := 0; i < len(xs); i++ {
+			if xs[0].CurveName() != xs[i].CurveName() {
+				return false
+			}
+		}
+		curve = xs[0].Curve()
+	}
+	if len(Xs) != 0 {
+		for i := 0; i < len(Xs); i++ {
+			if Xs[0].CurveName() != Xs[i].CurveName() {
+				return false
+			}
+		}
+		if Xs[0].CurveName() != curve.Name() {
+			return false
+		}
+	}
+	return true
+}

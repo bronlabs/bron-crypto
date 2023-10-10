@@ -1,14 +1,21 @@
 package testutils
 
 import (
+	crand "crypto/rand"
+	"crypto/sha256"
+
 	"github.com/pkg/errors"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
 )
 
 func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[types.IdentityHash]*boldyreva02.Shard[K]) (participants []*signing.Cosigner[K, S], err error) {
@@ -47,4 +54,64 @@ func MapPartialSignatures[S bls.SignatureSubGroup](identities []integration.Iden
 		result[identity.Hash()] = partialSignatures[i]
 	}
 	return result
+}
+
+func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int) error {
+	hashFunc := sha256.New
+	message := []byte("messi > ronaldo")
+	sid := []byte("sessionId")
+
+	pointInK := new(K)
+	keysSubGroup := (*pointInK).Curve()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: keysSubGroup,
+		Hash:  hashFunc,
+	}
+
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	if err != nil {
+		return err
+	}
+
+	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	if err != nil {
+		return err
+	}
+
+	shards, err := trusted_dealer.Keygen[K](cohort, crand.Reader)
+	if err != nil {
+		return err
+	}
+
+	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
+	publicKey := publicKeyShares.PublicKey
+
+	participants, err := MakeSigningParticipants[K, S](sid, cohort, identities, shards)
+	if err != nil {
+		return err
+	}
+
+	partialSignatures, err := ProducePartialSignature(participants, message)
+	if err != nil {
+		return err
+	}
+
+	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+
+	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, cohort)
+	if err != nil {
+		return err
+	}
+
+	signature, err := agg.Aggregate(aggregatorInput, message)
+	if err != nil {
+		return err
+	}
+
+	err = bls.Verify(publicKey, signature, message, nil, bls.Basic, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

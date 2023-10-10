@@ -39,10 +39,6 @@ type Prover struct {
 	_ types.Incomparable
 }
 
-func (*Prover) IsUC() bool {
-	return true
-}
-
 type Proof struct {
 	A [RBytes]curves.Point
 	E [RBytes]curves.Scalar
@@ -59,14 +55,15 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 		transcript:      transcript,
 		prng:            prng,
 	}
-	if err := prover.Validate(); err != nil {
+	if err := prover.validate(); err != nil {
 		return nil, errs.WrapFailed(err, "invalid prover")
 	}
+	prover.transcript.AppendMessages("Randomised Fischlin proof", prover.uniqueSessionId)
 	return prover, nil
 }
 
 // Prove proves knowledge of dlog of the statement, using Fischlin.
-func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
+func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (*Proof, Statement, error) {
 	curve := p.BasePoint.Curve()
 	statement := p.BasePoint.Mul(x)
 	p.transcript.AppendPoints("statement", statement)
@@ -99,7 +96,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 			// step P.3.3
 			z_i := a[i].Add(x.Mul(e_i))
 			// step P.3.4
-			hashResult, err := h(A, i, e_i, z_i, p.uniqueSessionId)
+			hashResult, err := h(p.BasePoint, A, i, e_i, z_i, p.uniqueSessionId, extraChellengeElements...)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "could not do the PoW hash")
 			}
@@ -121,7 +118,7 @@ func (p *Prover) Prove(x curves.Scalar) (*Proof, Statement, error) {
 	}, statement, nil
 }
 
-func (p *Prover) Validate() error {
+func (p *Prover) validate() error {
 	if p == nil {
 		return errs.NewIsNil("prover is nil")
 	}
@@ -140,12 +137,11 @@ func (p *Prover) Validate() error {
 	if len(p.uniqueSessionId) == 0 {
 		return errs.NewInvalidArgument("length of session id is 0")
 	}
-	p.transcript.AppendMessages("Randomised Fischlin proof", p.uniqueSessionId)
 	return nil
 }
 
 // Verify verifiers the UC-Secure PoK of dlog of `statement` through Fischlin transform.
-func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte) error {
+func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, extraChallengeElements ...[]byte) error {
 	if basePoint == nil {
 		return errs.NewInvalidArgument("basepoint is nil")
 	}
@@ -167,7 +163,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 		e_i := proof.E[i]
 		z_i := proof.Z[i]
 		// step V.2.1
-		hashResult, err := h(proof.A, i, e_i, z_i, uniqueSessionId)
+		hashResult, err := h(basePoint, proof.A, i, e_i, z_i, uniqueSessionId, extraChallengeElements...)
 		if err != nil {
 			return errs.WrapFailed(err, "could not produce the hash result")
 		}
@@ -187,16 +183,21 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 }
 
 // h is the hash used in the PoW.
-func h(A [RBytes]curves.Point, i int, e, z curves.Scalar, sid []byte) ([LBytes]byte, error) {
-	message := [RBytes + 4][]byte{}
+func h(basepoint curves.Point, A [RBytes]curves.Point, i int, e, z curves.Scalar, sid []byte, extraChellengeElements ...[]byte) ([LBytes]byte, error) {
+	message := make([][]byte, RBytes+5+len(extraChellengeElements))
+	message[0] = basepoint.ToAffineCompressed()
 	for j := 0; j < RBytes; j++ {
-		message[j] = A[j].ToAffineCompressed()
+		message[j+1] = A[j].ToAffineCompressed()
 	}
-	message[RBytes] = []byte{byte(i)}
-	message[RBytes+1] = e.Bytes()
-	message[RBytes+2] = z.Bytes()
-	message[RBytes+3] = sid
-	hashed, err := hashing.Hash(sha3.New256, message[:]...)
+	message[RBytes+1] = []byte{byte(i)}
+	message[RBytes+2] = e.Bytes()
+	message[RBytes+3] = z.Bytes()
+	message[RBytes+4] = sid
+	for j := 0; j < len(extraChellengeElements); j++ {
+		message[RBytes+5+j] = extraChellengeElements[j]
+	}
+
+	hashed, err := hashing.Hash(sha3.New256, message...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
 	}

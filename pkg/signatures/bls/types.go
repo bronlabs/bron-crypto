@@ -117,6 +117,14 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 		Value:  value,
 		Point_: *point,
 	}
+	Y, ok := sk.d.Curve().ScalarBaseMult(sk.d).(curves.PairingPoint)
+	if !ok {
+		return errs.NewInvalidType("could not convert public key to pairing point")
+	}
+	sk.PublicKey = &PublicKey[K]{
+		Y: Y,
+	}
+
 	return nil
 }
 
@@ -135,15 +143,17 @@ type PublicKey[K KeySubGroup] struct {
 // Note that if the RogueKeyPreventionScheme is POP, this public key must be accompanied with a proof of possession.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keyvalidate
 func (pk *PublicKey[K]) Validate() error {
+	if pk == nil {
+		return errs.NewIsNil("public key is nil")
+	}
 	if pk.Y == nil {
 		return errs.NewIsNil("public key value is nil")
 	}
 	if pk.Y.IsIdentity() {
 		return errs.NewIsIdentity("public key value is identity")
 	}
-	// TODO: why this works then?
-	if pk.Y.ClearCofactor().IsIdentity() {
-		return errs.NewIsIdentity("public key value is identity after clearing cofactor")
+	if pk.Y.IsSmallOrder() {
+		return errs.NewIsIdentity("public key value is small order")
 	}
 	if !pk.Y.IsTorsionFree() {
 		return errs.NewVerificationFailed("public key is not torsion free")
@@ -178,7 +188,6 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	if len(data) != size {
 		return errs.NewInvalidLength("public key must be %d bytes", size)
 	}
-	// var blob [PublicKeySize]byte
 	blob := make([]byte, size)
 	copy(blob, data)
 	t := new(K)
@@ -197,8 +206,8 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (pk *PublicKey[K]) inG1() bool {
-	return pk.Y.CurveName() == bls12381.G1Name
+func (*PublicKey[K]) inG1() bool {
+	return (*new(K)).CurveName() == bls12381.G1Name
 }
 
 type SignatureSubGroup = KeySubGroup
@@ -249,7 +258,7 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 		return errs.WrapSerializationError(err, "couldn't deserialize data in a point of G1")
 	}
 	if p.IsIdentity() {
-		return errs.NewIsZero("public keys cannot be zero")
+		return errs.NewIsZero("signatures cannot be zero")
 	}
 
 	var ok bool
@@ -260,8 +269,8 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (sig *Signature[S]) inG1() bool {
-	return sig.Value.CurveName() == bls12381.G1Name
+func (*Signature[S]) inG1() bool {
+	return (*new(S)).CurveName() == bls12381.G1Name
 }
 
 // type aliasing of generic types is not supported. So, sitll have to copy identical stuff.

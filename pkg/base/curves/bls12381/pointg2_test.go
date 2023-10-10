@@ -2,13 +2,34 @@ package bls12381_test
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	itu "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 )
+
+type pointG2 struct {
+	Input struct {
+		Point itu.HexBytes `json:"signature"`
+	} `json:"input"`
+	Output bool `json:"output"`
+}
+
+type hashedPointG2 struct {
+	Input struct {
+		Message string `json:"msg"`
+	} `json:"input"`
+	Output struct {
+		X itu.HexBytes `json:"x"`
+		Y itu.HexBytes `json:"y"`
+	} `json:"output"`
+}
 
 func Test_HashToPointBLS12381G2(t *testing.T) {
 	t.Parallel()
@@ -54,6 +75,80 @@ func Test_HashToPointBLS12381G2(t *testing.T) {
 			pBytesExpected, err := hex.DecodeString(theTest.x + theTest.y)
 			require.NoError(t, err)
 			require.Equal(t, pBytes, pBytesExpected)
+		})
+	}
+}
+
+func testHashToG2(t *testing.T, vector *hashedPointG2) {
+	t.Helper()
+
+	actual := bls12381.NewG2().Point().Hash([]byte(vector.Input.Message))
+	require.EqualValues(t, actual.X().Bytes(), vector.Output.X, "X coordinate")
+	require.EqualValues(t, actual.Y().Bytes(), vector.Output.Y, "Y coordinate")
+}
+
+// these test vectors are from the eth implementation
+func TestHashToG2Vectors(t *testing.T) {
+	t.Parallel()
+	hashedDir := filepath.Join(dir, "hash_to_G2")
+
+	files, err := os.ReadDir(hashedDir)
+	require.NoError(t, err)
+
+	for _, file := range files {
+		content, err := os.ReadFile(filepath.Join(hashedDir, file.Name()))
+		require.NoError(t, err)
+
+		var vector *hashedPointG2
+		json.Unmarshal(content, &vector)
+
+		require.NotNil(t, vector)
+		require.NotNil(t, vector.Input)
+		require.NotNil(t, vector.Output)
+
+		t.Run(file.Name(), func(t *testing.T) {
+			t.Parallel()
+			testHashToG2(t, vector)
+		})
+	}
+}
+
+func testDeserializationG2(t *testing.T, vector *pointG2) {
+	t.Helper()
+
+	x, err := bls12381.NewG2().Point().FromAffineCompressed(vector.Input.Point)
+	if vector.Output {
+		require.NoError(t, err)
+	} else {
+		if x != nil && x.IsIdentity() {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+		}
+	}
+}
+
+// these test vectors are from the eth implementation
+func TestDeserializationTestVectorsG2(t *testing.T) {
+	t.Parallel()
+	signDir := filepath.Join(dir, "deserialization_G2")
+
+	files, err := os.ReadDir(signDir)
+	require.NoError(t, err)
+
+	for _, file := range files {
+		content, err := os.ReadFile(filepath.Join(signDir, file.Name()))
+		require.NoError(t, err)
+
+		var vector *pointG2
+		json.Unmarshal(content, &vector)
+
+		require.NotNil(t, vector)
+		require.NotNil(t, vector.Input)
+
+		t.Run(file.Name(), func(t *testing.T) {
+			t.Parallel()
+			testDeserializationG2(t, vector)
 		})
 	}
 }

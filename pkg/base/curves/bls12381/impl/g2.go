@@ -810,6 +810,9 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	}
 
 	if infinityFlag == 1 {
+		if sortFlag == 1 {
+			return nil, errs.NewFailed("infinity flag and sort flag are both set")
+		}
 		return g2.Identity(), nil
 	}
 
