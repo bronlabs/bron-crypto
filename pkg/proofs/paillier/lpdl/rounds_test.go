@@ -19,6 +19,9 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
@@ -44,6 +47,9 @@ func Test_HappyPath(t *testing.T) {
 // xEncrypted is not a dlog of Q
 func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
@@ -73,6 +79,9 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 // xEncrypted is not encryption of x
 func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
@@ -97,6 +106,9 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 
 func Test_FailOnOutOfRange(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("Skipping test in short mode")
+	}
 
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)

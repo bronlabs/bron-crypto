@@ -9,5 +9,5 @@ COPY . .
 
 RUN go build ./...
 
-RUN golangci-lint run
+RUN make lint
 

@@ -38,7 +38,7 @@ githooks:
 .PHONY: lint
 lint:
 	${GO} vet ./...
-	golangci-lint run
+	golangci-lint run --timeout=60m
 
 .PHONY: lint-fix
 lint-fix:

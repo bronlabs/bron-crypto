@@ -45,6 +45,9 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	require.NoError(t, err)
 
 	combinations := combin.Combinations(n, threshold)
+	if testing.Short() {
+		combinations = combinations[:1]
+	}
 	for _, combinationIndices := range combinations {
 		identities := make([]integration.IdentityKey, threshold)
 		selectedShards := make([]*dkls23.Shard, threshold)
