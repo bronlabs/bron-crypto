@@ -90,6 +90,7 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
 	}
 
+	// TODO(Alberto): Hash2Field
 	result.C, err = curve.Scalar().SetBytes(digest)
 	if err != nil {
 		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")

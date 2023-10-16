@@ -6,7 +6,6 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
 // the base field of all curves need 4 limbs, but edwards25519 which needs 5.
@@ -14,7 +13,7 @@ type FieldValue = []uint64
 
 const (
 	FieldBytes     = constants.ScalarBytes
-	WideFieldBytes = impl.WideFieldBytes
+	WideFieldBytes = constants.WideFieldBytes
 )
 
 type FieldProfile interface {

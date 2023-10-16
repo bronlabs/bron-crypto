@@ -5,41 +5,88 @@ import (
 	"hash"
 
 	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/cronokirby/saferith"
 )
 
 // OversizeDstSalt is the salt used to hash a dst over MaxDstLen.
 var OversizeDstSalt = []byte("H2C-OVERSIZE-DST-")
 
-// MaxDstLen the max size for dst in hash to curve.
-const MaxDstLen = 255
+const (
+	// DigestScalarBytes (`L` in rfc9380) is bytestring length needed for safe hash_to_field conversion, avoiding bias when reduced.
+	DigestFieldBytes = constants.ScalarBytes + constants.ComputationalSecurityBytes
 
-func getDomainXmd(h hash.Hash, domain []byte) []byte {
-	var out []byte
-	if len(domain) > MaxDstLen {
-		h.Reset()
-		_, _ = h.Write(OversizeDstSalt)
-		_, _ = h.Write(domain)
-		out = h.Sum(nil)
-	} else {
-		out = domain
+	// MaxDstLen the max size for dst in hash to curve.
+	MaxDstLen = 255
+)
+
+// HashToField
+func HashToField(curve curves.Curve, h *EllipticCurveHasher, msg, dst []byte, count int) (u [][]curves.FieldElement, err error) {
+	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.3
+
+	// 1. Set len_in_bytes = count * m * L
+	m := int(curve.Profile().Field().ExtensionDegree().Uint64())
+	lenInBytes := count * m * DigestFieldBytes
+
+	// 2. Expand the given message, salting with dst uniform_bytes = expand_message(msg, DST, len_in_bytes)
+	var uniformBytes []byte
+	if h.hashType == XMD {
+		uniformBytes = ExpandMsgXmd(h, msg, dst, lenInBytes)
+	} else { // XOF
+		uniformBytes = ExpandMsgXof(h, msg, dst, lenInBytes)
 	}
-	return out
+	u = make([][]curves.FieldElement, count)
+
+	// 3. for i in (0, ..., count - 1):
+	for i := 0; i < count; i++ {
+		e := make([]*saferith.Nat, m)
+		// 4. for j in (0, ..., m - 1):
+		for j := 0; j < m; j++ {
+			// 5. elm_offset = L * (j + i * m)
+			elmOffset := DigestFieldBytes * (j + i*m)
+			// 6. tv = substr(uniform_bytes, elm_offset, L)
+			tv := uniformBytes[elmOffset : elmOffset+DigestFieldBytes]
+			// 7. e_j = OS2IP(tv) mod p
+			tvNat := new(saferith.Nat).SetBytes(tv)
+			e[j] = tvNat.Mod(tvNat, curve.Profile().Field().Order())
+		}
+		// step 8
+		// u[i] = curve.Scalar().SetNat()
+	}
+	// step 9
+	return u, nil
 }
 
-func getDomainXof(h sha3.ShakeHash, domain []byte) []byte {
-	var out []byte
-	if len(domain) > MaxDstLen {
-		h.Reset()
-		_, _ = h.Write(OversizeDstSalt)
-		_, _ = h.Write(domain)
-		var tv [64]byte
-		_, _ = h.Read(tv[:])
-		out = tv[:]
-	} else {
-		out = domain
-	}
-	return out
-}
+// Parameters:
+// - DST, a domain separation tag (see Section 3.1).
+// - F, a finite field of characteristic p and order q = p^m.
+// - p, the characteristic of F (see immediately above).
+// - m, the extension degree of F, m >= 1 (see immediately above).
+// - L = ceil((ceil(log2(p)) + k) / 8), where k is the security
+//   parameter of the suite (e.g., k = 128).
+// - expand_message, a function that expands a byte string and
+//   domain separation tag into a uniformly random byte string
+//   (see Section 5.3).
+
+// Input:
+// - msg, a byte string containing the message to hash.
+// - count, the number of elements of F to output.
+
+// Output:
+// - (u_0, ..., u_(count - 1)), a list of field elements.
+
+// Steps:
+// 1. len_in_bytes = count * m * L
+// 2. uniform_bytes = expand_message(msg, DST, len_in_bytes)
+// 3. for i in (0, ..., count - 1):
+// 4.   for j in (0, ..., m - 1):
+// 5.     elm_offset = L * (j + i * m)
+// 6.     tv = substr(uniform_bytes, elm_offset, L)
+// 7.     e_j = OS2IP(tv) mod p
+// 8.   u_i = (e_0, ..., e_(m - 1))
+// 9. return (u_0, ..., u_(count - 1))
 
 // ExpandMsgXmd expands the msg with the domain to output a byte array
 // with outLen in size using a fixed size hash.
@@ -102,5 +149,33 @@ func ExpandMsgXof(h *EllipticCurveHasher, msg, domain []byte, outLen int) []byte
 	_, _ = h.xof.Write([]byte{domainLen})
 	out := make([]byte, outLen)
 	_, _ = h.xof.Read(out)
+	return out
+}
+
+func getDomainXmd(h hash.Hash, domain []byte) []byte {
+	var out []byte
+	if len(domain) > MaxDstLen {
+		h.Reset()
+		_, _ = h.Write(OversizeDstSalt)
+		_, _ = h.Write(domain)
+		out = h.Sum(nil)
+	} else {
+		out = domain
+	}
+	return out
+}
+
+func getDomainXof(h sha3.ShakeHash, domain []byte) []byte {
+	var out []byte
+	if len(domain) > MaxDstLen {
+		h.Reset()
+		_, _ = h.Write(OversizeDstSalt)
+		_, _ = h.Write(domain)
+		var tv [64]byte
+		_, _ = h.Read(tv[:])
+		out = tv[:]
+	} else {
+		out = domain
+	}
 	return out
 }

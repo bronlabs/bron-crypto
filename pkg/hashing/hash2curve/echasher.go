@@ -21,7 +21,7 @@ const (
 	// XOF - use ExpandMsgXof.
 	XOF
 )
-
+	
 func (t EllipticCurveHashType) String() string {
 	switch t {
 	case XMD:
@@ -47,8 +47,8 @@ const (
 	SHAKE256
 )
 
-func (n EllipticCurveHashName) String() string {
-	switch n {
+func (name EllipticCurveHashName) String() string {
+	switch name {
 	case SHA256:
 		return "SHA-256"
 	case SHA512:
@@ -69,8 +69,7 @@ func (n EllipticCurveHashName) String() string {
 	return "unknown"
 }
 
-// EllipticCurveHasher is the type of hashing methods for
-// hashing byte sequences to curve point.
+// EllipticCurveHasher is the type of hashing methods for hashing byte sequences to curve point.
 type EllipticCurveHasher struct {
 	name     EllipticCurveHashName
 	hashType EllipticCurveHashType

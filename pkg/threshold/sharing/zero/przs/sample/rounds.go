@@ -13,6 +13,7 @@ func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
 		if _, err := p.Prngs[sharingId].Read(zeroShareBytes); err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
 		}
+		// TODO(Alberto): Hash2Field
 		sample, err := p.Curve.Scalar().SetBytes(zeroShareBytes)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not set bytes from prng")

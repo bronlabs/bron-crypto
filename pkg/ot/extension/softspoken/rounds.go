@@ -228,6 +228,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 					idxOTe = l
 				}
 				// z_A_j = ECP(v_0_j)
+				// TODO(Alberto) Hash2Field
 				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().SetBytes(
 					oTeSenderOutput[0][idxOTe][i][j][:])
 				if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -60,9 +61,9 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 	}
 	s := k.suite.Curve.Scalar().Zero()
 	switch len(s.Bytes()) {
-	case curves.WideFieldBytes:
+	case constants.WideFieldBytes:
 		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
-	case curves.FieldBytes:
+	case constants.ScalarBytes:
 		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
 	default:
 		err = errs.NewSerializationError("cannot deserialize signature")
