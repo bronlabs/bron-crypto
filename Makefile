@@ -81,37 +81,37 @@ test-package-%: ## for example `make test-package-hashing` to run all test under
 .PHONY: fuzz-test-%
 fuzz-test-%:
 	chmod +x scripts/run_fuzz.sh
-	scripts/./run_fuzz.sh ${*}
+	./scripts/run_fuzz.sh ${*}
 
 .PHONY: profile-test-%
 profile-test-%:
 	chmod +x scripts/run_profile.sh
-	scripts/./run_profile.sh ${*}
+	./scripts/run_profile.sh ${*}
 
 .PHONY: benchmark-test-%
 benchmark-test-%:
 	chmod +x scripts/run_benchmark.sh
-	scripts/./run_benchmark.sh ${*}
+	./scripts/run_benchmark.sh ${*}
 
 .PHONY: cte-test-%
 cte-test-%:
 	chmod +x scripts/run_cte.sh
-	scripts/./run_cte.sh ${*}
+	./scripts/run_cte.sh ${*}
 
 .PHONY: unittest-test-%
 unit-test-%:
 	chmod +x scripts/run_unittest.sh
-	scripts/./run_unittest.sh ${*}
+	./scripts/run_unittest.sh ${*}
 
 .PHONY: short-unittest-test-%
 short-unit-test-%:
 	chmod +x scripts/run_unittest.sh
-	scripts/./run_unittest.sh ${*} -test.short
+	./scripts/run_unittest.sh ${*} -test.short
 
 .PHONY: deflake-test-%
 deflake-test-%:
 	chmod +x scripts/run_deflake.sh
-	scripts/./run_deflake.sh ${*}
+	./scripts/run_deflake.sh ${*}
 
 .PHONY: test-nightly
 test-nightly:

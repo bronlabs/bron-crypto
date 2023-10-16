@@ -1,6 +1,4 @@
-#!/bin/bash
-
-set -x
+#!/bin/sh -x
 
 packageName=$1
 if [[ -z $packageName ]]; then
