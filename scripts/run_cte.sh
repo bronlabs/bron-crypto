@@ -6,7 +6,7 @@ if [[ -z $packageName ]]; then
     exit 1
 fi
 
-files=$(grep -r --include='**_test.go' --files-with-matches 'Test_MeasureConstantTime_' .)
+files=$(find . -type f -print | grep '_test.go' | xargs grep -l 'Test_MeasureConstantTime_')
 COUNTER=0
 
 for file in ${files}

@@ -6,7 +6,7 @@ if [[ -z $packageName ]]; then
     exit 1
 fi
 
-files=$(grep -r --include='**_test.go' --files-with-matches 'TestRunProfile' .)
+files=$(find . -type f -print | grep '_test.go' | xargs grep -l 'TestRunProfile')
 COUNTER=0
 
 for file in ${files}
