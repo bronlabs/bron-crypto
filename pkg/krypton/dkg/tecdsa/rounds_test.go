@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/krypton/dkg/tecdsa/testutils"
 )
 
@@ -32,9 +32,9 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeParticipants(cohortConfig, identities, nil)

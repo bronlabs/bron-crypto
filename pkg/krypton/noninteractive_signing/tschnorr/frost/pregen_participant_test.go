@@ -5,13 +5,13 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
@@ -37,7 +37,7 @@ func (k *mockedIdentityKey) Sign(message []byte) []byte {
 }
 
 func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
+	return errs.NewMissing("not implemented")
 }
 
 func Test_CanInitialize(t *testing.T) {

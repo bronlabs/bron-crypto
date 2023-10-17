@@ -67,7 +67,7 @@ type Output struct {
 func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
 	err := validateInputs(threshold, total, generator)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidArgument(err, "invalid inputs to pedersen VSS")
 	}
 
 	return &Dealer{Threshold: threshold, Total: total, Curve: generator.Curve(), Generator: generator}, nil

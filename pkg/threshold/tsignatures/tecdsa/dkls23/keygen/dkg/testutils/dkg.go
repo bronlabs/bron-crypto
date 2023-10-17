@@ -1,19 +1,19 @@
 package testutils
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"hash"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
-func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identities []integration.IdentityKey, sid []byte) ([]integration.IdentityKey, *integration.CohortConfig, []*dkg.Participant, []*dkls23.Shard, error) {
+func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities []integration.IdentityKey, sid []byte) ([]integration.IdentityKey, *integration.CohortConfig, []*dkg.Participant, []*dkls23.Shard, error) {
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  h,
@@ -21,24 +21,24 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 
 	var err error
 	if identities == nil {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, n)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, n)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct test identities")
 		}
 	}
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct cohort protocol")
 	}
 
 	participants, err := testutils.MakeDkgParticipants(curve, cohortConfig, identities, nil, sid)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct participants")
 	}
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 1")
 	}
 	for _, out := range r1OutsU {
 		if len(out) != cohortConfig.Protocol.TotalParties-1 {
@@ -46,10 +46,10 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		}
 	}
 
-	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsB, r2OutsU, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 2")
 	}
 	for _, out := range r2OutsU {
 		if len(out) != cohortConfig.Protocol.TotalParties-1 {
@@ -57,10 +57,10 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		}
 	}
 
-	r3InsB, r3InsU := testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	r3InsB, r3InsU := integration_testutils.MapO2I(participants, r2OutsB, r2OutsU)
 	r3OutsU, err := testutils.DoDkgRound3(participants, r3InsB, r3InsU)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
 	}
 	for _, out := range r3OutsU {
 		if len(out) != cohortConfig.Protocol.TotalParties-1 {
@@ -68,10 +68,10 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		}
 	}
 
-	r4InsU := testutils.MapDkgRound3OutputsToRound4Inputs(participants, r3OutsU)
+	r4InsU := integration_testutils.MapUnicastO2I(participants, r3OutsU)
 	r4OutsU, err := testutils.DoDkgRound4(participants, r4InsU)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 4")
 	}
 	for _, out := range r4OutsU {
 		if len(out) != cohortConfig.Protocol.TotalParties-1 {
@@ -79,10 +79,10 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		}
 	}
 
-	r5InsU := testutils.MapDkgRound4OutputsToRound5Inputs(participants, r4OutsU)
+	r5InsU := integration_testutils.MapUnicastO2I(participants, r4OutsU)
 	r5OutsU, err := testutils.DoDkgRound5(participants, r5InsU)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 5")
 	}
 	for _, out := range r5OutsU {
 		if len(out) != cohortConfig.Protocol.TotalParties-1 {
@@ -90,7 +90,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold int, n int, identi
 		}
 	}
 
-	r6InsU := testutils.MapDkgRound5OutputsToRound6Inputs(participants, r5OutsU)
+	r6InsU := integration_testutils.MapUnicastO2I(participants, r5OutsU)
 	shards, err := testutils.DoDkgRound6(participants, r6InsU)
-	return identities, cohortConfig, participants, shards, err
+	return identities, cohortConfig, participants, shards, errs.WrapFailed(err, "could not run DKG round 6")
 }

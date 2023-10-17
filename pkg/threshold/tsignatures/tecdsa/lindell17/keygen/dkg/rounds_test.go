@@ -5,27 +5,27 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	gennaro_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	lindell17_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping Lindell 2017 DKG tests.")
 	}
-	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: k256.New(),
@@ -36,7 +36,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
@@ -48,13 +48,13 @@ func Test_HappyPath(t *testing.T) {
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
-	r2InsB, r2InsU := gennaro_dkg_testutils.MapDkgRound1OutputsToRound2Inputs(gennaroParticipants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(gennaroParticipants, r1OutsB, r1OutsU)
 	r2Outs, err := gennaro_dkg_testutils.DoDkgRound2(gennaroParticipants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
-	r3Ins := gennaro_dkg_testutils.MapDkgRound2OutputsToRound3Inputs(gennaroParticipants, r2Outs)
+	r3Ins := integration_testutils.MapBroadcastO2I(gennaroParticipants, r2Outs)
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_testutils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
@@ -69,31 +69,31 @@ func Test_HappyPath(t *testing.T) {
 	r1o, err := lindell17_dkg_testutils.DoDkgRound1(lindellParticipants)
 	require.NoError(t, err)
 
-	r2i := lindell17_dkg_testutils.MapDkgRound1OutputsToRound2Inputs(lindellParticipants, r1o)
+	r2i := integration_testutils.MapBroadcastO2I(lindellParticipants, r1o)
 	r2o, err := lindell17_dkg_testutils.DoDkgRound2(lindellParticipants, r2i)
 	require.NoError(t, err)
 
-	r3i := lindell17_dkg_testutils.MapDkgRound2OutputsToRound3Inputs(lindellParticipants, r2o)
+	r3i := integration_testutils.MapBroadcastO2I(lindellParticipants, r2o)
 	r3o, err := lindell17_dkg_testutils.DoDkgRound3(lindellParticipants, r3i)
 	require.NoError(t, err)
 
-	r4i := lindell17_dkg_testutils.MapDkgRound3OutputsToRound4Inputs(lindellParticipants, r3o)
+	r4i := integration_testutils.MapBroadcastO2I(lindellParticipants, r3o)
 	r4o, err := lindell17_dkg_testutils.DoDkgRound4(lindellParticipants, r4i)
 	require.NoError(t, err)
 
-	r5i := lindell17_dkg_testutils.MapDkgRound4OutputsToRound5Inputs(lindellParticipants, r4o)
+	r5i := integration_testutils.MapUnicastO2I(lindellParticipants, r4o)
 	r5o, err := lindell17_dkg_testutils.DoDkgRound5(lindellParticipants, r5i)
 	require.NoError(t, err)
 
-	r6i := lindell17_dkg_testutils.MapDkgRound5OutputsToRound6Inputs(lindellParticipants, r5o)
+	r6i := integration_testutils.MapUnicastO2I(lindellParticipants, r5o)
 	r6o, err := lindell17_dkg_testutils.DoDkgRound6(lindellParticipants, r6i)
 	require.NoError(t, err)
 
-	r7i := lindell17_dkg_testutils.MapDkgRound6OutputsToRound7Inputs(lindellParticipants, r6o)
+	r7i := integration_testutils.MapUnicastO2I(lindellParticipants, r6o)
 	r7o, err := lindell17_dkg_testutils.DoDkgRound7(lindellParticipants, r7i)
 	require.NoError(t, err)
 
-	r8i := lindell17_dkg_testutils.MapDkgRound7OutputsToRound8Inputs(lindellParticipants, r7o)
+	r8i := integration_testutils.MapUnicastO2I(lindellParticipants, r7o)
 	shards, err := lindell17_dkg_testutils.DoDkgRound8(lindellParticipants, r8i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
@@ -146,6 +146,7 @@ func Test_HappyPath(t *testing.T) {
 	})
 
 	t.Run("cKey is encryption of share", func(t *testing.T) {
+		t.Parallel()
 		for i := 0; i < len(shards); i++ {
 			for j := 0; j < len(shards); j++ {
 				if i != j {

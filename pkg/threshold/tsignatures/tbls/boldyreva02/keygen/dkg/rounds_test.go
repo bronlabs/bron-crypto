@@ -4,23 +4,22 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/stretchr/testify/require"
 )
-
 
 func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	t.Helper()
@@ -39,12 +38,12 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 		inG1s[i] = inG1
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, nil)
@@ -56,10 +55,11 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 		require.Len(t, out, cohortConfig.Participants.Len()-1)
 	}
 
-	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+	require.NoError(t, err)
 
-	r3Ins := testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
+	r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
 	shards, err := testutils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	for _, shard := range shards {
@@ -108,7 +108,7 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(idCipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(idCipherSuite, n)
 	require.NoError(t, err)
 
 	aliceId := identities[0]
@@ -119,7 +119,7 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	cohortConfigAlice, err := testutils_integration.MakeCohortProtocol(aliceCipherSuite, protocols.BLS, identities, threshold, identities)
+	cohortConfigAlice, err := integration_testutils.MakeCohortProtocol(aliceCipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 	cohortConfigAlice.CipherSuite.Curve = aliceSubGroup
 
@@ -128,7 +128,7 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	cohortConfigBob, err := testutils_integration.MakeCohortProtocol(bobCipherSuite, protocols.BLS, identities, threshold, identities)
+	cohortConfigBob, err := integration_testutils.MakeCohortProtocol(bobCipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
 	alice, err := dkg.NewParticipant[bls.G1](sid, aliceId, cohortConfigAlice, nil, crand.Reader)

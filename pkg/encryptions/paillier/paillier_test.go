@@ -3,7 +3,6 @@ package paillier_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -298,19 +297,19 @@ func TestLcmNil(t *testing.T) {
 		{
 			x:        nil,
 			y:        parseNat("1"),
-			err:      errors.New("arguments cannot be nil"),
+			err:      errs.NewInvalidArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 		{
 			x:        parseNat("1"),
 			y:        nil,
-			err:      errors.New("arguments cannot be nil"),
+			err:      errs.NewInvalidArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 		{
 			x:        nil,
 			y:        nil,
-			err:      errors.New("arguments cannot be nil"),
+			err:      errs.NewInvalidArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 	}

@@ -13,8 +13,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
@@ -26,24 +27,24 @@ import (
 func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
 	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not make setup participants")
 	}
 
 	r1OutsU, err := testutils.DoSetupRound1(participants)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not run setup round 1")
 	}
 
-	r2InsU := testutils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not run setup round 2")
 	}
 
-	r3InsU := testutils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
+	r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
 	allPairwiseSeeds, err = testutils.DoSetupRound3(participants, r3InsU)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not run setup round 3")
 	}
 	return allPairwiseSeeds, nil
 }
@@ -102,7 +103,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -133,7 +134,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig := &integration.CohortConfig{
 		CipherSuite:  cipherSuite,
@@ -202,7 +203,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, _ := testutils_integration.MakeTestIdentities(cipherSuite, 3)
+	allIdentities, _ := integration_testutils.MakeTestIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]
@@ -212,7 +213,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

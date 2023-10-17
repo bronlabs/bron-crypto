@@ -213,29 +213,29 @@ func Test_BIP340TestVectors(t *testing.T) {
 func doTestSign(privateKeyString string, messageString string, auxString string) ([]byte, error) {
 	privateKeyBin, err := hex.DecodeString(privateKeyString)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "cannot decode private key")
 	}
 
 	bip340PrivateKey, err := unmarshalPrivateKey(privateKeyBin)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "cannot unmarshal private key")
 	}
 
 	message, err := hex.DecodeString(messageString)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "cannot decode message")
 	}
 
 	signer := bip340.NewSigner(bip340PrivateKey)
 
 	aux, err := hex.DecodeString(auxString)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "cannot decode aux")
 	}
 
 	signature, err := signer.Sign(message, aux, crand.Reader)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "cannot sign")
 	}
 
 	return marshalSignature(signature), nil
@@ -244,25 +244,25 @@ func doTestSign(privateKeyString string, messageString string, auxString string)
 func doTestVerify(publicKeyString string, signatureString string, messageString string) error {
 	publicKeyBin, err := hex.DecodeString(publicKeyString)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "cannot decode public key")
 	}
 	publicKey, err := unmarshalPublicKey(publicKeyBin)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "cannot unmarshal public key")
 	}
 
 	signatureBin, err := hex.DecodeString(signatureString)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "cannot decode signature")
 	}
 	signature, err := unmarshalSignature(signatureBin)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "cannot unmarshal signature")
 	}
 
 	message, err := hex.DecodeString(messageString)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "cannot decode message")
 	}
 
 	return bip340.Verify(publicKey, signature, message)

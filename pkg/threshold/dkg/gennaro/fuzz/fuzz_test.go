@@ -19,6 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -88,13 +89,13 @@ func Fuzz_Test(f *testing.F) {
 			require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 		}
 
-		r2InsB, r2InsU := gennaro_testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+		r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 		r2Outs, err := gennaro_testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.NoError(t, err)
 		for _, out := range r2Outs {
 			require.NotNil(t, out)
 		}
-		r3Ins := gennaro_testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
+		r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
 		signingKeyShares, publicKeyShares, err := gennaro_testutils.DoDkgRound3(participants, r3Ins)
 		require.NoError(t, err)
 		for _, publicKeyShare := range publicKeyShares {

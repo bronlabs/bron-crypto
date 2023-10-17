@@ -4,8 +4,7 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/pkg/errors"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/krypton/dkg/tecdsa"
@@ -13,7 +12,7 @@ import (
 
 func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*tecdsa.Participant, err error) {
 	if len(identities) != cohortConfig.Protocol.TotalParties {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
+		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
 
 	participants = make([]*tecdsa.Participant, cohortConfig.Protocol.TotalParties)
@@ -27,7 +26,7 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 		}
 
 		if !cohortConfig.IsInCohort(identity) {
-			return nil, errors.New("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
 		participants[i], err = tecdsa.NewParticipant(identity, cohortConfig, prng)

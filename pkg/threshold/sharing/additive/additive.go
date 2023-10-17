@@ -50,7 +50,7 @@ type Dealer struct {
 func NewDealer(total int, curve curves.Curve) (*Dealer, error) {
 	dealer := &Dealer{Total: total, Curve: curve}
 	if err := dealer.Validate(); err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "invalid additive sharing dealer")
 	}
 	return dealer, nil
 }

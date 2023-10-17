@@ -102,7 +102,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	participants, err := testutils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, false)
 	require.NoError(t, err)
 
-	partialSignatures, err := testutils.DoInteractiveSigning(participants, message)
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
@@ -145,7 +145,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	participants, err := testutils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, true)
 	require.NoError(t, err)
 
-	partialSignatures, err := testutils.DoInteractiveSigning(participants, message)
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 

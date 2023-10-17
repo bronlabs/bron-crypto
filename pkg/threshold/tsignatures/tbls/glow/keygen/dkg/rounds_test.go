@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRunProfile(t *testing.T) {
@@ -48,12 +48,12 @@ func testHappyPath(t *testing.T, threshold, n int) {
 		inG1s[i] = inG1
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
@@ -65,10 +65,11 @@ func testHappyPath(t *testing.T, threshold, n int) {
 		require.Len(t, out, cohortConfig.Participants.Len()-1)
 	}
 
-	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+	require.NoError(t, err)
 
-	r3Ins := testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
+	r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
 	shards, err := testutils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	for _, shard := range shards {

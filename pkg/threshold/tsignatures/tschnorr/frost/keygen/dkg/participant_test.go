@@ -3,18 +3,19 @@ package dkg
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 )
 
 type mockedIdentityKey struct {
@@ -34,7 +35,7 @@ func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")
 }
 func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
+	return errs.NewMissing("not implemented")
 }
 
 func Test_CanInitialize(t *testing.T) {
@@ -69,12 +70,13 @@ func Test_CanInitialize(t *testing.T) {
 			SignatureAggregators: hashset.NewHashSet(identityKeys),
 		},
 	}
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identityKeys, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identityKeys, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(uniqueSessionId, aliceIdentityKey, cohortConfig, crand.Reader)
+	require.NoError(t, err)
 	bob, err := NewParticipant(uniqueSessionId, bobIdentityKey, cohortConfig, crand.Reader)
+	require.NoError(t, err)
 	for _, party := range []*Participant{alice, bob} {
-		require.NoError(t, err)
 		require.NotNil(t, party)
 	}
 	require.NotEqual(t, alice.GetSharingId(), bob.GetSharingId())

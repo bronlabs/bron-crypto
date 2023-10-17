@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
@@ -26,7 +26,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
@@ -38,14 +38,14 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		require.Len(t, out, len(identities)-1)
 	}
 
-	r2InsU := testutils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+	r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Len(t, out, len(identities)-1)
 	}
 
-	r3InsU := testutils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
+	r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
 	allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 	require.NoError(t, err)
 

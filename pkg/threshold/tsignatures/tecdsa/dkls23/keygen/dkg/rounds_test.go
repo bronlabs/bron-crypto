@@ -4,30 +4,29 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"hash"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	dkls23_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 )
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
@@ -201,9 +200,9 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
@@ -217,10 +216,11 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
 	}
 
-	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsB, r2OutsU, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+	require.NoError(t, err)
 
-	r3InsB, r3InsU := testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2OutsB, r2OutsU)
+	r3InsB, r3InsU := integration_testutils.MapO2I(participants, r2OutsB, r2OutsU)
 	_, err = testutils.DoDkgRound3(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))

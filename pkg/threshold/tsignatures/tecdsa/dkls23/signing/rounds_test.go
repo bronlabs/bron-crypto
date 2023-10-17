@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
@@ -40,10 +40,10 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
@@ -100,10 +100,10 @@ func testFailForDifferentSID(t *testing.T, protocol protocols.Protocol, curve cu
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
@@ -147,10 +147,10 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
@@ -173,10 +173,10 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 		require.NoError(t, err)
 		r1OutB, r1OutU, err := testutils.DoInteractiveSignRound1(participants)
 		require.NoError(t, err)
-		r2InB, r2InU := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1OutB, r1OutU)
+		r2InB, r2InU := integration_testutils.MapO2I(participants, r1OutB, r1OutU)
 		r2OutB, r2OutU, err := testutils.DoInteractiveSignRound2(participants, r2InB, r2InU)
 		require.NoError(t, err)
-		r3InB, r3InU := testutils.MapInteractiveSignRound2OutputsToRound3Inputs(participants, r2OutB, r2OutU)
+		r3InB, r3InU := integration_testutils.MapO2I(participants, r2OutB, r2OutU)
 		partialSignatures, err := testutils.DoInteractiveSignRound3(participants, r3InB, r3InU, message)
 		require.NoError(t, err)
 		producedSignatures, err := testutils.RunSignatureAggregation(cohortConfig, identities, participants, partialSignatures, message)
@@ -192,7 +192,7 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 
 		// Party 1 switches his P2P messages to the ones from the previous run.
 		r1OutU2[0] = r1OutU[0]
-		r2InB2, r2InU2 := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participants2, r1OutB2, r1OutU2)
+		r2InB2, r2InU2 := integration_testutils.MapO2I(participants2, r1OutB2, r1OutU2)
 		_, _, err = testutils.DoInteractiveSignRound2(participants2, r2InB2, r2InU2)
 		require.Error(t, err)
 
@@ -201,12 +201,12 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 		require.NoError(t, err)
 		r1OutB3, r1OutU3, err := testutils.DoInteractiveSignRound1(participants3)
 		require.NoError(t, err)
-		r2InB3, r2InU3 := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participants3, r1OutB3, r1OutU3)
+		r2InB3, r2InU3 := integration_testutils.MapO2I(participants3, r1OutB3, r1OutU3)
 		r2OutB3, r2OutU3, err := testutils.DoInteractiveSignRound2(participants3, r2InB3, r2InU3)
 		require.NoError(t, err)
 		// Party 1 switches his broadcast messages to the ones from the previous run.
 		r2OutB3[0] = r2OutB[0]
-		r3InB3, r3InU3 := testutils.MapInteractiveSignRound2OutputsToRound3Inputs(participants3, r2OutB3, r2OutU3)
+		r3InB3, r3InU3 := integration_testutils.MapO2I(participants3, r2OutB3, r2OutU3)
 		_, err = testutils.DoInteractiveSignRound3(participants3, r3InB3, r3InU3, message)
 		require.Error(t, err)
 	})

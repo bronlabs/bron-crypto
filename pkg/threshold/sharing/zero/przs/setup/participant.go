@@ -14,6 +14,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+var _ integration.Participant = (*Participant)(nil)
+
 type Participant struct {
 	prng io.Reader
 
@@ -97,4 +99,16 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 		},
 		round: 1,
 	}, nil
+}
+
+func (p *Participant) GetIdentityKey() integration.IdentityKey {
+	return p.MyIdentityKey
+}
+
+func (p *Participant) GetSharingId() int {
+	return p.MySharingId
+}
+
+func (*Participant) GetCohortConfig() *integration.CohortConfig {
+	return nil
 }

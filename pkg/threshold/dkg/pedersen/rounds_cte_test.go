@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
@@ -36,11 +36,11 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var err error
 
 	internal.RunMeasurement(500, "pedersen_round1", func(i int) {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
@@ -70,17 +70,17 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var r2InsU []map[types.IdentityHash]*pedersen.Round1P2P
 
 	internal.RunMeasurement(500, "pedersen_round2", func(i int) {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants, nil)
 		require.NoError(t, err)
-		r2InsB, r2InsU = testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+		r2InsB, r2InsU = integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	}, func() {
 		testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	})

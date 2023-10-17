@@ -80,7 +80,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	}
 	require.NoError(t, err)
 
-	partialSignatures, err := interactive_testutils.DoInteractiveSigning(participants, message)
+	partialSignatures, err := interactive_testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 

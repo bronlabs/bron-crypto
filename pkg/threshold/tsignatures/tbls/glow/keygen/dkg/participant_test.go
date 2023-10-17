@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/dkg"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +21,10 @@ func Test_CanInitialize(t *testing.T) {
 		Hash:  sha512.New512_256,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId := []byte("sid")
 

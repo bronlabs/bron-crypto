@@ -25,7 +25,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	frost_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/frost"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
@@ -156,7 +156,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	r1Out, err := testutils.DoInteractiveSignRound1(signingParticipants)
 	require.NoError(t, err)
 
-	r2In := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(signingParticipants, r1Out)
+	r2In := integration_testutils.MapBroadcastO2I(signingParticipants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(signingParticipants, r2In, []byte(message))
 	require.NoError(t, err)
 
@@ -274,12 +274,12 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
+		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
@@ -287,7 +287,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 			require.NoError(t, err)
 		}
 	}
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.SkipNow()
@@ -304,7 +304,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	require.NoError(t, err)
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
-	r2InsB, r2InsU := testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {

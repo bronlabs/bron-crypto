@@ -7,13 +7,13 @@ import (
 
 	filippo "filippo.io/edwards25519"
 	"github.com/cronokirby/saferith"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 func TestScalarRandom(t *testing.T) {
@@ -427,17 +427,17 @@ func toRSc(hx string) *filippo.Scalar {
 func toRPt(hx string) (*edwards25519.Point, error) {
 	e, err := hex.DecodeString(hx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode hex string")
+		return nil, errs.WrapFailed(err, "could not decode hex string")
 	}
 	var data [32]byte
 	copy(data[:], e)
 	pt, err := new(edwards25519.Point).FromAffineCompressed(data[:])
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errs.WrapFailed(err, "could not create point from affine compressed")
 	}
 	point, ok := pt.(*edwards25519.Point)
 	if !ok {
-		return nil, errors.New("type casting failure")
+		return nil, errs.NewFailed("type casting failure")
 	}
 	return point, nil
 }

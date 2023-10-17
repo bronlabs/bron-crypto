@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
@@ -35,11 +35,11 @@ func Fuzz_Test_rounds(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		_, err := testutils.ProduceSharedRandomValue(curve, allIdentities, prng)
+		_, err := testutils.RunAgreeOnRandom(curve, allIdentities, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -61,10 +61,10 @@ func Fuzz_Test_rounds(f *testing.F) {
 
 		r1Out, err := testutils.DoRound1(participants)
 		require.NoError(t, err)
-		r2In := testutils.MapRound1OutputsToRound2Inputs(participants, r1Out)
+		r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
 		r2Out, err := testutils.DoRound2(participants, r2In)
 		require.NoError(t, err)
-		r3In := testutils.MapRound2OutputsToRound3Inputs(participants, r2Out)
+		r3In := integration_testutils.MapBroadcastO2I(participants, r2Out)
 		agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 		require.NoError(t, err)
 		require.Equal(t, len(agreeOnRandoms), set.Len())
@@ -93,9 +93,9 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := testutils_integration.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0], hashset.NewHashSet(allIdentities), nil, prng)
 		if err != nil && !errs.IsKnownError(err) {

@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
@@ -23,11 +23,11 @@ func Test_MeasureConstantTime(t *testing.T) {
 		Curve: curve,
 		Hash:  sha3.New256,
 	}
-	allIdentities, _ := testutils_integration.MakeTestIdentities(cipherSuite, 3)
+	allIdentities, _ := integration_testutils.MakeTestIdentities(cipherSuite, 3)
 
 	internal.RunMeasurement(500, "agreeonrandom", func(i int) {
-		allIdentities, _ = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		allIdentities, _ = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 	}, func() {
-		testutils.ProduceSharedRandomValue(curve, allIdentities, crand.Reader)
+		testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	})
 }

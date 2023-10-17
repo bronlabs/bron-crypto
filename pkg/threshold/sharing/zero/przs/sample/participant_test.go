@@ -32,7 +32,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	aliceSeeds := przs.PairwiseSeeds{bobIdentityKey.Hash(): sharedSeed}
 	bobSeeds := przs.PairwiseSeeds{aliceIdentityKey.Hash(): sharedSeed}
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	cohortConfig := &integration.CohortConfig{

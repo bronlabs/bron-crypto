@@ -20,7 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	frost_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/frost"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
@@ -29,7 +29,7 @@ import (
 )
 
 func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +43,7 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := testutils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	r3InB, r3InU := integration_testutils.MapO2I(dkgParticipants, r2OutB, r2OutU)
 	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +61,7 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*frost_nonintera
 	if err != nil {
 		return nil, nil, err
 	}
-	r2Ins := testutils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
+	r2Ins := integration_testutils.MapBroadcastO2I(participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	if err != nil {
 		return nil, nil, err
@@ -126,10 +126,10 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  hash,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -161,10 +161,10 @@ func TestSignNilMessage(t *testing.T) {
 		Hash:  hash,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)

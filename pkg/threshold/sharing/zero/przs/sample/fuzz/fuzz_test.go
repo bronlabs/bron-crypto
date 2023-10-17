@@ -56,11 +56,11 @@ func Fuzz_Test(f *testing.F) {
 		r1OutsU, err := testutils.DoSetupRound1(participants)
 		require.NoError(t, err)
 
-		r2InsU := testutils.MapSetupRound1OutputsToRound2Inputs(participants, r1OutsU)
+		r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
 		r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 		require.NoError(t, err)
 
-		r3InsU := testutils.MapSetupRound2OutputsToRound3Inputs(participants, r2OutsU)
+		r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
 		allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 		require.NoError(t, err)
 

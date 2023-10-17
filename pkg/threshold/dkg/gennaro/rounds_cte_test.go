@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
@@ -36,11 +36,11 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var err error
 
 	internal.RunMeasurement(500, "gennaro_round1", func(i int) {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
@@ -68,18 +68,18 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var r1OutsU []map[types.IdentityHash]*gennaro.Round1P2P
 
 	internal.RunMeasurement(500, "gennaro_round2", func(i int) {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)
 	}, func() {
-		testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+		integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	})
 }
 
@@ -106,20 +106,20 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var r3Ins []map[types.IdentityHash]*gennaro.Round2Broadcast
 
 	internal.RunMeasurement(500, "gennaro_round3", func(i int) {
-		identities, err = testutils_integration.MakeTestIdentities(cipherSuite, 3)
+		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.ProduceSharedRandomValue(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)
-		r2InsB, r2InsU = testutils.MapDkgRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+		r2InsB, r2InsU = integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 		r2Outs, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.NoError(t, err)
-		r3Ins = testutils.MapDkgRound2OutputsToRound3Inputs(participants, r2Outs)
+		r3Ins = integration_testutils.MapBroadcastO2I(participants, r2Outs)
 	}, func() {
 		testutils.DoDkgRound3(participants, r3Ins)
 	})

@@ -9,6 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
 
+var _ integration.Participant = (*PreGenParticipant)(nil)
+
 type PreGenParticipant struct {
 	prng io.Reader
 
@@ -65,4 +67,17 @@ func validateInputs(identityKey integration.IdentityKey, cohortConfig *integrati
 		return errs.NewMissing("PRNG is nil")
 	}
 	return nil
+}
+
+func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
+	return p.CohortConfig
+}
+
+func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
+	return p.MyIdentityKey
+}
+
+// TODO: implement SharingId for FROSTs
+func (*PreGenParticipant) GetSharingId() int {
+	return -1
 }

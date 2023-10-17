@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
@@ -26,9 +26,9 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 		Hash:  h,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakePreGenParticipants(cohortConfig, tau)
@@ -40,8 +40,7 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 	for _, out := range r1Outs {
 		require.NotNil(t, out)
 	}
-
-	r2Ins := testutils.MapPreGenRound1OutputsToRound2Inputs(participants, r1Outs)
+	r2Ins := integration_testutils.MapBroadcastO2I(participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	require.NoError(t, err)
 

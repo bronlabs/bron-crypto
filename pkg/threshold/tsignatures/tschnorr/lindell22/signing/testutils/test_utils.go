@@ -3,9 +3,8 @@ package testutils
 import (
 	crand "crypto/rand"
 
-	"github.com/pkg/errors"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -15,18 +14,18 @@ import (
 
 func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[types.IdentityHash]*lindell22.Shard, allTranscripts []transcripts.Transcript, taproot bool) (participants []*signing.Cosigner, err error) {
 	if len(identities) < cohortConfig.Protocol.Threshold {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
+		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
 	}
 
 	prng := crand.Reader
 	participants = make([]*signing.Cosigner, cohortConfig.Protocol.Threshold)
 	for i, identity := range identities {
 		if !cohortConfig.IsInCohort(identity) {
-			return nil, errors.New("invalid identity")
+			return nil, errs.NewMissing("cohort is missing identity")
 		}
 		participants[i], err = signing.NewCosigner(identity, sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], taproot, prng)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
 	}
 
@@ -38,7 +37,7 @@ func DoRound1(participants []*signing.Cosigner) (round2Inputs []map[types.Identi
 	for i, participant := range participants {
 		round1Outputs[i], err = participant.Round1()
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "failed to do lindell22 round 1")
 		}
 	}
 
@@ -58,7 +57,7 @@ func DoRound2(participants []*signing.Cosigner, round2Inputs []map[types.Identit
 	for i, participant := range participants {
 		round2Outputs[i], err = participant.Round2(round2Inputs[i])
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "failed to do lindell22 round 2")
 		}
 	}
 
@@ -78,23 +77,27 @@ func DoRound3(participants []*signing.Cosigner, round3Inputs []map[types.Identit
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3Inputs[i], message)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "failed to do lindell22 round 3")
 		}
 	}
 
 	return partialSignatures, nil
 }
 
-func DoInteractiveSigning(participants []*signing.Cosigner, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func RunInteractiveSigning(participants []*signing.Cosigner, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	r2i, err := DoRound1(participants)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "failed to do lindell22 round 1")
 	}
 
 	r3i, err := DoRound2(participants, r2i)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "failed to do lindell22 round 2")
 	}
 
-	return DoRound3(participants, r3i, message)
+	partialSignatures, err = DoRound3(participants, r3i, message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to do lindell22 round 3")
+	}
+	return partialSignatures, nil
 }

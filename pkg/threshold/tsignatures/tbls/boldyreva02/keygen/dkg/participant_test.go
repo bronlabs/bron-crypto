@@ -3,9 +3,10 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"testing"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
@@ -23,10 +24,10 @@ func Test_CanInitialize(t *testing.T) {
 		Hash:  sha512.New512_256,
 	}
 
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId := []byte("sid")
 

@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -56,7 +55,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 	r := k.suite.Curve.Point().Identity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
-		return err
+		return errs.NewSerializationError("cannot deserialize signature")
 	}
 	s := k.suite.Curve.Scalar().Zero()
 	switch len(s.Bytes()) {
@@ -79,7 +78,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 		A: publicKey,
 	}
 	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
-		return errors.Wrap(err, "could not verify schnorr signature")
+		return errs.WrapVerificationFailed(err, "could not verify schnorr signature")
 	}
 	return nil
 }
@@ -89,7 +88,7 @@ type HexBytes []byte
 func (h *HexBytes) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
-		return err
+		return errs.WrapFailed(err, "could not unmarshal hex bytes")
 	}
 
 	if s == "" {
@@ -101,7 +100,7 @@ func (h *HexBytes) UnmarshalJSON(b []byte) error {
 
 	decoded, err := hex.DecodeString(hexStr)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "could not decode hex bytes")
 	}
 	*h = decoded
 	return nil
@@ -109,10 +108,10 @@ func (h *HexBytes) UnmarshalJSON(b []byte) error {
 
 func MakeTestIdentities(cipherSuite *integration.CipherSuite, n int) (identities []integration.IdentityKey, err error) {
 	if err := cipherSuite.Validate(); err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidArgument(err, "invalid cipher suite")
 	}
 	if n <= 0 {
-		return nil, errors.Errorf("invalid number of identities: %d", n)
+		return nil, errs.NewInvalidLength("invalid number of identities: %d", n)
 	}
 
 	identities = make([]integration.IdentityKey, n)
@@ -139,7 +138,7 @@ func MakeTestIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar
 		pk, sk, err = schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
 	}
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not generate schnorr key pair")
 	}
 
 	return &TestIdentityKey{
@@ -151,7 +150,7 @@ func MakeTestIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar
 
 func MakeCohortProtocol(cipherSuite *integration.CipherSuite, protocol protocols.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {
 	if threshold > len(identities) {
-		return nil, errors.Errorf("invalid t=%d, n=%d", threshold, len(identities))
+		return nil, errs.NewInvalidLength("invalid t=%d, n=%d", threshold, len(identities))
 	}
 	parties := append([]integration.IdentityKey{}, identities...)
 	aggregators := append([]integration.IdentityKey{}, signatureAggregators...)
@@ -167,7 +166,7 @@ func MakeCohortProtocol(cipherSuite *integration.CipherSuite, protocol protocols
 	}
 
 	if err := cohortConfig.Validate(); err != nil {
-		return nil, err
+		return nil, errs.WrapInvalidArgument(err, "invalid cohort config")
 	}
 
 	return cohortConfig, nil
@@ -185,12 +184,12 @@ func TranscriptAtSameState(label string, allTranscripts []transcripts.Transcript
 	for i := 0; i < len(allTranscripts); i++ {
 		l, err := allTranscripts[i].ExtractBytes(label, 32)
 		if err != nil {
-			return false, err
+			return false, errs.WrapFailed(err, "could not extract transcript")
 		}
 		for j := i + 1; j < len(allTranscripts); j++ {
 			r, err := allTranscripts[j].ExtractBytes(label, 32)
 			if err != nil {
-				return false, err
+				return false, errs.WrapFailed(err, "could not extract transcript")
 			}
 			if !bytes.Equal(l, r) {
 				return false, nil

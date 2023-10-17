@@ -3,16 +3,17 @@ package dkg
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"testing"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -34,7 +35,7 @@ func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")
 }
 func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
-	return errors.New("not implemented")
+	return errs.NewMissing("not implemented")
 }
 
 func Test_CanInitialize(t *testing.T) {
@@ -70,7 +71,7 @@ func Test_CanInitialize(t *testing.T) {
 		},
 	}
 	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-	sid, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
 	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)

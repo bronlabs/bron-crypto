@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
@@ -24,7 +25,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 	}
 	if sids == nil { // Create a common sid if no hardcoded sids are provided
 		sids = make([][]byte, len(identities))
-		sid, err := agreeonrandom_testutils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities, crand.Reader)
+		sid, err := agreeonrandom_testutils.RunAgreeOnRandom(cohortConfig.CipherSuite.Curve, identities, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to produce shared random value")
 		}
@@ -67,30 +68,6 @@ func DoInteractiveSignRound1(participants []*signing.Cosigner) (round1OutputsBro
 	return round1OutputsBroadcast, round1OutputsP2P, nil
 }
 
-func MapInteractiveSignRound1OutputsToRound2Inputs(participants []*signing.Cosigner, round1BroadcastOutputs []*signing.Round1Broadcast, round1UnicastOutputs []map[types.IdentityHash]*signing.Round1P2P) (round2BroadcastInputs []map[types.IdentityHash]*signing.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*signing.Round1P2P) {
-	round2BroadcastInputs = make([]map[types.IdentityHash]*signing.Round1Broadcast, len(participants))
-	for i := range participants {
-		round2BroadcastInputs[i] = make(map[types.IdentityHash]*signing.Round1Broadcast)
-		for j := range participants {
-			if j != i {
-				round2BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round1BroadcastOutputs[j]
-			}
-		}
-	}
-
-	round2UnicastInputs = make([]map[types.IdentityHash]*signing.Round1P2P, len(participants))
-	for i := range participants {
-		round2UnicastInputs[i] = make(map[types.IdentityHash]*signing.Round1P2P)
-		for j := range participants {
-			if j != i {
-				round2UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round1UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
-			}
-		}
-	}
-
-	return round2BroadcastInputs, round2UnicastInputs
-}
-
 func DoInteractiveSignRound2(participants []*signing.Cosigner, round2BroadcastInputs []map[types.IdentityHash]*signing.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*signing.Round1P2P) (round2BroadcastOutputs []*signing.Round2Broadcast, round2UnicastOutputs []map[types.IdentityHash]*signing.Round2P2P, err error) {
 	round2BroadcastOutputs = make([]*signing.Round2Broadcast, len(participants))
 	round2UnicastOutputs = make([]map[types.IdentityHash]*signing.Round2P2P, len(participants))
@@ -101,29 +78,6 @@ func DoInteractiveSignRound2(participants []*signing.Cosigner, round2BroadcastIn
 		}
 	}
 	return round2BroadcastOutputs, round2UnicastOutputs, nil
-}
-
-func MapInteractiveSignRound2OutputsToRound3Inputs(participants []*signing.Cosigner, round2BroadcastOutputs []*signing.Round2Broadcast, round2UnicastOutputs []map[types.IdentityHash]*signing.Round2P2P) (round3BroadcastInputs []map[types.IdentityHash]*signing.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*signing.Round2P2P) {
-	round3BroadcastInputs = make([]map[types.IdentityHash]*signing.Round2Broadcast, len(participants))
-	for i := range participants {
-		round3BroadcastInputs[i] = make(map[types.IdentityHash]*signing.Round2Broadcast)
-		for j := range participants {
-			if j != i {
-				round3BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round2BroadcastOutputs[j]
-			}
-		}
-	}
-	round3UnicastInputs = make([]map[types.IdentityHash]*signing.Round2P2P, len(participants))
-	for i := range participants {
-		round3UnicastInputs[i] = make(map[types.IdentityHash]*signing.Round2P2P)
-		for j := range participants {
-			if j != i {
-				round3UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round2UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
-			}
-		}
-	}
-
-	return round3BroadcastInputs, round3UnicastInputs
 }
 
 func DoInteractiveSignRound3(participants []*signing.Cosigner, round3BroadcastInputs []map[types.IdentityHash]*signing.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*signing.Round2P2P, message []byte) (partialSignatures []*dkls23.PartialSignature, err error) {
@@ -195,12 +149,12 @@ func RunInteractiveSign(cohortConfig *integration.CohortConfig, identities []int
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 	}
-	r2InB, r2InU := MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1OutB, r1OutU)
+	r2InB, r2InU := integration_testutils.MapO2I(participants, r1OutB, r1OutU)
 	r2OutB, r2OutU, err := DoInteractiveSignRound2(participants, r2InB, r2InU)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 	}
-	r3InB, r3InU := MapInteractiveSignRound2OutputsToRound3Inputs(participants, r2OutB, r2OutU)
+	r3InB, r3InU := integration_testutils.MapO2I(participants, r2OutB, r2OutU)
 	partialSignatures, err := DoInteractiveSignRound3(participants, r3InB, r3InU, message)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")

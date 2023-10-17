@@ -4,18 +4,18 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/pkg/errors"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/recovery"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
 func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, presentRecoverers []*hashset.HashSet[integration.IdentityKey], identities []integration.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, prngs []io.Reader) (participants []*recovery.Participant, err error) {
 	if len(identities) != cohortConfig.Protocol.TotalParties {
-		return nil, errors.Errorf("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
+		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
 
 	participants = make([]*recovery.Participant, cohortConfig.Protocol.TotalParties)
@@ -28,7 +28,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 		}
 
 		if !cohortConfig.IsInCohort(identity) {
-			return nil, errors.New("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
 		if lostPartyIndex == i {
@@ -37,7 +37,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			participants[i], err = recovery.NewRecoverer(uniqueSessionId, identity, identities[lostPartyIndex], signingKeyShares[i], publicKeyShares[i], cohortConfig, presentRecoverers[i], nil, prng)
 		}
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
 	}
 
@@ -50,35 +50,11 @@ func DoRecoveryRound1(participants []*recovery.Participant) (round1BroadcastOutp
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errs.WrapFailed(err, "could not run Recovery round 1")
 		}
 	}
 
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
-}
-
-func MapRecoveryRound1OutputsToRound2Inputs(participants []*recovery.Participant, round1BroadcastOutputs []*recovery.Round1Broadcast, round1UnicastOutputs []map[types.IdentityHash]*recovery.Round1P2P) (round2BroadcastInputs []map[types.IdentityHash]*recovery.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*recovery.Round1P2P) {
-	round2BroadcastInputs = make([]map[types.IdentityHash]*recovery.Round1Broadcast, len(participants))
-	for i := range participants {
-		round2BroadcastInputs[i] = make(map[types.IdentityHash]*recovery.Round1Broadcast)
-		for j := range participants {
-			if j != i {
-				round2BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round1BroadcastOutputs[j]
-			}
-		}
-	}
-
-	round2UnicastInputs = make([]map[types.IdentityHash]*recovery.Round1P2P, len(participants))
-	for i := range participants {
-		round2UnicastInputs[i] = make(map[types.IdentityHash]*recovery.Round1P2P)
-		for j := range participants {
-			if j != i {
-				round2UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round1UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
-			}
-		}
-	}
-
-	return round2BroadcastInputs, round2UnicastInputs
 }
 
 func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, round2BroadcastInputs []map[types.IdentityHash]*recovery.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*recovery.Round1P2P) (round2p2p []map[types.IdentityHash]*recovery.Round2P2P, err error) {
@@ -87,33 +63,17 @@ func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, 
 	for i, participant := range participants {
 		round2p2p[lastRecorded], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "could not run Recovery round 2")
 		}
 		lastRecorded++
 	}
 	return round2p2p, nil
 }
 
-func MapRecoveryRound2OutputsToRound3Inputs(participants []*recovery.Participant, lostPartyIndex int, round2UnicastOutputs []map[types.IdentityHash]*recovery.Round2P2P) (round3UnicastInputs map[types.IdentityHash]*recovery.Round2P2P) {
-	for i := range participants {
-		if i != lostPartyIndex {
-			continue
-		}
-		round3UnicastInputs = make(map[types.IdentityHash]*recovery.Round2P2P)
-		for j := range participants {
-			if j != i {
-				round3UnicastInputs[participants[j].GetIdentityKey().Hash()] = round2UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
-			}
-		}
-	}
-
-	return round3UnicastInputs
-}
-
 func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, round3UnicastInputs map[types.IdentityHash]*recovery.Round2P2P) (signingKeyShare *tsignatures.SigningKeyShare, err error) {
 	signingKeyShare, err = participants[lostPartyIndex].Round3(round3UnicastInputs)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "could not run Recovery round 3")
 	}
 	return signingKeyShare, nil
 }
@@ -129,14 +89,14 @@ func RunRecovery(uniqueSessionId []byte, cohortConfig *integration.CohortConfig,
 		return nil, nil, err
 	}
 
-	r2InsB, r2InsU := MapRecoveryRound1OutputsToRound2Inputs(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsU, err := DoRecoveryRound2(participants, lostPartyIndex, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r3InsU := MapRecoveryRound2OutputsToRound3Inputs(participants, lostPartyIndex, r2OutsU)
-	recoveredShare, err = DoRecoveryRound3(participants, lostPartyIndex, r3InsU)
+	r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
+	recoveredShare, err = DoRecoveryRound3(participants, lostPartyIndex, r3InsU[lostPartyIndex])
 	if err != nil {
 		return nil, nil, err
 	}

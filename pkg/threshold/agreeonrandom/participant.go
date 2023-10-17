@@ -13,6 +13,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+var _ integration.Participant = (*Participant)(nil)
+
 type Participant struct {
 	prng io.Reader
 
@@ -81,5 +83,18 @@ func validateInputs(curve curves.Curve, identityKey integration.IdentityKey, par
 	if !found {
 		return errs.NewInvalidArgument("i'm not part of the participants")
 	}
+	return nil
+}
+
+func (p *Participant) GetIdentityKey() integration.IdentityKey {
+	return p.MyIdentityKey
+}
+
+// TODO: implement this
+func (*Participant) GetSharingId() int {
+	return -1
+}
+
+func (*Participant) GetCohortConfig() *integration.CohortConfig {
 	return nil
 }

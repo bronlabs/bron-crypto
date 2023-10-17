@@ -20,7 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	testutils_integration "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
@@ -28,7 +28,7 @@ import (
 )
 
 func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +43,7 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := testutils.MapDkgRound1OutputsToRound2Inputs(dkgParticipants, r2OutB, r2OutU)
+	r3InB, r3InU := integration_testutils.MapO2I(dkgParticipants, r2OutB, r2OutU)
 	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
@@ -76,7 +76,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 		return err
 	}
 
-	r2In := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1Out)
+	r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(participants, r2In, message)
 	if err != nil {
 		return err
@@ -123,10 +123,10 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -158,10 +158,10 @@ func TestSignEmptyMessage(t *testing.T) {
 		Hash:  h,
 	}
 
-	allIdentities, err := testutils_integration.MakeTestIdentities(cipherSuite, 2)
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
 	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
@@ -199,10 +199,10 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
 	signingKeyShares, publicKeyShares, err := doDkg(curve, cohortConfig, identities)
@@ -221,7 +221,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 	require.NoError(t, err)
 	r1OutAlpha, err := testutils.DoInteractiveSignRound1(participantsAlpha)
 	require.NoError(t, err)
-	r2InAlpha := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsAlpha, r1OutAlpha)
+	r2InAlpha := integration_testutils.MapBroadcastO2I(participantsAlpha, r1OutAlpha)
 	partialSignaturesAlpha, err := testutils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
 	require.NoError(t, err)
 	mappedPartialSignaturesAlpha := testutils.MapPartialSignatures(identities[:threshold], partialSignaturesAlpha)
@@ -233,7 +233,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, protocol protocols.Protocol
 	require.NoError(t, err)
 	r1OutBeta, err := testutils.DoInteractiveSignRound1(participantsBeta)
 	require.NoError(t, err)
-	r2InBeta := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participantsBeta, r1OutBeta)
+	r2InBeta := integration_testutils.MapBroadcastO2I(participantsBeta, r1OutBeta)
 	partialSignaturesBeta, err := testutils.DoInteractiveSignRound2(participantsBeta, r2InBeta, message)
 	require.NoError(t, err)
 
@@ -256,10 +256,10 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
-	identities, err := testutils_integration.MakeTestIdentities(cipherSuite, n)
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	cohortConfig, err := testutils_integration.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, identities, threshold, identities)
 	require.NoError(t, err)
 
 	signingKeyShares, publicKeyShares, err := doDkg(curve, cohortConfig, identities)
@@ -277,7 +277,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	require.NoError(t, err)
 	r1Out, err := testutils.DoInteractiveSignRound1(participants)
 	require.NoError(t, err)
-	r2In := testutils.MapInteractiveSignRound1OutputsToRound2Inputs(participants, r1Out)
+	r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(participants, r2In, message)
 	require.NoError(t, err)
 

@@ -16,7 +16,7 @@ func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities [
 	participants = make([]*sample.Participant, len(identities))
 
 	random := crand.Reader
-	uniqueSessionId, err := agreeonrandom_testutils.ProduceSharedRandomValue(cohortConfig.CipherSuite.Curve, identities, random)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cohortConfig.CipherSuite.Curve, identities, random)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce shared random value")
 	}
