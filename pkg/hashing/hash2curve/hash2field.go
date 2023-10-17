@@ -59,35 +59,6 @@ func HashToField(curve curves.Curve, h *EllipticCurveHasher, msg, dst []byte, co
 	return u, nil
 }
 
-// Parameters:
-// - DST, a domain separation tag (see Section 3.1).
-// - F, a finite field of characteristic p and order q = p^m.
-// - p, the characteristic of F (see immediately above).
-// - m, the extension degree of F, m >= 1 (see immediately above).
-// - L = ceil((ceil(log2(p)) + k) / 8), where k is the security
-//   parameter of the suite (e.g., k = 128).
-// - expand_message, a function that expands a byte string and
-//   domain separation tag into a uniformly random byte string
-//   (see Section 5.3).
-
-// Input:
-// - msg, a byte string containing the message to hash.
-// - count, the number of elements of F to output.
-
-// Output:
-// - (u_0, ..., u_(count - 1)), a list of field elements.
-
-// Steps:
-// 1. len_in_bytes = count * m * L
-// 2. uniform_bytes = expand_message(msg, DST, len_in_bytes)
-// 3. for i in (0, ..., count - 1):
-// 4.   for j in (0, ..., m - 1):
-// 5.     elm_offset = L * (j + i * m)
-// 6.     tv = substr(uniform_bytes, elm_offset, L)
-// 7.     e_j = OS2IP(tv) mod p
-// 8.   u_i = (e_0, ..., e_(m - 1))
-// 9. return (u_0, ..., u_(count - 1))
-
 // ExpandMsgXmd expands the msg with the domain to output a byte array
 // with outLen in size using a fixed size hash.
 // See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-13#section-5.4.1
