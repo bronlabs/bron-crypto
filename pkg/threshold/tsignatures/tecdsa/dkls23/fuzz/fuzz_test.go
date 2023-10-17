@@ -68,7 +68,7 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []integration.
 	signerIdentities := identities[:threshold]
 	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
-	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message, seededPrng)
+	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message, seededPrng, nil)
 	require.NoError(t, err)
 }
 

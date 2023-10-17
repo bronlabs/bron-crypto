@@ -47,7 +47,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	}
 
 	// step 1.3
-	oTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1ExtendAndProveConsistency(bob.Beta)
+	oTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1(bob.Beta)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob step 1.3")
 	}
@@ -73,9 +73,8 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 		}
 	}
 
-	// TODO: get rid of pointer stuff
 	// step 2.4
-	_, cOTeSenderOutputs, cOTeRound2Output, err := alice.sender.Round2ExtendAndCheckConsistency(round1output, alpha[:])
+	_, cOTeSenderOutputs, cOTeRound2Output, err := alice.sender.Round2(round1output, alpha[:])
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "alice cote round 2")
 	}
@@ -161,7 +160,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 
 func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err error) {
 	// step 2.1
-	coteReceiverOutput, err := bob.receiver.Round3Derandomize(round2output.COTeRound2Output, bob.oTeReceiverOutput)
+	coteReceiverOutput, err := bob.receiver.Round3(round2output.COTeRound2Output, bob.oTeReceiverOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob cote round 3")
 	}

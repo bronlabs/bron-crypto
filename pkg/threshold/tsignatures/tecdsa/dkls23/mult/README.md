@@ -101,3 +101,12 @@ $r_{i,j}=\tilde{\chi}_{i} \cdot \tilde{z_{A_{\xi}}} + \hat{\chi}_i \cdot $$\hat{
 - Sampling:       [1.1, 1.2]
 - Multiplication: [Every thing else]
 
+
+
+## Best-effort Constant Time implementation
+
+The code of this package is written in a best-effort mode to be Constant Time by: 
+1. Removing data-dependent branching (e.g. if-else statements) and data-dependent iteration (e.g. data-dependent length of for-loops)
+2. Using constant-time operations from primitives (e.g. constant-time field operations from `saferith`)
+3. Delaying error/abort raising when tied to data (e.g., for loops in consistency checks) to avoid leaking unnecessary stop information. Note that this does not cover "static" errors (e.g., wrong size for hashing).
+4. Using `crypto/subtle` functions whenever applicable.

@@ -157,3 +157,12 @@ ROUNDS (ROTe with fiat-shamir (*)):
  2. S: (u,ẋ,ṫ)---(Round2)--->(v_0,v_1)         [Ext.1, Ext.2, Ext.4, Check.1*, T&R.1, T&R.3, Check.3]
 */
 ```
+
+
+## Best-effort Constant Time implementation
+
+The code of this package is written in a best-effort mode to be Constant Time by: 
+1. Removing data-dependent branching (e.g. if-else statements) and data-dependent iteration (e.g. data-dependent length of for-loops)
+2. Using constant-time operations from primitives (e.g. constant-time field operations from `saferith`)
+3. Delaying error/abort raising when tied to data (e.g., for loops in consistency checks) to avoid leaking unnecessary stop information. Note that this does not cover "static" errors (e.g., wrong size for hashing).
+4. Using `crypto/subtle` functions whenever applicable.

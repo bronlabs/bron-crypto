@@ -77,11 +77,11 @@ func RunSoftspokenOTe(
 	}
 
 	// Run OTe
-	oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
+	oTeReceiverOutput, round1Output, err := receiver.Round1(choices)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 1")
 	}
-	oTeSenderOutput, _, _, err := sender.Round2ExtendAndCheckConsistency(round1Output, nil)
+	oTeSenderOutput, _, _, err := sender.Round2(round1Output, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken sender round 2")
 	}
@@ -153,15 +153,15 @@ func RunSoftspokenCOTe(
 	}
 
 	// Run COTe
-	oTeReceiverOutput, round1Output, err := receiver.Round1ExtendAndProveConsistency(choices)
+	oTeReceiverOutput, round1Output, err := receiver.Round1(choices)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 1")
 	}
-	_, cOTeSenderOutput, round2Output, err := sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+	_, cOTeSenderOutput, round2Output, err := sender.Round2(round1Output, inputOpts)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken sender round 2")
 	}
-	cOTeReceiverOutput, err = receiver.Round3Derandomize(round2Output, oTeReceiverOutput)
+	cOTeReceiverOutput, err = receiver.Round3(round2Output, oTeReceiverOutput)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 3")
 	}

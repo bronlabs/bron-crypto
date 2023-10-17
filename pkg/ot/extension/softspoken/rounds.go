@@ -23,7 +23,7 @@ type Round1Output struct {
 }
 
 // Round1Extend uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
-func (R *Receiver) Round1ExtendAndProveConsistency(
+func (R *Receiver) Round1(
 	oTeInputChoices OTeInputChoices, // x_i ∈ [LOTe][ξ]bits
 ) (oTeReceiverOutput OTeReceiverOutput, // v_x ∈ [LOTe][ξ][ω][κ]bits
 	round1Output *Round1Output, // u_i ∈ [κ][η']bits, ẋ ∈ [σ]bits, ṫ ∈ [κ][σ]bits
@@ -73,7 +73,7 @@ func (R *Receiver) Round1ExtendAndProveConsistency(
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 	}
-	// (Ext.3) Compute u_i and send it
+	// (Ext.3) Compute u_i = t^i_0 + t^i_1 + Δ_i
 	for i := 0; i < Kappa; i++ {
 		round1Output.expansionMask[i] = make([]byte, etaPrimeBytes)
 		subtle.XORBytes(round1Output.expansionMask[i], extOptions[0][i], extOptions[1][i])
@@ -118,10 +118,10 @@ type Round2Output struct {
 }
 
 // Round2Extend uses the PRG to extend the baseOT results, verifies their consistency
-// and derandomizes them (COTe only).
-func (S *Sender) Round2ExtendAndCheckConsistency(
+// and (COTe only, not in OTe) derandomizes them.
+func (S *Sender) Round2(
 	round1Output *Round1Output,
-	InputOpts COTeInputOpt, // Input opts (α) ∈ [L][ξ][ω]curve.Scalar. Set to nil for OTe.
+	InputOpts COTeInputOpt, // Input opts (α) ∈ [L][ξ][ω]curve.Scalar. Set to nil for OTe functionality.
 ) (oTeSenderOutput *OTeSenderOutput, cOTeSenderOutput COTeSenderOutput, round2Output *Round2Output, err error) {
 	// Sanitise inputs, compute sizes and allocate outputs
 	if round1Output == nil {
@@ -176,8 +176,7 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	qjTransposedPlusDelta := make([][]byte, eta) // q_j+Δ ∈ [η][κ]bits
 	for j := 0; j < eta; j++ {
 		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
-	}
-	for j := 0; j < eta; j++ { // drop η' - η rows, used for consistency check
+		// drop last η'-η rows, they are instead used for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], S.baseOtSeeds.PackedRandomChoiceBits)
 	}
 	// (T&R.3) Randomise by hashing the first η rows of q_j and q_j+Δ (drop η' - η = σ rows)
@@ -219,14 +218,14 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	round2Output = &Round2Output{derandMask: make(DerandomizeMask, L)}
 	var idxOTe int
 	for l := 0; l < L; l++ {
+		// if forced reuse, use always the first OTe batch (idxOTe = 0)
+		if S.useForcedReuse {
+			idxOTe = 0
+		} else {
+			idxOTe = l
+		}
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				// if forced reuse, use always the first OTe batch (idxOTe = 0)
-				if S.useForcedReuse {
-					idxOTe = 0
-				} else {
-					idxOTe = l
-				}
 				// z_A_j = ECP(v_0_j)
 				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().SetBytes(
 					oTeSenderOutput[0][idxOTe][i][j][:])
@@ -258,8 +257,8 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 	return oTeSenderOutput, cOTeSenderOutput, round2Output, nil
 }
 
-// Round3Derandomize uses the derandomization mask to derandomize the COTe output.
-func (R *Receiver) Round3Derandomize(
+// Round3 uses the derandomization mask to derandomize the COTe output.
+func (R *Receiver) Round3(
 	round2Output *Round2Output,
 	oTeReceiverOutput OTeReceiverOutput,
 ) (cOTeReceiverOutput COTeReceiverOutput, err error) {
@@ -290,14 +289,14 @@ func (R *Receiver) Round3Derandomize(
 	var v_x_NegCurve, v_x_curve_corr curves.Scalar
 	var idxOTe int
 	for l := 0; l < L; l++ {
+		// if forced reuse, use always the first OTe batch (idxOTe = 0)
+		if R.useForcedReuse {
+			idxOTe = 0
+		} else {
+			idxOTe = l
+		}
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
-				// if forced reuse, use always the first OTe batch (idxOTe = 0)
-				if R.useForcedReuse {
-					idxOTe = 0
-				} else {
-					idxOTe = l
-				}
 				// ECP(v_x_j)
 				v_x_NegCurve, err = R.curve.Scalar().SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {
@@ -309,7 +308,7 @@ func (R *Receiver) Round3Derandomize(
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot select bit")
 				}
-				if bit != 0 {
+				if bit == 0x01 {
 					// z_B_j = τ_j - ECP(v_x_j)  if x_j == 1
 					cOTeReceiverOutput[l][i][j] = v_x_curve_corr
 				} else {
@@ -397,6 +396,7 @@ func (S *Sender) VerifyChallengeResponse(
 	M := len(challenge)                                // M = η/σ
 	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
 	var qi_val, qi_expected [SigmaBytes]byte
+	isCorrect := true
 	for i := 0; i < Kappa; i++ {
 		// q̇^i = q^i_hat_{m+1} ...
 		copy(qi_val[:], extCorrelations[i][etaBytes:etaBytes+SigmaBytes])
@@ -411,9 +411,11 @@ func (S *Sender) VerifyChallengeResponse(
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		subtle.XORBytes(qi_expected[:], challengeResponse.t_val[i][:], challengeResponse.x_val[:])
 		subtle.ConstantTimeCopy((1 - S.baseOtSeeds.RandomChoiceBits[i]), qi_expected[:], challengeResponse.t_val[i][:])
-		if subtle.ConstantTimeCompare(qi_expected[:], qi_val[:]) == 0 {
-			return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
-		}
+		checkOk := subtle.ConstantTimeCompare(qi_expected[:], qi_val[:]) == 1
+		isCorrect = isCorrect && checkOk
+	}
+	if !isCorrect {
+		return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 	}
 	return nil
 }

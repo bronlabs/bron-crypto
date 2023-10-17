@@ -45,7 +45,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
 		require.NoError(t, err)
 	}, func() {
-		receiver.Round1ExtendAndProveConsistency(choices)
+		receiver.Round1(choices)
 	})
 }
 
@@ -85,10 +85,10 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
 		require.NoError(t, err)
 
-		_, round1Output, err = receiver.Round1ExtendAndProveConsistency(choices)
+		_, round1Output, err = receiver.Round1(choices)
 		require.NoError(t, err)
 	}, func() {
-		sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+		sender.Round2(round1Output, inputOpts)
 	})
 }
 
@@ -130,12 +130,12 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
 		require.NoError(t, err)
 
-		oTeReceiverOutput, round1Output, err = receiver.Round1ExtendAndProveConsistency(choices)
+		oTeReceiverOutput, round1Output, err = receiver.Round1(choices)
 		require.NoError(t, err)
-		_, _, round2Output, err = sender.Round2ExtendAndCheckConsistency(round1Output, inputOpts)
+		_, _, round2Output, err = sender.Round2(round1Output, inputOpts)
 		require.NoError(t, err)
 
 	}, func() {
-		receiver.Round3Derandomize(round2Output, oTeReceiverOutput)
+		receiver.Round3(round2Output, oTeReceiverOutput)
 	})
 }
