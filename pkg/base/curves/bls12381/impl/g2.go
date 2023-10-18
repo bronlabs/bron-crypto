@@ -523,9 +523,9 @@ func (g2 *G2) Hash(hash *hash2curve.EllipticCurveHasher, msg, dst []byte) *G2 {
 	var r0, r1, q0, q1 G2
 
 	switch hash.Type() {
-	case hash2curve.XMD:
+	case types.XMD:
 		u = hash2curve.ExpandMsgXmd(hash, msg, dst, 256)
-	case hash2curve.XOF:
+	case types.XOF:
 		u = hash2curve.ExpandMsgXof(hash, msg, dst, 256)
 	}
 

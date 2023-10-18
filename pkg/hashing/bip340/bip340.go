@@ -13,6 +13,7 @@ const (
 	challengeTag = "BIP0340/challenge"
 )
 
+// TODO(Alberto): merge with FixedLengthHasher
 type hasher struct {
 	hash.Hash
 	tag          string

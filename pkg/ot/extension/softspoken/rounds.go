@@ -228,18 +228,11 @@ func (S *Sender) Round2ExtendAndCheckConsistency(
 					idxOTe = l
 				}
 				// z_A_j = ECP(v_0_j)
-				// TODO(Alberto) Hash2Field
-				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().SetBytes(
+				cOTeSenderOutput[l][i][j] = S.curve.Scalar().Hash(
 					oTeSenderOutput[0][idxOTe][i][j][:])
-				if err != nil {
-					return nil, nil, nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
-				}
 				// τ_j = ECP(v_1_j) - z_A_j + α_j
-				round2Output.derandMask[l][i][j], err = S.curve.Scalar().SetBytes(
+				round2Output.derandMask[l][i][j] = S.curve.Scalar().Hash(
 					oTeSenderOutput[1][idxOTe][i][j][:])
-				if err != nil {
-					return nil, nil, nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
-				}
 				round2Output.derandMask[l][i][j] = round2Output.derandMask[l][i][j].
 					Sub(cOTeSenderOutput[l][i][j]).Add(InputOpts[l][i][j])
 			}

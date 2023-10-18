@@ -99,13 +99,10 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 
 	digest, err := p.transcript.ExtractBytes("challenge bytes", impl.FieldBytes)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
+		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
-	c, err := curve.Scalar().SetBytes(digest)
-	if err != nil {
-		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
-	}
+	c := curve.Scalar().Hash(digest)
 	// step 7
 	s := c.Mul(x).Add(k)
 	// step 8

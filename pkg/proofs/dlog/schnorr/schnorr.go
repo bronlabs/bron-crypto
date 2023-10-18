@@ -87,14 +87,10 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
 	digest, err := p.transcript.ExtractBytes(digestLabel, impl.FieldBytes)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
+		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
-	// TODO(Alberto): Hash2Field
-	result.C, err = curve.Scalar().SetBytes(digest)
-	if err != nil {
-		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
-	}
+	result.C = curve.Scalar().Hash(digest)
 	result.S = result.C.Mul(x).Add(k)
 	return result, statement, nil
 }

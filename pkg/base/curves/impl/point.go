@@ -74,7 +74,7 @@ func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
 
 // Hash uses the hasher to map bytes to a valid point.
 func (p *EllipticPoint) Hash(bytes []byte, hasher *hash2curve.EllipticCurveHasher) (*EllipticPoint, error) {
-	dst := []byte(fmt.Sprintf("QUUX-V01-CS02-with-%s_%s:%s_SSWU_RO_", p.Params.Name, hasher.Type(), hasher.Name()))
+	dst := []byte(fmt.Sprintf("QUUX-V01-CS02-with-%s_%s:%s_SSWU_RO_", p.Params.Name, hasher.Type().Name(), hasher.Name()))
 	err := p.Arithmetic.Hash(p, hasher, bytes, dst)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash failed")

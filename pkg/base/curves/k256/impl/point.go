@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
@@ -250,9 +251,9 @@ func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *hash2curve.Elli
 	isoParams := getK256PointIsogenyParams()
 
 	switch hash.Type() {
-	case hash2curve.XMD:
+	case types.XMD:
 		u = hash2curve.ExpandMsgXmd(hash, msg, dst, 96)
-	case hash2curve.XOF:
+	case types.XOF:
 		u = hash2curve.ExpandMsgXof(hash, msg, dst, 96)
 	}
 	var buf [64]byte

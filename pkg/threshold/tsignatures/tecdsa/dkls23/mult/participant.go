@@ -140,11 +140,7 @@ func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}
-		// TODO(ALberto): Hash2Field
-		gadget[0][i], err = curve.Scalar().SetBytes(bytes)
-		if err != nil {
-			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
-		}
+		gadget[0][i] = curve.Scalar().Hash(append([]byte{byte(i)}, bytes...))
 	}
 	return gadget, nil
 }
