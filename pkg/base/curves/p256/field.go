@@ -261,5 +261,9 @@ func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error)
 }
 
 func (e *FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	return curve.Scalar().SetNat(e.Nat())
+	s, err := curve.Scalar().SetNat(e.Nat())
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not convert to scalar")
+	}
+	return s, nil
 }

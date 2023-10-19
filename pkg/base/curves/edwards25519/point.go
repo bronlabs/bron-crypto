@@ -148,7 +148,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 // public key.
 func (*Point) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *Scalar) (*Point, error) {
 	data := rhs.Value.Bytes()
-	s, err := filippo.NewScalar().SetBytesWithClamping(data[:])
+	s, err := filippo.NewScalar().SetBytesWithClamping(data)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
 	}
@@ -165,12 +165,12 @@ func (p *Point) Equal(rhs curves.Point) bool {
 		// We have that X = xZ and X' = x'Z'. Thus, x = x' is equivalent to
 		// (xZ)Z' = (x'Z')Z, and similarly for the y-coordinate.
 		return p.Value.Equal(r.Value) == 1
-		//lhs1 := new(ed.FieldElement).Mul(&p.value.X, &r.value.Z)
-		//rhs1 := new(ed.FieldElement).Mul(&r.value.X, &p.value.Z)
-		//lhs2 := new(ed.FieldElement).Mul(&p.value.Y, &r.value.Z)
-		//rhs2 := new(ed.FieldElement).Mul(&r.value.Y, &p.value.Z)
+		//  lhs1 := new(ed.FieldElement).Mul(&p.value.X, &r.value.Z)
+		//  rhs1 := new(ed.FieldElement).Mul(&r.value.X, &p.value.Z)
+		//  lhs2 := new(ed.FieldElement).Mul(&p.value.Y, &r.value.Z)
+		//  rhs2 := new(ed.FieldElement).Mul(&r.value.Y, &p.value.Z)
 		//
-		//return lhs1.Equals(rhs1) && lhs2.Equals(rhs2)
+		//  return lhs1.Equals(rhs1) && lhs2.Equals(rhs2)
 	} else {
 		return false
 	}

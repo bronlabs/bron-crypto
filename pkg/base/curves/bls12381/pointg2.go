@@ -222,7 +222,11 @@ func multiScalarMultBls12381G2(scalars []curves.Scalar, points []curves.Point) (
 }
 
 func (*PointG2) OtherGroup() curves.PairingPoint {
-	return new(PointG1).Identity().(curves.PairingPoint)
+	p1, ok := new(PointG1).Identity().(curves.PairingPoint)
+	if !ok {
+		panic("invalid point type")
+	}
+	return p1
 }
 
 func (p *PointG2) Pairing(rhs curves.PairingPoint) curves.Scalar {

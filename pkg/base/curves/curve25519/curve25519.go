@@ -1,8 +1,13 @@
 package curve25519
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+)
 
-const Name = "Curve25519"
+const (
+	Name string = constants.CURVE25519_NAME
+)
 
 var _ curves.Curve = (*Curve)(nil)
 
@@ -28,6 +33,10 @@ func (*Curve) Name() string {
 	return Name
 }
 
+func (*Curve) FieldElement() curves.FieldElement {
+	return nil
+}
+
 func (*Curve) Generator() curves.Point {
 	return nil
 }
@@ -44,6 +53,6 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	return nil, nil
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
 	return nil, nil, nil
 }

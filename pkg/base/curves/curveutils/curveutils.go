@@ -32,14 +32,13 @@ func NewScalarFromJSON(data []byte) (curves.Scalar, error) {
 
 // ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.
 func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
-	err := errs.NewInvalidCurve("can't convert %s", c.Name())
 	switch c.Name() {
 	case k256.Name:
 		return k256.NewElliptic(), nil
 	case p256.Name:
 		return elliptic.P256(), nil
 	default:
-		return nil, err
+		return nil, errs.NewInvalidCurve("can't convert %s", c.Name())
 	}
 }
 

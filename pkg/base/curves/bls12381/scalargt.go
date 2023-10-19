@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ (curves.Scalar) = (*ScalarGt)(nil)
+var _ curves.Scalar = (*ScalarGt)(nil)
 
 type ScalarGt struct {
 	Value *bls12381impl.Gt

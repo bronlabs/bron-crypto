@@ -317,7 +317,7 @@ func (*Scalar) SetBytes(input []byte) (result curves.Scalar, err error) {
 		}
 	} else {
 		var wideBytes [64]byte
-		copy(wideBytes[:], input[:])
+		copy(wideBytes[:], input)
 		value, err = filippo.NewScalar().SetUniformBytes(wideBytes[:])
 		if err != nil {
 			return nil, errs.WrapSerializationError(err, "set uniform bytes")
@@ -333,7 +333,11 @@ func (s *Scalar) Clone() curves.Scalar {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	return serialisation.ScalarMarshalBinary(s)
+	buf, err := serialisation.ScalarMarshalBinary(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "scalar marshal binary failed")
+	}
+	return buf, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
@@ -350,7 +354,11 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	return serialisation.ScalarMarshalText(s)
+	buf, err := serialisation.ScalarMarshalText(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "scalar marshal binary failed")
+	}
+	return buf, nil
 }
 
 func (s *Scalar) UnmarshalText(input []byte) error {
@@ -375,7 +383,11 @@ func (*Scalar) SetEdwardsScalar(sc *filippo.Scalar) *Scalar {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	return serialisation.ScalarMarshalJson(Name, s)
+	buf, err := serialisation.ScalarMarshalJson(Name, s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "scalar marshal binary failed")
+	}
+	return buf, nil
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {

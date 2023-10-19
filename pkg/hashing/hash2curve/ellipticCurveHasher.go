@@ -183,7 +183,7 @@ func getDomainXmd(h hash.Hash, domain []byte) []byte {
 	var out []byte
 	if len(domain) > MaxDstLen {
 		h.Reset()
-		_, _ = h.Write([]byte(OversizeDstSalt))
+		_, _ = h.Write([]byte(DST_OVERSIZE_SALT))
 		_, _ = h.Write(domain)
 		out = h.Sum(nil)
 	} else {
@@ -196,7 +196,7 @@ func getDomainXof(h sha3.ShakeHash, domain []byte) []byte {
 	var out []byte
 	if len(domain) > MaxDstLen {
 		h.Reset()
-		_, _ = h.Write([]byte(OversizeDstSalt))
+		_, _ = h.Write([]byte(DST_OVERSIZE_SALT))
 		_, _ = h.Write(domain)
 		var tv [64]byte
 		_, _ = h.Read(tv[:])

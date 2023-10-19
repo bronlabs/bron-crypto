@@ -13,6 +13,7 @@ type Curve interface {
 	Profile() CurveProfile
 	Scalar() Scalar
 	Point() Point
+	FieldElement() FieldElement
 
 	Name() string
 	Generator() Point

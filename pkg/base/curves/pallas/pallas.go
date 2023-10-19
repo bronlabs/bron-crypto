@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
@@ -13,7 +14,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-const Name = "pallas"
+const (
+	Name string = constants.PALLAS_NAME
+)
 
 var (
 	pallasInitonce sync.Once
@@ -73,20 +76,22 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
 
 	_ types.Incomparable
 }
 
 func pallasInit() {
 	pallasInstance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
 }
 
@@ -109,6 +114,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {

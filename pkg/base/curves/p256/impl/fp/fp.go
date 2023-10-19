@@ -135,19 +135,9 @@ func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 	for i := 224; i >= 0; i-- {
 		f.Square(&r, &r)
 		switch i {
-		case 0:
-			fallthrough
-		case 2:
-			fallthrough
-		case 192:
-			fallthrough
-		case 224:
+		case 0, 2, 192, 224:
 			f.Mul(&r, &r, arg)
-		case 3:
-			fallthrough
-		case 34:
-			fallthrough
-		case 65:
+		case 3, 34, 65:
 			f.Mul(&r, &r, &t)
 		}
 	}

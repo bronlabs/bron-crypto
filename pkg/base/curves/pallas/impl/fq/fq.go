@@ -222,7 +222,7 @@ func (fq *Fq) Sqrt(elem *Fq) (*Fq, bool) {
 func (fq *Fq) tonelliShanks(elem *Fq) (*Fq, bool) {
 	// c1 := 32
 	// c2 := (q - 1) / (2^c1)
-	//c2 := [4]uint64{
+	// c2 := [4]uint64{
 	//	0x0994a8dd8c46eb21,
 	//	0x00000000224698fc,
 	//	0x0000000000000000,

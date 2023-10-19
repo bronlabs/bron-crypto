@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	p256n "github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl"
@@ -15,7 +16,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-const Name = "P-256"
+const (
+	Name string = constants.P256_NAME
+)
 
 var (
 	p256Initonce sync.Once
@@ -45,20 +48,22 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
 
 	_ types.Incomparable
 }
 
 func p256Init() {
 	p256Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
 }
 
@@ -81,6 +86,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {
@@ -126,7 +135,11 @@ func (c *Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Poi
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")
 	}
 	rhs := fp.New()
-	c.Point().(*Point).Value.Arithmetic.RhsEq(rhs, xc.v)
+	cp, ok := c.Point().(*Point)
+	if !ok {
+		return nil, nil, errs.NewFailed("invalid point type, expected PointP256")
+	}
+	cp.Value.Arithmetic.RhsEq(rhs, xc.v)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")

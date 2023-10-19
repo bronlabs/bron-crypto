@@ -1,190 +1,200 @@
 package hash2curve
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"hash"
-	"io"
 
-	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"golang.org/x/crypto/sha3"
 )
 
-type Hasher interface {
-	// HashFresh iteratively writes all the inputs to a fresh hash function and returns the result.
-	HashFresh(messages ...[]byte) ([]byte, error)
-	// Name returns a human-readable hash name for the underlying hash function.
-	Name() string
-	// Type returns an enum indicating the type of the underlying hash function.
-	Type() types.HasherType
-	// ExpandMessageName returns a human-readable name of the message expansion function (XMD or XOF) for the underlying hash function.
-	ExpandMessageName() string
-	// Curve returns the curve assigned to this hasher.
-	Curve() curves.Curve
-	// Write implements io.Writer, and writes the input to an instance of the underlying hash function.
-	io.Writer
-	// Read implements io.Reader, and returns the digest (hash of the written inputs).
-	io.Reader
-	// Reset resets the underlying hash function.
-	Reset()
-	// Size returns the digest size of the underlying hash function.
-	Size() int
+const (
+	// MaxDstLen the max size for dst in hash to curve.
+	MaxDstLen = 255
+	// MaxExpMsgOutLen is the max size for the output of the expand message function in bytes.
+	MaxExpMsgOutLen = 65535
+	// MaxExpMsgBlockLen the max size  for the output of the expand message function in blocks.
+	MaxExpMsgBlockLen = 255
+)
+const (
+	DST_ID_SEPARATOR   = "_"
+	DST_TAG_SEPARATOR  = ":"
+	DST_ENC_VAR        = "RO"
+	DST_EXP_TAG_XMD    = "XMD"
+	DST_EXP_TAG_XOF    = "XOF"
+	DST_OVERSIZE_SALT  = "H2C-OVERSIZE-DST-"
+	DST_TAG_SHA256     = "SHA-256"
+	DST_TAG_SHA512     = "SHA-512"
+	DST_TAG_SHAKE256   = "SHAKE256"
+	DST_TAG_SSWU       = "SSWU"
+	DST_TAG_ELLIGATOR2 = "ELL2"
+)
+
+type CurveHasher interface {
+	// ExpandMessage expands an input `msg` to a byte string of length `outLen`,
+	// using an optional `appId` for the domain separation tag.
+	// It follows https://datatracker.ietf.org/doc/html/rfc9380#section-5.3
+	ExpandMessage(msg, dst []byte, outLen int) ([]byte, error)
+	// GenerateDST generates the domain sepaaration tag.
+	// It follows https://datatracker.ietf.org/doc/html/rfc9380#section-8.10
+	GenerateDST(curve curves.Curve) []byte
 }
 
-// FixedLengthHasher encapsulates the fixed-length hash functions of sha256, sha512, sha3 and blake2b.
-type FixedLengthHasher struct {
-	hashFactory func() hash.Hash
-	curve       curves.Curve
+/* ------------------------- FIXED-LENGTH HASHERS --------------------------- */
+
+func NewCurveHasherSha256(curve curves.Curve) CurveHasher {
+	return &FixedLengthCurveHasher{sha256.New(), DST_TAG_SHA256}
+}
+
+func NewCurveHasherSha512(curve curves.Curve) CurveHasher {
+	return &FixedLengthCurveHasher{sha512.New(), DST_TAG_SHA512}
+}
+
+// FixedLengthCurveHasher encapsulates the fixed-length hash functions of sha256, sha512, sha3 and blake2b.
+type FixedLengthCurveHasher struct {
 	hash.Hash
-	*types.HasherType
+	hashName string
 }
 
-func NewFixedLengthHasher(hasherType types.HasherType, curve curves.Curve) (Hasher, error) {
-	var hashFactory func() hash.Hash
-	switch hasherType {
-	case types.SHA256:
-		hashFactory = sha256.New
-	case types.SHA512:
-		hashFactory = sha512.New
-	case types.BLAKE2B_256:
-		hashFactory = newBlake2b_256 // blake2b.New256(nil)
-	case types.BLAKE2B_512:
-		hashFactory = newBlake2b_512 // blake2b.New512(nil)
-	case types.SHA3_256:
-		hashFactory = sha3.New256
-	case types.SHA3_384:
-		hashFactory = sha3.New384
-	case types.SHA3_512:
-		hashFactory = sha3.New512
-	case types.SHAKE128, types.SHAKE256, types.BLAKE2S:
-		return nil, errs.NewInvalidArgument("variable length hashers must be created with NewVariableLengthHasher")
-	default:
-		return nil, errs.NewInvalidArgument("unsupported fixed hash type")
+// ExpandMessage implements the fixed-length hash variant `expand_message_xmd`
+// from https://datatracker.ietf.org/doc/html/rfc9380#section-5.3.1
+func (flh *FixedLengthCurveHasher) ExpandMessage(msg, dst []byte, outLen int) ([]byte, error) {
+	// step 1 & 2
+	ell := base.CeilDiv(outLen, flh.Size())
+	if ell > MaxExpMsgBlockLen || outLen > MaxExpMsgOutLen {
+		return nil, errs.NewFailed("outLen is too large")
 	}
-	return &FixedLengthHasher{hashFactory, curve, hashFactory(), &hasherType}, nil
-}
-
-func (flh *FixedLengthHasher) Type() types.HasherType {
-	return *flh.HasherType
-}
-
-func (flh *FixedLengthHasher) Curve() curves.Curve {
-	return flh.curve
-}
-
-func (flh *FixedLengthHasher) Read(p []byte) (n int, err error) {
-	if len(p) < flh.Size() {
-		return 0, errs.NewFailed("insufficient buffer size")
+	// steps 3-7
+	//  b_0 = H(Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST || I2OSP(len(DST), 1))
+	dstLen := byte(len(dst))
+	flh.Reset()
+	_, _ = flh.Write(make([]byte, flh.BlockSize()))
+	_, _ = flh.Write(msg)
+	_, _ = flh.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
+	_, _ = flh.Write([]byte{0})
+	_, _ = flh.Write(dst)
+	_, _ = flh.Write([]byte{dstLen})
+	b0 := flh.Sum(nil)
+	// step 8
+	//  b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
+	flh.Reset()
+	_, _ = flh.Write(b0)
+	_, _ = flh.Write([]byte{1})
+	_, _ = flh.Write(dst)
+	_, _ = flh.Write([]byte{dstLen})
+	b1 := flh.Sum(nil)
+	// steps 9-11
+	bi := b1
+	out := make([]byte, outLen)
+	for i := 1; i < ell; i++ {
+		flh.Reset()
+		//  b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
+		tmp := make([]byte, flh.Size())
+		subtle.XORBytes(tmp, b0, bi)
+		_, _ = flh.Write(tmp)
+		_, _ = flh.Write([]byte{1 + uint8(i)})
+		_, _ = flh.Write(dst)
+		_, _ = flh.Write([]byte{dstLen})
+		//  uniform_bytes = b_1 || ... || b_(ell - 1)
+		copy(out[(i-1)*flh.Size():i*flh.Size()], bi)
+		bi = flh.Sum(nil)
 	}
-	n = copy(p, flh.Hash.Sum(nil))
-	return n, nil
+	//  || b_ell
+	copy(out[(ell-1)*flh.Size():], bi)
+	// step 12
+	return out[:outLen], nil
 }
 
-func (flh *FixedLengthHasher) HashFresh(messages ...[]byte) ([]byte, error) {
-	H := flh.hashFactory()
-	for _, x := range messages {
-		if _, err := H.Write(x); err != nil {
-			return nil, errs.WrapFailed(err, "could not write to H")
-		}
+// GenerateDST returns the dst to be used in the ExpandMessage function, following
+// the dst expansion from https://datatracker.ietf.org/doc/html/rfc9380#section-5.3.2
+func (flh *FixedLengthCurveHasher) GenerateDST(curve curves.Curve) (dst []byte) {
+	dst = generateDst(curve, flh.hashName, DST_EXP_TAG_XMD)
+	if len(dst) > MaxDstLen {
+		flh.Reset()
+		_, _ = flh.Write([]byte(DST_OVERSIZE_SALT))
+		_, _ = flh.Write([]byte(dst))
+		dst = flh.Sum(nil)
 	}
-	digest := H.Sum(nil)
-	return digest, nil
+	return dst
 }
 
-// ExtendableHash homogeneizes the variable-length hash function interfaces of blake2b.XOF and sha3.ShakeHash.
-type ExtendableHash interface {
-	io.Writer // Write(p []byte) (n int, err error)
-	io.Reader // Read(p []byte) (n int, err error)
-	Reset()
-	// TODO: find a way to expose Clone() ExtendableHash
+/* ----------------------- VARIABLE-LENGTH HASHERS -------------------------- */
+
+func NewShake256Hasher() CurveHasher {
+	return &VariableLengthHasher{sha3.NewShake256(), DST_TAG_SHAKE256}
 }
 
+// VariableLengthHasher encapsulates the variable-length hash functions of blake2b.XOF and sha3.ShakeHash.
 type VariableLengthHasher struct {
-	hashFactory func() ExtendableHash
-	curve       curves.Curve
-	ExtendableHash
-	*types.HasherType
-	outputSize int
+	sha3.ShakeHash
+	hashName string
 }
 
-func NewVariableLengthHasher(hasherType types.HasherType, curve curves.Curve, outputSize int) (Hasher, error) {
-	var hashFactory func() ExtendableHash
-	switch hasherType {
-	case types.SHAKE128:
-		hashFactory = newShake128
-	case types.SHAKE256:
-		hashFactory = newShake256
-	case types.BLAKE2S:
-		hashFactory = newBlake2x
-	case types.SHA256, types.SHA512, types.BLAKE2B_256, types.BLAKE2B_512, types.SHA3_256, types.SHA3_384, types.SHA3_512:
-		return nil, errs.NewInvalidArgument("fixed length hashers must be created with NewFixedLengthHasher")
-	default:
-		return nil, errs.NewInvalidArgument("unsupported hash type")
+// ExpandMessage implements the variable-length hash variant `expand_msg_xof` from
+// https://datatracker.ietf.org/doc/html/rfc9380#section-5.3.2
+func (vlh *VariableLengthHasher) ExpandMessage(msg, dst []byte, outLen int) ([]byte, error) {
+	// step 1
+	if outLen > MaxExpMsgOutLen {
+		panic("expandMsgXof: outLen is too large")
 	}
-	return &VariableLengthHasher{hashFactory, curve, hashFactory(), &hasherType, outputSize}, nil
+	// step 2-4
+	//  uniform_bytes = H(msg || I2OSP(len_in_bytes, 2) || DST || I2OSP(len(DST), 1), len_in_bytes)
+	dstLen := byte(len(dst))
+	vlh.Reset()
+	_, _ = vlh.Write(msg)
+	_, _ = vlh.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
+	_, _ = vlh.Write(dst)
+	_, _ = vlh.Write([]byte{dstLen})
+	// step 5
+	out := make([]byte, outLen)
+	_, _ = vlh.Read(out)
+	return out, nil
 }
 
-func (vlh *VariableLengthHasher) Type() types.HasherType {
-	return *vlh.HasherType
-}
-
-func (vlh *VariableLengthHasher) Curve() curves.Curve {
-	return vlh.curve
-}
-
-func (vlh *VariableLengthHasher) Size() int {
-	return vlh.outputSize
-}
-
-func (vlh *VariableLengthHasher) HashFresh(messages ...[]byte) ([]byte, error) {
-	H := vlh.hashFactory()
-	for _, x := range messages {
-		if _, err := H.Write(x); err != nil {
-			return nil, errs.WrapFailed(err, "could not write to H")
-		}
+// getDstXof returns the dst to be used in the expandMsgXof function, following
+// the dst expansion from https://datatracker.ietf.org/doc/html/rfc9380#section-5.3.3
+func (vlh *VariableLengthHasher) GenerateDST(curve curves.Curve) (dst []byte) {
+	dst = generateDst(curve, vlh.hashName, DST_EXP_TAG_XOF)
+	if len(dst) > MaxDstLen {
+		vlh.Reset()
+		_, _ = vlh.Write([]byte(DST_OVERSIZE_SALT))
+		_, _ = vlh.Write(dst)
+		var tv [64]byte
+		_, _ = vlh.Read(tv[:])
+		dst = tv[:]
 	}
-	digest := make([]byte, vlh.outputSize)
-	_, err := H.Read(digest)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not read from H")
-	}
-	return digest, nil
+	return dst
 }
 
 /*.------------------------------ AUXILIARY ---------------------------------.*/
 
-var newBlake2b_256 = func() hash.Hash {
-	hashFunction, err := blake2b.New256(nil)
-	if err != nil {
-		panic(errs.WrapFailed(err, "could not create blake2b-256 hash function"))
+// generateDst generates a human-readable identifier for the suite following
+// the convention from https://datatracker.ietf.org/doc/html/rfc9380#section-8.10
+func generateDst(curve curves.Curve, hashName, expandMessageTag string) []byte {
+	var buf bytes.Buffer
+	// CURVE_ID
+	buf.WriteString(curve.Name())
+	buf.WriteString(DST_ID_SEPARATOR)
+	// HASH_ID
+	buf.WriteString(expandMessageTag)
+	buf.WriteString(DST_TAG_SEPARATOR)
+	buf.WriteString(hashName)
+	buf.WriteString(DST_ID_SEPARATOR)
+	// MAP_ID
+	if curve.Name() == constants.ED25519_NAME || curve.Name() == constants.CURVE25519_NAME {
+		buf.WriteString(DST_TAG_ELLIGATOR2)
+	} else {
+		buf.WriteString(DST_TAG_SSWU)
 	}
-	return hashFunction
-}
-
-var newBlake2b_512 = func() hash.Hash {
-	hashFunction, err := blake2b.New512(nil)
-	if err != nil {
-		panic(errs.WrapFailed(err, "could not create blake2b-512 hash function"))
-	}
-	return hashFunction
-}
-
-var newShake128 = func() ExtendableHash {
-	return sha3.NewShake128()
-}
-
-var newShake256 = func() ExtendableHash {
-	return sha3.NewShake256()
-}
-
-var newBlake2x = func() ExtendableHash {
-	hashFunction, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, nil)
-	if err != nil {
-		panic(errs.WrapFailed(err, "could not create blake2x hash function"))
-	}
-	return hashFunction
+	buf.WriteString(DST_ID_SEPARATOR)
+	// ENC_VAR
+	buf.WriteString(DST_ENC_VAR)
+	buf.WriteString(DST_ID_SEPARATOR)
+	return buf.Bytes()
 }

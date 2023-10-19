@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
@@ -15,7 +16,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-const Name = "secp256k1"
+const (
+	Name string = constants.K256_NAME
+)
 
 var (
 	k256Initonce sync.Once
@@ -45,20 +48,22 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ *CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      *CurveProfile
 
 	_ types.Incomparable
 }
 
 func k256Init() {
 	k256Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
 }
 
@@ -81,6 +86,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {

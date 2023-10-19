@@ -16,7 +16,7 @@ const (
 	G1Name = "BLS12381G1"
 	G2Name = "BLS12381G2"
 	GtName = "BLS12381Gt"
-	Name   = "BLS12831"
+	Name   = "BLS12381"
 )
 
 var (
@@ -68,10 +68,11 @@ func (*PairingCurveProfile) EmbeddingDegree() *saferith.Nat {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
 
 	_ types.Incomparable
 }
@@ -95,7 +96,10 @@ func bls12381g1Init() {
 			Point_: new(PointG1),
 		},
 		Point_: new(PointG1).Identity(),
-		Name_:  G1Name,
+		FieldElement_: &FieldElementG1{
+			v: new(bls12381impl.Fp),
+		},
+		Name_: G1Name,
 		Profile_: &CurveProfile{
 			i:        &bls12381g1,
 			cofactor: cofactorG1,
@@ -158,6 +162,10 @@ func (c *Curve) Name() string {
 	return c.Name_
 }
 
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
+}
+
 func (c *Curve) Generator() curves.Point {
 	return c.Point_.Generator()
 }
@@ -184,7 +192,7 @@ func (c *Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) 
 	return result, nil
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*Curve) DeriveFromAffineX(x curves.FieldElement) (p1, p2 curves.Point, err error) {
 	return nil, nil, nil
 }
 
@@ -201,11 +209,19 @@ func (*PairingCurve) G1() curves.Curve {
 }
 
 func (*PairingCurve) PointG1() curves.PairingPoint {
-	return bls12381g1.Point().(curves.PairingPoint)
+	p1, ok := bls12381g1.Point().(curves.PairingPoint)
+	if !ok {
+		panic("invalid point type")
+	}
+	return p1
 }
 
 func (*PairingCurve) PointG2() curves.PairingPoint {
-	return bls12381g2.Point().(curves.PairingPoint)
+	p2, ok := bls12381g2.Point().(curves.PairingPoint)
+	if !ok {
+		panic("invalid point type")
+	}
+	return p2
 }
 
 func (*PairingCurve) G2() curves.Curve {

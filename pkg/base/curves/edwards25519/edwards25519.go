@@ -9,12 +9,15 @@ import (
 	"filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-const Name = "edwards25519"
+const (
+	Name string = constants.ED25519_NAME
+)
 
 var (
 	edwards25519Initonce sync.Once
@@ -58,10 +61,11 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
 
 	_ types.Incomparable
 }
@@ -73,10 +77,11 @@ func New() *Curve {
 
 func ed25519Init() {
 	edwards25519Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
 }
 
@@ -94,6 +99,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {
@@ -129,7 +138,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	return &Point{Value: pt}, nil
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*Curve) DeriveFromAffineX(x curves.FieldElement) (p1, p2 curves.Point, err error) {
 	xc, ok := x.(*FieldElement)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("x is not an edwards25519 base field element")
@@ -161,13 +170,13 @@ func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Poi
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
 	}
-	p1 := &Point{Value: p1e}
+	p1 = &Point{Value: p1e}
 
 	p2e, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xc.v, yNeg, feOne, new(field.Element).Multiply(xc.v, new(field.Element).Negate(yy)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldnt set extended coordinates")
 	}
-	p2 := &Point{Value: p2e}
+	p2 = &Point{Value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil

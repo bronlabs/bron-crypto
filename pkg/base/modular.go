@@ -14,6 +14,14 @@ func Min[T constraints.Ordered](a, b T) T {
 	return b
 }
 
+// A one-line way to cast a bool to any integer type.
+func BoolTo[T constraints.Integer](b bool) T {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 // CeilDiv returns `ceil(numerator/denominator) for integer inputs. Equivalently,
 // it returns `x`, the smallest integer that satisfies `(x*b) >= a`.
 func CeilDiv(numerator, denominator int) int {
@@ -41,4 +49,9 @@ func ConstantTimeGt(x, y uint64) int {
 // ConstantTimeGeq returns 1 if x <= y and 0 otherwise.
 func ConstantTimeLeq(x, y uint64) int {
 	return 1 - ConstantTimeGt(y, x)
+}
+
+// ConstantTimeSelect returns x if v == 1 and y if v == 0. Its behavior is undefined if v takes any other value.
+func ConstantTimeSelect(v, x, y uint64) uint64 {
+	return ^(v-1)&x | (v-1)&y
 }

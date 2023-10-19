@@ -61,36 +61,36 @@ func getP256PointSswuParams() *impl.SswuParams {
 func p256PointSswuParamsInit() {
 	// How these values were derived
 	// left for informational purposes
-	//params := elliptic.P256().Params()
+	// params := elliptic.P256().Params()
 	//
-	//// c1 = (q - 3) / 4
-	//c1 := new(big.Int).Set(params.P)
-	//c1.Sub(c1, big.NewInt(3))
-	//c1.Rsh(c1, 2)
+	// // c1 = (q - 3) / 4
+	// c1 := new(big.Int).Set(params.P)
+	// c1.Sub(c1, big.NewInt(3))
+	// c1.Rsh(c1, 2)
 	//
-	//a := big.NewInt(-3)
-	//a.Mod(a, params.P)
-	//b := new(big.Int).Set(params.B)
-	//z := big.NewInt(-10)
-	//z.Mod(z, params.P)
-	//// sqrt(-Z^3)
-	//zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
-	//zTmp = zTmp.Neg(zTmp)
-	//zTmp.Mod(zTmp, params.P)
-	//c2 := new(big.Int).ModSqrt(zTmp, params.P)
+	// a := big.NewInt(-3)
+	// a.Mod(a, params.P)
+	// b := new(big.Int).Set(params.B)
+	// z := big.NewInt(-10)
+	// z.Mod(z, params.P)
+	// // sqrt(-Z^3)
+	// zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
+	// zTmp = zTmp.Neg(zTmp)
+	// zTmp.Mod(zTmp, params.P)
+	// c2 := new(big.Int).ModSqrt(zTmp, params.P)
 	//
-	//var capC1Bytes [32]byte
-	//c1.FillBytes(capC1Bytes[:])
-	//capC1 := fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(capC1Bytes[24:]),
-	//	binary.BigEndian.Uint64(capC1Bytes[16:24]),
-	//	binary.BigEndian.Uint64(capC1Bytes[8:16]),
-	//	binary.BigEndian.Uint64(capC1Bytes[:8]),
-	//})
-	//capC2 := fp.P256FpNew().SetBigInt(c2)
-	//capA := fp.P256FpNew().SetBigInt(a)
-	//capB := fp.P256FpNew().SetBigInt(b)
-	//capZ := fp.P256FpNew().SetBigInt(z)
+	// var capC1Bytes [32]byte
+	// c1.FillBytes(capC1Bytes[:])
+	// capC1 := fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(capC1Bytes[24:]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[16:24]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[8:16]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[:8]),
+	// })
+	// capC2 := fp.P256FpNew().SetBigInt(c2)
+	// capA := fp.P256FpNew().SetBigInt(a)
+	// capB := fp.P256FpNew().SetBigInt(b)
+	// capZ := fp.P256FpNew().SetBigInt(z)
 
 	p256PointSswuParams = impl.SswuParams{
 		C1: [impl.FieldLimbs]uint64{0xffffffffffffffff, 0x000000003fffffff, 0x4000000000000000, 0x3fffffffc0000000},
