@@ -107,6 +107,18 @@ func (e *FieldElementG2) Square() curves.FieldElement {
 	}
 }
 
+func (e *FieldElementG2) SubfieldElement(index uint64) curves.FieldElement {
+	if index&0x1 == 0 {
+		return &FieldElementG1{
+			v: &e.v.A,
+		}
+	} else {
+		return &FieldElementG1{
+			v: &e.v.B,
+		}
+	}
+}
+
 func (e *FieldElementG2) Double() curves.FieldElement {
 	return &FieldElementG2{
 		v: new(bimpl.Fp2).Double(e.v),

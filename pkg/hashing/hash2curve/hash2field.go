@@ -12,7 +12,7 @@ import (
 // HashToField hashes arbitrary-length byte strings to a list of one or more
 // elements of a finite field F. It is used to generate curve points &| scalars.
 // Reference Spec: https://datatracker.ietf.org/doc/html/rfc9380#section-5
-func HashToField(h CurveHasher, m, log2p int, fieldOrder *saferith.Modulus, msg, dst []byte, count int) (u [][]*saferith.Nat, err error) {
+func HashToField(h CurveHasher, m, log2p int, fieldOrder *saferith.Modulus, msg, dst []byte, count int) (u []*saferith.Nat, err error) {
 	// step 1
 	k := constants.ComputationalSecurity
 	L := base.CeilDiv(log2p+k, 8)
@@ -22,22 +22,19 @@ func HashToField(h CurveHasher, m, log2p int, fieldOrder *saferith.Modulus, msg,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not expand message to be hashed to field")
 	}
-	u = make([][]*saferith.Nat, count)
+	u = make([]*saferith.Nat, count*m)
 	// step 3
 	for i := 0; i < count; i++ {
-		e := make([]*saferith.Nat, m)
 		// step 4
 		for j := 0; j < m; j++ {
 			// step 5
 			elmOffset := L * (j + i*m)
 			// step 6
 			tv := uniformBytes[elmOffset : elmOffset+L]
-			// step 7
+			// step 7 & 8
 			tvNat := new(saferith.Nat).SetBytes(tv)
-			e[j] = tvNat.Mod(tvNat, fieldOrder)
+			u[m*i+j] = tvNat.Mod(tvNat, fieldOrder)
 		}
-		// step 8
-		u[i] = e
 	}
 	// step 9
 	return u, nil
@@ -54,10 +51,7 @@ func HashToCurveScalar(h CurveHasher, curve curves.Curve, msg, dst []byte, count
 	}
 	s = make([]curves.Scalar, len(u))
 	for i := range u {
-		if len(u[i]) != 1 {
-			return nil, errs.NewFailed("hash to scalar returned a non-scalar")
-		}
-		s[i], err = curve.Scalar().SetNat(u[i][0])
+		s[i], err = curve.Scalar().SetNat(u[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not set scalar with nat")
 		}
@@ -65,7 +59,7 @@ func HashToCurveScalar(h CurveHasher, curve curves.Curve, msg, dst []byte, count
 	return s, nil
 }
 
-func HashToFieldElement(h CurveHasher, curve curves.Curve, msg []byte, count int) ([][]*saferith.Nat, error) {
+func HashToFieldElement(h CurveHasher, curve curves.Curve, msg []byte, count int) (f []curves.FieldElement, err error) {
 	m := int(curve.Profile().Field().ExtensionDegree().Uint64())
 	log2p := curve.Profile().Field().Characteristic().AnnouncedLen()
 	fieldOrder := curve.Profile().Field().Order()
@@ -74,5 +68,12 @@ func HashToFieldElement(h CurveHasher, curve curves.Curve, msg []byte, count int
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not hash to curve field")
 	}
-	return u, nil
+	f = make([]curves.FieldElement, len(u))
+	for i := range u {
+		f[i], err = curve.FieldElement().SetNat(u[i])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not set field element with nat")
+		}
+	}
+	return f, nil
 }

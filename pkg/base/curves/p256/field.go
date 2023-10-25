@@ -86,6 +86,10 @@ func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
 	return e.v.Cmp(rhse.impl())
 }
 
+func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
+	return e
+}
+
 // Random TODO: implement
 func (*FieldElement) Random(prng io.Reader) curves.FieldElement {
 	return nil

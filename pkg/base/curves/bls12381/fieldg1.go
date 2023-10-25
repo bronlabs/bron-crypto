@@ -62,7 +62,7 @@ func (*FieldElementG1) Profile() curves.FieldProfile {
 	return &FieldProfileG1{}
 }
 
-// IMPLEMENT
+// TODO(Alberto) implement
 func (e *FieldElementG1) Hash(x []byte) curves.FieldElement {
 	return &FieldElementG1{
 		v: e.v.Hash(x),
@@ -73,6 +73,10 @@ func (e *FieldElementG1) New(value uint64) curves.FieldElement {
 	return &FieldElementG1{
 		v: e.v.SetUint64(value),
 	}
+}
+
+func (e *FieldElementG1) SubfieldElement(index uint64) curves.FieldElement {
+	return e
 }
 
 func (e *FieldElementG1) Random(prng io.Reader) curves.FieldElement {

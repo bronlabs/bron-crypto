@@ -81,6 +81,10 @@ func (*FieldElement) New(value uint64) curves.FieldElement {
 	}
 }
 
+func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
+	return e
+}
+
 func (*FieldElement) Random(prng io.Reader) curves.FieldElement {
 	return nil
 }

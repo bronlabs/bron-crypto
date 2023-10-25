@@ -75,6 +75,10 @@ func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
 	return 1
 }
 
+func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
+	return e
+}
+
 func (*FieldElement) New(value uint64) curves.FieldElement {
 	return nil
 }

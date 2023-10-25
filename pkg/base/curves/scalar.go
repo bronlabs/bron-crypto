@@ -9,7 +9,9 @@ import (
 // Scalar represents an element of the scalar field \mathbb{F}_q
 // of the elliptic curve construction.
 type Scalar interface {
+	// Curve returns the curve this scalar is associated with
 	Curve() Curve
+	// CurveName returns the name of the curve this scalar is associated with
 	CurveName() string
 	// Random returns a random scalar using the provided reader
 	// to retrieve bytes
