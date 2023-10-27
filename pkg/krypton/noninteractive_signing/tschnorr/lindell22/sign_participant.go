@@ -15,10 +15,11 @@ import (
 type Cosigner struct {
 	lindell22.Participant
 
-	myIdentityKey  integration.IdentityKey
-	mySharingId    int
-	myShard        *lindell22.Shard
-	myPreSignature *lindell22.PreSignature
+	myIdentityKey       integration.IdentityKey
+	mySharingId         int
+	myShard             *lindell22.Shard
+	myPreSignature      *lindell22.PreSignature
+	myPreSignatureIndex int
 
 	taproot                bool
 	identityKeyToSharingId map[types.IdentityHash]int
@@ -72,6 +73,7 @@ func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard
 		mySharingId:            mySharingId,
 		myShard:                myShard,
 		myPreSignature:         preSignatureBatch.PreSignatures[preSignatureIndex],
+		myPreSignatureIndex:    preSignatureIndex,
 		taproot:                taproot,
 		identityKeyToSharingId: identityKeyToSharingId,
 		sessionParticipants:    sessionParticipants,

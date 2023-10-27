@@ -39,8 +39,10 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 }
 
 type PreSignature struct {
-	K    curves.Scalar
-	BigR map[types.IdentityHash]curves.Point
+	K     curves.Scalar
+	K2    curves.Scalar
+	BigR  map[types.IdentityHash]curves.Point
+	BigR2 map[types.IdentityHash]curves.Point
 
 	_ types.Incomparable
 }

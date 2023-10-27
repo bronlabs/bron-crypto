@@ -25,7 +25,9 @@ type state struct {
 	pid                 []byte
 	bigS                []byte
 	k                   []curves.Scalar
+	k2                  []curves.Scalar
 	bigR                []curves.Point
+	bigR2               []curves.Point
 	bigRWitness         []commitments.Witness
 	theirBigRCommitment []map[types.IdentityHash]commitments.Commitment
 

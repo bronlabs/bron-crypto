@@ -1,6 +1,8 @@
 package lindell22
 
 import (
+	"strconv"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -9,24 +11,36 @@ import (
 )
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
-	k := c.myPreSignature.K
 	bigRSum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
+	bigR2Sum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
 	for _, identity := range c.sessionParticipants.Iter() {
 		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
+		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
 	}
+
+	delta := c.cohortConfig.CipherSuite.Curve.Scalar().Hash(
+		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
+		bigRSum.ToAffineCompressed(),
+		bigR2Sum.ToAffineCompressed(),
+		[]byte(strconv.Itoa(c.myPreSignatureIndex)),
+		message,
+	)
+	k := c.myPreSignature.K.Add(c.myPreSignature.K2.Mul(delta))
+	bigR := bigRSum.Add(bigR2Sum.Mul(delta))
+
 	if c.taproot {
-		if bigRSum.Y().IsOdd() {
+		if bigR.Y().IsOdd() {
 			k = k.Neg()
-			bigRSum = bigRSum.Neg()
+			bigR = bigR.Neg()
 		}
 	}
 
-	// 3.ii. compute e = H(Rsum || pk || message)
+	// 3.ii. compute e = H(R || pk || message)
 	var e curves.Scalar
 	if c.taproot {
-		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigRSum.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
 	} else {
-		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigRSum.ToAffineCompressed(), c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(), message)
+		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(), message)
 	}
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")

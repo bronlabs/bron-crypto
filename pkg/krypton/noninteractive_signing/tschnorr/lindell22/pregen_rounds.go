@@ -33,8 +33,10 @@ type Round1Broadcast struct {
 
 type Round2Broadcast struct {
 	BigR        []curves.Point
+	BigR2       []curves.Point
 	BigRWitness []commitments.Witness
 	BigRProof   []*dlog.Proof
+	BigR2Proof  []*dlog.Proof
 
 	_ types.Incomparable
 }
@@ -45,25 +47,31 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	k := make([]curves.Scalar, p.tau)
+	k2 := make([]curves.Scalar, p.tau)
 	bigR := make([]curves.Point, p.tau)
+	bigR2 := make([]curves.Point, p.tau)
 	bigRCommitment := make([]commitments.Commitment, p.tau)
 	bigRWitness := make([]commitments.Witness, p.tau)
 	for i := 0; i < p.tau; i++ {
-		// 1. choose a random k
+		// 1. choose a random k & k2
 		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k2[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 
-		// 2. compute R = k * G
+		// 2. compute R = k * G, R2 = k2 * G
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
+		bigR2[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k2[i])
 
-		// 3. compute Rcom = commit(R, pid, sid, S)
-		bigRCommitment[i], bigRWitness[i], err = commit(bigR[i], i, p.tau, p.state.pid, p.sid, p.state.bigS)
+		// 3. compute Rcom = commit(R, R2, pid, sid, S)
+		bigRCommitment[i], bigRWitness[i], err = commit(bigR[i], bigR2[i], i, p.tau, p.state.pid, p.sid, p.state.bigS)
 		if err != nil {
 			return nil, errs.NewFailed("cannot commit to R")
 		}
 	}
 
 	p.state.k = k
+	p.state.k2 = k2
 	p.state.bigR = bigR
+	p.state.bigR2 = bigR2
 	p.state.bigRWitness = bigRWitness
 
 	p.round++
@@ -79,6 +87,7 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 
 	theirBigRCommitment := make([]map[types.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
+	bigR2Proof := make([]*dlog.Proof, p.tau)
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitment[i] = make(map[types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
@@ -89,8 +98,12 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 			theirBigRCommitment[i][identity.Hash()] = in.BigRCommitment[i]
 		}
 
-		// 1. compute proof of dlog knowledge of R
+		// 1. compute proof of dlog knowledge of R & R2
 		bigRProof[i], err = dlogProve(p.state.k[i], p.state.bigR[i], i, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot prove dlog")
+		}
+		bigR2Proof[i], err = dlogProve(p.state.k2[i], p.state.bigR2[i], i, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot prove dlog")
 		}
@@ -98,12 +111,14 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 
 	p.state.theirBigRCommitment = theirBigRCommitment
 
-	// 2. broadcast proof and opening of R, revealing R
+	// 2. broadcast proof and opening of R, R2, revealing R, R2
 	p.round++
 	return &Round2Broadcast{
 		BigR:        p.state.bigR,
+		BigR2:       p.state.bigR2,
 		BigRWitness: p.state.bigRWitness,
 		BigRProof:   bigRProof,
+		BigR2Proof:  bigR2Proof,
 	}, nil
 }
 
@@ -113,8 +128,10 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 	}
 
 	BigR := make([]map[types.IdentityHash]curves.Point, p.tau)
+	BigR2 := make([]map[types.IdentityHash]curves.Point, p.tau)
 	for i := 0; i < p.tau; i++ {
 		BigR[i] = make(map[types.IdentityHash]curves.Point)
+		BigR2[i] = make(map[types.IdentityHash]curves.Point)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
 			in, ok := input[identity.Hash()]
 			if !ok {
@@ -122,11 +139,12 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 			}
 
 			theirBigR := in.BigR[i]
+			theirBigR2 := in.BigR2[i]
 			theirBigRWitness := in.BigRWitness[i]
 			theirPid := identity.PublicKey().ToAffineCompressed()
 
 			// 1. verify commitment
-			if err := openCommitment(theirBigR, i, p.tau, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[i][identity.Hash()], theirBigRWitness); err != nil {
+			if err := openCommitment(theirBigR, theirBigR2, i, p.tau, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[i][identity.Hash()], theirBigRWitness); err != nil {
 				return nil, errs.WrapFailed(err, "cannot open R commitment")
 			}
 
@@ -135,14 +153,20 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
 			BigR[i][identity.Hash()] = theirBigR
+			if err := dlogVerifyProof(in.BigR2Proof[i], theirBigR2, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
+				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			}
+			BigR2[i][identity.Hash()] = theirBigR2
 		}
 	}
 
 	preSignatures := make([]*lindell22.PreSignature, p.tau)
 	for i := 0; i < p.tau; i++ {
 		preSignatures[i] = &lindell22.PreSignature{
-			K:    p.state.k[i],
-			BigR: BigR[i],
+			K:     p.state.k[i],
+			K2:    p.state.k2[i],
+			BigR:  BigR[i],
+			BigR2: BigR2[i],
 		}
 	}
 
@@ -151,8 +175,8 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 	}, nil
 }
 
-func commit(bigR curves.Point, i, tau int, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
+func commit(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
 	commitment, witness, err = commitments.Commit(commitmentHashFunc, message)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
@@ -161,8 +185,8 @@ func commit(bigR curves.Point, i, tau int, pid, sid, bigS []byte) (commitment co
 	return commitment, witness, nil
 }
 
-func openCommitment(bigR curves.Point, i, tau int, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
+func openCommitment(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
+	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
 	if err := commitments.Open(commitmentHashFunc, message, commitment, witness); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot open commitment")
 	}
