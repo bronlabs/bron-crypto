@@ -86,7 +86,7 @@ func (s *Signer[K, S]) Sign(message, tag []byte) (*Signature[S], *ProofOfPossess
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
 	case MessageAugmentation:
 		// step 3.2.1.2 (namely, the pk || message portion)
-		message, err = augmentMessage(message, s.PrivateKey.PublicKey)
+		message, err = AugmentMessage(message, s.PrivateKey.PublicKey)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not augment message")
 		}
@@ -99,14 +99,14 @@ func (s *Signer[K, S]) Sign(message, tag []byte) (*Signature[S], *ProofOfPossess
 	default:
 		return nil, nil, errs.NewInvalidType("rogue key prevention scheme %d is not supported", s.Scheme)
 	}
-	var dst string
+	var dst []byte
 	if len(tag) == 0 {
-		dst, err = getDst(s.Scheme, s.PrivateKey.PublicKey.inG1())
+		dst, err = GetDst(s.Scheme, s.PrivateKey.PublicKey.InG1())
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not get domain separation tag")
 		}
 	} else {
-		dst = string(tag)
+		dst = tag
 	}
 
 	point, err := coreSign[K, S](s.PrivateKey, message, dst)
@@ -156,7 +156,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 			return errs.NewIsNil("public key is nil")
 		}
 		// step 3.2.2.1 (PK || message)
-		message, err = augmentMessage(message, publicKey)
+		message, err = AugmentMessage(message, publicKey)
 		if err != nil {
 			return errs.WrapFailed(err, "could not augment message")
 		}
@@ -176,14 +176,14 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
 	}
 
-	var dst string
+	var dst []byte
 	if len(tag) == 0 {
-		dst, err = getDst(scheme, publicKey.inG1())
+		dst, err = GetDst(scheme, publicKey.InG1())
 		if err != nil {
 			return errs.WrapFailed(err, "could not get domain separation tag")
 		}
 	} else {
-		dst = string(tag)
+		dst = tag
 	}
 
 	p, ok := signature.Value.(S)
@@ -241,7 +241,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 		// step 3.2.3.1
 		for i, publicKey := range publicKeys {
 			// step 3.2.3.2
-			augmentedMessage, err := augmentMessage(messages[i], publicKey)
+			augmentedMessage, err := AugmentMessage(messages[i], publicKey)
 			if err != nil {
 				return errs.WrapFailed(err, " could not augment message")
 			}
@@ -251,15 +251,15 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
 	}
 
-	var dst string
+	var dst []byte
 	var err error
 	if len(tag) == 0 {
-		dst, err = getDst(scheme, (*new(K)).CurveName() == bls12381.G1Name)
+		dst, err = GetDst(scheme, (*new(K)).CurveName() == bls12381.G1Name)
 		if err != nil {
 			return errs.WrapFailed(err, "could not get domain separation tag")
 		}
 	} else {
-		dst = string(tag)
+		dst = tag
 	}
 
 	sigValue, ok := aggregatedSiganture.Value.(S)
@@ -308,7 +308,7 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 		}
 	}
 
-	dst, err := getDst(POP, publicKeys[0].inG1())
+	dst, err := GetDst(POP, publicKeys[0].InG1())
 	if err != nil {
 		return errs.WrapFailed(err, "could not get domain separation tag")
 	}

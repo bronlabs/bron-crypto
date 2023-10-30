@@ -25,7 +25,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignatu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct a prover")
 	}
-	Hm := bls12381.New().PointG2().HashWithDst(message, bls.DstSignatureBasicInG2)
+	Hm := bls12381.New().PointG2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
 	proof, _, err := prover.Prove(c.signer.PrivateKey.D(), bls12381.NewG1().Generator(), Hm)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't produce proof")

@@ -1,7 +1,6 @@
 package signing
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
@@ -9,46 +8,62 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
 )
 
-func (c *Cosigner[_, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
+func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
 	if c.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", c.round)
 	}
+	var err error
+	var sigmaPOP_i *bls.Signature[S]
 	// step 1.1 and 1.2
-	sigma_i, pi_i, err := c.signer.Sign(message, getDst[S]())
+	switch c.scheme {
+	case bls.Basic:
+	case bls.MessageAugmentation:
+		message, err = bls.AugmentMessage[K](message, c.myShard.PublicKeyShares.PublicKey)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not augment message")
+		}
+	case bls.POP:
+		msg, err := c.myShard.PublicKeyShares.PublicKey.MarshalBinary()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not marshal public key")
+		}
+		sigmaPOP_i, _, err = c.signer.Sign(msg, bls.GetPOPDst(c.myShard.PublicKeyShares.PublicKey.InG1()))
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not produce POP partial signature")
+		}
+	default:
+		return nil, errs.NewInvalidType("scheme type %v not implemented", c.scheme)
+	}
+	tag, err := bls.GetDst(c.scheme, c.myShard.PublicKeyShares.PublicKey.InG1())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get dst")
+	}
+	sigma_i, pi_i, err := c.signer.Sign(message, tag)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
 	c.round++
 	return &boldyreva02.PartialSignature[S]{
-		SigmaI: sigma_i,
-		POP:    pi_i,
+		SigmaI:    sigma_i,
+		SigmaPOPI: sigmaPOP_i,
+		POP:       pi_i,
 	}, nil
 }
 
-func (c *Cosigner[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte) (*bls.Signature[S], error) {
+func (c *Cosigner[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
 	if c.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", c.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", c.round)
 	}
 	if !c.IsSignatureAggregator() {
-		return nil, errs.NewInvalidType("i'm not a signature aggregator")
+		return nil, nil, errs.NewInvalidType("i'm not a signature aggregator")
 	}
-	aggregator, err := aggregation.NewAggregator[K, S](c.myShard.PublicKeyShares, c.cohortConfig)
+	aggregator, err := aggregation.NewAggregator[K, S](c.myShard.PublicKeyShares, scheme, c.cohortConfig)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct aggregator")
+		return nil, nil, errs.WrapFailed(err, "could not construct aggregator")
 	}
-	signature, err := aggregator.Aggregate(partialSignatures, message)
+	signature, signaturePOP, err := aggregator.Aggregate(partialSignatures, message, scheme)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "aggregation failed")
+		return nil, nil, errs.WrapFailed(err, "aggregation failed")
 	}
-	return signature, nil
-}
-
-// we are overriding the default dst. We want a BASIC scheme with POP dst. Because we are generating and verifying pops,
-// but output a signature that does not have a pop.
-func getDst[S bls.SignatureSubGroup]() []byte {
-	pointInS := new(S)
-	if (*pointInS).CurveName() == bls12381.G1Name {
-		return []byte(bls.DstSignatureBasicInG1)
-	}
-	return []byte(bls.DstSignatureBasicInG2)
+	return signature, signaturePOP, nil
 }

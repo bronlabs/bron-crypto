@@ -68,10 +68,10 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards)
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards, scheme)
 	require.NoError(t, err)
 
-	partialSignatures, err := testutils.ProducePartialSignature(participants, message)
+	partialSignatures, err := testutils.ProducePartialSignature(participants, message, bls.Basic)
 	if err != nil && !errs.IsKnownError(err) {
 		require.NoError(t, err)
 	}
@@ -82,13 +82,13 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, cohort)
+	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, scheme, cohort)
 	require.NoError(t, err)
 
-	signature, err := agg.Aggregate(aggregatorInput, message)
+	signature, signaturePOP, err := agg.Aggregate(aggregatorInput, message, scheme)
 	require.NoError(t, err)
 
-	err = bls.Verify(publicKey, signature, message, nil, scheme, nil)
+	err = bls.Verify(publicKey, signature, message, signaturePOP, scheme, nil)
 	require.NoError(t, err)
 }
 

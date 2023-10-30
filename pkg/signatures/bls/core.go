@@ -9,7 +9,7 @@ import (
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coresign
-func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], message []byte, dst string) (curves.PairingPoint, error) {
+func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], message, dst []byte) (curves.PairingPoint, error) {
 	// step 2.6.1
 	Hm := privateKey.d.OtherGroup().HashWithDst(message, dst)
 	// step 2.6.2
@@ -25,7 +25,7 @@ func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], mes
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreverify
-func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], message []byte, value S, dst string) error {
+func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], message []byte, value S, dst []byte) error {
 	// step 2.7.2
 	if value == nil || message == nil || publicKey == nil {
 		return errs.NewInvalidArgument("signature or message or public key cannot be nil or zero")
@@ -39,7 +39,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	if err := publicKey.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "public key is invalid")
 	}
-	keysInG1 := publicKey.inG1()
+	keysInG1 := publicKey.InG1()
 	curve := publicKey.Y.PairingCurve()
 
 	// e(pk, H(m)) == e(g1, s)  OR if signature in G1  e(H(m), pk) == e(s, g2)
@@ -76,7 +76,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreaggregateverify
-func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignatureValue S, dst string) error {
+func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignatureValue S, dst []byte) error {
 	// step 2.9.2
 	if aggregatedSignatureValue == nil {
 		return errs.NewIsNil("aggregated signature value is nil")
@@ -89,7 +89,7 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	if len(publicKeys) < 1 || publicKeys[0] == nil {
 		return errs.NewIncorrectCount("at least one key is required")
 	}
-	keysInG1 := publicKeys[0].inG1()
+	keysInG1 := publicKeys[0].InG1()
 
 	if len(messages) < 1 {
 		return errs.NewIncorrectCount("at least one message is required")
@@ -171,10 +171,7 @@ func PopProve[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K]) (*P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not marshal public key to binary")
 	}
-	dst := DstPopProofInG1
-	if !privateKey.PublicKey.inG1() {
-		dst = DstPopProofInG2
-	}
+	dst := GetPOPDst(privateKey.PublicKey.InG1())
 	point, err := coreSign[K, S](privateKey, message, dst)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce pop")
@@ -194,10 +191,7 @@ func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop 
 	if err != nil {
 		return errs.WrapFailed(err, "could not marshal public ky")
 	}
-	dst := DstPopProofInG1
-	if !publicKey.inG1() {
-		dst = DstPopProofInG2
-	}
+	dst := GetPOPDst(publicKey.InG1())
 	p, ok := pop.Value.(S)
 	if !ok {
 		return errs.NewInvalidType("pop is not in the right subgroup")
@@ -207,7 +201,7 @@ func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop 
 
 // See section 3.2.1 from
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
-func augmentMessage[K KeySubGroup](message []byte, publicKey *PublicKey[K]) ([]byte, error) {
+func AugmentMessage[K KeySubGroup](message []byte, publicKey *PublicKey[K]) ([]byte, error) {
 	result, err := publicKey.MarshalBinary()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not marshal public key to binary")
@@ -290,24 +284,31 @@ func allUnique(messages [][]byte) (bool, error) {
 	return true, nil
 }
 
-func getDst(scheme RogueKeyPrevention, keysInG1 bool) (string, error) {
+func GetDst(scheme RogueKeyPrevention, keysInG1 bool) ([]byte, error) {
 	switch scheme {
 	case Basic:
 		if keysInG1 {
-			return DstSignatureBasicInG2, nil
+			return []byte(DstSignatureBasicInG2), nil
 		}
-		return DstSignatureBasicInG1, nil
+		return []byte(DstSignatureBasicInG1), nil
 	case MessageAugmentation:
 		if keysInG1 {
-			return DstSignatureAugInG2, nil
+			return []byte(DstSignatureAugInG2), nil
 		}
-		return DstSignatureAugInG1, nil
+		return []byte(DstSignatureAugInG1), nil
 	case POP:
 		if keysInG1 {
-			return DstSignaturePopInG2, nil
+			return []byte(DstSignaturePopInG2), nil
 		}
-		return DstSignaturePopInG1, nil
+		return []byte(DstSignaturePopInG1), nil
 	default:
-		return "", errs.NewInvalidType("scheme type %v not implemented", scheme)
+		return []byte(""), errs.NewInvalidType("scheme type %v not implemented", scheme)
 	}
+}
+
+func GetPOPDst(keysInG1 bool) []byte {
+	if !keysInG1 {
+		return []byte(DstPopProofInG2)
+	}
+	return []byte(DstPopProofInG1)
 }

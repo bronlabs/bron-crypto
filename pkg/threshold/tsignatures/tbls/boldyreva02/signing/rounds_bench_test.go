@@ -47,25 +47,25 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards)
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards, bls.Basic)
 	if err != nil {
 		return err
 	}
 
-	partialSignatures, err := testutils.ProducePartialSignature(participants, message)
+	partialSignatures, err := testutils.ProducePartialSignature(participants, message, bls.Basic)
 	if err != nil {
 		return err
 	}
 
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, cohort)
+	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, bls.Basic, cohort)
 	if err != nil {
 		return err
 	}
 
 	b.StartTimer()
-	signature, err := agg.Aggregate(aggregatorInput, message)
+	signature, _, err := agg.Aggregate(aggregatorInput, message, bls.Basic)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func Benchmark_Basic(b *testing.B) {
 
 	b.Run("short keys", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := testutils.SigningRoundTrip[bls.G1, bls.G2](threshold, total)
+			err := testutils.SigningRoundTrip[bls.G1, bls.G2](threshold, total, bls.Basic)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -97,7 +97,7 @@ func Benchmark_Basic(b *testing.B) {
 
 	b.Run("short signatures", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := testutils.SigningRoundTrip[bls.G2, bls.G1](threshold, total)
+			err := testutils.SigningRoundTrip[bls.G2, bls.G1](threshold, total, bls.Basic)
 			if err != nil {
 				b.Fatal(err)
 			}

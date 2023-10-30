@@ -162,7 +162,7 @@ func (pk *PublicKey[K]) Validate() error {
 }
 
 func (pk *PublicKey[K]) Size() int {
-	if pk.inG1() {
+	if pk.InG1() {
 		return PublicKeySizeInG1
 	}
 	return PublicKeySizeInG2
@@ -206,7 +206,7 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (*PublicKey[K]) inG1() bool {
+func (*PublicKey[K]) InG1() bool {
 	return (*new(K)).CurveName() == bls12381.G1Name
 }
 

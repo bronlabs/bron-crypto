@@ -103,8 +103,9 @@ func (s *Shard[K]) Validate(cohortConfig *integration.CohortConfig) error {
 }
 
 type PartialSignature[S bls.SignatureSubGroup] struct {
-	SigmaI *bls.Signature[S]
-	POP    *bls.ProofOfPossession[S]
+	SigmaI    *bls.Signature[S]
+	SigmaPOPI *bls.Signature[S]
+	POP       *bls.ProofOfPossession[S]
 
 	_ types.Incomparable
 }

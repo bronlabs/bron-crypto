@@ -27,7 +27,7 @@ Unlike threshold ECDSA or Schnorr which can be made noninteractive by preprocess
 - Choice of hash function used in message expansion of hash to curve is hardcoded to Sha256.
 
 **Functionalities**:
--  `HashG1(x)` hashes a scalar to a point on G1. Similarly `HashG2(x)` for G2.
+- `HashG1(x)` hashes a scalar to a point on G1. Similarly `HashG2(x)` for G2.
 - `Send(x)` Send message x to party P.
 - `ProvePOP(sk)` outputs proof of possession of sk.
 - `VerifyPOP(pk, pop)` validates POP given a public key.
@@ -47,18 +47,34 @@ Unlike threshold ECDSA or Schnorr which can be made noninteractive by preprocess
 This protocol is symmetric: In every round, all parties do the same thing. Wlog we'll write the protocol down for short public keys.
 
 0. Init.
-   1. DKG
+    1. DKG
+
+Signing and Verification process comes with different tags, depending on the rogue key prevention scheme used. The tags are: (All tag values are in [the paper](https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html))
+- DstSignatureBasicInG2
+- DstSignatureBasicInG1
+- DstSignatureAugInG2
+- DstSignatureAugInG1
+- DstSignaturePopInG2
+- DstSignaturePopInG1
+- DstPopProofInG2
+- DstPopProofInG1
 
 1. Round 1:
-   1. Set $\pi_i$ = ProvePOP($x_i$) where $x_i$ is signing key share of $P_i$
-   2. compute partial signature $\sigma_i = x_i \cdot HashG2(M)$ where $M$ is the message and $x_i$ signing key share of $P_i$. This is just a regular BLS signing process, with private key being the signing key share of each party.
-   3. $Send(psig)$ to signature aggregator, where psig is the tuple of p and $\sigma_i$.
-   4. That's it.
+    1. Set $\pi_i$ = ProvePOP($x_i$) where $x_i$ is signing key share of $P_i$
+    2. Depending on the rogue key prevention scheme: (This is just a regular BLS signing process, with private key being the signing key share of each party)
+        1. Basic Scheme: compute partial signature $\sigma_i = x_i \cdot HashG2(M, DstSignatureBasic)$ where $M$ is the message and $x_i$ signing key share of $P_i$.
+        2. MessageAugmentation scheme: compute partial signature $\sigma_i = x_i \cdot HashG2(pks || M, DstSignatureAug)$ where $M$ is the message, $x_i$ signing key share of $P_i$ and $pks$ is main public key.
+        3. POP scheme: compute partial signature $\sigma_i = x_i \cdot HashG2(M,DstSignaturePop)$ and $\sigma^{POP}_i = x_i \cdot HashG2(pks, DstPopProof)$ where $x_i$ signing key share of $P_i$ and $pks$ is main public key.
+    3. $Send(psig)$ to signature aggregator, where psig is the tuple of p, $\sigma_i$ and $\sigma^{POP}_i$ if using POP scheme.
 
 2. Aggregation:
-   0. Receives all psigs from all participating parties and parse it into $\sigma_i$ and $\pi_i$.
-   1. For each $P_i$:
-      1. **ABORT and IDENTIFY** if $VerifyPOP(pk_i, \pi_i)$ fails, where $pk_i = x_i \cdot G$.
-      2. **ABORT and IDENTIFY** if $Verify(pk_i, \sigma_i, m)$ fails, where $pk_i = x_i \cdot G$.
-   2. Compute the signature $\sigma = \sum \lambda_i \cdot \sigma_i$ where $\lambda_i$ is the lagrange coefficient of $P_i$.
-   3. Output $\sigma$.
+    0. Receives all psigs from all participating parties and parse it into $\sigma_i$ and $\pi_i$ (and $\sigma^{POP}_i$ if using POP scheme).
+    1. For each $P_i$:
+        1. **ABORT and IDENTIFY** if $VerifyPOP(pk_i, \pi_i)$ fails, where $pk_i = x_i \cdot G$.
+        2. Depending on the rogue key prevention scheme:
+            1. Basic scheme: **ABORT and IDENTIFY** if $Verify(pk_i, \sigma_i, m, DstSignatureBasic)$ fails, where $pk_i = x_i \cdot G$.
+            2. MessageAugmentation scheme: **ABORT and IDENTIFY** if $Verify(pk_i, \sigma_i, pks || m, DstSignatureAug)$ fails, where $pk_i = x_i \cdot G$ and $pks$ is main public key.
+            3. POP scheme: **ABORT and IDENTIFY** if $Verify(pk_i, \sigma_i, m, DstSignaturePop)$ or $Verify(pk_i, \sigma^{POP}_i, pks, DstPopProof)$ fails, where $pk_i = x_i \cdot G$ and $pks$ is main public key.
+    2. Compute the signature $\sigma = \sum \lambda_i \cdot \sigma_i$ where $\lambda_i$ is the lagrange coefficient of $P_i$.
+    3. Compute the signature $\sigma^{POP} = \sum \lambda_i \cdot \sigma^{POP}_i$ where $\lambda_i$ is the lagrange coefficient of $P_i$ if using POP scheme.
+    4. If using POP scheme, calculate and return $\sigma$ and $\sigma^{POP}$, otherwise return $\sigma$. 

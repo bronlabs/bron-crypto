@@ -20,6 +20,7 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	mySharingId            int
 	myShard                *boldyreva02.Shard[K]
 	identityKeyToSharingId map[types.IdentityHash]int
+	scheme                 bls.RogueKeyPrevention
 
 	sid        []byte
 	transcript transcripts.Transcript
@@ -47,7 +48,7 @@ func (p *Cosigner[K, S]) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdentityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdentityKey integration.IdentityKey, scheme bls.RogueKeyPrevention, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
 	if err := validateInputs[K, S](sid, myIdentityKey, sessionParticipants, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "couldn't construct the cossigner")
 	}
@@ -76,6 +77,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 		mySharingId:            mySharingId,
 		myShard:                myShard,
 		transcript:             transcript,
+		scheme:                 scheme,
 		round:                  1,
 	}, nil
 }

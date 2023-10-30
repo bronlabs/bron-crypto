@@ -47,8 +47,8 @@ func (*PointG2) Hash(inputs ...[]byte) curves.Point {
 	return &PointG2{Value: pt}
 }
 
-func (*PointG2) HashWithDst(input []byte, dst string) curves.PairingPoint {
-	pt := new(bls12381impl.G2).Hash(impl.EllipticPointHasherSha256(), input, []byte(dst))
+func (*PointG2) HashWithDst(input []byte, dst []byte) curves.PairingPoint {
+	pt := new(bls12381impl.G2).Hash(impl.EllipticPointHasherSha256(), input, dst)
 	return &PointG2{Value: pt}
 }
 
