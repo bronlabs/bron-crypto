@@ -21,13 +21,13 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 	participants = make([]*lindell17_dkg.Participant, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
 		var prng io.Reader
-		if len(prngs) == 0 && prngs[i] != nil {
+		if len(prngs) != 0 && prngs[i] != nil {
 			prng = prngs[i]
 		} else {
 			prng = crand.Reader
 		}
 		var transcript transcripts.Transcript
-		if len(allTranscripts) == 0 && allTranscripts[i] != nil {
+		if len(allTranscripts) != 0 && allTranscripts[i] != nil {
 			transcript = allTranscripts[i]
 		}
 

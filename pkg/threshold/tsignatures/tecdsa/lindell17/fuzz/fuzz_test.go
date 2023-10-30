@@ -20,12 +20,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	lindell17_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tecdsa/lindell17"
-	noninteractiv_testutils "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tecdsa/lindell17/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing"
+	noninteractive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -117,7 +117,7 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	}
 	fmt.Println("sid: ", sid, "preSignatureIndex: ", preSignatureIndex)
 	transcripts := integration_testutils.MakeTranscripts("TEST", identities)
-	participants, err := noninteractiv_testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+	participants, err := noninteractive_testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
 	if len(sid) == 0 {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -125,15 +125,15 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	}
 	require.NoError(t, err)
 
-	batches, err := noninteractiv_testutils.DoLindell2017PreGen(participants)
+	batches, err := noninteractive_testutils.DoLindell2017PreGen(participants)
 	require.NoError(t, err)
 
 	aliceShard := shards[identities[aliceIdx].Hash()]
-	alice, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
+	alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	bobShard := shards[identities[bobIdx].Hash()]
-	bob, err := lindell17_noninteractive_signing.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
+	bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	partialSignature, err := alice.ProducePartialSignature(message)
@@ -183,7 +183,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	require.NoError(t, err)
 
 	aliceShard := shards[alice.Hash()]
-	primary, err := signing.NewPrimaryCosigner(alice, bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := interactive_signing.NewPrimaryCosigner(alice, bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
 	if err != nil {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -193,7 +193,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	require.NoError(t, err)
 
 	bobShard := shards[bob.Hash()]
-	secondary, err := signing.NewSecondaryCosigner(bob, alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := interactive_signing.NewSecondaryCosigner(bob, alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 

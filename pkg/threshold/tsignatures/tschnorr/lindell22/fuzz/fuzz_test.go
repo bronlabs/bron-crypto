@@ -20,13 +20,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	lindell22_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/lindell22"
-	noninteractive_testutils "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/lindell22/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
+	interactive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
-	interactive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/noninteractive_signing"
+	noninteractive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/noninteractive_signing/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -84,7 +84,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := interactive_signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -110,12 +110,12 @@ func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, ident
 	partialSignatures := make([]*lindell22.PartialSignature, threshold)
 	for i := 0; i < threshold; i++ {
 		shard := shards[identities[i].Hash()]
-		cosigner, err2 := lindell22_noninteractive_signing.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, crand.Reader)
+		cosigner, err2 := noninteractive_signing.NewCosigner(identities[i], shard, cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, crand.Reader)
 		require.NoError(t, err2)
 		partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 		require.NoError(t, err)
 	}
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := interactive_signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	shard := shards[identities[0].Hash()]
 	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: shard.SigningKeyShare.PublicKey}, message, signature)

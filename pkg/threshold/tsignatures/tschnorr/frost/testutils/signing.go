@@ -7,9 +7,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	frost_noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/krypton/noninteractive_signing/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/signing"
+	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
 )
 
 func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard) (participants []*signing_helpers.Cosigner, err error) {
@@ -32,10 +32,10 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 	return participants, nil
 }
 
-func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *frost_noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*frost_noninteractive_signing.PrivateNoncePair) (participants []*frost_noninteractive_signing.Cosigner, err error) {
-	participants = make([]*frost_noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
+func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair) (participants []*noninteractive_signing.Cosigner, err error) {
+	participants = make([]*noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
-		participants[i], err = frost_noninteractive_signing.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
+		participants[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -76,7 +76,7 @@ func MapPartialSignatures(identities []integration.IdentityKey, partialSignature
 	return result
 }
 
-func DoProducePartialSignature(participants []*frost_noninteractive_signing.Cosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+func DoProducePartialSignature(participants []*noninteractive_signing.Cosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.ProducePartialSignature(message)
