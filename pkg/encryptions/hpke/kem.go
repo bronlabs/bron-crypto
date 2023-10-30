@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/ecies/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
 )
 
 type KEMID uint16

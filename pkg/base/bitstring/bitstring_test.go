@@ -9,6 +9,8 @@ import (
 )
 
 func TestSelectBit(t *testing.T) {
+	t.Parallel()
+
 	vector := []byte{0x00, 0x00, 0x00, 0x00}
 	for i := 0; i < 32; i++ {
 		vector[i>>3] = 0x01 << (i & 0x07)
@@ -19,6 +21,8 @@ func TestSelectBit(t *testing.T) {
 }
 
 func TestTransposeBooleanMatrix(t *testing.T) {
+	t.Parallel()
+
 	// Test with a 8x6 matrix
 	inputMatrix := [][]byte{
 		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},

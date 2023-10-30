@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/ecies/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
 )
 
 const (

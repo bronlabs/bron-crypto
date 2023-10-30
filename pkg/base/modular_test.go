@@ -1,9 +1,12 @@
 package base_test
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 )
@@ -79,5 +82,66 @@ func Test_ConstantTimeGt(t *testing.T) {
 		if expected != actual {
 			t.Errorf("ConstantTimeGt(%d, %d) = %d, expected %d", x, y, actual, expected)
 		}
+	}
+}
+
+func Test_FloorLog2(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		arg      int
+		expected int
+	}{
+		{1, 0},
+		{7, 2},
+		{8, 3},
+		{15, 3},
+		{16, 4},
+		{253, 7},
+		{254, 7},
+		{255, 7},
+		{256, 8},
+		{257, 8},
+		{258, 8},
+	}
+
+	for _, testCase := range testCases {
+		arg := testCase.arg
+		expected := testCase.expected
+		t.Run(fmt.Sprintf("floor(log2(%d)) = %d", arg, expected), func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, base.FloorLog2(arg), expected)
+		})
+	}
+}
+
+func Test_CeilLog2(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		arg      int
+		expected int
+	}{
+		{1, 0},
+		{7, 3},
+		{8, 3},
+		{9, 4},
+		{15, 4},
+		{16, 4},
+		{253, 8},
+		{254, 8},
+		{255, 8},
+		{256, 8},
+		{257, 9},
+		{258, 9},
+	}
+
+	for _, testCase := range testCases {
+		arg := testCase.arg
+		expected := testCase.expected
+		t.Run(fmt.Sprintf("ceil(log2(%d)) = %d", arg, expected), func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, base.CeilLog2(arg), expected)
+		})
 	}
 }
