@@ -6,7 +6,7 @@ import (
 )
 
 // IsogenyParamsSecp256k1 are parameters needed to map from an isogeny to Secp256k1.
-// See https://datatracker.ietf.org/doc/html/rfc9380#name-3-isogeny-map-for-secp256k1
+// See https://datatracker.ietf.org/doc/html/rfc9380#appendix-E.1
 type IsogenyParamsSecp256k1 struct {
 	K1 [4]curves.FieldElement
 	K2 [2]curves.FieldElement

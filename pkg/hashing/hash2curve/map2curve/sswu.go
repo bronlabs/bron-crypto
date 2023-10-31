@@ -9,10 +9,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-// SswuParams for computing the Simplified SWU mapping for any field of order q,
+// SswuMapper for computing the Simplified SWU mapping for any field of order q,
 // given a curve in Weierstrass form (y^2 = x^3 + Ax + B), Z, a constant from
 // the Simplified SWU map, and constant parameters for the SqrtRatio function.
-type SswuParams struct {
+type SswuMapper struct {
 	A, B, Z curves.FieldElement
 	sr      SqrtRatioParams
 	_       types.Incomparable
@@ -27,30 +27,30 @@ type SqrtRatioParams interface {
 	SqrtRatio(u, v curves.FieldElement) (isQR bool, y curves.FieldElement)
 }
 
-// MapToCurveSSWU maps an element of a finite field F to a point on an elliptic
+// MapToCurve maps an element of a finite field F to a point on an elliptic
 // curve E over F. This is an optimised straight-line implementation of the
 // Simplified SWU method for any Weierstrass curve, that is, it applies to any
 // base field.
 // See: https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2
-func (params *SswuParams) MapToCurveSSWU(u curves.FieldElement) (x, y curves.FieldElement) {
+func (mapper *SswuMapper) MapToCurve(u curves.FieldElement) (x, y curves.FieldElement) {
 	/*  1. */ tv1 := u.Square()
-	/*  2. */ tv1 = tv1.Mul(params.Z)
+	/*  2. */ tv1 = tv1.Mul(mapper.Z)
 	/*  3. */ tv2 := tv1.Square()
 	/*  4. */ tv2 = tv2.Add(tv1)
 	/*  5. */ tv3 := tv2.Add(tv2.One())
-	/*  6. */ tv3 = tv3.Mul(params.B)
-	/*  7. */ tv4 := Cmov(params.Z, tv2.Neg(), tv2.IsZero())
-	/*  8. */ tv4 = tv4.Mul(params.A)
+	/*  6. */ tv3 = tv3.Mul(mapper.B)
+	/*  7. */ tv4 := Cmov(mapper.Z, tv2.Neg(), tv2.IsZero())
+	/*  8. */ tv4 = tv4.Mul(mapper.A)
 	/*  9. */ tv2 = tv3.Square()
 	/* 10. */ tv6 := tv4.Square()
-	/* 11. */ tv5 := tv6.Mul(params.A)
+	/* 11. */ tv5 := tv6.Mul(mapper.A)
 	/* 12. */ tv2 = tv2.Add(tv5)
 	/* 13. */ tv2 = tv2.Mul(tv3)
 	/* 14. */ tv6 = tv6.Mul(tv4)
-	/* 15. */ tv5 = tv6.Mul(params.B)
+	/* 15. */ tv5 = tv6.Mul(mapper.B)
 	/* 16. */ tv2 = tv2.Add(tv5)
 	/* 17. */ x = tv1.Mul(tv3)
-	/* 18. */ is_gx1_square, y1 := params.sr.SqrtRatio(tv2, tv6)
+	/* 18. */ is_gx1_square, y1 := mapper.sr.SqrtRatio(tv2, tv6)
 	/* 19. */ y = tv1.Mul(u)
 	/* 20. */ y = y.Mul(y1)
 	/* 21. */ x = Cmov(x, tv3, is_gx1_square)
@@ -180,7 +180,6 @@ func NewSqrtRatio3mod4Params(curve curves.Curve, Z curves.FieldElement) (SqrtRat
 	return &SqrtRatio3mod4Params{C1: c1, C2: c2}, nil
 }
 
-// Based on https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2.1.2
 func (params *SqrtRatio3mod4Params) SqrtRatio(u, v curves.FieldElement) (isQR bool, y curves.FieldElement) {
 	/*  1. */ tv1 := v.Square()
 	/*  2. */ tv2 := u.Mul(v)
