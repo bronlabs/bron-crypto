@@ -3,32 +3,10 @@ package hash2curve
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
-
-// MapToCurve maps a list of elements of a finite field F to a list of points
-// on an elliptic curve E over F. The mapping is deterministic, following the
-// convention from https://datatracker.ietf.org/doc/html/rfc9380#section-6
-//   - Montgomery curves --> Elligator 2 method (Section 6.7.1, Section 6.8.2 for
-//     twisted edwards).
-//   - Weierstrass curves --> Simplified Shallue-van de Woestijne-Ulas (SWU)
-//     method (Section 6.6.2) if possible.
-
-func MapToCurve(curve curves.Curve, u [][]saferith.Nat) {
-	switch curve.Name() {
-	case constants.ED25519_NAME:
-	case constants.CURVE25519_NAME:
-	}
-}
-
-type ParamsSSWU3mod4 struct {
-	C1, C2, A, B, Z curves.FieldElement
-
-	_ types.Incomparable
-}
 
 type ParamsElligator2_5mod8 struct {
 	C1, C2, C3, C4, J, S curves.FieldElement
@@ -71,7 +49,7 @@ func NewParamsElligator2_5mod8(curve curves.Curve) (params *ParamsElligator2_5mo
 
 // Elligator2 maps from a field element u to a point on the curve, optimised for
 // curve25519.
-func (params *ParamsElligator2_5mod8) MapToCurve_Elligator2_curve25519(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
+func (params *ParamsElligator2_5mod8) MapToCurveElligator2_curve25519(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
 	/*  1. */ tv1 := u.Square()
 	/*  2. */ tv1 = tv1.Double()
 	/*  3. */ xd = tv1.Add(tv1.One())
@@ -133,8 +111,10 @@ func NewParamsElligator2_Edwards25519(curve curves.Curve) (params *ParamsElligat
 	return params, nil
 }
 
-func (params *ParamsElligator2_Edwards25519) MapToCurve_Elligator2_edwards25519(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
-	/*  1. */ xMn, xMd, yMn, yMd := params.MapToCurve_Elligator2_curve25519(u)
+// MapToCurveElligator2_edwards25519 maps from a field element u to a point on
+// the curve, optimised for edwards25519.
+func (params *ParamsElligator2_Edwards25519) MapToCurveElligator2_edwards25519(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
+	/*  1. */ xMn, xMd, yMn, yMd := params.MapToCurveElligator2_curve25519(u)
 	/*  2. */ xn = xMn.Mul(yMd)
 	/*  3. */ xn = xn.Mul(params.C1ed)
 	/*  4. */ xd = xMd.Mul(yMn)

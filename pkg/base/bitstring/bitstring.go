@@ -2,6 +2,7 @@ package bitstring
 
 import (
 	"encoding/binary"
+	"math/bits"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -86,4 +87,15 @@ func ByteSubLE(b []byte) {
 		b[i] = byte(t & 0xff)
 		carry = t >> 8
 	}
+}
+
+// TrailingBitsBE returns the number of zeroed bits in the rightmost part of the input.
+func TrailingBitsBE(input []byte) (res uint64) {
+	for i := len(input); i > 0; i-- {
+		tb := bits.TrailingZeros8(input[i])
+		if tb < 8 {
+			return uint64(i*8 + tb)
+		}
+	}
+	return res
 }
