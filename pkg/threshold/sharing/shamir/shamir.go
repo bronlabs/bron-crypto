@@ -16,6 +16,7 @@ type Share struct {
 	_ types.Incomparable
 }
 
+// Validate checks if the share is valid (non-zero value, non-zero id and in the correct curve).
 func (ss Share) Validate(curve curves.Curve) error {
 	if ss.Id == 0 {
 		return errs.NewInvalidIdentifier("invalid identifier - id is zero")

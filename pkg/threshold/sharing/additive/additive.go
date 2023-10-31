@@ -68,6 +68,8 @@ func (d *Dealer) Validate() error {
 	return nil
 }
 
+// Split secret shares a secret into N many additive shares, sampling them from
+// `prng` as a uniform distribution.
 func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	if secret.IsZero() {
 		return nil, errs.NewIsZero("invalid secret")
@@ -83,14 +85,15 @@ func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	return shares, nil
 }
 
-func (d *Dealer) Combine(shares []*Share) (curves.Scalar, error) {
+// Combine reconstructs a secret from N many additive shares.
+func (d *Dealer) Combine(shares []*Share) (secret curves.Scalar, err error) {
 	if len(shares) != d.Total {
 		return nil, errs.NewFailed("len(shares) != N")
 	}
-	secret := d.Curve.Scalar().Zero()
+	secret = d.Curve.Scalar().Zero()
 	for _, share := range shares {
 		if share == nil || share.Value.IsZero() {
-			return nil, errs.NewIsZero("found a share with value %s", share.Value.Nat().String())
+			return nil, errs.NewIsZero("found a nil or zero share")
 		}
 		secret = secret.Add(share.Value)
 	}

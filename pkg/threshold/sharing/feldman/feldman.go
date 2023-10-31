@@ -1,3 +1,6 @@
+/*
+A VSS scheme based on the Feldman commitment scheme and the Shamir secret sharing scheme \cite{shamir}. The scheme is parametrized by a finite field $F_q$ defining a group $\mathbb{G}$ with generator $G$ (e.g., an elliptic curve), the number of shares produced $n$, and the number of shares required to reconstruct $t$ (threshold).
+*/
 package feldman
 
 import (
@@ -11,15 +14,17 @@ import (
 
 type Share = shamir.Share
 
+// Verify verifies that the share is valid using the commitments to the polynomial coefficients.
 func Verify(share *Share, commitments []curves.Point) (err error) {
 	curve := share.Value.Curve()
 	err = share.Validate(curve)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "share validation failed")
+		return errs.WrapInvalidArgument(err, "share validation failed")
 	}
 	x := curve.Scalar().New(uint64(share.Id))
 	i := curve.Scalar().One()
 
+	// 1. R = C_0 +  Σ_{j=1}((j * i) * C_i)
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
@@ -31,7 +36,9 @@ func Verify(share *Share, commitments []curves.Point) (err error) {
 	}
 	rhs = rhs.Add(commitments[0])
 
+	// 2. L = y_j * G
 	lhs := commitments[0].Generator().Mul(share.Value)
+	// 3. L == R
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
@@ -54,12 +61,14 @@ func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	return dealer, nil
 }
 
+// Split generates n (`total`) secret shares of the secret.
 func (f *Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
+	//
 	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")

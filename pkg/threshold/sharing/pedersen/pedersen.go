@@ -20,32 +20,38 @@ type Dealer struct {
 	_ types.Incomparable
 }
 
-func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
-	curve := generator.Curve()
+// Verify checks that the share is a valid pedersen VSS share.
+func Verify(share, blindShare *Share, blindedCommitments []curves.Point, secondGenerator curves.Point) (err error) {
+	curve := secondGenerator.Curve()
 	if err := share.Validate(curve); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid share")
 	}
 	if err := blindShare.Validate(curve); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid blind share")
 	}
-
-	x := curve.Scalar().New(uint64(share.Id))
-	i := curve.Scalar().One()
-	is := make([]curves.Scalar, len(commitments))
-	for j := 1; j < len(commitments); j++ {
-		i = i.Mul(x)
-		is[j] = i
+	if err := Validate(secondGenerator); err != nil {
+		return errs.WrapVerificationFailed(err, "invalid second generator")
 	}
-	rhs, err := curve.MultiScalarMult(is[1:], commitments[1:])
+	// 1. Compute R = D_0 +  Σ_j=1^t ((j*i) * D_j) as the expected blinded commitment
+	i := curve.Scalar().New(uint64(share.Id))
+	accumulator := curve.Scalar().One()
+	js := make([]curves.Scalar, len(blindedCommitments))
+	for j := 1; j < len(blindedCommitments); j++ {
+		accumulator = accumulator.Mul(i)
+		js[j] = accumulator
+	}
+	rhs, err := curve.MultiScalarMult(js[1:], blindedCommitments[1:])
 	if err != nil {
 		return errs.WrapFailed(err, "multiscalarmult failed")
 	}
-	rhs = rhs.Add(commitments[0])
+	rhs = rhs.Add(blindedCommitments[0])
 
-	g := commitments[0].Generator().Mul(share.Value)
-	h := generator.Mul(blindShare.Value)
+	// 2. Compute L = (s * G) + (h * H) as the actual blinded commitment
+	g := blindedCommitments[0].Generator().Mul(share.Value)
+	h := secondGenerator.Mul(blindShare.Value)
 	lhs := g.Add(h)
 
+	// 3. Check that L = R, abort otherwise
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
@@ -173,4 +179,20 @@ func (pd Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		return nil, errs.WrapFailed(err, "could not combine points")
 	}
 	return result, nil
+}
+
+func Validate(secondGenerator curves.Point) error {
+	if secondGenerator == nil {
+		return errs.NewIsNil("second generator is nil")
+	}
+	if !secondGenerator.IsOnCurve() {
+		return errs.NewMembershipError("invalid second generator")
+	}
+	if secondGenerator.IsIdentity() {
+		return errs.NewIsIdentity("invalid second generator")
+	}
+	if secondGenerator.Equal(secondGenerator.Curve().Generator()) {
+		return errs.NewInvalidArgument("second generator is equal to curve generator")
+	}
+	return nil
 }
