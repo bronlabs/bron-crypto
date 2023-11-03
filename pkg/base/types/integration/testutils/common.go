@@ -63,7 +63,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 	switch len(s.Bytes()) {
 	case constants.WideFieldBytes:
 		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
-	case constants.ScalarBytes:
+	case constants.FieldBytes:
 		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
 	default:
 		err = errs.NewSerializationError("cannot deserialize signature")

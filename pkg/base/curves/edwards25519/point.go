@@ -142,20 +142,6 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	}
 }
 
-// MangleScalarBitsAndMulByBasepointToProducePublicKey
-// is a function for mangling the bits of a (formerly
-// mathematically well-defined) "scalar" and multiplying it to produce a
-// public key.
-func (*Point) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *Scalar) (*Point, error) {
-	data := rhs.Value.Bytes()
-	s, err := filippo.NewScalar().SetBytesWithClamping(data)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
-	}
-	value := filippo.NewIdentityPoint().ScalarBaseMult(s)
-	return &Point{Value: value}, nil
-}
-
 func (p *Point) Equal(rhs curves.Point) bool {
 	r, ok := rhs.(*Point)
 	if ok {

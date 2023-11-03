@@ -8,25 +8,30 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-type Elligator2MapperCurve25519 struct {
-	C1, C2, C3, C4, J, S curves.FieldElement
+// MapperElligator2Curve25519 is a straight-line implementation of Elligator 2
+// for curve25519 named `map_to_curve_elligator2_curve25519` of RFC9380.
+// This implementation can also be used for any Montgomery curve (in the form
+// K * t^2 = s^3 + J * s^2 + s) with extension degree 1 over GF(q) where q = 5 (mod 8).
+// The constants are:
+//   - c1 = (q + 3) / 8       # Integer arithmetic
+//   - c2 = 2^c1
+//   - c3 = sqrt(-1)
+//   - c4 = (q - 5) / 8       # Integer arithmetic
+//
+// See: https://datatracker.ietf.org/doc/html/rfc9380#appendix-G.2.1
+type MapperElligator2Curve25519 struct {
+	C1, C2, C3, C4, J, K curves.FieldElement
 
 	_ types.Incomparable
 }
 
-// Constants:
-// 1. c1 = (q + 3) / 8       # Integer arithmetic
-// 2. c2 = 2^c1
-// 3. c3 = sqrt(-1)
-// 4. c4 = (q - 5) / 8       # Integer arithmetic
-// J and S are provided by the curve.
-func NewElligator2MapperCurve25519(curve curves.Curve) (params *Elligator2MapperCurve25519, err error) {
-	params = &Elligator2MapperCurve25519{}
+func NewMapperElligator2Curve25519(curve curves.Curve) (params *MapperElligator2Curve25519, err error) {
+	params = &MapperElligator2Curve25519{}
 	q := curve.FieldElement().Modulus()
 	qNat := q.Nat()
 	c1Nat := qNat.Div(qNat.Add(qNat, qNat.SetUint64(3), 0), saferith.ModulusFromUint64(8), 0)
-	c2Nat := qNat.ModMul(c1Nat, c1Nat, q)
-	c3Nat := qNat.ModSqrt(qNat, q)
+	c2Nat := qNat.Exp(qNat.SetUint64(2), c1Nat, q)
+	c3Nat := qNat.ModSqrt(qNat.Sub(qNat, qNat.SetUint64(1), 0), q)
 	c4Nat := qNat.Div(qNat.Sub(qNat, qNat.SetUint64(5), 0), saferith.ModulusFromUint64(8), 0)
 	params.C1, err = curve.FieldElement().SetNat(c1Nat)
 	if err != nil {
@@ -47,9 +52,7 @@ func NewElligator2MapperCurve25519(curve curves.Curve) (params *Elligator2Mapper
 	return params, nil
 }
 
-// Elligator2 maps from a field element u to a point on the curve, optimised for
-// curve25519.
-func (mapper *Elligator2MapperCurve25519) MapToCurve(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
+func (mapper *MapperElligator2Curve25519) MapToCurve(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
 	/*  1. */ tv1 := u.Square()
 	/*  2. */ tv1 = tv1.Double()
 	/*  3. */ xd = tv1.Add(tv1.One())
@@ -91,29 +94,34 @@ func (mapper *Elligator2MapperCurve25519) MapToCurve(u curves.FieldElement) (xn,
 	/* 39. */ return xn, xd, y, u.One()
 }
 
-type Elligator2MapperEdwards25519 struct {
-	C1ed curves.FieldElement
+// MapperElligator2Edwards25519 is a straight-line implementation of Elligator 2
+// for edwards25519 named `map_to_curve_elligator2_curve25519`. Besides the
+// following constant, it is identical to the curve25519 implementation.
+//   - c1 = sqrt(-486664) # sgn0(c1) MUST equal 0
+//
+// See: https://datatracker.ietf.org/doc/html/rfc9380#appendix-G.2.2
+type MapperElligator2Edwards25519 struct {
+	C1ed             curves.FieldElement
+	elligator2Mapper MapperElligator2Curve25519
 
-	elligator2Mapper Elligator2MapperCurve25519
+	_ types.Incomparable
 }
 
-func NewElligator2MapperEdwards25519(curve curves.Curve) (params *Elligator2MapperEdwards25519, err error) {
+func NewElligator2MapperEdwards25519(curve curves.Curve) (params *MapperElligator2Edwards25519, err error) {
 	c1, ok := curve.FieldElement().Zero().Sub(curve.FieldElement().New(486664)).Sqrt()
 	if !ok {
 		return nil, errs.NewFailed("failed to compute sqrt")
 	}
 	if Sgn0(c1) { // Sgn0(c1) MUST be 0
-		c1 = c1.Neg()
+		panic("Sgn0(c1) MUST be 0")
 	}
-	params = &Elligator2MapperEdwards25519{
+	params = &MapperElligator2Edwards25519{
 		C1ed: c1,
 	}
 	return params, nil
 }
 
-// MapToCurveElligator2_edwards25519 maps from a field element u to a point on
-// the curve, optimised for edwards25519.
-func (mapper *Elligator2MapperEdwards25519) MapToCurve(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
+func (mapper *MapperElligator2Edwards25519) MapToCurve(u curves.FieldElement) (xn, xd, yn, yd curves.FieldElement) {
 	/*  1. */ xMn, xMd, yMn, yMd := mapper.elligator2Mapper.MapToCurve(u)
 	/*  2. */ xn = xMn.Mul(yMd)
 	/*  3. */ xn = xn.Mul(mapper.C1ed)

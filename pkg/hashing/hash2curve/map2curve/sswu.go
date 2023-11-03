@@ -15,7 +15,8 @@ import (
 type SswuMapper struct {
 	A, B, Z curves.FieldElement
 	sr      SqrtRatioParams
-	_       types.Incomparable
+
+	_ types.Incomparable
 }
 
 // SqrtRatioParams are the parameters required for the `sqrt_ratio(u,v)` function.
@@ -76,6 +77,8 @@ func (mapper *SswuMapper) MapToCurve(u curves.FieldElement) (x, y curves.FieldEl
 // See: https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2.1.1
 type SqrtRatioGenericParams struct {
 	C1, C2, C3, C4, C5, C6, C7 curves.FieldElement
+
+	_ types.Incomparable
 }
 
 func NewSqrtRatioGenericParams(curve curves.Curve, Z curves.FieldElement) (SqrtRatioParams, error) {
@@ -163,6 +166,8 @@ func (params *SqrtRatioGenericParams) SqrtRatio(u, v curves.FieldElement) (isQR 
 // See: https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2.1.2
 type SqrtRatio3mod4Params struct {
 	C1, C2 curves.FieldElement
+
+	_ types.Incomparable
 }
 
 func NewSqrtRatio3mod4Params(curve curves.Curve, Z curves.FieldElement) (SqrtRatioParams, error) {

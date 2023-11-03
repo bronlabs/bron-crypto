@@ -12,7 +12,7 @@ import (
 type FieldValue = []uint64
 
 const (
-	FieldBytes     = constants.ScalarBytes
+	FieldBytes     = constants.FieldBytes
 	WideFieldBytes = constants.WideFieldBytes
 )
 
@@ -23,7 +23,7 @@ type FieldProfile interface {
 }
 
 // FieldElement is an element of a finite field \mathbb{F}_{p^k} with p>1 a prime
-// and k>1 an integer.
+// and k>=1 an integer.
 type FieldElement interface {
 	// Clone returns a copy of this field element
 	Clone() FieldElement
@@ -34,8 +34,8 @@ type FieldElement interface {
 	Value() FieldValue
 	// Modulus returns the modulus of the field this element is in
 	Modulus() *saferith.Modulus
-	// SubfieldElement returns:
-	//  - For k>1 only (subfields Fp1, ...), the element of Fp((i+1)%k) with 0<=i<k.
+	// SubfieldElement returns, depending of the extension degree k of the field:
+	//  - For k>1 (with subfields Fp1, ...), the element of Fp((i+1)%k) with 0<=i<k.
 	//  - For k=1, the element itself regardless of i.
 	SubfieldElement(i uint64) FieldElement
 

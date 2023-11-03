@@ -2,12 +2,12 @@ package constants
 
 // ComputationalSecurity is the number of bits of security we want to achieve in most of our cryptographic primitives.
 const ComputationalSecurity = 128
-const ComputationalSecurityBytes = ComputationalSecurity >> 3
+const ComputationalSecurityBytes = ComputationalSecurity / 8
 
-// ScalarBytes is the number of bytes needed to represent a scalar in most fields in the `curves` package.
-const ScalarBytes = 32
+// FieldBytes is the number of bytes needed to represent a FieldElement|Scalar in most fields of the `curves` package.
+const FieldBytes = 32
 
-// WideFieldBytes is the number of bytes needed for sufficiently unbiased sampling of a scalar in most fields.
+// WideFieldBytes is the number of bytes needed for sufficiently unbiased sampling of a FieldElement|Scalar in most fields.
 const WideFieldBytes = 64
 
 // Curve names compliant with https://datatracker.ietf.org/doc/html/rfc9380
@@ -19,4 +19,8 @@ const (
 	CURVE25519_NAME string = "curve25519"
 	ED25519_NAME    string = "edwards25519"
 	PALLAS_NAME     string = "pallas"
+)
+
+const (
+	HASH2CURVE_APP_TAG string = "KRYPTON-H2C-"
 )

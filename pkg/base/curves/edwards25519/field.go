@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"encoding/binary"
 	"io"
 
 	"filippo.io/edwards25519/field"
@@ -80,11 +81,30 @@ func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
 }
 
 func (*FieldElement) New(value uint64) curves.FieldElement {
-	return nil
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, value)
+	el, err := new(field.Element).SetBytes(buf)
+	if err != nil {
+		panic(err)
+	}
+	return &FieldElement{
+		v: el,
+	}
 }
 
 func (*FieldElement) Random(prng io.Reader) curves.FieldElement {
-	return nil
+	buf := make([]byte, 32)
+	_, err := prng.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+	el, err := new(field.Element).SetBytes(buf)
+	if err != nil {
+		panic(err)
+	}
+	return &FieldElement{
+		v: el,
+	}
 }
 
 func (e *FieldElement) Zero() curves.FieldElement {
@@ -99,20 +119,20 @@ func (e *FieldElement) One() curves.FieldElement {
 	}
 }
 
-func (*FieldElement) IsZero() bool {
-	return false
+func (e *FieldElement) IsZero() bool {
+	return e.v.Equal(e.v.Zero()) == 1
 }
 
-func (*FieldElement) IsOne() bool {
-	return false
+func (e *FieldElement) IsOne() bool {
+	return e.v.Equal(e.v.One()) == 1
 }
 
-func (*FieldElement) IsOdd() bool {
-	return false
+func (e *FieldElement) IsOdd() bool {
+	return e.v.Bytes()[0]&1 == 1
 }
 
-func (*FieldElement) IsEven() bool {
-	return false
+func (e *FieldElement) IsEven() bool {
+	return e.v.Bytes()[0]&1 == 0
 }
 
 func (e *FieldElement) Square() curves.FieldElement {
@@ -125,7 +145,13 @@ func (e *FieldElement) Double() curves.FieldElement {
 	return e.Add(e)
 }
 
-func (*FieldElement) Sqrt() (curves.FieldElement, bool) {
+func (e *FieldElement) Sqrt() (curves.FieldElement, bool) {
+	res, ok := e.v.SqrtRatio(e.v, e.v.One())
+	if ok == 1 {
+		return &FieldElement{
+			v: res,
+		}, true
+	}
 	return nil, false
 }
 
@@ -197,11 +223,17 @@ func (*FieldElement) Nat() *saferith.Nat {
 }
 
 func (*FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
-	return nil, nil
+	result, err := new(field.Element).SetBytes(input)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not set bytes")
+	}
+	return &FieldElement{
+		v: result,
+	}, nil
 }
 
 func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	result, err := e.v.SetBytes(input)
+	result, err := e.v.SetWideBytes(input)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not set bytes")
 	}
@@ -214,10 +246,21 @@ func (e *FieldElement) Bytes() []byte {
 	return e.v.Bytes()
 }
 
-func (*FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
-	return nil, nil
+func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
+	if sc.CurveName() != Name {
+		return nil, errs.NewInvalidType("scalar is not a ed25519 scalar")
+	}
+	result, err := e.SetBytes(sc.Bytes())
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not convert from scalar")
+	}
+	return result, nil
 }
 
-func (*FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	return nil, nil
+func (e *FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
+	results, err := curve.Scalar().SetBytes(e.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert field element to scalar")
+	}
+	return results, nil
 }

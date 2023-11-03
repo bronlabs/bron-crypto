@@ -13,14 +13,15 @@ import (
 )
 
 // FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.
+// Used for faster limb-based operations.
 const FieldLimbs = 4
 
 // FieldBytes is the number of bytes needed to represent an element of most fields.
-const FieldBytes = constants.ScalarBytes
+const FieldBytes = constants.FieldBytes
 
 // WideFieldBytes is the number of bytes needed for safe conversion
 // to this field to avoid bias when reduced.
-const WideFieldBytes = 64
+const WideFieldBytes = constants.WideFieldBytes
 
 // FieldValue holds the implementation of field element. This struct homogeneizes
 // several curve fields, and encapsulates them to be exposed using the `curves.FieldElement`

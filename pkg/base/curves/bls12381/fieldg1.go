@@ -211,11 +211,11 @@ func (e *FieldElementG1) Nat() *saferith.Nat {
 }
 
 func (e *FieldElementG1) SetBytes(input []byte) (curves.FieldElement, error) {
-	if len(input) != bimpl.FieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 48 bytes")
+	if len(input) > bimpl.FieldBytes {
+		return nil, errs.NewInvalidLength("input length > %d bytes", bimpl.FieldBytes)
 	}
 	var out [48]byte
-	copy(out[:], bitstring.ReverseBytes(input))
+	copy(out[:len(input)], bitstring.ReverseBytes(input))
 	result, ok := e.v.SetBytes(&out)
 	if ok != 1 {
 		return nil, errs.NewFailed("could not set byte")
@@ -226,11 +226,11 @@ func (e *FieldElementG1) SetBytes(input []byte) (curves.FieldElement, error) {
 }
 
 func (e *FieldElementG1) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	if len(input) != bimpl.WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 96 bytes")
+	if len(input) > bimpl.WideFieldBytes {
+		return nil, errs.NewInvalidLength("input length > %d bytes", bimpl.WideFieldBytes)
 	}
 	var out [96]byte
-	copy(out[:], bitstring.ReverseBytes(input))
+	copy(out[:len(input)], bitstring.ReverseBytes(input))
 	result := e.v.SetBytesWide(&out)
 	return &FieldElementG1{
 		v: result,

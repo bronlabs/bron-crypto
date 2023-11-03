@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -87,7 +87,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 			if identityKey == otherIdentityKey {
 				continue
 			}
-			randomSeed := [impl.FieldBytes]byte{}
+			randomSeed := [constants.FieldBytes]byte{}
 			if _, err := crand.Read(randomSeed[:]); err != nil {
 				return nil, errs.WrapRandomSampleFailed(err, "could not produce random seed")
 			}

@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-const scalarBytes = constants.ScalarBytes
+const scalarBytes = constants.FieldBytes
 
 func PointMarshalBinary(point curves.Point) ([]byte, error) {
 	// Always stores points in compressed form
