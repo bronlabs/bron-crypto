@@ -233,7 +233,7 @@ func (*FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 }
 
 func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	result, err := e.v.SetWideBytes(input)
+	result, err := e.v.SetBytes(input)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not set bytes")
 	}
