@@ -1,67 +1,67 @@
 package hash2curve_test
 
 import (
-	"bytes"
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve/testutils"
 )
 
 var testCurves = []curves.Curve{
-	// bls12381.NewG1(),
+	bls12381.NewG1(),
 	// bls12381.NewG2(),
 	// curve25519.New(),
-	// edwards25519.New(),
+	edwards25519.New(),
 	k256.New(),
-	// p256.New(),
+	p256.New(),
 }
 
 func Test_HashToField_VectorsRFC9380(t *testing.T) {
 	for _, curve := range testCurves {
 		t.Run(curve.Name(), func(t *testing.T) {
 			tv := testutils.NewHash2CurveTestVector(curve)
-			err := RunTestVector(curve, tv)
+			err := RunTestVector(t, curve, tv)
 			require.NoError(t, err)
 		})
 	}
 }
 
-func RunTestVector(curve curves.Curve, tv *testutils.TestVector) error {
+func RunTestVector(t *testing.T, curve curves.Curve, tv *testutils.TestVector) error {
+	t.Helper()
 	ch, err := testutils.SetCurveHasher(curve, tv)
 	if err != nil {
 		return errs.WrapFailed(err, "could not set curve hasher")
 	}
 	for _, tc := range tv.TestCases {
-		// expMsgUs, _ := ch.ExpandMessage([]byte(tc.Msg), []byte(tv.Dst), 96)
-		// expMsgUs2, _ := ch.ExpandMessage([]byte(tc.Msg), ch.Dst(), 96)
-		// expMsgTrue := hash2curve.ExpandMsgXmd(hash2curve.EllipticCurveHasherSha256(), []byte(tc.Msg), []byte(tv.Dst), 96)
-		// if !bytes.Equal(expMsgUs, expMsgTrue) || !bytes.Equal(expMsgUs2, expMsgTrue) {
-		// 	return errs.NewVerificationFailed("expand message failed: mismatch")
-		// }
-
 		u, err := ch.HashToFieldElement([]byte(tc.Msg), 2)
 		if err != nil {
 			return errs.WrapFailed(err, "hash to field element failed")
 		}
-		u0Bytes := u[0].Bytes()
-		u1Bytes := u[1].Bytes()
-		expu0Bytes, _ := hex.DecodeString(tc.U0)
-		expu1Bytes, _ := hex.DecodeString(tc.U1)
-		expu0BytesR := bitstring.ReverseBytes(expu0Bytes)
-		expu1BytesR := bitstring.ReverseBytes(expu1Bytes)
-		if !bytes.Equal(u0Bytes, expu0Bytes) || !bytes.Equal(u0Bytes, expu0BytesR) {
-			return errs.NewVerificationFailed("hash to field element failed: u0 mismatch")
-		}
-		if !bytes.Equal(u1Bytes, expu1Bytes) || !bytes.Equal(u1Bytes, expu1BytesR) {
-			return errs.NewVerificationFailed("hash to field element failed: u1 mismatch")
-		}
+		u0_expected := ReadTestFieldElement(tc.U0, curve)
+		u1_expected := ReadTestFieldElement(tc.U1, curve)
+		require.Zero(t, u[0].Cmp(u0_expected))
+		require.Zero(t, u[1].Cmp(u1_expected))
 	}
 	return nil
+}
+
+func ReadTestFieldElement(input string, curve curves.Curve) curves.FieldElement {
+	feBytes, err := hex.DecodeString(input)
+	if err != nil {
+		panic(err)
+	}
+	fe, err := hash2curve.MapToFieldElement(curve, feBytes)
+	if err != nil {
+		panic(err)
+	}
+	return fe
 }
