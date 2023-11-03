@@ -1,12 +1,13 @@
 package hash2curve_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
 
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -49,15 +50,16 @@ func RunTestVector(curve curves.Curve, tv *testutils.TestVector) error {
 		if err != nil {
 			return errs.WrapFailed(err, "hash to field element failed")
 		}
+		u0Bytes := u[0].Bytes()
+		u1Bytes := u[1].Bytes()
 		expu0Bytes, _ := hex.DecodeString(tc.U0)
 		expu1Bytes, _ := hex.DecodeString(tc.U1)
-		u0Nat := new(saferith.Nat).SetBytes(expu0Bytes)
-		u1Nat := new(saferith.Nat).SetBytes(expu1Bytes)
-
-		if u[0].Nat().Eq(u0Nat) != 1 {
+		expu0BytesR := bitstring.ReverseBytes(expu0Bytes)
+		expu1BytesR := bitstring.ReverseBytes(expu1Bytes)
+		if !bytes.Equal(u0Bytes, expu0Bytes) || !bytes.Equal(u0Bytes, expu0BytesR) {
 			return errs.NewVerificationFailed("hash to field element failed: u0 mismatch")
 		}
-		if u[1].Nat().Eq(u1Nat) != 1 {
+		if !bytes.Equal(u1Bytes, expu1Bytes) || !bytes.Equal(u1Bytes, expu1BytesR) {
 			return errs.NewVerificationFailed("hash to field element failed: u1 mismatch")
 		}
 	}

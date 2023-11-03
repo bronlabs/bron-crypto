@@ -58,14 +58,14 @@ type CurveHasher interface {
 /*.------------------------- FIXED-LENGTH HASHERS ---------------------------.*/
 
 func NewCurveHasherSha256(curve curves.Curve, appTag, mapperTag string) CurveHasher {
-	lFieldElement, lScalar := getUniformBytesLengths(curve)
+	lFieldElement, lScalar := getUniformByteLengths(curve)
 	flh := &FixedLengthCurveHasher{sha256.New(), curve, nil, lFieldElement, lScalar}
 	flh.dst = flh.generateDST(curve, appTag, DST_TAG_SHA256, mapperTag)
 	return flh
 }
 
 func NewCurveHasherSha512(curve curves.Curve, appTag, mapperTag string) CurveHasher {
-	lFieldElement, lScalar := getUniformBytesLengths(curve)
+	lFieldElement, lScalar := getUniformByteLengths(curve)
 	flh := &FixedLengthCurveHasher{sha512.New(), curve, nil, lFieldElement, lScalar}
 	flh.dst = flh.generateDST(curve, appTag, DST_TAG_SHA512, mapperTag)
 	return flh
@@ -166,7 +166,7 @@ func (flh *FixedLengthCurveHasher) HashToScalar(msg []byte, count int) (u []curv
 /*.----------------------- VARIABLE-LENGTH HASHERS --------------------------.*/
 
 func NewShake256Hasher(curve curves.Curve, appTag, mapperTag string) CurveHasher {
-	lFieldElement, lScalar := getUniformBytesLengths(curve)
+	lFieldElement, lScalar := getUniformByteLengths(curve)
 	vlh := &VariableLengthHasher{sha3.NewShake256(), curve, nil, lFieldElement, lScalar}
 	vlh.dst = vlh.generateDST(curve, appTag, DST_TAG_SHA256, mapperTag)
 	return vlh
@@ -253,7 +253,8 @@ func hashToField[FieldType any](h CurveHasher, MapToField func([]byte) (FieldTyp
 			// step 5
 			elmOffset := L * (j + i*m)
 			// step 6-8
-			uij, err := MapToField(uniformBytes[elmOffset : elmOffset+L])
+			tv := uniformBytes[elmOffset : elmOffset+L]
+			uij, err := MapToField(tv)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "could not set element")
 			}
@@ -264,9 +265,9 @@ func hashToField[FieldType any](h CurveHasher, MapToField func([]byte) (FieldTyp
 	return u, nil
 }
 
-// getUniformBytesLengthsLengths computes `L`, the random length in bytes
-// required to sample a uniformly distributed FieldElement|Scalar.
-func getUniformBytesLengths(curve curves.Curve) (lFieldElement, lScalar int) {
+// getUniformByteLengths computes `L`, the random length in bytes required to
+// sample a uniformly distributed FieldElement|Scalar.
+func getUniformByteLengths(curve curves.Curve) (lFieldElement, lScalar int) {
 	log2pFieldElement := curve.Profile().Field().Characteristic().AnnouncedLen()
 	log2pScalar := curve.Profile().SubGroupOrder().BitLen()
 	k := constants.ComputationalSecurity
