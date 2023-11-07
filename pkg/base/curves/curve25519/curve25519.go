@@ -1,49 +1,101 @@
 package curve25519
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
+import (
+	"strings"
+	"sync"
 
-const Name = "Curve25519"
+	"github.com/cronokirby/saferith"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+)
+
+const Name = "curve25519"
+
+var (
+	curve25519Initonce sync.Once
+	curve25519Instance Curve
+	subgroupOrder, _   = saferith.ModulusFromHex(strings.ToUpper("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"))
+	baseFieldOrder, _  = saferith.ModulusFromHex(strings.ToUpper("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"))
+)
 
 var _ curves.Curve = (*Curve)(nil)
 
-type Curve struct{}
+type CurveProfile struct{}
+
+func (*CurveProfile) Field() curves.FieldProfile {
+	return &FieldProfile{}
+}
+
+func (*CurveProfile) SubGroupOrder() *saferith.Modulus {
+	return subgroupOrder
+}
+
+func (*CurveProfile) Cofactor() curves.Scalar {
+	return (&curve25519Instance).Scalar().New(8)
+}
+
+func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
+	return nil
+}
+
+type Curve struct {
+	Scalar_  curves.Scalar
+	Point_   curves.Point
+	Name_    string
+	Profile_ curves.CurveProfile
+
+	_ types.Incomparable
+}
 
 func New() *Curve {
-	return &Curve{}
+	curve25519Initonce.Do(curve25519Init)
+	return &curve25519Instance
 }
 
-func (*Curve) Profile() curves.CurveProfile {
-	return nil
+func curve25519Init() {
+	curve25519Instance = Curve{
+		Scalar_:  new(Scalar).Zero(),
+		Point_:   new(Point).Identity(),
+		Name_:    Name,
+		Profile_: &CurveProfile{},
+	}
 }
 
-func (*Curve) Scalar() curves.Scalar {
-	return nil
+func (c *Curve) Profile() curves.CurveProfile {
+	return c.Profile_
 }
 
-func (*Curve) Point() curves.Point {
-	return nil
+func (c *Curve) Scalar() curves.Scalar {
+	return c.Scalar_
 }
 
-func (*Curve) Name() string {
-	return Name
+func (c *Curve) Point() curves.Point {
+	return c.Point_
 }
 
-func (*Curve) Generator() curves.Point {
-	return nil
+func (c *Curve) Name() string {
+	return c.Name_
 }
 
-func (*Curve) Identity() curves.Point {
-	return nil
+func (c *Curve) Generator() curves.Point {
+	return c.Point_.Generator()
 }
 
-func (*Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
-	return nil
+func (c *Curve) Identity() curves.Point {
+	return c.Point_.Identity()
+}
+
+func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+	return c.Generator().Mul(sc)
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	return nil, nil
+	//TODO implement me
+	panic("implement me")
 }
 
 func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	return nil, nil, nil
+	//TODO implement me
+	panic("implement me")
 }

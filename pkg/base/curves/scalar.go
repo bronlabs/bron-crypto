@@ -1,6 +1,7 @@
 package curves
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -75,6 +76,9 @@ type Scalar interface {
 	SetBytesWide(bytes []byte) (Scalar, error)
 	// Clone returns a cloned Scalar of this value
 	Clone() Scalar
+
+	json.Marshaler
+	json.Unmarshaler
 }
 
 type PairingScalar interface {

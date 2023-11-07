@@ -1,0 +1,86 @@
+package k
+
+import (
+	"fmt"
+	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/noise"
+)
+
+type Participant struct {
+	State *noise.Session
+	suite *noise.Suite
+	prng  io.Reader
+	// both parties must agree on this. I think it's a good idea to use a hash of the protocol name or sorted party public keys
+	HandshakeMessage []byte
+}
+
+// step 1.1 and 1.2 if initiator.
+func NewInitiator(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage []byte) (*Participant, error) {
+	return newParticipant(suite, prng, sid, s, rs, handshakeMessage, true)
+}
+
+// step 1.1 and 1.2 if responder.
+func NewResponder(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage []byte) (*Participant, error) {
+	return newParticipant(suite, prng, sid, s, rs, handshakeMessage, false)
+}
+
+func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage []byte, isInitializer bool) (*Participant, error) {
+	err := validate(suite, prng, sid, s, rs, handshakeMessage)
+	if err != nil {
+		if isInitializer {
+			return nil, errs.WrapInvalidArgument(err, "invalid initializer")
+		} else {
+			return nil, errs.WrapInvalidArgument(err, "invalid responder")
+		}
+	}
+	var session noise.Session
+	if isInitializer {
+		session.Hs, err = noise.InitializeInitiator(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_K_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sid, s, rs)
+	} else {
+		session.Hs, err = noise.InitializeResponder(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_K_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sid, s, rs)
+	}
+	if err != nil {
+		if isInitializer {
+			return nil, errs.WrapInvalidArgument(err, "invalid initializer")
+		} else {
+			return nil, errs.WrapInvalidArgument(err, "invalid responder")
+		}
+	}
+	session.IsInitializer = isInitializer
+	session.Round = 1
+	return &Participant{
+		State:            &session,
+		HandshakeMessage: handshakeMessage,
+		suite:            suite,
+		prng:             prng,
+	}, nil
+}
+
+func validate(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, message []byte) error {
+	err := suite.Validate()
+	if err != nil {
+		return errs.WrapInvalidType(err, "invalid ciphersuite")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	if len(sid) == 0 {
+		return errs.NewIsNil("sid is empty")
+	}
+	if s.PublicKey == nil {
+		return errs.NewIsNil("s.PublicKey is nil")
+	}
+	if s.PrivateKey == nil {
+		return errs.NewIsNil("s.PrivateKey is nil")
+	}
+	if rs == nil {
+		return errs.NewIsNil("rs is nil")
+	}
+	if len(message) == 0 {
+		return errs.NewIsNil("message is empty")
+	}
+	return nil
+}

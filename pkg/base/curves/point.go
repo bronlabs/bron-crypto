@@ -1,6 +1,7 @@
 package curves
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -33,6 +34,8 @@ type Point interface {
 	FromAffineCompressed(bytes []byte) (Point, error)
 	FromAffineUncompressed(bytes []byte) (Point, error)
 	IsSmallOrder() bool
+	json.Marshaler
+	json.Unmarshaler
 }
 
 type PairingPoint interface {

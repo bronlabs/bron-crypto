@@ -11,6 +11,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -202,6 +203,30 @@ func (s *BenchScalar) One() curves.Scalar {
 	}
 }
 
+func (s *BenchScalar) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}
+
+func (s *BenchScalar) UnmarshalBinary(input []byte) error {
+	return nil
+}
+
+func (s *BenchScalar) MarshalText() ([]byte, error) {
+	return internal.ScalarMarshalText(s)
+}
+
+func (s *BenchScalar) UnmarshalText(input []byte) error {
+	return nil
+}
+
+func (s *BenchScalar) MarshalJSON() ([]byte, error) {
+	return nil, nil
+}
+
+func (s *BenchScalar) UnmarshalJSON(input []byte) error {
+	return nil
+}
+
 func (s *BenchScalar) IsZero() bool {
 	return s.value.EqZero() != 0
 }
@@ -369,6 +394,30 @@ func (p *BenchPoint) Clone() curves.Point {
 		x: new(saferith.Nat).SetNat(p.x),
 		y: new(saferith.Nat).SetNat(p.y),
 	}
+}
+
+func (p *BenchPoint) MarshalBinary() ([]byte, error) {
+	return internal.PointMarshalBinary(p)
+}
+
+func (p *BenchPoint) UnmarshalBinary(input []byte) error {
+	return nil
+}
+
+func (p *BenchPoint) MarshalText() ([]byte, error) {
+	return internal.PointMarshalText(p)
+}
+
+func (p *BenchPoint) UnmarshalText(input []byte) error {
+	return nil
+}
+
+func (p *BenchPoint) MarshalJSON() ([]byte, error) {
+	return nil, nil
+}
+
+func (p *BenchPoint) UnmarshalJSON(input []byte) error {
+	return nil
 }
 
 func (p *BenchPoint) ClearCofactor() curves.Point {
