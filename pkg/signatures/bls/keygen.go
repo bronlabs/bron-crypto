@@ -7,10 +7,10 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -45,7 +45,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		ikm = append(ikm, 0)
 		// step 2.3.2
 		kdf := hkdf.New(sha256.New, ikm, salt, []byte{0, 48})
-		var okm [impl.WideFieldBytes]byte
+		var okm [constants.WideFieldBytes]byte
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
 		read, err := kdf.Read(okm[:48])

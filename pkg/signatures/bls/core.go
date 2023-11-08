@@ -11,7 +11,10 @@ import (
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coresign
 func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], message, dst []byte) (curves.PairingPoint, error) {
 	// step 2.6.1
-	Hm := privateKey.d.OtherGroup().HashWithDst(message, dst)
+	Hm, err := privateKey.d.OtherGroup().HashWithDst(message, dst)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not hash message")
+	}
 	// step 2.6.2
 	result, ok := Hm.Mul(privateKey.d).(curves.PairingPoint)
 	if !ok {
@@ -49,7 +52,10 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	// that'll be done in multipairing
 
 	// step 2.7.6
-	Hm := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+	Hm, err := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+	if err != nil {
+		return errs.WrapHashingFailed(err, "could not hash message")
+	}
 
 	generatorOfKeysSubGroup, ok := publicKey.Y.Generator().(curves.PairingPoint)
 	if !ok {
@@ -122,7 +128,10 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 			return errs.NewIsNil("nil message is not alloed at index %d", i)
 		}
 		// step 2.9.8
-		Q := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+		Q, err := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+		if err != nil {
+			return errs.WrapHashingFailed(err, "could not hash message %d", i)
+		}
 
 		if keysInG1 {
 			multiPairingInputs[mpInputIndexOfG1] = publicKey.Y

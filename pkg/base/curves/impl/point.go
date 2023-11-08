@@ -1,51 +1,17 @@
 package impl
 
 import (
-	"crypto/sha256"
-	"crypto/sha512"
-	"fmt"
-	"hash"
-	"io"
-
 	"github.com/cronokirby/saferith"
-	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-// EllipticPointHashType is to indicate which expand operation is used
-// for hash to curve operations.
-type EllipticPointHashType uint
-
-// EllipticPointHashName is to indicate the hash function is used
-// for hash to curve operations.
-type EllipticPointHashName uint
-
-const (
-	// XMD - use ExpandMsgXmd.
-	XMD EllipticPointHashType = iota
-	// XOF - use ExpandMsgXof.
-	XOF
-)
-
-const (
-	SHA256 EllipticPointHashName = iota
-	SHA512
-	SHA3_256
-	SHA3_384
-	SHA3_512
-	BLAKE2B
-	SHAKE128
-	SHAKE256
-)
-
 // EllipticPoint represents a Weierstrauss elliptic curve point.
 type EllipticPoint struct {
-	X          *Field
-	Y          *Field
-	Z          *Field
+	X          *FieldValue
+	Y          *FieldValue
+	Z          *FieldValue
 	Params     *EllipticPointParams
 	Arithmetic EllipticPointArithmetic
 
@@ -57,125 +23,20 @@ type EllipticPoint struct {
 // and the prime bit size.
 type EllipticPointParams struct {
 	Name    string
-	A       *Field
-	B       *Field
-	Gx      *Field
-	Gy      *Field
+	A       *FieldValue
+	B       *FieldValue
+	Gx      *FieldValue
+	Gy      *FieldValue
 	BitSize int
 
 	_ types.Incomparable
 }
 
-// EllipticPointHasher is the type of hashing methods for
-// hashing byte sequences to curve point.
-type EllipticPointHasher struct {
-	name     EllipticPointHashName
-	hashType EllipticPointHashType
-	xmd      hash.Hash
-	xof      sha3.ShakeHash
-
-	_ types.Incomparable
-}
-
-// Name returns the hash name for this hasher.
-func (e *EllipticPointHasher) Name() string {
-	return e.name.String()
-}
-
-// Type returns the hash type for this hasher.
-func (e *EllipticPointHasher) Type() EllipticPointHashType {
-	return e.hashType
-}
-
-// Xmd returns the hash method for ExpandMsgXmd.
-func (e *EllipticPointHasher) Xmd() hash.Hash {
-	return e.xmd
-}
-
-// Xof returns the hash method for ExpandMsgXof.
-func (e *EllipticPointHasher) Xof() sha3.ShakeHash {
-	return e.xof
-}
-
-// EllipticPointHasherSha256 creates a point hasher that uses Sha256.
-func EllipticPointHasherSha256() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHA256,
-		hashType: XMD,
-		xmd:      sha256.New(),
-	}
-}
-
-// EllipticPointHasherSha512 creates a point hasher that uses Sha512.
-func EllipticPointHasherSha512() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHA512,
-		hashType: XMD,
-		xmd:      sha512.New(),
-	}
-}
-
-// EllipticPointHasherSha3256 creates a point hasher that uses Sha3256.
-func EllipticPointHasherSha3256() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHA3_256,
-		hashType: XMD,
-		xmd:      sha3.New256(),
-	}
-}
-
-// EllipticPointHasherSha3384 creates a point hasher that uses Sha3384.
-func EllipticPointHasherSha3384() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHA3_384,
-		hashType: XMD,
-		xmd:      sha3.New384(),
-	}
-}
-
-// EllipticPointHasherSha3512 creates a point hasher that uses Sha3512.
-func EllipticPointHasherSha3512() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHA3_512,
-		hashType: XMD,
-		xmd:      sha3.New512(),
-	}
-}
-
-// EllipticPointHasherBlake2b creates a point hasher that uses Blake2b.
-func EllipticPointHasherBlake2b() *EllipticPointHasher {
-	h, _ := blake2b.New(64, []byte{})
-	return &EllipticPointHasher{
-		name:     BLAKE2B,
-		hashType: XMD,
-		xmd:      h,
-	}
-}
-
-// EllipticPointHasherShake128 creates a point hasher that uses Shake128.
-func EllipticPointHasherShake128() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHAKE128,
-		hashType: XOF,
-		xof:      sha3.NewShake128(),
-	}
-}
-
-// EllipticPointHasherShake256 creates a point hasher that uses Shake256.
-func EllipticPointHasherShake256() *EllipticPointHasher {
-	return &EllipticPointHasher{
-		name:     SHAKE128,
-		hashType: XOF,
-		xof:      sha3.NewShake256(),
-	}
-}
-
 // EllipticPointArithmetic are the methods that specific curves
 // need to implement for higher abstractions to wrap the point.
 type EllipticPointArithmetic interface {
-	// Hash a byte sequence to the curve using the specified hasher
-	// and dst and store the result in out
-	Hash(out *EllipticPoint, hasher *EllipticPointHasher, bytes, dst []byte) error
+	// Map convert two field elements u0 and u1 into a point
+	Map(u0, u1 *FieldValue, out *EllipticPoint) error
 	// Double arg and store the result in out
 	Double(out, arg *EllipticPoint)
 	// Add arg1 with arg2 and store the result in out
@@ -185,68 +46,7 @@ type EllipticPointArithmetic interface {
 	// ToAffine converts arg to affine coordinates storing the result in out
 	ToAffine(out, arg *EllipticPoint)
 	// RhsEq computes the right-hand side of the ecc equation
-	RhsEq(out, x *Field)
-}
-
-func (t EllipticPointHashType) String() string {
-	switch t {
-	case XMD:
-		return "XMD"
-	case XOF:
-		return "XOF"
-	}
-	return "unknown"
-}
-
-func (n EllipticPointHashName) String() string {
-	switch n {
-	case SHA256:
-		return "SHA-256"
-	case SHA512:
-		return "SHA-512"
-	case SHA3_256:
-		return "SHA3-256"
-	case SHA3_384:
-		return "SHA3-384"
-	case SHA3_512:
-		return "SHA3-512"
-	case BLAKE2B:
-		return "BLAKE2b"
-	case SHAKE128:
-		return "SHAKE-128"
-	case SHAKE256:
-		return "SHAKE-256"
-	}
-	return "unknown"
-}
-
-// Random creates a random point on the curve
-// from the specified reader.
-func (p *EllipticPoint) Random(reader io.Reader) (*EllipticPoint, error) {
-	var seed [WideFieldBytes]byte
-	n, err := reader.Read(seed[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "random could not read from stream")
-	}
-	if n != WideFieldBytes {
-		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
-	}
-	dst := []byte(fmt.Sprintf("%s_XMD:SHA-256_SSWU_RO_", p.Params.Name))
-	err = p.Arithmetic.Hash(p, EllipticPointHasherSha256(), seed[:], dst)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "ecc hash failed")
-	}
-	return p, nil
-}
-
-// Hash uses the hasher to map bytes to a valid point.
-func (p *EllipticPoint) Hash(bytes []byte, hasher *EllipticPointHasher) (*EllipticPoint, error) {
-	dst := []byte(fmt.Sprintf("QUUX-V01-CS02-with-%s_%s:%s_SSWU_RO_", p.Params.Name, hasher.hashType, hasher.name))
-	err := p.Arithmetic.Hash(p, hasher, bytes, dst)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "hash failed")
-	}
-	return p, nil
+	RhsEq(out, x *FieldValue)
 }
 
 // Identity returns the identity point.
@@ -299,7 +99,7 @@ func (p *EllipticPoint) Sub(lhs, rhs *EllipticPoint) *EllipticPoint {
 }
 
 // Mul multiplies this point by the input scalar.
-func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *Field) *EllipticPoint {
+func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticPoint {
 	bytes := scalar.Bytes()
 	precomputed := [16]*EllipticPoint{}
 	precomputed[0] = new(EllipticPoint).Set(point).Identity()
@@ -322,7 +122,7 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *Field) *EllipticPoint 
 
 // Equal returns 1 if the two points are equal 0 otherwise.
 func (p *EllipticPoint) Equal(rhs *EllipticPoint) int {
-	var x1, x2, y1, y2 Field
+	var x1, x2, y1, y2 FieldValue
 
 	x1.Arithmetic = p.X.Arithmetic
 	x2.Arithmetic = p.X.Arithmetic
@@ -344,9 +144,9 @@ func (p *EllipticPoint) Equal(rhs *EllipticPoint) int {
 
 // Set copies clone into p.
 func (p *EllipticPoint) Set(clone *EllipticPoint) *EllipticPoint {
-	p.X = new(Field).Set(clone.X)
-	p.Y = new(Field).Set(clone.Y)
-	p.Z = new(Field).Set(clone.Z)
+	p.X = new(FieldValue).Set(clone.X)
+	p.Y = new(FieldValue).Set(clone.Y)
+	p.Z = new(FieldValue).Set(clone.Z)
 	p.Params = clone.Params
 	p.Arithmetic = clone.Arithmetic
 	return p
@@ -364,20 +164,20 @@ func (p *EllipticPoint) Nat() (x, y *saferith.Nat) {
 // SetNat creates a point from affine x, y
 // and returns the point if it is on the curve.
 func (p *EllipticPoint) SetNat(x, y *saferith.Nat) (*EllipticPoint, error) {
-	xx := &Field{
+	xx := &FieldValue{
 		Params:     p.Params.Gx.Params,
 		Arithmetic: p.Params.Gx.Arithmetic,
 	}
 	xx.SetNat(x)
-	yy := &Field{
+	yy := &FieldValue{
 		Params:     p.Params.Gx.Params,
 		Arithmetic: p.Params.Gx.Arithmetic,
 	}
 	yy.SetNat(y)
 	pp := new(EllipticPoint).Set(p)
 
-	zero := new(Field).Set(xx).SetZero()
-	one := new(Field).Set(xx).SetOne()
+	zero := new(FieldValue).Set(xx).SetZero()
+	one := new(FieldValue).Set(xx).SetOne()
 	isIdentity := xx.IsZero() & yy.IsZero()
 	pp.X = xx.CMove(xx, zero, isIdentity)
 	pp.Y = yy.CMove(yy, zero, isIdentity)
@@ -389,14 +189,14 @@ func (p *EllipticPoint) SetNat(x, y *saferith.Nat) (*EllipticPoint, error) {
 }
 
 // GetX returns the affine X coordinate.
-func (p *EllipticPoint) GetX() *Field {
+func (p *EllipticPoint) GetX() *FieldValue {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
 	return t.X
 }
 
 // GetY returns the affine Y coordinate.
-func (p *EllipticPoint) GetY() *Field {
+func (p *EllipticPoint) GetY() *FieldValue {
 	t := new(EllipticPoint).Set(p)
 	p.Arithmetic.ToAffine(t, p)
 	return t.Y
@@ -416,7 +216,7 @@ func (p *EllipticPoint) ToAffine(clone *EllipticPoint) *EllipticPoint {
 // SumOfProducts computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `p`.
 // Returns an error if the lengths of the arguments is not equal.
-func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*Field) (*EllipticPoint, error) {
+func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldValue) (*EllipticPoint, error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

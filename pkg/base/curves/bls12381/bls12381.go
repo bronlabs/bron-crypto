@@ -6,17 +6,19 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 const (
 	G1Name = "BLS12381G1"
 	G2Name = "BLS12381G2"
 	GtName = "BLS12381Gt"
-	Name   = "BLS12831"
+	Name   = "BLS12381"
 )
 
 var (
@@ -68,10 +70,13 @@ func (*PairingCurveProfile) EmbeddingDegree() *saferith.Nat {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
+
+	hashing.CurveHasher
 
 	_ types.Incomparable
 }
@@ -95,13 +100,21 @@ func bls12381g1Init() {
 			Point_: new(PointG1),
 		},
 		Point_: new(PointG1).Identity(),
-		Name_:  G1Name,
+		FieldElement_: &FieldElementG1{
+			v: new(bls12381impl.Fp),
+		},
+		Name_: G1Name,
 		Profile_: &CurveProfile{
 			i:        &bls12381g1,
 			cofactor: cofactorG1,
 			profile:  &FieldProfileG1{},
 		},
 	}
+	bls12381g1.CurveHasher = hashing.NewCurveHasherSha256(
+		&bls12381g1,
+		constants.HASH2CURVE_APP_TAG,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func NewG1() *Curve {
@@ -116,13 +129,21 @@ func bls12381g2Init() {
 			Point_: new(PointG2),
 		},
 		Point_: new(PointG2).Identity(),
-		Name_:  G2Name,
+		FieldElement_: &FieldElementG2{
+			v: new(bls12381impl.Fp2),
+		},
+		Name_: G2Name,
 		Profile_: &CurveProfile{
 			i:        &bls12381g2,
 			cofactor: cofactorG2,
 			profile:  &FieldProfileG2{},
 		},
 	}
+	bls12381g2.CurveHasher = hashing.NewCurveHasherSha256(
+		&bls12381g2,
+		constants.HASH2CURVE_APP_TAG,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func NewG2() *Curve {
@@ -142,6 +163,21 @@ func New() *PairingCurve {
 	}
 }
 
+// SetCustomHasher sets the hasher to use for hash-to-curve operations with a
+// custom "appTag". Not exposed in the `curves.Curve` interface, as by
+// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
+func (c *Curve) SetCustomHasher(appTag string) {
+	c.CurveHasher = hashing.NewCurveHasherSha256(
+		curves.Curve(c),
+		appTag,
+		hashing.DST_TAG_SSWU,
+	)
+}
+
+func (c *Curve) Hasher() hashing.CurveHasher {
+	return c.CurveHasher
+}
+
 func (c *Curve) Profile() curves.CurveProfile {
 	return c.Profile_
 }
@@ -156,6 +192,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {
@@ -184,7 +224,7 @@ func (c *Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) 
 	return result, nil
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
+func (*Curve) DeriveFromAffineX(x curves.FieldElement) (p1, p2 curves.Point, err error) {
 	return nil, nil, nil
 }
 
@@ -201,11 +241,19 @@ func (*PairingCurve) G1() curves.Curve {
 }
 
 func (*PairingCurve) PointG1() curves.PairingPoint {
-	return bls12381g1.Point().(curves.PairingPoint)
+	p1, ok := bls12381g1.Point().(curves.PairingPoint)
+	if !ok {
+		panic("invalid point type")
+	}
+	return p1
 }
 
 func (*PairingCurve) PointG2() curves.PairingPoint {
-	return bls12381g2.Point().(curves.PairingPoint)
+	p2, ok := bls12381g2.Point().(curves.PairingPoint)
+	if !ok {
+		panic("invalid point type")
+	}
+	return p2
 }
 
 func (*PairingCurve) G2() curves.Curve {

@@ -3,7 +3,6 @@ package shamir_test
 import (
 	crand "crypto/rand"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -83,12 +82,14 @@ func TestShamirCombineSingle(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	shares, err := scheme.Split(curve.Scalar().Hash([]byte("test")), crand.Reader)
+	randomScalar, err := curve.Scalar().Hash([]byte("test"))
+	require.Nil(t, err)
+	shares, err := scheme.Split(randomScalar, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
 	secret, err := scheme.Combine(shares...)
 	require.Nil(t, err)
-	require.Equal(t, secret, curve.Scalar().Hash([]byte("test")))
+	require.Equal(t, secret, randomScalar)
 }
 
 // Test ComputeL function to compute Lagrange coefficients.
@@ -97,7 +98,8 @@ func TestShamirComputeL(t *testing.T) {
 	scheme, err := shamir.NewDealer(2, 2, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	secret := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.Scalar().Hash([]byte("test"))
+	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
@@ -109,8 +111,6 @@ func TestShamirComputeL(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, lCoeffs)
 	require.Len(t, lCoeffs, len(identities))
-	fmt.Println(identities)
-	fmt.Println(lCoeffs)
 
 	// Checking we can reconstruct the same secret using Lagrange coefficients.
 	result := curve.Scalar()
@@ -126,7 +126,8 @@ func TestShamirAllCombinations(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.Scalar().Hash([]byte("test"))
+	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
@@ -157,7 +158,8 @@ func TestAdditiveAllCombinations(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.Scalar().Hash([]byte("test"))
+	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)

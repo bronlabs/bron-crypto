@@ -6,11 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
-const Name = "curve25519"
+const Name = constants.CURVE25519_NAME
 
 var (
 	curve25519Initonce sync.Once
@@ -45,6 +47,8 @@ type Curve struct {
 	Name_    string
 	Profile_ curves.CurveProfile
 
+	hashing.CurveHasher
+
 	_ types.Incomparable
 }
 
@@ -60,6 +64,11 @@ func curve25519Init() {
 		Name_:    Name,
 		Profile_: &CurveProfile{},
 	}
+	curve25519Instance.CurveHasher = hashing.NewCurveHasherSha512(
+		&curve25519Instance,
+		constants.HASH2CURVE_APP_TAG,
+		hashing.DST_TAG_ELLIGATOR2,
+	)
 }
 
 func (c *Curve) Profile() curves.CurveProfile {
@@ -72,6 +81,10 @@ func (c *Curve) Scalar() curves.Scalar {
 
 func (c *Curve) Point() curves.Point {
 	return c.Point_
+}
+
+func (*Curve) FieldElement() curves.FieldElement {
+	return nil
 }
 
 func (c *Curve) Name() string {
@@ -91,11 +104,11 @@ func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (curves.Point, curves.Point, error) {
-	//TODO implement me
+func (*Curve) DeriveFromAffineX(x curves.FieldElement) (a, b curves.Point, err error) {
+	// TODO implement me
 	panic("implement me")
 }

@@ -5,10 +5,10 @@ import (
 	"encoding"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -106,7 +106,7 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	if subtle.ConstantTimeCompare(data, zeros) == 1 {
 		return errs.NewIsZero("secret key cannot be zero")
 	}
-	var bb [impl.FieldBytes]byte
+	var bb [constants.FieldBytes]byte
 	copy(bb[:], bitstring.ReverseBytes(data))
 	value, err := bimpl.FqNew().SetBytes(&bb)
 	if err != nil {

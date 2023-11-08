@@ -1,9 +1,8 @@
 package agreeonrandom
 
 import (
+	"crypto/sha256"
 	"sort"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -12,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
-var h = sha3.New256
+var h = sha256.New
 
 type Round1Broadcast struct {
 	Commitment commitments.Commitment
@@ -31,7 +30,10 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	r_i := p.Curve.Scalar().Random(p.prng)
+	r_i, err := p.Curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random scalar")
+	}
 	commitment, witness, err := commitments.Commit(h, r_i.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyIdentityKey.Hash())

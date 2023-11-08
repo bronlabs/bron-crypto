@@ -1,15 +1,15 @@
-package internal
+package serialisation
 
 import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-const scalarBytes = impl.FieldBytes
+const scalarBytes = constants.FieldBytes
 
 func PointMarshalBinary(point curves.Point) ([]byte, error) {
 	// Always stores points in compressed form

@@ -146,7 +146,8 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 	r3InsB, r3InsU := integration_testutils.MapO2I(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	r3InsU[attackerIndex][identities[1].Hash()].Xij = curve.Scalar().Hash(uniqueSessionId)
+	r3InsU[attackerIndex][identities[1].Hash()].Xij, err = curve.Scalar().Hash(uniqueSessionId)
+	require.NoError(t, err)
 	_, _, err = testutils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))
@@ -227,7 +228,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		t.Parallel()
 		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), []byte("sid"), nil, prng)
 		require.NoError(t, err)
-		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Random(prng))
+		randomScalar, err := cipherSuite.Curve.Scalar().Random(prng)
+		require.NoError(t, err)
+		proof, _, err := prover.Prove(randomScalar)
 		require.NoError(t, err)
 		r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 		for identity := range r2InsU[attackerIndex] {

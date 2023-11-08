@@ -1,7 +1,7 @@
 package hagrid_test
 
 import (
-	"fmt"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,8 +15,8 @@ func TestSimpleTranscript(t *testing.T) {
 	mt.AppendMessages("some label", []byte("some data"))
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
-	cHex := fmt.Sprintf("%x", cBytes)
-	expectedHex := "25f0fee7cff96c33627d39bd13729a150967f3e154c8c8863b6449f3798de882"
+	cHex := hex.EncodeToString(cBytes)
+	expectedHex := "d0b97977f3e37ad374982b0fddafc450d6ccdf8dcda6c4eb3fef4439eae971bb"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -30,8 +30,8 @@ func TestSimpleTranscriptWithPRNG(t *testing.T) {
 	mt.AppendMessages("some label", []byte("some data"))
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
-	cHex := fmt.Sprintf("%x", cBytes)
-	expectedHex := "149033b63daf9a1bdb2ceba92ba0ada5c0635e30bbcd9a1cc628a2c04d7b3d9e"
+	cHex := hex.EncodeToString(cBytes)
+	expectedHex := "af66587a9cd4f0c37e0bbd319380886ba827b7c7face3a29e30b295a7fd8cc5e"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -54,8 +54,8 @@ func TestComplexTranscript(t *testing.T) {
 		tr.AppendMessages("challengedata", chlBytes)
 	}
 
-	expectedChlHex := "4d7b81464cf26b51a76dcef82c459736ed92bf1105fd6323d0c89bb2bc36abcd"
-	chlHex := fmt.Sprintf("%x", chlBytes)
+	expectedChlHex := "4e3888588ba577a20a94550e81e5affe9c0e82b246b1c90fcb996f636bccf057"
+	chlHex := hex.EncodeToString(chlBytes)
 
 	if chlHex != expectedChlHex {
 		t.Errorf("\nGot : %s\nWant: %s", chlHex, expectedChlHex)

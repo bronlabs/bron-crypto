@@ -1,11 +1,10 @@
 package bls12381impl
 
 import (
-	"io"
-
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -536,46 +535,15 @@ type G1 struct {
 	_ types.Incomparable
 }
 
-// Random creates a random point on the curve
-// from the specified reader.
-func (g1 *G1) Random(reader io.Reader) (*G1, error) {
-	var seed [impl.WideFieldBytes]byte
-	n, err := reader.Read(seed[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "random could not read from stream")
-	}
-	if n != impl.WideFieldBytes {
-		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
-	}
-	dst := []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_")
-	return g1.Hash(impl.EllipticPointHasherSha256(), seed[:], dst), nil
-}
-
-// Hash uses the hasher to map bytes to a valid point.
-func (g1 *G1) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G1 {
-	var u []byte
-	var u0, u1 Fp
-	var r0, r1, q0, q1 G1
-
-	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 128)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 128)
-	}
-
-	var buf [WideFieldBytes]byte
-	copy(buf[:64], bitstring.ReverseBytes(u[:64]))
-	u0.SetBytesWide(&buf)
-	copy(buf[:64], bitstring.ReverseBytes(u[64:]))
-	u1.SetBytesWide(&buf)
-
-	r0.osswu3mod4(&u0)
-	r1.osswu3mod4(&u1)
-	q0.isogenyMap(&r0)
-	q1.isogenyMap(&r1)
+func (g1 *G1) Map(u0, u1 *Fp) *G1 {
+	var r, q0, q1 G1
+	r.osswu3mod4(u0)
+	q0.isogenyMap(&r)
+	r.osswu3mod4(u1)
+	q1.isogenyMap(&r)
 	g1.Add(&q0, &q1)
-	return g1.ClearCofactor(g1)
+	g1.ClearCofactor(g1)
+	return g1
 }
 
 // Identity returns the identity point.
@@ -676,7 +644,7 @@ func (g1 *G1) Sub(arg1, arg2 *G1) *G1 {
 }
 
 // Double this point.
-func (g1 *G1) Double(a *G1) *G1 {
+func (g1 *G1) Double(a *G1) (a2 *G1) {
 	// Algorithm 9, https://eprint.iacr.org/2015/1060.pdf
 	var t0, t1, t2, x3, y3, z3 Fp
 
@@ -707,12 +675,12 @@ func (g1 *G1) Double(a *G1) *G1 {
 }
 
 // Mul multiplies this point by the input scalar.
-func (g1 *G1) Mul(a *G1, s *impl.Field) *G1 {
+func (g1 *G1) Mul(a *G1, s *impl.FieldValue) *G1 {
 	bytes := s.Bytes()
 	return g1.multiply(a, &bytes)
 }
 
-func (g1 *G1) multiply(a *G1, bytes *[impl.FieldBytes]byte) *G1 {
+func (g1 *G1) multiply(a *G1, bytes *[constants.FieldBytes]byte) *G1 {
 	var p G1
 	precomputed := [16]*G1{}
 	precomputed[0] = new(G1).Identity()
@@ -974,7 +942,7 @@ func (g1 *G1) CMove(arg1, arg2 *G1, choice int) *G1 {
 // SumOfProducts computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `g1`.
 // Returns an error if the lengths of the arguments is not equal.
-func (g1 *G1) SumOfProducts(points []*G1, scalars []*impl.Field) (*G1, error) {
+func (g1 *G1) SumOfProducts(points []*G1, scalars []*impl.FieldValue) (*G1, error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

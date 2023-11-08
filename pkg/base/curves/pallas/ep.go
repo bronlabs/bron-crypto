@@ -2,9 +2,7 @@ package pallas
 
 import (
 	"crypto/subtle"
-	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -19,28 +17,12 @@ type Ep struct {
 	_ types.Incomparable
 }
 
-func (p *Ep) Random(reader io.Reader) *Ep {
-	var seed [64]byte
-	_, _ = reader.Read(seed[:])
-	return p.Hash(seed[:])
-}
-
-func (p *Ep) Hash(input []byte) *Ep {
-	if input == nil {
-		input = []byte{}
-	}
-	u := impl.ExpandMsgXmd(impl.EllipticPointHasherBlake2b(), input, []byte("pallas_XMD:BLAKE2b_SSWU_RO_"), 128)
-	var buf [64]byte
-	copy(buf[:], u[:64])
-	u0 := new(fp.Fp).SetBytesWide(&buf)
-	copy(buf[:], u[64:])
-	u1 := new(fp.Fp).SetBytesWide(&buf)
-
+func (p *Ep) Map(u0, u1 *fp.Fp) *Ep {
 	q0 := mapSswu(u0)
 	q1 := mapSswu(u1)
 	r1 := isoMap(q0)
 	r2 := isoMap(q1)
-	return p.Identity().Add(r1, r2)
+	return p.Add(r1, r2)
 }
 
 func (p *Ep) Identity() *Ep {

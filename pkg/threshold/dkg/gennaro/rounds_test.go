@@ -234,7 +234,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		t.Parallel()
 		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil, prng)
 		require.NoError(t, err)
-		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Random(prng))
+		randomScalar, err := cipherSuite.Curve.Scalar().Random(prng)
+		require.NoError(t, err)
+		proof, _, err := prover.Prove(randomScalar)
 		require.NoError(t, err)
 		r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
 		for identity := range r3Ins[attackerIndex] {

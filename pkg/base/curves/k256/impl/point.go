@@ -3,7 +3,6 @@ package k256arith
 import (
 	"sync"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 )
@@ -59,65 +58,65 @@ func getK256PointSswuParams() *impl.SswuParams {
 }
 
 func k256PointSswuParamsInit() {
-	// Taken from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#section-8.7
-	//params := btcec.S256().Params()
+	//  Taken from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#section-8.7
+	// params := btcec.S256().Params()
 	//
-	//// c1 = (q - 3) / 4
-	//c1 := new(big.Int).Set(params.P)
-	//c1.Sub(c1, big.NewInt(3))
-	//c1.Rsh(c1, 2)
+	// // c1 = (q - 3) / 4
+	// c1 := new(big.Int).Set(params.P)
+	// c1.Sub(c1, big.NewInt(3))
+	// c1.Rsh(c1, 2)
 	//
-	//a, _ := new(big.Int).SetString("3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533", 16)
-	//b := big.NewInt(1771)
-	//z := big.NewInt(-11)
-	//z.Mod(z, params.P)
-	//// sqrt(-z^3)
-	//zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
-	//zTmp = zTmp.Neg(zTmp)
-	//zTmp.Mod(zTmp, params.P)
-	//c2 := new(big.Int).ModSqrt(zTmp, params.P)
+	// a, _ := new(big.Int).SetString("3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533", 16)
+	// b := big.NewInt(1771)
+	// z := big.NewInt(-11)
+	// z.Mod(z, params.P)
+	// // sqrt(-z^3)
+	// zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
+	// zTmp = zTmp.Neg(zTmp)
+	// zTmp.Mod(zTmp, params.P)
+	// c2 := new(big.Int).ModSqrt(zTmp, params.P)
 	//
-	//var tBytes [32]byte
-	//c1.FillBytes(tBytes[:])
-	//newC1 := [impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newC1, &newC1)
-	//c2.FillBytes(tBytes[:])
-	//newC2 := [impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newC2, &newC2)
-	//a.FillBytes(tBytes[:])
-	//newA := [impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newA, &newA)
-	//b.FillBytes(tBytes[:])
-	//newB := [impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newB, &newB)
-	//z.FillBytes(tBytes[:])
-	//newZ := [impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newZ, &newZ)
+	// var tBytes [32]byte
+	// c1.FillBytes(tBytes[:])
+	// newC1 := [impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newC1, &newC1)
+	// c2.FillBytes(tBytes[:])
+	// newC2 := [impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newC2, &newC2)
+	// a.FillBytes(tBytes[:])
+	// newA := [impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newA, &newA)
+	// b.FillBytes(tBytes[:])
+	// newB := [impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newB, &newB)
+	// z.FillBytes(tBytes[:])
+	// newZ := [impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newZ, &newZ)
 
 	k256PointSswuParams = impl.SswuParams{
 		// (q -3) // 4
@@ -241,24 +240,13 @@ func getK256PointIsogenyParams() *impl.IsogenyParams {
 	return &k256PointIsogenyParams
 }
 
+var _ impl.EllipticPointArithmetic = (*k256PointArithmetic)(nil)
+
 type k256PointArithmetic struct{}
 
-func (k k256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPointHasher, msg, dst []byte) error {
-	var u []byte
+func (k k256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
 	sswuParams := getK256PointSswuParams()
 	isoParams := getK256PointIsogenyParams()
-
-	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 96)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 96)
-	}
-	var buf [64]byte
-	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
-	u0 := fp.New().SetBytesWide(&buf)
-	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
-	u1 := fp.New().SetBytesWide(&buf)
 
 	r0x, r0y := sswuParams.Osswu3mod4(u0)
 	r1x, r1y := sswuParams.Osswu3mod4(u1)
@@ -438,7 +426,7 @@ func (k256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (k256PointArithmetic) RhsEq(out, x *impl.Field) {
+func (k256PointArithmetic) RhsEq(out, x *impl.FieldValue) {
 	// Elliptic curve equation for secp256k1 is: y^2 = x^3 + 7
 	out.Square(x)
 	out.Mul(out, x)

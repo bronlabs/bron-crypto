@@ -6,8 +6,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 
-	core "github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
@@ -57,8 +57,8 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[types.Ident
 	fieldOrder := cohortConfig.CipherSuite.Curve.Profile().Field().Order()
 	recoveredPublicKey := cohortConfig.CipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
 	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
-		core.NatFromBig(ecdsaPrivateKey.X, fieldOrder),
-		core.NatFromBig(ecdsaPrivateKey.Y, fieldOrder),
+		utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder),
+		utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder),
 	)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "invalid ECDSA public key")
@@ -127,8 +127,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 
 	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
-		core.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
-		core.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
+		utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
+		utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
 	)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a krypton point")

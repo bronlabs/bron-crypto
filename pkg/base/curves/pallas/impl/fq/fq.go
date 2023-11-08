@@ -170,7 +170,7 @@ func (fq *Fq) SetNat(bi *saferith.Nat) *Fq {
 	r := new(saferith.Nat).SetNat(bi)
 	r.Mod(r, Modulus)
 	r.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
+	copy(buffer[:], bitstring.ReverseBytes(buffer[:])) // Nat is big endian, we want little endian
 	_, _ = fq.SetBytes(&buffer)
 	return fq
 }
@@ -222,7 +222,7 @@ func (fq *Fq) Sqrt(elem *Fq) (*Fq, bool) {
 func (fq *Fq) tonelliShanks(elem *Fq) (*Fq, bool) {
 	// c1 := 32
 	// c2 := (q - 1) / (2^c1)
-	//c2 := [4]uint64{
+	// c2 := [4]uint64{
 	//	0x0994a8dd8c46eb21,
 	//	0x00000000224698fc,
 	//	0x0000000000000000,

@@ -8,7 +8,6 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -200,16 +199,7 @@ func (f *Fp) Random(reader io.Reader) (*Fp, error) {
 	if n != WideFieldBytes {
 		return nil, errs.NewFailed("can only read %d when %d are needed", n, WideFieldBytes)
 	}
-	return f.Hash(t[:]), nil
-}
-
-// Hash converts the byte sequence into a field element.
-func (f *Fp) Hash(input []byte) *Fp {
-	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherSha256(), input, dst, hashBytes)
-	var t [WideFieldBytes]byte
-	copy(t[:hashBytes], bitstring.ReverseBytes(xmd))
-	return f.SetBytesWide(&t)
+	return f.SetBytesWide(&t), nil
 }
 
 // toMontgomery converts this field to montgomery form.
@@ -286,7 +276,7 @@ func (f *Fp) Square(a *Fp) *Fp {
 	r[4] = (r[4] << 1) | r[3]>>63
 	r[3] = (r[3] << 1) | r[2]>>63
 	r[2] = (r[2] << 1) | r[1]>>63
-	r[1] = r[1] << 1
+	r[1] <<= 1
 
 	r[0], carry = mac(0, a[0], a[0], 0)
 	r[1], carry = adc(0, r[1], carry)
@@ -416,7 +406,7 @@ func (f *Fp) Sub(arg1, arg2 *Fp) *Fp {
 }
 
 // Sqrt performs modular square root.
-func (f *Fp) Sqrt(a *Fp) (*Fp, int) {
+func (f *Fp) Sqrt(a *Fp) (fRes *Fp, wasSquare int) {
 	// Shank's method, as p = 3 (mod 4). This means
 	// exponentiate by (p+1)/4. This only works for elements
 	// that are actually quadratic residue,
@@ -432,13 +422,13 @@ func (f *Fp) Sqrt(a *Fp) (*Fp, int) {
 	})
 
 	c.Square(&z)
-	wasSquare := c.Equal(a)
+	wasSquare = c.Equal(a)
 	f.CMove(f, &z, wasSquare)
 	return f, wasSquare
 }
 
 // Invert performs modular inverse.
-func (f *Fp) Invert(a *Fp) (*Fp, int) {
+func (f *Fp) Invert(a *Fp) (fRes *Fp, wasInverted int) {
 	// Exponentiate by p - 2
 	t := &Fp{}
 	t.pow(a, &Fp{
@@ -449,14 +439,14 @@ func (f *Fp) Invert(a *Fp) (*Fp, int) {
 		0x4b1ba7b6434bacd7,
 		0x1a0111ea397fe69a,
 	})
-	wasInverted := a.IsNonZero()
+	wasInverted = a.IsNonZero()
 	f.CMove(a, t, wasInverted)
 	return f, wasInverted
 }
 
 // SetBytes converts a little endian byte array into a field element
 // return 0 if the bytes are not in the field, 1 if they are.
-func (f *Fp) SetBytes(arg *[FieldBytes]byte) (*Fp, int) {
+func (f *Fp) SetBytes(arg *[FieldBytes]byte) (fRes *Fp, mask int) {
 	var borrow uint64
 	t := &Fp{}
 
@@ -478,7 +468,7 @@ func (f *Fp) SetBytes(arg *[FieldBytes]byte) (*Fp, int) {
 	// If the element is smaller than modulus then the
 	// subtraction will underflow, producing a borrow value
 	// of 1. Otherwise, it'll be zero.
-	mask := int(borrow)
+	mask = int(borrow)
 	return f.CMove(f, t.toMontgomery(t), mask), mask
 }
 

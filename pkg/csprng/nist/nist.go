@@ -5,8 +5,8 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
@@ -196,9 +196,9 @@ dataGeneration:
 // automatically if the prng was initialised with an `entropySource`, raising an
 // error otherwise.
 func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
-	numRequests := base.CeilDiv(len(buffer), maxNumberOfBytesRequest)
+	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
 	for i := 0; i < numRequests; i++ {
-		end := base.Min((i+1)*maxNumberOfBytesRequest, len(buffer))
+		end := utils.Min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {
 			return n, errs.WrapRandomSampleFailed(err, "Could not generate random bits")

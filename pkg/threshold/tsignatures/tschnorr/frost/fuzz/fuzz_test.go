@@ -274,7 +274,9 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().Hash([]byte(secretValue)))
+		commitedScalar, err := curve.Scalar().Hash([]byte(secretValue))
+		require.NoError(t, err)
+		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, commitedScalar)
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}

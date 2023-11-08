@@ -23,7 +23,8 @@ func Test_MeasureConstantTime_split(t *testing.T) {
 	require.NoError(t, err)
 	var secret curves.Scalar
 	internal.RunMeasurement(32*8, "shamir_split", func(i int) {
-		secret = curve.Scalar().Hash(internal.GetBigEndianBytesWithLowestBitsSet(32, i))
+		secret, err = curve.Scalar().Hash(internal.GetBigEndianBytesWithLowestBitsSet(32, i))
+		require.NoError(t, err)
 	}, func() {
 		scheme.Split(secret, crand.Reader)
 	})
@@ -40,7 +41,8 @@ func Test_MeasureConstantTime_combine(t *testing.T) {
 	var secret curves.Scalar
 	var shares []*shamir.Share
 	internal.RunMeasurement(32*8, "shamir_combine", func(i int) {
-		secret = curve.Scalar().Hash(internal.GetBigEndianBytesWithLowestBitsSet(32, i))
+		secret, err = curve.Scalar().Hash(internal.GetBigEndianBytesWithLowestBitsSet(32, i))
+		require.NoError(t, err)
 		shares, err = scheme.Split(secret, crand.Reader)
 		require.NoError(t, err)
 	}, func() {

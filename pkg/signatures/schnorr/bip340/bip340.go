@@ -174,7 +174,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	return nil
 }
 
-func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]byte, prng io.Reader) error {
+func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]byte, prng io.Reader) (err error) {
 	curve := k256.New()
 
 	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
@@ -186,8 +186,10 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 	a[0] = curve.Scalar().One()
 	for i := 1; i < len(signatures); i++ {
 		for {
-			// TODO: change to deterministic CSPRNG when available
-			a[i] = curve.Scalar().Random(prng)
+			a[i], err = curve.Scalar().Random(prng)
+			if err != nil {
+				return errs.WrapRandomSampleFailed(err, "cannot generate random scalar")
+			}
 			if !a[i].IsZero() {
 				break
 			}

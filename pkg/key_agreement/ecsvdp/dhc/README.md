@@ -1,6 +1,6 @@
 # ECSVDP-DHC (Elliptic Curve Secret Value Derivation Primitive, Diffie-Hellman version with cofactor multiplication)
 
-This package implemenets ECSVDP-DHC, as per section 7.2.2 of [IEEE 1363-2000](https://standards.ieee.org/ieee/1363/2049/)
+This package implements ECSVDP-DHC, as per section 7.2.2 of [IEEE 1363-2000](https://standards.ieee.org/ieee/1363/2049/)
 
 ECSVDP-DHC is the Elliptic Curve Secret Value Derivation Primitive, Diffie-Hellman version with cofactor multiplication. It is based on the work of Diffie and Hellman [B47], Kaliski [B88], Koblitz [B94], Law et al. [B98], and Miller [B117]. This primitive derives a shared secret value from one party’s private key and another party’s public key, where both have the same set of EC domain parameters. If two parties correctly execute this primitive, they will produce the same output. This primitive can be invoked by a scheme to derive a shared secret key; specifically, it may be used with the schemes ECKAS-DH1 and DL/ECKAS-DH2. It does not assume the validity of the input public key - unlike ECSVDP-DH.
 

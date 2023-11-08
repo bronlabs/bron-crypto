@@ -29,10 +29,7 @@ func Fuzz_Test(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		secret, err := curve.Scalar().SetBytes(secretBytes)
-		if err != nil && !errs.IsKnownError(err) {
-			require.NoError(t, err)
-		}
+		secret, err := curve.Scalar().Hash(secretBytes)
 		if err != nil {
 			t.Skip()
 		}

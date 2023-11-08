@@ -73,7 +73,10 @@ func (a *Aggregator) Aggregate(partialSignatures map[types.IdentityHash]*glow.Pa
 	}
 
 	sigma := bls12381.NewG2().Identity()
-	Hm := bls12381.New().PointG2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	Hm, err := bls12381.New().PointG2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "couldn't hash message")
+	}
 
 	// step 2.1
 	for identityHash, psig := range partialSignatures {

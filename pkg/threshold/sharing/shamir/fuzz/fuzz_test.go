@@ -31,11 +31,13 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 
-		shares, err := scheme.Split(curve.Scalar().Hash(message), prng)
+		messageScalar, err := curve.Scalar().Hash(message)
+		require.Nil(t, err)
+		shares, err := scheme.Split(messageScalar, prng)
 		require.Nil(t, err)
 		require.NotNil(t, shares)
 		secret, err := scheme.Combine(shares...)
 		require.Nil(t, err)
-		require.Equal(t, secret, curve.Scalar().Hash(message))
+		require.Equal(t, secret, messageScalar)
 	})
 }

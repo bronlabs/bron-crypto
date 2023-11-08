@@ -75,7 +75,10 @@ func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	shares := make([]*Share, d.Total)
 	partialSum := d.Curve.Scalar().Zero()
 	for i := 1; i < d.Total; i++ {
-		share := d.Curve.Scalar().Random(prng)
+		share, err := d.Curve.Scalar().Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		}
 		partialSum = partialSum.Add(share)
 		shares[i] = &Share{Value: share}
 	}

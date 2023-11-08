@@ -54,8 +54,14 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k & k2
-		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
-		k2[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+		}
+		k2[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k2")
+		}
 
 		// 2. compute R = k * G, R2 = k2 * G
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])

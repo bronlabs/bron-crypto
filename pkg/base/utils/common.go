@@ -1,0 +1,39 @@
+package utils
+
+import (
+	"math/bits"
+
+	"golang.org/x/exp/constraints"
+)
+
+// Min returns the minimum of two elements.
+func Min[T constraints.Ordered](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// A one-line way to cast a bool to any integer type.
+func BoolTo[T constraints.Integer](b bool) T {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// CeilDiv returns `ceil(numerator/denominator) for integer inputs. Equivalently,
+// it returns `x`, the smallest integer that satisfies `(x*b) >= a`.
+func CeilDiv(numerator, denominator int) int {
+	return (numerator - 1 + denominator) / denominator
+}
+
+// FloorLog2 return floor(log2(x)).
+func FloorLog2(x int) int {
+	return 63 - bits.LeadingZeros64(uint64(x))
+}
+
+// CeilLog2 return ceil(log2(x)).
+func CeilLog2(x int) int {
+	return 64 - bits.LeadingZeros64(uint64(x)-1)
+}

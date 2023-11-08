@@ -34,8 +34,9 @@ func Test_HashToPointBLS12381G1(t *testing.T) {
 	t.Parallel()
 
 	curve := bls12381.NewG1()
+	curve.SetCustomHasher("QUUX-V01-CS02-with-")
 
-	// https://datatracker.ietf.org/doc/html/rfc9380 (Appendix J)
+	// https://datatracker.ietf.org/doc/html/rfc9380#appendix-J
 	tests := []testCase{
 		{
 			message: "",
@@ -75,7 +76,8 @@ func Test_HashToPointBLS12381G1(t *testing.T) {
 			require.NoError(t, err)
 			expected, err := curve.Point().Set(ex, ey)
 			require.NoError(t, err)
-			p := curve.Point().Hash([]byte(theTest.message))
+			p, err := curve.Point().Hash([]byte(theTest.message))
+			require.NoError(t, err)
 			require.NoError(t, err)
 			require.True(t, p.Equal(expected))
 		})

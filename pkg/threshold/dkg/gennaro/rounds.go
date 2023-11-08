@@ -1,8 +1,7 @@
 package gennaro
 
 import (
-	"fmt"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -39,7 +38,10 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	a_i0 := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	a_i0, err := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+	}
 
 	dealer, err := pedersen.NewDealer(p.CohortConfig.Protocol.Threshold, p.CohortConfig.Protocol.TotalParties, p.H)
 	if err != nil {
@@ -51,7 +53,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	}
 
 	proverTranscript := hagrid.NewTranscript(DlogProofLabel, nil)
-	proverTranscript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", p.MySharingId)))
+	proverTranscript.AppendMessages("sharing id")
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
@@ -175,7 +177,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
 		transcript := hagrid.NewTranscript(DlogProofLabel, nil)
-		transcript.AppendMessages("sharing id", []byte(fmt.Sprintf("%d", senderSharingId)))
+		transcript.AppendMessages("sharing id", bitstring.ToByteArrLE(senderSharingId))
 		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")
 		}

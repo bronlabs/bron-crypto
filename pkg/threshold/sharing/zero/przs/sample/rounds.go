@@ -1,21 +1,16 @@
 package sample
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
 func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
 	zeroShare = p.Curve.Scalar().Zero()
-	zeroShareBytes := make([]byte, impl.FieldBytes)
 	for sharingId := range p.Prngs {
-		if _, err := p.Prngs[sharingId].Read(zeroShareBytes); err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
-		}
-		sample, err := p.Curve.Scalar().SetBytes(zeroShareBytes)
+		sample, err := p.Curve.Scalar().Random(p.Prngs[sharingId])
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "could not set bytes from prng")
+			return nil, errs.WrapRandomSampleFailed(err, "could not sample scalar")
 		}
 		switch TheirSharingId := sharingId; {
 		case TheirSharingId == p.MySharingId:

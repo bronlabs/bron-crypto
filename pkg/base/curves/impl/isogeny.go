@@ -15,7 +15,7 @@ type IsogenyParams struct {
 }
 
 // Map from the isogeny curve to the main curve using the parameters.
-func (p *IsogenyParams) Map(xIn, yIn *Field) (x, y *Field) {
+func (p *IsogenyParams) Map(xIn, yIn *FieldValue) (x, y *FieldValue) {
 	var xNum, xDen, yNum, yDen, tv [FieldLimbs]uint64
 	var wasInverted int
 
@@ -46,12 +46,12 @@ func (p *IsogenyParams) Map(xIn, yIn *Field) (x, y *Field) {
 	computeIsoK(&yDen, &xs, &p.YDen, xIn.Arithmetic)
 
 	xIn.Arithmetic.Invert(&wasInverted, &xDen, &xDen)
-	x = new(Field).Set(xIn)
+	x = new(FieldValue).Set(xIn)
 	xIn.Arithmetic.Mul(&tv, &xNum, &xDen)
 	xIn.Arithmetic.Selectznz(&x.Value, &x.Value, &tv, wasInverted)
 
 	yIn.Arithmetic.Invert(&wasInverted, &yDen, &yDen)
-	y = new(Field).Set(yIn)
+	y = new(FieldValue).Set(yIn)
 	yIn.Arithmetic.Mul(&tv, &yNum, &yDen)
 	yIn.Arithmetic.Selectznz(&y.Value, &y.Value, &tv, wasInverted)
 	yIn.Arithmetic.Mul(&y.Value, &y.Value, &yIn.Value)

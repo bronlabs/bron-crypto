@@ -7,13 +7,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var (
@@ -38,7 +38,7 @@ func oldK256InitAll() {
 	oldK256.Gx = curve.Generator().X().Nat().Big()
 	oldK256.Gy = curve.Generator().Y().Nat().Big()
 	oldK256.B = B.Nat().Big()
-	oldK256.BitSize = impl.FieldBytes * 8
+	oldK256.BitSize = constants.FieldBytes * 8
 	oldK256.Name = Name
 }
 
@@ -53,22 +53,22 @@ func (curve *Koblitz256) Params() *elliptic.CurveParams {
 
 func (*Koblitz256) IsOnCurve(x, y *big.Int) bool {
 	_, err := secp256k1.PointNew().SetNat(
-		base.NatFromBig(x, fp.New().Params.Modulus),
-		base.NatFromBig(y, fp.New().Params.Modulus),
+		utils.NatFromBig(x, fp.New().Params.Modulus),
+		utils.NatFromBig(y, fp.New().Params.Modulus),
 	)
 	return err == nil
 }
 
-func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (x *big.Int, y *big.Int) {
+func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	c := New()
-	x11 := base.NatFromBig(x1, fp.New().Params.Modulus)
-	y11 := base.NatFromBig(y1, fp.New().Params.Modulus)
+	x11 := utils.NatFromBig(x1, fp.New().Params.Modulus)
+	y11 := utils.NatFromBig(y1, fp.New().Params.Modulus)
 	p1, err := c.Point().Set(x11, y11)
 	if err != nil {
 		panic("set point")
 	}
-	x22 := base.NatFromBig(x2, fp.New().Params.Modulus)
-	y22 := base.NatFromBig(y2, fp.New().Params.Modulus)
+	x22 := utils.NatFromBig(x2, fp.New().Params.Modulus)
+	y22 := utils.NatFromBig(y2, fp.New().Params.Modulus)
 	p2, err := c.Point().Set(x22, y22)
 	if err != nil {
 		panic("set point")
@@ -77,10 +77,10 @@ func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (x *big.Int, y *big.Int) {
 	return p.X().Nat().Big(), p.Y().Nat().Big()
 }
 
-func (*Koblitz256) Double(x1, y1 *big.Int) (x *big.Int, y *big.Int) {
+func (*Koblitz256) Double(x1, y1 *big.Int) (x, y *big.Int) {
 	c := New()
-	x11 := base.NatFromBig(x1, fp.New().Params.Modulus)
-	y11 := base.NatFromBig(y1, fp.New().Params.Modulus)
+	x11 := utils.NatFromBig(x1, fp.New().Params.Modulus)
+	y11 := utils.NatFromBig(y1, fp.New().Params.Modulus)
 	p1, err := c.Point().Set(x11, y11)
 	if err != nil {
 		panic("set point")
@@ -89,10 +89,10 @@ func (*Koblitz256) Double(x1, y1 *big.Int) (x *big.Int, y *big.Int) {
 	return result.X().Nat().Big(), result.Y().Nat().Big()
 }
 
-func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x *big.Int, y *big.Int) {
+func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x, y *big.Int) {
 	c := New()
-	Bxx := base.NatFromBig(Bx, fp.New().Params.Modulus)
-	Byy := base.NatFromBig(By, fp.New().Params.Modulus)
+	Bxx := utils.NatFromBig(Bx, fp.New().Params.Modulus)
+	Byy := utils.NatFromBig(By, fp.New().Params.Modulus)
 	p1, err := c.Point().Set(Bxx, Byy)
 	if err != nil {
 		panic(errs.WrapSerializationError(err, "set pointt"))
@@ -100,7 +100,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x *big.Int, y *big.Int
 	if len(k) > 32 {
 		panic("invalid scalar length")
 	}
-	kk, err := c.Scalar().SetNat(base.NatFromBig(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
+	kk, err := c.Scalar().SetNat(utils.NatFromBig(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
 	if err != nil {
 		return nil, nil
 	}
@@ -108,12 +108,12 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x *big.Int, y *big.Int
 	return result.X().Nat().Big(), result.Y().Nat().Big()
 }
 
-func (*Koblitz256) ScalarBaseMult(k []byte) (x *big.Int, y *big.Int) {
+func (*Koblitz256) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	if len(k) > 32 {
 		panic("invalid scalar length")
 	}
 	c := New()
-	kk, err := c.Scalar().SetNat(base.NatFromBig(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
+	kk, err := c.Scalar().SetNat(utils.NatFromBig(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
 	if err != nil {
 		panic("set scalar")
 	}

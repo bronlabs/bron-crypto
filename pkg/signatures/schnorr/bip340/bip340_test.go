@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -277,12 +278,16 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 	t.Run(fmt.Sprintf("running the test for curve %s", curve.Name()), func(t *testing.T) {
 		t.Parallel()
 
-		aliceKey, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk1, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
+		aliceKey, err := bip340.NewPrivateKey(sk1)
 		require.NoError(t, err)
 		alice := bip340.NewSigner(aliceKey)
 		require.NotNil(t, alice)
 
-		bobKey, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk2, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
+		bobKey, err := bip340.NewPrivateKey(sk2)
 		require.NoError(t, err)
 		bob := bip340.NewSigner(bobKey)
 		require.NotNil(t, bob)
@@ -301,7 +306,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 }
 
 func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
-	if len(input) != curves.FieldBytes {
+	if len(input) != constants.FieldBytes {
 		return nil, errs.NewSerializationError("invalid length")
 	}
 	p, err := decodePoint(input)
@@ -314,7 +319,7 @@ func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
 }
 
 func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
-	if len(input) != curves.FieldBytes {
+	if len(input) != constants.FieldBytes {
 		return nil, errs.NewSerializationError("invalid length")
 	}
 	curve := k256.New()

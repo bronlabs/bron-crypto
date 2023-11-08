@@ -47,7 +47,10 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", primaryCosigner.round)
 	}
 
-	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
+	primaryCosigner.state.k1, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k1")
+	}
 	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
 	bigR1CommitmentMessage := append(
@@ -75,7 +78,10 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
 
-	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
+	secondaryCosigner.state.k2, err = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k2")
+	}
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
 	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)

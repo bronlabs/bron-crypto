@@ -2,9 +2,8 @@ package interactive_signing
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"io"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -21,7 +20,7 @@ const (
 	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS"
 )
 
-var commitmentHashFunc = sha3.New256
+var commitmentHashFunc = sha256.New
 
 type Round1Broadcast struct {
 	BigRCommitment commitments.Commitment
@@ -43,7 +42,10 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1. choose a random k
-	k := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	k, err := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+	}
 
 	// 2. compute R = k * G
 	bigR := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k)
@@ -134,9 +136,9 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 	// 3.ii. compute e
 	var e curves.Scalar
 	if p.taproot {
-		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+		e, err = hashing.HashToSchnorrScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
 	} else {
-		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
+		e, err = hashing.HashToSchnorrScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
 	}
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")

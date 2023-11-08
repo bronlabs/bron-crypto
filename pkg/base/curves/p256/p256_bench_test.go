@@ -12,9 +12,11 @@ import (
 	"testing"
 
 	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -40,7 +42,7 @@ func BenchmarkP256(b *testing.B) {
 			acc := new(BenchPoint).Identity()
 			b.StartTimer()
 			for _, pt := range points {
-				acc = acc.Hash(pt)
+				acc, _ = acc.Hash(pt)
 			}
 		}
 	})
@@ -57,7 +59,7 @@ func BenchmarkP256(b *testing.B) {
 			acc := new(Point).Identity()
 			b.StartTimer()
 			for _, pt := range points {
-				acc = acc.Hash(pt)
+				acc, _ = acc.Hash(pt)
 			}
 		}
 	})
@@ -67,7 +69,9 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			points := make([]*BenchPoint, 1000)
 			for i := range points {
-				points[i] = points[i].Random(crand.Reader).(*BenchPoint)
+				p, err := points[i].Random(crand.Reader)
+				require.NoError(b, err)
+				points[i] = p.(*BenchPoint)
 			}
 			acc := new(BenchPoint).Identity()
 			b.StartTimer()
@@ -82,7 +86,9 @@ func BenchmarkP256(b *testing.B) {
 			curve := New()
 			points := make([]*Point, 1000)
 			for i := range points {
-				points[i] = curve.Identity().Random(crand.Reader).(*Point)
+				p, err := curve.Identity().Random(crand.Reader)
+				require.NoError(b, err)
+				points[i] = p.(*Point)
 			}
 			acc := curve.Identity()
 			b.StartTimer()
@@ -116,7 +122,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			acc := new(BenchPoint).Generator().Mul(new(BenchScalar).New(2))
@@ -131,7 +138,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*Scalar, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
+				s, err := new(Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*Scalar)
 			}
 			acc := new(Point).Generator()
@@ -146,7 +154,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			b.StartTimer()
@@ -160,7 +169,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*Scalar, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
+				s, err := new(Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*Scalar)
 			}
 			b.StartTimer()
@@ -174,7 +184,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			b.StartTimer()
@@ -188,7 +199,8 @@ func BenchmarkP256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*Scalar, 1000)
 			for i := range scalars {
-				s := new(Scalar).Random(crand.Reader)
+				s, err := new(Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*Scalar)
 			}
 			b.StartTimer()
@@ -238,26 +250,26 @@ func (*BenchScalar) Curve() curves.Curve {
 	return New()
 }
 
-func (s *BenchScalar) Random(reader io.Reader) curves.Scalar {
+func (s *BenchScalar) Random(reader io.Reader) (curves.Scalar, error) {
 	if reader == nil {
-		return nil
+		return nil, errs.NewIsNil("reader is nil")
 	}
 	var seed [64]byte
 	_, _ = reader.Read(seed[:])
 	return s.Hash(seed[:])
 }
 
-func (s *BenchScalar) Hash(inputs ...[]byte) curves.Scalar {
-	xmd, err := testutils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), []byte("P256_XMD:SHA-256_SSWU_RO_"), 48)
+func (s *BenchScalar) Hash(inputs ...[]byte) (curves.Scalar, error) {
+	dst := append([]byte("P256_XMD:SHA-256_SSWU_RO_"), []byte(constants.HASH2CURVE_APP_TAG)...)
+	xmd, err := testutils.ExpandMsgXmd(sha256.New(), bytes.Join(inputs, nil), dst, 48)
 	if err != nil {
-		return nil
+		return nil, errs.WrapHashingFailed(err, "could not hash")
 	}
 	v := new(saferith.Nat).SetBytes(xmd)
 	return &BenchScalar{
 		value: new(saferith.Nat).Mod(v, groupOrder),
-	}
+	}, nil
 }
-
 func (s *BenchScalar) Zero() curves.Scalar {
 	return &BenchScalar{
 		value: new(saferith.Nat).SetUint64(0),
@@ -448,11 +460,11 @@ func (s *BenchScalar) Clone() curves.Scalar {
 }
 
 func (s *BenchScalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	return serialisation.ScalarMarshalBinary(s)
 }
 
 func (s *BenchScalar) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -465,11 +477,11 @@ func (s *BenchScalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *BenchScalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	return serialisation.ScalarMarshalText(s)
 }
 
 func (s *BenchScalar) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -482,11 +494,11 @@ func (s *BenchScalar) UnmarshalText(input []byte) error {
 }
 
 func (s *BenchScalar) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(New().Name(), s)
+	return serialisation.ScalarMarshalJson(New().Name(), s)
 }
 
 func (s *BenchScalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -498,13 +510,13 @@ func (s *BenchScalar) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *BenchPoint) Random(reader io.Reader) curves.Point {
+func (p *BenchPoint) Random(reader io.Reader) (curves.Point, error) {
 	var seed [64]byte
 	_, _ = reader.Read(seed[:])
 	return p.Hash(seed[:])
 }
 
-func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
+func (p *BenchPoint) Hash(inputs ...[]byte) (curves.Point, error) {
 	curve := elliptic.P256().Params()
 
 	domain := []byte("P256_XMD:SHA-256_SSWU_RO_")
@@ -526,7 +538,7 @@ func (p *BenchPoint) Hash(inputs ...[]byte) curves.Point {
 	return &BenchPoint{
 		x: new(saferith.Nat).SetBig(x, fieldOrder.BitLen()),
 		y: new(saferith.Nat).SetBig(y, fieldOrder.BitLen()),
-	}
+	}, nil
 }
 
 func (p *BenchPoint) Identity() curves.Point {
@@ -709,11 +721,11 @@ func (p *BenchPoint) Params() *elliptic.CurveParams {
 }
 
 func (p *BenchPoint) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	return serialisation.PointMarshalBinary(p)
 }
 
 func (p *BenchPoint) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(New(), input)
+	pt, err := serialisation.PointUnmarshalBinary(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -727,11 +739,11 @@ func (p *BenchPoint) UnmarshalBinary(input []byte) error {
 }
 
 func (p *BenchPoint) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	return serialisation.PointMarshalText(p)
 }
 
 func (p *BenchPoint) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(New(), input)
+	pt, err := serialisation.PointUnmarshalText(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -745,11 +757,11 @@ func (p *BenchPoint) UnmarshalText(input []byte) error {
 }
 
 func (p *BenchPoint) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	return serialisation.PointMarshalJson(p)
 }
 
 func (p *BenchPoint) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(New(), input)
+	pt, err := serialisation.NewPointFromJSON(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}

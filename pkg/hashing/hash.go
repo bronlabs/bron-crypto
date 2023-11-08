@@ -7,8 +7,8 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
@@ -26,8 +26,11 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	return digest, nil
 }
 
-// FiatShamir computes the challenge scalar writing all inputs to the hash and creating a digest.
-func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
+// HashToSchnorrScalar computes the challenge scalar writing all inputs to the hash
+// and maps its digest to a curve scalar according to the digest size. It does
+// not care about potential biases in the resulting scalar, as it is used for
+// Schnorr signatures.
+func HashToSchnorrScalar(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scalar, error) {
 	for _, x := range xs {
 		if x == nil {
 			return nil, errs.NewIsNil("an input is nil")
@@ -41,9 +44,9 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 
 	var setBytesFunc func([]byte) (curves.Scalar, error)
 	switch len(digest) {
-	case impl.FieldBytes:
+	case constants.FieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar().SetBytes
-	case impl.WideFieldBytes:
+	case constants.WideFieldBytes:
 		setBytesFunc = cipherSuite.Curve.Scalar().SetBytesWide
 	default:
 		return nil, errs.WrapSerializationError(err, "digest length %d is not supported", len(digest))
@@ -55,10 +58,6 @@ func FiatShamir(cipherSuite *integration.CipherSuite, xs ...[]byte) (curves.Scal
 	}
 	return challenge, nil
 }
-
-// CreateDigestScalar is the same as FiatShamir, except it'll be used in the signing algorithms to create the digest.
-// We rename it because FiatShamir is not the right name.
-var CreateDigestScalar = FiatShamir
 
 // FiatShamirHKDF computes the HKDF over many values
 // iteratively such that each value is hashed separately

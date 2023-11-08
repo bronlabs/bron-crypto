@@ -2,10 +2,9 @@ package noninteractive_signing
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"io"
 	"strconv"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
@@ -32,7 +31,7 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-var commitmentHashFunc = sha3.New256
+var commitmentHashFunc = sha256.New
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
@@ -45,7 +44,10 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot generate random k")
+		}
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
 		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myIdentityKey, bigR[i])
 		if err != nil {

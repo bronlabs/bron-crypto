@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/curve25519"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -26,17 +26,17 @@ func (p *Point) X() curves.FieldElement {
 }
 
 func (*Point) Y() curves.FieldElement {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
-func (*Point) Random(prng io.Reader) curves.Point {
-	//TODO implement me
+func (*Point) Random(prng io.Reader) (curves.Point, error) {
+	// TODO implement me
 	panic("implement me")
 }
 
-func (*Point) Hash(bytes ...[]byte) curves.Point {
-	//TODO implement me
+func (*Point) Hash(bytes ...[]byte) (curves.Point, error) {
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -68,47 +68,47 @@ func (p *Point) IsIdentity() bool {
 }
 
 func (*Point) IsNegative() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) IsOnCurve() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Double() curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Scalar() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Neg() curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) ClearCofactor() curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Clone() curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Add(rhs curves.Point) curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) Sub(rhs curves.Point) curves.Point {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -139,7 +139,7 @@ func (p *Point) Equal(rhs curves.Point) bool {
 }
 
 func (*Point) Set(x, y *saferith.Nat) (curves.Point, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -148,17 +148,17 @@ func (p *Point) ToAffineCompressed() []byte {
 }
 
 func (*Point) ToAffineUncompressed() []byte {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) FromAffineCompressed(bytes []byte) (curves.Point, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Point) FromAffineUncompressed(bytes []byte) (curves.Point, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -179,7 +179,7 @@ func (p *Point) IsSmallOrder() bool {
 	}
 
 	for _, testValue := range outsidePrimeSubgroupValues {
-		if subtle.ConstantTimeCompare(p.Value[:], testValue[:]) == 1 {
+		if subtle.ConstantTimeCompare(p.Value[:], testValue) == 1 {
 			panic("Invalid public key")
 		}
 	}
@@ -195,11 +195,15 @@ func (*Point) CurveName() string {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	buffer, err := serialisation.PointMarshalBinary(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal binary")
+	}
+	return buffer, nil
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(&curve25519Instance, input)
+	pt, err := serialisation.PointUnmarshalBinary(&curve25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
@@ -212,11 +216,15 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	buffer, err := serialisation.PointMarshalText(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal text")
+	}
+	return buffer, nil
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(&curve25519Instance, input)
+	pt, err := serialisation.PointUnmarshalText(&curve25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
@@ -229,11 +237,15 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	return internal.PointMarshalJson(p)
+	buffer, err := serialisation.PointMarshalJson(p)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return buffer, nil
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(&curve25519Instance, input)
+	pt, err := serialisation.NewPointFromJSON(&curve25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}

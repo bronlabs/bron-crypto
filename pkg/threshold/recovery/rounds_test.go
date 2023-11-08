@@ -101,7 +101,8 @@ func Test_HappyPath(t *testing.T) {
 func TestSanity(t *testing.T) {
 	t.Parallel()
 	curve := k256.New()
-	secret := curve.Scalar().Random(crand.Reader)
+	secret, err := curve.Scalar().Random(crand.Reader)
+	require.NoError(t, err)
 
 	dealer, err := shamir.NewDealer(2, 3, curve)
 	require.NoError(t, err)

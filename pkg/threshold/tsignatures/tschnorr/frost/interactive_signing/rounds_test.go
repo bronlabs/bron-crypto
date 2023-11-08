@@ -282,7 +282,8 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	require.NoError(t, err)
 
 	// use random scalar
-	partialSignatures[maliciousParty].Zi = curve.Scalar().Random(crand.Reader)
+	partialSignatures[maliciousParty].Zi, err = curve.Scalar().Random(crand.Reader)
+	require.NoError(t, err)
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))

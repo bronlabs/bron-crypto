@@ -128,11 +128,11 @@ func ExpandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
 		_, _ = h.Write([]byte{domainLen})
 
 		// b_1 || ... || b_(ell - 1)
-		copy(out[(i-1)*h.Size():i*h.Size()], bi[:])
+		copy(out[(i-1)*h.Size():i*h.Size()], bi)
 		bi = h.Sum(nil)
 	}
 	// b_ell
-	copy(out[(ell-1)*h.Size():], bi[:])
+	copy(out[(ell-1)*h.Size():], bi)
 	return out[:outLen], nil
 }
 

@@ -19,10 +19,12 @@ func TestHappyPath(t *testing.T) {
 		c := curve
 		t.Run(fmt.Sprintf("running test for curve =%s", c.Name()), func(t *testing.T) {
 			t.Parallel()
-			alicePrivateKey := c.Scalar().Random(crand.Reader)
+			alicePrivateKey, err := c.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			alicePublicKey := c.ScalarBaseMult(alicePrivateKey)
 
-			bobPrivateKey := c.Scalar().Random(crand.Reader)
+			bobPrivateKey, err := c.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			bobPublicKey := c.ScalarBaseMult(bobPrivateKey)
 
 			aliceDerivation, err := dhc.DeriveSharedSecretValue(alicePrivateKey, bobPublicKey)

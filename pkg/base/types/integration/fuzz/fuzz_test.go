@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	core "github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -21,6 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
@@ -136,7 +136,7 @@ func Fuzz_Test_DeriveSharingId(f *testing.F) {
 func Fuzz_Test_RandomNat(f *testing.F) {
 	f.Fuzz(func(t *testing.T, randomSeed uint64, a uint64, b uint64) {
 		prng := rand.New(rand.NewSource(int64(randomSeed)))
-		_, err := core.RandomNat(prng, new(saferith.Nat).SetUint64(a), new(saferith.Nat).SetUint64(b))
+		_, err := utils.RandomNat(prng, new(saferith.Nat).SetUint64(a), new(saferith.Nat).SetUint64(b))
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -145,7 +145,7 @@ func Fuzz_Test_RandomNat(f *testing.F) {
 
 func Fuzz_Test_NatSetBit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, a uint64, k int) {
-		_, err := core.NatSetBit(new(saferith.Nat).SetUint64(a), k-1)
+		_, err := utils.NatSetBit(new(saferith.Nat).SetUint64(a), k-1)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

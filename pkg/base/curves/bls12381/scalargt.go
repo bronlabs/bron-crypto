@@ -9,12 +9,12 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ (curves.Scalar) = (*ScalarGt)(nil)
+var _ curves.Scalar = (*ScalarGt)(nil)
 
 type ScalarGt struct {
 	Value *bls12381impl.Gt
@@ -38,22 +38,22 @@ func (*ScalarGt) PairingCurveName() string {
 	return Name
 }
 
-func (*ScalarGt) Random(reader io.Reader) curves.Scalar {
+func (*ScalarGt) Random(reader io.Reader) (curves.Scalar, error) {
+	if reader == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
 	value, err := new(bls12381impl.Gt).Random(reader)
 	if err != nil {
-		return nil
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar in BLS12381Gt")
 	}
-	return &ScalarGt{Value: value}
+	return &ScalarGt{Value: value}, nil
 }
 
-func (s *ScalarGt) Hash(inputs ...[]byte) curves.Scalar {
+func (s *ScalarGt) Hash(inputs ...[]byte) (curves.Scalar, error) {
 	reader := sha3.NewShake256()
-	n, err := reader.Write(bytes.Join(inputs, nil))
+	_, err := reader.Write(bytes.Join(inputs, nil))
 	if err != nil {
-		return nil
-	}
-	if n != len(inputs) {
-		return nil
+		return nil, errs.WrapHashingFailed(err, "could not write inputs to hash")
 	}
 	return s.Random(reader)
 }
@@ -75,11 +75,15 @@ func (s *ScalarGt) IsOne() bool {
 }
 
 func (s *ScalarGt) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	buffer, err := serialisation.ScalarMarshalBinary(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return buffer, nil
 }
 
 func (s *ScalarGt) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(GtName, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(GtName, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -92,13 +96,17 @@ func (s *ScalarGt) UnmarshalBinary(input []byte) error {
 }
 
 func (s *ScalarGt) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	buffer, err := serialisation.ScalarMarshalText(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal text")
+	}
+	return buffer, nil
 }
 
 func (s *ScalarGt) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -109,11 +117,15 @@ func (s *ScalarGt) UnmarshalText(input []byte) error {
 }
 
 func (s *ScalarGt) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(GtName, s)
+	buffer, err := serialisation.ScalarMarshalJson(GtName, s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal json")
+	}
+	return buffer, nil
 }
 
 func (s *ScalarGt) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}

@@ -3,7 +3,6 @@ package fuzz
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"io"
 	"math/rand"
 	"testing"
@@ -64,7 +63,6 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 
 	shards := keygen[K](t, identities, 2, 3, randomSeed)
 
-	fmt.Println(shards[identities[0].Hash()])
 	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 

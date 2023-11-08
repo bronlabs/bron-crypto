@@ -145,11 +145,13 @@ func Fuzz_Test_PointRandom(f *testing.F) {
 func Fuzz_Test_PointHash(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p := curve.Point().Hash(h)
-		pp := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
+		pp, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		require.True(t, len(p.ToAffineCompressed()) > 0)
 		require.True(t, len(p.ToAffineUncompressed()) > 0)
-		pp, err := pp.FromAffineCompressed(p.ToAffineCompressed())
+		pp, err = pp.FromAffineCompressed(p.ToAffineCompressed())
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -165,7 +167,8 @@ func Fuzz_Test_PointHash(f *testing.F) {
 func Fuzz_Test_PointDouble(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		p.Double()
 	})
 }
@@ -173,7 +176,8 @@ func Fuzz_Test_PointDouble(f *testing.F) {
 func Fuzz_Test_PointNeg(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		p.Neg()
 	})
 }
@@ -181,7 +185,8 @@ func Fuzz_Test_PointNeg(f *testing.F) {
 func Fuzz_Test_PointAdd(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		p.Add(p)
 	})
 }
@@ -189,7 +194,8 @@ func Fuzz_Test_PointAdd(f *testing.F) {
 func Fuzz_Test_PointSub(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		p.Sub(p)
 	})
 }
@@ -198,7 +204,8 @@ func Fuzz_Test_PointMul(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, h []byte, i uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		v := curve.Scalar().New(i)
-		p := curve.Point().Hash(h)
+		p, err := curve.Point().Hash(h)
+		require.NoError(t, err)
 		p.Mul(v)
 	})
 }

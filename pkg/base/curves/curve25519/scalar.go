@@ -6,8 +6,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -20,19 +21,19 @@ type Scalar struct {
 	_ types.Incomparable
 }
 
-func (*Scalar) Random(prng io.Reader) curves.Scalar {
+func (*Scalar) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		panic("prng in nil")
 	}
 	var seed [32]byte
 	if _, err := prng.Read(seed[:]); err != nil {
-		panic(err)
+		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
 	}
-	return &Scalar{Value: seed}
+	return &Scalar{Value: seed}, nil
 }
 
-func (*Scalar) Hash(bytes ...[]byte) curves.Scalar {
-	//TODO implement me
+func (*Scalar) Hash(bytes ...[]byte) (curves.Scalar, error) {
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -52,27 +53,27 @@ func (*Scalar) Zero() curves.Scalar {
 }
 
 func (*Scalar) One() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) IsZero() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) IsOne() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) IsOdd() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) IsEven() bool {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -85,82 +86,82 @@ func (*Scalar) New(value uint64) curves.Scalar {
 }
 
 func (*Scalar) Cmp(rhs curves.Scalar) int {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Square() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Double() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Invert() (curves.Scalar, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Sqrt() (curves.Scalar, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Cube() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Add(rhs curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Sub(rhs curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Mul(rhs curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Div(rhs curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Exp(k curves.Scalar) curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Neg() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) SetNat(v *saferith.Nat) (curves.Scalar, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Nat() *saferith.Nat {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Uint64() uint64 {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -169,18 +170,18 @@ func (s *Scalar) Bytes() []byte {
 }
 
 func (*Scalar) SetBytes(bytes []byte) (curves.Scalar, error) {
-	var ss [32]byte
-	copy(ss[:], bytes[:])
+	var ss [constants.FieldBytes]byte
+	copy(ss[:], bytes)
 	return &Scalar{Value: ss}, nil
 }
 
 func (*Scalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (*Scalar) Clone() curves.Scalar {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -193,11 +194,15 @@ func (*Scalar) CurveName() string {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	return internal.ScalarMarshalBinary(s)
+	buffer, err := serialisation.ScalarMarshalBinary(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return buffer, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := internal.ScalarUnmarshalBinary(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -210,11 +215,15 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	buffer, err := serialisation.ScalarMarshalText(s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return buffer, nil
 }
 
 func (s *Scalar) UnmarshalText(input []byte) error {
-	sc, err := internal.ScalarUnmarshalText(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -227,11 +236,15 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	return internal.ScalarMarshalJson(Name, s)
+	buffer, err := serialisation.ScalarMarshalJson(Name, s)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not marshal")
+	}
+	return buffer, nil
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}

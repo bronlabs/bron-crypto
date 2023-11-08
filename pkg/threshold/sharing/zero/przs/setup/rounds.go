@@ -1,7 +1,7 @@
 package setup
 
 import (
-	"golang.org/x/crypto/sha3"
+	"crypto/sha256"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -11,7 +11,7 @@ import (
 )
 
 // size should match zero.LambdaBytes.
-var h = sha3.New256
+var h = sha256.New
 
 type Round1P2P struct {
 	Commitment commitments.Commitment

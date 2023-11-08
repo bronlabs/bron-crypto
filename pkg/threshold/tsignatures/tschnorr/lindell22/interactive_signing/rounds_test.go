@@ -33,7 +33,8 @@ func Test_SanityCheck(t *testing.T) {
 
 	message := []byte("Hello World!")
 
-	eddsaPrivateKey := curve.Scalar().Random(prng)
+	eddsaPrivateKey, err := curve.Scalar().Random(prng)
+	require.NoError(t, err)
 	dHashed, err := hashing.Hash(hashFunc, eddsaPrivateKey.Bytes())
 	require.NoError(t, err)
 
@@ -42,7 +43,8 @@ func Test_SanityCheck(t *testing.T) {
 	require.NoError(t, err)
 	publicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
-	nonce := curve.Scalar().Random(prng)
+	nonce, err := curve.Scalar().Random(prng)
+	require.NoError(t, err)
 	bigR := curve.ScalarBaseMult(nonce)
 
 	eBytes, err := hashing.Hash(hashFunc, bigR.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)

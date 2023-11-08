@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	p256n "github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl"
@@ -13,9 +14,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
-const Name = "P-256"
+const (
+	Name string = constants.P256_NAME
+)
 
 var (
 	p256Initonce sync.Once
@@ -45,26 +49,46 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
+
+	hashing.CurveHasher
 
 	_ types.Incomparable
 }
 
 func p256Init() {
 	p256Instance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
+	p256Instance.CurveHasher = hashing.NewCurveHasherSha256(
+		curves.Curve(&p256Instance),
+		constants.HASH2CURVE_APP_TAG,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func New() *Curve {
 	p256Initonce.Do(p256Init)
 	return &p256Instance
+}
+
+// SetCustomHasher sets the hasher to use for hash-to-curve operations with a
+// custom "appTag". Not exposed in the `curves.Curve` interface, as by
+// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
+func (c *Curve) SetCustomHasher(appTag string) {
+	c.CurveHasher = hashing.NewCurveHasherSha256(
+		curves.Curve(&p256Instance),
+		appTag,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func (c *Curve) Profile() curves.CurveProfile {
@@ -83,6 +107,10 @@ func (c *Curve) Name() string {
 	return c.Name_
 }
 
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
+}
+
 func (c *Curve) Generator() curves.Point {
 	return c.Point_.Generator()
 }
@@ -97,7 +125,7 @@ func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*impl.EllipticPoint, len(points))
-	nScalars := make([]*impl.Field, len(scalars))
+	nScalars := make([]*impl.FieldValue, len(scalars))
 	for i, pt := range points {
 		ptv, ok := pt.(*Point)
 		if !ok {
@@ -126,7 +154,11 @@ func (c *Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Poi
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a p256 field element")
 	}
 	rhs := fp.New()
-	c.Point().(*Point).Value.Arithmetic.RhsEq(rhs, xc.v)
+	cp, ok := c.Point().(*Point)
+	if !ok {
+		return nil, nil, errs.NewInvalidType("provided point is not a p256 point")
+	}
+	cp.Value.Arithmetic.RhsEq(rhs, xc.v)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")

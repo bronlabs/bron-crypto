@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
@@ -18,8 +19,8 @@ var (
 	p256FqParams   impl.FieldParams
 )
 
-func New() *impl.Field {
-	return &impl.Field{
+func New() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getP256FqParams(),
 		Arithmetic: p256FqArithmetic{},
@@ -125,7 +126,7 @@ func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 			Square((*MontgomeryDomainFieldElement)(&b), (*MontgomeryDomainFieldElement)(&b))
 		}
 		// if b == 1 flag = 0 else flag = 1
-		flag := -(&impl.Field{
+		flag := -(&impl.FieldValue{
 			Value:      b,
 			Params:     getP256FqParams(),
 			Arithmetic: f,
@@ -138,11 +139,11 @@ func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 		copy(b[:], t[:])
 	}
 	Square((*MontgomeryDomainFieldElement)(&c), (*MontgomeryDomainFieldElement)(&z))
-	*wasSquare = (&impl.Field{
+	*wasSquare = (&impl.FieldValue{
 		Value:      c,
 		Params:     getP256FqParams(),
 		Arithmetic: f,
-	}).Equal(&impl.Field{
+	}).Equal(&impl.FieldValue{
 		Value:      *arg,
 		Params:     getP256FqParams(),
 		Arithmetic: f,
@@ -264,7 +265,7 @@ func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 	impl.Pow2k(&tmp, &tmp, 6, f)
 	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1111))
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getP256FqParams(),
 		Arithmetic: f,
@@ -273,12 +274,12 @@ func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (p256FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[impl.FieldBytes]byte) {
+func (p256FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[constants.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (p256FqArithmetic) ToBytes(out *[impl.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (p256FqArithmetic) ToBytes(out *[constants.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 

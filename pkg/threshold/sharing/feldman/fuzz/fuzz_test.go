@@ -24,7 +24,8 @@ func Fuzz_Test(f *testing.F) {
 
 		scheme, err := feldman.NewDealer(3, 5, curve)
 		require.NoError(t, err)
-		secret := curve.Scalar().Hash(secretBytes)
+		secret, err := curve.Scalar().Hash(secretBytes)
+		require.NoError(t, err)
 		commitments, shares, err := scheme.Split(secret, prng)
 		require.Nil(t, err)
 		require.NotNil(t, shares)

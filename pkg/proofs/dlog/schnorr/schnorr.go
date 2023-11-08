@@ -3,8 +3,8 @@ package schnorr
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
@@ -78,19 +78,22 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 	curve := p.BasePoint.Curve()
 
 	statement := p.BasePoint.Mul(x)
-	k := curve.Scalar().Random(prng)
+	k, err := curve.Scalar().Random(prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
+	}
 	R := p.BasePoint.Mul(k)
 
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
 	p.transcript.AppendPoints(rLabel, R)
 	p.transcript.AppendPoints(statementLabel, statement)
 	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
-	digest, err := p.transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	digest, err := p.transcript.ExtractBytes(digestLabel, constants.WideFieldBytes)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
+		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge bytes")
 	}
 
-	result.C, err = curve.Scalar().SetBytes(digest)
+	result.C, err = curve.Scalar().SetBytesWide(digest)
 	if err != nil {
 		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
 	}
@@ -127,12 +130,12 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 	transcript.AppendPoints(rLabel, R)
 	transcript.AppendPoints(statementLabel, statement)
 	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
-	digest, err := transcript.ExtractBytes(digestLabel, impl.FieldBytes)
+	digest, err := transcript.ExtractBytes(digestLabel, constants.WideFieldBytes)
 	if err != nil {
 		return errs.WrapFailed(err, "could not extract bytes from transcript")
 	}
 
-	computedChallenge, err := curve.Scalar().SetBytes(digest)
+	computedChallenge, err := curve.Scalar().SetBytesWide(digest)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
 	}

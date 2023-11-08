@@ -28,6 +28,14 @@ func (*FieldProfileG1) ExtensionDegree() *saferith.Nat {
 	return new(saferith.Nat).SetUint64(1)
 }
 
+func (*FieldProfileG1) FieldBytes() int {
+	return bimpl.FieldBytes
+}
+
+func (*FieldProfileG1) WideFieldBytes() int {
+	return bimpl.WideFieldBytes
+}
+
 var _ curves.FieldElement = (*FieldElementG1)(nil)
 
 type FieldElementG1 struct {
@@ -62,11 +70,12 @@ func (*FieldElementG1) Profile() curves.FieldProfile {
 	return &FieldProfileG1{}
 }
 
-// IMPLEMENT
-func (e *FieldElementG1) Hash(x []byte) curves.FieldElement {
-	return &FieldElementG1{
-		v: e.v.Hash(x),
+func (*FieldElementG1) Hash(x []byte) (curves.FieldElement, error) {
+	els, err := NewG1().HashToFieldElements(1, x, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not hash to field element in bls12381 G1")
 	}
+	return els[0], nil
 }
 
 func (e *FieldElementG1) New(value uint64) curves.FieldElement {
@@ -75,12 +84,19 @@ func (e *FieldElementG1) New(value uint64) curves.FieldElement {
 	}
 }
 
-func (e *FieldElementG1) Random(prng io.Reader) curves.FieldElement {
+func (e *FieldElementG1) SubfieldElement(index uint64) curves.FieldElement {
+	return e
+}
+
+func (e *FieldElementG1) Random(prng io.Reader) (curves.FieldElement, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
 	result, err := e.v.Random(prng)
 	if err != nil {
-		panic(err.Error())
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random field element")
 	}
-	return &FieldElementG1{v: result}
+	return &FieldElementG1{v: result}, nil
 }
 
 func (*FieldElementG1) Zero() curves.FieldElement {
@@ -206,13 +222,12 @@ func (e *FieldElementG1) Nat() *saferith.Nat {
 	return e.v.Nat()
 }
 
-func (e *FieldElementG1) SetBytes(input []byte) (curves.FieldElement, error) {
+func (*FieldElementG1) SetBytes(input []byte) (curves.FieldElement, error) {
 	if len(input) != bimpl.FieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 48 bytes")
+		return nil, errs.NewInvalidLength("input length (%d != %d bytes)", len(input), bimpl.FieldBytes)
 	}
-	var out [48]byte
-	copy(out[:], bitstring.ReverseBytes(input))
-	result, ok := e.v.SetBytes(&out)
+	buffer := bitstring.ReverseBytes(input)
+	result, ok := new(bimpl.Fp).SetBytes((*[bimpl.FieldBytes]byte)(buffer))
 	if ok != 1 {
 		return nil, errs.NewFailed("could not set byte")
 	}
@@ -221,13 +236,12 @@ func (e *FieldElementG1) SetBytes(input []byte) (curves.FieldElement, error) {
 	}, nil
 }
 
-func (e *FieldElementG1) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	if len(input) != bimpl.WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 96 bytes")
+func (*FieldElementG1) SetBytesWide(input []byte) (curves.FieldElement, error) {
+	if len(input) > bimpl.WideFieldBytes {
+		return nil, errs.NewInvalidLength("input length > %d bytes", bimpl.WideFieldBytes)
 	}
-	var out [96]byte
-	copy(out[:], bitstring.ReverseBytes(input))
-	result := e.v.SetBytesWide(&out)
+	buffer := bitstring.ReverseAndPadBytes(input, bimpl.WideFieldBytes-len(input))
+	result := new(bimpl.Fp).SetBytesWide((*[bimpl.WideFieldBytes]byte)(buffer))
 	return &FieldElementG1{
 		v: result,
 	}, nil

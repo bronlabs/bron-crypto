@@ -2,7 +2,6 @@ package edwards25519
 
 import (
 	"bytes"
-	"crypto/sha512"
 	"crypto/subtle"
 	"io"
 
@@ -11,8 +10,9 @@ import (
 	ed "github.com/bwesterb/go-ristretto/edwards25519"
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -33,25 +33,44 @@ func (*Point) CurveName() string {
 	return Name
 }
 
-func (p *Point) Random(reader io.Reader) curves.Point {
-	var seed [64]byte
-	_, _ = reader.Read(seed[:])
-	return p.Hash(seed[:])
+// Map a little-endian encoding of an ed25519 field element into a point on
+// ed25519 curve, using the Elligator2 map to curve25519 and a bidirectional
+// map to get to ed25519.
+//
+// The encoding follows `element = Σ_{i=0}^{k-1} (input[i] << 8*i)`.
+// Contrary to most curves (which often require checking if the field element is
+// reduced), this encoding is possible thanks to the proximity of the field
+// order to a power of 2. As a nice consequence, we don't need to use `SetBytesWide`
+// to reduce the bias of non-uniform sampling, as this direct method yields a small
+// bias (< 2^-250) already.
+//
+// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
+func (*Point) Map(fieldElement []byte) curves.Point {
+	signBit := (fieldElement[31] & 0x80) >> 7
+	fe := new(ed.FieldElement).SetBytes((*[constants.FieldBytes]byte)(fieldElement))
+	m1 := elligatorEncode(fe)
+	return toEdwards(m1, signBit)
 }
 
-func (*Point) Hash(inputs ...[]byte) curves.Point {
-	/// Perform hashing to the group using the Elligator2 map
-	///
-	/// See https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#section-6.7.1
-	h := sha512.Sum512(bytes.Join(inputs, nil))
-	var res [32]byte
-	copy(res[:], h[:32])
-	signBit := (res[31] & 0x80) >> 7
+func (p *Point) Random(reader io.Reader) (curves.Point, error) {
+	var fieldElement [constants.FieldBytes]byte
+	_, err := reader.Read(fieldElement[:])
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not read random bytes (to be used as uniform field element)")
+	}
+	return p.Map(fieldElement[:]), nil
+}
 
-	fe := new(ed.FieldElement).SetBytes(&res).BytesInto(&res)
-	m1 := elligatorEncode(fe)
-
-	return toEdwards(m1, signBit)
+// Perform hashing to the ed25519 group using the Elligator2 mapping
+//
+// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
+func (p *Point) Hash(inputs ...[]byte) (curves.Point, error) {
+	buffer, err := New().ExpandMessage(constants.FieldBytes, bytes.Join(inputs, nil), nil)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not hash to field elements in ed25519")
+	}
+	point := p.Map(buffer)
+	return point, nil
 }
 
 func (*Point) Identity() curves.Point {
@@ -142,20 +161,6 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	}
 }
 
-// MangleScalarBitsAndMulByBasepointToProducePublicKey
-// is a function for mangling the bits of a (formerly
-// mathematically well-defined) "scalar" and multiplying it to produce a
-// public key.
-func (*Point) MangleScalarBitsAndMulByBasepointToProducePublicKey(rhs *Scalar) (*Point, error) {
-	data := rhs.Value.Bytes()
-	s, err := filippo.NewScalar().SetBytesWithClamping(data[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "set bytes with clamping failed")
-	}
-	value := filippo.NewIdentityPoint().ScalarBaseMult(s)
-	return &Point{Value: value}, nil
-}
-
 func (p *Point) Equal(rhs curves.Point) bool {
 	r, ok := rhs.(*Point)
 	if ok {
@@ -165,12 +170,12 @@ func (p *Point) Equal(rhs curves.Point) bool {
 		// We have that X = xZ and X' = x'Z'. Thus, x = x' is equivalent to
 		// (xZ)Z' = (x'Z')Z, and similarly for the y-coordinate.
 		return p.Value.Equal(r.Value) == 1
-		//lhs1 := new(ed.FieldElement).Mul(&p.value.X, &r.value.Z)
-		//rhs1 := new(ed.FieldElement).Mul(&r.value.X, &p.value.Z)
-		//lhs2 := new(ed.FieldElement).Mul(&p.value.Y, &r.value.Z)
-		//rhs2 := new(ed.FieldElement).Mul(&r.value.Y, &p.value.Z)
+		//  lhs1 := new(ed.FieldElement).Mul(&p.value.X, &r.value.Z)
+		//  rhs1 := new(ed.FieldElement).Mul(&r.value.X, &p.value.Z)
+		//  lhs2 := new(ed.FieldElement).Mul(&p.value.Y, &r.value.Z)
+		//  rhs2 := new(ed.FieldElement).Mul(&r.value.Y, &p.value.Z)
 		//
-		//return lhs1.Equals(rhs1) && lhs2.Equals(rhs2)
+		//  return lhs1.Equals(rhs1) && lhs2.Equals(rhs2)
 	} else {
 		return false
 	}
@@ -238,7 +243,6 @@ func cselect(v, a, b *ed.FieldElement, cond bool) {
 	if cond {
 		m = mask64Bits
 	}
-
 	v[0] = (m & a[0]) | (^m & b[0])
 	v[1] = (m & a[1]) | (^m & b[1])
 	v[2] = (m & a[2]) | (^m & b[2])
@@ -294,7 +298,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	point, err := internal.PointMarshalBinary(p)
+	point, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to point failed")
 	}
@@ -302,7 +306,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := internal.PointUnmarshalBinary(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalBinary(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -315,7 +319,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	t, err := internal.PointMarshalText(p)
+	t, err := serialisation.PointMarshalText(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to text failed")
 	}
@@ -323,7 +327,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := internal.PointUnmarshalText(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalText(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -336,7 +340,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	point, err := internal.PointMarshalJson(p)
+	point, err := serialisation.PointMarshalJson(p)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to json failed")
 	}
@@ -344,7 +348,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := internal.NewPointFromJSON(&edwards25519Instance, input)
+	pt, err := serialisation.NewPointFromJSON(&edwards25519Instance, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}

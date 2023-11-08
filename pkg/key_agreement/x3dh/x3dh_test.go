@@ -33,13 +33,17 @@ func Test_HappyPathX3DH(t *testing.T) {
 		t.Run(fmt.Sprintf("x3dh for %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 
-			aliceSk := curve.Scalar().Random(crand.Reader)
+			aliceSk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			alicePk := curve.ScalarBaseMult(aliceSk)
-			aliceEsk := curve.Scalar().Random(crand.Reader)
+			aliceEsk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			aliceEpk := curve.ScalarBaseMult(aliceEsk)
-			bobSk := curve.Scalar().Random(crand.Reader)
+			bobSk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			bobPk := curve.ScalarBaseMult(bobSk)
-			bobEsk := curve.Scalar().Random(crand.Reader)
+			bobEsk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			bobEpk := curve.ScalarBaseMult(bobEsk)
 
 			local, err := x3dh.DeriveSecretLocal(aliceSk, bobPk, aliceEsk, bobEpk)

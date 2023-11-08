@@ -26,8 +26,9 @@ func Benchmark_Verify(b *testing.B) {
 	publicKeys := make([]*bip340.PublicKey, batchSize)
 	signatures := make([]*bip340.Signature, batchSize)
 	for i := 0; i < batchSize; i++ {
-
-		privateKeys[i], err = bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(b, err)
+		privateKeys[i], err = bip340.NewPrivateKey(sk)
 		require.NoError(b, err)
 
 		signer := bip340.NewSigner(privateKeys[i])
@@ -75,12 +76,15 @@ func Benchmark_TwoPartyManyMessageVerify(b *testing.B) {
 	aux := make([]byte, 32)
 	_, err := crand.Read(aux)
 	require.NoError(b, err)
-
-	alicePrivateKey, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+	sk1, err := curve.Scalar().Random(crand.Reader)
+	require.NoError(b, err)
+	alicePrivateKey, err := bip340.NewPrivateKey(sk1)
 	require.NoError(b, err)
 	alice := bip340.NewSigner(alicePrivateKey)
 
-	bobPrivateKey, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+	sk2, err := curve.Scalar().Random(crand.Reader)
+	require.NoError(b, err)
+	bobPrivateKey, err := bip340.NewPrivateKey(sk2)
 	require.NoError(b, err)
 	bob := bip340.NewSigner(bobPrivateKey)
 

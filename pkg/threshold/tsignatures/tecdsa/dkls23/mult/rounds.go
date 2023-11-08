@@ -2,8 +2,8 @@ package mult
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
@@ -56,12 +56,18 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	return COTeR1Output, nil
 }
 
-func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceInput) (*OutputShares, *Round2Output, error) {
+func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceInput) (s *OutputShares, r2o *Round2Output, err error) {
 	for i := 0; i < L; i++ {
 		// step 2.1
-		alice.aTilde[i] = alice.Curve.Scalar().Random(alice.prng)
+		alice.aTilde[i], err = alice.Curve.Scalar().Random(alice.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a tilde")
+		}
 		// step 2.2
-		alice.aHat[i] = alice.Curve.Scalar().Random(alice.prng)
+		alice.aHat[i], err = alice.Curve.Scalar().Random(alice.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a hat")
+		}
 	}
 
 	// step 2.3
@@ -90,23 +96,23 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	}
 
 	// step 2.6
-	chiTildeTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	chiTildeTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi tilde", constants.WideFieldBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
 	}
-	chiTilde := [L]curves.Scalar{}
-	for i := 0; i < L; i++ {
-		chiTilde[i] = alice.Curve.Scalar().Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
+	chiTilde, err := alice.Curve.HashToScalars(L, append([]byte{1}, chiTildeTranscript...), nil)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "alice failed to hash chi tilde")
 	}
 
 	// step 2.7
-	chiHatTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	chiHatTranscript, err := alice.transcript.ExtractBytes("transcript state for Chi hat", constants.WideFieldBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
 	}
-	chiHat := [L]curves.Scalar{}
-	for i := 0; i < L; i++ {
-		chiHat[i] = alice.Curve.Scalar().Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
+	chiHat, err := alice.Curve.HashToScalars(L, append([]byte{2}, chiHatTranscript...), nil)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "alice failed to hash chi tilde")
 	}
 
 	// step 2.8
@@ -132,7 +138,10 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	for _, element := range &r {
 		toBeHashed = append(toBeHashed, element.Bytes()...)
 	}
-	rTilde := alice.Curve.Scalar().Hash(toBeHashed)
+	rTilde, err := alice.Curve.Scalar().Hash(toBeHashed)
+	if err != nil {
+		return nil, nil, errs.WrapHashingFailed(err, "alice failed to hash r tilde")
+	}
 	alice.transcript.AppendScalars("rTilde", rTilde)
 
 	// step 2.11
@@ -175,23 +184,23 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	}
 
 	// step 2.3
-	chiTildeTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi tilde", impl.WideFieldBytes)
+	chiTildeTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi tilde", constants.WideFieldBytes)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "bob failed to extract chi tilde transcript")
+		return nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
 	}
-	chiTilde := [L]curves.Scalar{}
-	for i := 0; i < L; i++ {
-		chiTilde[i] = bob.Curve.Scalar().Hash(append([]byte{1, byte(i)}, chiTildeTranscript...))
+	chiTilde, err := bob.Curve.HashToScalars(L, append([]byte{1}, chiTildeTranscript...), nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "alice failed to hash chi tilde")
 	}
 
 	// step 2.4
-	chiHatTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi hat", impl.WideFieldBytes)
+	chiHatTranscript, err := bob.transcript.ExtractBytes("transcript state for Chi hat", constants.WideFieldBytes)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "bob failed to extract chi tilde transcript")
+		return nil, errs.WrapFailed(err, "alice failed to extract chi tilde transcript")
 	}
-	chiHat := [L]curves.Scalar{}
-	for i := 0; i < L; i++ {
-		chiHat[i] = bob.Curve.Scalar().Hash(append([]byte{2, byte(i)}, chiHatTranscript...))
+	chiHat, err := bob.Curve.HashToScalars(L, append([]byte{2}, chiHatTranscript...), nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "alice failed to hash chi tilde")
 	}
 
 	// According to spec, Alice would have generated u right after producing chiTilde and chiHat
@@ -225,7 +234,10 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	for _, element := range &rTildeBElements {
 		rhs = append(rhs, element.Bytes()...)
 	}
-	rTildeB := bob.Curve.Scalar().Hash(rhs)
+	rTildeB, err := bob.Curve.Scalar().Hash(rhs)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "bob failed to hash r tilde")
+	}
 	// step 2.6
 	if rTildeB.Cmp(round2output.RTilde) != 0 {
 		return nil, errs.NewVerificationFailed("bob round 3 rtilde check")

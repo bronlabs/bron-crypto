@@ -90,7 +90,9 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 		for i := 0; i < int(boundedBatchSize); i++ {
 			m := message
 			if boundedScheme == bls.Basic {
-				m = bls12381.NewG1().Point().Random(crand.Reader).ToAffineCompressed()
+				p, err := bls12381.NewG1().Point().Random(crand.Reader)
+				require.NoError(t, err)
+				m = p.ToAffineCompressed()
 			}
 			privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(m, boundedScheme)
 			if err != nil && !errs.IsKnownError(err) {

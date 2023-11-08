@@ -8,7 +8,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 )
 
 type Uint128 struct {
@@ -70,8 +70,8 @@ func (u Uint128) IsZero() bool {
 
 // Equals returns true if u == v.
 func (u Uint128) Equals(v Uint128) bool {
-	eqLow := base.ConstantTimeEq(u.Lo, v.Lo)
-	eqHigh := base.ConstantTimeEq(u.Hi, v.Hi)
+	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
+	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
 	return (eqLow & eqHigh) == 1
 }
 
@@ -81,10 +81,10 @@ func (u Uint128) Equals(v Uint128) bool {
 //	 0 if u == v
 //	+1 if u >  v
 func (u Uint128) Cmp(v Uint128) int {
-	ltHigh := base.ConstantTimeGt(v.Hi, u.Hi)
-	ltLow := base.ConstantTimeGt(v.Lo, u.Lo)
-	eqHigh := base.ConstantTimeEq(u.Hi, v.Hi)
-	eqLow := base.ConstantTimeEq(u.Lo, v.Lo)
+	ltHigh := ct.ConstantTimeGt(v.Hi, u.Hi)
+	ltLow := ct.ConstantTimeGt(v.Lo, u.Lo)
+	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
+	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
 	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
 }
 

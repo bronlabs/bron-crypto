@@ -1,5 +1,4 @@
-# Core Package
+# `base` Package
 
-The core package contains a set of primitives, including but not limited to various
-elliptic curves, hashes, and commitment schemes. These primitives are used internally
-and can also be used independently on their own externally.
+The `base` package contains a set of base primitives, including but not limited to various
+elliptic curves, data structures, and common functions used across this library.

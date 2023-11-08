@@ -964,7 +964,6 @@ func TestDecryptErrorConditions(t *testing.T) {
 	decryptor, err := paillier.NewDecryptor(sk)
 	require.NoError(t, err)
 	_, err = decryptor.Decrypt(&paillier.CipherText{C: one})
-	println(err.Error())
 	require.True(t, errs.IsFailed(err))
 }
 

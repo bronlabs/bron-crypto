@@ -121,7 +121,10 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	// Scalar multiplications with points
 	if f.Int.Cmp(Ed25519Order()) == 0 {
 		scalar := &edwards25519.Scalar{}
-		s := scalar.Random(r)
+		s, err := scalar.Random(r)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "could not get random element")
+		}
 		randInt = new(big.Int).SetBytes(bitstring.ReverseBytes(s.Bytes()))
 	} else {
 		// Read a random integer within the field. This is defined as [0, max) so we don't need to

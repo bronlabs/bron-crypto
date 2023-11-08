@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
@@ -54,11 +54,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = base.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
+	verifier.state.a, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = base.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
+	verifier.state.b, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}

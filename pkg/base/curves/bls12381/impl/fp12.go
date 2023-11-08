@@ -92,13 +92,13 @@ func (f *Fp12) Square(arg *Fp12) *Fp12 {
 }
 
 // Invert computes this element's field inversion.
-func (f *Fp12) Invert(arg *Fp12) (*Fp12, int) {
+func (f *Fp12) Invert(arg *Fp12) (el *Fp12, wasInverted int) {
 	var a, b, t Fp6
 	a.Square(&arg.A)
 	b.Square(&arg.B)
 	b.MulByNonResidue(&b)
 	a.Sub(&a, &b)
-	_, wasInverted := t.Invert(&a)
+	_, wasInverted = t.Invert(&a)
 
 	a.Mul(&arg.A, &t)
 	t.Neg(&t)

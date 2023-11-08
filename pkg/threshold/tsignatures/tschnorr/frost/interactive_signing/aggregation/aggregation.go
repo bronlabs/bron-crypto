@@ -1,7 +1,6 @@
 package aggregation
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -133,7 +132,10 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 		for _, jIdentityKey := range sa.SessionParticipants.Iter() {
 			j := sa.IdentityKeyToSharingId[jIdentityKey.Hash()]
 
-			r_j := sa.CohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
+			r_j, err := sa.CohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
+			if err != nil {
+				return nil, errs.WrapHashingFailed(err, "could not hash for r_j")
+			}
 			D_j, exists := sa.parameters.D_alpha[jIdentityKey.Hash()]
 			if !exists {
 				return nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", j)
@@ -169,7 +171,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 			return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 		}
 
-		c, err := hashing.FiatShamir(
+		c, err := hashing.HashToSchnorrScalar(
 			sa.CohortConfig.CipherSuite,
 			sa.parameters.R.ToAffineCompressed(),
 			sa.PublicKey.ToAffineCompressed(),
@@ -208,7 +210,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {
-				return nil, errs.NewIdentifiableAbort(fmt.Sprintf("%d", j), "participant with sharing id is misbehaving")
+				return nil, errs.NewIdentifiableAbort(j, "participant with sharing id is misbehaving")
 			}
 		}
 	}

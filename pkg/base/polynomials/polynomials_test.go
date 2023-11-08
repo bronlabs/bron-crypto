@@ -15,7 +15,8 @@ import (
 func TestNewPoly(t *testing.T) {
 	t.Parallel()
 	curve := bls12381.NewG1()
-	secret := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.Scalar().Hash([]byte("test"))
+	require.NoError(t, err)
 
 	poly, err := p.NewRandomPolynomial(secret, 4, crand.Reader)
 	require.NoError(t, err)

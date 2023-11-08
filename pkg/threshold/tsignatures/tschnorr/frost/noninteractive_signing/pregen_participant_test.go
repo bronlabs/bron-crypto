@@ -45,13 +45,15 @@ func Test_CanInitialize(t *testing.T) {
 	curve := edwards25519.New()
 	n := 2 // By convention, all parties will have to be present for pregen ceremony.
 	tau := 5
-	alicePublicKey := curve.Point().Random(crand.Reader)
+	alicePublicKey, err := curve.Point().Random(crand.Reader)
+	require.NoError(t, err)
 	aliceIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: alicePublicKey,
 	}
 
-	bobPublicKey := curve.Point().Random(crand.Reader)
+	bobPublicKey, err := curve.Point().Random(crand.Reader)
+	require.NoError(t, err)
 	bobIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: bobPublicKey,

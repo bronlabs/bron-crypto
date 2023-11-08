@@ -126,7 +126,7 @@ func (gt *Gt) Bytes() [GtFieldBytes]byte {
 
 // SetBytes attempts to convert a big-endian byte representation of
 // a scalar into a `Gt`, failing if the input is not canonical.
-func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (*Gt, int) {
+func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok int) {
 	var t [FieldBytes]byte
 	var valid [12]int
 	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
@@ -314,7 +314,7 @@ func (gt *Gt) Neg(a *Gt) *Gt {
 }
 
 // Mul multiplies this value by the input scalar.
-func (gt *Gt) Mul(a *Gt, s *impl.Field) *Gt {
+func (gt *Gt) Mul(a *Gt, s *impl.FieldValue) *Gt {
 	var f, p Fp12
 	f.Set((*Fp12)(a))
 	bytes := s.Bytes()
@@ -344,8 +344,8 @@ func (gt *Gt) Square(a *Gt) *Gt {
 }
 
 // Invert this value.
-func (gt *Gt) Invert(a *Gt) (*Gt, int) {
-	_, wasInverted := (*Fp12)(gt).Invert((*Fp12)(a))
+func (gt *Gt) Invert(a *Gt) (res *Gt, wasInverted int) {
+	_, wasInverted = (*Fp12)(gt).Invert((*Fp12)(a))
 	return gt, wasInverted
 }
 

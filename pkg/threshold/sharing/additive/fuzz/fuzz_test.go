@@ -25,7 +25,8 @@ func Fuzz_Test(f *testing.F) {
 		require.Nil(t, err)
 		require.NotNil(t, dealer)
 
-		secret := curve.Scalar().Hash(secretBytes)
+		secret, err := curve.Scalar().Hash(secretBytes)
+		require.NoError(t, err)
 
 		shares, err := dealer.Split(secret, prng)
 		require.NoError(t, err)

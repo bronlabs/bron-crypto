@@ -48,14 +48,20 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-func (ic *Cosigner) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
+func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*Round1P2P, err error) {
 	if ic.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
 	// step 1.1
-	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.phi_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample phi_i")
+	}
 	// step 1.2
-	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.r_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample r_i")
+	}
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
@@ -261,12 +267,16 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
-	digest, err := hashing.CreateDigestScalar(ic.CohortConfig.CipherSuite, message)
+	digest, err := hashing.Hash(ic.CohortConfig.CipherSuite.Hash, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not produce digest")
+		return nil, errs.WrapFailed(err, "digest")
+	}
+	digestScalar, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(digest)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "digestScalar")
 	}
 	// TODO: redo when FieldElement.Scalar is implemented
-	w_i := digest.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
+	w_i := digestScalar.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
 
 	ic.round++
 	// step 3.7

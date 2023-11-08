@@ -2,9 +2,9 @@ package k256_test
 
 import (
 	crand "crypto/rand"
+	"encoding/hex"
 	"math/big"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -12,57 +12,22 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
 )
-
-type mockReader struct {
-	index int
-	seed  []byte
-
-	_ types.Incomparable
-}
-
-var (
-	mockRngInitonce sync.Once
-	mockRng         mockReader
-)
-
-func newMockReader() {
-	mockRng.index = 0
-	mockRng.seed = make([]byte, 32)
-	for i := range mockRng.seed {
-		mockRng.seed[i] = 1
-	}
-}
-
-func testRng() *mockReader {
-	mockRngInitonce.Do(newMockReader)
-	return &mockRng
-}
-
-func (m *mockReader) Read(p []byte) (n int, err error) {
-	limit := len(m.seed)
-	for i := range p {
-		p[i] = m.seed[m.index]
-		m.index += 1
-		m.index %= limit
-	}
-	n = len(p)
-	err = nil
-	return
-}
 
 func TestScalarK256Random(t *testing.T) {
 	curve := k256.New()
-	sc := curve.Scalar().Random(testRng())
+	sc, err := curve.Scalar().Random(testutils.TestRng())
+	require.NoError(t, err)
 	s, ok := sc.(*k256.Scalar)
 	require.True(t, ok)
-	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("2f71aaec5e14d747c72e46cdcaffffe6f542f38b3f0925469ceb24ac1c65885d"))
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("fc9a011df3753bd79d841c11f6521f25ad2ab1deceb96b7e8c28d87ea3303a06"))
 	require.NoError(t, err)
 	require.NotZero(t, s.Value.Nat().Eq(expected))
 	// Try 10 random.Values
 	for i := 0; i < 10; i++ {
-		sc := curve.Scalar().Random(crand.Reader)
+		sc, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		_, ok := sc.(*k256.Scalar)
 		require.True(t, ok)
 		require.True(t, !sc.IsZero())
@@ -72,10 +37,11 @@ func TestScalarK256Random(t *testing.T) {
 func TestScalarK256Hash(t *testing.T) {
 	var b [32]byte
 	curve := k256.New()
-	sc := curve.Scalar().Hash(b[:])
+	sc, err := curve.Scalar().Hash(b[:])
+	require.NoError(t, err)
 	s, ok := sc.(*k256.Scalar)
 	require.True(t, ok)
-	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("e5cb3500b809a8202de0834a805068bc21bde09bd6367815e7523a37adf8f52e"))
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("c8470022b73d1429f89958a4176f324d35eca30729f8f3d812883a66f34312c8"))
 	require.NoError(t, err)
 	require.NotZero(t, s.Value.Nat().Eq(expected))
 }
@@ -242,7 +208,8 @@ func TestScalarSerialize(t *testing.T) {
 
 	// Try 10 random.Values
 	for i := 0; i < 10; i++ {
-		sc = k256.Scalar().Random(crand.Reader)
+		sc, err = k256.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		sequence = sc.Bytes()
 		require.Equal(t, len(sequence), 32)
 		ret, err = k256.Scalar().SetBytes(sequence)
@@ -258,9 +225,10 @@ func TestScalarNil(t *testing.T) {
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
 	require.Panics(t, func() { one.Div(nil) })
-	require.Panics(t, func() { k256.Scalar().Random(nil) })
+	_, err := k256.Scalar().Random(nil)
+	require.Error(t, err)
 	require.Panics(t, func() { one.Cmp(nil) })
-	_, err := k256.Scalar().SetNat(nil)
+	_, err = k256.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
@@ -368,13 +336,17 @@ func TestPointMul(t *testing.T) {
 
 func TestPointSerialize(t *testing.T) {
 	curve := k256.New()
-	ss := curve.Scalar().Random(testRng())
+	ss, err := curve.Scalar().Random(testutils.TestRng())
+	require.NoError(t, err)
 
 	g := curve.Point().Generator()
 	ppt := g.Mul(ss).(*k256.Point)
 
-	require.Equal(t, ppt.ToAffineCompressed(), []byte{0x2, 0x1b, 0xa7, 0x7e, 0x98, 0xd6, 0xd8, 0x49, 0x45, 0xa4, 0x75, 0xd8, 0x6, 0xc0, 0x94, 0x5b, 0x8c, 0xf0, 0x5b, 0x8a, 0xb2, 0x76, 0xbb, 0x9f, 0x6e, 0x52, 0x9a, 0x11, 0x9c, 0x79, 0xdd, 0xf6, 0x5a})
-	require.Equal(t, ppt.ToAffineUncompressed(), []byte{0x4, 0x1b, 0xa7, 0x7e, 0x98, 0xd6, 0xd8, 0x49, 0x45, 0xa4, 0x75, 0xd8, 0x6, 0xc0, 0x94, 0x5b, 0x8c, 0xf0, 0x5b, 0x8a, 0xb2, 0x76, 0xbb, 0x9f, 0x6e, 0x52, 0x9a, 0x11, 0x9c, 0x79, 0xdd, 0xf6, 0x5a, 0xb2, 0x96, 0x7c, 0x59, 0x4, 0xeb, 0x9a, 0xaa, 0xa9, 0x1d, 0x4d, 0xd0, 0x2d, 0xc6, 0x37, 0xee, 0x4a, 0x95, 0x51, 0x60, 0xab, 0xab, 0xf7, 0xdb, 0x30, 0x7d, 0x7d, 0x0, 0x68, 0x6c, 0xcf, 0xf6})
+	expectedC, _ := hex.DecodeString("03ca628ce0f7af465c9da399aa4695d494bbacec559c50aabd33db448330610a4c")
+	expectedU, _ := hex.DecodeString("04ca628ce0f7af465c9da399aa4695d494bbacec559c50aabd33db448330610a4c7a85ef50f77b60ae883a86a933c21bdfc47ba9f5a89e53a90b1167a5a0c2449f")
+
+	require.Equal(t, ppt.ToAffineCompressed(), expectedC)
+	require.Equal(t, ppt.ToAffineUncompressed(), expectedU)
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
@@ -384,7 +356,8 @@ func TestPointSerialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		s := curve.Scalar().Random(crand.Reader)
+		s, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		pt := g.Mul(s)
 		affineCompressed := pt.ToAffineCompressed()
 		require.Equal(t, len(affineCompressed), 33)
@@ -406,9 +379,10 @@ func TestPointNil(t *testing.T) {
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
-	require.Panics(t, func() { k256.Scalar().Random(nil) })
+	_, err := k256.Scalar().Random(nil)
+	require.Error(t, err)
 	require.False(t, one.Equal(nil))
-	_, err := k256.Scalar().SetNat(nil)
+	_, err = k256.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
@@ -434,8 +408,10 @@ func TestPointSumOfProducts(t *testing.T) {
 	for j := 0; j < 25; j++ {
 		lhs = lhs.Identity()
 		for i := range points {
-			points[i] = new(k256.Point).Random(crand.Reader)
-			scalars[i] = new(k256.Scalar).Random(crand.Reader)
+			points[i], err = new(k256.Point).Random(crand.Reader)
+			require.NoError(t, err)
+			scalars[i], err = new(k256.Scalar).Random(crand.Reader)
+			require.NoError(t, err)
 			lhs = lhs.Add(points[i].Mul(scalars[i]))
 		}
 		rhs, err = curve.MultiScalarMult(scalars, points)

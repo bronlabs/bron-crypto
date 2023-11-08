@@ -76,34 +76,36 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 
 func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
-	secret := testCurve.Scalar().Hash([]byte("test"))
+	secret, err := testCurve.Scalar().Hash([]byte("test"))
+	require.NoError(t, err)
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, shares)
 	for _, s := range shares {
 		err = feldman.Verify(s, commitments)
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
 	secret2, err := scheme.Combine(shares...)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, secret2, secret)
 }
 
 func TestEd25519FeldmanAllCombinations(t *testing.T) {
 	scheme, err := feldman.NewDealer(3, 5, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
-	secret := testCurve.Scalar().Hash([]byte("test"))
+	secret, err := testCurve.Scalar().Hash([]byte("test"))
+	require.NoError(t, err)
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	for _, s := range shares {
 		err = feldman.Verify(s, commitments)
-		require.Nil(t, err)
+		require.NoError(t, err)
 	}
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, shares)
 	// There are 5*4*3 possible combinations
 	for i := 0; i < 5; i++ {
@@ -117,7 +119,7 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 				}
 
 				rSecret, err := scheme.Combine(shares[i], shares[j], shares[k])
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, rSecret)
 				require.Equal(t, rSecret, secret)
 			}

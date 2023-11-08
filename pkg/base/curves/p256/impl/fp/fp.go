@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/constants"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
@@ -18,8 +19,8 @@ var (
 	p256FpParams   impl.FieldParams
 )
 
-func New() *impl.Field {
-	return &impl.Field{
+func New() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getP256FpParams(),
 		Arithmetic: p256FpArithmetic{},
@@ -101,7 +102,7 @@ func (f p256FpArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 	}
 	impl.Pow(&t, arg, &c1, getP256FpParams(), f)
 	Square((*MontgomeryDomainFieldElement)(&c), (*MontgomeryDomainFieldElement)(&t))
-	*wasSquare = (&impl.Field{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&impl.Field{
+	*wasSquare = (&impl.FieldValue{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&impl.FieldValue{
 		Value: *arg, Params: getP256FpParams(), Arithmetic: f,
 	})
 	Selectznz(out, uint1(*wasSquare), out, &t)
@@ -135,24 +136,14 @@ func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 	for i := 224; i >= 0; i-- {
 		f.Square(&r, &r)
 		switch i {
-		case 0:
-			fallthrough
-		case 2:
-			fallthrough
-		case 192:
-			fallthrough
-		case 224:
+		case 0, 2, 192, 224:
 			f.Mul(&r, &r, arg)
-		case 3:
-			fallthrough
-		case 34:
-			fallthrough
-		case 65:
+		case 3, 34, 65:
 			f.Mul(&r, &r, &t)
 		}
 	}
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getP256FpParams(),
 		Arithmetic: f,
@@ -161,12 +152,12 @@ func (f p256FpArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (p256FpArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[impl.FieldBytes]byte) {
+func (p256FpArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[constants.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (p256FpArithmetic) ToBytes(out *[impl.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (p256FpArithmetic) ToBytes(out *[constants.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
