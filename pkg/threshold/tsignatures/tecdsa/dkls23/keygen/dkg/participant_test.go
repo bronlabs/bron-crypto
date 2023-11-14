@@ -18,6 +18,12 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
+
+func (k *mockedIdentityKey) PrivateKey() curves.Scalar {
+	panic("this should not be called")
+}
+
 type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point

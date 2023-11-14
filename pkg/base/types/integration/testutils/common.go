@@ -31,6 +31,10 @@ type TestIdentityKey struct {
 
 var _ integration.IdentityKey = (*TestIdentityKey)(nil)
 
+func (k *TestIdentityKey) PrivateKey() curves.Scalar {
+	return k.privateKey.S
+}
+
 func (k *TestIdentityKey) PublicKey() curves.Point {
 	return k.publicKey.A
 }

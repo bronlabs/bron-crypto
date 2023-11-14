@@ -19,11 +19,17 @@ import (
 	trusted_dealer "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/keygen/ed25519_trusted_dealer"
 )
 
+var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
+
 type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point
 
 	_ types.Incomparable
+}
+
+func (k *mockedIdentityKey) PrivateKey() curves.Scalar {
+	panic("this should not be called")
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {

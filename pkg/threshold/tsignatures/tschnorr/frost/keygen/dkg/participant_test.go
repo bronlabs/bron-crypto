@@ -18,11 +18,17 @@ import (
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
+var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
+
 type mockedIdentityKey struct {
 	curve     curves.Curve
 	publicKey curves.Point
 
 	_ types.Incomparable
+}
+
+func (k *mockedIdentityKey) PrivateKey() curves.Scalar {
+	panic("this should not be called")
 }
 
 func (k *mockedIdentityKey) PublicKey() curves.Point {

@@ -24,6 +24,7 @@ type IdentityKey interface {
 	Sign(message []byte) []byte
 	Verify(signature []byte, publicKey curves.Point, message []byte) error
 	PublicKey() curves.Point
+	PrivateKey() curves.Scalar
 	types.Hashable
 }
 
