@@ -2,33 +2,15 @@ package curveutils
 
 import (
 	"crypto/elliptic"
-	"encoding/json"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
-
-func NewScalarFromJSON(data []byte) (curves.Scalar, error) {
-	var m struct {
-		Type string `json:"type"`
-	}
-
-	err := json.Unmarshal(data, &m)
-	if err != nil {
-		return nil, errs.WrapSerializationError(err, "json unmarshal failed")
-	}
-	curve, err := GetCurveByName(m.Type)
-	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not fetch curve")
-	}
-	return internal.NewScalarFromJSON(curve.Scalar().SetBytes, data)
-}
 
 // ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.
 func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
