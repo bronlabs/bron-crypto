@@ -3,16 +3,12 @@ package agreeonrandom
 import (
 	"sort"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
-
-var h = sha3.New256
 
 type Round1Broadcast struct {
 	Commitment commitments.Commitment
@@ -31,8 +27,11 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	r_i := p.Curve.Scalar().Random(p.prng)
-	commitment, witness, err := commitments.Commit(h, r_i.Bytes())
+	r_i, err := p.Curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random scalar")
+	}
+	commitment, witness, err := commitments.Commit(r_i.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyIdentityKey.Hash())
 	}
@@ -69,7 +68,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		if p.state.receivedCommitments[key] == nil {
 			return nil, errs.NewIdentifiableAbort(key, "could not find commitment for participant %x", key)
 		}
-		if err := commitments.Open(h, message.Ri.Bytes(), p.state.receivedCommitments[key], message.Witness); err != nil {
+		if err := commitments.Open(message.Ri.Bytes(), p.state.receivedCommitments[key], message.Witness); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, key, "commitment from participant with sharing id can't be opened")
 		}
 	}

@@ -2,6 +2,7 @@ package dkg
 
 import (
 	"encoding/hex"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
@@ -27,13 +28,13 @@ type Round2P2P struct {
 	_ types.Incomparable
 }
 
-// Acting as sender
+// Acting as sender.
 type Round3P2P = vsot.Round3P2P
 
-// Acting as receiver
+// Acting as receiver.
 type Round4P2P = vsot.Round4P2P
 
-// Acting as sender
+// Acting as sender.
 type Round5P2P = vsot.Round5P2P
 
 func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {

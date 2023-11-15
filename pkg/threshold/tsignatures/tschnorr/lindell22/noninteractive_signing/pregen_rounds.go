@@ -6,8 +6,6 @@ import (
 	"io"
 	"strconv"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -22,8 +20,6 @@ const (
 	transcriptDLogSLabel                 = "Lindell2022PreGenDLogS"
 	transcriptDLogPreSignatureIndexLabel = "Lindell2022PreGenDLogPreSignatureIndex"
 )
-
-var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment []commitments.Commitment
@@ -54,8 +50,14 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k & k2
-		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
-		k2[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+		}
+		k2[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k2")
+		}
 
 		// 2. compute R = k * G, R2 = k2 * G
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
@@ -177,7 +179,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 
 func commit(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
-	commitment, witness, err = commitments.Commit(commitmentHashFunc, message)
+	commitment, witness, err = commitments.Commit(message)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
@@ -187,7 +189,7 @@ func commit(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte) (commit
 
 func openCommitment(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
 	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, sid, bigS}, nil)
-	if err := commitments.Open(commitmentHashFunc, message, commitment, witness); err != nil {
+	if err := commitments.Open(message, commitment, witness); err != nil {
 		return errs.WrapVerificationFailed(err, "cannot open commitment")
 	}
 

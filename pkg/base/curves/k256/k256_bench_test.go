@@ -8,11 +8,13 @@ import (
 	"testing"
 
 	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
@@ -28,7 +30,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			points := make([]*BenchPoint, 1000)
 			for i := range points {
-				points[i] = points[i].Random(crand.Reader).(*BenchPoint)
+				p, _ := points[i].Random(crand.Reader)
+				points[i] = p.(*BenchPoint)
 			}
 			acc := new(BenchPoint).Identity()
 			b.StartTimer()
@@ -43,7 +46,8 @@ func BenchmarkK256(b *testing.B) {
 			curve := k256.New()
 			points := make([]*k256.Point, 1000)
 			for i := range points {
-				points[i] = curve.Identity().Random(crand.Reader).(*k256.Point)
+				p, _ := curve.Identity().Random(crand.Reader)
+				points[i] = p.(*k256.Point)
 			}
 			acc := curve.Identity()
 			b.StartTimer()
@@ -77,7 +81,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			acc := new(BenchPoint).Generator().Mul(new(BenchScalar).New(2))
@@ -92,7 +97,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*k256.Scalar, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
+				s, err := new(k256.Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*k256.Scalar)
 			}
 			acc := new(k256.Point).Generator()
@@ -107,7 +113,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			b.StartTimer()
@@ -121,7 +128,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*k256.Scalar, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
+				s, err := new(k256.Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*k256.Scalar)
 			}
 			b.StartTimer()
@@ -135,7 +143,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*BenchScalar, 1000)
 			for i := range scalars {
-				s := new(BenchScalar).Random(crand.Reader)
+				s, err := new(BenchScalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*BenchScalar)
 			}
 			b.StartTimer()
@@ -149,7 +158,8 @@ func BenchmarkK256(b *testing.B) {
 			b.StopTimer()
 			scalars := make([]*k256.Scalar, 1000)
 			for i := range scalars {
-				s := new(k256.Scalar).Random(crand.Reader)
+				s, err := new(k256.Scalar).Random(crand.Reader)
+				require.NoError(b, err)
 				scalars[i] = s.(*k256.Scalar)
 			}
 			b.StartTimer()
@@ -174,21 +184,24 @@ func (*BenchScalar) Curve() curves.Curve {
 	return k256.New()
 }
 
-func (s *BenchScalar) Random(reader io.Reader) curves.Scalar {
+func (s *BenchScalar) Random(reader io.Reader) (curves.Scalar, error) {
 	var v [32]byte
-	_, _ = reader.Read(v[:])
+	_, err := reader.Read(v[:])
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not read from reader")
+	}
 	value := new(saferith.Nat).SetBytes(v[:])
 	return &BenchScalar{
 		value: value.Mod(value, groupOrder),
-	}
+	}, nil
 }
 
-func (s *BenchScalar) Hash(inputs ...[]byte) curves.Scalar {
+func (s *BenchScalar) Hash(inputs ...[]byte) (curves.Scalar, error) {
 	h := sha256.Sum256(bytes.Join(inputs, nil))
 	value := new(saferith.Nat).SetBytes(h[:])
 	return &BenchScalar{
 		value: value.Mod(value, groupOrder),
-	}
+	}, nil
 }
 
 func (s *BenchScalar) Zero() curves.Scalar {
@@ -212,7 +225,7 @@ func (s *BenchScalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *BenchScalar) MarshalText() ([]byte, error) {
-	return internal.ScalarMarshalText(s)
+	return serialisation.ScalarMarshalText(s)
 }
 
 func (s *BenchScalar) UnmarshalText(input []byte) error {
@@ -397,7 +410,7 @@ func (p *BenchPoint) Clone() curves.Point {
 }
 
 func (p *BenchPoint) MarshalBinary() ([]byte, error) {
-	return internal.PointMarshalBinary(p)
+	return serialisation.PointMarshalBinary(p)
 }
 
 func (p *BenchPoint) UnmarshalBinary(input []byte) error {
@@ -405,7 +418,7 @@ func (p *BenchPoint) UnmarshalBinary(input []byte) error {
 }
 
 func (p *BenchPoint) MarshalText() ([]byte, error) {
-	return internal.PointMarshalText(p)
+	return serialisation.PointMarshalText(p)
 }
 
 func (p *BenchPoint) UnmarshalText(input []byte) error {
@@ -432,7 +445,7 @@ func (*BenchPoint) Curve() curves.Curve {
 	return k256.New()
 }
 
-func (p *BenchPoint) Random(reader io.Reader) curves.Point {
+func (p *BenchPoint) Random(reader io.Reader) (curves.Point, error) {
 	var k [32]byte
 	curve := k256.NewElliptic()
 	_, _ = reader.Read(k[:])
@@ -441,11 +454,11 @@ func (p *BenchPoint) Random(reader io.Reader) curves.Point {
 		_, _ = reader.Read(k[:])
 		x, y = curve.ScalarBaseMult(k[:])
 	}
-	return &BenchPoint{x: new(saferith.Nat).SetBig(x, k256.NewElliptic().N.BitLen()), y: new(saferith.Nat).SetBig(y, k256.NewElliptic().N.BitLen())}
+	return &BenchPoint{x: new(saferith.Nat).SetBig(x, k256.NewElliptic().N.BitLen()), y: new(saferith.Nat).SetBig(y, k256.NewElliptic().N.BitLen())}, nil
 }
 
-func (p *BenchPoint) Hash(bytes ...[]byte) curves.Point {
-	return nil
+func (p *BenchPoint) Hash(bytes ...[]byte) (curves.Point, error) {
+	return nil, nil
 }
 
 func (p *BenchPoint) Identity() curves.Point {

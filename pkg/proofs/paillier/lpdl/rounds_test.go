@@ -95,8 +95,10 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMult(x)
 
-	x2Int := curve.Scalar().Random(prng).Nat()
-	x2Encrypted, r, err := pk.Encrypt(x2Int)
+	x2Int, err := curve.Scalar().Random(prng)
+	require.NoError(t, err)
+	x2IntNat := x2Int.Nat()
+	x2Encrypted, r, err := pk.Encrypt(x2IntNat)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")

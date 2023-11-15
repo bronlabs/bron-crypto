@@ -1,8 +1,7 @@
 package setup
 
 import (
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
@@ -11,7 +10,6 @@ import (
 )
 
 // size should match zero.LambdaBytes.
-var h = sha3.New256
 
 type Round1P2P struct {
 	Commitment commitments.Commitment
@@ -41,11 +39,11 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
-		seedForThisParticipant, err := hashing.Hash(h, p.UniqueSessionId, randomBytes[:])
+		seedForThisParticipant, err := hashing.Hash(base.CommitmentHashFunction, p.UniqueSessionId, randomBytes[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}
-		commitment, witness, err := commitments.Commit(h, seedForThisParticipant)
+		commitment, witness, err := commitments.Commit(seedForThisParticipant)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with sharing id %d", sharingId)
 		}
@@ -117,7 +115,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (pr
 		if message.Witness == nil {
 			return nil, errs.NewMissing("participant with sharingId %d sent empty witness", sharingId)
 		}
-		if err := commitments.Open(h, message.Message, commitment, message.Witness); err != nil {
+		if err := commitments.Open(message.Message, commitment, message.Witness); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, sharingId, "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds[participant.Hash()]
@@ -130,7 +128,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (pr
 		} else {
 			orderedAppendedSeeds = append(message.Message, myContributedSeed.seed...)
 		}
-		finalSeedBytes, err := hashing.Hash(h, orderedAppendedSeeds)
+		finalSeedBytes, err := hashing.Hash(base.CommitmentHashFunction, orderedAppendedSeeds)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", sharingId)
 		}

@@ -13,7 +13,7 @@ import (
 
 func Fuzz_Test_hash(f *testing.F) {
 	f.Fuzz(func(t *testing.T, a []byte) {
-		_, err := hashing.FiatShamirHKDF(sha256.New, a)
+		_, err := hashing.HashChain(sha256.New, a)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

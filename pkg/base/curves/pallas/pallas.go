@@ -6,14 +6,18 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
-const Name = "pallas"
+const (
+	Name string = "pallas"
+)
 
 var (
 	pallasInitonce sync.Once
@@ -73,26 +77,46 @@ func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_  curves.Scalar
-	Point_   curves.Point
-	Name_    string
-	Profile_ curves.CurveProfile
+	Scalar_       curves.Scalar
+	Point_        curves.Point
+	FieldElement_ curves.FieldElement
+	Name_         string
+	Profile_      curves.CurveProfile
+
+	hashing.CurveHasher
 
 	_ types.Incomparable
 }
 
 func pallasInit() {
 	pallasInstance = Curve{
-		Scalar_:  new(Scalar).Zero(),
-		Point_:   new(Point).Identity(),
-		Name_:    Name,
-		Profile_: &CurveProfile{},
+		Scalar_:       new(Scalar).Zero(),
+		Point_:        new(Point).Identity(),
+		FieldElement_: new(FieldElement).Zero(),
+		Name_:         Name,
+		Profile_:      &CurveProfile{},
 	}
+	pallasInstance.CurveHasher = hashing.NewCurveHasherSha256(
+		curves.Curve(&pallasInstance),
+		base.HASH2CURVE_APP_TAG,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func New() *Curve {
 	pallasInitonce.Do(pallasInit)
 	return &pallasInstance
+}
+
+// SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
+// custom "appTag". Not exposed in the `curves.Curve` interface, as by
+// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
+func (c *Curve) SetHasherAppTag(appTag string) {
+	c.CurveHasher = hashing.NewCurveHasherSha256(
+		curves.Curve(&pallasInstance),
+		appTag,
+		hashing.DST_TAG_SSWU,
+	)
 }
 
 func (c *Curve) Profile() curves.CurveProfile {
@@ -109,6 +133,10 @@ func (c *Curve) Point() curves.Point {
 
 func (c *Curve) Name() string {
 	return c.Name_
+}
+
+func (c *Curve) FieldElement() curves.FieldElement {
+	return c.FieldElement_
 }
 
 func (c *Curve) Generator() curves.Point {
@@ -143,8 +171,8 @@ func (*Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point
 	p2e.Y = new(fp.Fp).Neg(new(fp.Fp).Set(y))
 	p2e.Z = new(fp.Fp).SetOne()
 
-	p1 := &Point{value: p1e}
-	p2 := &Point{value: p2e}
+	p1 := &Point{Value: p1e}
+	p2 := &Point{Value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil
@@ -159,7 +187,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
 		}
-		eps[i] = ps.value
+		eps[i] = ps.Value
 	}
 	nScalars := make([]*saferith.Nat, len(scalars))
 	for i, s := range scalars {
@@ -167,11 +195,11 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		if !ok {
 			return nil, errs.NewInvalidType("not a pallas scalar")
 		}
-		nScalars[i] = sc.value.Nat()
+		nScalars[i] = sc.Value.Nat()
 	}
 
-	value := pippengerMultiScalarMultPallas(eps, nScalars)
-	return &Point{value: value}, nil
+	value := PippengerMultiScalarMultPallas(eps, nScalars)
+	return &Point{Value: value}, nil
 }
 
 // rhs of the curve equation.
@@ -181,7 +209,7 @@ func rhsPallas(x *fp.Fp) *fp.Fp {
 	return new(fp.Fp).Add(x3, b)
 }
 
-func pippengerMultiScalarMultPallas(points []*Ep, scalars []*saferith.Nat) *Ep {
+func PippengerMultiScalarMultPallas(points []*Ep, scalars []*saferith.Nat) *Ep {
 	if len(points) != len(scalars) {
 		return nil
 	}

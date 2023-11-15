@@ -23,7 +23,8 @@ func TestSplitAndCombine(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, dealer)
 
-	secret := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.Scalar().Hash([]byte("test"))
+	require.NoError(t, err)
 
 	shares, err := dealer.Split(secret, crand.Reader)
 	require.NoError(t, err)
@@ -48,7 +49,8 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 			require.Nil(t, err)
 			require.NotNil(t, shamirDealer)
 
-			secret := boundedCurve.Scalar().Hash([]byte("2+2=5"))
+			secret, err := boundedCurve.Scalar().Hash([]byte("2+2=5"))
+			require.NoError(t, err)
 
 			shamirShares, err := shamirDealer.Split(secret, crand.Reader)
 			require.NoError(t, err)

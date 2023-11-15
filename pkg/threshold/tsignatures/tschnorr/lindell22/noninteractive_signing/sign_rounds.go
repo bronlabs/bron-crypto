@@ -10,6 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 )
 
+var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
+
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	bigRSum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
 	bigR2Sum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
@@ -18,13 +20,17 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
 	}
 
-	delta := c.cohortConfig.CipherSuite.Curve.Scalar().Hash(
+	delta, err := c.cohortConfig.CipherSuite.Curve.Scalar().Hash(
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigRSum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),
 		[]byte(strconv.Itoa(c.myPreSignatureIndex)),
 		message,
 	)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
+	}
+
 	k := c.myPreSignature.K.Add(c.myPreSignature.K2.Mul(delta))
 	bigR := bigRSum.Add(bigR2Sum.Mul(delta))
 
@@ -38,9 +44,9 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	// 3.ii. compute e = H(R || pk || message)
 	var e curves.Scalar
 	if c.taproot {
-		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+		e, err = fiatShamir.GenerateChallenge(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
 	} else {
-		e, err = hashing.CreateDigestScalar(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(), message)
+		e, err = fiatShamir.GenerateChallenge(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(), message)
 	}
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")

@@ -1,12 +1,13 @@
 package dkg_test
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 )
 
 func TestRunProfile(t *testing.T) {
@@ -30,7 +31,7 @@ func TestRunProfile(t *testing.T) {
 	} else {
 		curve = bls12381.NewG2()
 	}
-	if curve.Name() == bls12381.G1Name {
+	if curve.Name() == bls12381.NameG1 {
 		for i := 0; i < 1; i++ {
 			testHappyPath[bls.G1](t, th, n)
 		}
@@ -40,4 +41,3 @@ func TestRunProfile(t *testing.T) {
 		}
 	}
 }
-

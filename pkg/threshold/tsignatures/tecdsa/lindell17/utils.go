@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 // DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
@@ -110,7 +110,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 	orderTimesHighPlusSeventeen := new(saferith.Nat).Add(orderTimesHigh, new(saferith.Nat).SetUint64(17), -1)
 	h := new(saferith.Nat).Div(orderTimesHighPlusSeventeen, saferith.ModulusFromUint64(18), order.AnnouncedLen())
 
-	x, err := base.RandomNat(prng, l, h)
+	x, err := utils.RandomNat(prng, l, h)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get random number")
 	}

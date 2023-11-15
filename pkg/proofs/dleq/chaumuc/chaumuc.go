@@ -1,9 +1,8 @@
 package chaumuc
 
 import (
+	"crypto/sha256"
 	"io"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -67,7 +66,7 @@ func NewProver(uniqueSessionId []byte, transcript transcripts.Transcript, prng i
 }
 
 // Prove proves in zero-knowledge the equality of the dlog of x*H1 and x*H2.
-func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeElements ...[]byte) (*Proof, *Statement, error) {
+func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeElements ...[]byte) (sigma *Proof, st *Statement, err error) {
 	if x == nil || H1 == nil || H2 == nil {
 		return nil, nil, errs.NewIsNil("main arguments can't be nil")
 	}
@@ -82,7 +81,10 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 	A2 := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i] = curve.Scalar().Random(p.prng)
+		a[i], err = curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		}
 		// step P.2
 		A1[i] = H1.Mul(a[i])
 		A2[i] = H2.Mul(a[i])
@@ -102,7 +104,10 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
-			e_i := curve.Scalar().Hash(e_i_bytes[:])
+			e_i, err := curve.Scalar().Hash(e_i_bytes[:])
+			if err != nil {
+				return nil, nil, errs.WrapHashingFailed(err, "could not hash to scalar")
+			}
 
 			// step P.3.3
 			z_i := a[i].Add(x.Mul(e_i))
@@ -226,7 +231,7 @@ func h(A1, A2 [RBytes]curves.Point, H1, H2, P1, P2 curves.Point, i int, e, z cur
 	for j := 0; j < len(extraChellengeElements); j++ {
 		message[1+2*RBytes+8+j] = extraChellengeElements[j]
 	}
-	hashed, err := hashing.Hash(sha3.New256, message...)
+	hashed, err := hashing.Hash(sha256.New, message...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
 	}

@@ -1,10 +1,10 @@
 package fischlin
 
 import (
+	"crypto/sha256"
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -16,8 +16,8 @@ import (
 
 const (
 	domainSeparationLabel = "COPPER_ZKPOK_DLOG_FISCHLIN-"
-	Lambda                = 128 // computational security parameter
-	k                     = 7   // ceil(log2(Lambda))
+	Lambda                = base.ComputationalSecurity
+	k                     = 7 // ceil(log2(Lambda))
 	L                     = 8
 	R                     = Lambda / L
 	T                     = k * L
@@ -63,7 +63,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 }
 
 // Prove proves knowledge of dlog of the statement, using Fischlin.
-func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (*Proof, Statement, error) {
+func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (sigma *Proof, st Statement, err error) {
 	curve := p.BasePoint.Curve()
 	statement := p.BasePoint.Mul(x)
 	p.transcript.AppendPoints("statement", statement)
@@ -72,7 +72,10 @@ func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (*Proo
 	A := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i] = curve.Scalar().Random(p.prng)
+		a[i], err = curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
+		}
 		// step P.2
 		A[i] = p.BasePoint.Mul(a[i])
 	}
@@ -91,7 +94,10 @@ func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (*Proo
 				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
-			e_i := curve.Scalar().Hash(e_i_bytes[:])
+			e_i, err := curve.Scalar().Hash(e_i_bytes[:])
+			if err != nil {
+				return nil, nil, errs.WrapHashingFailed(err, "could not hash the challenge")
+			}
 
 			// step P.3.3
 			z_i := a[i].Add(x.Mul(e_i))
@@ -197,7 +203,7 @@ func h(basepoint curves.Point, A [RBytes]curves.Point, i int, e, z curves.Scalar
 		message[RBytes+5+j] = extraChellengeElements[j]
 	}
 
-	hashed, err := hashing.Hash(sha3.New256, message...)
+	hashed, err := hashing.Hash(sha256.New, message...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
 	}

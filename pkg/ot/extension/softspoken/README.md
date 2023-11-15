@@ -131,16 +131,16 @@ PROTOCOL STEPS:
 ROUNDS (COTe):
  0. Setup R & S:(...) ---(κ × BaseOT)--->(...) [BaseOT]
  1. R: (x)------(Round1)--->(u,v_x)            [Ext.1, Ext.2, Ext.3]
- 2. S: (α)------(Round2)--->(χ,τ,z_B)          [Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Derand.1]
- 3. R: (χ,τ)----(Round3)--->(ẋ,ṫ,z_A)          [Check.2, T&R.1, T&R.2, Derand.2]
+ 2. S: (α)------(Round2)--->(χ,τ,z_A)          [Ext.2, Ext.4, Check.1, T&R.1, T&R.3, Derand.1]
+ 3. R: (χ,τ)----(Round3)--->(ẋ,ṫ,z_B)          [Check.2, T&R.1, T&R.2, Derand.2]
  4. S: (ẋ,ṫ)----(Round4)--->()                 [Check.3]
 
 // -------------------------------------------------------------------------- //
 ROUNDS (COTe with fiat-shamir (*)):
  0. Setup R & S:(...) ---(κ × BaseOT)--->(...) [BaseOT]
  1. R: (x)---------(Round1)--->(u,ẋ,ṫ)         [Ext.1, Ext.2, Ext.3, Check.1*, Check.2, T&R.1, T&R.2]
- 2. S: (u,ẋ,ṫ,α)---(Round2)--->(τ,z_B)         [Ext.1, Ext.2, Ext.4, T&R.1, T&R.3, Derand.1, Check. Check.3]
- 3. R: (τ)---------(Round3)--->(z_A)           [Derand.2]
+ 2. S: (u,ẋ,ṫ,α)---(Round2)--->(τ,z_A)         [Ext.1, Ext.2, Ext.4, T&R.1, T&R.3, Derand.1, Check. Check.3]
+ 3. R: (τ)---------(Round3)--->(z_B)           [Derand.2]
 
 // -------------------------------------------------------------------------- //
 ROUNDS (ROTe):

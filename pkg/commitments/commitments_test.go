@@ -1,30 +1,30 @@
 package commitments_test
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
-var h = sha256.New
+var h = base.CommitmentHashFunction
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
-	h := sha3.New256
-	commitment, witness, err := commitments.Commit(h, message)
+	base.CommitmentHashFunction = sha3.New256
+	commitment, witness, err := commitments.Commit(message)
 	require.NoError(t, err)
 	require.NotNil(t, commitment)
 	require.NotNil(t, witness)
 
-	openingError := commitments.Open(h, message, commitment, witness)
+	openingError := commitments.Open(message, commitment, witness)
 	require.NoError(t, openingError)
 }
 
@@ -64,7 +64,7 @@ var testResults = []entry{
 func init() {
 	for i := range testResults {
 		entry := &testResults[i]
-		entry.commit, entry.witness, entry.err = commitments.Commit(h, entry.msg)
+		entry.commit, entry.witness, entry.err = commitments.Commit(entry.msg)
 	}
 }
 
@@ -123,7 +123,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		c, _, err := commitments.Commit(h, msg)
+		c, _, err := commitments.Commit(msg)
 		if err != nil {
 			t.Error(err)
 		}
@@ -161,7 +161,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		_, dee, err := commitments.Commit(h, msg)
+		_, dee, err := commitments.Commit(msg)
 		require.NoError(t, err)
 
 		// Ensure each nonce is unique
@@ -174,7 +174,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 func TestOpenOnValidCommitments(t *testing.T) {
 	for _, entry := range testResults {
 		// Open each commitment
-		err := commitments.Open(h, entry.msg, entry.commit, entry.witness)
+		err := commitments.Open(entry.msg, entry.commit, entry.witness)
 		// There should be no error
 		require.NoErrorf(t, err, "commitment of message failed: %s", entry.msg)
 	}
@@ -189,7 +189,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 		dʹ[0] ^= 0x40
 
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
+		err := commitments.Open(entry.msg, entry.commit, dʹ)
 		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
@@ -213,7 +213,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 		dʹ[10] = 0x00
 
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
+		err := commitments.Open(entry.msg, entry.commit, dʹ)
 		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
@@ -228,7 +228,7 @@ func TestOpenOnNewMessage(t *testing.T) {
 		msg := []byte("no one expects the spanish inquisition")
 
 		// Open and check for failure
-		err := commitments.Open(h, msg, entry.commit, dʹ)
+		err := commitments.Open(msg, entry.commit, dʹ)
 		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
@@ -247,7 +247,7 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 		dʹ[1] ^= 0x99
 
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, entry.commit, dʹ)
+		err := commitments.Open(entry.msg, entry.commit, dʹ)
 		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
@@ -262,7 +262,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 		cʹ[6] ^= 0x33
 
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, cʹ, entry.witness)
+		err := commitments.Open(entry.msg, cʹ, entry.witness)
 		require.True(t, errs.IsVerificationFailed(err))
 	}
 }
@@ -272,7 +272,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
 	for _, entry := range testResults {
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, entry.commit, commitments.Witness{})
+		err := commitments.Open(entry.msg, entry.commit, commitments.Witness{})
 		require.True(t, errs.IsInvalidArgument(err))
 	}
 }
@@ -280,7 +280,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 // A nil commit should return an error
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
-	err := commitments.Open(h, nil, nil, commitments.Witness{})
+	err := commitments.Open(nil, nil, commitments.Witness{})
 	require.True(t, errs.IsInvalidArgument(err))
 }
 
@@ -291,7 +291,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 		tooLong := make([]byte, h().Size()+1)
 		copy(tooLong, entry.msg)
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, tooLong, entry.witness)
+		err := commitments.Open(entry.msg, tooLong, entry.witness)
 		require.True(t, errs.IsInvalidArgument(err))
 	}
 }
@@ -303,7 +303,7 @@ func TestOpenOnShortCommitment(t *testing.T) {
 		tooShort := make([]byte, h().Size()-1)
 		copy(tooShort, entry.msg)
 		// Open and check for failure
-		err := commitments.Open(h, entry.msg, tooShort, entry.witness)
+		err := commitments.Open(entry.msg, tooShort, entry.witness)
 		require.True(t, errs.IsInvalidArgument(err))
 	}
 }

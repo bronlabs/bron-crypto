@@ -3,10 +3,9 @@ package dkg
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"

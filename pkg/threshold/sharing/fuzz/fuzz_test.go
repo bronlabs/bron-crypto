@@ -23,7 +23,8 @@ func Fuzz_Test_polynomial(f *testing.F) {
 	f.Add(uint(0), []byte("test"), int64(0), 4, uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, s []byte, randomSeed int64, degree int, x uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		secret := curve.Scalar().Hash(s)
+		secret, err := curve.Scalar().Hash(s)
+		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randomSeed))
 
 		poly, err := polynomials.NewRandomPolynomial(secret, degree, prng)

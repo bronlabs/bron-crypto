@@ -36,6 +36,7 @@ const (
 	Missing            ErrorType = "[MISSING]"
 	Serialisation      ErrorType = "[SERIALISATION_ERROR]"
 	RandomSampleFailed ErrorType = "[RANDOM_SAMPLE_FAILED]"
+	HashingFailed      ErrorType = "[HASHING_FAILED]"
 	TotalAbort         ErrorType = "[TOTAL_ABORT]"
 	VerificationFailed ErrorType = "[VERIFICATION_FAILED]"
 )
@@ -60,6 +61,7 @@ var knownErrors = []ErrorType{
 	Missing,
 	Serialisation,
 	RandomSampleFailed,
+	HashingFailed,
 	TotalAbort,
 	VerificationFailed,
 }
@@ -326,6 +328,22 @@ func IsRandomSampleFailed(err error) bool {
 
 func HasRandomSampleFailed(err error) bool {
 	return Has(err, RandomSampleFailed)
+}
+
+func NewHashingFailed(format string, args ...any) error {
+	return errors.Errorf("%s %s", HashingFailed, fmt.Sprintf(format, args...))
+}
+
+func WrapHashingFailed(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", HashingFailed, fmt.Sprintf(format, args...))
+}
+
+func IsHashingFailed(err error) bool {
+	return Is(err, HashingFailed)
+}
+
+func HasHashingFailed(err error) bool {
+	return Has(err, HashingFailed)
 }
 
 func NewInvalidIdentifier(format string, args ...any) error {

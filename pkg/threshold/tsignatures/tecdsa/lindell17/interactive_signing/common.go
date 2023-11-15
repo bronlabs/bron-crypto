@@ -6,9 +6,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	core "github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
@@ -39,7 +39,7 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 	// c1 = Enc(ρq + k2^(-1) * m')
 	c1Plain := k2Inv.Mul(mPrime).Nat()
 	qSquared := new(saferith.Nat).Mul(q, q, -1)
-	rho, err := core.RandomNat(prng, new(saferith.Nat).SetUint64(0), qSquared)
+	rho, err := utils.RandomNat(prng, new(saferith.Nat).SetUint64(0), qSquared)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random int")
 	}

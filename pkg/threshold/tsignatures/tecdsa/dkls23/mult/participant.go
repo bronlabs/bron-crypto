@@ -3,6 +3,7 @@ package mult
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -136,11 +137,11 @@ func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript)
 	gadget = make([][Xi]curves.Scalar, 1) // LOTe = 1 for Forced Reuse
 	transcript.AppendMessages("gadget vector", []byte("COPPER_KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
-		bytes, err := transcript.ExtractBytes("gadget", KappaBytes)
+		bytes, err := transcript.ExtractBytes("gadget", base.WideFieldBytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}
-		gadget[0][i], err = curve.Scalar().SetBytes(bytes)
+		gadget[0][i], err = curve.Scalar().SetBytesWide(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

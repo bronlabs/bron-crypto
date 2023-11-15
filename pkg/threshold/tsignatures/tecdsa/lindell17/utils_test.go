@@ -85,7 +85,8 @@ func Test_ShouldSplit(t *testing.T) {
 			t.Parallel()
 
 			for i := 0; i < n; i++ {
-				x := curve.Scalar().Random(crand.Reader)
+				x, err := curve.Scalar().Random(crand.Reader)
+				require.NoError(t, err)
 
 				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
 				require.NoError(t, err)

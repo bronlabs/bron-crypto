@@ -3,8 +3,8 @@ package commitments
 import (
 	crand "crypto/rand"
 	"crypto/subtle"
-	"hash"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -14,8 +14,8 @@ type (
 	Witness    []byte
 )
 
-func Commit(h func() hash.Hash, message []byte) (Commitment, Witness, error) {
-	hasher := h()
+func Commit(message []byte) (Commitment, Witness, error) {
+	hasher := base.CommitmentHashFunction()
 	lambda := hasher.Size()
 
 	witness := make([]byte, lambda)
@@ -28,15 +28,15 @@ func Commit(h func() hash.Hash, message []byte) (Commitment, Witness, error) {
 		return nil, nil, errs.NewFailed("random reader did not return enough bytes. returned %d bytes whereas we need %d bytes", n, lambda)
 	}
 
-	commitment, err := hashing.Hash(h, message, witness)
+	commitment, err := hashing.Hash(base.CommitmentHashFunction, message, witness)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "computing commitment hash")
 	}
 	return commitment, witness, nil
 }
 
-func Open(h func() hash.Hash, message []byte, commitment Commitment, witness Witness) error {
-	hasher := h()
+func Open(message []byte, commitment Commitment, witness Witness) error {
+	hasher := base.CommitmentHashFunction()
 	lambda := hasher.Size()
 	if lambda != len(commitment) {
 		return errs.NewInvalidArgument("size of commitment is wrong given hash function. Need %d whereas we have %d", lambda, len(commitment))
@@ -44,7 +44,7 @@ func Open(h func() hash.Hash, message []byte, commitment Commitment, witness Wit
 	if lambda != len(witness) {
 		return errs.NewInvalidArgument("size of witness is wrong given hash function. Need %d whereas we have %d", lambda, len(witness))
 	}
-	recomputedCommitment, err := hashing.Hash(h, message, witness)
+	recomputedCommitment, err := hashing.Hash(base.CommitmentHashFunction, message, witness)
 	if err != nil {
 		return errs.WrapFailed(err, "recomputing commitment hash")
 	}

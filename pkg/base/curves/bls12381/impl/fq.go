@@ -7,6 +7,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 )
 
@@ -31,8 +32,8 @@ var fqModulusLimbs = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5
 
 var fqModulusHex = strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
 
-func FqNew() *impl.Field {
-	return &impl.Field{
+func FqNew() *impl.FieldValue {
+	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getBls12381FqParams(),
 		Arithmetic: bls12381FqArithmetic{},
@@ -114,7 +115,7 @@ func (f bls12381FqArithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
 	r[4] = (r[4] << 1) | r[3]>>63
 	r[3] = (r[3] << 1) | r[2]>>63
 	r[2] = (r[2] << 1) | r[1]>>63
-	r[1] = r[1] << 1
+	r[1] <<= 1
 
 	r[0], carry = mac(0, arg[0], arg[0], 0)
 	r[1], carry = adc(0, r[1], carry)
@@ -231,7 +232,7 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 			f.Square(&b, &b)
 		}
 		// if b == 1 flag = 0 else flag = 1
-		flag := -(&impl.Field{
+		flag := -(&impl.FieldValue{
 			Value:      b,
 			Params:     getBls12381FqParams(),
 			Arithmetic: f,
@@ -244,11 +245,11 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 		copy(b[:], t[:])
 	}
 	f.Square(&c, &z)
-	*wasSquare = (&impl.Field{
+	*wasSquare = (&impl.FieldValue{
 		Value:      c,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
-	}).Equal(&impl.Field{
+	}).Equal(&impl.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
@@ -349,7 +350,7 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimb
 	impl.Pow2k(&t0, &t0, 5, f)
 	f.Mul(&t0, &t0, &t1)
 
-	*wasInverted = (&impl.Field{
+	*wasInverted = (&impl.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
@@ -358,7 +359,7 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimb
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (bls12381FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[impl.FieldBytes]byte) {
+func (bls12381FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
 	out[0] = binary.LittleEndian.Uint64(arg[:8])
 	out[1] = binary.LittleEndian.Uint64(arg[8:16])
 	out[2] = binary.LittleEndian.Uint64(arg[16:24])
@@ -366,7 +367,7 @@ func (bls12381FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[impl.F
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (bls12381FqArithmetic) ToBytes(out *[impl.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (bls12381FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
 	binary.LittleEndian.PutUint64(out[:8], arg[0])
 	binary.LittleEndian.PutUint64(out[8:16], arg[1])
 	binary.LittleEndian.PutUint64(out[16:24], arg[2])

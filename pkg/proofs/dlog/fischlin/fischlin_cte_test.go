@@ -25,7 +25,7 @@ func Test_MeasureConstantTime_prove(t *testing.T) {
 
 	var secret curves.Scalar
 	internal.RunMeasurement(500, "fischlin_prove", func(i int) {
-		secret = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.Scalar().Random(crand.Reader)
 		require.NoError(t, err)
 	}, func() {
 		prover.Prove(secret)
@@ -45,7 +45,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	var proof *fischlin.Proof
 	var statement fischlin.Statement
 	internal.RunMeasurement(500, "fischlin_verify", func(i int) {
-		secret := curve.Scalar().Random(crand.Reader)
+		secret, err := curve.Scalar().Random(crand.Reader)
 		require.NoError(t, err)
 		proof, statement, err = prover.Prove(secret)
 		require.NoError(t, err)

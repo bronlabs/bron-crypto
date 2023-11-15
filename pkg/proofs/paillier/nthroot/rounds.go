@@ -5,9 +5,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type Round1Output struct {
@@ -60,12 +60,12 @@ func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err
 	k := verifier.bigN.AnnouncedLen()
 
 	// V chooses e, a random k bit number, and sends e to P (i.e 0 <= e < (1 << k))
-	e, err := base.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), uint(k), -1))
+	e, err := utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), uint(k), -1))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random number")
 	}
 	// make sure e has MSB set (no
-	e, err = base.NatSetBit(e, k-1)
+	e, err = utils.NatSetBit(e, k-1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot set MSB")
 	}

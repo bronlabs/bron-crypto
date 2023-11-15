@@ -72,6 +72,10 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_GENNARO_DKG-", nil)
 	}
 	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
+	H, err := cohortConfig.CipherSuite.Curve.Point().Hash([]byte(NothingUpMySleeve))
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "failed to hash to curve for H")
+	}
 	result := &Participant{
 		MyIdentityKey: identityKey,
 		state: &State{
@@ -79,7 +83,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		},
 		prng:            prng,
 		CohortConfig:    cohortConfig,
-		H:               cohortConfig.CipherSuite.Curve.Point().Hash([]byte(NothingUpMySleeve)),
+		H:               H,
 		round:           1,
 		UniqueSessionId: uniqueSessionId,
 	}

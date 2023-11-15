@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -16,14 +16,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
-var h = sha3.New256
-
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
-		Hash:  h,
+		Hash:  base.CommitmentHashFunction,
 	}
 
 	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)

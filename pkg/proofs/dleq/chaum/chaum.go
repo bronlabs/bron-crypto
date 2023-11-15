@@ -3,8 +3,8 @@ package chaum
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaumuc"
@@ -82,7 +82,10 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 	}
 
 	// step 3
-	k := curve.Scalar().Random(p.prng)
+	k, err := curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+	}
 	// step 4
 	R1 := H1.Mul(k)
 	// step 5
@@ -97,14 +100,14 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 	p.transcript.AppendPoints("R2", R2)
 	p.transcript.AppendMessages("extra elements", extraChallengeElements...)
 
-	digest, err := p.transcript.ExtractBytes("challenge bytes", impl.FieldBytes)
+	digest, err := p.transcript.ExtractBytes("challenge bytes", base.FieldBytes)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not extract bytes from transcript")
+		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
-	c, err := curve.Scalar().SetBytes(digest)
+	c, err := curve.Scalar().Hash(digest)
 	if err != nil {
-		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 	// step 7
 	s := c.Mul(x).Add(k)
@@ -146,7 +149,7 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, transcri
 	// step 2
 	R2 := statement.H2.Mul(proof.S).Sub(statement.P2.Mul(proof.C))
 
-	// step 3
+	// step 3, Fiat-Shamir
 	transcript.AppendPoints("H1", statement.H1)
 	transcript.AppendPoints("H2", statement.H2)
 	transcript.AppendPoints("P1", statement.P1)
@@ -155,14 +158,13 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, transcri
 	transcript.AppendPoints("R2", R2)
 	transcript.AppendMessages("extra elements", extraChallengeElements...)
 
-	digest, err := transcript.ExtractBytes("challenge bytes", impl.FieldBytes)
+	digest, err := transcript.ExtractBytes("challenge bytes", base.FieldBytes)
 	if err != nil {
 		return errs.WrapFailed(err, "could not extract bytes from transcript")
 	}
-
-	recomputedChallenge, err := curve.Scalar().SetBytes(digest)
+	recomputedChallenge, err := curve.Scalar().Hash(digest)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
+		return errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
 	// step 4

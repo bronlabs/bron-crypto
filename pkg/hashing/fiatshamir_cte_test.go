@@ -19,7 +19,7 @@ func Test_MeasureConstantTime_FiatShamirDeterministic(t *testing.T) {
 	internal.RunMeasurement(500, "FiatShamirDeterministic", func(i int) {
 		inputBytes = internal.GetBigEndianBytesWithLowestBitsSet(128, i)
 	}, func() {
-		hashing.FiatShamirHKDF(sha3.New256, inputBytes)
+		hashing.HashChain(sha3.New256, inputBytes)
 	})
 }
 

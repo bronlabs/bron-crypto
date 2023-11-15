@@ -1,8 +1,6 @@
 package interactive_signing
 
 import (
-	"crypto/sha256"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -40,14 +38,15 @@ type Round4OutputP2P struct {
 	_ types.Incomparable
 }
 
-var commitmentHashFunc = sha256.New
-
 func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P, err error) {
 	if primaryCosigner.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", primaryCosigner.round)
 	}
 
-	primaryCosigner.state.k1 = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
+	primaryCosigner.state.k1, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k1")
+	}
 	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
 	bigR1CommitmentMessage := append(
@@ -55,7 +54,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 			primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...),
 		primaryCosigner.state.bigR1.ToAffineCompressed()...,
 	)
-	bigR1Commitment, bigR1Witness, err := commitments.Commit(commitmentHashFunc, bigR1CommitmentMessage)
+	bigR1Commitment, bigR1Witness, err := commitments.Commit(bigR1CommitmentMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to R1")
 	}
@@ -75,7 +74,10 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
 
-	secondaryCosigner.state.k2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
+	secondaryCosigner.state.k2, err = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k2")
+	}
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
 	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
@@ -146,7 +148,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 
 	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
-	err = commitments.Open(commitmentHashFunc, bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
+	err = commitments.Open(bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "primary", "cannot open R1 commitment")
 	}

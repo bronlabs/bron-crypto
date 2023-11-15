@@ -254,7 +254,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 	var dst []byte
 	var err error
 	if len(tag) == 0 {
-		dst, err = GetDst(scheme, (*new(K)).CurveName() == bls12381.G1Name)
+		dst, err = GetDst(scheme, (*new(K)).CurveName() == bls12381.NameG1)
 		if err != nil {
 			return errs.WrapFailed(err, "could not get domain separation tag")
 		}

@@ -27,6 +27,17 @@ func ReverseBytes(inBytes []byte) []byte {
 	return outBytes
 }
 
+// ReverseAndPadBytes reverses the order of the bytes in a new slice.
+func ReverseAndPadBytes(inBytes []byte, padLen int) []byte {
+	outBytes := make([]byte, len(inBytes)+padLen)
+
+	for i, j := 0, len(inBytes)-1; j >= 0; i, j = i+1, j-1 {
+		outBytes[i] = inBytes[j]
+	}
+
+	return outBytes
+}
+
 // Memset sets all the bytes in the slice to the given value.
 func Memset(buffer []byte, value byte) {
 	for i := range buffer {
@@ -86,4 +97,10 @@ func ByteSubLE(b []byte) {
 		b[i] = byte(t & 0xff)
 		carry = t >> 8
 	}
+}
+
+func ToBytesLE(i int) []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, uint32(i))
+	return b
 }

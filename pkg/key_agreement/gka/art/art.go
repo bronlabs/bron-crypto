@@ -3,11 +3,11 @@ package art
 import (
 	"sort"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/x3dh"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
 type AsynchronousRatchetTree struct {
@@ -52,7 +52,7 @@ func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, the
 	if leaves[0].publicIdentityKey.Equal(myPublicIdentityKey) {
 		// I am the leader.
 		for i := 1; i < len(leaves); i++ {
-			secret, err := x3dh.DeriveSecretLocal(
+			secret, err := tripledh.DeriveSecretLocal(
 				leaves[0].privateIdentityKey, leaves[i].publicIdentityKey,
 				leaves[0].privateEphemeralKey, leaves[i].publicEphemeralKey,
 			)
@@ -67,7 +67,7 @@ func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, the
 		// I am NOT a leader.
 		for i := 1; i < len(leaves); i++ {
 			if leaves[i].privateIdentityKey != nil && leaves[i].privateEphemeralKey != nil {
-				secret, err := x3dh.DeriveSecretRemote(
+				secret, err := tripledh.DeriveSecretRemote(
 					leaves[0].publicIdentityKey, leaves[i].privateIdentityKey,
 					leaves[0].publicEphemeralKey, leaves[i].privateEphemeralKey,
 				)
@@ -83,7 +83,7 @@ func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, the
 
 	// 1.i. [Build ART] Extend binary tree to full binary tree as it's easier to work with (some node would be empty).
 	trueTreeSize := 2*len(leaves) - 1
-	allLeavesSize := 1 << base.CeilLog2(len(leaves))
+	allLeavesSize := 1 << utils.CeilLog2(len(leaves))
 	remainingLeavesSize := allLeavesSize - len(leaves)
 	fullLeaves := append(append(make([]*node, 0), leaves...), make([]*node, remainingLeavesSize)...)
 	tree := NewArrayTree[*node](fullLeaves)
@@ -248,7 +248,10 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value at %d", parent)
 				}
-				p.tree[parent].privateNodeKey = p.tree[left].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				p.tree[parent].privateNodeKey, err = p.tree[left].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				if err != nil {
+					return errs.NewHashingFailed("cannot hash secret value at %d", parent)
+				}
 				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 
 			// 4.ii [Build ART] the left child has node public key, the right child has node private key.
@@ -257,7 +260,10 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value %d", parent)
 				}
-				p.tree[parent].privateNodeKey = p.tree[right].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				p.tree[parent].privateNodeKey, err = p.tree[right].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				if err != nil {
+					return errs.NewHashingFailed("cannot hash secret value %d", parent)
+				}
 				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 
 			// 4.iii [Build ART] The right child is empty (while the left is not).

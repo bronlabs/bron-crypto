@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
@@ -25,7 +26,9 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 	curve := k256.New()
 
 	internal.RunMeasurement(500, "bip340_signing", func(i int) {
-		privateKey, err := bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk, err := curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
+		privateKey, err := bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
 		signer = bip340.NewSigner(privateKey)
 
@@ -40,6 +43,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	}
 
 	var err error
+	var sk curves.Scalar
 	var signer *bip340.Signer
 	var privateKey *bip340.PrivateKey
 	var signature *bip340.Signature
@@ -50,7 +54,9 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	curve := k256.New()
 
 	internal.RunMeasurement(500, "bip340_verify", func(i int) {
-		privateKey, err = bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk, err = curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
+		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
 		signer = bip340.NewSigner(privateKey)
 		signature, err = signer.Sign(message, aux, nil)
@@ -66,6 +72,7 @@ func Test_MeasureConstantTime_batchverify(t *testing.T) {
 	}
 
 	var err error
+	var sk curves.Scalar
 	var signer *bip340.Signer
 	var signature *bip340.Signature
 	var privateKey *bip340.PrivateKey
@@ -76,7 +83,9 @@ func Test_MeasureConstantTime_batchverify(t *testing.T) {
 	curve := k256.New()
 
 	internal.RunMeasurement(500, "bip340_batchverify", func(i int) {
-		privateKey, err = bip340.NewPrivateKey(curve.Scalar().Random(crand.Reader))
+		sk, err = curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
+		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
 		signer = bip340.NewSigner(privateKey)
 		require.NoError(t, err)

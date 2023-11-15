@@ -1,4 +1,4 @@
-package x3dh_test
+package tripledh_test
 
 import (
 	crand "crypto/rand"
@@ -13,10 +13,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/x3dh"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
-func Test_HappyPathX3DH(t *testing.T) {
+func Test_HappyPathTripleDH(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []curves.Curve{
@@ -33,18 +33,22 @@ func Test_HappyPathX3DH(t *testing.T) {
 		t.Run(fmt.Sprintf("x3dh for %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 
-			aliceSk := curve.Scalar().Random(crand.Reader)
+			aliceSk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			alicePk := curve.ScalarBaseMult(aliceSk)
-			aliceEsk := curve.Scalar().Random(crand.Reader)
+			aliceEsk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			aliceEpk := curve.ScalarBaseMult(aliceEsk)
-			bobSk := curve.Scalar().Random(crand.Reader)
+			bobSk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			bobPk := curve.ScalarBaseMult(bobSk)
-			bobEsk := curve.Scalar().Random(crand.Reader)
+			bobEsk, err := curve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
 			bobEpk := curve.ScalarBaseMult(bobEsk)
 
-			local, err := x3dh.DeriveSecretLocal(aliceSk, bobPk, aliceEsk, bobEpk)
+			local, err := tripledh.DeriveSecretLocal(aliceSk, bobPk, aliceEsk, bobEpk)
 			require.NoError(t, err)
-			remote, err := x3dh.DeriveSecretRemote(alicePk, bobSk, aliceEpk, bobEsk)
+			remote, err := tripledh.DeriveSecretRemote(alicePk, bobSk, aliceEpk, bobEsk)
 			require.NoError(t, err)
 
 			require.Zero(t, local.Cmp(remote))

@@ -5,8 +5,6 @@ import (
 	"io"
 	"strconv"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -32,8 +30,6 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-var commitmentHashFunc = sha3.New256
-
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
@@ -45,7 +41,10 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		k[i] = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot generate random k")
+		}
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
 		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myIdentityKey, bigR[i])
 		if err != nil {
@@ -146,7 +145,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 
 func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
 	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	c, w, err := commitments.Commit(commitmentHashFunc, commitmentMessage)
+	c, w, err := commitments.Commit(commitmentMessage)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not commit the message")
 	}
@@ -155,7 +154,7 @@ func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point)
 
 func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curves.Point, bigRCommitment commitments.Commitment, bigRWitness commitments.Witness) error {
 	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	if err := commitments.Open(commitmentHashFunc, commitmentMessage, bigRCommitment, bigRWitness); err != nil {
+	if err := commitments.Open(commitmentMessage, bigRCommitment, bigRWitness); err != nil {
 		return errs.WrapVerificationFailed(err, "commitment could not be opened")
 	}
 	return nil

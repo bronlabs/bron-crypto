@@ -208,8 +208,8 @@ func TestFqBytes(t *testing.T) {
 
 func TestFqCmp(t *testing.T) {
 	tests := []struct {
-		a *impl.Field
-		b *impl.Field
+		a *impl.FieldValue
+		b *impl.FieldValue
 		e int
 	}{
 		{

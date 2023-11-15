@@ -95,7 +95,10 @@ func validateInputs(threshold, total int, generator curves.Point) error {
 // Split creates the verifiers, blinding and shares.
 func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	// generate a random blinding factor
-	blinding := pd.Curve.Scalar().Random(prng)
+	blinding, err := pd.Curve.Scalar().Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+	}
 
 	shamirDealer := shamir.Dealer{
 		Threshold: pd.Threshold,

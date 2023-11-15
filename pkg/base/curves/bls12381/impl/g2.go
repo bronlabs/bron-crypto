@@ -1,10 +1,9 @@
 package bls12381impl
 
 import (
-	"io"
-
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -500,48 +499,12 @@ type G2 struct {
 	_ types.Incomparable
 }
 
-// Random creates a random point on the curve
-// from the specified reader.
-func (g2 *G2) Random(reader io.Reader) (*G2, error) {
-	var seed [impl.WideFieldBytes]byte
-	n, err := reader.Read(seed[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "random could not read from stream")
-	}
-	if n != impl.WideFieldBytes {
-		return nil, errs.NewFailed("insufficient bytes read %d when %d are needed", n, WideFieldBytes)
-	}
-	dst := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
-	return g2.Hash(impl.EllipticPointHasherSha256(), seed[:], dst), nil
-}
-
-// Hash uses the hasher to map bytes to a valid point.
-func (g2 *G2) Hash(hash *impl.EllipticPointHasher, msg, dst []byte) *G2 {
-	var u []byte
-	var u0, u1 Fp2
-	var r0, r1, q0, q1 G2
-
-	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 256)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 256)
-	}
-
-	var buf [96]byte
-	copy(buf[:64], bitstring.ReverseBytes(u[:64]))
-	u0.A.SetBytesWide(&buf)
-	copy(buf[:64], bitstring.ReverseBytes(u[64:128]))
-	u0.B.SetBytesWide(&buf)
-	copy(buf[:64], bitstring.ReverseBytes(u[128:192]))
-	u1.A.SetBytesWide(&buf)
-	copy(buf[:64], bitstring.ReverseBytes(u[192:]))
-	u1.B.SetBytesWide(&buf)
-
-	r0.sswu(&u0)
-	r1.sswu(&u1)
-	q0.isogenyMap(&r0)
-	q1.isogenyMap(&r1)
+func (g2 *G2) Map(u0, u1 *Fp2) *G2 {
+	var r, q0, q1 G2
+	r.sswu(u0)
+	q0.isogenyMap(&r)
+	r.sswu(u1)
+	q1.isogenyMap(&r)
 	g2.Add(&q0, &q1)
 	return g2.ClearCofactor(g2)
 }
@@ -675,12 +638,12 @@ func (g2 *G2) Double(a *G2) *G2 {
 }
 
 // Mul multiplies this point by the input scalar.
-func (g2 *G2) Mul(a *G2, s *impl.Field) *G2 {
+func (g2 *G2) Mul(a *G2, s *impl.FieldValue) *G2 {
 	bytes := s.Bytes()
 	return g2.multiply(a, &bytes)
 }
 
-func (g2 *G2) multiply(a *G2, bytes *[impl.FieldBytes]byte) *G2 {
+func (g2 *G2) multiply(a *G2, bytes *[base.FieldBytes]byte) *G2 {
 	var p G2
 	precomputed := [16]*G2{}
 	precomputed[0] = new(G2).Identity()
@@ -974,7 +937,7 @@ func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
 // SumOfProducts computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `g2`.
 // Returns an error if the lengths of the arguments is not equal.
-func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.Field) (*G2, error) {
+func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.FieldValue) (*G2, error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

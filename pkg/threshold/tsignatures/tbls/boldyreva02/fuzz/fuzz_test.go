@@ -3,7 +3,6 @@ package fuzz
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"io"
 	"math/rand"
 	"testing"
@@ -64,7 +63,6 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 
 	shards := keygen[K](t, identities, 2, 3, randomSeed)
 
-	fmt.Println(shards[identities[0].Hash()])
 	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
@@ -103,7 +101,7 @@ func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKe
 		Hash:  sha256.New,
 	}
 
-	inG1 := curve.Name() == bls12381.G1Name
+	inG1 := curve.Name() == bls12381.NameG1
 	inG1s := make([]bool, n)
 	for i := 0; i < n; i++ {
 		inG1s[i] = inG1

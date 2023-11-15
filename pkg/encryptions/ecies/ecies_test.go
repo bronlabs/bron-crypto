@@ -23,7 +23,8 @@ func TestEphemeral(t *testing.T) {
 		AD := []byte("no there really isn't any")
 		t.Run(fmt.Sprintf("running curve=%s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
-			S := curve.Scalar().Random(prng)
+			S, err := curve.Scalar().Random(prng)
+			require.NoError(t, err)
 			alice := &ecies.PrivateKey{
 				S:         S,
 				PublicKey: curve.ScalarBaseMult(S),

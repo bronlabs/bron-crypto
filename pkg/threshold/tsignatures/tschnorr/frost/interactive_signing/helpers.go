@@ -14,6 +14,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
 )
 
+var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
+
 func ProducePartialSignature(
 	participant frost.Participant,
 	sessionParticipants *hashset.HashSet[integration.IdentityKey],
@@ -42,7 +44,10 @@ func ProducePartialSignature(
 	R_js := map[types.IdentityHash]curves.Point{}
 	for _, participant := range sessionParticipants.Iter() {
 		sharingId := identityKeyToSharingId[participant.Hash()]
-		r_j := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
+		r_j, err := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not hash to r_j")
+		}
 		if sharingId == mySharingId {
 			r_i = r_j
 		}
@@ -66,7 +71,7 @@ func ProducePartialSignature(
 		return nil, errs.NewMissing("could not find r_i")
 	}
 
-	c, err := hashing.FiatShamir(
+	c, err := fiatShamir.GenerateChallenge(
 		cohortConfig.CipherSuite,
 		R.ToAffineCompressed(),
 		signingKeyShare.PublicKey.ToAffineCompressed(),

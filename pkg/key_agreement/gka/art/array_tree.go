@@ -3,7 +3,7 @@ package art
 import (
 	"math/bits"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type ArrayTree[T any] []T
@@ -26,7 +26,7 @@ func (ArrayTree[T]) Level(x int) int {
 
 // Root returns the index of the root element node of the tree.
 func (t ArrayTree[T]) Root() int {
-	return (1 << base.FloorLog2(len(t))) - 1
+	return (1 << utils.FloorLog2(len(t))) - 1
 }
 
 // Left returns the index of the left child node .

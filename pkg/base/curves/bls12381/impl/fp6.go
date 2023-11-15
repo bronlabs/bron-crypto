@@ -270,7 +270,7 @@ func (f *Fp6) Square(arg *Fp6) *Fp6 {
 }
 
 // Invert computes this element's field inversion.
-func (f *Fp6) Invert(arg *Fp6) (*Fp6, int) {
+func (f *Fp6) Invert(arg *Fp6) (el *Fp6, wasInverted int) {
 	var a, b, c, s, t Fp2
 
 	// a' = a^2 - (b * c).mul_by_nonresidue()
@@ -299,7 +299,7 @@ func (f *Fp6) Invert(arg *Fp6) (*Fp6, int) {
 	t.Mul(&arg.A, &a)
 	s.Add(&s, &t)
 
-	_, wasInverted := t.Invert(&s)
+	_, wasInverted = t.Invert(&s)
 
 	// newA = a' * t^-1
 	s.Mul(&a, &t)

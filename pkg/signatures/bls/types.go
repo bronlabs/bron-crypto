@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"encoding"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -106,7 +106,7 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	if subtle.ConstantTimeCompare(data, zeros) == 1 {
 		return errs.NewIsZero("secret key cannot be zero")
 	}
-	var bb [impl.FieldBytes]byte
+	var bb [base.FieldBytes]byte
 	copy(bb[:], bitstring.ReverseBytes(data))
 	value, err := bimpl.FqNew().SetBytes(&bb)
 	if err != nil {
@@ -207,7 +207,7 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 }
 
 func (*PublicKey[K]) InG1() bool {
-	return (*new(K)).CurveName() == bls12381.G1Name
+	return (*new(K)).CurveName() == bls12381.NameG1
 }
 
 type SignatureSubGroup = KeySubGroup
@@ -270,7 +270,7 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 }
 
 func (*Signature[S]) inG1() bool {
-	return (*new(S)).CurveName() == bls12381.G1Name
+	return (*new(S)).CurveName() == bls12381.NameG1
 }
 
 // type aliasing of generic types is not supported. So, sitll have to copy identical stuff.
@@ -332,5 +332,5 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 }
 
 func (pop *ProofOfPossession[S]) inG1() bool {
-	return pop.Value.CurveName() == bls12381.G1Name
+	return pop.Value.CurveName() == bls12381.NameG1
 }

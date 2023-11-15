@@ -118,7 +118,7 @@ func (ps *PreSignature) Es() []curves.Point {
 	return result
 }
 
-// TODO: serialisation/deserialization.
+// TODO: serialisation/deserialisation.
 type PreSignatureBatch []*PreSignature
 
 func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) error {

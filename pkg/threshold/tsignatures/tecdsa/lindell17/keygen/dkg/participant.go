@@ -3,11 +3,12 @@ package dkg
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
@@ -16,7 +17,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-	"github.com/cronokirby/saferith"
 )
 
 var _ lindell17.Participant = (*Participant)(nil)

@@ -3,13 +3,13 @@ package testutils
 import (
 	"bytes"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"sort"
 	"strings"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -40,7 +40,7 @@ func (k *TestIdentityKey) PublicKey() curves.Point {
 }
 
 func (k *TestIdentityKey) Hash() [32]byte {
-	return sha3.Sum256(k.PublicKey().ToAffineCompressed())
+	return sha256.Sum256(k.PublicKey().ToAffineCompressed())
 }
 
 func (k *TestIdentityKey) Sign(message []byte) []byte {
@@ -63,9 +63,9 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 	}
 	s := k.suite.Curve.Scalar().Zero()
 	switch len(s.Bytes()) {
-	case curves.WideFieldBytes:
+	case base.WideFieldBytes:
 		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
-	case curves.FieldBytes:
+	case base.FieldBytes:
 		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
 	default:
 		err = errs.NewSerializationError("cannot deserialize signature")

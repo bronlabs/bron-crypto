@@ -21,8 +21,8 @@ func Test_HashToPointP256(t *testing.T) {
 	t.Parallel()
 
 	curve := p256.New()
-
-	// https://datatracker.ietf.org/doc/html/rfc9380 (Appendix J)
+	curve.SetHasherAppTag("QUUX-V01-CS02-with-")
+	// https://datatracker.ietf.org/doc/html/rfc9380#appendix-J
 	tests := []testCase{
 		{
 			message: "",
@@ -62,7 +62,7 @@ func Test_HashToPointP256(t *testing.T) {
 			require.NoError(t, err)
 			expected, err := curve.Point().Set(ex, ey)
 			require.NoError(t, err)
-			p := curve.Point().Hash([]byte(theTest.message))
+			p, err := curve.Point().Hash([]byte(theTest.message))
 			require.NoError(t, err)
 			require.True(t, p.Equal(expected))
 		})

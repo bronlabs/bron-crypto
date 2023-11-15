@@ -8,8 +8,8 @@
 // Limitation: currently we only support batch OTs that are multiples of 8.
 //
 // Ideal functionalities:
-//   - We have used ZKP Schnorr for the F^{R_{DL}}_{ZK}
-//   - We have used HMAC for realising the Random Oracle Hash function, the key for HMAC is received as input to the protocol.
+//   - For the F^{R_{DL}}_{ZK}, we use ZKP Schnorr made non-interactive with the randomised Fischlim transform.
+//   - We use HMAC for realising the Random Oracle Hash function, the key for HMAC is received as input to the protocol.
 package vsot
 
 import (

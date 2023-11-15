@@ -3,7 +3,6 @@ package p256
 import (
 	"sync"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
 )
@@ -42,7 +41,7 @@ func p256PointParamsInit() {
 		Gx:      fp.New().SetRaw(&[impl.FieldLimbs]uint64{0x79e730d418a9143c, 0x75ba95fc5fedb601, 0x79fb732b77622510, 0x18905f76a53755c6}),
 		Gy:      fp.New().SetRaw(&[impl.FieldLimbs]uint64{0xddf25357ce95560a, 0x8b4ab8e4ba19e45c, 0xd2e88688dd21f325, 0x8571ff1825885d85}),
 		BitSize: 256,
-		Name:    "P256",
+		Name:    "P256", // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
 	}
 }
 
@@ -59,36 +58,36 @@ func getP256PointSswuParams() *impl.SswuParams {
 func p256PointSswuParamsInit() {
 	// How these values were derived
 	// left for informational purposes
-	//params := elliptic.P256().Params()
+	// params := elliptic.P256().Params()
 	//
-	//// c1 = (q - 3) / 4
-	//c1 := new(big.Int).Set(params.P)
-	//c1.Sub(c1, big.NewInt(3))
-	//c1.Rsh(c1, 2)
+	// // c1 = (q - 3) / 4
+	// c1 := new(big.Int).Set(params.P)
+	// c1.Sub(c1, big.NewInt(3))
+	// c1.Rsh(c1, 2)
 	//
-	//a := big.NewInt(-3)
-	//a.Mod(a, params.P)
-	//b := new(big.Int).Set(params.B)
-	//z := big.NewInt(-10)
-	//z.Mod(z, params.P)
-	//// sqrt(-Z^3)
-	//zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
-	//zTmp = zTmp.Neg(zTmp)
-	//zTmp.Mod(zTmp, params.P)
-	//c2 := new(big.Int).ModSqrt(zTmp, params.P)
+	// a := big.NewInt(-3)
+	// a.Mod(a, params.P)
+	// b := new(big.Int).Set(params.B)
+	// z := big.NewInt(-10)
+	// z.Mod(z, params.P)
+	// // sqrt(-Z^3)
+	// zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
+	// zTmp = zTmp.Neg(zTmp)
+	// zTmp.Mod(zTmp, params.P)
+	// c2 := new(big.Int).ModSqrt(zTmp, params.P)
 	//
-	//var capC1Bytes [32]byte
-	//c1.FillBytes(capC1Bytes[:])
-	//capC1 := fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(capC1Bytes[24:]),
-	//	binary.BigEndian.Uint64(capC1Bytes[16:24]),
-	//	binary.BigEndian.Uint64(capC1Bytes[8:16]),
-	//	binary.BigEndian.Uint64(capC1Bytes[:8]),
-	//})
-	//capC2 := fp.P256FpNew().SetBigInt(c2)
-	//capA := fp.P256FpNew().SetBigInt(a)
-	//capB := fp.P256FpNew().SetBigInt(b)
-	//capZ := fp.P256FpNew().SetBigInt(z)
+	// var capC1Bytes [32]byte
+	// c1.FillBytes(capC1Bytes[:])
+	// capC1 := fp.P256FpNew().SetRaw(&[impl.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(capC1Bytes[24:]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[16:24]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[8:16]),
+	// 	binary.BigEndian.Uint64(capC1Bytes[:8]),
+	// })
+	// capC2 := fp.P256FpNew().SetBigInt(c2)
+	// capA := fp.P256FpNew().SetBigInt(a)
+	// capB := fp.P256FpNew().SetBigInt(b)
+	// capZ := fp.P256FpNew().SetBigInt(z)
 
 	p256PointSswuParams = impl.SswuParams{
 		C1: [impl.FieldLimbs]uint64{0xffffffffffffffff, 0x000000003fffffff, 0x4000000000000000, 0x3fffffffc0000000},
@@ -101,21 +100,8 @@ func p256PointSswuParamsInit() {
 
 type p256PointArithmetic struct{}
 
-func (k p256PointArithmetic) Hash(out *impl.EllipticPoint, hash *impl.EllipticPointHasher, msg, dst []byte) error {
-	var u []byte
+func (k p256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
 	sswuParams := getP256PointSswuParams()
-
-	switch hash.Type() {
-	case impl.XMD:
-		u = impl.ExpandMsgXmd(hash, msg, dst, 96)
-	case impl.XOF:
-		u = impl.ExpandMsgXof(hash, msg, dst, 96)
-	}
-	var buf [64]byte
-	copy(buf[:48], bitstring.ReverseBytes(u[:48]))
-	u0 := fp.New().SetBytesWide(&buf)
-	copy(buf[:48], bitstring.ReverseBytes(u[48:]))
-	u1 := fp.New().SetBytesWide(&buf)
 
 	q0x, q0y := sswuParams.Osswu3mod4(u0)
 	q1x, q1y := sswuParams.Osswu3mod4(u1)
@@ -308,7 +294,7 @@ func (p256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (p256PointArithmetic) RhsEq(out, x *impl.Field) {
+func (p256PointArithmetic) RhsEq(out, x *impl.FieldValue) {
 	// Elliptic curve equation for p256 is: y^2 = x^3 ax + b
 	out.Square(x)
 	out.Mul(out, x)

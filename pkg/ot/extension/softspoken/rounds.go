@@ -227,16 +227,16 @@ func (S *Sender) Round2(
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// z_A_j = ECP(v_0_j)
-				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().SetBytes(
+				cOTeSenderOutput[l][i][j], err = S.curve.Scalar().Hash(
 					oTeSenderOutput[0][idxOTe][i][j][:])
 				if err != nil {
-					return nil, nil, nil, errs.WrapFailed(err, "bad v_0 mapping to curve elements (Derand.1)")
+					return nil, nil, nil, errs.WrapHashingFailed(err, "bad hashing v_0_j for SoftSpoken COTe (Derand.1)")
 				}
 				// τ_j = ECP(v_1_j) - z_A_j + α_j
-				round2Output.derandMask[l][i][j], err = S.curve.Scalar().SetBytes(
+				round2Output.derandMask[l][i][j], err = S.curve.Scalar().Hash(
 					oTeSenderOutput[1][idxOTe][i][j][:])
 				if err != nil {
-					return nil, nil, nil, errs.WrapFailed(err, "bad v_1 mapping to curve elements (Derand.1)")
+					return nil, nil, nil, errs.WrapHashingFailed(err, "bad hashing v_1_j for SoftSpoken COTe (Derand.1)")
 				}
 				round2Output.derandMask[l][i][j] = round2Output.derandMask[l][i][j].
 					Sub(cOTeSenderOutput[l][i][j]).Add(InputOpts[l][i][j])
@@ -298,9 +298,9 @@ func (R *Receiver) Round3(
 		for i := 0; i < Xi; i++ {
 			for j := 0; j < ROTeWidth; j++ {
 				// ECP(v_x_j)
-				v_x_NegCurve, err = R.curve.Scalar().SetBytes(oTeReceiverOutput[idxOTe][i][j][:])
+				v_x_NegCurve, err = R.curve.Scalar().Hash(oTeReceiverOutput[idxOTe][i][j][:])
 				if err != nil {
-					return nil, errs.WrapFailed(err, "bad v_x mapping to curve elements (Derand.2)")
+					return nil, errs.WrapHashingFailed(err, "bad hashing v_x_j for SoftSpoken COTe (Derand.2)")
 				}
 				v_x_NegCurve = v_x_NegCurve.Neg()
 				v_x_curve_corr = round2Output.derandMask[l][i][j].Add(v_x_NegCurve)
@@ -317,9 +317,6 @@ func (R *Receiver) Round3(
 				}
 			}
 		}
-	}
-	if err != nil {
-		return nil, errs.WrapFailed(err, "bad derandomization for SoftSpoken COTe (Derand.2)")
 	}
 	return cOTeReceiverOutput, nil
 }

@@ -5,16 +5,16 @@ import (
 	crand "crypto/rand"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 
-	core "github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -36,6 +36,9 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 
 	curve := k256.New()
 	eCurve, err := curveutils.ToEllipticCurve(curve)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert krypton curve to elliptic curve")
+	}
 	ecdsaPrivateKey, err := ecdsa.GenerateKey(eCurve, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
@@ -45,8 +48,8 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.WrapSerializationError(err, "could not convert go private key bytes to a krypton scalar")
 	}
 	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
-		core.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
-		core.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
+		utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
+		utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
 	)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a krypton point")
@@ -87,7 +90,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 			if identityKey == otherIdentityKey {
 				continue
 			}
-			randomSeed := [impl.FieldBytes]byte{}
+			randomSeed := [base.FieldBytes]byte{}
 			if _, err := crand.Read(randomSeed[:]); err != nil {
 				return nil, errs.WrapRandomSampleFailed(err, "could not produce random seed")
 			}

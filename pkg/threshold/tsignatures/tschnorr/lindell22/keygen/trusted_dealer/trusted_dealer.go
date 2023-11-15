@@ -1,18 +1,16 @@
 package trusted_dealer
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 )
 
 func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*lindell22.Shard, error) {
@@ -25,7 +23,10 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
-	schnorrPrivateKey := curve.Scalar().Random(prng)
+	schnorrPrivateKey, err := curve.Scalar().Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random schnorr private key")
+	}
 	schnorrPublicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
 	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)

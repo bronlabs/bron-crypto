@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -16,12 +14,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
+var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
+
 const (
 	commitmentDomainRLabel = "Lindell2022InteractiveSignR"
 	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS"
 )
-
-var commitmentHashFunc = sha3.New256
 
 type Round1Broadcast struct {
 	BigRCommitment commitments.Commitment
@@ -43,7 +41,10 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1. choose a random k
-	k := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	k, err := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+	}
 
 	// 2. compute R = k * G
 	bigR := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k)
@@ -134,9 +135,9 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 	// 3.ii. compute e
 	var e curves.Scalar
 	if p.taproot {
-		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+		e, err = fiatShamir.GenerateChallenge(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
 	} else {
-		e, err = hashing.CreateDigestScalar(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
+		e, err = fiatShamir.GenerateChallenge(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
 	}
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
@@ -166,7 +167,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 
 func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	commitment, witness, err = commitments.Commit(commitmentHashFunc, message)
+	commitment, witness, err = commitments.Commit(message)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
@@ -176,7 +177,7 @@ func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Co
 
 func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
 	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	if err := commitments.Open(commitmentHashFunc, message, commitment, witness); err != nil {
+	if err := commitments.Open(message, commitment, witness); err != nil {
 		return errs.WrapVerificationFailed(err, "couldn't open")
 	}
 	return nil

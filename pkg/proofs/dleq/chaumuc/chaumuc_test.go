@@ -22,9 +22,18 @@ func doChaum(curve curves.Curve, sid []byte, prng io.Reader) error {
 	if err != nil {
 		return err
 	}
-	x := curve.Scalar().Random(crand.Reader)
-	H1 := curve.Point().Random(crand.Reader)
-	H2 := curve.Point().Random(crand.Reader)
+	x, err := curve.Scalar().Random(crand.Reader)
+	if err != nil {
+		return errs.WrapRandomSampleFailed(err, "failed to generate random scalar")
+	}
+	H1, err := curve.Point().Random(crand.Reader)
+	if err != nil {
+		return errs.WrapRandomSampleFailed(err, "failed to generate random point")
+	}
+	H2, err := curve.Point().Random(crand.Reader)
+	if err != nil {
+		return errs.WrapRandomSampleFailed(err, "failed to generate random point")
+	}
 
 	proof, statement, err := prover.Prove(x, H1, H2)
 	if err != nil {
@@ -80,13 +89,18 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, prover)
 
-			secret := boundedCurve.Scalar().Random(crand.Reader)
-			H1 := boundedCurve.Point().Random(crand.Reader)
-			H2 := boundedCurve.Point().Random(crand.Reader)
+			secret, err := boundedCurve.Scalar().Random(crand.Reader)
+			require.NoError(t, err)
+			H1, err := boundedCurve.Point().Random(crand.Reader)
+			require.NoError(t, err)
+			H2, err := boundedCurve.Point().Random(crand.Reader)
+			require.NoError(t, err)
 			proof, correctStatement, err := prover.Prove(secret, H1, H2)
+			require.NoError(t, err)
 
-			H3 := boundedCurve.Point().Random(crand.Reader)
+			H3, err := boundedCurve.Point().Random(crand.Reader)
 			require.False(t, H1.Equal(H3), "buy a lotter ticket")
+			require.NoError(t, err)
 			require.False(t, H2.Equal(H3), "buy a lotter ticket")
 
 			P3 := H3.Mul(secret)

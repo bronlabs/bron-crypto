@@ -8,7 +8,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -21,7 +21,7 @@ func NewScalarFromMap(data map[string]any) (curves.Scalar, error) {
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "json marshal failed")
 	}
-	return internal.NewScalarFromJSON(curve.Scalar().SetBytes, value)
+	return serialisation.NewScalarFromJSON(curve.Scalar().SetBytes, value)
 }
 
 func NewPointFromMap(data map[string]any) (curves.Point, error) {
@@ -33,7 +33,7 @@ func NewPointFromMap(data map[string]any) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "json marshal failed")
 	}
-	return internal.NewPointFromJSON(curve, value)
+	return serialisation.NewPointFromJSON(curve, value)
 }
 
 func UnmarshalCurveJSON(input []byte, a any) error {

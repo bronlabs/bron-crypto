@@ -5,6 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
@@ -33,16 +34,23 @@ func (*FieldProfile) ExtensionDegree() *saferith.Nat {
 	return new(saferith.Nat).SetUint64(1)
 }
 
+func (*FieldProfile) FieldBytes() int {
+	return base.FieldBytes
+}
+
+func (*FieldProfile) WideFieldBytes() int {
+	return base.WideFieldBytes
+}
+
 var _ curves.FieldElement = (*FieldElement)(nil)
 
 type FieldElement struct {
-	v *impl.Field
+	v *impl.FieldValue
 
 	_ types.Incomparable
 }
 
-//nolint:revive // we don't care if impl shadows impl
-func (e *FieldElement) impl() *impl.Field {
+func (e *FieldElement) FieldValue() *impl.FieldValue {
 	return e.v
 }
 
@@ -72,9 +80,12 @@ func (*FieldElement) New(value uint64) curves.FieldElement {
 	}
 }
 
-// Hash TODO: implement
-func (*FieldElement) Hash(x []byte) curves.FieldElement {
-	return nil
+func (*FieldElement) Hash(x []byte) (curves.FieldElement, error) {
+	els, err := New().HashToFieldElements(1, x, nil)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not hash to field element in k256")
+	}
+	return els[0], nil
 }
 
 func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
@@ -82,12 +93,27 @@ func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
 	if !ok {
 		return -2
 	}
-	return e.v.Cmp(rhsK256.impl())
+	return e.v.Cmp(rhsK256.FieldValue())
 }
 
-// Random TODO: implement
-func (*FieldElement) Random(prng io.Reader) curves.FieldElement {
-	return nil
+func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
+	return e
+}
+
+func (e *FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	var seed [base.WideFieldBytes]byte
+	_, err := prng.Read(seed[:])
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
+	}
+	value, err := e.SetBytesWide(seed[:])
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "could not set bytes")
+	}
+	return value, nil
 }
 
 func (*FieldElement) Zero() curves.FieldElement {
@@ -147,7 +173,7 @@ func (e *FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
 		panic("not a k256 Fp element")
 	}
 	return &FieldElement{
-		v: fp.New().Add(e.v, n.impl()),
+		v: fp.New().Add(e.v, n.FieldValue()),
 	}
 }
 
@@ -157,7 +183,7 @@ func (e *FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
 		panic("not a k256 Fp element")
 	}
 	return &FieldElement{
-		v: fp.New().Sub(e.v, n.impl()),
+		v: fp.New().Sub(e.v, n.FieldValue()),
 	}
 }
 
@@ -167,7 +193,7 @@ func (e *FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
 		panic("not a k256 Fp element")
 	}
 	return &FieldElement{
-		v: fp.New().Mul(e.v, n.impl()),
+		v: fp.New().Mul(e.v, n.FieldValue()),
 	}
 }
 
@@ -217,12 +243,11 @@ func (e *FieldElement) Nat() *saferith.Nat {
 }
 
 func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
-	if len(input) != impl.FieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 32 bytes")
+	if len(input) != base.FieldBytes {
+		return nil, errs.NewInvalidLength("input length %d != %d bytes", len(input), base.FieldBytes)
 	}
-	var out [32]byte
-	copy(out[:], bitstring.ReverseBytes(input))
-	result, err := e.v.SetBytes(&out)
+	buffer := bitstring.ReverseBytes(input)
+	result, err := e.v.SetBytes((*[base.FieldBytes]byte)(buffer))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set byte")
 	}
@@ -232,12 +257,11 @@ func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 }
 
 func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	if len(input) != impl.WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length is not 64 bytes")
+	if len(input) > base.WideFieldBytes {
+		return nil, errs.NewInvalidLength("input length > %d bytes", base.WideFieldBytes)
 	}
-	var out [64]byte
-	copy(out[:], bitstring.ReverseBytes(input))
-	result := e.v.SetBytesWide(&out)
+	buffer := bitstring.ReverseAndPadBytes(input, base.WideFieldBytes-len(input))
+	result := e.v.SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
 	return &FieldElement{
 		v: result,
 	}, nil

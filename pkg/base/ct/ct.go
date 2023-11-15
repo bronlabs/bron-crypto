@@ -1,25 +1,6 @@
-package base
+package ct
 
-import (
-	"crypto/subtle"
-	"math/bits"
-
-	"golang.org/x/exp/constraints"
-)
-
-// Min returns the minimum of two elements.
-func Min[T constraints.Ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// CeilDiv returns `ceil(numerator/denominator) for integer inputs. Equivalently,
-// it returns `x`, the smallest integer that satisfies `(x*b) >= a`.
-func CeilDiv(numerator, denominator int) int {
-	return (numerator - 1 + denominator) / denominator
-}
+import "crypto/subtle"
 
 // ConstantTimeEq returns 1 if x == y and 0 otherwise. Based on the subtle package.
 func ConstantTimeEq(x, y uint64) int {
@@ -44,12 +25,7 @@ func ConstantTimeLeq(x, y uint64) int {
 	return 1 - ConstantTimeGt(y, x)
 }
 
-// FloorLog2 return floor(log2(x)).
-func FloorLog2(x int) int {
-	return 63 - bits.LeadingZeros64(uint64(x))
-}
-
-// CeilLog2 return ceil(log2(x)).
-func CeilLog2(x int) int {
-	return 64 - bits.LeadingZeros64(uint64(x)-1)
+// ConstantTimeSelect returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
+func ConstantTimeSelect(v, x, y uint64) uint64 {
+	return ^(v-1)&x | (v-1)&y
 }

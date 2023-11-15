@@ -5,17 +5,17 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 )
 
 var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
@@ -47,13 +47,15 @@ func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, mes
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := edwards25519.New()
-	alicePublicKey := curve.Point().Random(crand.Reader)
+	alicePublicKey, err := curve.Point().Random(crand.Reader)
+	require.NoError(t, err)
 	aliceIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: alicePublicKey,
 	}
 
-	bobPublicKey := curve.Point().Random(crand.Reader)
+	bobPublicKey, err := curve.Point().Random(crand.Reader)
+	require.NoError(t, err)
 	bobIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: bobPublicKey,
@@ -80,6 +82,7 @@ func Test_CanInitialize(t *testing.T) {
 	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
+	require.NoError(t, err)
 	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)

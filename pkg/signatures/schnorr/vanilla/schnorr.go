@@ -15,6 +15,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
+var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
+
 type PublicKey struct {
 	A curves.Point
 
@@ -73,8 +75,15 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
 
-	scalar := curve.Scalar().Random(prng)
-	return NewKeys(scalar)
+	scalar, err := curve.Scalar().Random(prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+	}
+	pk, sk, err := NewKeys(scalar)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not generate keys")
+	}
+	return pk, sk, nil
 }
 
 func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer, error) {
@@ -95,11 +104,14 @@ func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer,
 }
 
 func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
-	k := signer.suite.Curve.Scalar().Random(prng)
+	k, err := signer.suite.Curve.Scalar().Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+	}
 	R := signer.suite.Curve.ScalarBaseMult(k)
 	a := signer.suite.Curve.ScalarBaseMult(signer.privateKey.S)
 
-	e, err := hashing.CreateDigestScalar(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
+	e, err := fiatShamir.GenerateChallenge(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
 	}
@@ -148,7 +160,7 @@ func IsEd25519Compliant(suite *integration.CipherSuite) bool {
 }
 
 func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	e, err := hashing.CreateDigestScalar(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
+	e, err := fiatShamir.GenerateChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}

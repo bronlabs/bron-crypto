@@ -24,7 +24,8 @@ func Test_MeasureConstantTime_prove(t *testing.T) {
 	var prover *Prover
 
 	internal.RunMeasurement(500, "schnorr_prove", func(i int) {
-		secret = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)
 	}, func() {
@@ -45,7 +46,8 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	var proof *Proof
 	var statement Statement
 	internal.RunMeasurement(500, "schnorr_verify", func(i int) {
-		secret = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)
 		proof, statement, err = prover.Prove(secret, crand.Reader)

@@ -11,15 +11,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.PairingScalar = (*Scalar)(nil)
 
 type Scalar struct {
-	Value  *impl.Field
+	Value  *impl.FieldValue
 	Point_ curves.PairingPoint
 
 	_ types.Incomparable
@@ -39,28 +40,31 @@ func (*Scalar) PairingCurve() curves.PairingCurve {
 }
 
 func (*Scalar) PairingCurveName() string {
-	return Name
+	return NamePairing
 }
 
-func (s *Scalar) Random(prng io.Reader) curves.Scalar {
+func (s *Scalar) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
-		panic("prng in nil")
+		return nil, errs.NewIsNil("prng is nil")
 	}
-	var seed [64]byte
-	_, _ = prng.Read(seed[:])
-	return s.Hash(seed[:])
+	var buffer [base.WideFieldBytes]byte
+	n, err := prng.Read(buffer[:])
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
+	}
+	if n != base.WideFieldBytes {
+		return nil, errs.NewRandomSampleFailed("could not read enough bytes from prng")
+	}
+	res, _ := s.SetBytesWide(buffer[:])
+	return res, nil
 }
 
-func (s *Scalar) Hash(inputs ...[]byte) curves.Scalar {
-	dst := []byte("BLS12381_XMD:SHA-256_SSWU_RO_")
-	xmd := impl.ExpandMsgXmd(impl.EllipticPointHasherSha256(), bytes.Join(inputs, nil), dst, 48)
-	var t [64]byte
-	copy(t[:48], bitstring.ReverseBytes(xmd))
-
-	return &Scalar{
-		Value:  bls12381impl.FqNew().SetBytesWide(&t),
-		Point_: s.Point_,
+func (*Scalar) Hash(inputs ...[]byte) (curves.Scalar, error) {
+	u, err := NewG1().HashToScalars(1, bytes.Join(inputs, nil), nil)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "hash to scalar for bls12381g1 failed")
 	}
+	return u[0], nil
 }
 
 func (s *Scalar) Zero() curves.Scalar {
@@ -258,30 +262,25 @@ func (s *Scalar) Bytes() []byte {
 }
 
 func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
-	if len(input) != 32 {
+	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
-	reducedInput := base.NatFromBytes(input, r)
-	var seq [32]byte
-	copy(seq[:], bitstring.ReverseBytes(reducedInput.Bytes()))
-	value, err := bls12381impl.FqNew().SetBytes(&seq)
+	reducedInput := utils.NatFromBytes(input, r)
+	buffer := bitstring.ReverseBytes(reducedInput.Bytes())
+	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't set bytes")
 	}
-	return &Scalar{
-		Value: value, Point_: s.Point_,
-	}, nil
+	return &Scalar{Value: value, Point_: s.Point_}, nil
 }
 
 func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
-	if len(input) != 64 {
-		return nil, errs.NewInvalidLength("invalid length")
+	if len(input) > base.WideFieldBytes {
+		return nil, errs.NewInvalidLength("invalid length > %d", base.WideFieldBytes)
 	}
-	var seq [64]byte
-	copy(seq[:], input)
-	return &Scalar{
-		Value: bls12381impl.FqNew().SetBytesWide(&seq), Point_: s.Point_,
-	}, nil
+	buffer := bitstring.ReverseAndPadBytes(input, base.WideFieldBytes-len(input))
+	value := bls12381impl.FqNew().SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
+	return &Scalar{Value: value, Point_: s.Point_}, nil
 }
 
 func (s *Scalar) Clone() curves.Scalar {
@@ -311,7 +310,7 @@ func (s *Scalar) Order() *saferith.Modulus {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	result, err := internal.ScalarMarshalBinary(s)
+	result, err := serialisation.ScalarMarshalBinary(s)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
 	}
@@ -320,7 +319,7 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
 	curve := s.Curve()
-	sc, err := internal.ScalarUnmarshalBinary(curve.Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalBinary(curve.Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -334,7 +333,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalText() ([]byte, error) {
-	result, err := internal.ScalarMarshalText(s)
+	result, err := serialisation.ScalarMarshalText(s)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
 	}
@@ -343,7 +342,7 @@ func (s *Scalar) MarshalText() ([]byte, error) {
 
 func (s *Scalar) UnmarshalText(input []byte) error {
 	curve := s.Curve()
-	sc, err := internal.ScalarUnmarshalText(curve.Name(), s.SetBytes, input)
+	sc, err := serialisation.ScalarUnmarshalText(curve.Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
@@ -358,7 +357,7 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
 	curve := s.Curve()
-	result, err := internal.ScalarMarshalJson(curve.Name(), s)
+	result, err := serialisation.ScalarMarshalJson(curve.Name(), s)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "couldn't marshal json")
 	}
@@ -366,7 +365,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := internal.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a scalar from json")
 	}

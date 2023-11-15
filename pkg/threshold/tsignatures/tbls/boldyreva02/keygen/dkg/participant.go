@@ -42,8 +42,8 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integ
 	}
 
 	pointInK := new(K)
-	inG1 := (*pointInK).CurveName() == bls12381.G1Name
-	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G1Name) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.G2Name) {
+	inG1 := (*pointInK).CurveName() == bls12381.NameG1
+	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG1) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG2) {
 		return nil, errs.NewInvalidCurve("cohort config curve mismatch with the declared subgroup")
 	}
 	if transcript == nil {

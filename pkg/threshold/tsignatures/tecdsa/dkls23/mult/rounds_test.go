@@ -48,7 +48,8 @@ func TestMultiplicationHappyPath(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i] = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				require.NoError(t, err)
 			}
 			zA, zB, err := testutils.RunMult(t, alice, bob, a)
 			require.NoError(t, err)
@@ -82,7 +83,8 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i] = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				require.NoError(t, err)
 			}
 
 			_, _, err = testutils.RunMult(t, alice, bob, a)
@@ -114,7 +116,8 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i] = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				require.NoError(t, err)
 			}
 
 			// First run

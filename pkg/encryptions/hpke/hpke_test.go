@@ -1,6 +1,7 @@
 package hpke
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -1160,7 +1161,9 @@ func setup(t *testing.T, s *setupInfo) (*ReceiverContext, *SenderContext) {
 
 	ephemeralPrivateKey, err := kem.DeriveKeyPair(s.ikmE)
 	require.NoError(t, err)
-
+	if !bytes.Equal(s.skEm, ephemeralPrivateKey.D.Bytes()) {
+		print("hi")
+	}
 	require.EqualValues(t, s.skEm, ephemeralPrivateKey.D.Bytes())
 	require.EqualValues(t, s.pkEm, ephemeralPrivateKey.PublicKey.ToAffineUncompressed())
 
@@ -1229,6 +1232,7 @@ func sealPlaintext(t *testing.T, sender *SenderContext, tt *encryptionInfo) {
 	require.Contains(t, sender.c.nonces, tt.nonce)
 }
 
+// Test https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A
 func TestRFCTestVectors(t *testing.T) {
 	t.Parallel()
 	for _, suiteTest := range tests {

@@ -18,14 +18,16 @@ import (
 
 func TestScalarRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
-	sc := ed25519.Scalar().Random(testutils.TestRng())
+	sc, err := ed25519.Scalar().Random(testutils.TestRng())
+	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
-	expected := toRSc("feaa6a9d6dda758da6145f7d411a3af9f8a120698e0093faa97085b384c3f00e")
+	expected := toRSc("4fe2a684e0e6c5e370ca0d89f5e2cb0da1e2ecd4028fa2d395fbca4e33f25805")
 	require.Equal(t, s.Value.Equal(expected), 1)
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
-		sc := ed25519.Scalar().Random(crand.Reader)
+		sc, err := ed25519.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		_, ok := sc.(*edwards25519.Scalar)
 		require.True(t, ok)
 		require.True(t, !sc.IsZero())
@@ -35,10 +37,11 @@ func TestScalarRandom(t *testing.T) {
 func TestScalarHash(t *testing.T) {
 	var b [32]byte
 	ed25519 := edwards25519.New()
-	sc := ed25519.Scalar().Hash(b[:])
+	sc, err := ed25519.Scalar().Hash(b[:])
+	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
-	expected := toRSc("9d574494a02d72f5ff311cf0fb844d0fdd6103b17255274e029bdeed7207d409")
+	expected := toRSc("1aed36e370cd007fed322e52c0b11699bab80a5b0bec1d5eb5e46d4a867de507")
 	require.Equal(t, s.Value.Equal(expected), 1)
 }
 
@@ -194,7 +197,8 @@ func TestScalarSerialize(t *testing.T) {
 
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
-		sc = ed25519.Scalar().Random(crand.Reader)
+		sc, err = ed25519.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		sequence = sc.Bytes()
 		require.Equal(t, len(sequence), 32)
 		ret, err = ed25519.Scalar().SetBytes(sequence)
@@ -210,28 +214,35 @@ func TestScalarNil(t *testing.T) {
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
 	require.Panics(t, func() { one.Div(nil) })
-	require.Panics(t, func() { ed25519.Scalar().Random(nil) })
+	_, err := ed25519.Scalar().Random(nil)
+	require.Error(t, err)
 	require.Panics(t, func() { one.Cmp(nil) })
-	_, err := ed25519.Scalar().SetNat(nil)
+	_, err = ed25519.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 
 func TestPointRandom(t *testing.T) {
 	ed25519 := edwards25519.New()
-	sc := ed25519.Point().Random(testutils.TestRng())
+	sc, err := ed25519.Point().Random(testutils.TestRng())
+	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Point)
 	require.True(t, ok)
-	expected, err := toRPt("6011540c6231421a70ced5f577432531f198d318facfaad6e52cc42fba6e6fc5")
+	expected, err := toRPt("19fc032736138ac12ae6e484c9af1ea6bc4b5467831b2e5aefc0415b1a943a88")
 	require.NoError(t, err)
-	require.True(t, s.Equal(&edwards25519.Point{Value: expected.Value}))
+	if !s.Equal(&edwards25519.Point{Value: expected.Value}) {
+		t.Errorf("\nGot : %s\nWant: %s",
+			hex.EncodeToString(s.ToAffineCompressed()),
+			hex.EncodeToString(expected.ToAffineCompressed()))
+	}
 	// Try 25 random values
 	for i := 0; i < 25; i++ {
-		sc := ed25519.Point().Random(crand.Reader)
+		sc, err := ed25519.Point().Random(crand.Reader)
+		require.NoError(t, err)
 		_, ok := sc.(*edwards25519.Point)
 		require.True(t, ok)
 		require.True(t, !sc.IsIdentity())
 		pBytes := sc.ToAffineCompressed()
-		_, err := filippo.NewIdentityPoint().SetBytes(pBytes)
+		_, err = filippo.NewIdentityPoint().SetBytes(pBytes)
 		require.NoError(t, err)
 	}
 }
@@ -239,17 +250,23 @@ func TestPointRandom(t *testing.T) {
 func TestPointHash(t *testing.T) {
 	var b [32]byte
 	ed25519 := edwards25519.New()
-	sc := ed25519.Point().Hash(b[:])
+	sc, err := ed25519.Point().Hash(b[:])
+	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Point)
 	require.True(t, ok)
-	expected, err := toRPt("b4d75c3bb03ca644ab6c6d2a955c911003d8cfa719415de93a6b85eeb0c8dd97")
+	expected, err := toRPt("9be377b2f8cf4f0e0e89ee405a01ffe6ab6e339470e9fbd06787dcc5223b6343")
 	require.NoError(t, err)
-	require.True(t, s.Equal(&edwards25519.Point{Value: expected.Value}))
+	if !s.Equal(&edwards25519.Point{Value: expected.Value}) {
+		t.Errorf("\nGot : %s\nWant: %s",
+			hex.EncodeToString(s.ToAffineCompressed()),
+			hex.EncodeToString(expected.ToAffineCompressed()))
+	}
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(b[:])
-		sc = ed25519.Point().Hash(b[:])
+		sc, err = ed25519.Point().Hash(b[:])
+		require.NoError(t, err)
 		require.NotNil(t, sc)
 	}
 }
@@ -328,12 +345,13 @@ func TestPointMul(t *testing.T) {
 
 func TestPointSerialize(t *testing.T) {
 	ed25519 := edwards25519.New()
-	ss := ed25519.Scalar().Random(testutils.TestRng())
+	ss, err := ed25519.Scalar().Random(testutils.TestRng())
+	require.NoError(t, err)
 	g := ed25519.Point().Generator()
 
 	ppt := g.Mul(ss)
-	expectedC := []byte{0x7f, 0x5b, 0xa, 0xd9, 0xb8, 0xce, 0xb7, 0x7, 0x4c, 0x10, 0xc8, 0xb4, 0x27, 0xe8, 0xd2, 0x28, 0x50, 0x42, 0x6c, 0x0, 0x8a, 0x3, 0x72, 0x2b, 0x7c, 0x3c, 0x37, 0x6f, 0xf8, 0x8f, 0x42, 0x5d}
-	expectedU := []byte{0x70, 0xad, 0x4, 0xa1, 0x6, 0x8, 0x9f, 0x47, 0xe1, 0xe8, 0x9b, 0x9c, 0x81, 0x5a, 0xfb, 0xb9, 0x85, 0x6a, 0x2c, 0xa, 0xbc, 0xff, 0xe, 0xc6, 0xa0, 0xb0, 0xac, 0x75, 0xc, 0xd8, 0x59, 0x53, 0x7f, 0x5b, 0xa, 0xd9, 0xb8, 0xce, 0xb7, 0x7, 0x4c, 0x10, 0xc8, 0xb4, 0x27, 0xe8, 0xd2, 0x28, 0x50, 0x42, 0x6c, 0x0, 0x8a, 0x3, 0x72, 0x2b, 0x7c, 0x3c, 0x37, 0x6f, 0xf8, 0x8f, 0x42, 0x5d}
+	expectedC, _ := hex.DecodeString("c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
+	expectedU, _ := hex.DecodeString("2a60c9f03c6b58ddae081ae1d9cefa7a2f64b313620a602af653796f2fa73974c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
 	require.Equal(t, ppt.ToAffineCompressed(), expectedC)
 	require.Equal(t, ppt.ToAffineUncompressed(), expectedU)
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
@@ -345,7 +363,8 @@ func TestPointSerialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		s := ed25519.Scalar().Random(crand.Reader)
+		s, err := ed25519.Scalar().Random(crand.Reader)
+		require.NoError(t, err)
 		pt := g.Mul(s)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 32)
@@ -367,9 +386,10 @@ func TestPointNil(t *testing.T) {
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
-	require.Panics(t, func() { ed25519.Scalar().Random(nil) })
+	_, err := ed25519.Scalar().Random(nil)
+	require.Error(t, err)
 	require.False(t, one.Equal(nil))
-	_, err := ed25519.Scalar().SetNat(nil)
+	_, err = ed25519.Scalar().SetNat(nil)
 	require.Error(t, err)
 }
 

@@ -102,7 +102,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 		for j, terms := range coeffs {
 			identity := e.pairs[j].g1.IsIdentity() | terms.identity
 			newF.Set(f)
-			ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+			ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 			f.CMove(newF, f, identity)
 		}
 		cIdx++
@@ -112,7 +112,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 			for j, terms := range coeffs {
 				identity := e.pairs[j].g1.IsIdentity() | terms.identity
 				newF.Set(f)
-				ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+				ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 				f.CMove(newF, f, identity)
 			}
 			cIdx++
@@ -122,7 +122,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 	for j, terms := range coeffs {
 		identity := e.pairs[j].g1.IsIdentity() | terms.identity
 		newF.Set(f)
-		ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+		ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 		f.CMove(newF, f, identity)
 	}
 	f.Conjugate(f)
@@ -162,7 +162,7 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 	return coeffs
 }
 
-func ell(f *Fp12, coeffs coefficients, p *G1) {
+func ell(f *Fp12, coeffs *coefficients, p *G1) {
 	var x, y Fp2
 	x.A.Mul(&coeffs.a.A, &p.Y)
 	x.B.Mul(&coeffs.a.B, &p.Y)

@@ -35,8 +35,9 @@ func Test_HashToPointBLS12381G2(t *testing.T) {
 	t.Parallel()
 
 	curve := bls12381.NewG2()
+	curve.SetHasherAppTag("QUUX-V01-CS02-with-")
 
-	// https://datatracker.ietf.org/doc/html/rfc9380 (Appendix J)
+	// https://datatracker.ietf.org/doc/html/rfc9380#appendix-J
 	tests := []testCase{
 		{
 			message: "",
@@ -70,11 +71,12 @@ func Test_HashToPointBLS12381G2(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
 
-			p := curve.Point().Hash([]byte(theTest.message))
+			p, err := curve.Point().Hash([]byte(theTest.message))
+			require.NoError(t, err)
 			pBytes := p.ToAffineUncompressed()
 			pBytesExpected, err := hex.DecodeString(theTest.x + theTest.y)
 			require.NoError(t, err)
-			require.Equal(t, pBytes, pBytesExpected)
+			require.Equal(t, pBytesExpected, pBytes)
 		})
 	}
 }
@@ -82,7 +84,9 @@ func Test_HashToPointBLS12381G2(t *testing.T) {
 func testHashToG2(t *testing.T, vector *hashedPointG2) {
 	t.Helper()
 
-	actual := bls12381.NewG2().Point().Hash([]byte(vector.Input.Message))
+	actual, err := bls12381.NewG2().Point().Hash([]byte(vector.Input.Message))
+	require.NoError(t, err)
+	// TODO: These `bytes` object is returning `nil`. Investigate why the test doesn't fail.
 	require.EqualValues(t, actual.X().Bytes(), vector.Output.X, "X coordinate")
 	require.EqualValues(t, actual.Y().Bytes(), vector.Output.Y, "Y coordinate")
 }

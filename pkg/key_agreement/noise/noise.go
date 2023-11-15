@@ -84,8 +84,12 @@ func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) cu
 }
 
 func NewSigner(prng io.Reader, curve curves.Curve, privateKey curves.Scalar) Signer {
+	var err error
 	if privateKey == nil {
-		privateKey = curve.Scalar().Random(prng)
+		privateKey, err = curve.Scalar().Random(prng)
+		if err != nil {
+			panic("Could not sample private key")
+		}
 	}
 	publicKey := curve.ScalarBaseMult(privateKey)
 	return Signer{publicKey, privateKey}

@@ -2,7 +2,6 @@ package paillierrange
 
 import (
 	crand "crypto/rand"
-	"crypto/sha256"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -12,8 +11,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
-
-var hashFunc = sha256.New
 
 type Round1Output struct {
 	EsidCommitment commitments.Commitment
@@ -73,7 +70,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 	// 1.iv. compute commitment to (e, sid) and send to P
 	esidMessage := append(verifier.state.e.Bytes(), verifier.sid...)
-	esidCommitment, esidWitness, err := commitments.Commit(hashFunc, esidMessage)
+	esidCommitment, esidWitness, err := commitments.Commit(esidMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sid")
 	}
@@ -164,7 +161,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 	}
 
 	esidMessage := append(input.E.Bytes(), prover.sid...)
-	err = commitments.Open(hashFunc, esidMessage, prover.state.esidCommitment, input.EsidWitness)
+	err = commitments.Open(esidMessage, prover.state.esidCommitment, input.EsidWitness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}

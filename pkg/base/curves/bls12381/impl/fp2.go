@@ -220,7 +220,7 @@ func (f *Fp2) Neg(a *Fp2) *Fp2 {
 }
 
 // Sqrt performs field square root.
-func (f *Fp2) Sqrt(a *Fp2) (*Fp2, int) {
+func (f *Fp2) Sqrt(a *Fp2) (el *Fp2, e3 int) {
 	// Algorithm 9, https://eprint.iacr.org/2012/685.pdf
 	// with constant time modifications.
 	var a1, alpha, x0, t, res, res2 Fp2
@@ -281,7 +281,7 @@ func (f *Fp2) Sqrt(a *Fp2) (*Fp2, int) {
 
 	// is the result^2 = a
 	t.Square(&res)
-	e3 := t.Equal(a)
+	e3 = t.Equal(a)
 	f.CMove(f, &res, e3)
 	return f, e3
 }
@@ -289,7 +289,7 @@ func (f *Fp2) Sqrt(a *Fp2) (*Fp2, int) {
 // Invert computes the multiplicative inverse of this field
 // element, returning the original value of fp2
 // in the case that this element is zero.
-func (f *Fp2) Invert(arg *Fp2) (*Fp2, int) {
+func (f *Fp2) Invert(arg *Fp2) (el *Fp2, wasInverted int) {
 	// We wish to find the multiplicative inverse of a nonzero
 	// element a + bu in fp2. We leverage an identity
 	//
@@ -307,7 +307,7 @@ func (f *Fp2) Invert(arg *Fp2) (*Fp2, int) {
 	a.Square(&arg.A)
 	b.Square(&arg.B)
 	a.Add(&a, &b)
-	_, wasInverted := t.Invert(&a)
+	_, wasInverted = t.Invert(&a)
 	// a * t
 	a.Mul(&arg.A, &t)
 	// b * -t

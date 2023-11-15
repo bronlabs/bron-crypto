@@ -42,7 +42,7 @@ func testHappyPath(t *testing.T, threshold, n int) {
 		Hash:  sha256.New,
 	}
 
-	inG1 := curve.Name() == bls12381.G1Name
+	inG1 := curve.Name() == bls12381.NameG1
 	inG1s := make([]bool, n)
 	for i := 0; i < n; i++ {
 		inG1s[i] = inG1

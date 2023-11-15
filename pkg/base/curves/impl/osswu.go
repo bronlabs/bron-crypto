@@ -14,7 +14,7 @@ type SswuParams struct {
 
 // Osswu3mod4 computes the simplified map optmized for 3 mod 4 primes
 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#appendix-G.2.1
-func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
+func (p *SswuParams) Osswu3mod4(u *FieldValue) (x, y *FieldValue) {
 	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, aNeg, zA, y1, y2 [FieldLimbs]uint64
 	var wasInverted int
 	u.Arithmetic.Mul(&tv1, &u.Value, &u.Value) // tv1 = u^2
@@ -26,7 +26,7 @@ func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
 	u.Arithmetic.Neg(&aNeg, &p.A)
 	u.Arithmetic.Mul(&xd, &xd, &aNeg) // xd = -A * xd
 
-	xdIsZero := (&Field{
+	xdIsZero := (&FieldValue{
 		Value: xd,
 	}).IsZero()
 	u.Arithmetic.Mul(&zA, &p.Z, &p.A)
@@ -57,10 +57,10 @@ func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
 	u.Arithmetic.Square(&tv2, &y1)     // tv2 = y1^2
 	u.Arithmetic.Mul(&tv2, &tv2, &gxd) // tv2 = tv2 * gxd
 
-	e2 := (&Field{Value: tv2}).Equal(&Field{Value: gx1})
+	e2 := (&FieldValue{Value: tv2}).Equal(&FieldValue{Value: gx1})
 
-	x = new(Field).Set(u)
-	y = new(Field).Set(u)
+	x = new(FieldValue).Set(u)
+	y = new(FieldValue).Set(u)
 
 	// If e2, x = x1, else x = x2
 	u.Arithmetic.Selectznz(&x.Value, &x2n, &x1n, e2)

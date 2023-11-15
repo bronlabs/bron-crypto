@@ -1,20 +1,16 @@
 package lpdl
 
 import (
-	"crypto/sha256"
-
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 )
-
-var hashFunc = sha256.New
 
 type Round1Output struct {
 	RangeVerifierOutput    *paillierrange.Round1Output
@@ -54,11 +50,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = base.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
+	verifier.state.a, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = base.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
+	verifier.state.b, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
@@ -79,7 +75,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 	// 1.ii. compute c'' = commit(a, b)
 	cDoublePrimeMessage := append(verifier.state.a.Bytes(), verifier.state.b.Bytes()...)
-	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(hashFunc, cDoublePrimeMessage)
+	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(cDoublePrimeMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to a and b")
 	}
@@ -135,7 +131,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
 	bigQHatMessage := prover.state.bigQHat.ToAffineCompressed()
-	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(hashFunc, bigQHatMessage)
+	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(bigQHatMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
 	}
@@ -183,7 +179,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 
 	cDoublePrimeMessage := append(input.A.Bytes(), input.B.Bytes()...)
-	if err := commitments.Open(hashFunc, cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness); err != nil {
+	if err := commitments.Open(cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 
@@ -214,7 +210,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	bigQHatMessage := input.BigQHat.ToAffineCompressed()
-	if err := commitments.Open(hashFunc, bigQHatMessage, verifier.state.cHat, input.BigQHatWitness); err != nil {
+	if err := commitments.Open(bigQHatMessage, verifier.state.cHat, input.BigQHatWitness); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
 

@@ -1,24 +1,18 @@
 package dkg
 
 import (
-	"crypto/sha256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"io"
-
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-)
-
-var (
-	commitmentHashFunc = sha256.New
 )
 
 type Round1Broadcast struct {
@@ -465,25 +459,25 @@ func (p *Participant) Round8(input map[types.IdentityHash]*Round7P2P) (shard *li
 	}, nil
 }
 
-func commit(bigQPrime curves.Point, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+func commit(bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	message := []byte{}
 	message = append(message, bigQPrime.ToAffineCompressed()...)
 	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
 	message = append(message, sid...)
 	message = append(message, pid.ToAffineCompressed()...)
-	return commitments.Commit(commitmentHashFunc, message)
+	return commitments.Commit(message)
 }
 
-func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime curves.Point, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (err error) {
+func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (err error) {
 	message := []byte{}
 	message = append(message, bigQPrime.ToAffineCompressed()...)
 	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
 	message = append(message, sid...)
 	message = append(message, pid.ToAffineCompressed()...)
-	return commitments.Open(commitmentHashFunc, message, commitment, witness)
+	return commitments.Open(message, commitment, witness)
 }
 
-func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
+func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curve := bigQ.Curve()
@@ -505,7 +499,7 @@ func dlogProve(x curves.Scalar, bigQ curves.Point, bigQTwin curves.Point, sid []
 	return proof, nil
 }
 
-func dlogVerify(proof *dlog.Proof, bigQ curves.Point, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
+func dlogVerify(proof *dlog.Proof, bigQ, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript) (err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	curve := bigQ.Curve()

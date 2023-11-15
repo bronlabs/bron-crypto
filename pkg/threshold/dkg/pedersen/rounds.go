@@ -1,8 +1,7 @@
 package pedersen
 
 import (
-	"fmt"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -31,13 +30,16 @@ const (
 	SharingIdLabel = "Pedersen DKG sharing id parameter"
 )
 
-func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u map[types.IdentityHash]*Round1P2P, err error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
 	if a_i0 == nil {
-		a_i0 = p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		a_i0, err = p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		}
 	}
 
 	dealer, err := feldman.NewDealer(p.CohortConfig.Protocol.Threshold, p.CohortConfig.Protocol.TotalParties, p.CohortConfig.CipherSuite.Curve)
@@ -52,7 +54,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (*Round1Broadcast, map[types.Id
 	p.State.Commitments = commitments
 
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
-	transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", p.MySharingId)))
+	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
 	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
@@ -122,7 +124,7 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 			}
 
 			transcript := hagrid.NewTranscript(DkgLabel, nil)
-			transcript.AppendMessages(SharingIdLabel, []byte(fmt.Sprintf("%d", senderSharingId)))
+			transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(senderSharingId))
 			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "abort from dlog proof given sharing id ")
 			}

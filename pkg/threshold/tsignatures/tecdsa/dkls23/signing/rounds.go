@@ -3,8 +3,6 @@ package signing
 import (
 	"bytes"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -16,8 +14,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
 )
-
-var h = sha3.New256
 
 type Round1Broadcast struct {
 	R_i curves.Point
@@ -48,14 +44,20 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-func (ic *Cosigner) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
+func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*Round1P2P, err error) {
 	if ic.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
 	// step 1.1
-	ic.state.phi_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.phi_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample phi_i")
+	}
 	// step 1.2
-	ic.state.r_i = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.r_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample r_i")
+	}
 	// step 1.3
 	ic.state.R_i = ic.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ic.state.r_i)
 
@@ -68,7 +70,7 @@ func (ic *Cosigner) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2
 		// step 1.3.1
 		idHash := participant.Hash()
 		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[idHash], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
-		commitmentToInstanceKey, witness, err := commitments.Commit(h, message)
+		commitmentToInstanceKey, witness, err := commitments.Commit(message)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
 		}
@@ -202,7 +204,6 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 		// step 3.1.3
 		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[idHash], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[idHash].ToAffineCompressed())
 		if err := commitments.Open(
-			h,
 			supposedlyCommittedMessage,
 			ic.state.receivedCommitmentsToInstanceKey[idHash],
 			receivedP2PMessage.WitnessOfTheCommitmentToInstanceKey,
@@ -261,12 +262,16 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 	if err != nil {
 		return nil, errs.WrapFailed(err, "rx")
 	}
-	digest, err := hashing.CreateDigestScalar(ic.CohortConfig.CipherSuite, message)
+	digest, err := hashing.Hash(ic.CohortConfig.CipherSuite.Hash, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not produce digest")
+		return nil, errs.WrapFailed(err, "digest")
+	}
+	digestScalar, err := ic.CohortConfig.CipherSuite.Curve.Scalar().SetBytesWide(digest)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "digestScalar")
 	}
 	// TODO: redo when FieldElement.Scalar is implemented
-	w_i := digest.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
+	w_i := digestScalar.Mul(ic.state.phi_i).Add(rx.Mul(v_i))
 
 	ic.round++
 	// step 3.7
