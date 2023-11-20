@@ -19,7 +19,7 @@ type Participant struct {
 	prng io.Reader
 
 	Curve               curves.Curve
-	MyIdentityKey       integration.IdentityKey
+	MyAuthKey           integration.AuthKey
 	SharingIdToIdentity map[int]integration.IdentityKey
 
 	state *State
@@ -38,8 +38,8 @@ type State struct {
 	_ types.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(curve, identityKey, participants, prng)
+func NewParticipant(curve curves.Curve, authKey integration.AuthKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(curve, authKey, participants, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
@@ -47,10 +47,10 @@ func NewParticipant(curve curves.Curve, identityKey integration.IdentityKey, par
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_AGREE_ON_RANDOM", nil)
 	}
-	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(identityKey, participants)
+	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(authKey, participants)
 	return &Participant{
 		prng:                prng,
-		MyIdentityKey:       identityKey,
+		MyAuthKey:           authKey,
 		round:               1,
 		Curve:               curve,
 		SharingIdToIdentity: sharingIdToIdentity,
@@ -86,8 +86,8 @@ func validateInputs(curve curves.Curve, identityKey integration.IdentityKey, par
 	return nil
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 // TODO: implement this

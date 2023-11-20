@@ -20,7 +20,7 @@ func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (pa
 	i := -1
 	for _, identity := range sortedIdentities {
 		i++
-		participants[i], err = noninteractive_signing.NewPreGenParticipant(identity, cohortConfig, tau, crand.Reader)
+		participants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(integration.AuthKey), cohortConfig, tau, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

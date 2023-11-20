@@ -21,7 +21,7 @@ type Participant struct {
 
 	UniqueSessionId    []byte
 	Curve              curves.Curve
-	MyIdentityKey      integration.IdentityKey
+	MyAuthKey          integration.AuthKey
 	MySharingId        int
 	SortedParticipants []integration.IdentityKey
 
@@ -49,11 +49,11 @@ type committedSeedContribution struct {
 	_ types.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, authKey integration.AuthKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if curve == nil {
 		return nil, errs.NewInvalidArgument("curve is nil")
 	}
-	if identityKey == nil {
+	if authKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
 	if len(uniqueSessionId) == 0 {
@@ -67,11 +67,11 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	_, found := participants.Get(identityKey)
+	_, found := participants.Get(authKey)
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, participants)
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
@@ -87,7 +87,7 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	return &Participant{
 		prng:                   prng,
 		Curve:                  curve,
-		MyIdentityKey:          identityKey,
+		MyAuthKey:              authKey,
 		MySharingId:            mySharingId,
 		SortedParticipants:     sortedParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
@@ -101,8 +101,8 @@ func NewParticipant(curve curves.Curve, uniqueSessionId []byte, identityKey inte
 	}, nil
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 func (p *Participant) GetSharingId() int {

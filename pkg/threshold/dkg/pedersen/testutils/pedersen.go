@@ -30,7 +30,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity, cohortConfig, nil, prng)
+		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

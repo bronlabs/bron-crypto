@@ -18,7 +18,7 @@ type Cosigner struct {
 	signer       *bls.Signer[bls.G1, bls.G2]
 	cohortConfig *integration.CohortConfig
 
-	myIdentityKey          integration.IdentityKey
+	myAuthKey              integration.AuthKey
 	mySharingId            int
 	myShard                *glow.Shard
 	identityKeyToSharingId map[types.IdentityHash]int
@@ -29,8 +29,8 @@ type Cosigner struct {
 	round      int
 }
 
-func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *Cosigner) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *Cosigner) GetSharingId() int {
@@ -43,15 +43,15 @@ func (p *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (p *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewCosigner(sid []byte, myIdentityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *glow.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
-	if err := validateInputs(sid, myIdentityKey, sessionParticipants, myShard, cohortConfig, prng); err != nil {
+func NewCosigner(sid []byte, myAuthKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *glow.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
+	if err := validateInputs(sid, myAuthKey, sessionParticipants, myShard, cohortConfig, prng); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "couldn't construct the cossigner")
 	}
 	if transcript == nil {
@@ -59,7 +59,7 @@ func NewCosigner(sid []byte, myIdentityKey integration.IdentityKey, sessionParti
 	}
 	transcript.AppendMessages("threshold bls signing", sid)
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
 	signingKeyShareAsPrivateKey, err := bls.NewPrivateKey[bls.G1](myShard.SigningKeyShare.Share)
 	if err != nil {
@@ -73,7 +73,7 @@ func NewCosigner(sid []byte, myIdentityKey integration.IdentityKey, sessionParti
 	return &Cosigner{
 		signer:                 signer,
 		cohortConfig:           cohortConfig,
-		myIdentityKey:          myIdentityKey,
+		myAuthKey:              myAuthKey,
 		sid:                    sid,
 		identityKeyToSharingId: identityKeyToSharingId,
 		mySharingId:            mySharingId,
@@ -84,7 +84,7 @@ func NewCosigner(sid []byte, myIdentityKey integration.IdentityKey, sessionParti
 	}, nil
 }
 
-func validateInputs(sid []byte, myIdentityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *glow.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+func validateInputs(sid []byte, myAuthKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *glow.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) error {
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -103,10 +103,10 @@ func validateInputs(sid []byte, myIdentityKey integration.IdentityKey, sessionPa
 	if sessionParticipants.Len() < cohortConfig.Protocol.Threshold {
 		return errs.NewIncorrectCount("too few present participants")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("my identity key is missing")
 	}
-	if !cohortConfig.IsInCohort(myIdentityKey) {
+	if !cohortConfig.IsInCohort(myAuthKey) {
 		return errs.NewMembershipError("i'm not in cohort")
 	}
 	if shard == nil || shard.SigningKeyShare == nil {

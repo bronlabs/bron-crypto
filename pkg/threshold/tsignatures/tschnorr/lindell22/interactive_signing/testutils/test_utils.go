@@ -23,7 +23,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewMissing("cohort is missing identity")
 		}
-		participants[i], err = interactive_signing.NewCosigner(identity, sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], taproot, prng)
+		participants[i], err = interactive_signing.NewCosigner(identity.(integration.AuthKey), sid, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, allTranscripts[i], taproot, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
@@ -45,7 +45,7 @@ func DoRound1(participants []*interactive_signing.Cosigner) (round2Inputs []map[
 	for i := range participants {
 		round2Inputs[i] = make(map[types.IdentityHash]*interactive_signing.Round1Broadcast)
 		for j := range participants {
-			round2Inputs[i][participants[j].GetIdentityKey().Hash()] = round1Outputs[j]
+			round2Inputs[i][participants[j].GetAuthKey().Hash()] = round1Outputs[j]
 		}
 	}
 
@@ -65,7 +65,7 @@ func DoRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[t
 	for i := range participants {
 		round3Inputs[i] = make(map[types.IdentityHash]*interactive_signing.Round2Broadcast)
 		for j := range participants {
-			round3Inputs[i][participants[j].GetIdentityKey().Hash()] = round2Outputs[j]
+			round3Inputs[i][participants[j].GetAuthKey().Hash()] = round2Outputs[j]
 		}
 	}
 

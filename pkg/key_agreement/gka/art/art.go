@@ -22,8 +22,8 @@ type AsynchronousRatchetTree struct {
 // NewAsynchronousRatchetTree creates the asynchronous ratcheting tree.
 // The leaf node with the lexicographically lowest identity key becomes a leader of the group
 // (i.e. generates keys at non-leaves nodes which other group members updates on).
-func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, theirIdentityKeys, theirEphemeralKeys []curves.Point) (ratchetTree *AsynchronousRatchetTree, err error) {
-	myPublicIdentityKey := myIdentityKey.Curve().ScalarBaseMult(myIdentityKey)
+func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirIdentityKeys, theirEphemeralKeys []curves.Point) (ratchetTree *AsynchronousRatchetTree, err error) {
+	myPublicIdentityKey := myAuthKey.Curve().ScalarBaseMult(myAuthKey)
 	myPublicEphemeralKey := myEphemeralKey.Curve().ScalarBaseMult(myEphemeralKey)
 
 	// 1. [Build ART] Construct full binary tree.
@@ -36,7 +36,7 @@ func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, the
 			publicEphemeralKey: theirEphemeralKeys[i],
 		}
 		if myPublicIdentityKey.Equal(theirIdentityKeys[i]) {
-			leaves[i].privateIdentityKey = myIdentityKey
+			leaves[i].privateIdentityKey = myAuthKey
 			leaves[i].privateEphemeralKey = myEphemeralKey
 		}
 	}
@@ -95,7 +95,7 @@ func NewAsynchronousRatchetTree(myIdentityKey, myEphemeralKey curves.Scalar, the
 
 	// 4. Rebuild node keys.
 	art := &AsynchronousRatchetTree{
-		myIdentitySecret:  myIdentityKey,
+		myIdentitySecret:  myAuthKey,
 		myEphemeralSecret: myEphemeralKey,
 		myIdentityPublic:  myPublicIdentityKey,
 		myEphemeralPublic: myPublicEphemeralKey,

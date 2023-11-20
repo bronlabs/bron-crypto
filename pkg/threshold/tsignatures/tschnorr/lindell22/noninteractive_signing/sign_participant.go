@@ -15,7 +15,7 @@ import (
 type Cosigner struct {
 	lindell22.Participant
 
-	myIdentityKey       integration.IdentityKey
+	myAuthKey           integration.AuthKey
 	mySharingId         int
 	myShard             *lindell22.Shard
 	myPreSignature      *lindell22.PreSignature
@@ -30,8 +30,8 @@ type Cosigner struct {
 	_ types.Incomparable
 }
 
-func (c *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return c.myIdentityKey
+func (c *Cosigner) GetAuthKey() integration.AuthKey {
+	return c.myAuthKey
 }
 
 func (c *Cosigner) GetSharingId() int {
@@ -44,32 +44,32 @@ func (c *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (c *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range c.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(c.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(c.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+func NewCosigner(myAuthKey integration.AuthKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
 	if err := myShard.Validate(cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "shard is invalid")
 	}
-	if err := validateCosignerInputs(myIdentityKey, myShard, cohortConfig); err != nil {
+	if err := validateCosignerInputs(myAuthKey, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
 	}
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 	return &Cosigner{
-		myIdentityKey:          myIdentityKey,
+		myAuthKey:              myAuthKey,
 		mySharingId:            mySharingId,
 		myShard:                myShard,
 		myPreSignature:         preSignatureBatch.PreSignatures[preSignatureIndex],

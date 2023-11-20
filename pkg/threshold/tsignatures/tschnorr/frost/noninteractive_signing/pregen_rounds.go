@@ -35,7 +35,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Ej := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(ej)
 		message := Dj.ToAffineCompressed()
 		message = append(message, Ej.ToAffineCompressed()...)
-		attestation := p.MyIdentityKey.Sign(message)
+		attestation := p.MyAuthKey.Sign(message)
 
 		p.state.ds[j] = dj
 		p.state.es[j] = ej
@@ -56,10 +56,10 @@ func (p *PreGenParticipant) Round2(round1output map[types.IdentityHash]*Round1Br
 	if p.round != 2 {
 		return nil, nil, errs.NewInvalidRound("rounds mismatch %d != 1", p.round)
 	}
-	if _, exists := round1output[p.MyIdentityKey.Hash()]; exists {
+	if _, exists := round1output[p.MyAuthKey.Hash()]; exists {
 		return nil, nil, errs.NewFailed("message found whose sender is me")
 	}
-	round1output[p.MyIdentityKey.Hash()] = &Round1Broadcast{
+	round1output[p.MyAuthKey.Hash()] = &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	}

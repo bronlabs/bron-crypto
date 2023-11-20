@@ -33,7 +33,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}
 	commitment, witness, err := commitments.Commit(r_i.Bytes())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyIdentityKey.Hash())
+		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyAuthKey.Hash())
 	}
 	p.round++
 	p.state.r_i = r_i
@@ -72,7 +72,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 			return nil, errs.WrapIdentifiableAbort(err, key, "commitment from participant with sharing id can't be opened")
 		}
 	}
-	round2output[p.MyIdentityKey.Hash()] = &Round2Broadcast{
+	round2output[p.MyAuthKey.Hash()] = &Round2Broadcast{
 		Ri: p.state.r_i,
 	}
 	sortRandomnessContributions, err := p.sortRandomnessContributions(round2output)

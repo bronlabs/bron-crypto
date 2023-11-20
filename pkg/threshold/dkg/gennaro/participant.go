@@ -23,8 +23,8 @@ var _ integration.Participant = (*Participant)(nil)
 type Participant struct {
 	prng io.Reader
 
-	MyIdentityKey integration.IdentityKey
-	MySharingId   int
+	MyAuthKey   integration.AuthKey
+	MySharingId int
 
 	CohortConfig           *integration.CohortConfig
 	UniqueSessionId        []byte
@@ -38,8 +38,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 func (p *Participant) GetSharingId() int {
@@ -63,8 +63,8 @@ type State struct {
 	_ types.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng)
+func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
@@ -77,7 +77,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return nil, errs.WrapHashingFailed(err, "failed to hash to curve for H")
 	}
 	result := &Participant{
-		MyIdentityKey: identityKey,
+		MyAuthKey: authKey,
 		state: &State{
 			transcript: transcript,
 		},
@@ -87,7 +87,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		round:           1,
 		UniqueSessionId: uniqueSessionId,
 	}
-	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
+	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
 	return result, nil
 }
 

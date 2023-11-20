@@ -15,8 +15,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.pedersenParty.GetIdentityKey()
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.pedersenParty.GetAuthKey()
 }
 
 func (p *Participant) GetSharingId() int {
@@ -27,12 +27,12 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.pedersenParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
-	err := validateInputs(cohortConfig, identityKey, prng)
+func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+	err := validateInputs(cohortConfig, authKey, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-	party, err := pedersen.NewParticipant(uniqueSessionId, identityKey, cohortConfig, nil, prng)
+	party, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, nil, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}

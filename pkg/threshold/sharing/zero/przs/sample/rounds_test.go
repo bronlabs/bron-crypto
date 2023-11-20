@@ -222,9 +222,9 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	}
 	prng, err := chacha20.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
-	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity, aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity, bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity, charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}), prng)
+	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity.(integration.AuthKey), aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
+	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity.(integration.AuthKey), bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
+	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity.(integration.AuthKey), charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}), prng)
 
 	aliceSample, err := aliceParticipant.Sample()
 	require.NoError(t, err)

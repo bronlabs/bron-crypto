@@ -129,11 +129,11 @@ func doNonInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite,
 	require.NoError(t, err)
 
 	aliceShard := shards[identities[aliceIdx].Hash()]
-	alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
+	alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx].(integration.AuthKey), aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	bobShard := shards[identities[bobIdx].Hash()]
-	bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx], bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
+	bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx].(integration.AuthKey), bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, crand.Reader)
 	require.NoError(t, err)
 
 	partialSignature, err := alice.ProducePartialSignature(message)
@@ -183,7 +183,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	require.NoError(t, err)
 
 	aliceShard := shards[alice.Hash()]
-	primary, err := interactive_signing.NewPrimaryCosigner(alice, bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := interactive_signing.NewPrimaryCosigner(alice.(integration.AuthKey), bob, aliceShard, cohortConfig, sessionId, nil, crand.Reader)
 	if err != nil {
 		if errs.IsInvalidArgument(err) {
 			t.Skip()
@@ -193,7 +193,7 @@ func doInteractiveSigning(t *testing.T, cipherSuite *integration.CipherSuite, fz
 	require.NoError(t, err)
 
 	bobShard := shards[bob.Hash()]
-	secondary, err := interactive_signing.NewSecondaryCosigner(bob, alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := interactive_signing.NewSecondaryCosigner(bob.(integration.AuthKey), alice, bobShard, cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 

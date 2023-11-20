@@ -131,10 +131,10 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 	cohortConfigBob, err := integration_testutils.MakeCohortProtocol(bobCipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	alice, err := dkg.NewParticipant[bls.G1](sid, aliceId, cohortConfigAlice, nil, crand.Reader)
+	alice, err := dkg.NewParticipant[bls.G1](sid, aliceId.(integration.AuthKey), cohortConfigAlice, nil, crand.Reader)
 	require.NoError(t, err)
 
-	bob, err := dkg.NewParticipant[bls.G2](sid, bobId, cohortConfigBob, nil, crand.Reader)
+	bob, err := dkg.NewParticipant[bls.G2](sid, bobId.(integration.AuthKey), cohortConfigBob, nil, crand.Reader)
 	require.NoError(t, err)
 
 	aliceR1Broadcast, aliceR1P2P, err := alice.Round1()

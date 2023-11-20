@@ -20,7 +20,7 @@ func MakeSetupParticipants(curve curves.Curve, identities []integration.Identity
 		return nil, errs.WrapFailed(err, "could not run agree on random")
 	}
 	for i, identity := range identities {
-		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity, hashset.NewHashSet(identities), nil, prng)
+		participants[i], err = setup.NewParticipant(curve, uniqueSessionId, identity.(integration.AuthKey), hashset.NewHashSet(identities), nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

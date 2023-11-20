@@ -85,7 +85,7 @@ func doInteractiveSign(cohortConfig *integration.CohortConfig, identities []inte
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
 	var producedSignatures []*schnorr.Signature
 	for i, participant := range participants {
-		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
+		if cohortConfig.IsSignatureAggregator(participant.MyAuthKey) {
 			signature, err := participant.Aggregate(message, mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			if err != nil {

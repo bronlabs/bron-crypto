@@ -163,7 +163,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	mappedPartialSignatures := testutils.MapPartialSignatures(signingIdentities, partialSignatures)
 	var producedSignatures []*schnorr.Signature
 	for i, participant := range signingParticipants {
-		if cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
+		if cohortConfig.IsSignatureAggregator(participant.MyAuthKey) {
 			signature, err := participant.Aggregate([]byte(message), mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
@@ -201,7 +201,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 
 	cosigners := make([]*noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
-		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
+		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(integration.AuthKey), shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
 		require.NoError(t, err)
 	}
 
@@ -233,7 +233,7 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 	pregenParticipants := make([]*noninteractive_signing.PreGenParticipant, cohortConfig.Protocol.TotalParties)
 	var err error
 	for i, identity := range identities {
-		pregenParticipants[i], err = noninteractive_signing.NewPreGenParticipant(identity, cohortConfig, tau, random)
+		pregenParticipants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(integration.AuthKey), cohortConfig, tau, random)
 		require.NoError(t, err)
 	}
 	round1Outputs := make([]*noninteractive_signing.Round1Broadcast, len(participants))
@@ -246,7 +246,7 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round2Inputs[i] = make(map[types.IdentityHash]*noninteractive_signing.Round1Broadcast)
 		for j := range participants {
 			if j != i {
-				round2Inputs[i][participants[j].MyIdentityKey.Hash()] = round1Outputs[j]
+				round2Inputs[i][participants[j].MyAuthKey.Hash()] = round1Outputs[j]
 			}
 		}
 	}

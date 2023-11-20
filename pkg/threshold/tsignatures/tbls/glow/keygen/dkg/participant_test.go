@@ -28,8 +28,8 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	uniqueSessionId := []byte("sid")
 
-	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0], cohortConfig, nil, crand.Reader)
-	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1], cohortConfig, nil, crand.Reader)
+	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0].(integration.AuthKey), cohortConfig, nil, crand.Reader)
+	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1].(integration.AuthKey), cohortConfig, nil, crand.Reader)
 	for _, party := range []*dkg.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

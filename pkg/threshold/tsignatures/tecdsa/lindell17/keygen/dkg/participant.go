@@ -50,7 +50,7 @@ type State struct {
 
 type Participant struct {
 	lindell17.Participant
-	myIdentityKey     integration.IdentityKey
+	myAuthKey         integration.AuthKey
 	mySharingId       int
 	mySigningKeyShare *tsignatures.SigningKeyShare
 	publicKeyShares   *tsignatures.PublicKeyShares
@@ -71,8 +71,8 @@ const (
 	transcriptSessionIdLabel = "Lindell2017 DKG Session"
 )
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *Participant) GetSharingId() int {
@@ -83,8 +83,8 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.cohortConfig
 }
 
-func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcripts.Transcript) (participant *Participant, err error) {
-	err = validateInputs(myIdentityKey, mySigningKeyShare, publicKeyShares, cohortConfig, prng, sessionId)
+func NewBackupParticipant(myAuthKey integration.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcripts.Transcript) (participant *Participant, err error) {
+	err = validateInputs(myAuthKey, mySigningKeyShare, publicKeyShares, cohortConfig, prng, sessionId)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
@@ -94,10 +94,10 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	_, idKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, idKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
 	return &Participant{
-		myIdentityKey:     myIdentityKey,
+		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
@@ -111,7 +111,7 @@ func NewBackupParticipant(myIdentityKey integration.IdentityKey, mySigningKeySha
 	}, nil
 }
 
-func validateInputs(myIdentityKey integration.IdentityKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte) error {
+func validateInputs(myAuthKey integration.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -127,10 +127,10 @@ func validateInputs(myIdentityKey integration.IdentityKey, mySigningKeyShare *ts
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("my identity key is nil")
 	}
-	if !cohortConfig.Participants.Contains(myIdentityKey) {
+	if !cohortConfig.Participants.Contains(myAuthKey) {
 		return errs.NewInvalidArgument("identity key is not in cohort config")
 	}
 	if len(sessionId) == 0 {

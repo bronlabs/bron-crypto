@@ -58,7 +58,7 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	}
 	message := ac.D.ToAffineCompressed()
 	message = append(message, ac.E.ToAffineCompressed()...)
-	if err := ac.Attestor.Verify(ac.Attestation, ac.Attestor.PublicKey(), message); err != nil {
+	if err := ac.Attestor.Verify(ac.Attestation, message); err != nil {
 		return errs.WrapVerificationFailed(err, "could not verify attestation")
 	}
 	return nil

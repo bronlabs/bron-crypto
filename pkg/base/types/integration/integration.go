@@ -15,17 +15,21 @@ import (
 )
 
 type Participant interface {
-	GetIdentityKey() IdentityKey
+	GetAuthKey() AuthKey
 	GetSharingId() int
 	GetCohortConfig() *CohortConfig
 }
 
 type IdentityKey interface {
-	Sign(message []byte) []byte
-	Verify(signature []byte, publicKey curves.Point, message []byte) error
+	Verify(signature []byte, message []byte) error
 	PublicKey() curves.Point
-	PrivateKey() curves.Scalar
 	types.Hashable
+}
+
+type AuthKey interface {
+	IdentityKey
+	Sign(message []byte) []byte
+	PrivateKey() curves.Scalar
 }
 
 type CipherSuite struct {

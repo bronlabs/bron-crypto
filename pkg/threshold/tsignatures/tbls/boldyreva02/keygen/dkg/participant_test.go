@@ -31,8 +31,8 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	uniqueSessionId := []byte("sid")
 
-	aliceInG1, err := dkg.NewParticipant[bls.G1](uniqueSessionId, identities[0], cohortConfig, nil, crand.Reader)
-	bobInG1, err := dkg.NewParticipant[bls.G1](uniqueSessionId, identities[1], cohortConfig, nil, crand.Reader)
+	aliceInG1, err := dkg.NewParticipant[bls.G1](uniqueSessionId, identities[0].(integration.AuthKey), cohortConfig, nil, crand.Reader)
+	bobInG1, err := dkg.NewParticipant[bls.G1](uniqueSessionId, identities[1].(integration.AuthKey), cohortConfig, nil, crand.Reader)
 	for _, party := range []*dkg.Participant[bls.G1]{aliceInG1, bobInG1} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

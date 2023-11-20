@@ -77,7 +77,7 @@ func (p *Participant) Round3(round1output map[types.IdentityHash]*Round2Broadcas
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce session id")
 	}
-	p.Main, err = dkls23.NewParticipant(p.UniqueSessionId, p.GetIdentityKey(), p.GetCohortConfig(), p.prng, p.transcript)
+	p.Main, err = dkls23.NewParticipant(p.UniqueSessionId, p.GetAuthKey(), p.GetCohortConfig(), p.prng, p.transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct main party")
 	}
@@ -109,7 +109,7 @@ func (p *Participant) Round5(round3broadcast map[types.IdentityHash]*Round4Broad
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce main shard")
 	}
-	p.Backup, err = lindell17.NewBackupParticipant(p.GetIdentityKey(), p.Main.Shard.SigningKeyShare, p.Main.Shard.PublicKeyShares, p.GetCohortConfig(), p.prng, p.UniqueSessionId, p.transcript)
+	p.Backup, err = lindell17.NewBackupParticipant(p.GetAuthKey(), p.Main.Shard.SigningKeyShare, p.Main.Shard.PublicKeyShares, p.GetCohortConfig(), p.prng, p.UniqueSessionId, p.transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce backup party")
 	}

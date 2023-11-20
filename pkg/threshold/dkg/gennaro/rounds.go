@@ -208,7 +208,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't derive public key shares")
 	}
-	myPresumedPublicKeyShare := publicKeySharesMap[p.MyIdentityKey.Hash()]
+	myPresumedPublicKeyShare := publicKeySharesMap[p.MyAuthKey.Hash()]
 	myPublicKeyShare := p.CohortConfig.CipherSuite.Curve.ScalarBaseMult(p.state.secretKeyShare)
 	if !myPublicKeyShare.Equal(myPresumedPublicKeyShare) {
 		return nil, nil, errs.NewFailed("did not calculate my public key share correctly")

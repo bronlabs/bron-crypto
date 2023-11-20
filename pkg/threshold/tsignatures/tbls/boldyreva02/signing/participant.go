@@ -16,7 +16,7 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	signer       *bls.Signer[K, S]
 	cohortConfig *integration.CohortConfig
 
-	myIdentityKey          integration.IdentityKey
+	myAuthKey              integration.AuthKey
 	mySharingId            int
 	myShard                *boldyreva02.Shard[K]
 	identityKeyToSharingId map[types.IdentityHash]int
@@ -27,8 +27,8 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	round      int
 }
 
-func (p *Cosigner[K, S]) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *Cosigner[K, S]) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *Cosigner[K, S]) GetSharingId() int {
@@ -41,15 +41,15 @@ func (p *Cosigner[K, S]) GetCohortConfig() *integration.CohortConfig {
 
 func (p *Cosigner[K, S]) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdentityKey integration.IdentityKey, scheme bls.RogueKeyPrevention, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
-	if err := validateInputs[K, S](sid, myIdentityKey, sessionParticipants, myShard, cohortConfig); err != nil {
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey integration.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+	if err := validateInputs[K, S](sid, authKey, sessionParticipants, myShard, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "couldn't construct the cossigner")
 	}
 	if transcript == nil {
@@ -57,7 +57,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 	}
 	transcript.AppendMessages("threshold bls signing", sid)
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
 
 	signingKeyShareAsPrivateKey, err := bls.NewPrivateKey[K](myShard.SigningKeyShare.Share)
 	if err != nil {
@@ -71,7 +71,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 	return &Cosigner[K, S]{
 		signer:                 signer,
 		cohortConfig:           cohortConfig,
-		myIdentityKey:          myIdentityKey,
+		myAuthKey:              authKey,
 		sid:                    sid,
 		identityKeyToSharingId: identityKeyToSharingId,
 		mySharingId:            mySharingId,
@@ -82,7 +82,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdent
 	}, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myIdentityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myAuthKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig) error {
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -101,10 +101,10 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myId
 	if sessionParticipants.Len() < cohortConfig.Protocol.Threshold {
 		return errs.NewIncorrectCount("too few present participants")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("my identity key is missing")
 	}
-	if !cohortConfig.IsInCohort(myIdentityKey) {
+	if !cohortConfig.IsInCohort(myAuthKey) {
 		return errs.NewMembershipError("i'm not in cohort")
 	}
 	if shard == nil || shard.SigningKeyShare == nil {

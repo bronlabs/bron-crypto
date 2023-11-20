@@ -40,7 +40,7 @@ func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortCon
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = dkg.NewParticipant(sid, identity, cohortConfig, prng, nil)
+		participants[i], err = dkg.NewParticipant(sid, identity.(integration.AuthKey), cohortConfig, prng, nil)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

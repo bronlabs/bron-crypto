@@ -9,10 +9,10 @@ import (
 var _ integration.Participant = (*Participant)(nil)
 
 type Participant struct {
-	cipherSuite   *integration.CipherSuite
-	MyIdentityKey integration.IdentityKey
-	MySharingId   int
-	sid           []byte
+	cipherSuite *integration.CipherSuite
+	MyAuthKey   integration.AuthKey
+	MySharingId int
+	sid         []byte
 
 	CohortConfig *integration.CohortConfig
 
@@ -23,8 +23,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 func (p *Participant) GetSharingId() int {
@@ -42,7 +42,7 @@ type State struct {
 	_ types.Incomparable
 }
 
-func NewInitiator(cipherSuite *integration.CipherSuite, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, sid, message []byte) (*Participant, error) {
+func NewInitiator(cipherSuite *integration.CipherSuite, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, sid, message []byte) (*Participant, error) {
 	err := cipherSuite.Validate()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid cipher cipherSuite")
@@ -54,7 +54,7 @@ func NewInitiator(cipherSuite *integration.CipherSuite, identityKey integration.
 	if cohortConfig.Participants.Len() <= 2 {
 		return nil, errs.NewInvalidArgument("cohort config has less than 3 participants")
 	}
-	if identityKey == nil {
+	if authKey == nil {
 		return nil, errs.NewInvalidArgument("identityKey is nil")
 	}
 	if message == nil {
@@ -64,21 +64,21 @@ func NewInitiator(cipherSuite *integration.CipherSuite, identityKey integration.
 		return nil, errs.NewIsNil("sid is nil")
 	}
 	result := &Participant{
-		MyIdentityKey: identityKey,
-		cipherSuite:   cipherSuite,
-		initiator:     identityKey,
-		sid:           sid,
+		MyAuthKey:   authKey,
+		cipherSuite: cipherSuite,
+		initiator:   authKey,
+		sid:         sid,
 		state: &State{
 			messageToBroadcast: message,
 		},
 		CohortConfig: cohortConfig,
 		round:        1,
 	}
-	_, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
+	_, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
 	return result, nil
 }
 
-func NewResponder(cipherSuite *integration.CipherSuite, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, sid []byte, initiator integration.IdentityKey) (*Participant, error) {
+func NewResponder(cipherSuite *integration.CipherSuite, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, sid []byte, initiator integration.IdentityKey) (*Participant, error) {
 	err := cipherSuite.Validate()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid cipher cipherSuite")
@@ -90,25 +90,25 @@ func NewResponder(cipherSuite *integration.CipherSuite, identityKey integration.
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid cohort config")
 	}
-	if identityKey == nil {
+	if authKey == nil {
 		return nil, errs.NewInvalidArgument("identityKey is nil")
 	}
 	if sid == nil {
 		return nil, errs.NewIsNil("sid is nil")
 	}
 	result := &Participant{
-		MyIdentityKey: identityKey,
-		cipherSuite:   cipherSuite,
-		initiator:     initiator,
-		sid:           sid,
-		state:         &State{},
-		CohortConfig:  cohortConfig,
-		round:         1,
+		MyAuthKey:    authKey,
+		cipherSuite:  cipherSuite,
+		initiator:    initiator,
+		sid:          sid,
+		state:        &State{},
+		CohortConfig: cohortConfig,
+		round:        1,
 	}
-	_, _, result.MySharingId = integration.DeriveSharingIds(identityKey, result.CohortConfig.Participants)
+	_, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
 	return result, nil
 }
 
 func (p *Participant) IsInitiator() bool {
-	return p.MyIdentityKey.PublicKey().Equal(p.initiator.PublicKey())
+	return p.MyAuthKey.PublicKey().Equal(p.initiator.PublicKey())
 }

@@ -31,7 +31,7 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 	var result = make(map[types.IdentityHash]*Round1P2P)
 	if p.IsInitiator() {
 		for _, participant := range p.CohortConfig.Participants.Iter() {
-			if participant.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+			if participant.PublicKey().Equal(p.MyAuthKey.PublicKey()) {
 				continue
 			}
 			var authMessage []byte
@@ -40,7 +40,7 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 			authMessage = append(authMessage, p.state.messageToBroadcast...)
 			// step 1.1 and 1.2
 			result[participant.Hash()] = &Round1P2P{
-				InitiatorSignature: p.MyIdentityKey.Sign(authMessage),
+				InitiatorSignature: p.MyAuthKey.Sign(authMessage),
 				Message:            p.state.messageToBroadcast,
 			}
 		}
@@ -61,15 +61,15 @@ func (p *Participant) Round2(p2pMessage *Round1P2P) (map[types.IdentityHash]*Rou
 		}
 
 		for _, participant := range p.CohortConfig.Participants.Iter() {
-			if participant.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+			if types.Equals(participant, p.MyAuthKey) {
 				continue
 			}
 			var authMessage []byte
 			authMessage = append(authMessage, p.sid...)
-			authMessage = append(authMessage, p.MyIdentityKey.PublicKey().ToAffineCompressed()...)
+			authMessage = append(authMessage, p.MyAuthKey.PublicKey().ToAffineCompressed()...)
 			authMessage = append(authMessage, p2pMessage.Message...)
 			// step 2.2 if responder
-			err := p.initiator.Verify(p2pMessage.InitiatorSignature, p.initiator.PublicKey(), authMessage)
+			err := p.initiator.Verify(p2pMessage.InitiatorSignature, authMessage)
 			if err != nil {
 				// step 2.3
 				return nil, errs.NewIdentifiableAbort(p.initiator.Hash(), "failed to verify signature")
@@ -126,7 +126,7 @@ func (p *Participant) Round3(p2pMessages map[types.IdentityHash]*Round2P2P) ([]b
 			authMessage = append(authMessage, sender.PublicKey().ToAffineCompressed()...)
 			authMessage = append(authMessage, message.Message...)
 			// Step 3.1
-			err := p.initiator.Verify(message.InitiatorSignature, p.initiator.PublicKey(), authMessage)
+			err := p.initiator.Verify(message.InitiatorSignature, authMessage)
 			if err != nil {
 				return nil, errs.NewIdentifiableAbort(sender.Hash(), "failed to verify signature")
 			}

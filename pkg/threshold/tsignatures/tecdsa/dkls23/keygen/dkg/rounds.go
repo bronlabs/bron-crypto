@@ -163,7 +163,7 @@ func (p *Participant) Round6(round5output map[types.IdentityHash]Round5P2P) (*dk
 	}
 	p.Shard.PairwiseBaseOTs = map[types.IdentityHash]*dkls23.BaseOTConfig{}
 	for _, identity := range p.GetCohortConfig().Participants.Iter() {
-		if identity.PublicKey().Equal(p.MyIdentityKey.PublicKey()) {
+		if identity.PublicKey().Equal(p.MyAuthKey.PublicKey()) {
 			continue
 		}
 		p.Shard.PairwiseBaseOTs[identity.Hash()] = &dkls23.BaseOTConfig{

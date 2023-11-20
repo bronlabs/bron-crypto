@@ -87,7 +87,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	bigQDoublePrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQWitness, err := commit(bigQPrime, bigQDoublePrime, p.sessionId, p.myIdentityKey.PublicKey())
+	bigQCommitment, bigQWitness, err := commit(bigQPrime, bigQDoublePrime, p.sessionId, p.myAuthKey.PublicKey())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
 	}
@@ -99,7 +99,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	p.state.myBigQWitness = bigQWitness
 
 	// some paranoid checks
-	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQDoublePrime).Equal(p.publicKeyShares.SharesMap[p.myIdentityKey.Hash()]) {
+	if !bigQPrime.Add(bigQPrime).Add(bigQPrime).Add(bigQDoublePrime).Equal(p.publicKeyShares.SharesMap[p.myAuthKey.Hash()]) {
 		return nil, errs.NewFailed("something went really wrong")
 	}
 
@@ -118,7 +118,7 @@ func (p *Participant) Round2(input map[types.IdentityHash]*Round1Broadcast) (out
 	// 2. store commitments
 	p.state.theirBigQCommitment = make(map[types.IdentityHash]commitments.Commitment)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -160,7 +160,7 @@ func (p *Participant) Round3(input map[types.IdentityHash]*Round2Broadcast) (out
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -214,7 +214,7 @@ func (p *Participant) Round3(input map[types.IdentityHash]*Round2Broadcast) (out
 	p.state.lpdlPrimeProvers = make(map[types.IdentityHash]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[types.IdentityHash]*lpdl.Prover)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		paillierProofsTranscript := p.transcript.Clone()
@@ -256,7 +256,7 @@ func (p *Participant) Round4(input map[types.IdentityHash]*Round3Broadcast) (out
 
 	round4Outputs := make(map[types.IdentityHash]*Round4P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -324,7 +324,7 @@ func (p *Participant) Round5(input map[types.IdentityHash]*Round4P2P) (output ma
 	// 5. LP and LPDL continue
 	round5Outputs := make(map[types.IdentityHash]*Round5P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -359,7 +359,7 @@ func (p *Participant) Round6(input map[types.IdentityHash]*Round5P2P) (output ma
 	// 6. LP and LPDL continue
 	round6Outputs := make(map[types.IdentityHash]*Round6P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -394,7 +394,7 @@ func (p *Participant) Round7(input map[types.IdentityHash]*Round6P2P) (output ma
 	// 7. LP and LPDL continue
 	round7Outputs := make(map[types.IdentityHash]*Round7P2P)
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()
@@ -427,7 +427,7 @@ func (p *Participant) Round8(input map[types.IdentityHash]*Round7P2P) (shard *li
 	}
 
 	for _, identity := range p.cohortConfig.Participants.Iter() {
-		if types.Equals(identity, p.myIdentityKey) {
+		if types.Equals(identity, p.myAuthKey) {
 			continue
 		}
 		idHash := identity.Hash()

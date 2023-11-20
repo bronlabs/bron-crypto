@@ -35,10 +35,10 @@ func Test_CanInitialize(t *testing.T) {
 	aliceIdx := 0
 	bobIdx := 1
 	sessionId := []byte("DummySession")
-	alice, err := interactive_signing.NewPrimaryCosigner(identities[aliceIdx], identities[bobIdx], shards[identities[aliceIdx].Hash()], cohortConfig, sessionId, nil, prng)
+	alice, err := interactive_signing.NewPrimaryCosigner(identities[aliceIdx].(integration.AuthKey), identities[bobIdx], shards[identities[aliceIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := interactive_signing.NewSecondaryCosigner(identities[bobIdx], identities[aliceIdx], shards[identities[bobIdx].Hash()], cohortConfig, sessionId, nil, prng)
+	bob, err := interactive_signing.NewSecondaryCosigner(identities[bobIdx].(integration.AuthKey), identities[aliceIdx], shards[identities[bobIdx].Hash()], cohortConfig, sessionId, nil, prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
 

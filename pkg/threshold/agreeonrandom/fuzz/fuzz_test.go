@@ -49,7 +49,7 @@ func Fuzz_Test_rounds(f *testing.F) {
 		var participants []*agreeonrandom.Participant
 		set := hashset.NewHashSet(allIdentities)
 		for _, identity := range set.Iter() {
-			participant, err := agreeonrandom.NewParticipant(curve, identity, set, nil, prng)
+			participant, err := agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), set, nil, prng)
 			if err != nil && !errs.IsKnownError(err) {
 				require.NoError(t, err)
 			}
@@ -97,7 +97,7 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
 		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0], hashset.NewHashSet(allIdentities), nil, prng)
+		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0].(integration.AuthKey), hashset.NewHashSet(allIdentities), nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

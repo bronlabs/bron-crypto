@@ -17,9 +17,9 @@ var _ frost.Participant = (*Cosigner)(nil)
 type Cosigner struct {
 	prng io.Reader
 
-	MyIdentityKey integration.IdentityKey
-	MySharingId   int
-	Shard         *frost.Shard
+	MyAuthKey   integration.AuthKey
+	MySharingId int
+	Shard       *frost.Shard
 
 	CohortConfig           *integration.CohortConfig
 	SharingIdToIdentityKey map[int]integration.IdentityKey
@@ -32,8 +32,8 @@ type Cosigner struct {
 	_ types.Incomparable
 }
 
-func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return ic.MyIdentityKey
+func (ic *Cosigner) GetAuthKey() integration.AuthKey {
+	return ic.MyAuthKey
 }
 
 func (ic *Cosigner) GetSharingId() int {
@@ -46,7 +46,7 @@ func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range ic.CohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
 			return true
 		}
 	}
@@ -64,14 +64,14 @@ type State struct {
 	_ types.Incomparable
 }
 
-func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
-	err := validateInputs(identityKey, sessionParticipants, shard, cohortConfig, prng)
+func NewInteractiveCosigner(authKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
+	err := validateInputs(authKey, sessionParticipants, shard, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
 
 	cosigner := &Cosigner{
-		MyIdentityKey:       identityKey,
+		MyAuthKey:           authKey,
 		CohortConfig:        cohortConfig,
 		Shard:               shard,
 		SessionParticipants: sessionParticipants,
@@ -83,7 +83,7 @@ func NewInteractiveCosigner(identityKey integration.IdentityKey, sessionParticip
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.SharingIdToIdentityKey, cosigner.IdentityKeyToSharingId, cosigner.MySharingId = integration.DeriveSharingIds(identityKey, cosigner.CohortConfig.Participants)
+	cosigner.SharingIdToIdentityKey, cosigner.IdentityKeyToSharingId, cosigner.MySharingId = integration.DeriveSharingIds(authKey, cosigner.CohortConfig.Participants)
 
 	cosigner.round = 1
 	return cosigner, nil

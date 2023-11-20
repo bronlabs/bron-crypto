@@ -16,7 +16,7 @@ func RunAgreeOnRandom(curve curves.Curve, identities []integration.IdentityKey, 
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))
 	set := hashset.NewHashSet(identities)
 	for _, identity := range set.Iter() {
-		participant, err := agreeonrandom.NewParticipant(curve, identity, set, nil, prng)
+		participant, err := agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), set, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

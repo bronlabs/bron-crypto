@@ -28,13 +28,13 @@ type Cosigner struct {
 
 	prng io.Reader
 	// My Cohort config
-	cohortConfig  *integration.CohortConfig
-	sessionId     []byte
-	transcript    transcripts.Transcript
-	myIdentityKey integration.IdentityKey
-	mySharingId   int
-	myShard       *lindell17.Shard
-	round         int
+	cohortConfig *integration.CohortConfig
+	sessionId    []byte
+	transcript   transcripts.Transcript
+	myAuthKey    integration.AuthKey
+	mySharingId  int
+	myShard      *lindell17.Shard
+	round        int
 
 	_ types.Incomparable
 }
@@ -77,8 +77,8 @@ type SecondaryCosigner struct {
 	_ types.Incomparable
 }
 
-func (cosigner *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return cosigner.myIdentityKey
+func (cosigner *Cosigner) GetAuthKey() integration.AuthKey {
+	return cosigner.myAuthKey
 }
 
 func (cosigner *Cosigner) GetSharingId() int {
@@ -91,15 +91,15 @@ func (cosigner *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (cosigner *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range cosigner.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(cosigner.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(cosigner.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
-	err = validatePrimaryInputs(myIdentityKey, secondaryIdentityKey, myShard, cohortConfig, sessionId, prng)
+func NewPrimaryCosigner(myAuthKey integration.AuthKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
+	err = validatePrimaryInputs(myAuthKey, secondaryIdentityKey, myShard, cohortConfig, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
@@ -109,17 +109,17 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 	primaryCosigner = &PrimaryCosigner{
 		Cosigner: Cosigner{
-			myIdentityKey: myIdentityKey,
-			mySharingId:   mySharingId,
-			myShard:       myShard,
-			cohortConfig:  cohortConfig,
-			sessionId:     sessionId,
-			transcript:    transcript,
-			prng:          prng,
-			round:         1,
+			myAuthKey:    myAuthKey,
+			mySharingId:  mySharingId,
+			myShard:      myShard,
+			cohortConfig: cohortConfig,
+			sessionId:    sessionId,
+			transcript:   transcript,
+			prng:         prng,
+			round:        1,
 		},
 		secondaryIdentityKey: secondaryIdentityKey,
 		secondarySharingId:   identityKeyToSharingId[secondaryIdentityKey.Hash()],
@@ -132,7 +132,7 @@ func NewPrimaryCosigner(myIdentityKey, secondaryIdentityKey integration.Identity
 	return primaryCosigner, nil
 }
 
-func validateSecondaryInputs(myIdentityKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
+func validateSecondaryInputs(myAuthKey, secondaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -142,7 +142,7 @@ func validateSecondaryInputs(myIdentityKey, secondaryIdentityKey integration.Ide
 	if err := myShard.Validate(cohortConfig); err != nil {
 		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("my identity key is nil")
 	}
 	if secondaryIdentityKey == nil {
@@ -157,8 +157,8 @@ func validateSecondaryInputs(myIdentityKey, secondaryIdentityKey integration.Ide
 	return nil
 }
 
-func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
-	err = validateSecondaryInputs(myIdentityKey, primaryIdentityKey, myShard, cohortConfig, sessionId, prng)
+func NewSecondaryCosigner(myAuthKey integration.AuthKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
+	err = validateSecondaryInputs(myAuthKey, primaryIdentityKey, myShard, cohortConfig, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
 	}
@@ -168,17 +168,17 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, keyToId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 	return &SecondaryCosigner{
 		Cosigner: Cosigner{
-			myIdentityKey: myIdentityKey,
-			mySharingId:   mySharingId,
-			myShard:       myShard,
-			cohortConfig:  cohortConfig,
-			sessionId:     sessionId,
-			transcript:    transcript,
-			prng:          prng,
-			round:         1,
+			myAuthKey:    myAuthKey,
+			mySharingId:  mySharingId,
+			myShard:      myShard,
+			cohortConfig: cohortConfig,
+			sessionId:    sessionId,
+			transcript:   transcript,
+			prng:         prng,
+			round:        1,
 		},
 		primaryIdentityKey: primaryIdentityKey,
 		primarySharingId:   keyToId[primaryIdentityKey.Hash()],
@@ -186,7 +186,7 @@ func NewSecondaryCosigner(myIdentityKey, primaryIdentityKey integration.Identity
 	}, nil
 }
 
-func validatePrimaryInputs(myIdentityKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
+func validatePrimaryInputs(myAuthKey integration.AuthKey, primaryIdentityKey integration.IdentityKey, myShard *lindell17.Shard, cohortConfig *integration.CohortConfig, sessionId []byte, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
@@ -196,7 +196,7 @@ func validatePrimaryInputs(myIdentityKey, primaryIdentityKey integration.Identit
 	if err := myShard.Validate(cohortConfig); err != nil {
 		return errs.WrapVerificationFailed(err, "could not validate shard")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("my identity key is nil")
 	}
 	if primaryIdentityKey == nil {

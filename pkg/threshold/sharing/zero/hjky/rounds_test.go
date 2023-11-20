@@ -82,7 +82,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 		for i, participant := range participants {
 			for j := range participants {
-				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(publicKeySharesMaps[j][participant.GetIdentityKey().Hash()]))
+				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(publicKeySharesMaps[j][participant.GetAuthKey().Hash()]))
 			}
 		}
 	})

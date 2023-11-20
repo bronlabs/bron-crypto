@@ -14,11 +14,11 @@ var _ integration.Participant = (*PreGenParticipant)(nil)
 type PreGenParticipant struct {
 	prng io.Reader
 
-	Tau           int
-	MyIdentityKey integration.IdentityKey
-	CohortConfig  *integration.CohortConfig
-	round         int
-	state         *preGenState
+	Tau          int
+	MyAuthKey    integration.AuthKey
+	CohortConfig *integration.CohortConfig
+	round        int
+	state        *preGenState
 
 	_ types.Incomparable
 }
@@ -31,19 +31,19 @@ type preGenState struct {
 	_ types.Incomparable
 }
 
-func NewPreGenParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
-	err := validateInputs(identityKey, cohortConfig, tau, prng)
+func NewPreGenParticipant(authKey integration.AuthKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
+	err := validateInputs(authKey, cohortConfig, tau, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
 	return &PreGenParticipant{
-		prng:          prng,
-		Tau:           tau,
-		MyIdentityKey: identityKey,
-		CohortConfig:  cohortConfig,
-		round:         1,
-		state:         &preGenState{},
+		prng:         prng,
+		Tau:          tau,
+		MyAuthKey:    authKey,
+		CohortConfig: cohortConfig,
+		round:        1,
+		state:        &preGenState{},
 	}, nil
 }
 
@@ -73,8 +73,8 @@ func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
 	return p.CohortConfig
 }
 
-func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *PreGenParticipant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 // TODO: implement SharingId for FROSTs

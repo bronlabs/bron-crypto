@@ -19,7 +19,7 @@ var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 type SignatureAggregator struct {
 	CohortConfig           *integration.CohortConfig
 	PublicKey              curves.Point
-	MyIdentityKey          integration.IdentityKey
+	MyAuthKey              integration.AuthKey
 	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
 	IdentityKeyToSharingId map[types.IdentityHash]int
 	PublicKeyShares        *frost.PublicKeyShares
@@ -51,7 +51,7 @@ func (s *SignatureAggregatorParameters) Validate() error {
 	return nil
 }
 
-func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
+func NewSignatureAggregator(authKey integration.AuthKey, cohortConfig *integration.CohortConfig, shard *frost.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int, message []byte, parameters *SignatureAggregatorParameters) (*SignatureAggregator, error) {
 	if err := shard.Validate(cohortConfig); err != nil {
 		return nil, errs.WrapFailed(err, "invalid shard")
 	}
@@ -59,7 +59,7 @@ func NewSignatureAggregator(identityKey integration.IdentityKey, cohortConfig *i
 		CohortConfig:           cohortConfig,
 		PublicKey:              shard.PublicKeyShares.PublicKey,
 		PublicKeyShares:        shard.PublicKeyShares,
-		MyIdentityKey:          identityKey,
+		MyAuthKey:              authKey,
 		SessionParticipants:    sessionParticipants,
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		Message:                message,
@@ -77,7 +77,7 @@ func (sa *SignatureAggregator) Validate() error {
 	if err := sa.CohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
-	if !sa.CohortConfig.IsSignatureAggregator(sa.MyIdentityKey) {
+	if !sa.CohortConfig.IsSignatureAggregator(sa.MyAuthKey) {
 		return errs.NewInvalidArgument("provided identity key is not a signature aggregator of the given cohort config")
 	}
 	if sa.CohortConfig.Protocol == nil {

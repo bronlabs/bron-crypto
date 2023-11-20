@@ -3,9 +3,10 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha512"
+	"testing"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
@@ -37,8 +38,8 @@ func Test_CanInitialize(t *testing.T) {
 		},
 	}
 	uniqueSessionId := []byte("sid")
-	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0], cohortConfig, nil, crand.Reader)
-	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1], cohortConfig, nil, crand.Reader)
+	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0].(integration.AuthKey), cohortConfig, nil, crand.Reader)
+	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1].(integration.AuthKey), cohortConfig, nil, crand.Reader)
 	for _, party := range []*dkg.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

@@ -24,7 +24,7 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []int
 	var participants []*agreeonrandom.Participant
 	for _, identity := range identities {
 		var participant *agreeonrandom.Participant
-		participant, _ = agreeonrandom.NewParticipant(curve, identity, hashset.NewHashSet(identities), nil, crand.Reader)
+		participant, _ = agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), hashset.NewHashSet(identities), nil, crand.Reader)
 		participants = append(participants, participant)
 	}
 

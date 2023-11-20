@@ -34,7 +34,7 @@ type state struct {
 
 type Cosigner struct {
 	lindell22.Participant
-	myIdentityKey     integration.IdentityKey
+	myAuthKey         integration.AuthKey
 	mySharingId       int
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
@@ -52,8 +52,8 @@ type Cosigner struct {
 	_ types.Incomparable
 }
 
-func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *Cosigner) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *Cosigner) GetSharingId() int {
@@ -66,14 +66,14 @@ func (p *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (p *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(myAuthKey integration.AuthKey, sid []byte, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sid, sessionParticipants, myShard, cohortConfig, prng); err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
@@ -82,12 +82,12 @@ func NewCosigner(myIdentityKey integration.IdentityKey, sid []byte, sessionParti
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
-	pid := myIdentityKey.PublicKey().ToAffineCompressed()
+	pid := myAuthKey.PublicKey().ToAffineCompressed()
 	bigS := BigS(cohortConfig.Participants)
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
 	cosigner := &Cosigner{
-		myIdentityKey:          myIdentityKey,
+		myAuthKey:              myAuthKey,
 		mySharingId:            mySharingId,
 		mySigningKeyShare:      myShard.SigningKeyShare,
 		identityKeyToSharingId: identityKeyToSharingId,

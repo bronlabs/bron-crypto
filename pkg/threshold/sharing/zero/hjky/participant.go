@@ -21,8 +21,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.PedersenParty.GetIdentityKey()
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.PedersenParty.GetAuthKey()
 }
 
 func (p *Participant) GetSharingId() int {
@@ -33,8 +33,8 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.PedersenParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng); err != nil {
+func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
@@ -42,7 +42,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
 
-	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)
+	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}

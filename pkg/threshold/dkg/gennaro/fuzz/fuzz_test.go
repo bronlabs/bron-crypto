@@ -55,21 +55,21 @@ func Fuzz_Test(f *testing.F) {
 				SignatureAggregators: hashset.NewHashSet(identityKeys),
 			},
 		}
-		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity, cohortConfig, prng, nil)
+		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(integration.AuthKey), cohortConfig, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity, cohortConfig, prng, nil)
+		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(integration.AuthKey), cohortConfig, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity, cohortConfig, prng, nil)
+		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(integration.AuthKey), cohortConfig, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

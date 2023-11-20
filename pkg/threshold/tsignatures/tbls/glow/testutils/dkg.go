@@ -28,7 +28,7 @@ func MakeDkgParticipants(uniqueSessionId []byte, cohortConfig *integration.Cohor
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = dkg.NewParticipant(uniqueSessionId, identity, cohortConfig, nil, prng)
+		participants[i], err = dkg.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

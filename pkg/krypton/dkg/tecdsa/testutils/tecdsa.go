@@ -29,7 +29,7 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = tecdsa.NewParticipant(identity, cohortConfig, prng)
+		participants[i], err = tecdsa.NewParticipant(identity.(integration.AuthKey), cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,7 @@ func MapDkgRoundArray[T any](participants []*tecdsa.Participant, round2Broadcast
 		round2BroadcastInputs[i] = make(map[types.IdentityHash]*T)
 		for j := range participants {
 			if j != i {
-				round2BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round2BroadcastOutputs[j]
+				round2BroadcastInputs[i][participants[j].GetAuthKey().Hash()] = round2BroadcastOutputs[j]
 			}
 		}
 	}
@@ -139,7 +139,7 @@ func MapDkgRoundP2P[K any, P any](participants []*tecdsa.Participant, round6Broa
 		round7BroadcastInputs[i] = make(map[types.IdentityHash]*K)
 		for j := range participants {
 			if j != i {
-				round7BroadcastInputs[i][participants[j].GetIdentityKey().Hash()] = round6BroadcastOutputs[j]
+				round7BroadcastInputs[i][participants[j].GetAuthKey().Hash()] = round6BroadcastOutputs[j]
 			}
 		}
 	}
@@ -149,7 +149,7 @@ func MapDkgRoundP2P[K any, P any](participants []*tecdsa.Participant, round6Broa
 		round7UnicastInputs[i] = make(map[types.IdentityHash]P)
 		for j := range participants {
 			if j != i {
-				round7UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round6UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
+				round7UnicastInputs[i][participants[j].GetAuthKey().Hash()] = round6UnicastOutputs[j][participants[i].GetAuthKey().Hash()]
 			}
 		}
 	}
@@ -207,7 +207,7 @@ func MapDkgRound[K any](participants []*tecdsa.Participant, round10UnicastOutput
 		round11UnicastInputs[i] = make(map[types.IdentityHash]*K)
 		for j := range participants {
 			if j != i {
-				round11UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = round10UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
+				round11UnicastInputs[i][participants[j].GetAuthKey().Hash()] = round10UnicastOutputs[j][participants[i].GetAuthKey().Hash()]
 			}
 		}
 	}

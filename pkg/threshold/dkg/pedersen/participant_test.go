@@ -42,7 +42,7 @@ func (k *mockedIdentityKey) Sign(message []byte) []byte {
 	return []byte("mocked")
 }
 
-func (k *mockedIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+func (k *mockedIdentityKey) Verify(signature []byte, message []byte) error {
 	return errs.NewMissing("not implemented")
 }
 

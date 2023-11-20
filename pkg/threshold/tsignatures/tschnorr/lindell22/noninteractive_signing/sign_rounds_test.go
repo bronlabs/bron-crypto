@@ -65,7 +65,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, prng)
+				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i].(integration.AuthKey), shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}
@@ -120,7 +120,7 @@ func Test_SignNonInteractiveThresholdBIP340(t *testing.T) {
 
 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
 			for i := 0; i < threshold; i++ {
-				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i], shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, true, nil, prng)
+				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i].(integration.AuthKey), shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, true, nil, prng)
 				require.NoError(t, err2)
 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 			}

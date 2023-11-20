@@ -46,7 +46,7 @@ func MakeInteractiveCosigners(cohortConfig *integration.CohortConfig, identities
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewInvalidIdentifier("identity not in cohort")
 		}
-		participants[i], err = signing.NewCosigner(sids[i], identity, hashset.NewHashSet(identities), shards[i], cohortConfig, prng, seededPrng, nil)
+		participants[i], err = signing.NewCosigner(sids[i], identity.(integration.AuthKey), hashset.NewHashSet(identities), shards[i], cohortConfig, prng, seededPrng, nil)
 		if err != nil || participants[i] == nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
@@ -105,7 +105,7 @@ func RunSignatureAggregation(cohortConfig *integration.CohortConfig, identities 
 	producedSignatures = make([]*ecdsa.Signature, len(participants))
 	for i, participant := range participants {
 		// TODO: test for signature aggregator
-		if !cohortConfig.IsSignatureAggregator(participant.MyIdentityKey) {
+		if !cohortConfig.IsSignatureAggregator(participant.MyAuthKey) {
 			continue
 		}
 		signature, err := signing.Aggregate(participant.CohortConfig.CipherSuite, participant.Shard.SigningKeyShare.PublicKey, mappedPartialSignatures, message)

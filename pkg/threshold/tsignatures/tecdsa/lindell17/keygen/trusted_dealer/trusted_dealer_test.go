@@ -3,9 +3,10 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"testing"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -92,12 +93,12 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {
 		t.Parallel()
 
-		for myIdentityKey, myShard := range shards {
+		for myAuthKey, myShard := range shards {
 			myShare := myShard.SigningKeyShare.Share.Nat()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for _, theirShard := range shards {
 				if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
-					theirEncryptedShare := theirShard.PaillierEncryptedShares[myIdentityKey]
+					theirEncryptedShare := theirShard.PaillierEncryptedShares[myAuthKey]
 					decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)
 					require.NoError(t, err)
 					theirDecryptedShare, err := decryptor.Decrypt(theirEncryptedShare)

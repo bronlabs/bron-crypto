@@ -23,7 +23,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 			return nil, errs.NewMissing("invalid identity")
 		}
 		// TODO: test for what happens if session participants are set to be different for different parties
-		participants[i], err = signing_helpers.NewInteractiveCosigner(identity, hashset.NewHashSet(identities), shards[i], cohortConfig, crand.Reader)
+		participants[i], err = signing_helpers.NewInteractiveCosigner(identity.(integration.AuthKey), hashset.NewHashSet(identities), shards[i], cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -35,7 +35,7 @@ func MakeInteractiveSignParticipants(cohortConfig *integration.CohortConfig, ide
 func MakeNonInteractiveCosigners(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*frost.Shard, preSignatureBatch *noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair) (participants []*noninteractive_signing.Cosigner, err error) {
 	participants = make([]*noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
 	for i, identity := range identities {
-		participants[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity, shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
+		participants[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(integration.AuthKey), shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

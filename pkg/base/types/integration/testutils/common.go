@@ -55,7 +55,7 @@ func (k *TestIdentityKey) Sign(message []byte) []byte {
 	return bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
 }
 
-func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, message []byte) error {
+func (k *TestIdentityKey) Verify(signature, message []byte) error {
 	r := k.suite.Curve.Point().Identity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
@@ -79,7 +79,7 @@ func (k *TestIdentityKey) Verify(signature []byte, publicKey curves.Point, messa
 		S: s,
 	}
 	schnorrPublicKey := &schnorr.PublicKey{
-		A: publicKey,
+		A: k.publicKey.A,
 	}
 	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errs.WrapVerificationFailed(err, "could not verify schnorr signature")

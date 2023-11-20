@@ -26,22 +26,22 @@ type preGenParticipantState struct {
 type PreGenParticipant struct {
 	lindell17.Participant
 
-	myIdentityKey integration.IdentityKey
-	mySharingId   int
-	tau           int
-	cohortConfig  *integration.CohortConfig
-	sid           []byte
-	transcript    transcripts.Transcript
-	round         int
-	prng          io.Reader
+	myAuthKey    integration.AuthKey
+	mySharingId  int
+	tau          int
+	cohortConfig *integration.CohortConfig
+	sid          []byte
+	transcript   transcripts.Transcript
+	round        int
+	prng         io.Reader
 
 	state *preGenParticipantState
 
 	_ types.Incomparable
 }
 
-func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *PreGenParticipant) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *PreGenParticipant) GetSharingId() int {
@@ -54,7 +54,7 @@ func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
 
 func (p *PreGenParticipant) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
@@ -66,8 +66,8 @@ const (
 	transcriptSessionIdLabel = "Lindell2017_PreGen_SessionId"
 )
 
-func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
-	err = validateInputs(sid, myIdentityKey, cohortConfig, tau, prng)
+func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
+	err = validateInputs(sid, myAuthKey, cohortConfig, tau, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
@@ -78,31 +78,31 @@ func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myIdent
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	return &PreGenParticipant{
-		myIdentityKey: myIdentityKey,
-		cohortConfig:  cohortConfig,
-		tau:           tau,
-		prng:          prng,
-		sid:           sid,
-		transcript:    transcript,
-		round:         1,
-		state:         &preGenParticipantState{},
+		myAuthKey:    myAuthKey,
+		cohortConfig: cohortConfig,
+		tau:          tau,
+		prng:         prng,
+		sid:          sid,
+		transcript:   transcript,
+		round:        1,
+		state:        &preGenParticipantState{},
 	}, nil
 }
 
-func validateInputs(sid []byte, myIdentityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
+func validateInputs(sid []byte, myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if cohortConfig.Protocol == nil {
 		return errs.NewIsNil("cohort config protocol is nil")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewMissing("identity key is nil")
 	}
 	if prng == nil {
 		return errs.NewMissing("prng is nil")
 	}
-	if !cohortConfig.IsInCohort(myIdentityKey) {
+	if !cohortConfig.IsInCohort(myAuthKey) {
 		return errs.NewMissing("identity key is not in cohort")
 	}
 	if tau <= 0 {

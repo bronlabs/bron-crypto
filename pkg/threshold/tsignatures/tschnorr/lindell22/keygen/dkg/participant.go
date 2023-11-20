@@ -20,8 +20,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.gennaroParty.GetIdentityKey()
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.gennaroParty.GetAuthKey()
 }
 
 func (p *Participant) GetSharingId() int {
@@ -32,8 +32,8 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.gennaroParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, identityKey, cohortConfig, prng)
+func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
@@ -42,7 +42,7 @@ func NewParticipant(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TSCHNORR_LINDELL22_DKG", nil)
 	}
 	transcript.AppendMessages("lindell22 dkg", uniqueSessionId)
-	party, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct lindell22 dkg participant out of gennaro dkg participant")
 	}

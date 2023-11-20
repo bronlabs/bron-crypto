@@ -129,7 +129,7 @@ func Fuzz_Test_DeriveSharingId(f *testing.F) {
 		identityA, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(a))
 		identityB, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(b))
 		identityC, _ := testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(c))
-		integration.DeriveSharingIds(identityA, hashset.NewHashSet([]integration.IdentityKey{identityA, identityB, identityC}))
+		integration.DeriveSharingIds(identityA.(integration.AuthKey), hashset.NewHashSet([]integration.IdentityKey{identityA, identityB, identityC}))
 	})
 }
 

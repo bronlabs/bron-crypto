@@ -29,11 +29,11 @@ func happyPath(t *testing.T, cipherSuite *integration.CipherSuite, n int) {
 	require.NoError(t, err)
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
-	initiator, err := echo.NewInitiator(cipherSuite, identities[0], cohortConfig, []byte("sid"), []byte("hello world"))
+	initiator, err := echo.NewInitiator(cipherSuite, identities[0].(integration.AuthKey), cohortConfig, []byte("sid"), []byte("hello world"))
 	require.NoError(t, err)
 	responders := make([]*echo.Participant, n-1)
 	for i := 1; i < n; i++ {
-		responders[i-1], err = echo.NewResponder(cipherSuite, identities[i], cohortConfig, []byte("sid"), initiator.MyIdentityKey)
+		responders[i-1], err = echo.NewResponder(cipherSuite, identities[i].(integration.AuthKey), cohortConfig, []byte("sid"), initiator.MyAuthKey)
 		require.NoError(t, err)
 	}
 	allParticipants := []*echo.Participant{initiator}
@@ -48,7 +48,7 @@ func happyPath(t *testing.T, cipherSuite *integration.CipherSuite, n int) {
 	_, r2InMessages := integration_testutils.MapO2I(allParticipants, []string{}, r1OutMessages)
 	r2OutMessages := make([]map[types.IdentityHash]*echo.Round2P2P, len(allParticipants))
 	for i, participant := range allParticipants {
-		p2p, err := participant.Round2(r2InMessages[i][initiator.MyIdentityKey.Hash()])
+		p2p, err := participant.Round2(r2InMessages[i][initiator.MyAuthKey.Hash()])
 		require.NoError(t, err)
 		r2OutMessages[i] = p2p
 	}
@@ -81,6 +81,6 @@ func TestFailIfOnlyTwoParticipants(t *testing.T) {
 	require.NoError(t, err)
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
 	require.NoError(t, err)
-	_, err = echo.NewInitiator(cipherSuite, identities[0], cohortConfig, []byte("sid"), []byte("hello world"))
+	_, err = echo.NewInitiator(cipherSuite, identities[0].(integration.AuthKey), cohortConfig, []byte("sid"), []byte("hello world"))
 	require.Error(t, err)
 }

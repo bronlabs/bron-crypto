@@ -39,7 +39,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 }
 
 func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*schnorr.Signature, error) {
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyIdentityKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}

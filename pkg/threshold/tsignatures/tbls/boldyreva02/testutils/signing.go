@@ -27,7 +27,7 @@ func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueS
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewMissing("cohort is missing identity")
 		}
-		participants[i], err = signing.NewCosigner[K, S](uniqueSessionId, identity, scheme, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, nil)
+		participants[i], err = signing.NewCosigner[K, S](uniqueSessionId, identity.(integration.AuthKey), scheme, hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, nil)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "Could not construct participant")
 		}

@@ -24,7 +24,7 @@ func MakePreGenParticipants(tau int, identities []integration.IdentityKey, sid [
 	prng := crand.Reader
 	parties := make([]*noninteractive_signing.PreGenParticipant, len(identities))
 	for i := range identities {
-		parties[i], err = noninteractive_signing.NewPreGenParticipant(sid, allTranscripts[i], identities[i], cohort, tau, prng)
+		parties[i], err = noninteractive_signing.NewPreGenParticipant(sid, allTranscripts[i], identities[i].(integration.AuthKey), cohort, tau, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +46,7 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (o
 		}
 		for j := range participants {
 			if j != i {
-				result[j][party.GetIdentityKey().Hash()] = out
+				result[j][party.GetAuthKey().Hash()] = out
 			}
 		}
 	}
@@ -67,7 +67,7 @@ func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, in
 		}
 		for j := range participants {
 			if j != i {
-				result[j][party.GetIdentityKey().Hash()] = out
+				result[j][party.GetAuthKey().Hash()] = out
 			}
 		}
 	}

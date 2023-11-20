@@ -32,9 +32,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 		}
 
 		if lostPartyIndex == i {
-			participants[i], err = recovery.NewLostParty(uniqueSessionId, identity, publicKeyShares[i], cohortConfig, presentRecoverers[i], nil, prng)
+			participants[i], err = recovery.NewLostParty(uniqueSessionId, identity.(integration.AuthKey), publicKeyShares[i], cohortConfig, presentRecoverers[i], nil, prng)
 		} else {
-			participants[i], err = recovery.NewRecoverer(uniqueSessionId, identity, identities[lostPartyIndex], signingKeyShares[i], publicKeyShares[i], cohortConfig, presentRecoverers[i], nil, prng)
+			participants[i], err = recovery.NewRecoverer(uniqueSessionId, identity.(integration.AuthKey), identities[lostPartyIndex], signingKeyShares[i], publicKeyShares[i], cohortConfig, presentRecoverers[i], nil, prng)
 		}
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")

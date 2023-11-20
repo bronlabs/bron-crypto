@@ -42,7 +42,7 @@ func MapBroadcastO2I[
 		broadcastInputs[i] = make(map[types.IdentityHash]BcastT)
 		for j := range participants {
 			if j != i {
-				broadcastInputs[i][participants[j].GetIdentityKey().Hash()] = broadcastOutputs[j]
+				broadcastInputs[i][participants[j].GetAuthKey().Hash()] = broadcastOutputs[j]
 			}
 		}
 	}
@@ -63,7 +63,7 @@ func MapUnicastO2I[
 		UnicastInputs[i] = make(map[types.IdentityHash]UnicastT)
 		for j := range participants {
 			if j != i {
-				UnicastInputs[i][participants[j].GetIdentityKey().Hash()] = UnicastOutputs[j][participants[i].GetIdentityKey().Hash()]
+				UnicastInputs[i][participants[j].GetAuthKey().Hash()] = UnicastOutputs[j][participants[i].GetAuthKey().Hash()]
 			}
 		}
 	}

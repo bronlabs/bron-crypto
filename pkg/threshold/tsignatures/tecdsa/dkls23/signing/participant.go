@@ -24,9 +24,9 @@ var _ dkls23.Participant = (*Cosigner)(nil)
 type Cosigner struct {
 	prng io.Reader
 
-	MyIdentityKey integration.IdentityKey
-	MyShamirId    int
-	Shard         *dkls23.Shard
+	MyAuthKey  integration.AuthKey
+	MyShamirId int
+	Shard      *dkls23.Shard
 
 	UniqueSessionId       []byte
 	CohortConfig          *integration.CohortConfig
@@ -76,8 +76,8 @@ type state struct {
 	_ types.Incomparable
 }
 
-func (ic *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return ic.MyIdentityKey
+func (ic *Cosigner) GetAuthKey() integration.AuthKey {
+	return ic.MyAuthKey
 }
 
 func (ic *Cosigner) GetSharingId() int {
@@ -90,7 +90,7 @@ func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range ic.CohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
 			return true
 		}
 	}
@@ -98,7 +98,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs23 cosigner.
-func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, tprng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, tprng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
@@ -107,7 +107,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	}
 	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
 
-	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
+	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, sessionParticipants.Len())
 	i := -1
 	for _, sessionParticipant := range sessionParticipants.Iter() {
@@ -116,14 +116,14 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, identityKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, authKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 	// step 0.3
 	multipliers := make(map[types.IdentityHash]*Multiplication, sessionParticipants.Len())
 	for _, participant := range sessionParticipants.Iter() {
-		if participant.PublicKey().Equal(identityKey.PublicKey()) {
+		if participant.PublicKey().Equal(authKey.PublicKey()) {
 			continue
 		}
 		alice, err := mult.NewAlice(cohortConfig.CipherSuite.Curve, shard.PairwiseBaseOTs[participant.Hash()].AsReceiver, uniqueSessionId, tprng, seededPrng, transcript.Clone())
@@ -141,7 +141,7 @@ func NewCosigner(uniqueSessionId []byte, identityKey integration.IdentityKey, se
 	}
 
 	cosigner := &Cosigner{
-		MyIdentityKey:       identityKey,
+		MyAuthKey:           authKey,
 		CohortConfig:        cohortConfig,
 		Shard:               shard,
 		SessionParticipants: sessionParticipants,

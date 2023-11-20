@@ -37,8 +37,8 @@ type state struct {
 type PreGenParticipant struct {
 	lindell22.Participant
 
-	myIdentityKey integration.IdentityKey
-	mySharingId   int
+	myAuthKey   integration.AuthKey
+	mySharingId int
 
 	cohortConfig *integration.CohortConfig
 	tau          int
@@ -52,8 +52,8 @@ type PreGenParticipant struct {
 	_ types.Incomparable
 }
 
-func (p *PreGenParticipant) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *PreGenParticipant) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *PreGenParticipant) GetSharingId() int {
@@ -66,15 +66,15 @@ func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
 
 func (p *PreGenParticipant) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []byte, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
-	if err := validatePreGenInputs(tau, myIdentityKey, sid, cohortConfig); err != nil {
+func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, sid []byte, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
+	if err := validatePreGenInputs(tau, myAuthKey, sid, cohortConfig); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid argument")
 	}
 
@@ -84,19 +84,19 @@ func NewPreGenParticipant(tau int, myIdentityKey integration.IdentityKey, sid []
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))
 
-	pid := myIdentityKey.PublicKey().ToAffineCompressed()
+	pid := myAuthKey.PublicKey().ToAffineCompressed()
 	bigS := interactive_signing.BigS(cohortConfig.Participants)
-	_, _, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, _, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
 	return &PreGenParticipant{
-		myIdentityKey: myIdentityKey,
-		mySharingId:   mySharingId,
-		cohortConfig:  cohortConfig,
-		tau:           tau,
-		sid:           sid,
-		transcript:    transcript,
-		round:         1,
-		prng:          prng,
+		myAuthKey:    myAuthKey,
+		mySharingId:  mySharingId,
+		cohortConfig: cohortConfig,
+		tau:          tau,
+		sid:          sid,
+		transcript:   transcript,
+		round:        1,
+		prng:         prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

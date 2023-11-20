@@ -75,10 +75,10 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
 					t.Parallel()
 
-					alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx], shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, prng)
+					alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx].(integration.AuthKey), shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, prng)
 					require.NoError(t, err)
 
-					bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx], shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, prng)
+					bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx].(integration.AuthKey), shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, prng)
 					require.NoError(t, err)
 
 					partialSignature, err := alice.ProducePartialSignature(message)

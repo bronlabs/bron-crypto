@@ -14,7 +14,7 @@ import (
 type Cosigner struct {
 	lindell17.Participant
 
-	myIdentityKey       integration.IdentityKey
+	myAuthKey           integration.AuthKey
 	mySharingId         int
 	myShard             *lindell17.Shard
 	myPreSignatureBatch *lindell17.PreSignatureBatch
@@ -29,8 +29,8 @@ type Cosigner struct {
 	_ types.Incomparable
 }
 
-func (p *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return p.myIdentityKey
+func (p *Cosigner) GetAuthKey() integration.AuthKey {
+	return p.myAuthKey
 }
 
 func (p *Cosigner) GetSharingId() int {
@@ -43,20 +43,20 @@ func (p *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (p *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
 			return true
 		}
 	}
 	return false
 }
 
-func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
-	err = validateCosignerInputs(cohortConfig, myIdentityKey, myShard, myPreSignatureBatch, preSignatureIndex, participantIdentity, sid, prng)
+func NewCosigner(cohortConfig *integration.CohortConfig, myAuthKey integration.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, transcript transcripts.Transcript, prng io.Reader) (p *Cosigner, err error) {
+	err = validateCosignerInputs(cohortConfig, myAuthKey, myShard, myPreSignatureBatch, preSignatureIndex, participantIdentity, sid, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
-	_, keyToId, mySharingId := integration.DeriveSharingIds(myIdentityKey, cohortConfig.Participants)
+	_, keyToId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 	theirSharingId := keyToId[participantIdentity.Hash()]
 
 	if transcript == nil {
@@ -64,7 +64,7 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 	return &Cosigner{
-		myIdentityKey:       myIdentityKey,
+		myAuthKey:           myAuthKey,
 		mySharingId:         mySharingId,
 		myShard:             myShard,
 		myPreSignatureBatch: myPreSignatureBatch,
@@ -76,14 +76,14 @@ func NewCosigner(cohortConfig *integration.CohortConfig, myIdentityKey integrati
 	}, nil
 }
 
-func validateCosignerInputs(cohortConfig *integration.CohortConfig, myIdentityKey integration.IdentityKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, prng io.Reader) error {
+func validateCosignerInputs(cohortConfig *integration.CohortConfig, myAuthKey integration.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, participantIdentity integration.IdentityKey, sid []byte, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}
 	if cohortConfig.Protocol == nil {
 		return errs.NewIsNil("cohort config protocol is nil")
 	}
-	if myIdentityKey == nil {
+	if myAuthKey == nil {
 		return errs.NewIsNil("identity key is nil")
 	}
 	if participantIdentity == nil {

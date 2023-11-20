@@ -46,7 +46,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 			return nil, errs.WrapFailed(err, "cannot generate random k")
 		}
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
-		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myIdentityKey, bigR[i])
+		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myAuthKey, bigR[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot commit to R")
 		}
@@ -73,7 +73,7 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitments[i] = make(map[types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
-			if types.Equals(identity, p.myIdentityKey) {
+			if types.Equals(identity, p.myAuthKey) {
 				continue
 			}
 			in, ok := input[identity.Hash()]
@@ -84,7 +84,7 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 			theirBigRCommitments[i][identity.Hash()] = in.BigRCommitment[i]
 		}
 
-		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myIdentityKey, p.state.k[i], p.state.bigR[i], p.prng)
+		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myAuthKey, p.state.k[i], p.state.bigR[i], p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot proof R dlog")
 		}
@@ -110,7 +110,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 		commonBigR[i] = make(map[types.IdentityHash]curves.Point)
 
 		for _, identity := range p.cohortConfig.Participants.Iter() {
-			if types.Equals(identity, p.myIdentityKey) {
+			if types.Equals(identity, p.myAuthKey) {
 				continue
 			}
 			in, ok := input[identity.Hash()]

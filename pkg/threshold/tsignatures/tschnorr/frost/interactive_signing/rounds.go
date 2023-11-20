@@ -75,7 +75,7 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[types.Identi
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.MyIdentityKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToSharingId, message, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.MyAuthKey, ic.CohortConfig, ic.Shard, ic.SessionParticipants, ic.IdentityKeyToSharingId, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
@@ -88,7 +88,7 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures map[types.Identi
 }
 
 func (ic *Cosigner) processNonceCommitmentOnline(round1output map[types.IdentityHash]*Round1Broadcast) (D_alpha, E_alpha map[types.IdentityHash]curves.Point, err error) {
-	round1output[ic.MyIdentityKey.Hash()] = &Round1Broadcast{
+	round1output[ic.MyAuthKey.Hash()] = &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	}

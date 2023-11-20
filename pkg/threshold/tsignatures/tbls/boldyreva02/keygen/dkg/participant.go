@@ -23,8 +23,8 @@ type Participant[K bls.KeySubGroup] struct {
 	_ types.Incomparable
 }
 
-func (p *Participant[K]) GetIdentityKey() integration.IdentityKey {
-	return p.gennaroParty.GetIdentityKey()
+func (p *Participant[K]) GetAuthKey() integration.AuthKey {
+	return p.gennaroParty.GetAuthKey()
 }
 
 func (p *Participant[K]) GetSharingId() int {
@@ -35,8 +35,8 @@ func (p *Participant[K]) GetCohortConfig() *integration.CohortConfig {
 	return p.gennaroParty.GetCohortConfig()
 }
 
-func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
-	err := validateInputs[K](uniqueSessionId, cohortConfig, identityKey, prng)
+func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
+	err := validateInputs[K](uniqueSessionId, cohortConfig, authKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
@@ -51,7 +51,7 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, identityKey integ
 	}
 	transcript.AppendMessages("threshold bls dkg", uniqueSessionId)
 	transcript.AppendMessages("keys subgroup", []byte(cohortConfig.CipherSuite.Curve.Name()))
-	party, err := gennaro.NewParticipant(uniqueSessionId, identityKey, cohortConfig, prng, transcript)
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct tbls dkg participant out of gennaro dkg participant")
 	}

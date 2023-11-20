@@ -51,7 +51,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 
 	bigR1CommitmentMessage := append(
 		append(primaryCosigner.sessionId,
-			primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...),
+			primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed()...),
 		primaryCosigner.state.bigR1.ToAffineCompressed()...,
 	)
 	bigR1Commitment, bigR1Witness, err := commitments.Commit(bigR1CommitmentMessage)
@@ -80,7 +80,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	}
 	secondaryCosigner.state.bigR2 = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(secondaryCosigner.state.k2)
 
-	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR2ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.myAuthKey.PublicKey().ToAffineCompressed()...)
 	secondaryCosigner.transcript.AppendMessages("bigR2Proof", bigR2ProofSessionId)
 	bigR2Prover, err := dlog.NewProver(secondaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR2ProofSessionId, secondaryCosigner.transcript.Clone(), secondaryCosigner.prng)
 	if err != nil {
@@ -113,7 +113,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myIdentityKey.PublicKey().ToAffineCompressed()...)
+	bigR1ProofSessionId := append(primaryCosigner.sessionId, primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed()...)
 	primaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
 	bigR1Prover, err := dlog.NewProver(primaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), bigR1ProofSessionId, primaryCosigner.transcript.Clone(), primaryCosigner.prng)
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 
 type Participant struct {
 	Curve               curves.Curve
-	MyIdentityKey       integration.IdentityKey
+	MyAuthKey           integration.AuthKey
 	MySharingId         int
 	PresentParticipants *hashset.HashSet[integration.IdentityKey]
 	UniqueSessionId     []byte
@@ -28,11 +28,11 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, identityKey integration.IdentityKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey], seededPrng csprng.CSPRNG) (*Participant, error) {
+func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, authKey integration.AuthKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey], seededPrng csprng.CSPRNG) (*Participant, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
-	if identityKey == nil {
+	if authKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
 	if len(uniqueSessionId) == 0 {
@@ -46,7 +46,7 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 			return nil, errs.NewIsNil("participant %x is nil", i)
 		}
 	}
-	_, found := presentParticipants.Get(identityKey)
+	_, found := presentParticipants.Get(authKey)
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
@@ -64,7 +64,7 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 		return nil, errs.WrapFailed(err, "seeds do not match participants")
 	}
 	for participant, sharedSeed := range seeds {
-		if participant == identityKey.Hash() {
+		if participant == authKey.Hash() {
 			return nil, errs.NewInvalidArgument("found a shared seed with myself")
 		}
 		foundAnyNonZeroByte := false
@@ -80,13 +80,13 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	}
 
 	// if you pass presentParticipants to below, sharing ids will be different
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
 	participant := &Participant{
 		Curve:                  cohortConfig.CipherSuite.Curve,
-		MyIdentityKey:          identityKey,
+		MyAuthKey:              authKey,
 		MySharingId:            mySharingId,
 		UniqueSessionId:        uniqueSessionId,
 		PresentParticipants:    presentParticipants,

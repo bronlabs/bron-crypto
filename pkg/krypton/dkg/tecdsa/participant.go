@@ -20,8 +20,8 @@ const DKGLabel = "COPPER_KRYPTON_DKG_TECDSA-"
 var _ integration.Participant = (*Participant)(nil)
 
 type Participant struct {
-	MyIdentityKey integration.IdentityKey
-	CohortConfig  *integration.CohortConfig
+	MyAuthKey    integration.AuthKey
+	CohortConfig *integration.CohortConfig
 
 	UniqueSessionId []byte
 	SIDParty        *agreeonrandom.Participant
@@ -36,8 +36,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.MyIdentityKey
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.MyAuthKey
 }
 
 func (p *Participant) GetSharingId() int {
@@ -48,25 +48,25 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.CohortConfig
 }
 
-func NewParticipant(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
-	err := validateInputs(identityKey, cohortConfig, prng)
+func NewParticipant(authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+	err := validateInputs(authKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 
 	transcript := hagrid.NewTranscript(DKGLabel, nil)
-	sidParty, err := agreeonrandom.NewParticipant(cohortConfig.CipherSuite.Curve, identityKey, cohortConfig.Participants, transcript, prng)
+	sidParty, err := agreeonrandom.NewParticipant(cohortConfig.CipherSuite.Curve, authKey, cohortConfig.Participants, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}
 	return &Participant{
-		MyIdentityKey: identityKey,
-		CohortConfig:  cohortConfig,
-		SIDParty:      sidParty,
-		Shard:         &Shard{},
-		transcript:    transcript,
-		prng:          prng,
-		round:         1,
+		MyAuthKey:    authKey,
+		CohortConfig: cohortConfig,
+		SIDParty:     sidParty,
+		Shard:        &Shard{},
+		transcript:   transcript,
+		prng:         prng,
+		round:        1,
 	}, nil
 }
 

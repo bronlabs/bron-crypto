@@ -48,11 +48,11 @@ func Test_HappyPath(t *testing.T) {
 	require.Len(t, shards, cohortConfig.Protocol.TotalParties)
 
 	sessionId := []byte("TestSession")
-	primary, err := interactive_signing.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
+	primary, err := interactive_signing.NewPrimaryCosigner(alice.(integration.AuthKey), bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive_signing.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
+	secondary, err := interactive_signing.NewSecondaryCosigner(bob.(integration.AuthKey), alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
@@ -136,11 +136,11 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			require.Len(t, shards, cohortConfig.Protocol.TotalParties)
 
 			sessionId := []byte("TestSession")
-			primary, err := interactive_signing.NewPrimaryCosigner(alice, bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
+			primary, err := interactive_signing.NewPrimaryCosigner(alice.(integration.AuthKey), bob, shards[alice.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, primary)
 			require.NoError(t, err)
 
-			secondary, err := interactive_signing.NewSecondaryCosigner(bob, alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
+			secondary, err := interactive_signing.NewSecondaryCosigner(bob.(integration.AuthKey), alice, shards[bob.Hash()], cohortConfig, sessionId, nil, crand.Reader)
 			require.NotNil(t, secondary)
 			require.NoError(t, err)
 
@@ -252,11 +252,11 @@ func doLindell17Dkg(t *testing.T, sid []byte, cohortConfig *integration.CohortCo
 func doLindell17Sign(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards []*lindell17.Shard, alice, bob int, message []byte) (signature *ecdsa.Signature) {
 	t.Helper()
 
-	primary, err := interactive_signing.NewPrimaryCosigner(identities[alice], identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)
+	primary, err := interactive_signing.NewPrimaryCosigner(identities[alice].(integration.AuthKey), identities[bob], shards[alice], cohortConfig, sid, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive_signing.NewSecondaryCosigner(identities[bob], identities[alice], shards[bob], cohortConfig, sid, nil, crand.Reader)
+	secondary, err := interactive_signing.NewSecondaryCosigner(identities[bob].(integration.AuthKey), identities[alice], shards[bob], cohortConfig, sid, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 

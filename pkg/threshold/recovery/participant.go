@@ -34,8 +34,8 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func (p *Participant) GetIdentityKey() integration.IdentityKey {
-	return p.sampler.GetIdentityKey()
+func (p *Participant) GetAuthKey() integration.AuthKey {
+	return p.sampler.GetAuthKey()
 }
 
 func (p *Participant) GetSharingId() int {
@@ -47,11 +47,11 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func (p *Participant) IsRecoverer() bool {
-	return !types.Equals(p.lostPartyIdentityKey, p.GetIdentityKey())
+	return !types.Equals(p.lostPartyIdentityKey, p.GetAuthKey())
 }
 
-func NewRecoverer(uniqueSessionId []byte, identityKey, lostPartyIdentityKey integration.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, presentRecoverers *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, identityKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, cohortConfig, prng); err != nil {
+func NewRecoverer(uniqueSessionId []byte, authKey integration.AuthKey, lostPartyIdentityKey integration.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, presentRecoverers *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, cohortConfig, prng); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate inputs")
 	}
 	if transcript == nil {
@@ -59,7 +59,7 @@ func NewRecoverer(uniqueSessionId []byte, identityKey, lostPartyIdentityKey inte
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -78,8 +78,8 @@ func NewRecoverer(uniqueSessionId []byte, identityKey, lostPartyIdentityKey inte
 	return result, nil
 }
 
-func NewLostParty(uniqueSessionId []byte, identityKey integration.IdentityKey, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, presentRecoverers *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, identityKey, identityKey, nil, publicKeyShares, cohortConfig, prng); err != nil {
+func NewLostParty(uniqueSessionId []byte, authKey integration.AuthKey, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, presentRecoverers *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, authKey, nil, publicKeyShares, cohortConfig, prng); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate inputs")
 	}
 	if transcript == nil {
@@ -87,7 +87,7 @@ func NewLostParty(uniqueSessionId []byte, identityKey integration.IdentityKey, p
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, identityKey, cohortConfig, transcript, prng)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -99,7 +99,7 @@ func NewLostParty(uniqueSessionId []byte, identityKey integration.IdentityKey, p
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		publicKeyShares:             publicKeyShares,
-		lostPartyIdentityKey:        identityKey,
+		lostPartyIdentityKey:        authKey,
 		round:                       1,
 	}
 	return result, nil

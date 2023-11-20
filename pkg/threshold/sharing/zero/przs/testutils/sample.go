@@ -27,7 +27,7 @@ func MakeSampleParticipants(cohortConfig *integration.CohortConfig, identities [
 		} else {
 			sid = uniqueSessionId
 		}
-		participants[i], err = sample.NewParticipant(cohortConfig, sid, identity, seeds[i], hashset.NewHashSet(identities), seededPrng)
+		participants[i], err = sample.NewParticipant(cohortConfig, sid, identity.(integration.AuthKey), seeds[i], hashset.NewHashSet(identities), seededPrng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not make participant")
 		}

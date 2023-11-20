@@ -63,7 +63,7 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*
 
 	outputP2P := make(map[types.IdentityHash]*Round1P2P, ic.SessionParticipants.Len())
 	for _, participant := range ic.SessionParticipants.Iter() {
-		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
+		if participant.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
 			continue
 		}
 
@@ -128,7 +128,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[types.IdentityHash]*Round1B
 
 	outputP2P := make(map[types.IdentityHash]*Round2P2P)
 	for _, participant := range ic.SessionParticipants.Iter() {
-		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
+		if participant.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
 			continue
 		}
 		// step 2.6.1
@@ -182,7 +182,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 	cVdV := ic.CohortConfig.CipherSuite.Curve.Scalar().Zero()
 
 	for _, participant := range ic.SessionParticipants.Iter() {
-		if participant.PublicKey().Equal(ic.MyIdentityKey.PublicKey()) {
+		if participant.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
 			continue
 		}
 		// step 3.1.1

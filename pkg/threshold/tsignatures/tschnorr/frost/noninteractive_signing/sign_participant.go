@@ -20,9 +20,9 @@ type Cosigner struct {
 	PreSignatures                *PreSignatureBatch
 	FirstUnusedPreSignatureIndex int
 
-	MyIdentityKey integration.IdentityKey
-	MySharingId   int
-	Shard         *frost.Shard
+	MyAuthKey   integration.AuthKey
+	MySharingId int
+	Shard       *frost.Shard
 
 	CohortConfig           *integration.CohortConfig
 	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
@@ -36,8 +36,8 @@ type Cosigner struct {
 	_ types.Incomparable
 }
 
-func (nic *Cosigner) GetIdentityKey() integration.IdentityKey {
-	return nic.MyIdentityKey
+func (nic *Cosigner) GetAuthKey() integration.AuthKey {
+	return nic.MyAuthKey
 }
 
 func (nic *Cosigner) GetSharingId() int {
@@ -50,7 +50,7 @@ func (nic *Cosigner) GetCohortConfig() *integration.CohortConfig {
 
 func (nic *Cosigner) IsSignatureAggregator() bool {
 	for _, signatureAggregator := range nic.CohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(nic.MyIdentityKey.PublicKey()) {
+		if signatureAggregator.PublicKey().Equal(nic.MyAuthKey.PublicKey()) {
 			return true
 		}
 	}
@@ -58,16 +58,16 @@ func (nic *Cosigner) IsSignatureAggregator() bool {
 }
 
 func NewNonInteractiveCosigner(
-	identityKey integration.IdentityKey, shard *frost.Shard,
+	authKey integration.AuthKey, shard *frost.Shard,
 	preSignatureBatch *PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
 	presentParties *hashset.HashSet[integration.IdentityKey], cohortConfig *integration.CohortConfig, prng io.Reader,
 ) (*Cosigner, error) {
-	err := validateParticipantInputs(identityKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, cohortConfig, prng)
+	err := validateParticipantInputs(authKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
-	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(identityKey, cohortConfig.Participants)
+	sharingIdToIdentityKey, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
 	for i, privateNoncePair := range privateNoncePairs {
 		preSignature := (*preSignatureBatch)[i]
 		myAttestedCommitment := (*preSignature)[mySharingId-1]
@@ -96,7 +96,7 @@ func NewNonInteractiveCosigner(
 		prng:                         prng,
 		PreSignatures:                preSignatureBatch,
 		FirstUnusedPreSignatureIndex: firstUnusedPreSignatureIndex,
-		MyIdentityKey:                identityKey,
+		MyAuthKey:                    authKey,
 		MySharingId:                  mySharingId,
 		Shard:                        shard,
 		CohortConfig:                 cohortConfig,

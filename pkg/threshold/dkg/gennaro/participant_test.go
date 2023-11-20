@@ -36,9 +36,9 @@ func Test_CanInitialize(t *testing.T) {
 			SignatureAggregators: hashset.NewHashSet(identities),
 		},
 	}
-	alice, err := gennaro.NewParticipant([]byte("sid"), identities[0], cohortConfig, crand.Reader, nil)
+	alice, err := gennaro.NewParticipant([]byte("sid"), identities[0].(integration.AuthKey), cohortConfig, crand.Reader, nil)
 	require.NoError(t, err)
-	bob, err := gennaro.NewParticipant([]byte("sid"), identities[1], cohortConfig, crand.Reader, nil)
+	bob, err := gennaro.NewParticipant([]byte("sid"), identities[1].(integration.AuthKey), cohortConfig, crand.Reader, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
 	require.True(t, alice.H.Equal(bob.H))

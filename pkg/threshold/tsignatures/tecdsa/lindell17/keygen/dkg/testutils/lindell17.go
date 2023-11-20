@@ -34,7 +34,7 @@ func MakeParticipants(sid []byte, cohortConfig *integration.CohortConfig, identi
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = lindell17_dkg.NewBackupParticipant(identity, signingShares[i], publicKeyShares[i], cohortConfig, prng, sid, transcript)
+		participants[i], err = lindell17_dkg.NewBackupParticipant(identity.(integration.AuthKey), signingShares[i], publicKeyShares[i], cohortConfig, prng, sid, transcript)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
