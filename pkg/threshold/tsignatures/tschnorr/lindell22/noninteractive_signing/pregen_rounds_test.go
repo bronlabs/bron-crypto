@@ -48,9 +48,16 @@ func Test_PreGenHappyPath(t *testing.T) {
 		for i := 0; i < tau; i++ {
 			for p1 := range identities {
 				p1BigR := cipherSuite.Curve.ScalarBaseMult(batches[p1].PreSignatures[i].K)
+				p1BigR2 := cipherSuite.Curve.ScalarBaseMult(batches[p1].PreSignatures[i].K2)
 				for p2 := range identities {
+					if identities[p1].Hash() == identities[p2].Hash() {
+						continue
+					}
+
 					p2BigR := batches[p2].PreSignatures[i].BigR[identities[p1].Hash()]
+					p2BigR2 := batches[p2].PreSignatures[i].BigR2[identities[p1].Hash()]
 					require.True(t, p1BigR.Equal(p2BigR))
+					require.True(t, p1BigR2.Equal(p2BigR2))
 				}
 			}
 		}

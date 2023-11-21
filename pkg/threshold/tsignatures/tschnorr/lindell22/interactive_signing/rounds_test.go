@@ -23,6 +23,8 @@ import (
 )
 
 func Test_SanityCheck(t *testing.T) {
+	t.Parallel()
+
 	hashFunc := sha512.New
 	curve := edwards25519.New()
 	suite := &integration.CipherSuite{

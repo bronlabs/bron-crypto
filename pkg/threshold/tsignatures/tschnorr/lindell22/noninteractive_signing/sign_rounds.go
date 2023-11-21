@@ -13,9 +13,13 @@ import (
 var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
-	bigRSum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
-	bigR2Sum := c.cohortConfig.CipherSuite.Curve.Point().Identity()
+	bigRSum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K)
+	bigR2Sum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K2)
 	for _, identity := range c.sessionParticipants.Iter() {
+		if identity.Hash() == c.myAuthKey.Hash() {
+			continue
+		}
+
 		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
 		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
 	}

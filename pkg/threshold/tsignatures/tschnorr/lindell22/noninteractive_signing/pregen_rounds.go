@@ -93,6 +93,10 @@ func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitment[i] = make(map[types.IdentityHash]commitments.Commitment)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
+			if identity.Hash() == p.myAuthKey.Hash() {
+				continue
+			}
+
 			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
@@ -135,6 +139,10 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 		BigR[i] = make(map[types.IdentityHash]curves.Point)
 		BigR2[i] = make(map[types.IdentityHash]curves.Point)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
+			if identity.Hash() == p.myAuthKey.Hash() {
+				continue
+			}
+
 			in, ok := input[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
