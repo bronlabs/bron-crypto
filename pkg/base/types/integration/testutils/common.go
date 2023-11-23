@@ -2,15 +2,20 @@ package testutils
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"sort"
 	"strings"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
@@ -21,7 +26,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-type TestIdentityKey struct {
+type TestAuthKey struct {
 	suite      *integration.CipherSuite
 	privateKey *schnorr.PrivateKey
 	publicKey  *schnorr.PublicKey
@@ -29,21 +34,24 @@ type TestIdentityKey struct {
 	_ types.Incomparable
 }
 
-var _ integration.IdentityKey = (*TestIdentityKey)(nil)
+type TestIdentityKey = TestAuthKey
 
-func (k *TestIdentityKey) PrivateKey() curves.Scalar {
+var _ integration.IdentityKey = (*TestAuthKey)(nil)
+var _ integration.AuthKey = (*TestAuthKey)(nil)
+
+func (k *TestAuthKey) PrivateKey() curves.Scalar {
 	return k.privateKey.S
 }
 
-func (k *TestIdentityKey) PublicKey() curves.Point {
+func (k *TestAuthKey) PublicKey() curves.Point {
 	return k.publicKey.A
 }
 
-func (k *TestIdentityKey) Hash() [32]byte {
+func (k *TestAuthKey) Hash() [32]byte {
 	return sha256.Sum256(k.PublicKey().ToAffineCompressed())
 }
 
-func (k *TestIdentityKey) Sign(message []byte) []byte {
+func (k *TestAuthKey) Sign(message []byte) []byte {
 	signer, err := schnorr.NewSigner(k.suite, k.privateKey)
 	if err != nil {
 		panic(err)
@@ -55,7 +63,7 @@ func (k *TestIdentityKey) Sign(message []byte) []byte {
 	return bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
 }
 
-func (k *TestIdentityKey) Verify(signature, message []byte) error {
+func (k *TestAuthKey) Verify(signature, message []byte) error {
 	r := k.suite.Curve.Point().Identity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
@@ -83,6 +91,46 @@ func (k *TestIdentityKey) Verify(signature, message []byte) error {
 	}
 	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errs.WrapVerificationFailed(err, "could not verify schnorr signature")
+	}
+	return nil
+}
+
+var _ integration.AuthKey = (*TestDeterministicAuthKey)(nil)
+
+type TestDeterministicAuthKey struct {
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
+}
+
+func (k *TestDeterministicAuthKey) PrivateKey() curves.Scalar {
+	hashed := sha512.Sum512(k.privateKey.Seed())
+	result, _ := edwards25519.NewScalar().SetBytesWithClamping(hashed[:32])
+	return result
+}
+
+func (k *TestDeterministicAuthKey) PublicKey() curves.Point {
+	result, err := edwards25519.New().Point().FromAffineCompressed(k.publicKey)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (k *TestDeterministicAuthKey) Hash() [32]byte {
+	return sha3.Sum256(k.PublicKey().ToAffineCompressed())
+}
+
+func (k *TestDeterministicAuthKey) Sign(message []byte) []byte {
+	signature, err := k.privateKey.Sign(crand.Reader, message, &ed25519.Options{})
+	if err != nil {
+		panic(err)
+	}
+	return signature
+}
+
+func (k *TestDeterministicAuthKey) Verify(signature, message []byte) error {
+	if ok := ed25519.Verify(k.PublicKey().ToAffineCompressed(), message, signature); !ok {
+		return errs.NewFailed("invalid signature")
 	}
 	return nil
 }
@@ -145,11 +193,89 @@ func MakeTestIdentity(cipherSuite *integration.CipherSuite, secret curves.Scalar
 		return nil, errs.WrapFailed(err, "could not generate schnorr key pair")
 	}
 
-	return &TestIdentityKey{
+	return &TestAuthKey{
 		suite:      cipherSuite,
 		privateKey: sk,
 		publicKey:  pk,
 	}, nil
+}
+
+func MakeTestAuthKeys(cipherSuite *integration.CipherSuite, n int) (authKeys []integration.AuthKey, err error) {
+	var ok bool
+	result := make([]integration.AuthKey, n)
+	out, err := MakeTestIdentities(cipherSuite, n)
+	if err != nil {
+		return nil, err
+	}
+	for i, k := range out {
+		result[i], ok = k.(integration.AuthKey)
+		if !ok {
+			return nil, errs.NewInvalidType("identity key is not auth key #%d", i)
+		}
+	}
+	return result, nil
+}
+
+func MakeTestAuthKey(cipherSuite *integration.CipherSuite, secret curves.Scalar) (integration.AuthKey, error) {
+	result, err := MakeTestIdentity(cipherSuite, secret)
+	if err != nil {
+		return nil, err
+	}
+	authKey, ok := result.(integration.AuthKey)
+	if !ok {
+		return nil, errs.NewInvalidType("identity key is not auth key")
+	}
+	return authKey, nil
+}
+
+func MakeDeterministicTestIdentities(n int) (identities []integration.IdentityKey, err error) {
+	result := make([]integration.IdentityKey, n)
+	for i := 0; i < n; i++ {
+		publicKey, privateKey, err := ed25519.GenerateKey(crand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = MakeDeterministicTestIdentity(privateKey, publicKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func MakeDeterministicTestIdentity(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) (integration.IdentityKey, error) {
+	return &TestDeterministicAuthKey{
+		privateKey: privateKey,
+		publicKey:  publicKey,
+	}, nil
+}
+
+func MakeDeterministicTestAuthKeys(n int) (authKeys []integration.AuthKey, err error) {
+	var ok bool
+	result := make([]integration.AuthKey, n)
+	out, err := MakeDeterministicTestIdentities(n)
+	if err != nil {
+		return nil, err
+	}
+	for i, k := range out {
+		result[i], ok = k.(integration.AuthKey)
+		if !ok {
+			return nil, errs.NewInvalidType("identity key is not auth key #%d", i)
+		}
+	}
+	return result, nil
+}
+
+func MakeDeterministicTestAuthKey(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) (integration.AuthKey, error) {
+	result, err := MakeDeterministicTestIdentity(privateKey, publicKey)
+	if err != nil {
+		return nil, err
+	}
+	authKey, ok := result.(integration.AuthKey)
+	if !ok {
+		return nil, errs.NewInvalidType("identity key is not auth key")
+	}
+	return authKey, nil
 }
 
 func MakeCohortProtocol(cipherSuite *integration.CipherSuite, protocol protocols.Protocol, identities []integration.IdentityKey, threshold int, signatureAggregators []integration.IdentityKey) (cohortConfig *integration.CohortConfig, err error) {

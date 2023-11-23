@@ -41,7 +41,7 @@ func Test_prng(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPRN
 		require.NoError(t, err)
 		// Create anew generate 200B of buffer data. Check equality of first 120B
 		buffer3 := make([]byte, 200)
-		prng2, err := prng.New(keys[i], nonces[i])
+		prng2, err := prngGenerator(keys[i], nonces[i])
 		require.NoError(t, err)
 		_, err = prng2.Read(buffer3)
 		require.NoError(t, err)

@@ -51,6 +51,12 @@ type FieldElementG2 struct {
 	_ types.Incomparable
 }
 
+func NewFieldElementG2() *FieldElementG2 {
+	emptyElement := &FieldElementG2{}
+	result, _ := emptyElement.One().(*FieldElementG2)
+	return result
+}
+
 func (*FieldElementG2) Value() curves.FieldValue {
 	return nil
 }

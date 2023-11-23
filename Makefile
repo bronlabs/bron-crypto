@@ -2,7 +2,6 @@ GOENV=GO111MODULE=on
 GO=${GOENV} go
 
 COVERAGE_OUT=/tmp/coverage.out
-PACKAGE=./...
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 
@@ -23,7 +22,7 @@ clean:
 
 .PHONY: cover
 cover: ## compute and display test coverage report
-	${GO} test -short -coverprofile=${COVERAGE_OUT} ${PACKAGE}
+	${GO} test -short -coverprofile=${COVERAGE_OUT} ./...
 	${GO} tool cover -html=${COVERAGE_OUT}
 
 .PHONY: fmt

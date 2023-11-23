@@ -23,6 +23,12 @@ type PointG1 struct {
 	_ types.Incomparable
 }
 
+func NewPointG1() *PointG1 {
+	emptyPoint := &PointG1{}
+	result, _ := emptyPoint.Identity().(*PointG1)
+	return result
+}
+
 func (*PointG1) Curve() curves.Curve {
 	return NewG1()
 }

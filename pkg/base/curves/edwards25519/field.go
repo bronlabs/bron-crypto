@@ -50,6 +50,12 @@ type FieldElement struct {
 	_ types.Incomparable
 }
 
+func NewFieldElement() *FieldElement {
+	emptyElement := &FieldElement{}
+	result, _ := emptyElement.One().(*FieldElement)
+	return result
+}
+
 func (*FieldElement) Profile() curves.FieldProfile {
 	return &FieldProfile{}
 }

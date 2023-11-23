@@ -24,6 +24,12 @@ type Point struct {
 	_ types.Incomparable
 }
 
+func NewPoint() *Point {
+	emptyPoint := &Point{}
+	result, _ := emptyPoint.Identity().(*Point)
+	return result
+}
+
 func (*Point) Curve() curves.Curve {
 	return &pallasInstance
 }

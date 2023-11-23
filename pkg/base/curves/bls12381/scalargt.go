@@ -22,6 +22,12 @@ type ScalarGt struct {
 	_ types.Incomparable
 }
 
+func NewScalarGt() *ScalarGt {
+	emptyScalar := &ScalarGt{}
+	result, _ := emptyScalar.Zero().(*ScalarGt)
+	return result
+}
+
 func (*ScalarGt) Curve() curves.Curve {
 	return nil
 }

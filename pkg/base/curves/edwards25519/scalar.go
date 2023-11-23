@@ -24,6 +24,12 @@ type Scalar struct {
 	_ types.Incomparable
 }
 
+func NewScalar() *Scalar {
+	emptyScalar := &Scalar{}
+	result, _ := emptyScalar.Zero().(*Scalar)
+	return result
+}
+
 func (*Scalar) Curve() curves.Curve {
 	return &edwards25519Instance
 }
@@ -271,6 +277,20 @@ func (*Scalar) SetBytesCanonical(input []byte) (curves.Scalar, error) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	value, err := filippo.NewScalar().SetCanonicalBytes(input)
+	if err != nil {
+		return nil, errs.WrapSerializationError(err, "set canonical bytes")
+	}
+	return &Scalar{Value: value}, nil
+}
+
+// SetBytesWithClamping takes input a 32-byte long array, applies the buffer
+// pruning described in RFC 8032, Section 5.1.5 (also known as clamping) and
+// returns the resulting ed25519 scalar.
+func (*Scalar) SetBytesWithClamping(input []byte) (curves.Scalar, error) {
+	if len(input) != base.FieldBytes {
+		return nil, errs.NewInvalidLength("invalid byte sequence")
+	}
+	value, err := filippo.NewScalar().SetBytesWithClamping(input)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set canonical bytes")
 	}

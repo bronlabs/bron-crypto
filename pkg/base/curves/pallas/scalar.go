@@ -23,6 +23,12 @@ type Scalar struct {
 	_ types.Incomparable
 }
 
+func NewScalar() *Scalar {
+	emptyScalar := &Scalar{}
+	result, _ := emptyScalar.Zero().(*Scalar)
+	return result
+}
+
 func (*Scalar) Curve() curves.Curve {
 	return &pallasInstance
 }

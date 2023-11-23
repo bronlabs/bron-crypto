@@ -50,6 +50,12 @@ type FieldElement struct {
 	_ types.Incomparable
 }
 
+func NewFieldElement() *FieldElement {
+	emptyElement := &FieldElement{}
+	result, _ := emptyElement.One().(*FieldElement)
+	return result
+}
+
 func (e *FieldElement) FieldValue() *impl.FieldValue {
 	return e.v
 }
