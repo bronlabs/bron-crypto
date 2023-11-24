@@ -48,7 +48,7 @@ The details of the main protocol are sketched in Protocol 1 of DkLs19 and the ne
 
    $\tilde{b}_j = g_j \cdot \beta_j$                                   $\in \mathbb{Z}_q, \forall{j}{\xi}$
 
-    3. Initiate $COTe(\xi)$ Round 1 and receive `extendedPackedChoices`, `cOTeReceiverOutput` and `R1Output`. Cache the first two.
+    3. Initiate $COTe(\xi)$ Round 1 and receive `extendedPackedChoices`, `cOTeMessage` and `R1Output`. Cache the first two.
     4. Send `R1Output` to Alice.
 
 2. Round 2 (Alice):
@@ -84,9 +84,9 @@ $r_{i,j}=\tilde{\chi}_{i} \cdot \tilde{z_{A_{\xi}}} + \hat{\chi}_i \cdot $$\hat{
 
     0. Receive ($gamma_A$, $\tilde{r}$, u, R2Output) from Alice.
     1. Initiate COTe round 3 with inputs `R2Output`, `oteReceiverOutput` and `extendedPackedChoices` to receive `coteReceiverOutput`.
-    2. Parse `cOTeReceiverOutputs` as ($\tilde{z}_B=\[L\]\[\xi\]\[0\]z$, $\hat{z}_B=\[L\]\[\xi\]\[1\]z$) where $z \in \mathbb{Z}_q$\
-            $\tilde{z}_B$ = cOTeReceiverOutputs[:][:][0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Every first element                $\in$ [L][$\xi$]$\mathbb{Z}_q$\
-            $\hat{z}_B$ = cOTeReceiverOutputs[:][:][1] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Every other element                $\in$ [L][$\xi$]$\mathbb{Z}_q$
+    2. Parse `cOTeMessages` as ($\tilde{z}_B=\[L\]\[\xi\]\[0\]z$, $\hat{z}_B=\[L\]\[\xi\]\[1\]z$) where $z \in \mathbb{Z}_q$\
+            $\tilde{z}_B$ = cOTeMessages[:][:][0]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Every first element                $\in$ [L][$\xi$]$\mathbb{Z}_q$\
+            $\hat{z}_B$ = cOTeMessages[:][:][1] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Every other element                $\in$ [L][$\xi$]$\mathbb{Z}_q$
     3. Compute $\tilde{\chi} \leftarrow H^{\xi}(1, sid, t)$ where t is the shared transcript of COTe.
     4. Compute $\hat{\chi} \leftarrow H^{\xi}(2, sid, t)$ where t is the shared transcript of COTe.
     5. Bob computes $\tilde{r}_B$:<br>

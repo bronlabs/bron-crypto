@@ -15,7 +15,7 @@ import (
 )
 
 type Alice struct {
-	prng            io.Reader
+	csrand          io.Reader
 	sender          *softspoken.Sender
 	Curve           curves.Curve
 	transcript      transcripts.Transcript
@@ -30,7 +30,7 @@ type Alice struct {
 }
 
 type Bob struct {
-	prng            io.Reader
+	csrand          io.Reader
 	receiver        *softspoken.Receiver
 	Curve           curves.Curve
 	transcript      transcripts.Transcript
@@ -41,22 +41,20 @@ type Bob struct {
 	// This should be considered as an enum. Only one field should be used
 	Beta [][XiBytes]byte
 	// BTilde (b̃) ∈ ℤq^L is the sum of the gadget vector elements weighted by the bits in beta
-	BTilde            [L]curves.Scalar
-	oTeReceiverOutput softspoken.OTeReceiverOutput
+	BTilde [L]curves.Scalar
 
 	_ types.Incomparable
 }
 
-func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, truePrng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
-	err := validateAliceInputs(curve, seedOtResults, uniqueSessionId, truePrng)
-	if err != nil {
+func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
+	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, true, seededPrng)
+	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, true, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -70,36 +68,19 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 		transcript:      transcript,
 		uniqueSessionId: uniqueSessionId,
 		gadget:          gadget,
-		prng:            truePrng,
+		csrand:          csrand,
 	}, nil
 }
 
-func validateAliceInputs(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, truePrng io.Reader) error {
-	if curve == nil {
-		return errs.NewInvalidArgument("curve is nil")
-	}
-	if truePrng == nil {
-		return errs.NewInvalidArgument("prng is nil")
-	}
-	if seedOtResults == nil {
-		return errs.NewInvalidArgument("seed ot results is nil")
-	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("unique session id is empty")
-	}
-	return nil
-}
-
-func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, truePrng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
-	err := validateBobInputs(curve, seedOtResults, uniqueSessionId, truePrng)
-	if err != nil {
+func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
+	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, true, seededPrng)
+	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, true, prgFn)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -113,11 +94,11 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 		transcript:      transcript,
 		uniqueSessionId: uniqueSessionId,
 		gadget:          gadget,
-		prng:            truePrng,
+		csrand:          csrand,
 	}, nil
 }
 
-func validateBobInputs(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, truePrng io.Reader) error {
+func validateParticipantInputs[T any](curve curves.Curve, seedOtResults *T, uniqueSessionId []byte, truePrng io.Reader) error {
 	if curve == nil {
 		return errs.NewInvalidArgument("curve is nil")
 	}

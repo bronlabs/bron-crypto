@@ -21,6 +21,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 
 	// Fixed parameters
 	useForcedReuse := true
+	scalarsPerSlot := 2
 	inputBatchLen := 5
 	curve := k256.New()
 
@@ -38,11 +39,11 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 
 		// Set COTe inputs
 		choices, _, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, curve, useForcedReuse)
+			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Setup COTe
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
 		require.NoError(t, err)
 	}, func() {
 		receiver.Round1(choices)
@@ -57,6 +58,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	// Fixed parameters
 	useForcedReuse := true
 	inputBatchLen := 5
+	scalarsPerSlot := 2
 	curve := k256.New()
 
 	// Session ID
@@ -66,7 +68,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var choices softspoken.OTeInputChoices
 	var receiver *softspoken.Receiver
 	var round1Output *softspoken.Round1Output
-	var inputOpts softspoken.COTeInputOpt
+	var inputOpts softspoken.COTeMessage
 	var sender *softspoken.Sender
 	internal.RunMeasurement(500, "softspoken_round2", func(i int) {
 		// BaseOTs
@@ -76,13 +78,13 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 
 		// Set COTe inputs
 		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, curve, useForcedReuse)
+			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Setup COTe
-		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
+		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
 		require.NoError(t, err)
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
 		require.NoError(t, err)
 
 		_, round1Output, err = receiver.Round1(choices)
@@ -99,6 +101,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 
 	// Fixed parameters
 	useForcedReuse := true
+	scalarsPerSlot := 2
 	inputBatchLen := 5
 	curve := k256.New()
 
@@ -109,10 +112,9 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var choices softspoken.OTeInputChoices
 	var receiver *softspoken.Receiver
 	var round1Output *softspoken.Round1Output
-	var inputOpts softspoken.COTeInputOpt
+	var inputOpts softspoken.COTeMessage
 	var sender *softspoken.Sender
 	var round2Output *softspoken.Round2Output
-	var oTeReceiverOutput softspoken.OTeReceiverOutput
 	internal.RunMeasurement(500, "softspoken_round3", func(i int) {
 		// BaseOTs
 		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
@@ -121,21 +123,21 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 
 		// Set COTe inputs
 		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, curve, useForcedReuse)
+			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Setup COTe
-		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
+		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
 		require.NoError(t, err)
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
 		require.NoError(t, err)
 
-		oTeReceiverOutput, round1Output, err = receiver.Round1(choices)
+		_, round1Output, err = receiver.Round1(choices)
 		require.NoError(t, err)
 		_, _, round2Output, err = sender.Round2(round1Output, inputOpts)
 		require.NoError(t, err)
 
 	}, func() {
-		receiver.Round3(round2Output, oTeReceiverOutput)
+		receiver.Round3(round2Output)
 	})
 }

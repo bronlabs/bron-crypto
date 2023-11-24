@@ -57,7 +57,7 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// check if array is a matrix
 	for i := 0; i < nRowsInput; i++ {
 		if len(inputMatrix[i]) != len(inputMatrix[0]) {
-			return nil, errs.NewInvalidArgument("input matrix must be a matrix")
+			return nil, errs.NewInvalidArgument("input matrix must be a 2D matrix")
 		}
 	}
 

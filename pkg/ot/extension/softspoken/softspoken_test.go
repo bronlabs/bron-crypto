@@ -22,6 +22,7 @@ func Test_HappyPath_OTe(t *testing.T) {
 	for _, curve := range curveInstances {
 		// Generic setup
 		useForcedReuse := false
+		scalarsPerSlot := 2
 		inputBatchLen := 3
 		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := crand.Read(uniqueSessionId[:])
@@ -32,12 +33,12 @@ func Test_HappyPath_OTe(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set OTe inputs
-		choices, _, err := testutils.GenerateSoftspokenRandomInputs(inputBatchLen, curve, useForcedReuse)
+		choices, _, err := testutils.GenerateSoftspokenRandomInputs(inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Run OTe
 		oTeSenderOutput, oTeReceiverOutput, err := testutils.RunSoftspokenOTe(
-			curve, uniqueSessionId[:], baseOtSendOutput, baseOtRecOutput, choices)
+			curve, uniqueSessionId[:], crand.Reader, baseOtSendOutput, baseOtRecOutput, choices)
 		require.NoError(t, err)
 
 		// Check OTe result
@@ -51,6 +52,7 @@ func Test_HappyPath_COTe(t *testing.T) {
 		// Generic setup
 		useForcedReuse := false
 		inputBatchLen := 5
+		scalarsPerSlot := 3
 		uniqueSessionId := [vsot.DigestSize]byte{}
 		_, err := crand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
@@ -63,16 +65,16 @@ func Test_HappyPath_COTe(t *testing.T) {
 
 		// Set COTe inputs
 		choices, inputOpts, err := testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, curve, useForcedReuse)
+			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := testutils.RunSoftspokenCOTe(
-			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
+		cOTeSenderOutputs, cOTeMessages, err := testutils.RunSoftspokenCOTe(
+			useForcedReuse, curve, uniqueSessionId[:], crand.Reader, baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
-		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeMessages, inputOpts, choices)
 		require.NoError(t, err)
 
 	}
@@ -83,6 +85,7 @@ func Test_HappyPath_COTeForcedReuse(t *testing.T) {
 		// Fixed parameters
 		useForcedReuse := true
 		inputBatchLen := 5
+		scalarsPerSlot := 4
 
 		// Session ID
 		uniqueSessionId := [vsot.DigestSize]byte{}
@@ -96,16 +99,16 @@ func Test_HappyPath_COTeForcedReuse(t *testing.T) {
 
 		// Set COTe inputs
 		choices, inputOpts, err := testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, curve, useForcedReuse)
+			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
 		require.NoError(t, err)
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeReceiverOutputs, err := testutils.RunSoftspokenCOTe(
-			useForcedReuse, curve, uniqueSessionId[:], baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
+		cOTeSenderOutputs, cOTeMessages, err := testutils.RunSoftspokenCOTe(
+			useForcedReuse, curve, uniqueSessionId[:], crand.Reader, baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
 		require.NoError(t, err)
 
 		// Check COTe result
-		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeReceiverOutputs, inputOpts, choices)
+		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeMessages, inputOpts, choices)
 		require.NoError(t, err)
 	}
 }

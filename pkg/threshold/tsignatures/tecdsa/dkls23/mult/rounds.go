@@ -23,7 +23,7 @@ type Round2Output struct {
 func (bob *Bob) Round1() (*Round1Output, error) {
 	// step 1.1
 	bob.Beta = make([][XiBytes]byte, 1) // LOTe = 1 for Forced Reuse
-	if _, err := bob.prng.Read(bob.Beta[0][:]); err != nil {
+	if _, err := bob.csrand.Read(bob.Beta[0][:]); err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not sample beta")
 	}
 
@@ -47,11 +47,10 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 	}
 
 	// step 1.3
-	oTeReceiverOutput, COTeR1Output, err := bob.receiver.Round1(bob.Beta)
+	_, COTeR1Output, err := bob.receiver.Round1(bob.Beta)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob step 1.3")
 	}
-	bob.oTeReceiverOutput = oTeReceiverOutput
 
 	return COTeR1Output, nil
 }
@@ -59,21 +58,22 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceInput) (s *OutputShares, r2o *Round2Output, err error) {
 	for i := 0; i < L; i++ {
 		// step 2.1
-		alice.aTilde[i], err = alice.Curve.Scalar().Random(alice.prng)
+		alice.aTilde[i], err = alice.Curve.Scalar().Random(alice.csrand)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a tilde")
 		}
 		// step 2.2
-		alice.aHat[i], err = alice.Curve.Scalar().Random(alice.prng)
+		alice.aHat[i], err = alice.Curve.Scalar().Random(alice.csrand)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a hat")
 		}
 	}
 
 	// step 2.3
-	alpha := [L][Xi][2]curves.Scalar{}
+	alpha := [L][Xi][]curves.Scalar{}
 	for i := 0; i < L; i++ {
 		for j := 0; j < Xi; j++ {
+			alpha[i][j] = make([]curves.Scalar, 2)
 			alpha[i][j][0] = alice.aTilde[i]
 			alpha[i][j][1] = alice.aHat[i]
 		}
@@ -169,7 +169,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 
 func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err error) {
 	// step 2.1
-	coteReceiverOutput, err := bob.receiver.Round3(round2output.COTeRound2Output, bob.oTeReceiverOutput)
+	coteReceiverOutput, err := bob.receiver.Round3(round2output.COTeRound2Output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob cote round 3")
 	}

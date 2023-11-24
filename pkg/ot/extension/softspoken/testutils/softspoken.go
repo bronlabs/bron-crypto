@@ -43,6 +43,7 @@ func CheckSoftspokenBaseOTOutputs(baseOtSenderOutput *vsot.SenderOutput, baseOtR
 	for i := 0; i < Kappa; i++ {
 		if !bytes.Equal(baseOtReceiverOutput.OneTimePadDecryptionKey[i][:],
 			baseOtSenderOutput.OneTimePadEncryptionKeys[i][baseOtReceiverOutput.RandomChoiceBits[i]][:]) {
+
 			return errs.NewVerificationFailed("baseOT output mismatch for index %d", i)
 		}
 	}
@@ -61,17 +62,18 @@ func CheckSoftspokenBaseOTOutputs(baseOtSenderOutput *vsot.SenderOutput, baseOtR
 func RunSoftspokenOTe(
 	curve curves.Curve,
 	sid []byte,
+	rand io.Reader,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
-) (oTeSenderOutputs *softspoken.OTeSenderOutput, oTeReceiverOutputs softspoken.OTeReceiverOutput, err error) {
+) (oTeSenderOutputs *[2]softspoken.OTeMessage, oTeReceiverOutputs softspoken.OTeMessage, err error) {
 	// Setup OTe
 	useForcedReuse := false
-	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse, nil)
+	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, rand, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
 	}
-	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse, nil)
+	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, rand, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
 	}
@@ -91,8 +93,8 @@ func RunSoftspokenOTe(
 // CheckSoftspokenOTeOutputs checks the results of a random OT extension run,
 // testing that v_x = v_1 • x + v_0 • (1-x).
 func CheckSoftspokenOTeOutputs(
-	oTeSenderOutput *softspoken.OTeSenderOutput, // (v_0, v_1)
-	oTeReceiverOutput softspoken.OTeReceiverOutput, // (v_x)
+	oTeSenderOutput *[2]softspoken.OTeMessage, // (v_0, v_1)
+	oTeReceiverOutput softspoken.OTeMessage, // (v_x)
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
 ) error {
 	if oTeSenderOutput == nil || oTeReceiverOutput == nil {
@@ -101,7 +103,7 @@ func CheckSoftspokenOTeOutputs(
 	L := len(oTeSenderOutput[0])
 	// Check length matching
 	if len(oTeReceiverOutput) != L {
-		return errs.NewInvalidLength("OTe output length mismatch")
+		return errs.NewInvalidLength("OTe output length mismatch (is %d, should be %d)", len(oTeReceiverOutput), L)
 	}
 	// Check OTe results
 	for l := 0; l < L; l++ {
@@ -111,10 +113,8 @@ func CheckSoftspokenOTeOutputs(
 			if err != nil {
 				return errs.WrapFailed(err, "cannot select bit")
 			}
-			for j := 0; j < softspoken.ROTeWidth; j++ {
-				if !bytes.Equal(oTeSenderOutput[xBit][l][i][j][:], oTeReceiverOutput[l][i][j][:]) {
-					return errs.NewVerificationFailed("OTe output mismatch for index %d", i)
-				}
+			if !bytes.Equal(oTeSenderOutput[xBit][l][i][:], oTeReceiverOutput[l][i][:]) {
+				return errs.NewVerificationFailed("OTe output mismatch for index %d", i)
 			}
 		}
 	}
@@ -137,23 +137,24 @@ func RunSoftspokenCOTe(
 	useForcedReuse bool,
 	curve curves.Curve,
 	sid []byte,
+	rand io.Reader,
 	baseOtSenderOutput *vsot.SenderOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *vsot.ReceiverOutput, // baseOT seeds for OTe sender
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
-	inputOpts softspoken.COTeInputOpt, // sender's input, the InputOpt batches of α
-) (cOTeSenderOutput softspoken.COTeSenderOutput, cOTeReceiverOutput softspoken.COTeReceiverOutput, err error) {
+	inputOpts softspoken.COTeMessage, // sender's input, the InputOpt batches of α
+) (cOTeSenderOutput, cOTeMessage softspoken.COTeMessage, err error) {
 	// Setup COTe
-	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, useForcedReuse, nil)
+	sender, err := softspoken.NewCOtSender(baseOtReceiverOutput, sid, nil, curve, rand, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
 	}
-	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, useForcedReuse, nil)
+	receiver, err := softspoken.NewCOtReceiver(baseOtSenderOutput, sid, nil, curve, rand, useForcedReuse, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
 	}
 
 	// Run COTe
-	oTeReceiverOutput, round1Output, err := receiver.Round1(choices)
+	_, round1Output, err := receiver.Round1(choices)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 1")
 	}
@@ -161,18 +162,18 @@ func RunSoftspokenCOTe(
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken sender round 2")
 	}
-	cOTeReceiverOutput, err = receiver.Round3(round2Output, oTeReceiverOutput)
+	cOTeMessage, err = receiver.Round3(round2Output)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 3")
 	}
-	return cOTeSenderOutput, cOTeReceiverOutput, nil
+	return cOTeSenderOutput, cOTeMessage, nil
 }
 
 // GenerateSoftspokenRandomInputs generates random inputs for the SoftspokenOT
 // Correlated OT extension.
-func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useForcedReuse bool) (
+func GenerateSoftspokenRandomInputs(inputBatchLen, scalarsPerSlot int, curve curves.Curve, useForcedReuse bool) (
 	choices softspoken.OTeInputChoices, // receiver's input, the Choice bits x
-	inputOpts softspoken.COTeInputOpt, // sender's input, the InputOpt α
+	inputOpts softspoken.COTeMessage, // sender's input, the InputOpt α
 	err error,
 ) {
 	if inputBatchLen < 0 {
@@ -191,10 +192,11 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 	if curve == nil { // Just need the input choices
 		return choices, nil, nil
 	}
-	inputOpts = make(softspoken.COTeInputOpt, inputBatchLen)
+	inputOpts = make(softspoken.COTeMessage, inputBatchLen)
 	for l := 0; l < inputBatchLen; l++ {
 		for i := 0; i < softspoken.Xi; i++ {
-			for k := 0; k < softspoken.ROTeWidth; k++ {
+			inputOpts[l][i] = make([]curves.Scalar, scalarsPerSlot)
+			for k := 0; k < scalarsPerSlot; k++ {
 				inputOpts[l][i][k], err = curve.Scalar().Random(crand.Reader)
 				if err != nil {
 					return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
@@ -208,17 +210,18 @@ func GenerateSoftspokenRandomInputs(inputBatchLen int, curve curves.Curve, useFo
 // CheckSoftspokenCOTeOutputs checks the results of a Correlated OT extension run,
 // testing that z_A + z_B = x • α.
 func CheckSoftspokenCOTeOutputs(
-	cOTeSenderOutputs softspoken.COTeSenderOutput,
-	cOTeReceiverOutputs softspoken.COTeReceiverOutput,
-	inputOpts softspoken.COTeInputOpt,
+	cOTeSenderOutputs softspoken.COTeMessage,
+	cOTeMessages softspoken.COTeMessage,
+	inputOpts softspoken.COTeMessage,
 	choices softspoken.OTeInputChoices,
 ) error {
 	L := len(inputOpts)
 	useForcedReuse := (len(choices) == 1) && (L > 1)
+	scalarsPerSlot := len(inputOpts[0][0])
 	// Check length matching
 	// require.Equal(t, len(cOTeSenderOutputs), L)
-	// require.Equal(t, len(cOTeReceiverOutputs), L)
-	if len(cOTeSenderOutputs) != L || len(cOTeReceiverOutputs) != L {
+	// require.Equal(t, len(cOTeMessages), L)
+	if len(cOTeSenderOutputs) != L || len(cOTeMessages) != L {
 		return errs.NewInvalidLength("COTe input/output length mismatch")
 	}
 	// Check correlation in COTe results
@@ -235,10 +238,10 @@ func CheckSoftspokenCOTeOutputs(
 			if err != nil {
 				return errs.WrapFailed(err, "cannot select bit")
 			}
-			for k := 0; k < softspoken.ROTeWidth; k++ {
+			for k := 0; k < scalarsPerSlot; k++ {
 				// Check each correlation z_A = x • α - z_B
 				z_A := cOTeSenderOutputs[l][i][k]
-				z_B := cOTeReceiverOutputs[l][i][k]
+				z_B := cOTeMessages[l][i][k]
 				alpha := inputOpts[l][i][k]
 				if x != 0 {
 					if z_A.Cmp(alpha.Sub(z_B)) != 0 {
