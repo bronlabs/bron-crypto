@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/krypton/dkg/tecdsa"
 )
 
-func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*tecdsa.Participant, err error) {
+func MakeParticipants(cohortConfig *integration.CohortConfig, sid []byte, identities []integration.IdentityKey, prngs []io.Reader) (participants []*tecdsa.Participant, err error) {
 	if len(identities) != cohortConfig.Protocol.TotalParties {
 		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
@@ -29,7 +29,7 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = tecdsa.NewParticipant(identity.(integration.AuthKey), cohortConfig, prng)
+		participants[i], err = tecdsa.NewParticipant(identity.(integration.AuthKey), sid, cohortConfig, prng)
 		if err != nil {
 			return nil, err
 		}
@@ -37,29 +37,6 @@ func MakeParticipants(cohortConfig *integration.CohortConfig, identities []integ
 
 	return participants, nil
 }
-
-func DoDkgRound1(participants []*tecdsa.Participant) (round1BroadcastOutputs []*tecdsa.Round1Broadcast, err error) {
-	round1BroadcastOutputs = make([]*tecdsa.Round1Broadcast, len(participants))
-	for i, participant := range participants {
-		round1BroadcastOutputs[i], err = participant.Round1()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return round1BroadcastOutputs, nil
-}
-
-func DoDkgRound2(participants []*tecdsa.Participant, round1BroadcastOutputs []map[types.IdentityHash]*tecdsa.Round1Broadcast) (round2BroadcastOutputs []*tecdsa.Round2Broadcast, err error) {
-	round2BroadcastOutputs = make([]*tecdsa.Round2Broadcast, len(participants))
-	for i, participant := range participants {
-		round2BroadcastOutputs[i], err = participant.Round2(round1BroadcastOutputs[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return round2BroadcastOutputs, nil
-}
-
 func MapDkgRoundArray[T any](participants []*tecdsa.Participant, round2BroadcastOutputs []*T) (round2BroadcastInputs []map[types.IdentityHash]*T) {
 	round2BroadcastInputs = make([]map[types.IdentityHash]*T, len(participants))
 	for i := range participants {
@@ -73,11 +50,11 @@ func MapDkgRoundArray[T any](participants []*tecdsa.Participant, round2Broadcast
 	return round2BroadcastInputs
 }
 
-func DoDkgRound3(participants []*tecdsa.Participant, round2BroadcastInputs []map[types.IdentityHash]*tecdsa.Round2Broadcast) (round2BroadcastOutputs []*tecdsa.Round3Broadcast, round2UnicastOutputs []map[types.IdentityHash]*tecdsa.Round3P2P, err error) {
+func DoDkgRound3(participants []*tecdsa.Participant) (round2BroadcastOutputs []*tecdsa.Round3Broadcast, round2UnicastOutputs []map[types.IdentityHash]*tecdsa.Round3P2P, err error) {
 	round2BroadcastOutputs = make([]*tecdsa.Round3Broadcast, len(participants))
 	round2UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round3P2P, len(participants))
 	for i := range participants {
-		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round3(round2BroadcastInputs[i])
+		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round1()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -89,7 +66,7 @@ func DoDkgRound4(participants []*tecdsa.Participant, round3BroadcastInputs []map
 	round3BroadcastOutputs = make([]*tecdsa.Round4Broadcast, len(participants))
 	round3UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round4P2P, len(participants))
 	for i := range participants {
-		round3BroadcastOutputs[i], round3UnicastOutputs[i], err = participants[i].Round4(round3BroadcastInputs[i], round3UnicastInputs[i])
+		round3BroadcastOutputs[i], round3UnicastOutputs[i], err = participants[i].Round2(round3BroadcastInputs[i], round3UnicastInputs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -101,7 +78,7 @@ func DoDkgRound5(participants []*tecdsa.Participant, round4BroadcastInputs []map
 	round4BroadcastOutputs = make([]*tecdsa.Round5Broadcast, len(participants))
 	round4UnicastOutputs = make([]map[types.IdentityHash]tecdsa.Round5P2P, len(participants))
 	for i := range participants {
-		round4BroadcastOutputs[i], round4UnicastOutputs[i], err = participants[i].Round5(round4BroadcastInputs[i], round4UnicastInputs[i])
+		round4BroadcastOutputs[i], round4UnicastOutputs[i], err = participants[i].Round3(round4BroadcastInputs[i], round4UnicastInputs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -113,7 +90,7 @@ func DoDkgRound6(participants []*tecdsa.Participant, round5BroadcastInputs []map
 	round5BroadcastOutputs = make([]*tecdsa.Round6Broadcast, len(participants))
 	round5UnicastOutputs = make([]map[types.IdentityHash]tecdsa.Round6P2P, len(participants))
 	for i := range participants {
-		round5BroadcastOutputs[i], round5UnicastOutputs[i], err = participants[i].Round6(round5BroadcastInputs[i], round5UnicastInputs[i])
+		round5BroadcastOutputs[i], round5UnicastOutputs[i], err = participants[i].Round4(round5BroadcastInputs[i], round5UnicastInputs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -125,7 +102,7 @@ func DoDkgRound7(participants []*tecdsa.Participant, round6BroadcastInputs []map
 	round6BroadcastOutputs = make([]*tecdsa.Round7Broadcast, len(participants))
 	round6UnicastOutputs = make([]map[types.IdentityHash]tecdsa.Round7P2P, len(participants))
 	for i := range participants {
-		round6BroadcastOutputs[i], round6UnicastOutputs[i], err = participants[i].Round7(round6BroadcastInputs[i], round6UnicastInputs[i])
+		round6BroadcastOutputs[i], round6UnicastOutputs[i], err = participants[i].Round5(round6BroadcastInputs[i], round6UnicastInputs[i])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -160,7 +137,7 @@ func MapDkgRoundP2P[K any, P any](participants []*tecdsa.Participant, round6Broa
 func DoDkgRound8(participants []*tecdsa.Participant, round7BroadcastInputs []map[types.IdentityHash]*tecdsa.Round7Broadcast, round7UnicastInputs []map[types.IdentityHash]tecdsa.Round7P2P) (round7UnicastOutputs []map[types.IdentityHash]*tecdsa.Round8P2P, err error) {
 	round7UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round8P2P, len(participants))
 	for i := range participants {
-		round7UnicastOutputs[i], err = participants[i].Round8(round7BroadcastInputs[i], round7UnicastInputs[i])
+		round7UnicastOutputs[i], err = participants[i].Round6(round7BroadcastInputs[i], round7UnicastInputs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +148,7 @@ func DoDkgRound8(participants []*tecdsa.Participant, round7BroadcastInputs []map
 func DoDkgRound9(participants []*tecdsa.Participant, round8UnicastInputs []map[types.IdentityHash]*tecdsa.Round8P2P) (round8UnicastOutputs []map[types.IdentityHash]*tecdsa.Round9P2P, err error) {
 	round8UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round9P2P, len(participants))
 	for i := range participants {
-		round8UnicastOutputs[i], err = participants[i].Round9(round8UnicastInputs[i])
+		round8UnicastOutputs[i], err = participants[i].Round7(round8UnicastInputs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +159,7 @@ func DoDkgRound9(participants []*tecdsa.Participant, round8UnicastInputs []map[t
 func DoDkgRound10(participants []*tecdsa.Participant, round9UnicastInputs []map[types.IdentityHash]*tecdsa.Round9P2P) (round9UnicastOutputs []map[types.IdentityHash]*tecdsa.Round10P2P, err error) {
 	round9UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round10P2P, len(participants))
 	for i := range participants {
-		round9UnicastOutputs[i], err = participants[i].Round10(round9UnicastInputs[i])
+		round9UnicastOutputs[i], err = participants[i].Round8(round9UnicastInputs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +170,7 @@ func DoDkgRound10(participants []*tecdsa.Participant, round9UnicastInputs []map[
 func DoDkgRound11(participants []*tecdsa.Participant, round10UnicastInputs []map[types.IdentityHash]*tecdsa.Round10P2P) (round10UnicastOutputs []map[types.IdentityHash]*tecdsa.Round11P2P, err error) {
 	round10UnicastOutputs = make([]map[types.IdentityHash]*tecdsa.Round11P2P, len(participants))
 	for i := range participants {
-		round10UnicastOutputs[i], err = participants[i].Round11(round10UnicastInputs[i])
+		round10UnicastOutputs[i], err = participants[i].Round9(round10UnicastInputs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +194,7 @@ func MapDkgRound[K any](participants []*tecdsa.Participant, round10UnicastOutput
 func DoDkgRound12(participants []*tecdsa.Participant, round11UnicastInputs []map[types.IdentityHash]*tecdsa.Round11P2P) (shards []*tecdsa.Shard, err error) {
 	shards = make([]*tecdsa.Shard, len(participants))
 	for i := range participants {
-		shards[i], err = participants[i].Round12(round11UnicastInputs[i])
+		shards[i], err = participants[i].Round10(round11UnicastInputs[i])
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	dkls23 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
 	lindell17 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -24,7 +23,6 @@ type Participant struct {
 	CohortConfig *integration.CohortConfig
 
 	UniqueSessionId []byte
-	SIDParty        *agreeonrandom.Participant
 	Main            *dkls23.Participant
 	Backup          *lindell17.Participant
 	Shard           *Shard
@@ -48,29 +46,25 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.CohortConfig
 }
 
-func NewParticipant(authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
-	err := validateInputs(authKey, cohortConfig, prng)
+func NewParticipant(authKey integration.AuthKey, sid []byte, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
+	err := validateInputs(authKey, sid, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
 
 	transcript := hagrid.NewTranscript(DKGLabel, nil)
-	sidParty, err := agreeonrandom.NewParticipant(cohortConfig.CipherSuite.Curve, authKey, cohortConfig.Participants, transcript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
-	}
 	return &Participant{
-		MyAuthKey:    authKey,
-		CohortConfig: cohortConfig,
-		SIDParty:     sidParty,
-		Shard:        &Shard{},
-		transcript:   transcript,
-		prng:         prng,
-		round:        1,
+		MyAuthKey:       authKey,
+		CohortConfig:    cohortConfig,
+		UniqueSessionId: sid,
+		Shard:           &Shard{},
+		transcript:      transcript,
+		prng:            prng,
+		round:           1,
 	}, nil
 }
 
-func validateInputs(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
+func validateInputs(identityKey integration.IdentityKey, sid []byte, cohortConfig *integration.CohortConfig, prng io.Reader) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
@@ -79,6 +73,9 @@ func validateInputs(identityKey integration.IdentityKey, cohortConfig *integrati
 	}
 	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
 		return errs.NewInvalidCurve("only K256 and P256 curves are supported")
+	}
+	if len(sid) == 0 {
+		return errs.NewInvalidArgument("sid is empty")
 	}
 	if prng == nil {
 		return errs.NewInvalidArgument("prng is nil")

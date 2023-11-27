@@ -31,24 +31,17 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		Curve: curve,
 		Hash:  h,
 	}
+	sid := []byte("test")
 
 	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, err := testutils.MakeParticipants(cohortConfig, identities, nil)
+	participants, err := testutils.MakeParticipants(cohortConfig, sid, identities, nil)
 	require.NoError(t, err)
 
-	r1OutsB, err := testutils.DoDkgRound1(participants)
-	require.NoError(t, err)
-
-	r2InsB := testutils.MapDkgRoundArray(participants, r1OutsB)
-	r2OutsB, err := testutils.DoDkgRound2(participants, r2InsB)
-	require.NoError(t, err)
-
-	r3InsB := testutils.MapDkgRoundArray(participants, r2OutsB)
-	r3OutsB, r3OutsU, err := testutils.DoDkgRound3(participants, r3InsB)
+	r3OutsB, r3OutsU, err := testutils.DoDkgRound3(participants)
 	require.NoError(t, err)
 
 	r4InsB, r4InsU := testutils.MapDkgRoundP2P(participants, r3OutsB, r3OutsU)
