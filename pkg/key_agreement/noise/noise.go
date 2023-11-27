@@ -294,42 +294,18 @@ func InitializeResponder(curve curves.Curve, hashFunc func() hash.Hash, name str
 	return HandshakeState{ss, s, e, rs, re}, nil
 }
 
-func writeMessageRegular(curve curves.Curve, aead func([]byte) cipher.AEAD, cs *CipherState, payload []byte) (ci *CipherState, messageBuffer P2PMessage, err error) {
+func writeMessageRegular(curve curves.Curve, aead func([]byte) cipher.AEAD, cs *CipherState, payload []byte) (messageBuffer P2PMessage, err error) {
 	var ciphertext []byte
 	ne := curve.Point()
-	cs, ciphertext, err = EncryptWithAd(aead, cs, []byte{}, payload)
+	_, ciphertext, err = EncryptWithAd(aead, cs, []byte{}, payload)
 	if err != nil {
-		return cs, messageBuffer, err
+		return messageBuffer, err
 	}
 	messageBuffer = P2PMessage{ne, ciphertext}
-	return cs, messageBuffer, err
+	return messageBuffer, err
 }
 
-func readMessageRegular(aead func([]byte) cipher.AEAD, cs *CipherState, message *P2PMessage) (ci *CipherState, plaintext []byte, valid bool, err error) {
+func readMessageRegular(aead func([]byte) cipher.AEAD, cs *CipherState, message *P2PMessage) (plaintext []byte, valid bool, err error) {
 	plaintext, valid, err = decryptWithAd(aead, cs, []byte{}, message.Ciphertext)
-	return cs, plaintext, valid, err
-}
-
-func EncryptMessage(suite *Suite, session *Session, payload []byte) (*CipherState, P2PMessage, error) {
-	err := suite.Validate()
-	if err != nil {
-		return nil, P2PMessage{}, errs.WrapInvalidType(err, "invalid ciphersuite")
-	}
-	if session.IsInitializer {
-		return writeMessageRegular(suite.Curve, suite.GetAeadFunc(), &session.Cs1, payload)
-	} else {
-		return writeMessageRegular(suite.Curve, suite.GetAeadFunc(), &session.Cs2, payload)
-	}
-}
-
-func DecryptMessage(suite *Suite, session *Session, message *P2PMessage) (ci *CipherState, plaintext []byte, valid bool, err error) {
-	err = suite.Validate()
-	if err != nil {
-		return nil, []byte{}, false, errs.WrapInvalidType(err, "invalid ciphersuite")
-	}
-	if session.IsInitializer {
-		return readMessageRegular(suite.GetAeadFunc(), &session.Cs2, message)
-	} else {
-		return readMessageRegular(suite.GetAeadFunc(), &session.Cs1, message)
-	}
+	return plaintext, valid, err
 }

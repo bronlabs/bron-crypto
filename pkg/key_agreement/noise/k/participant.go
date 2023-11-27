@@ -10,7 +10,7 @@ import (
 )
 
 type Participant struct {
-	State *noise.Session
+	State *noise.EncryptionContext
 	suite *noise.Suite
 	prng  io.Reader
 	// both parties must agree on this. I think it's a good idea to use a hash of the protocol name or sorted party public keys
@@ -36,7 +36,7 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 			return nil, errs.WrapInvalidArgument(err, "invalid responder")
 		}
 	}
-	var session noise.Session
+	var session noise.EncryptionContext
 	if isInitializer {
 		session.Hs, err = noise.InitializeInitiator(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_K_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sid, s, rs)
 	} else {
@@ -49,8 +49,9 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 			return nil, errs.WrapInvalidArgument(err, "invalid responder")
 		}
 	}
-	session.IsInitializer = isInitializer
+	session.IsInitiator = isInitializer
 	session.Round = 1
+	session.Suite = suite
 	return &Participant{
 		State:            &session,
 		HandshakeMessage: handshakeMessage,

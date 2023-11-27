@@ -13,7 +13,7 @@ func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error)
 	}
 	var messageBuffer = input
 	var err error
-	if p.State.IsInitializer {
+	if p.State.IsInitiator {
 		// steps 3.1.x
 		messageBuffer, err = p.writeHandshake1(&p.State.Hs, p.HandshakeMessage1)
 	} else {
@@ -42,7 +42,7 @@ func (p *Participant) Round2(input *noise.P2PMessage) (*noise.P2PMessage, error)
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.State.Round)
 	}
 	var messageBuffer = input
-	if !p.State.IsInitializer {
+	if !p.State.IsInitiator {
 		return nil, errs.NewInvalidArgument("responder cannot initiate round 2")
 	}
 	var plaintext []byte

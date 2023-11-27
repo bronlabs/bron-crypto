@@ -45,14 +45,14 @@ func happyPath(t *testing.T, curve curves.Curve, hashFunc noise.SupportedHash) {
 	t.Run(fmt.Sprintf("[%s] alice generate one way handshake and encrypted message to bob", curve.Name()), func(t *testing.T) {
 		aliceToBobRound1Message, err = aliceSession.Round1(nil)
 		require.NoError(t, err)
-		_, encryptedMessage, err = noise.EncryptMessage(suite, aliceSession.State, message)
+		encryptedMessage, err = aliceSession.State.Encrypt(message)
 		require.NoError(t, err)
 	})
 
 	t.Run(fmt.Sprintf("[%s] bob receive handshake from alice and decrypt her message", curve.Name()), func(t *testing.T) {
 		_, err = bobSession.Round1(aliceToBobRound1Message)
 		require.NoError(t, err)
-		_, plaintext, valid, err := noise.DecryptMessage(suite, bobSession.State, &encryptedMessage)
+		plaintext, valid, err := bobSession.State.Decrypt(&encryptedMessage)
 		require.True(t, valid)
 		require.NoError(t, err)
 		require.Equal(t, message, plaintext)

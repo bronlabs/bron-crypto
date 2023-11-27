@@ -14,7 +14,7 @@ func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error)
 	var messageBuffer *noise.P2PMessage
 	var plaintext []byte
 	var err error
-	if p.State.IsInitializer {
+	if p.State.IsInitiator {
 		// step 2.1.x
 		p.State.H, messageBuffer, p.State.Cs1, err = p.writeHandshake(&p.State.Hs, p.HandshakeMessage)
 		p.State.Hs = noise.HandshakeState{}

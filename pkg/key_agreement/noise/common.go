@@ -57,20 +57,6 @@ type HandshakeState struct {
 	OtherPartyEphemeralPk curves.Point
 }
 
-type Session struct {
-	// handshake state
-	Hs HandshakeState
-	// hash output of the handshake
-	H [32]byte
-	// cs1 and cs2 are used to encrypt and decrypt messages
-	Cs1 CipherState
-	Cs2 CipherState
-	// round number
-	Round uint64
-	// flag to indicate if this is the initializer or the responder
-	IsInitializer bool
-}
-
 type Suite struct {
 	Curve curves.Curve
 	Hash  SupportedHash

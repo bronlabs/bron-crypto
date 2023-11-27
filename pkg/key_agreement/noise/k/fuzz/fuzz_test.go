@@ -52,12 +52,12 @@ func Fuzz_K(f *testing.F) {
 
 		aliceToBobRound1Message, err = aliceSession.Round1(nil)
 		require.NoError(t, err)
-		_, encryptedMessage, err = noise.EncryptMessage(suite, aliceSession.State, message)
+		encryptedMessage, err = aliceSession.State.Encrypt(message)
 		require.NoError(t, err)
 
 		_, err = bobSession.Round1(aliceToBobRound1Message)
 		require.NoError(t, err)
-		_, plaintext, valid, err := noise.DecryptMessage(suite, bobSession.State, &encryptedMessage)
+		plaintext, valid, err := bobSession.State.Decrypt(&encryptedMessage)
 		require.True(t, valid)
 		require.NoError(t, err)
 		require.Equal(t, message, plaintext)

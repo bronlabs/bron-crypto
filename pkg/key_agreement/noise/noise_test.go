@@ -96,9 +96,9 @@ func TestVectorKPattern(t *testing.T) {
 				})
 			} else {
 				t.Run(fmt.Sprintf("exchange message %s", m.msg), func(t *testing.T) {
-					_, encryptedMessage, err := noise.EncryptMessage(suite, aliceSession.State, msg)
+					encryptedMessage, err := aliceSession.State.Encrypt(msg)
 					require.NoError(t, err)
-					_, plaintext, valid, err := noise.DecryptMessage(suite, bobSession.State, &encryptedMessage)
+					plaintext, valid, err := bobSession.State.Decrypt(&encryptedMessage)
 					require.True(t, valid)
 					require.NoError(t, err)
 					require.Equal(t, msg, plaintext)
@@ -213,14 +213,14 @@ func TestVectorKKPattern(t *testing.T) {
 						receiverSession = aliceSession
 					}
 
-					_, encryptedMessage, err := noise.EncryptMessage(suite, senderSession.State, msg)
+					encryptedMessage, err := senderSession.State.Encrypt(msg)
 					require.NoError(t, err)
 
 					var cipertext []byte
 					cipertext = append(cipertext, encryptedMessage.Ciphertext[:]...)
 					require.Equal(t, expectedEncryptedMsg, cipertext)
 
-					_, plaintext, valid, err := noise.DecryptMessage(suite, receiverSession.State, &encryptedMessage)
+					plaintext, valid, err := receiverSession.State.Decrypt(&encryptedMessage)
 					require.True(t, valid)
 					require.NoError(t, err)
 					require.Equal(t, msg, plaintext)
