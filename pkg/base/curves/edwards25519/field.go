@@ -18,7 +18,7 @@ var _ curves.FieldProfile = (*FieldProfile)(nil)
 
 type FieldProfile struct{}
 
-func (*FieldProfile) Curve() curves.Curve {
+func (*FieldProfile) Curve() curves.Curve[CurveIdentifierEdward25519] {
 	return &edwards25519Instance
 }
 
@@ -42,7 +42,7 @@ func (*FieldProfile) WideFieldBytes() int {
 	return base.WideFieldBytes
 }
 
-var _ curves.FieldElement = (*FieldElement)(nil)
+var _ curves.FieldElement[CurveIdentifierEdward25519] = (*FieldElement)(nil)
 
 type FieldElement struct {
 	v *field.Element
@@ -50,7 +50,7 @@ type FieldElement struct {
 	_ types.Incomparable
 }
 
-func NewFieldElement() *FieldElement {
+func NewFieldElement() curves.FieldElement[CurveIdentifierEdward25519] {
 	emptyElement := &FieldElement{}
 	result, _ := emptyElement.One().(*FieldElement)
 	return result
@@ -60,7 +60,7 @@ func (*FieldElement) Profile() curves.FieldProfile {
 	return &FieldProfile{}
 }
 
-func (*FieldElement) Hash(x []byte) (curves.FieldElement, error) {
+func (*FieldElement) Hash(x []byte) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	els, err := New().HashToFieldElements(1, x, nil)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not hash to field element in edwards25519")
@@ -98,13 +98,13 @@ func (*FieldElement) Modulus() *saferith.Modulus {
 	return baseFieldOrder
 }
 
-func (e *FieldElement) Clone() curves.FieldElement {
+func (e *FieldElement) Clone() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).Set(e.v),
 	}
 }
 
-func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
+func (e *FieldElement) Cmp(rhs curves.FieldElement[CurveIdentifierEdward25519]) int {
 	n, ok := rhs.(*FieldElement)
 	if !ok {
 		return -2
@@ -119,11 +119,11 @@ func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
 	return 1
 }
 
-func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
+func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement[CurveIdentifierEdward25519] {
 	return e
 }
 
-func (*FieldElement) New(value uint64) curves.FieldElement {
+func (*FieldElement) New(value uint64) curves.FieldElement[CurveIdentifierEdward25519] {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, value)
 	el, err := new(field.Element).SetBytes(buf)
@@ -135,7 +135,7 @@ func (*FieldElement) New(value uint64) curves.FieldElement {
 	}
 }
 
-func (*FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
+func (*FieldElement) Random(prng io.Reader) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	buf := make([]byte, base.FieldBytes)
 	_, err := prng.Read(buf)
 	if err != nil {
@@ -150,13 +150,13 @@ func (*FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
 	}, nil
 }
 
-func (*FieldElement) Zero() curves.FieldElement {
+func (*FieldElement) Zero() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).Zero(),
 	}
 }
 
-func (*FieldElement) One() curves.FieldElement {
+func (*FieldElement) One() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).One(),
 	}
@@ -182,19 +182,19 @@ func (e *FieldElement) IsEven() bool {
 	return e.v.Bytes()[0]&1 == 0
 }
 
-func (e *FieldElement) Square() curves.FieldElement {
+func (e *FieldElement) Square() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).Square(e.v),
 	}
 }
 
-func (e *FieldElement) Double() curves.FieldElement {
+func (e *FieldElement) Double() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).Add(e.v, e.v),
 	}
 }
 
-func (e *FieldElement) Sqrt() (curves.FieldElement, bool) {
+func (e *FieldElement) Sqrt() (curves.FieldElement[CurveIdentifierEdward25519], bool) {
 	res, ok := e.v.SqrtRatio(e.v, feOne)
 	if ok == 1 {
 		return &FieldElement{
@@ -204,14 +204,14 @@ func (e *FieldElement) Sqrt() (curves.FieldElement, bool) {
 	return nil, false
 }
 
-func (e *FieldElement) Cube() curves.FieldElement {
+func (e *FieldElement) Cube() curves.FieldElement[CurveIdentifierEdward25519] {
 	eSq := new(field.Element).Square(e.v)
 	return &FieldElement{
 		v: eSq.Multiply(eSq, e.v),
 	}
 }
 
-func (e *FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
+func (e *FieldElement) Add(rhs curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	n, ok := rhs.(*FieldElement)
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
@@ -221,7 +221,7 @@ func (e *FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
 	}
 }
 
-func (e *FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
+func (e *FieldElement) Sub(rhs curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	n, ok := rhs.(*FieldElement)
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
@@ -231,7 +231,7 @@ func (e *FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
 	}
 }
 
-func (e *FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
+func (e *FieldElement) Mul(rhs curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	n, ok := rhs.(*FieldElement)
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
@@ -241,7 +241,7 @@ func (e *FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
 	}
 }
 
-func (e *FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
+func (e *FieldElement) MulAdd(y, z curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	yFe, ok := y.(*FieldElement)
 	if !ok {
 		panic("y is not an edwards25519 base field element")
@@ -256,7 +256,7 @@ func (e *FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
 	}
 }
 
-func (e *FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
+func (e *FieldElement) Div(rhs curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	rhsFe, ok := rhs.(*FieldElement)
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
@@ -270,17 +270,17 @@ func (e *FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
 	}
 }
 
-func (*FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
+func (*FieldElement) Exp(rhs curves.FieldElement[CurveIdentifierEdward25519]) curves.FieldElement[CurveIdentifierEdward25519] {
 	return nil
 }
 
-func (e *FieldElement) Neg() curves.FieldElement {
+func (e *FieldElement) Neg() curves.FieldElement[CurveIdentifierEdward25519] {
 	return &FieldElement{
 		v: new(field.Element).Negate(e.v),
 	}
 }
 
-func (*FieldElement) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
+func (*FieldElement) SetNat(value *saferith.Nat) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	v, err := new(field.Element).SetBytes(bitstring.ReverseBytes(value.Bytes()))
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "could not set nat bytes")
@@ -294,7 +294,7 @@ func (e *FieldElement) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(e.v.Bytes())
 }
 
-func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
+func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("input length != %d bytes", base.FieldBytes)
 	}
@@ -307,7 +307,7 @@ func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	}, nil
 }
 
-func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
+func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("input length > %d bytes", base.WideFieldBytes)
 	}
@@ -325,7 +325,7 @@ func (e *FieldElement) Bytes() []byte {
 	return e.v.Bytes()
 }
 
-func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
+func (e *FieldElement) FromScalar(sc curves.Scalar[CurveIdentifierEdward25519]) (curves.FieldElement[CurveIdentifierEdward25519], error) {
 	if sc.CurveName() != Name {
 		return nil, errs.NewInvalidType("scalar is not a ed25519 scalar")
 	}
@@ -336,9 +336,9 @@ func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error)
 	return result, nil
 }
 
-func (e *FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
+func (e *FieldElement) Scalar() (curves.Scalar[CurveIdentifierEdward25519], error) {
 	ePrimeSubfield := new(field.Element).Pow22523(e.v)
-	results, err := curve.Scalar().SetBytes(ePrimeSubfield.Bytes())
+	results, err := New().Scalar().SetBytes(ePrimeSubfield.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert field element to scalar")
 	}

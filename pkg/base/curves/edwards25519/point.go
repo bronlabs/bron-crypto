@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ curves.Point = (*Point)(nil)
+var _ curves.Point[CurveIdentifierEdward25519] = (*Point)(nil)
 
 type Point struct {
 	Value *filippo.Point
@@ -25,13 +25,13 @@ type Point struct {
 	_ types.Incomparable
 }
 
-func NewPoint() *Point {
+func NewPoint() curves.Point[CurveIdentifierEdward25519] {
 	emptyPoint := &Point{}
 	result, _ := emptyPoint.Identity().(*Point)
 	return result
 }
 
-func (*Point) Curve() curves.Curve {
+func (*Point) Curve() curves.Curve[CurveIdentifierEdward25519] {
 	return &edwards25519Instance
 }
 
@@ -51,14 +51,14 @@ func (*Point) CurveName() string {
 // bias (< 2^-250) already.
 //
 // See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
-func (*Point) Map(fieldElement []byte) curves.Point {
+func (*Point) Map(fieldElement []byte) curves.Point[CurveIdentifierEdward25519] {
 	signBit := (fieldElement[31] & 0x80) >> 7
 	fe := new(ed.FieldElement).SetBytes((*[base.FieldBytes]byte)(fieldElement))
 	m1 := elligatorEncode(fe)
 	return toEdwards(m1, signBit)
 }
 
-func (p *Point) Random(reader io.Reader) (curves.Point, error) {
+func (p *Point) Random(reader io.Reader) (curves.Point[CurveIdentifierEdward25519], error) {
 	var fieldElement [base.FieldBytes]byte
 	_, err := reader.Read(fieldElement[:])
 	if err != nil {
@@ -70,8 +70,8 @@ func (p *Point) Random(reader io.Reader) (curves.Point, error) {
 // Perform hashing to the ed25519 group using the Elligator2 mapping
 //
 // See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
-func (p *Point) Hash(inputs ...[]byte) (curves.Point, error) {
-	buffer, err := New().ExpandMessage(base.FieldBytes, bytes.Join(inputs, nil), nil)
+func (p *Point) Hash(inputs ...[]byte) (curves.Point[CurveIdentifierEdward25519], error) {
+	buffer, err := (&edwards25519Instance).ExpandMessage(base.FieldBytes, bytes.Join(inputs, nil), nil)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not hash to field elements in ed25519")
 	}
@@ -79,25 +79,25 @@ func (p *Point) Hash(inputs ...[]byte) (curves.Point, error) {
 	return point, nil
 }
 
-func (*Point) Identity() curves.Point {
+func (*Point) Identity() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{
 		Value: filippo.NewIdentityPoint(),
 	}
 }
 
-func (*Point) Generator() curves.Point {
+func (*Point) Generator() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{
 		Value: filippo.NewGeneratorPoint(),
 	}
 }
 
-func (p *Point) Clone() curves.Point {
+func (p *Point) Clone() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{
 		Value: filippo.NewIdentityPoint().Set(p.Value),
 	}
 }
 
-func (p *Point) ClearCofactor() curves.Point {
+func (p *Point) ClearCofactor() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{
 		Value: filippo.NewIdentityPoint().MultByCofactor(p.Value),
 	}
@@ -117,19 +117,19 @@ func (p *Point) IsOnCurve() bool {
 	return err == nil
 }
 
-func (p *Point) Double() curves.Point {
+func (p *Point) Double() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{Value: filippo.NewIdentityPoint().Add(p.Value, p.Value)}
 }
 
-func (*Point) Scalar() curves.Scalar {
+func (*Point) Scalar() curves.Scalar[CurveIdentifierEdward25519] {
 	return new(Scalar).Zero()
 }
 
-func (p *Point) Neg() curves.Point {
+func (p *Point) Neg() curves.Point[CurveIdentifierEdward25519] {
 	return &Point{Value: filippo.NewIdentityPoint().Negate(p.Value)}
 }
 
-func (p *Point) Add(rhs curves.Point) curves.Point {
+func (p *Point) Add(rhs curves.Point[CurveIdentifierEdward25519]) curves.Point[CurveIdentifierEdward25519] {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
@@ -141,7 +141,7 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 	}
 }
 
-func (p *Point) Sub(rhs curves.Point) curves.Point {
+func (p *Point) Sub(rhs curves.Point[CurveIdentifierEdward25519]) curves.Point[CurveIdentifierEdward25519] {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
@@ -154,7 +154,7 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 	}
 }
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+func (p *Point) Mul(rhs curves.Scalar[CurveIdentifierEdward25519]) curves.Point[CurveIdentifierEdward25519] {
 	if rhs == nil {
 		panic("rhs in nil")
 	}
@@ -167,7 +167,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	}
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
+func (p *Point) Equal(rhs curves.Point[CurveIdentifierEdward25519]) bool {
 	r, ok := rhs.(*Point)
 	if ok {
 		// We would like to check that the point (X/Z, Y/Z) is equal to
@@ -187,7 +187,7 @@ func (p *Point) Equal(rhs curves.Point) bool {
 	}
 }
 
-func (p *Point) Set(x, y *saferith.Nat) (curves.Point, error) {
+func (p *Point) Set(x, y *saferith.Nat) (curves.Point[CurveIdentifierEdward25519], error) {
 	// check is identity
 	xx := subtle.ConstantTimeCompare(x.Bytes(), []byte{})
 	yy := subtle.ConstantTimeCompare(y.Bytes(), []byte{})
@@ -271,7 +271,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
+func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point[CurveIdentifierEdward25519], error) {
 	pt, err := filippo.NewIdentityPoint().SetBytes(inBytes)
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "set bytes method failed")
@@ -279,7 +279,7 @@ func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 	return &Point{Value: pt}, nil
 }
 
-func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
+func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point[CurveIdentifierEdward25519], error) {
 	if len(inBytes) != 64 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -304,7 +304,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	point, err := serialisation.PointMarshalBinary(p)
+	point, err := serialisation.PointMarshalBinary(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to point failed")
 	}
@@ -312,7 +312,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := serialisation.PointUnmarshalBinary(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalBinary(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -325,7 +325,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalText() ([]byte, error) {
-	t, err := serialisation.PointMarshalText(p)
+	t, err := serialisation.PointMarshalText(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to text failed")
 	}
@@ -333,7 +333,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := serialisation.PointUnmarshalText(&edwards25519Instance, input)
+	pt, err := serialisation.PointUnmarshalText(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "unmarshal binary failed")
 	}
@@ -346,7 +346,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	point, err := serialisation.PointMarshalJson(p)
+	point, err := serialisation.PointMarshalJson(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "marshal to json failed")
 	}
@@ -354,7 +354,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := serialisation.NewPointFromJSON(&edwards25519Instance, input)
+	pt, err := serialisation.NewPointFromJSON(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not extract a point from json")
 	}
@@ -398,7 +398,7 @@ func (p *Point) IsSmallOrder() bool {
 	return p.ClearCofactor().IsIdentity()
 }
 
-func (p *Point) X() curves.FieldElement {
+func (p *Point) X() curves.FieldElement[CurveIdentifierEdward25519] {
 	x, _, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
 	xx := new(field.Element).Multiply(x, recip)
@@ -407,7 +407,7 @@ func (p *Point) X() curves.FieldElement {
 	}
 }
 
-func (p *Point) Y() curves.FieldElement {
+func (p *Point) Y() curves.FieldElement[CurveIdentifierEdward25519] {
 	_, y, z, _ := p.Value.ExtendedCoordinates()
 	recip := new(field.Element).Invert(z)
 	y.Multiply(y, recip)
@@ -416,28 +416,28 @@ func (p *Point) Y() curves.FieldElement {
 	}
 }
 
-func (p *Point) ExtendedX() curves.FieldElement {
+func (p *Point) ExtendedX() curves.FieldElement[CurveIdentifierEdward25519] {
 	x, _, _, _ := p.Value.ExtendedCoordinates()
 	return &FieldElement{
 		v: x,
 	}
 }
 
-func (p *Point) ExtendedY() curves.FieldElement {
+func (p *Point) ExtendedY() curves.FieldElement[CurveIdentifierEdward25519] {
 	_, y, _, _ := p.Value.ExtendedCoordinates()
 	return &FieldElement{
 		v: y,
 	}
 }
 
-func (p *Point) ExtendedZ() curves.FieldElement {
+func (p *Point) ExtendedZ() curves.FieldElement[CurveIdentifierEdward25519] {
 	_, _, z, _ := p.Value.ExtendedCoordinates()
 	return &FieldElement{
 		v: z,
 	}
 }
 
-func (p *Point) ExtendedT() curves.FieldElement {
+func (p *Point) ExtendedT() curves.FieldElement[CurveIdentifierEdward25519] {
 	_, _, _, t := p.Value.ExtendedCoordinates()
 	return &FieldElement{
 		v: t,

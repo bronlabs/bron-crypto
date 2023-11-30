@@ -62,10 +62,10 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	var rx, ry *saferith.Nat
 
 	//nolint:gocritic // below is not a switch
-	if p, ok := bigR.(*k256.Point); ok {
+	if p, ok := bigR.(*k256.PointK256); ok {
 		rx = p.X().Nat()
 		ry = p.Y().Nat()
-	} else if p, ok := bigR.(*p256.Point); ok {
+	} else if p, ok := bigR.(*p256.PointP256); ok {
 		rx = p.X().Nat()
 		ry = p.Y().Nat()
 	} else {

@@ -394,19 +394,20 @@ func TestPointNil(t *testing.T) {
 }
 
 func TestPointSumOfProducts(t *testing.T) {
+	curve := edwards25519.New()
 	lhs := new(edwards25519.Point).Generator().Mul(new(edwards25519.Scalar).New(50))
-	points := make([]curves.Point, 5)
+	points := make([]curves.Point[edwards25519.CurveIdentifierEdward25519], 5)
 	for i := range points {
-		points[i] = new(edwards25519.Point).Generator()
+		points[i] = curve.Generator()
 	}
-	scalars := []curves.Scalar{
+	scalars := []curves.Scalar[edwards25519.CurveIdentifierEdward25519]{
 		new(edwards25519.Scalar).New(8),
 		new(edwards25519.Scalar).New(9),
 		new(edwards25519.Scalar).New(10),
 		new(edwards25519.Scalar).New(11),
 		new(edwards25519.Scalar).New(12),
 	}
-	curve := edwards25519.New()
+
 	rhs, err := curve.MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)

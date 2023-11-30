@@ -30,7 +30,7 @@ type Koblitz256 struct {
 }
 
 func oldK256InitAll() {
-	B, _ := new(FieldElement).SetNat(new(saferith.Nat).SetUint64(uint64(7)))
+	B, _ := new(FieldElementK256).SetNat(new(saferith.Nat).SetUint64(uint64(7)))
 	curve := New()
 	oldK256.CurveParams = new(elliptic.CurveParams)
 	oldK256.P = curve.Profile().Field().Order().Big()

@@ -3,63 +3,56 @@ package schnorr
 import (
 	"bytes"
 	"crypto/ed25519"
-	"crypto/sha512"
-	"io"
-	"reflect"
-
+	crand "crypto/rand"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"io"
 )
 
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
-
-type PublicKey struct {
-	A curves.Point
+type PublicKey[C curves.CurveIdentifier] struct {
+	A curves.Point[C]
 
 	_ types.Incomparable
 }
 
-type PrivateKey struct {
-	S curves.Scalar
-	PublicKey
+type PrivateKey[C curves.CurveIdentifier] struct {
+	S curves.Scalar[C]
+	PublicKey[C]
 
 	_ types.Incomparable
 }
 
-type Signature struct {
-	R curves.Point
-	S curves.Scalar
+type Signature[C curves.CurveIdentifier] struct {
+	R curves.Point[C]
+	S curves.Scalar[C]
 
 	_ types.Incomparable
 }
 
-func (s *Signature) MarshalBinary() ([]byte, error) {
+func (s *Signature[C]) MarshalBinary() ([]byte, error) {
 	serializedSignature := bytes.Join([][]byte{s.R.ToAffineCompressed(), s.S.Bytes()}, nil)
 	return serializedSignature, nil
 }
 
-func (pk *PublicKey) MarshalBinary() ([]byte, error) {
+func (pk *PublicKey[C]) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()
 	return serializedPublicKey, nil
 }
 
-type Signer struct {
-	suite      *integration.CipherSuite
-	privateKey *PrivateKey
+type Signer[C curves.CurveIdentifier] struct {
+	privateKey *PrivateKey[C]
 }
 
-func NewKeys(scalar curves.Scalar) (*PublicKey, *PrivateKey, error) {
+func NewKeys[C curves.CurveIdentifier](scalar curves.Scalar[C]) (*PublicKey[C], *PrivateKey[C], error) {
 	if scalar == nil {
 		return nil, nil, errs.NewIsNil("scalar is nil")
 	}
 
-	privateKey := &PrivateKey{
+	privateKey := &PrivateKey[C]{
 		S: scalar,
-		PublicKey: PublicKey{
+		PublicKey: PublicKey[C]{
 			A: scalar.Curve().ScalarBaseMult(scalar),
 		},
 	}
@@ -67,7 +60,7 @@ func NewKeys(scalar curves.Scalar) (*PublicKey, *PrivateKey, error) {
 	return &privateKey.PublicKey, privateKey, nil
 }
 
-func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error) {
+func KeyGen[C curves.CurveIdentifier](curve curves.Curve[C], prng io.Reader) (*PublicKey[C], *PrivateKey[C], error) {
 	if curve == nil {
 		return nil, nil, errs.NewIsNil("curve is nil")
 	}
@@ -86,53 +79,44 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 	return pk, sk, nil
 }
 
-func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer, error) {
-	if err := suite.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid cipher suite")
-	}
-	if privateKey == nil || privateKey.S == nil || privateKey.S.CurveName() != suite.Curve.Name() ||
-		privateKey.A == nil || privateKey.A.CurveName() != suite.Curve.Name() ||
-		!suite.Curve.ScalarBaseMult(privateKey.S).Equal(privateKey.A) {
+func NewSigner[C curves.CurveIdentifier](privateKey *PrivateKey[C]) (*Signer[C], error) {
+	if privateKey == nil || privateKey.S == nil || privateKey.A == nil ||
+		!privateKey.S.Curve().Generator().Mul(privateKey.S).Equal(privateKey.PublicKey.A) {
 
 		return nil, errs.NewInvalidArgument("invalid private key")
 	}
 
-	return &Signer{
-		suite,
+	return &Signer[C]{
 		privateKey,
 	}, nil
 }
 
-func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
-	k, err := signer.suite.Curve.Scalar().Random(prng)
+func (signer *Signer[C]) Sign(message []byte, prng io.Reader) (*Signature[C], error) {
+	curve := signer.privateKey.S.Curve()
+	k, err := curve.Scalar().Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
-	R := signer.suite.Curve.ScalarBaseMult(k)
-	a := signer.suite.Curve.ScalarBaseMult(signer.privateKey.S)
+	R := curve.ScalarBaseMult(k)
+	a := curve.ScalarBaseMult(signer.privateKey.S)
 
-	e, err := fiatShamir.GenerateChallenge(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
+	e, err := generateChallenge(curve, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
 	}
 
 	s := k.Add(signer.privateKey.S.Mul(e))
-	return &Signature{
+	return &Signature[C]{
 		R: R,
 		S: s,
 	}, nil
 }
 
-func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	if err := suite.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "invalid cipher suite")
-	}
-	if publicKey == nil || !publicKey.A.IsOnCurve() || publicKey.A.IsIdentity() || publicKey.A.CurveName() != suite.Curve.Name() {
+func Verify[C curves.CurveIdentifier](publicKey *PublicKey[C], message []byte, signature *Signature[C]) error {
+	if publicKey == nil || !publicKey.A.IsOnCurve() || publicKey.A.IsIdentity() {
 		return errs.NewInvalidArgument("invalid signature")
 	}
-	if signature == nil || signature.R == nil || !signature.R.IsOnCurve() || signature.R.CurveName() != suite.Curve.Name() ||
-		signature.S == nil || signature.S.CurveName() != suite.Curve.Name() {
-
+	if signature == nil || signature.R == nil || !signature.R.IsOnCurve() || signature.S == nil {
 		return errs.NewInvalidArgument("invalid signature")
 	}
 	// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptible
@@ -142,31 +126,29 @@ func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte
 		return errs.NewFailed("public key is small order")
 	}
 
-	if IsEd25519Compliant(suite) {
+	if IsEd25519Compliant(publicKey.A.Curve()) {
 		return verifyEd25519(publicKey, message, signature)
 	}
-	return verifySchnorr(suite, publicKey, message, signature)
+	return verifySchnorr(publicKey, message, signature)
 }
 
-func IsEd25519Compliant(suite *integration.CipherSuite) bool {
-	if suite.Curve.Name() != edwards25519.Name {
-		return false
-	}
-	if reflect.ValueOf(suite.Hash).Pointer() != reflect.ValueOf(sha512.New).Pointer() {
+func IsEd25519Compliant[C curves.CurveIdentifier](curve curves.Curve[C]) bool {
+	if curve.Name() != edwards25519.Name {
 		return false
 	}
 
 	return true
 }
 
-func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	e, err := fiatShamir.GenerateChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
+func verifySchnorr[C curves.CurveIdentifier](publicKey *PublicKey[C], message []byte, signature *Signature[C]) error {
+	curve := publicKey.A.Curve()
+	e, err := generateChallenge(publicKey.A.Curve(), signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
 
-	cofactor := suite.Curve.Profile().Cofactor()
-	left := suite.Curve.ScalarBaseMult(signature.S.Mul(cofactor))
+	cofactor := curve.Profile().Cofactor()
+	left := curve.ScalarBaseMult(signature.S.Mul(cofactor))
 	right := signature.R.Mul(cofactor).Add(publicKey.A.Mul(e.Mul(cofactor)))
 	if !left.Equal(right) {
 		return errs.NewVerificationFailed("invalid signature")
@@ -175,7 +157,7 @@ func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message
 	return nil
 }
 
-func verifyEd25519(publicKey *PublicKey, message []byte, signature *Signature) error {
+func verifyEd25519[C curves.CurveIdentifier](publicKey *PublicKey[C], message []byte, signature *Signature[C]) error {
 	serializedSignature, err := signature.MarshalBinary()
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not serialise signature to binary")
@@ -189,4 +171,10 @@ func verifyEd25519(publicKey *PublicKey, message []byte, signature *Signature) e
 	}
 
 	return nil
+}
+
+// dummy
+func generateChallenge[C curves.CurveIdentifier](curve curves.Curve[C], bytes ...[]byte) (curves.Scalar[C], error) {
+	// do whatever it takes
+	return curve.Scalar().Random(crand.Reader)
 }

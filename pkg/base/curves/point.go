@@ -8,20 +8,20 @@ import (
 )
 
 // Point represents an elliptic curve point.
-type Point interface {
-	Affine
+type Point[C CurveIdentifier] interface {
+	Affine[C]
 	// Curve returns the curve that this point belongs to.
-	Curve() Curve
+	Curve() Curve[C]
 	// CurveName returns the name of the curve this point belongs to.
 	CurveName() string
 	// Random samples a random point from the curve.
-	Random(prng io.Reader) (Point, error)
+	Random(prng io.Reader) (Point[C], error)
 	// Hash hashes the given bytes into a uniformly random point.
-	Hash(bytes ...[]byte) (Point, error)
+	Hash(bytes ...[]byte) (Point[C], error)
 	// Identity returns the identity (I) of the group as a new point.
-	Identity() Point
+	Identity() Point[C]
 	// Generator returns the generator (G) of the group as a new point.
-	Generator() Point
+	Generator() Point[C]
 	// IsIdentity returns true if this point is the identity.
 	IsIdentity() bool
 	// IsNegative returns true if this point is the negative of another point.
@@ -29,33 +29,33 @@ type Point interface {
 	// IsOnCurve returns true if this point is on its defined curve.
 	IsOnCurve() bool
 	// Double returns P + P as a new point.
-	Double() Point
+	Double() Point[C]
 	// Scalar casts the point to a scalar.
-	Scalar() Scalar
+	Scalar() Scalar[C]
 	// Neg returns the negative of this point.
-	Neg() Point
+	Neg() Point[C]
 	// ClearCofactor clears the cofactor of this point, ensuring that it's in the prime-order subgroup.
-	ClearCofactor() Point
+	ClearCofactor() Point[C]
 	// Clone returns a copy of this point.
-	Clone() Point
+	Clone() Point[C]
 	// Add returns P + Q for this point P and another point Q.
-	Add(rhs Point) Point
+	Add(rhs Point[C]) Point[C]
 	// Sub returns P - Q for this point P and another point Q.
-	Sub(rhs Point) Point
+	Sub(rhs Point[C]) Point[C]
 	// Mul returns kP for this point P and a scalar k.
-	Mul(rhs Scalar) Point
+	Mul(rhs Scalar[C]) Point[C]
 	// Equal returns true if this point is equal to another point on the same curve.
-	Equal(rhs Point) bool
+	Equal(rhs Point[C]) bool
 	// Set overwrites the affine coordinates (X, Y) of this point, treating them as FieldElements.
-	Set(x, y *saferith.Nat) (Point, error)
+	Set(x, y *saferith.Nat) (Point[C], error)
 	// ToAffineCompressed returns the compressed affine serialisation of this point.
 	ToAffineCompressed() []byte
 	// ToAffineUncompressed returns the uncompressed affine serialisation of this point.
 	ToAffineUncompressed() []byte
 	// FromAffineCompressed returns the point represented by the compressed affine serialisation.
-	FromAffineCompressed(bytes []byte) (Point, error)
+	FromAffineCompressed(bytes []byte) (Point[C], error)
 	// FromAffineUncompressed returns the point represented by the uncompressed affine serialisation.
-	FromAffineUncompressed(bytes []byte) (Point, error)
+	FromAffineUncompressed(bytes []byte) (Point[C], error)
 	// IsSmallOrder returns true if this point is in the small-order subgroup.
 	IsSmallOrder() bool
 
@@ -63,41 +63,41 @@ type Point interface {
 	json.Unmarshaler
 }
 
-type PairingPoint interface {
-	Point
-	HashWithDst(input []byte, dst []byte) (PairingPoint, error)
+type PairingPoint[C CurveIdentifier] interface {
+	Point[C]
+	HashWithDst(input []byte, dst []byte) (PairingPoint[C], error)
 	IsTorsionFree() bool
-	PairingCurve() PairingCurve
+	PairingCurve() PairingCurve[C]
 	PairingCurveName() string
-	OtherGroup() PairingPoint
-	Pairing(rhs PairingPoint) Scalar
+	OtherGroup() PairingPoint[C]
+	Pairing(rhs PairingPoint[C]) Scalar[C]
 }
 
-type WeierstrassPoint interface {
-	Point
-	Projective
+type WeierstrassPoint[C CurveIdentifier] interface {
+	Point[C]
+	Projective[C]
 }
 
-type Affine interface {
-	X() FieldElement
-	Y() FieldElement
+type Affine[C CurveIdentifier] interface {
+	X() FieldElement[C]
+	Y() FieldElement[C]
 }
 
-type Projective interface {
-	ProjectiveX() FieldElement
-	ProjectiveY() FieldElement
-	ProjectiveZ() FieldElement
+type Projective[C CurveIdentifier] interface {
+	ProjectiveX() FieldElement[C]
+	ProjectiveY() FieldElement[C]
+	ProjectiveZ() FieldElement[C]
 }
 
-type Jacobian interface {
-	JacobianX() FieldElement
-	JacobianY() FieldElement
-	JacobianZ() FieldElement
+type Jacobian[C CurveIdentifier] interface {
+	JacobianX() FieldElement[C]
+	JacobianY() FieldElement[C]
+	JacobianZ() FieldElement[C]
 }
 
-type Extended interface {
-	ExtendedX() FieldElement
-	ExtendedY() FieldElement
-	ExtendedZ() FieldElement
-	ExtendedT() FieldElement
+type Extended[C Curve[C]] interface {
+	ExtendedX() FieldElement[C]
+	ExtendedY() FieldElement[C]
+	ExtendedZ() FieldElement[C]
+	ExtendedT() FieldElement[C]
 }

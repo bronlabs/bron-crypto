@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-// EllipticPoint represents a Weierstrauss elliptic curve point.
+// EllipticPoint represents a Weierstrass elliptic curve point.
 type EllipticPoint struct {
 	X          *FieldValue
 	Y          *FieldValue
@@ -18,7 +18,7 @@ type EllipticPoint struct {
 	_ types.Incomparable
 }
 
-// EllipticPointParams are the Weierstrauss curve parameters
+// EllipticPointParams are the Weierstrass curve parameters
 // such as the name, the coefficients the generator point,
 // and the prime bit size.
 type EllipticPointParams struct {

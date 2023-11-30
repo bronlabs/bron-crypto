@@ -17,63 +17,67 @@ import (
 	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
+type CurveIdentifierK256 struct {
+	curves.CurveIdentifier
+}
+
 const Name = "secp256k1" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
 
 var (
 	k256Initonce sync.Once
-	k256Instance Curve
+	k256Instance CurveK256
 )
 
-var _ curves.CurveProfile = (*CurveProfile)(nil)
+var _ curves.CurveProfile[CurveIdentifierK256] = (*CurveProfileK256)(nil)
 
-type CurveProfile struct{}
+type CurveProfileK256 struct{}
 
-func (*CurveProfile) Field() curves.FieldProfile {
-	return &FieldProfile{}
+func (*CurveProfileK256) Field() curves.FieldProfile {
+	return &FieldProfileK256{}
 }
 
-func (*CurveProfile) SubGroupOrder() *saferith.Modulus {
+func (*CurveProfileK256) SubGroupOrder() *saferith.Modulus {
 	return fq.New().Params.Modulus
 }
 
-func (*CurveProfile) Cofactor() curves.Scalar {
+func (*CurveProfileK256) Cofactor() curves.Scalar[CurveIdentifierK256] {
 	return (&k256Instance).Scalar().One()
 }
 
-func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
+func (*CurveProfileK256) ToPairingCurve() curves.PairingCurve[CurveIdentifierK256] {
 	return nil
 }
 
-var _ curves.Curve = (*Curve)(nil)
+var _ curves.Curve[CurveIdentifierK256] = (*CurveK256)(nil)
 
-type Curve struct {
-	Scalar_       curves.Scalar
-	Point_        curves.Point
-	FieldElement_ curves.FieldElement
+type CurveK256 struct {
+	Scalar_       curves.Scalar[CurveIdentifierK256]
+	Point_        curves.Point[CurveIdentifierK256]
+	FieldElement_ curves.FieldElement[CurveIdentifierK256]
 	Name_         string
-	Profile_      *CurveProfile
+	Profile_      curves.CurveProfile[CurveIdentifierK256]
 
-	hashing.CurveHasher
+	hashing.CurveHasher[CurveIdentifierK256]
 
 	_ types.Incomparable
 }
 
 func k256Init() {
-	k256Instance = Curve{
-		Scalar_:       new(Scalar).Zero(),
-		Point_:        new(Point).Identity(),
-		FieldElement_: new(FieldElement).Zero(),
+	k256Instance = CurveK256{
+		Scalar_:       new(ScalarK256).Zero(),
+		Point_:        new(PointK256).Identity(),
+		FieldElement_: new(FieldElementK256).Zero(),
 		Name_:         Name,
-		Profile_:      &CurveProfile{},
+		Profile_:      &CurveProfileK256{},
 	}
 	k256Instance.CurveHasher = hashing.NewCurveHasherSha256(
-		curves.Curve(&k256Instance),
+		New(),
 		base.HASH2CURVE_APP_TAG,
 		hashing.DST_TAG_SSWU,
 	)
 }
 
-func New() *Curve {
+func New() curves.Curve[CurveIdentifierK256] {
 	k256Initonce.Do(k256Init)
 	return &k256Instance
 }
@@ -81,58 +85,58 @@ func New() *Curve {
 // SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
 // custom "appTag". Not exposed in the `curves.Curve` interface, as by
 // default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
-func (c *Curve) SetHasherAppTag(appTag string) {
+func (c CurveK256) SetHasherAppTag(appTag string) {
 	c.CurveHasher = hashing.NewCurveHasherSha256(
-		curves.Curve(&k256Instance),
+		New(),
 		appTag,
 		hashing.DST_TAG_SSWU,
 	)
 }
 
-func (c *Curve) Profile() curves.CurveProfile {
+func (c CurveK256) Profile() curves.CurveProfile[CurveIdentifierK256] {
 	return c.Profile_
 }
 
-func (c *Curve) Scalar() curves.Scalar {
+func (c CurveK256) Scalar() curves.Scalar[CurveIdentifierK256] {
 	return c.Scalar_
 }
 
-func (c *Curve) Point() curves.Point {
+func (c CurveK256) Point() curves.Point[CurveIdentifierK256] {
 	return c.Point_
 }
 
-func (c *Curve) Name() string {
+func (c CurveK256) Name() string {
 	return c.Name_
 }
 
-func (c *Curve) FieldElement() curves.FieldElement {
+func (c CurveK256) FieldElement() curves.FieldElement[CurveIdentifierK256] {
 	return c.FieldElement_
 }
 
-func (c *Curve) Generator() curves.Point {
+func (c CurveK256) Generator() curves.Point[CurveIdentifierK256] {
 	return c.Point_.Generator()
 }
 
-func (c *Curve) Identity() curves.Point {
+func (c CurveK256) Identity() curves.Point[CurveIdentifierK256] {
 	return c.Point_.Identity()
 }
 
-func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+func (c CurveK256) ScalarBaseMult(sc curves.Scalar[CurveIdentifierK256]) curves.Point[CurveIdentifierK256] {
 	return c.Generator().Mul(sc)
 }
 
-func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func (CurveK256) MultiScalarMult(scalars []curves.Scalar[CurveIdentifierK256], points []curves.Point[CurveIdentifierK256]) (curves.Point[CurveIdentifierK256], error) {
 	nPoints := make([]*impl.EllipticPoint, len(points))
 	nScalars := make([]*impl.FieldValue, len(scalars))
 	for i, pt := range points {
-		ptv, ok := pt.(*Point)
+		ptv, ok := pt.(*PointK256)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointK256", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i] = ptv.Value
 	}
 	for i, sc := range scalars {
-		s, ok := sc.(*Scalar)
+		s, ok := sc.(*ScalarK256)
 		if !ok {
 			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarK256", reflect.TypeOf(sc).Name())
 		}
@@ -143,16 +147,16 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
-	return &Point{Value: value}, nil
+	return &PointK256{Value: value}, nil
 }
 
-func (c *Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
-	xc, ok := x.(*FieldElement)
+func (c CurveK256) DeriveFromAffineX(x curves.FieldElement[CurveIdentifierK256]) (evenY, oddY curves.Point[CurveIdentifierK256], err error) {
+	xc, ok := x.(*FieldElementK256)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("provided x coordinate is not a k256 field element")
 	}
 	rhs := fp.New()
-	cPoint, ok := c.Point().(*Point)
+	cPoint, ok := c.Point().(*PointK256)
 	if !ok {
 		return nil, nil, errs.NewFailed("invalid point type %s, expected PointK256", reflect.TypeOf(c.Point()).Name())
 	}
@@ -171,8 +175,8 @@ func (c *Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Poi
 	p2e.Y = fp.New().Neg(fp.New().Set(y))
 	p2e.Z.SetOne()
 
-	p1 := &Point{Value: p1e}
-	p2 := &Point{Value: p2e}
+	p1 := &PointK256{Value: p1e}
+	p2 := &PointK256{Value: p2e}
 
 	if p1.Y().IsEven() {
 		return p1, p2, nil

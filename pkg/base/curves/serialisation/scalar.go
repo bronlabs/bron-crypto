@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type setBytesFuncType func(input []byte) (curves.Scalar, error)
+type setBytesFuncType[C curves.CurveIdentifier] func(input []byte) (curves.Scalar[C], error)
 
 func UnmarshalScalar(input []byte) []byte {
 	sep := byte(':')
@@ -21,7 +21,7 @@ func UnmarshalScalar(input []byte) []byte {
 	return input[i+1:]
 }
 
-func ScalarMarshalBinary(scalar curves.Scalar) ([]byte, error) {
+func ScalarMarshalBinary[C curves.CurveIdentifier](scalar curves.Scalar[C]) ([]byte, error) {
 	// All scalars are 32 bytes long
 	// The last 32 bytes are the actual value
 	// The first remaining bytes are the curve name
@@ -35,7 +35,7 @@ func ScalarMarshalBinary(scalar curves.Scalar) ([]byte, error) {
 	return output, nil
 }
 
-func ScalarUnmarshalBinary(name string, f setBytesFuncType, input []byte) (curves.Scalar, error) {
+func ScalarUnmarshalBinary[C curves.CurveIdentifier](name string, f setBytesFuncType[C], input []byte) (curves.Scalar[C], error) {
 	// All scalars are 32 bytes long
 	// The first 32 bytes are the actual value
 	// The remaining bytes are the curve name
@@ -50,7 +50,7 @@ func ScalarUnmarshalBinary(name string, f setBytesFuncType, input []byte) (curve
 	return scalar, nil
 }
 
-func ScalarMarshalText(scalar curves.Scalar) ([]byte, error) {
+func ScalarMarshalText[C curves.CurveIdentifier](scalar curves.Scalar[C]) ([]byte, error) {
 	// All scalars are 32 bytes long
 	// For text encoding we put the curve name first for readability
 	// separated by a colon, then the hex encoding of the scalar
@@ -64,7 +64,7 @@ func ScalarMarshalText(scalar curves.Scalar) ([]byte, error) {
 	return output, nil
 }
 
-func ScalarUnmarshalText(name string, f setBytesFuncType, input []byte) (curves.Scalar, error) {
+func ScalarUnmarshalText[C curves.CurveIdentifier](name string, f setBytesFuncType[C], input []byte) (curves.Scalar[C], error) {
 	if len(input) < scalarBytes*2+len(name)+1 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -80,7 +80,7 @@ func ScalarUnmarshalText(name string, f setBytesFuncType, input []byte) (curves.
 	return scalar, nil
 }
 
-func ScalarMarshalJson(name string, scalar curves.Scalar) ([]byte, error) {
+func ScalarMarshalJson[C curves.CurveIdentifier](name string, scalar curves.Scalar[C]) ([]byte, error) {
 	m := make(map[string]string, 2)
 	m["type"] = name
 	m["value"] = hex.EncodeToString(scalar.Bytes())
@@ -91,7 +91,7 @@ func ScalarMarshalJson(name string, scalar curves.Scalar) ([]byte, error) {
 	return serialised, nil
 }
 
-func NewScalarFromJSON(f setBytesFuncType, data []byte) (curves.Scalar, error) {
+func NewScalarFromJSON[C curves.CurveIdentifier](f setBytesFuncType[C], data []byte) (curves.Scalar[C], error) {
 	var m map[string]string
 
 	err := json.Unmarshal(data, &m)

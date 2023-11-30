@@ -39,17 +39,17 @@ const (
 
 // CurveHasher is a thread-safe interface for hash to curve functions based on
 // https://datatracker.ietf.org/doc/html/rfc9380.
-type CurveHasher interface {
+type CurveHasher[C curves.CurveIdentifier] interface {
 	// HashToFieldElements hashes an arbitrary-length message to a list of one
 	// or more field elements in a finite field (curves.FieldElement). Uses a
 	// domain separation tag (dst) for ExpandMessage, default to `Dst()` if nil.
 	// It follows https://datatracker.ietf.org/doc/html/rfc9380#section-5
-	HashToFieldElements(count int, msg, optionalDst []byte) (u []curves.FieldElement, err error)
+	HashToFieldElements(count int, msg, optionalDst []byte) (u []curves.FieldElement[C], err error)
 	// HashToScalars hashes an arbitrary-length message to a list of one
 	// or more elements in a prime field Fq (curves.Scalar). Uses a
 	// domain separation tag (dst) for ExpandMessage, default to `Dst()` if nil.
 	// It follows https://datatracker.ietf.org/doc/html/rfc9380#section-5
-	HashToScalars(count int, msg, optionalDst []byte) (u []curves.Scalar, err error)
+	HashToScalars(count int, msg, optionalDst []byte) (u []curves.Scalar[C], err error)
 	// ExpandMessage expands an input `msg` to a byte string of length `outLen`.
 	// Uses a domain separation tag (dst) for ExpandMessage, default to `Dst()` if nil.
 	// It follows https://datatracker.ietf.org/doc/html/rfc9380#section-5.3
@@ -57,29 +57,29 @@ type CurveHasher interface {
 	// Dst returns the domain separation tag (dst) for ExpandMessage.
 	Dst() []byte
 	// Curve returns the curve associated with the hasher.
-	Curve() curves.Curve
+	Curve() curves.Curve[C]
 }
 
 /*.------------------------- FIXED-LENGTH HASHERS ---------------------------.*/
 
-func NewCurveHasherSha256(curve curves.Curve, appTag, mapperTag string) CurveHasher {
+func NewCurveHasherSha256[C curves.CurveIdentifier](curve curves.Curve[C], appTag, mapperTag string) CurveHasher[C] {
 	lFieldElement, lScalar := getUniformByteLengths(curve)
-	flh := &FixedLengthCurveHasher{sha256.New, curve, nil, lFieldElement, lScalar}
+	flh := &FixedLengthCurveHasher[C]{sha256.New, curve, nil, lFieldElement, lScalar}
 	flh.dst = flh.generateDST(curve, appTag, DST_TAG_SHA256, mapperTag)
 	return flh
 }
 
-func NewCurveHasherSha512(curve curves.Curve, appTag, mapperTag string) CurveHasher {
+func NewCurveHasherSha512[C curves.CurveIdentifier](curve curves.Curve[C], appTag, mapperTag string) CurveHasher[C] {
 	lFieldElement, lScalar := getUniformByteLengths(curve)
-	flh := &FixedLengthCurveHasher{sha512.New, curve, nil, lFieldElement, lScalar}
+	flh := &FixedLengthCurveHasher[C]{sha512.New, curve, nil, lFieldElement, lScalar}
 	flh.dst = flh.generateDST(curve, appTag, DST_TAG_SHA512, mapperTag)
 	return flh
 }
 
 // FixedLengthCurveHasher encapsulates the fixed-length hash functions of sha256, sha512, sha3 and blake2b.
-type FixedLengthCurveHasher struct {
+type FixedLengthCurveHasher[C curves.CurveIdentifier] struct {
 	hashFactory func() hash.Hash
-	curve       curves.Curve
+	curve       curves.Curve[C]
 	dst         []byte
 
 	lFieldElement int
@@ -88,7 +88,7 @@ type FixedLengthCurveHasher struct {
 
 // ExpandMessage implements the fixed-length hash variant `expand_message_xmd`
 // from https://datatracker.ietf.org/doc/html/rfc9380#section-5.3.1
-func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([]byte, error) {
+func (flh *FixedLengthCurveHasher[C]) ExpandMessage(outLen int, msg, dst []byte) ([]byte, error) {
 	h := flh.hashFactory()
 	// step 1 & 2
 	ell := utils.CeilDiv(outLen, h.Size())
@@ -135,15 +135,15 @@ func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([
 	return out[:outLen], nil
 }
 
-func (flh *FixedLengthCurveHasher) Dst() []byte {
+func (flh *FixedLengthCurveHasher[C]) Dst() []byte {
 	return flh.dst
 }
 
-func (flh *FixedLengthCurveHasher) Curve() curves.Curve {
+func (flh *FixedLengthCurveHasher[C]) Curve() curves.Curve[C] {
 	return flh.curve
 }
 
-func (flh *FixedLengthCurveHasher) generateDST(curve curves.Curve, appTag, hashTag, mapperTag string) (dst []byte) {
+func (flh *FixedLengthCurveHasher[C]) generateDST(curve curves.Curve[C], appTag, hashTag, mapperTag string) (dst []byte) {
 	suiteId := getSuiteID(curve, hashTag, DST_EXP_TAG_XMD, mapperTag)
 	dst = append([]byte(appTag), suiteId...)
 	if len(dst) > MaxDstLen {
@@ -155,23 +155,23 @@ func (flh *FixedLengthCurveHasher) generateDST(curve curves.Curve, appTag, hashT
 	return dst
 }
 
-func (flh *FixedLengthCurveHasher) HashToFieldElements(count int, msg, dst []byte) (u []curves.FieldElement, err error) {
+func (flh *FixedLengthCurveHasher[C]) HashToFieldElements(count int, msg, dst []byte) (u []curves.FieldElement[C], err error) {
 	if dst == nil {
 		dst = flh.Dst()
 	}
 	m := int(flh.curve.Profile().Field().ExtensionDegree().Uint64())
-	u, err = hashToField(flh, MapToFieldElement, msg, dst, count, flh.lFieldElement, m)
+	u, err = hashToField[C, curves.FieldElement[C]](flh, MapToFieldElement[C], msg, dst, count, flh.lFieldElement, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to field element with fixed-length hash function failed")
 	}
 	return u, nil
 }
 
-func (flh *FixedLengthCurveHasher) HashToScalars(count int, msg, dst []byte) (u []curves.Scalar, err error) {
+func (flh *FixedLengthCurveHasher[C]) HashToScalars(count int, msg, dst []byte) (u []curves.Scalar[C], err error) {
 	if dst == nil {
 		dst = flh.Dst()
 	}
-	u, err = hashToField(flh, MapToScalar, msg, dst, count, flh.lScalar, 1)
+	//u, err = hashToField(flh, MapToScalar[C], msg, dst, count, flh.lScalar, 1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to scalar with fixed-length hash function failed")
 	}
@@ -180,24 +180,24 @@ func (flh *FixedLengthCurveHasher) HashToScalars(count int, msg, dst []byte) (u 
 
 /*.----------------------- VARIABLE-LENGTH HASHERS --------------------------.*/
 
-func NewShake256Hasher(curve curves.Curve, appTag, mapperTag string) CurveHasher {
+func NewShake256Hasher[C curves.Curve[C]](curve curves.Curve[C], appTag, mapperTag string) CurveHasher[C] {
 	lFieldElement, lScalar := getUniformByteLengths(curve)
-	vlh := &VariableLengthHasher{sha3.NewShake256, curve, nil, lFieldElement, lScalar}
+	vlh := &VariableLengthHasher[C]{sha3.NewShake256, curve, nil, lFieldElement, lScalar}
 	vlh.dst = vlh.generateDST(curve, appTag, DST_TAG_SHA256, mapperTag)
 	return vlh
 }
 
 // VariableLengthHasher encapsulates the variable-length hash functions of blake2b.XOF and sha3.ShakeHash.
-type VariableLengthHasher struct {
+type VariableLengthHasher[C curves.Curve[C]] struct {
 	hashFactory func() sha3.ShakeHash
-	curve       curves.Curve
+	curve       curves.Curve[C]
 	dst         []byte
 
 	lFieldElement int
 	lScalar       int
 }
 
-func (vlh *VariableLengthHasher) ExpandMessage(outLen int, msg, dst []byte) ([]byte, error) {
+func (vlh *VariableLengthHasher[C]) ExpandMessage(outLen int, msg, dst []byte) ([]byte, error) {
 	h := vlh.hashFactory()
 	// step 1
 	if outLen > MaxExpMsgOutLen {
@@ -216,15 +216,15 @@ func (vlh *VariableLengthHasher) ExpandMessage(outLen int, msg, dst []byte) ([]b
 	return out, nil
 }
 
-func (vlh *VariableLengthHasher) Dst() []byte {
+func (vlh *VariableLengthHasher[C]) Dst() []byte {
 	return vlh.dst
 }
 
-func (vlh *VariableLengthHasher) Curve() curves.Curve {
+func (vlh *VariableLengthHasher[C]) Curve() curves.Curve[C] {
 	return vlh.curve
 }
 
-func (vlh *VariableLengthHasher) generateDST(curve curves.Curve, appTag, hashTag, mapperTag string) (dst []byte) {
+func (vlh *VariableLengthHasher[C]) generateDST(curve curves.Curve[C], appTag, hashTag, mapperTag string) (dst []byte) {
 	suiteId := getSuiteID(curve, hashTag, DST_EXP_TAG_XMD, mapperTag)
 	dst = append([]byte(appTag), suiteId...)
 	if len(dst) > MaxDstLen {
@@ -239,23 +239,23 @@ func (vlh *VariableLengthHasher) generateDST(curve curves.Curve, appTag, hashTag
 	return dst
 }
 
-func (vlh *VariableLengthHasher) HashToFieldElements(count int, msg, dst []byte) (u []curves.FieldElement, err error) {
+func (vlh *VariableLengthHasher[C]) HashToFieldElements(count int, msg, dst []byte) (u []curves.FieldElement[C], err error) {
 	if dst == nil {
 		dst = vlh.Dst()
 	}
 	m := int(vlh.curve.Profile().Field().ExtensionDegree().Uint64())
-	u, err = hashToField(vlh, MapToFieldElement, msg, dst, count, vlh.lFieldElement, m)
+	u, err = hashToField[C, curves.FieldElement[C]](vlh, MapToFieldElement[C], msg, dst, count, vlh.lFieldElement, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to field element with variable-length hash function failed")
 	}
 	return u, nil
 }
 
-func (vlh *VariableLengthHasher) HashToScalars(count int, msg, dst []byte) (u []curves.Scalar, err error) {
+func (vlh *VariableLengthHasher[C]) HashToScalars(count int, msg, dst []byte) (u []curves.Scalar[C], err error) {
 	if dst == nil {
 		dst = vlh.Dst()
 	}
-	u, err = hashToField(vlh, MapToScalar, msg, dst, count, vlh.lScalar, 1)
+	u, err = hashToField[C, curves.Scalar[C]](vlh, MapToScalar[C], msg, dst, count, vlh.lScalar, 1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to scalar with variable-length hash function failed")
 	}
@@ -265,9 +265,9 @@ func (vlh *VariableLengthHasher) HashToScalars(count int, msg, dst []byte) (u []
 /*.-------------------------------- COMMON ----------------------------------.*/
 
 // hashToField implements the hash_to_field function from https://datatracker.ietf.org/doc/html/rfc9380#section-5.2
-func hashToField[FieldType any](
-	h CurveHasher,
-	MapToField func(curves.Curve, []byte) (FieldType, error),
+func hashToField[C curves.CurveIdentifier, FieldType any](
+	h CurveHasher[C],
+	MapToField func(curves.Curve[C], []byte) (FieldType, error),
 	msg, dst []byte,
 	count, L, m int,
 ) (u []FieldType, err error) {
@@ -289,7 +289,7 @@ func hashToField[FieldType any](
 	return u, nil
 }
 
-func MapToFieldElement(curve curves.Curve, input []byte) (curves.FieldElement, error) {
+func MapToFieldElement[C curves.CurveIdentifier](curve curves.Curve[C], input []byte) (curves.FieldElement[C], error) {
 	fe, err := curve.FieldElement().Zero().SetBytesWide(input)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not map bytes to field element")
@@ -297,7 +297,7 @@ func MapToFieldElement(curve curves.Curve, input []byte) (curves.FieldElement, e
 	return fe, nil
 }
 
-func MapToScalar(curve curves.Curve, input []byte) (curves.Scalar, error) {
+func MapToScalar[C curves.CurveIdentifier](curve curves.Curve[C], input []byte) (curves.Scalar[C], error) {
 	sc, err := curve.Scalar().Zero().SetBytesWide(input)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not map bytes to scalar")
@@ -307,7 +307,7 @@ func MapToScalar(curve curves.Curve, input []byte) (curves.Scalar, error) {
 
 // getUniformByteLengths computes `L`, the random length in bytes required to
 // sample a uniformly distributed FieldElement|Scalar.
-func getUniformByteLengths(curve curves.Curve) (lFieldElement, lScalar int) {
+func getUniformByteLengths[C curves.CurveIdentifier](curve curves.Curve[C]) (lFieldElement, lScalar int) {
 	log2pFieldElement := curve.Profile().Field().Characteristic().AnnouncedLen()
 	log2pScalar := curve.Profile().SubGroupOrder().BitLen()
 	k := base.ComputationalSecurity
@@ -318,7 +318,7 @@ func getUniformByteLengths(curve curves.Curve) (lFieldElement, lScalar int) {
 
 // getSuiteID generates a human-readable identifier for the suite following
 // the convention from https://datatracker.ietf.org/doc/html/rfc9380#section-8.10
-func getSuiteID(curve curves.Curve, hashTag, expandMessageTag, mapperTag string) []byte {
+func getSuiteID[C curves.CurveIdentifier](curve curves.Curve[C], hashTag, expandMessageTag, mapperTag string) []byte {
 	var buf bytes.Buffer
 	// CURVE_ID
 	buf.WriteString(curve.Name())

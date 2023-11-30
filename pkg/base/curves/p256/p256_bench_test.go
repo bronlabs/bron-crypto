@@ -56,7 +56,7 @@ func BenchmarkP256(b *testing.B) {
 				_, _ = crand.Read(t)
 				points[i] = t
 			}
-			acc := new(Point).Identity()
+			acc := new(PointP256).Identity()
 			b.StartTimer()
 			for _, pt := range points {
 				acc, _ = acc.Hash(pt)
@@ -84,11 +84,11 @@ func BenchmarkP256(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
 			curve := New()
-			points := make([]*Point, 1000)
+			points := make([]*PointP256, 1000)
 			for i := range points {
 				p, err := curve.Identity().Random(crand.Reader)
 				require.NoError(b, err)
-				points[i] = p.(*Point)
+				points[i] = p.(*PointP256)
 			}
 			acc := curve.Identity()
 			b.StartTimer()
@@ -110,7 +110,7 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 point double - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			acc := new(Point).Generator()
+			acc := new(PointP256).Generator()
 			b.StartTimer()
 			for i := 0; i < 1000; i++ {
 				acc = acc.Double()
@@ -136,13 +136,13 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 point multiply - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s, err := new(Scalar).Random(crand.Reader)
+				s, err := new(ScalarP256).Random(crand.Reader)
 				require.NoError(b, err)
-				scalars[i] = s.(*Scalar)
+				scalars[i] = s.(*ScalarP256)
 			}
-			acc := new(Point).Generator()
+			acc := new(PointP256).Generator()
 			b.StartTimer()
 			for _, sc := range scalars {
 				acc = acc.Mul(sc)
@@ -167,11 +167,11 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 scalar invert - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s, err := new(Scalar).Random(crand.Reader)
+				s, err := new(ScalarP256).Random(crand.Reader)
 				require.NoError(b, err)
-				scalars[i] = s.(*Scalar)
+				scalars[i] = s.(*ScalarP256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -197,11 +197,11 @@ func BenchmarkP256(b *testing.B) {
 	b.Run("1000 scalar sqrt - ct p256", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			b.StopTimer()
-			scalars := make([]*Scalar, 1000)
+			scalars := make([]*ScalarP256, 1000)
 			for i := range scalars {
-				s, err := new(Scalar).Random(crand.Reader)
+				s, err := new(ScalarP256).Random(crand.Reader)
 				require.NoError(b, err)
-				scalars[i] = s.(*Scalar)
+				scalars[i] = s.(*ScalarP256)
 			}
 			b.StartTimer()
 			for _, sc := range scalars {
@@ -676,7 +676,7 @@ func (p *BenchPoint) FromAffineCompressed(bytes []byte) (curves.Point, error) {
 	x := new(saferith.Nat).SetBytes(bytes[1:])
 	rhs := rhsP256(x.Big(), elliptic.P256().Params())
 	// test that rhs is quadratic residue
-	// if not, then this curves.Point is at infinity
+	// if not, then this curves.PointP256 is at infinity
 	y := new(saferith.Nat).ModSqrt(new(saferith.Nat).SetBig(rhs, fieldOrder.BitLen()), fieldOrder)
 	if y != nil {
 		// fix the sign

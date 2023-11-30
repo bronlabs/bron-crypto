@@ -11,7 +11,7 @@ import (
 
 const scalarBytes = base.FieldBytes
 
-func PointMarshalBinary(point curves.Point) ([]byte, error) {
+func PointMarshalBinary[C curves.CurveIdentifier](point curves.Point[C]) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
 	// separated by a colon followed by the compressed point
@@ -26,7 +26,7 @@ func PointMarshalBinary(point curves.Point) ([]byte, error) {
 	return output, nil
 }
 
-func PointUnmarshalBinary(curve curves.Curve, input []byte) (curves.Point, error) {
+func PointUnmarshalBinary[C curves.CurveIdentifier](curve curves.Curve[C], input []byte) (curves.Point[C], error) {
 	if len(input) < scalarBytes+1+len(curve.Name()) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -44,7 +44,7 @@ func PointUnmarshalBinary(curve curves.Curve, input []byte) (curves.Point, error
 	return point, nil
 }
 
-func PointMarshalText(point curves.Point) ([]byte, error) {
+func PointMarshalText[C curves.CurveIdentifier](point curves.Point[C]) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
 	// separated by a colon followed by the compressed point
@@ -59,7 +59,7 @@ func PointMarshalText(point curves.Point) ([]byte, error) {
 	return output, nil
 }
 
-func PointUnmarshalText(curve curves.Curve, input []byte) (curves.Point, error) {
+func PointUnmarshalText[C curves.CurveIdentifier](curve curves.Curve[C], input []byte) (curves.Point[C], error) {
 	if len(input) < scalarBytes*2+1+len(curve.Name()) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
@@ -82,7 +82,7 @@ func PointUnmarshalText(curve curves.Curve, input []byte) (curves.Point, error) 
 	return point, nil
 }
 
-func PointMarshalJson(point curves.Point) ([]byte, error) {
+func PointMarshalJson[C curves.CurveIdentifier](point curves.Point[C]) ([]byte, error) {
 	m := make(map[string]string, 2)
 	curve := point.Curve()
 	m["type"] = curve.Name()
@@ -94,7 +94,7 @@ func PointMarshalJson(point curves.Point) ([]byte, error) {
 	return marshalled, nil
 }
 
-func NewPointFromJSON(curve curves.Curve, data []byte) (curves.Point, error) {
+func NewPointFromJSON[C curves.CurveIdentifier](curve curves.Curve[C], data []byte) (curves.Point[C], error) {
 	var m map[string]string
 
 	if err := json.Unmarshal(data, &m); err != nil {

@@ -23,7 +23,7 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
-	curveInstances := []curves.Curve{
+	curveInstances := []curves.Curve[curves.CurveIdentifier]{
 		k256.New(),
 		p256.New(),
 		edwards25519.New(),

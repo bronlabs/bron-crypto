@@ -17,38 +17,38 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ curves.Point = (*Point)(nil)
+var _ curves.Point[CurveIdentifierK256] = (*PointK256)(nil)
 
-type Point struct {
+type PointK256 struct {
 	Value *impl.EllipticPoint
 
 	_ types.Incomparable
 }
 
-func NewPoint() *Point {
-	emptyPoint := &Point{}
-	result, _ := emptyPoint.Identity().(*Point)
+func NewPoint() curves.Point[CurveIdentifierK256] {
+	emptyPoint := &PointK256{}
+	result, _ := emptyPoint.Identity().(*PointK256)
 	return result
 }
 
-func (*Point) Curve() curves.Curve {
-	return &k256Instance
+func (PointK256) Curve() curves.Curve[CurveIdentifierK256] {
+	return New()
 }
 
-func (p *Point) Random(prng io.Reader) (curves.Point, error) {
+func (p PointK256) Random(prng io.Reader) (curves.Point[CurveIdentifierK256], error) {
 	var seed [64]byte
 	_, _ = prng.Read(seed[:])
 	return p.Hash(seed[:])
 }
 
-func (*Point) Hash(inputs ...[]byte) (curves.Point, error) {
+func (PointK256) Hash(inputs ...[]byte) (curves.Point[CurveIdentifierK256], error) {
 	p := secp256k1.PointNew()
 	u, err := New().HashToFieldElements(2, bytes.Join(inputs, nil), nil)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "hash to field element of K256 failed")
 	}
-	u0, ok0 := u[0].(*FieldElement)
-	u1, ok1 := u[1].(*FieldElement)
+	u0, ok0 := u[0].(*FieldElementK256)
+	u1, ok1 := u[1].(*FieldElementK256)
 	if !ok0 || !ok1 {
 		return nil, errs.NewHashingFailed("Cast to K256 field elements failed")
 	}
@@ -56,102 +56,102 @@ func (*Point) Hash(inputs ...[]byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "Map to K256 point failed")
 	}
-	return &Point{Value: p}, nil
+	return &PointK256{Value: p}, nil
 }
 
-func (*Point) Identity() curves.Point {
-	return &Point{
+func (PointK256) Identity() curves.Point[CurveIdentifierK256] {
+	return &PointK256{
 		Value: secp256k1.PointNew().Identity(),
 	}
 }
 
-func (*Point) Generator() curves.Point {
-	return &Point{
+func (PointK256) Generator() curves.Point[CurveIdentifierK256] {
+	return &PointK256{
 		Value: secp256k1.PointNew().Generator(),
 	}
 }
 
-func (p *Point) IsIdentity() bool {
+func (p PointK256) IsIdentity() bool {
 	return p.Value.IsIdentity()
 }
 
-func (p *Point) IsNegative() bool {
+func (p PointK256) IsNegative() bool {
 	return p.Value.GetY().Value[0]&1 == 1
 }
 
-func (p *Point) IsOnCurve() bool {
+func (p PointK256) IsOnCurve() bool {
 	return p.Value.IsOnCurve()
 }
 
-func (p *Point) Clone() curves.Point {
-	return &Point{
+func (p PointK256) Clone() curves.Point[CurveIdentifierK256] {
+	return &PointK256{
 		Value: secp256k1.PointNew().Set(p.Value),
 	}
 }
 
-func (p *Point) ClearCofactor() curves.Point {
+func (p PointK256) ClearCofactor() curves.Point[CurveIdentifierK256] {
 	return p.Clone()
 }
 
-func (*Point) IsSmallOrder() bool {
+func (PointK256) IsSmallOrder() bool {
 	return false
 }
 
-func (p *Point) Double() curves.Point {
+func (p PointK256) Double() curves.Point[CurveIdentifierK256] {
 	value := secp256k1.PointNew().Double(p.Value)
-	return &Point{Value: value}
+	return &PointK256{Value: value}
 }
 
-func (*Point) Scalar() curves.Scalar {
-	return new(Scalar).Zero()
+func (PointK256) Scalar() curves.Scalar[CurveIdentifierK256] {
+	return new(ScalarK256).Zero()
 }
 
-func (p *Point) Neg() curves.Point {
+func (p PointK256) Neg() curves.Point[CurveIdentifierK256] {
 	value := secp256k1.PointNew().Neg(p.Value)
-	return &Point{Value: value}
+	return &PointK256{Value: value}
 }
 
-func (p *Point) Add(rhs curves.Point) curves.Point {
+func (p PointK256) Add(rhs curves.Point[CurveIdentifierK256]) curves.Point[CurveIdentifierK256] {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(*PointK256)
 	if ok {
 		value := secp256k1.PointNew().Add(p.Value, r.Value)
-		return &Point{Value: value}
+		return &PointK256{Value: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
 }
 
-func (p *Point) Sub(rhs curves.Point) curves.Point {
+func (p PointK256) Sub(rhs curves.Point[CurveIdentifierK256]) curves.Point[CurveIdentifierK256] {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(*PointK256)
 	if ok {
 		value := secp256k1.PointNew().Sub(p.Value, r.Value)
-		return &Point{Value: value}
+		return &PointK256{Value: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
 }
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+func (p PointK256) Mul(rhs curves.Scalar[CurveIdentifierK256]) curves.Point[CurveIdentifierK256] {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Scalar)
+	r, ok := rhs.(*ScalarK256)
 	if ok {
 		value := secp256k1.PointNew().Mul(p.Value, r.Value)
-		return &Point{Value: value}
+		return &PointK256{Value: value}
 	} else {
 		panic("rhs is not ScalarK256")
 	}
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*Point)
+func (p PointK256) Equal(rhs curves.Point[CurveIdentifierK256]) bool {
+	r, ok := rhs.(*PointK256)
 	if ok {
 		return p.Value.Equal(r.Value) == 1
 	} else {
@@ -159,15 +159,15 @@ func (p *Point) Equal(rhs curves.Point) bool {
 	}
 }
 
-func (*Point) Set(x, y *saferith.Nat) (curves.Point, error) {
+func (PointK256) Set(x, y *saferith.Nat) (curves.Point[CurveIdentifierK256], error) {
 	value, err := secp256k1.PointNew().SetNat(x, y)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "could not set x,y")
 	}
-	return &Point{Value: value}, nil
+	return &PointK256{Value: value}, nil
 }
 
-func (p *Point) ToAffineCompressed() []byte {
+func (p PointK256) ToAffineCompressed() []byte {
 	var x [33]byte
 	x[0] = byte(2)
 
@@ -180,7 +180,7 @@ func (p *Point) ToAffineCompressed() []byte {
 	return x[:]
 }
 
-func (p *Point) ToAffineUncompressed() []byte {
+func (p PointK256) ToAffineUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
 	t := secp256k1.PointNew().ToAffine(p.Value)
@@ -191,7 +191,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
+func (p PointK256) FromAffineCompressed(input []byte) (curves.Point[CurveIdentifierK256], error) {
 	var raw [base.FieldBytes]byte
 	if len(input) != 33 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
@@ -212,7 +212,7 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	rhs := fp.New()
 	p.Value.Arithmetic.RhsEq(rhs, x)
 	// test that rhs is quadratic residue
-	// if not, then this Point is at infinity
+	// if not, then this PointK256 is at infinity
 	y, wasQr := fp.New().Sqrt(rhs)
 	if wasQr {
 		// fix the sign
@@ -224,10 +224,10 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 		value.Y = y
 		value.Z.SetOne()
 	}
-	return &Point{Value: value}, nil
+	return &PointK256{Value: value}, nil
 }
 
-func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
+func (PointK256) FromAffineUncompressed(input []byte) (curves.Point[CurveIdentifierK256], error) {
 	var arr [base.FieldBytes]byte
 	if len(input) != 65 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
@@ -250,57 +250,57 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	value.X = x
 	value.Y = y
 	value.Z.SetOne()
-	return &Point{Value: value}, nil
+	return &PointK256{Value: value}, nil
 }
 
-func (*Point) CurveName() string {
+func (PointK256) CurveName() string {
 	return Name
 }
 
-func (p *Point) X() curves.FieldElement {
-	return &FieldElement{
+func (p PointK256) X() curves.FieldElement[CurveIdentifierK256] {
+	return &FieldElementK256{
 		v: p.Value.GetX(),
 	}
 }
 
-func (p *Point) Y() curves.FieldElement {
-	return &FieldElement{
+func (p PointK256) Y() curves.FieldElement[CurveIdentifierK256] {
+	return &FieldElementK256{
 		v: p.Value.GetY(),
 	}
 }
 
-func (p *Point) ProjectiveX() curves.FieldElement {
-	return &FieldElement{
+func (p PointK256) ProjectiveX() curves.FieldElement[CurveIdentifierK256] {
+	return &FieldElementK256{
 		v: p.Value.X,
 	}
 }
 
-func (p *Point) ProjectiveY() curves.FieldElement {
-	return &FieldElement{
+func (p PointK256) ProjectiveY() curves.FieldElement[CurveIdentifierK256] {
+	return &FieldElementK256{
 		v: p.Value.Y,
 	}
 }
 
-func (p *Point) ProjectiveZ() curves.FieldElement {
-	return &FieldElement{
+func (p PointK256) ProjectiveZ() curves.FieldElement[CurveIdentifierK256] {
+	return &FieldElementK256{
 		v: p.Value.Z,
 	}
 }
 
-func (p *Point) MarshalBinary() ([]byte, error) {
-	res, err := serialisation.PointMarshalBinary(p)
+func (p PointK256) MarshalBinary() ([]byte, error) {
+	res, err := serialisation.PointMarshalBinary(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "Could not marshal point to binary")
 	}
 	return res, nil
 }
 
-func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := serialisation.PointUnmarshalBinary(&k256Instance, input)
+func (p PointK256) UnmarshalBinary(input []byte) error {
+	pt, err := serialisation.PointUnmarshalBinary(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal binary")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointK256)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -308,20 +308,20 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalText() ([]byte, error) {
-	res, err := serialisation.PointMarshalText(p)
+func (p PointK256) MarshalText() ([]byte, error) {
+	res, err := serialisation.PointMarshalText(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "Could not marshal point to text")
 	}
 	return res, nil
 }
 
-func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := serialisation.PointUnmarshalText(&k256Instance, input)
+func (p PointK256) UnmarshalText(input []byte) error {
+	pt, err := serialisation.PointUnmarshalText(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal text")
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(*PointK256)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
@@ -329,20 +329,20 @@ func (p *Point) UnmarshalText(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalJSON() ([]byte, error) {
-	res, err := serialisation.PointMarshalJson(p)
+func (p PointK256) MarshalJSON() ([]byte, error) {
+	res, err := serialisation.PointMarshalJson(p.Clone())
 	if err != nil {
 		return nil, errs.WrapSerializationError(err, "Could not marshal point to json")
 	}
 	return res, nil
 }
 
-func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := serialisation.NewPointFromJSON(&k256Instance, input)
+func (p PointK256) UnmarshalJSON(input []byte) error {
+	pt, err := serialisation.NewPointFromJSON(New(), input)
 	if err != nil {
 		return errs.WrapSerializationError(err, "could not unmarshal")
 	}
-	P, ok := pt.(*Point)
+	P, ok := pt.(*PointK256)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}

@@ -18,6 +18,10 @@ import (
 
 const Name = "edwards25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
 
+type CurveIdentifierEdward25519 struct {
+	curves.CurveIdentifier
+}
+
 var (
 	edwards25519Initonce sync.Once
 	edwards25519Instance Curve
@@ -37,36 +41,36 @@ var (
 	})
 )
 
-var _ curves.CurveProfile = (*CurveProfile)(nil)
+var _ curves.CurveProfile[CurveIdentifierEdward25519] = (*CurveProfileEdward25519)(nil)
 
-type CurveProfile struct{}
+type CurveProfileEdward25519 struct{}
 
-func (*CurveProfile) Field() curves.FieldProfile {
+func (*CurveProfileEdward25519) Field() curves.FieldProfile {
 	return &FieldProfile{}
 }
 
-func (*CurveProfile) SubGroupOrder() *saferith.Modulus {
+func (*CurveProfileEdward25519) SubGroupOrder() *saferith.Modulus {
 	return subgroupOrder
 }
 
-func (*CurveProfile) Cofactor() curves.Scalar {
+func (*CurveProfileEdward25519) Cofactor() curves.Scalar[CurveIdentifierEdward25519] {
 	return (&edwards25519Instance).Scalar().New(8)
 }
 
-func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
+func (*CurveProfileEdward25519) ToPairingCurve() curves.PairingCurve[CurveIdentifierEdward25519] {
 	return nil
 }
 
-var _ curves.Curve = (*Curve)(nil)
+var _ curves.Curve[CurveIdentifierEdward25519] = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_       curves.Scalar
-	Point_        curves.Point
-	FieldElement_ curves.FieldElement
+	Scalar_       curves.Scalar[CurveIdentifierEdward25519]
+	Point_        curves.Point[CurveIdentifierEdward25519]
+	FieldElement_ curves.FieldElement[CurveIdentifierEdward25519]
 	Name_         string
-	Profile_      curves.CurveProfile
+	Profile_      curves.CurveProfile[CurveIdentifierEdward25519]
 
-	hashing.CurveHasher
+	hashing.CurveHasher[CurveIdentifierEdward25519]
 
 	_ types.Incomparable
 }
@@ -77,16 +81,16 @@ func ed25519Init() {
 		Point_:        new(Point).Identity(),
 		FieldElement_: new(FieldElement).Zero(),
 		Name_:         Name,
-		Profile_:      &CurveProfile{},
+		Profile_:      &CurveProfileEdward25519{},
 	}
 	edwards25519Instance.CurveHasher = hashing.NewCurveHasherSha512(
-		&edwards25519Instance,
+		curves.Curve[CurveIdentifierEdward25519](&edwards25519Instance),
 		base.HASH2CURVE_APP_TAG,
 		hashing.DST_TAG_ELLIGATOR2,
 	)
 }
 
-func New() *Curve {
+func New() curves.Curve[CurveIdentifierEdward25519] {
 	edwards25519Initonce.Do(ed25519Init)
 	return &edwards25519Instance
 }
@@ -96,21 +100,21 @@ func New() *Curve {
 // default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
 func (c *Curve) SetHasherAppTag(appTag string) {
 	c.CurveHasher = hashing.NewCurveHasherSha512(
-		curves.Curve(&edwards25519Instance),
+		New(),
 		appTag,
 		hashing.DST_TAG_ELLIGATOR2,
 	)
 }
 
-func (c *Curve) Profile() curves.CurveProfile {
+func (c *Curve) Profile() curves.CurveProfile[CurveIdentifierEdward25519] {
 	return c.Profile_
 }
 
-func (c *Curve) Scalar() curves.Scalar {
+func (c *Curve) Scalar() curves.Scalar[CurveIdentifierEdward25519] {
 	return c.Scalar_
 }
 
-func (c *Curve) Point() curves.Point {
+func (c *Curve) Point() curves.Point[CurveIdentifierEdward25519] {
 	return c.Point_
 }
 
@@ -118,23 +122,23 @@ func (c *Curve) Name() string {
 	return c.Name_
 }
 
-func (c *Curve) FieldElement() curves.FieldElement {
+func (c *Curve) FieldElement() curves.FieldElement[CurveIdentifierEdward25519] {
 	return c.FieldElement_
 }
 
-func (c *Curve) Generator() curves.Point {
+func (c *Curve) Generator() curves.Point[CurveIdentifierEdward25519] {
 	return c.Point_.Generator()
 }
 
-func (c *Curve) Identity() curves.Point {
+func (c *Curve) Identity() curves.Point[CurveIdentifierEdward25519] {
 	return c.Point_.Identity()
 }
 
-func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+func (c *Curve) ScalarBaseMult(sc curves.Scalar[CurveIdentifierEdward25519]) curves.Point[CurveIdentifierEdward25519] {
 	return c.Generator().Mul(sc)
 }
 
-func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+func (*Curve) MultiScalarMult(scalars []curves.Scalar[CurveIdentifierEdward25519], points []curves.Point[CurveIdentifierEdward25519]) (curves.Point[CurveIdentifierEdward25519], error) {
 	nScalars := make([]*filippo.Scalar, len(scalars))
 	nPoints := make([]*filippo.Point, len(points))
 	for i, sc := range scalars {
@@ -155,7 +159,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	return &Point{Value: pt}, nil
 }
 
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (p1, p2 curves.Point, err error) {
+func (*Curve) DeriveFromAffineX(x curves.FieldElement[CurveIdentifierEdward25519]) (p1, p2 curves.Point[CurveIdentifierEdward25519], err error) {
 	xc, ok := x.(*FieldElement)
 	if !ok {
 		return nil, nil, errs.NewInvalidType("x is not an edwards25519 base field element")

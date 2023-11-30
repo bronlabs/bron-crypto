@@ -20,9 +20,9 @@ type FieldProfile interface {
 
 // FieldElement is an element of a finite field \mathbb{F}_{p^k} with p>1 a prime
 // and k>=1 an integer, with k=1 in most cases (prime field \mathbb{F}_p).
-type FieldElement interface {
+type FieldElement[C CurveIdentifier] interface {
 	// Clone returns a copy of this field element.
-	Clone() FieldElement
+	Clone() FieldElement[C]
 
 	// Profile returns the profile (p, k and p^k) of the field this element is in.
 	Profile() FieldProfile
@@ -36,23 +36,23 @@ type FieldElement interface {
 	// SubfieldElement returns a field element in F_p, a subfield of F_{p^k} depending on its extension degree k:
 	//  - For k>1 (with subfields F_{p_1}, ..., F_{p_k}), the element of F_{p_((i+1)%k)}.
 	//  - For k=1, the element itself (in F_p already) regardless of i.
-	SubfieldElement(i uint64) FieldElement
+	SubfieldElement(i uint64) FieldElement[C]
 
 	// Random samples a random field element using a uniform bitstring from the
 	// reader, and mapping it to a field element using SetBytesWide.
-	Random(prng io.Reader) (FieldElement, error)
+	Random(prng io.Reader) (FieldElement[C], error)
 	// Hash the bytes to yield nElements uniformly distributed field elements.
 	//
 	// Uses the default cipher suite defined in RFC9380 (in hashing/hash2curve package),
 	// exanding the input `x` to nElements blocks, and maps each block to a field
 	// element using SetBytesWide. Each block is long enough to keep the final
 	// bias below the computational security parameter (2^{-128} for 128-bit security).
-	Hash(x []byte) (FieldElement, error)
+	Hash(x []byte) (FieldElement[C], error)
 
 	// Zero returns the additive identity element
-	Zero() FieldElement
+	Zero() FieldElement[C]
 	// One returns the multiplicative identity element
-	One() FieldElement
+	One() FieldElement[C]
 	// IsZero returns true if this element is the additive identity element
 	IsZero() bool
 	// IsOne returns true if this element is the multiplicative identity element
@@ -66,35 +66,35 @@ type FieldElement interface {
 	//  - -1 if this element is less than rhs
 	//  - 0 if this element is equal to rhs
 	//  - 1 if this element is greater than rhs
-	Cmp(rhs FieldElement) int
+	Cmp(rhs FieldElement[C]) int
 
 	// Square returns element*element in a new FieldElement
-	Square() FieldElement
+	Square() FieldElement[C]
 	// Double returns element+element in a new FieldElement
-	Double() FieldElement
+	Double() FieldElement[C]
 	// Sqrt computes the square root of this element in a new FieldElement if it exists.
-	Sqrt() (result FieldElement, wasSquare bool)
+	Sqrt() (result FieldElement[C], wasSquare bool)
 	// Cube returns element*element*element in a new FieldElement
-	Cube() FieldElement
+	Cube() FieldElement[C]
 	// Add returns element+rhs in a new FieldElement
-	Add(rhs FieldElement) FieldElement
+	Add(rhs FieldElement[C]) FieldElement[C]
 	// Sub returns element-rhs in a new FieldElement
-	Sub(rhs FieldElement) FieldElement
+	Sub(rhs FieldElement[C]) FieldElement[C]
 	// Mul returns element*rhs in a new FieldElement
-	Mul(rhs FieldElement) FieldElement
+	Mul(rhs FieldElement[C]) FieldElement[C]
 	// MulAdd returns element * y + z in a new FieldElement
-	MulAdd(y, z FieldElement) FieldElement
+	MulAdd(y, z FieldElement[C]) FieldElement[C]
 	// Div returns element*rhs^-1 in a new FieldElement
-	Div(rhs FieldElement) FieldElement
+	Div(rhs FieldElement[C]) FieldElement[C]
 	// Exp returns element^k in a new FieldElement
-	Exp(rhs FieldElement) FieldElement
+	Exp(rhs FieldElement[C]) FieldElement[C]
 	// Neg returns (-element) in a new FieldElement
-	Neg() FieldElement
+	Neg() FieldElement[C]
 
 	// New returns an element with the value set to `v`
-	New(v uint64) FieldElement
+	New(v uint64) FieldElement[C]
 	// SetNat returns this element set to the value of v
-	SetNat(value *saferith.Nat) (FieldElement, error)
+	SetNat(value *saferith.Nat) (FieldElement[C], error)
 	// Nat returns this element as a Nat
 	Nat() *saferith.Nat
 	// Bytes returns the canonical little-endian byte representation of this field
@@ -105,13 +105,13 @@ type FieldElement interface {
 	// s.t. element = Σ_{i=0}^{k-1} (input[i] << 8*i). The input must be exactly
 	// k*FieldBytes long, and must be less than the modulus.
 	// WARNING: do not use it for uniform sampling, use SetBytesWide instead.
-	SetBytes(input []byte) (FieldElement, error)
+	SetBytes(input []byte) (FieldElement[C], error)
 	// SetBytesWide creates a new field element from uniformly sampled bytes, reducing
 	// the result with the field modulus. The input must be at most k*WideFieldBytes long.
-	SetBytesWide(input []byte) (FieldElement, error)
+	SetBytesWide(input []byte) (FieldElement[C], error)
 	// FromScalar casts a scalar to its corresponding field element, without reduction.
-	FromScalar(sc Scalar) (FieldElement, error)
+	FromScalar(sc Scalar[C]) (FieldElement[C], error)
 	// Scalar casts the field element to a curve scalar, reducing its value mod
 	// the prime subgroup order.
-	Scalar(curve Curve) (Scalar, error)
+	Scalar() (Scalar[C], error)
 }
