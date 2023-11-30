@@ -7,6 +7,15 @@ type Curve interface {
 	ScalarBaseMul(scalar Scalar) Point
 }
 
+type PairingCurve interface {
+	G1() PairingPoint
+	G2() PairingPoint
+	Gt() GroupElement
+
+	Pairing(p1, p2 PairingPoint) Scalar
+	MultiPairing(...PairingPoint) Scalar
+}
+
 type ShortWeierstrassCurve interface {
 	ShortWeierstrassA() FieldElement
 	ShortWeierstrassB() FieldElement

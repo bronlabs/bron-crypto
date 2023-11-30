@@ -5,15 +5,17 @@ import (
 	"io"
 )
 
-type Group interface {
-	FromRandom(prng io.Reader) Group
-	Clone() Group
-	Identity() Group
-	Generator() Group
-	Operate(rhs Group) Group
-	Inv() Group
-	Exp(nat saferith.Nat) Group
-	IsIdentity() Group
-	Equals(rhs Group)
+type GroupElement interface {
+	FromRandom(prng io.Reader) GroupElement
+	Clone() GroupElement
+	Identity() GroupElement
+	Generator() GroupElement
+	Double() GroupElement
+	Triple() GroupElement
+	Operate(rhs GroupElement) GroupElement
+	Inv() GroupElement
+	Exp(nat saferith.Nat) GroupElement
+	IsIdentity() GroupElement
+	Equals(rhs GroupElement)
 	Order() saferith.Nat
 }

@@ -1,9 +1,11 @@
 package curves2
 
 type Point interface {
-	Group
+	GroupElement
 	FromAffineBytes(bytes []byte)
 	FromAffineCompressedBytes(bytes []byte)
+	Add(rhs Point) Point
+	Neg() Point
 	Mul(rhs Scalar) Point
 	IsOnCurve() bool
 	ClearCofactor() bool
@@ -14,6 +16,12 @@ type Point interface {
 	Curve() Curve
 	Scalar() Scalar
 	toAffine() AffinePoint
+}
+
+type PairingPoint interface {
+	Point
+	OtherGroup() PairingPoint
+	Pairing(p PairingPoint) GroupElement
 }
 
 type AffinePoint interface {
