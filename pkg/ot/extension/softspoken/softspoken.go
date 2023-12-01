@@ -100,7 +100,7 @@ type (
 
 	// ChallengeResponse (ẋ, ṫ) is the OTe consistency check from the receiver, to be verified by the Sender.
 	ChallengeResponse struct {
-		x_val [SigmaBytes]byte        // ẋ ∈ [σ]
-		t_val [Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits
+		X_val [SigmaBytes]byte        // ẋ ∈ [σ]
+		T_val [Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits
 	}
 )
