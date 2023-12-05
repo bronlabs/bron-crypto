@@ -117,7 +117,7 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output map[types.Identity
 			return nil, nil, errs.NewIsIdentity("E_i of sharing id %d is at infinity", sharingId)
 		}
 		if !E_i.IsOnCurve() {
-			return nil, nil, errs.NewMembershipError("E_i of sharing id %d is not on curve", sharingId)
+			return nil, nil, errs.NewMembership("E_i of sharing id %d is not on curve", sharingId)
 		}
 
 		D_alpha[senderIdentityKey.Hash()] = D_i

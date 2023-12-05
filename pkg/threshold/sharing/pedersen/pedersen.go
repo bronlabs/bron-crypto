@@ -84,7 +84,7 @@ func validateInputs(threshold, total int, generator curves.Point) error {
 		return errs.NewIsNil("generator is nil")
 	}
 	if !generator.IsOnCurve() {
-		return errs.NewMembershipError("invalid generator")
+		return errs.NewMembership("invalid generator")
 	}
 	if generator.IsIdentity() {
 		return errs.NewIsIdentity("invalid generator")

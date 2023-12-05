@@ -63,7 +63,7 @@ func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return errs.NewIsNil("my identity key is nil")
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewMembershipError("i'm not in cohort")
+		return errs.NewMembership("i'm not in cohort")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")

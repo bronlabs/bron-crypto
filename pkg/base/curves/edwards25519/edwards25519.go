@@ -140,7 +140,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	for i, sc := range scalars {
 		s, err := filippo.NewScalar().SetCanonicalBytes(sc.Bytes())
 		if err != nil {
-			return nil, errs.WrapSerializationError(err, "set canonical bytes")
+			return nil, errs.WrapSerialisation(err, "set canonical bytes")
 		}
 		nScalars[i] = s
 	}

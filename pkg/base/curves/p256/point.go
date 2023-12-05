@@ -199,14 +199,14 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	}
 	sign := int(input[0])
 	if sign != 2 && sign != 3 {
-		return nil, errs.NewSerializationError("invalid sign byte")
+		return nil, errs.NewSerialisation("invalid sign byte")
 	}
 	sign &= 0x1
 
 	copy(raw[:], bitstring.ReverseBytes(input[1:]))
 	x, err := fp.New().SetBytes(&raw)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "set bytes failed")
+		return nil, errs.WrapSerialisation(err, "set bytes failed")
 	}
 
 	value := p256n.PointNew().Identity()
@@ -234,7 +234,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	if input[0] != 4 {
-		return nil, errs.NewSerializationError("invalid sign byte")
+		return nil, errs.NewSerialisation("invalid sign byte")
 	}
 
 	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
@@ -295,7 +295,7 @@ func (*Point) Params() *elliptic.CurveParams {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	res, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -303,7 +303,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(&p256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -316,7 +316,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	res, err := serialisation.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -324,7 +324,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(&p256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -337,7 +337,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	res, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -345,7 +345,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(&p256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

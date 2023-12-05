@@ -69,7 +69,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 	for id := range partialSignatures {
 		sharingId, exists := a.identityKeyToSharingId[id]
 		if !exists {
-			return nil, nil, errs.NewMembershipError("participant %x is not in cohort", id)
+			return nil, nil, errs.NewMembership("participant %x is not in cohort", id)
 		}
 		sharingIds[i] = sharingId
 		presentParticipantsToSharingId[id] = sharingId

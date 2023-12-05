@@ -274,7 +274,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 	pt, err := filippo.NewIdentityPoint().SetBytes(inBytes)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "set bytes method failed")
+		return nil, errs.WrapSerialisation(err, "set bytes method failed")
 	}
 	return &Point{Value: pt}, nil
 }
@@ -298,7 +298,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	t := new(field.Element).Multiply(x, y)
 	value, err := filippo.NewIdentityPoint().SetExtendedCoordinates(x, y, z, t)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "set extended coordinates")
+		return nil, errs.WrapSerialisation(err, "set extended coordinates")
 	}
 	return &Point{Value: value}, nil
 }
@@ -306,7 +306,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	point, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "marshal to point failed")
+		return nil, errs.WrapSerialisation(err, "marshal to point failed")
 	}
 	return point, nil
 }
@@ -314,7 +314,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(&edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "unmarshal binary failed")
+		return errs.WrapSerialisation(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -327,7 +327,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	t, err := serialisation.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "marshal to text failed")
+		return nil, errs.WrapSerialisation(err, "marshal to text failed")
 	}
 	return t, nil
 }
@@ -335,7 +335,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(&edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "unmarshal binary failed")
+		return errs.WrapSerialisation(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -348,7 +348,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	point, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "marshal to json failed")
+		return nil, errs.WrapSerialisation(err, "marshal to json failed")
 	}
 	return point, nil
 }
@@ -356,7 +356,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(&edwards25519Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not extract a point from json")
+		return errs.WrapSerialisation(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

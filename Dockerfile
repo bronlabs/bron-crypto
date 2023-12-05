@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build ./...
+RUN go generate ./... && go build ./...
 
 RUN make lint
 

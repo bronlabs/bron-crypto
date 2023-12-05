@@ -162,7 +162,7 @@ func (p *Point) Set(x, y *saferith.Nat) (curves.Point, error) {
 	yElem := new(fp.Fp).SetNat(y)
 	value := &Ep{X: xElem, Y: yElem, Z: new(fp.Fp).SetOne()}
 	if !value.IsOnCurve() {
-		return nil, errs.NewMembershipError("point is not on the curve")
+		return nil, errs.NewMembership("point is not on the curve")
 	}
 	return &Point{Value: value}, nil
 }
@@ -194,7 +194,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	res, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -202,7 +202,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(&pallasInstance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -215,7 +215,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	res, err := serialisation.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -223,7 +223,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(&pallasInstance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -236,7 +236,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	res, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return res, nil
 }
@@ -244,7 +244,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(&pallasInstance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

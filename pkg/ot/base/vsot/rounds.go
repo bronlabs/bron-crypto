@@ -101,7 +101,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
 	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
 		if receiversMaskedChoice[i], err = sender.Curve.Point().FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
-			return nil, errs.WrapSerializationError(err, "uncompress the point")
+			return nil, errs.WrapSerialisation(err, "uncompress the point")
 		}
 	}
 

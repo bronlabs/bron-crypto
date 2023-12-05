@@ -180,7 +180,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 			sa.Message,
 		)
 		if err != nil {
-			return nil, errs.WrapSerializationError(err, "converting hash to c failed")
+			return nil, errs.WrapSerialisation(err, "converting hash to c failed")
 		}
 
 		for _, jIdentityKey := range sa.SessionParticipants.Iter() {

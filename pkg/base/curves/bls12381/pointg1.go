@@ -215,7 +215,7 @@ func (*PointG1) FromAffineCompressed(input []byte) (curves.Point, error) {
 	copy(b[:], input)
 	value, err := new(bls12381impl.G1).FromCompressed(&b)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't construct G1 point from affine compressed")
+		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine compressed")
 	}
 	return &PointG1{Value: value}, nil
 }
@@ -225,7 +225,7 @@ func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	copy(b[:], input)
 	value, err := new(bls12381impl.G1).FromUncompressed(&b)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't construct G1 point from affine uncompressed")
+		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine uncompressed")
 	}
 	return &PointG1{Value: value}, nil
 }
@@ -316,7 +316,7 @@ func (*PointG1) Modulus() *saferith.Modulus {
 func (p *PointG1) MarshalBinary() ([]byte, error) {
 	result, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal to binary")
 	}
 	return result, nil
 }
@@ -324,7 +324,7 @@ func (p *PointG1) MarshalBinary() ([]byte, error) {
 func (p *PointG1) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(NewG1(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG1)
 	if !ok {
@@ -337,7 +337,7 @@ func (p *PointG1) UnmarshalBinary(input []byte) error {
 func (p *PointG1) MarshalText() ([]byte, error) {
 	result, err := serialisation.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal to text")
 	}
 	return result, nil
 }
@@ -345,7 +345,7 @@ func (p *PointG1) MarshalText() ([]byte, error) {
 func (p *PointG1) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(NewG1(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*PointG1)
 	if !ok {
@@ -358,7 +358,7 @@ func (p *PointG1) UnmarshalText(input []byte) error {
 func (p *PointG1) MarshalJSON() ([]byte, error) {
 	result, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal to json")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal to json")
 	}
 	return result, nil
 }
@@ -366,7 +366,7 @@ func (p *PointG1) MarshalJSON() ([]byte, error) {
 func (p *PointG1) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(NewG1(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not extract a point from json")
+		return errs.WrapSerialisation(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*PointG1)
 	if !ok {

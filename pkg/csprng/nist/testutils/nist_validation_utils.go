@@ -116,13 +116,13 @@ func (nistTest *NistTestHelper) Sscanf(canBeEmpty bool, format string, a ...any)
 	scanResult := nistTest.FileScanner.Scan()
 	nistTest.LineNo++
 	if !scanResult && !canBeEmpty {
-		return errs.NewSerializationError("Expected line %d not to be empty", nistTest.LineNo)
+		return errs.NewSerialisation("Expected line %d not to be empty", nistTest.LineNo)
 	}
 	line := nistTest.FileScanner.Text()
 	fixedPartMatches := (format == "") || (line == format[:len(format)-2]) // -2 to remove the %d|%x
 	_, err := fmt.Sscanf(line, format, a...)
 	if err != nil && (!canBeEmpty || !fixedPartMatches) {
-		return errs.NewSerializationError("Error parsing line %d: %s", nistTest.LineNo, err)
+		return errs.NewSerialisation("Error parsing line %d: %s", nistTest.LineNo, err)
 	}
 	return nil
 }
@@ -138,26 +138,26 @@ func (nistTest *NistTestHelper) Sscanf(canBeEmpty bool, format string, a ...any)
 //	[ReturnedBitsLen = 512]
 func (nistTest *NistTestHelper) ScanTestConfig() error {
 	if err := nistTest.Sscanf(false, "[PredictionResistance = %t]", &nistTest.Config.PredictionResistance); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing PredictionResistance")
+		return errs.WrapSerialisation(err, "Error parsing PredictionResistance")
 	}
 	if err := nistTest.Sscanf(false, "[EntropyInputLen = %d]", &nistTest.Config.EntropyInputLen); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing EntropyInputLen")
+		return errs.WrapSerialisation(err, "Error parsing EntropyInputLen")
 	}
 	if err := nistTest.Sscanf(false, "[NonceLen = %d]", &nistTest.Config.NonceLen); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing NonceLen")
+		return errs.WrapSerialisation(err, "Error parsing NonceLen")
 	}
 	if err := nistTest.Sscanf(false, "[PersonalizationStringLen = %d]", &nistTest.Config.PersonalizationStringLen); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing PersonalizationStringLen")
+		return errs.WrapSerialisation(err, "Error parsing PersonalizationStringLen")
 	}
 	if err := nistTest.Sscanf(false, "[AdditionalInputLen = %d]", &nistTest.Config.AdditionalInputLen); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing AdditionalInputLen")
+		return errs.WrapSerialisation(err, "Error parsing AdditionalInputLen")
 	}
 	if err := nistTest.Sscanf(false, "[ReturnedBitsLen = %d]", &nistTest.Config.ReturnedBitsLen); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing ReturnedBitsLen")
+		return errs.WrapSerialisation(err, "Error parsing ReturnedBitsLen")
 	}
 	// Scan the empty line after the test config
 	if !nistTest.Scan() {
-		return errs.NewSerializationError("Expected line %d not to be empty", nistTest.LineNo)
+		return errs.NewSerialisation("Expected line %d not to be empty", nistTest.LineNo)
 	}
 	// Initialise test state
 	nistTest.State = NewNistTestCase(nistTest.Config)
@@ -176,33 +176,33 @@ func (nistTest *NistTestHelper) ScanTestConfig() error {
 //	ReturnedBits = 5862eb38bd558dd978a696e6df164782ddd887e7e9a6c9f3f1fbafb78941b535a64912dfd224c6dc7454e5250b3d97165e16260c2faf1cc7735cb75fb4f07e1d
 func (nistTest *NistTestHelper) ScanTestCase(withReseed bool) error {
 	if err := nistTest.Sscanf(false, "COUNT = %d", &nistTest.State.Count); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing COUNT")
+		return errs.WrapSerialisation(err, "Error parsing COUNT")
 	}
 	if err := nistTest.Sscanf(false, "EntropyInput = %x", &nistTest.State.EntropyInput); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing EntropyInput")
+		return errs.WrapSerialisation(err, "Error parsing EntropyInput")
 	}
 	if err := nistTest.Sscanf(false, "Nonce = %x", &nistTest.State.Nonce); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing Nonce")
+		return errs.WrapSerialisation(err, "Error parsing Nonce")
 	}
 	if err := nistTest.Sscanf(true, "PersonalizationString = %x", &nistTest.State.PersonalizationStr); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing PersonalizationString")
+		return errs.WrapSerialisation(err, "Error parsing PersonalizationString")
 	}
 	if withReseed {
 		if err := nistTest.Sscanf(true, "EntropyInputReseed = %x", &nistTest.State.EntropyInputReseed); err != nil {
-			return errs.WrapSerializationError(err, "Error parsing EntropyInputReseed")
+			return errs.WrapSerialisation(err, "Error parsing EntropyInputReseed")
 		}
 		if err := nistTest.Sscanf(true, "AdditionalInputReseed = %x", &nistTest.State.AdditionalInputReseed); err != nil {
-			return errs.WrapSerializationError(err, "Error parsing AdditionalInputReseed")
+			return errs.WrapSerialisation(err, "Error parsing AdditionalInputReseed")
 		}
 	}
 	if err := nistTest.Sscanf(true, "AdditionalInput = %x", &nistTest.State.AdditionalInput1); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing AdditionalInput")
+		return errs.WrapSerialisation(err, "Error parsing AdditionalInput")
 	}
 	if err := nistTest.Sscanf(true, "AdditionalInput = %x", &nistTest.State.AdditionalInput2); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing AdditionalInput")
+		return errs.WrapSerialisation(err, "Error parsing AdditionalInput")
 	}
 	if err := nistTest.Sscanf(false, "ReturnedBits = %x", &nistTest.State.ReturnedBits); err != nil {
-		return errs.WrapSerializationError(err, "Error parsing ReturnedBits")
+		return errs.WrapSerialisation(err, "Error parsing ReturnedBits")
 	}
 	return nil
 }
@@ -259,14 +259,14 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 		if nistTest.IsNewTestCase() {
 			// Scan test config
 			if err := nistTest.ScanTestConfig(); err != nil {
-				return errs.WrapSerializationError(err, "[line=%d] Error parsing test config", nistTest.LineNo)
+				return errs.WrapSerialisation(err, "[line=%d] Error parsing test config", nistTest.LineNo)
 			}
 			returnedBits := make([]byte, nistTest.Config.ReturnedBitsLen>>3)
 
 			for nistTest.CountNo = 0; nistTest.CountNo < maxTestCount; nistTest.CountNo++ {
 				// Scan test state
 				if err := nistTest.ScanTestCase(withReseed); err != nil {
-					return errs.WrapSerializationError(err, "Error parsing test state at line %d", nistTest.LineNo)
+					return errs.WrapSerialisation(err, "Error parsing test state at line %d", nistTest.LineNo)
 				}
 				// Run initialisation
 				prng, err := nistTest.RunInit(AesKeySize)
@@ -289,7 +289,7 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 				}
 				// Scan empty line
 				if err = nistTest.Sscanf(true, ""); err != nil {
-					return errs.WrapSerializationError(err, "[line=%d] Expected line was empty", nistTest.LineNo)
+					return errs.WrapSerialisation(err, "[line=%d] Expected line was empty", nistTest.LineNo)
 				}
 			}
 			nistTest.TestNo++
@@ -310,7 +310,7 @@ func RunNistValidationTest(keySize int, useDf bool) (err error) {
 		// Open test data file
 		f, err := os.Open(caseParams.fName)
 		if err != nil {
-			return errs.WrapSerializationError(err, "cannot open test data file %s", caseParams.fName)
+			return errs.WrapSerialisation(err, "cannot open test data file %s", caseParams.fName)
 		}
 		// Run tests
 		if err = RunNistTestCases(f, keySize, useDf, caseParams.withReseed); err != nil {
@@ -318,7 +318,7 @@ func RunNistValidationTest(keySize int, useDf bool) (err error) {
 		}
 		// Close test data file
 		if err = f.Close(); err != nil {
-			return errs.WrapSerializationError(err, "cannot close test data file %s", caseParams.fName)
+			return errs.WrapSerialisation(err, "cannot close test data file %s", caseParams.fName)
 		}
 	}
 	return nil

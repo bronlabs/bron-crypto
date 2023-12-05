@@ -110,7 +110,7 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	copy(bb[:], bitstring.ReverseBytes(data))
 	value, err := bimpl.FqNew().SetBytes(&bb)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't set bytes")
+		return errs.WrapSerialisation(err, "couldn't set bytes")
 	}
 	point := new(K)
 	sk.d = &bls12381.Scalar{
@@ -193,7 +193,7 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	t := new(K)
 	p, err := (*t).FromAffineCompressed(blob)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't deserialize data in a point of G1")
+		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
 	if p.IsIdentity() {
 		return errs.NewIsZero("public keys cannot be zero")
@@ -201,7 +201,7 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	var ok bool
 	pk.Y, ok = p.(curves.PairingPoint)
 	if !ok {
-		return errs.NewSerializationError("point is not a pairing type")
+		return errs.NewSerialisation("point is not a pairing type")
 	}
 	return nil
 }
@@ -255,7 +255,7 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	t := new(S)
 	p, err := (*t).FromAffineCompressed(blob)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't deserialize data in a point of G1")
+		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
 	if p.IsIdentity() {
 		return errs.NewIsZero("signatures cannot be zero")
@@ -264,7 +264,7 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	var ok bool
 	sig.Value, ok = p.(curves.PairingPoint)
 	if !ok {
-		return errs.NewSerializationError("point is not a pairing type")
+		return errs.NewSerialisation("point is not a pairing type")
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 	t := new(S)
 	p, err := (*t).FromAffineCompressed(blob)
 	if err != nil {
-		return errs.WrapSerializationError(err, "couldn't deserialize data in a point of G1")
+		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
 	if p.IsIdentity() {
 		return errs.NewIsZero("public keys cannot be zero")
@@ -326,7 +326,7 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 	var ok bool
 	pop.Value, ok = p.(curves.PairingPoint)
 	if !ok {
-		return errs.NewSerializationError("point is not a pairing type")
+		return errs.NewSerialisation("point is not a pairing type")
 	}
 	return nil
 }

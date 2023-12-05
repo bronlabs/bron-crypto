@@ -86,7 +86,7 @@ func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey,
 		return errs.NewIsNil("my identity key is nil")
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewMembershipError("i am not in cohort")
+		return errs.NewMembership("i am not in cohort")
 	}
 	if len(uniqueSessionId) == 0 {
 		return errs.NewIsZero("sid length is zero")

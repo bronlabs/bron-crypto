@@ -321,7 +321,7 @@ func TestG1ClearCofactor(t *testing.T) {
 	require.Equal(t, 1, clearedPoint.Equal(&point))
 }
 
-func TestSerialization(t *testing.T) {
+func TestSerialisation(t *testing.T) {
 	a := new(G1).Generator()
 	b := new(G1).Generator().Double(a)
 

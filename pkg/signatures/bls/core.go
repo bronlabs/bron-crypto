@@ -35,7 +35,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	}
 	// step 2.7.3
 	if value.IsIdentity() || !value.IsTorsionFree() {
-		return errs.NewMembershipError("signature is not in the correct subgroup")
+		return errs.NewMembership("signature is not in the correct subgroup")
 	}
 
 	// step 2.7.4
@@ -89,7 +89,7 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	}
 	// step 2.9.3
 	if aggregatedSignatureValue.IsIdentity() || !aggregatedSignatureValue.IsTorsionFree() {
-		return errs.NewMembershipError("signature is not in the correct subgroup")
+		return errs.NewMembership("signature is not in the correct subgroup")
 	}
 
 	if len(publicKeys) < 1 || publicKeys[0] == nil {

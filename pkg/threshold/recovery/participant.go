@@ -116,7 +116,7 @@ func validateInputs(uniqueSessionId []byte, identityKey, lostPartyIdentityKey in
 		return errs.NewIsNil("my identity key is nil")
 	}
 	if !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewMembershipError("I'm not in cohort")
+		return errs.NewMembership("I'm not in cohort")
 	}
 	if err := publicKeyShares.Validate(cohortConfig); err != nil {
 		return errs.WrapVerificationFailed(err, "public key shares are invlaid")

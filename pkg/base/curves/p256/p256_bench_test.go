@@ -466,7 +466,7 @@ func (s *BenchScalar) MarshalBinary() ([]byte, error) {
 func (s *BenchScalar) UnmarshalBinary(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalBinary(New().Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*BenchScalar)
 	if !ok {
@@ -483,7 +483,7 @@ func (s *BenchScalar) MarshalText() ([]byte, error) {
 func (s *BenchScalar) UnmarshalText(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalText(New().Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*BenchScalar)
 	if !ok {
@@ -500,7 +500,7 @@ func (s *BenchScalar) MarshalJSON() ([]byte, error) {
 func (s *BenchScalar) UnmarshalJSON(input []byte) error {
 	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	S, ok := sc.(*BenchScalar)
 	if !ok {
@@ -727,7 +727,7 @@ func (p *BenchPoint) MarshalBinary() ([]byte, error) {
 func (p *BenchPoint) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(New(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*BenchPoint)
 	if !ok {
@@ -745,7 +745,7 @@ func (p *BenchPoint) MarshalText() ([]byte, error) {
 func (p *BenchPoint) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(New(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ppt, ok := pt.(*BenchPoint)
 	if !ok {
@@ -763,7 +763,7 @@ func (p *BenchPoint) MarshalJSON() ([]byte, error) {
 func (p *BenchPoint) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(New(), input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	P, ok := pt.(*BenchPoint)
 	if !ok {

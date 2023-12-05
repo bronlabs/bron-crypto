@@ -275,7 +275,7 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	buffer := bitstring.ReverseBytes(reducedInput.Bytes())
 	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't set bytes")
+		return nil, errs.WrapSerialisation(err, "couldn't set bytes")
 	}
 	return &Scalar{Value: value, Point_: s.Point_}, nil
 }
@@ -318,7 +318,7 @@ func (s *Scalar) Order() *saferith.Modulus {
 func (s *Scalar) MarshalBinary() ([]byte, error) {
 	result, err := serialisation.ScalarMarshalBinary(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal to binary")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal to binary")
 	}
 	return result, nil
 }
@@ -327,7 +327,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	curve := s.Curve()
 	sc, err := serialisation.ScalarUnmarshalBinary(curve.Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -341,7 +341,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 func (s *Scalar) MarshalText() ([]byte, error) {
 	result, err := serialisation.ScalarMarshalText(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal to text")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal to text")
 	}
 	return result, nil
 }
@@ -350,7 +350,7 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 	curve := s.Curve()
 	sc, err := serialisation.ScalarUnmarshalText(curve.Name(), s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -365,7 +365,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 	curve := s.Curve()
 	result, err := serialisation.ScalarMarshalJson(curve.Name(), s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "couldn't marshal json")
+		return nil, errs.WrapSerialisation(err, "couldn't marshal json")
 	}
 	return result, nil
 }
@@ -373,7 +373,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 func (s *Scalar) UnmarshalJSON(input []byte) error {
 	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not extract a scalar from json")
+		return errs.WrapSerialisation(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

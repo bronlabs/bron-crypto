@@ -178,11 +178,11 @@ func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message
 func verifyEd25519(publicKey *PublicKey, message []byte, signature *Signature) error {
 	serializedSignature, err := signature.MarshalBinary()
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not serialise signature to binary")
+		return errs.WrapSerialisation(err, "could not serialise signature to binary")
 	}
 	serializedPublicKey, err := publicKey.MarshalBinary()
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not serialise signature to binary")
+		return errs.WrapSerialisation(err, "could not serialise signature to binary")
 	}
 	if ok := ed25519.Verify(serializedPublicKey, message, serializedSignature); !ok {
 		return errs.NewVerificationFailed("could not verify schnorr signature using ed25519 verifier")

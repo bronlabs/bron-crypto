@@ -107,7 +107,7 @@ func validateInputs(sid []byte, myAuthKey integration.AuthKey, sessionParticipan
 		return errs.NewIsNil("my identity key is missing")
 	}
 	if !cohortConfig.IsInCohort(myAuthKey) {
-		return errs.NewMembershipError("i'm not in cohort")
+		return errs.NewMembership("i'm not in cohort")
 	}
 	if shard == nil || shard.SigningKeyShare == nil {
 		return errs.NewVerificationFailed("shard is nil")

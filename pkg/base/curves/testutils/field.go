@@ -50,7 +50,7 @@ func (x *Element) MarshalJSON() ([]byte, error) {
 		Value:   x.Value.String(),
 	})
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "marshalling x failed")
+		return nil, errs.WrapSerialisation(err, "marshalling x failed")
 	}
 	return marshalled, nil
 }
@@ -58,17 +58,17 @@ func (x *Element) MarshalJSON() ([]byte, error) {
 func (x *Element) UnmarshalJSON(bytes []byte) error {
 	var e ElementJSON
 	if err := json.Unmarshal(bytes, &e); err != nil {
-		return errs.WrapSerializationError(err, "could not json unmarshal")
+		return errs.WrapSerialisation(err, "could not json unmarshal")
 	}
 	// Convert the strings to big.Ints
 	modulus, ok := new(big.Int).SetString(e.Modulus, 10)
 	if !ok {
-		return errs.NewSerializationError("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
+		return errs.NewSerialisation("failed to unmarshal modulus string '%v' to big.Int", e.Modulus)
 	}
 	x.Modulus = &Field{modulus}
 	x.Value, ok = new(big.Int).SetString(e.Value, 10)
 	if !ok {
-		return errs.NewSerializationError("failed to unmarshal value string '%v' to big.Int", e.Value)
+		return errs.NewSerialisation("failed to unmarshal value string '%v' to big.Int", e.Value)
 	}
 	return nil
 }

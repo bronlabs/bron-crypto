@@ -10,6 +10,7 @@ all: build lint fmt test
 
 .PHONY: build
 build:
+	${GO} generate ./...
 	${GO} build ./...
 
 .PHONY: bench

@@ -133,10 +133,10 @@ func (c *CohortConfig) IsSignatureAggregator(identityKey IdentityKey) bool {
 func (c *CohortConfig) UnmarshalJSON(data []byte) error {
 	var result CohortConfig
 	if err := json.Unmarshal(data, &result); err != nil {
-		return errs.WrapSerializationError(err, "failed to unmarshal json")
+		return errs.WrapSerialisation(err, "failed to unmarshal json")
 	}
 	if err := result.Validate(); err != nil {
-		return errs.WrapSerializationError(err, "cohort config is invalid")
+		return errs.WrapSerialisation(err, "cohort config is invalid")
 	}
 	*c = result
 	return nil

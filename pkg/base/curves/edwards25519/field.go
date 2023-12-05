@@ -143,7 +143,7 @@ func (*FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
 	}
 	el, err := new(field.Element).SetBytes(buf)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not set bytes of edwards25519 field element")
+		return nil, errs.WrapSerialisation(err, "could not set bytes of edwards25519 field element")
 	}
 	return &FieldElement{
 		v: el,
@@ -283,7 +283,7 @@ func (e *FieldElement) Neg() curves.FieldElement {
 func (*FieldElement) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
 	v, err := new(field.Element).SetBytes(bitstring.ReverseBytes(value.Bytes()))
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not set nat bytes")
+		return nil, errs.WrapSerialisation(err, "could not set nat bytes")
 	}
 	return &FieldElement{
 		v: v,
@@ -300,7 +300,7 @@ func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
 	}
 	result, err := e.v.SetBytes(input)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not set bytes")
+		return nil, errs.WrapSerialisation(err, "could not set bytes")
 	}
 	return &FieldElement{
 		v: result,
@@ -314,7 +314,7 @@ func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
 	buffer := bitstring.ReverseAndPadBytes(input, 64-len(input))
 	result, err := e.v.SetWideBytes(buffer)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not set bytes")
+		return nil, errs.WrapSerialisation(err, "could not set bytes")
 	}
 	return &FieldElement{
 		v: result,
@@ -331,7 +331,7 @@ func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error)
 	}
 	result, err := e.SetBytes(sc.Bytes())
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert from scalar")
+		return nil, errs.WrapSerialisation(err, "could not convert from scalar")
 	}
 	return result, nil
 }

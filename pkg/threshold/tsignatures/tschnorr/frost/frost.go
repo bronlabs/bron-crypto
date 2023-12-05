@@ -40,7 +40,7 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !s.PublicKeyShares.PublicKey.IsOnCurve() {
-		return errs.NewMembershipError("public key is not on curve")
+		return errs.NewMembership("public key is not on curve")
 	}
 	return nil
 }

@@ -83,7 +83,7 @@ func (s *ScalarGt) IsOne() bool {
 func (s *ScalarGt) MarshalBinary() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalBinary(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return buffer, nil
 }
@@ -91,7 +91,7 @@ func (s *ScalarGt) MarshalBinary() ([]byte, error) {
 func (s *ScalarGt) UnmarshalBinary(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalBinary(NameGt, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -104,7 +104,7 @@ func (s *ScalarGt) UnmarshalBinary(input []byte) error {
 func (s *ScalarGt) MarshalText() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalText(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal text")
+		return nil, errs.WrapSerialisation(err, "could not marshal text")
 	}
 	return buffer, nil
 }
@@ -112,7 +112,7 @@ func (s *ScalarGt) MarshalText() ([]byte, error) {
 func (s *ScalarGt) UnmarshalText(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalText(NamePairing, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal text")
+		return errs.WrapSerialisation(err, "could not unmarshal text")
 	}
 	ss, ok := sc.(*ScalarGt)
 	if !ok {
@@ -125,7 +125,7 @@ func (s *ScalarGt) UnmarshalText(input []byte) error {
 func (s *ScalarGt) MarshalJSON() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalJson(NameGt, s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal json")
+		return nil, errs.WrapSerialisation(err, "could not marshal json")
 	}
 	return buffer, nil
 }
@@ -133,7 +133,7 @@ func (s *ScalarGt) MarshalJSON() ([]byte, error) {
 func (s *ScalarGt) UnmarshalJSON(input []byte) error {
 	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not extract a scalar from json")
+		return errs.WrapSerialisation(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*ScalarGt)
 	if !ok {
@@ -311,7 +311,7 @@ func (*ScalarGt) SetBytes(input []byte) (curves.Scalar, error) {
 	copy(b[:], input)
 	ss, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewSerializationError("invalid bytes")
+		return nil, errs.NewSerialisation("invalid bytes")
 	}
 	return &ScalarGt{Value: ss}, nil
 }
@@ -325,12 +325,12 @@ func (*ScalarGt) SetBytesWide(input []byte) (curves.Scalar, error) {
 
 	value, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewSerializationError("invalid bytes")
+		return nil, errs.NewSerialisation("invalid bytes")
 	}
 	copy(b[:], input[bls12381impl.GtFieldBytes:])
 	value2, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
 	if isCanonical == 0 {
-		return nil, errs.NewSerializationError("invalid bytes")
+		return nil, errs.NewSerialisation("invalid bytes")
 	}
 	value.Add(value, value2)
 	return &ScalarGt{Value: value}, nil

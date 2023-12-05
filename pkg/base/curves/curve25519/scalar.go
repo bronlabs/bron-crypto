@@ -196,7 +196,7 @@ func (*Scalar) CurveName() string {
 func (s *Scalar) MarshalBinary() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalBinary(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return buffer, nil
 }
@@ -204,7 +204,7 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 func (s *Scalar) UnmarshalBinary(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalBinary(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -217,7 +217,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 func (s *Scalar) MarshalText() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalText(s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return buffer, nil
 }
@@ -225,7 +225,7 @@ func (s *Scalar) MarshalText() ([]byte, error) {
 func (s *Scalar) UnmarshalText(input []byte) error {
 	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
@@ -238,7 +238,7 @@ func (s *Scalar) UnmarshalText(input []byte) error {
 func (s *Scalar) MarshalJSON() ([]byte, error) {
 	buffer, err := serialisation.ScalarMarshalJson(Name, s)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
 	return buffer, nil
 }
@@ -246,7 +246,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 func (s *Scalar) UnmarshalJSON(input []byte) error {
 	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not extract a scalar from json")
+		return errs.WrapSerialisation(err, "could not extract a scalar from json")
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

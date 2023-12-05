@@ -67,7 +67,7 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 	r := k.suite.Curve.Point().Identity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
-		return errs.NewSerializationError("cannot deserialize signature")
+		return errs.NewSerialisation("cannot deserialize signature")
 	}
 	s := k.suite.Curve.Scalar().Zero()
 	switch len(s.Bytes()) {
@@ -76,10 +76,10 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 	case base.FieldBytes:
 		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
 	default:
-		err = errs.NewSerializationError("cannot deserialize signature")
+		err = errs.NewSerialisation("cannot deserialize signature")
 	}
 	if err != nil {
-		return errs.NewSerializationError("cannot deserialize signature")
+		return errs.NewSerialisation("cannot deserialize signature")
 	}
 
 	schnorrSignature := &schnorr.Signature{

@@ -2,9 +2,10 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
@@ -32,11 +33,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 	privateKey, err := curve.Scalar().SetBytesWide(privateKeyBytes)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
+		return nil, errs.WrapSerialisation(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
 	}
 	publicKey, err := curve.Point().FromAffineCompressed(publicKeyBytes)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert ed25519 public key bytes to an ed25519 point")
+		return nil, errs.WrapSerialisation(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
 	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)

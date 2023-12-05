@@ -95,7 +95,7 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 
 	result.C, err = curve.Scalar().SetBytesWide(digest)
 	if err != nil {
-		return nil, nil, errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, errs.WrapSerialisation(err, "could not produce fiat shamir challenge scalar")
 	}
 	result.S = result.C.Mul(x).Add(k)
 	return result, statement, nil
@@ -137,7 +137,7 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 
 	computedChallenge, err := curve.Scalar().SetBytesWide(digest)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not produce fiat shamir challenge scalar")
+		return errs.WrapSerialisation(err, "could not produce fiat shamir challenge scalar")
 	}
 
 	if computedChallenge.Cmp(proof.C) != 0 {

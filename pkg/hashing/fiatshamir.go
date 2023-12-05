@@ -66,7 +66,7 @@ func (fs *FiatShamir) GenerateChallenge(cipherSuite *integration.CipherSuite, xs
 		case L == base.WideFieldBytes:
 			challenge, err = cipherSuite.Curve.Scalar().SetBytesWide(digest)
 		default:
-			return nil, errs.WrapSerializationError(err, "digest length %d is not supported", len(digest))
+			return nil, errs.WrapSerialisation(err, "digest length %d is not supported", len(digest))
 		}
 	case AlwaysUseWideBytes:
 		challenge, err = cipherSuite.Curve.Scalar().SetBytesWide(digest)
@@ -74,7 +74,7 @@ func (fs *FiatShamir) GenerateChallenge(cipherSuite *integration.CipherSuite, xs
 		return nil, errs.NewInvalidArgument("Unknown mapping method")
 	}
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not compute fiat shamir challenge")
+		return nil, errs.WrapSerialisation(err, "could not compute fiat shamir challenge")
 	}
 	return challenge, nil
 }

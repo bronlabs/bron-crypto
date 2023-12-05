@@ -260,7 +260,7 @@ func (p *Ep) FromAffineUncompressed(bytes_ []byte) (*Ep, error) {
 		return nil, errs.WrapInvalidCoordinates(err, "could not set y")
 	}
 	if !p.IsOnCurve() {
-		return nil, errs.NewMembershipError("invalid point")
+		return nil, errs.NewMembership("invalid point")
 	}
 	return p, nil
 }

@@ -123,7 +123,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 
 	privateKey, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.Profile().SubGroupOrder().BitLen()))
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert go private key bytes to a krypton scalar")
+		return nil, errs.WrapSerialisation(err, "could not convert go private key bytes to a krypton scalar")
 	}
 
 	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
@@ -131,7 +131,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
 	)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert go public key bytes to a krypton point")
+		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a krypton point")
 	}
 
 	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)

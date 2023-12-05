@@ -307,11 +307,11 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 
 func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
 	if len(input) != base.FieldBytes {
-		return nil, errs.NewSerializationError("invalid length")
+		return nil, errs.NewSerialisation("invalid length")
 	}
 	p, err := decodePoint(input)
 	if err != nil {
-		return nil, errs.NewSerializationError("invalid point")
+		return nil, errs.NewSerialisation("invalid point")
 	}
 
 	pk := &bip340.PublicKey{A: p}
@@ -320,16 +320,16 @@ func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
 
 func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	if len(input) != base.FieldBytes {
-		return nil, errs.NewSerializationError("invalid length")
+		return nil, errs.NewSerialisation("invalid length")
 	}
 	curve := k256.New()
 	k, err := curve.Scalar().SetBytes(input)
 	if err != nil {
-		return nil, errs.NewSerializationError("invalid scalar")
+		return nil, errs.NewSerialisation("invalid scalar")
 	}
 	bigP, err := decodePoint(encodePoint(curve.ScalarBaseMult(k)))
 	if err != nil {
-		return nil, errs.NewSerializationError("invalid scalar")
+		return nil, errs.NewSerialisation("invalid scalar")
 	}
 
 	sk := &bip340.PrivateKey{
@@ -345,16 +345,16 @@ func marshalSignature(signature *bip340.Signature) []byte {
 
 func unmarshalSignature(input []byte) (*bip340.Signature, error) {
 	if len(input) != 64 {
-		return nil, errs.NewSerializationError("invalid length")
+		return nil, errs.NewSerialisation("invalid length")
 	}
 
 	r, err := decodePoint(input[:32])
 	if err != nil {
-		return nil, errs.NewSerializationError("invalid signature")
+		return nil, errs.NewSerialisation("invalid signature")
 	}
 	s, err := k256.New().Scalar().SetBytes(input[32:])
 	if err != nil {
-		return nil, errs.NewSerializationError("invalid signature")
+		return nil, errs.NewSerialisation("invalid signature")
 	}
 
 	signature := &bip340.Signature{

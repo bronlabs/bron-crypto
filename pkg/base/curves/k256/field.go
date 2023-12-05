@@ -117,7 +117,7 @@ func (e *FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
 	}
 	value, err := e.SetBytesWide(seed[:])
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not set bytes")
+		return nil, errs.WrapSerialisation(err, "could not set bytes")
 	}
 	return value, nil
 }
@@ -284,7 +284,7 @@ func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error)
 	}
 	result, err := e.SetBytes(sc.Bytes())
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert from scalar")
+		return nil, errs.WrapSerialisation(err, "could not convert from scalar")
 	}
 	return result, nil
 }

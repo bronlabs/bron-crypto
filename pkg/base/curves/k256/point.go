@@ -290,7 +290,7 @@ func (p *Point) ProjectiveZ() curves.FieldElement {
 func (p *Point) MarshalBinary() ([]byte, error) {
 	res, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "Could not marshal point to binary")
+		return nil, errs.WrapSerialisation(err, "Could not marshal point to binary")
 	}
 	return res, nil
 }
@@ -298,7 +298,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(&k256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal binary")
+		return errs.WrapSerialisation(err, "could not unmarshal binary")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -311,7 +311,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 func (p *Point) MarshalText() ([]byte, error) {
 	res, err := serialisation.PointMarshalText(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "Could not marshal point to text")
+		return nil, errs.WrapSerialisation(err, "Could not marshal point to text")
 	}
 	return res, nil
 }
@@ -319,7 +319,7 @@ func (p *Point) MarshalText() ([]byte, error) {
 func (p *Point) UnmarshalText(input []byte) error {
 	pt, err := serialisation.PointUnmarshalText(&k256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal text")
+		return errs.WrapSerialisation(err, "could not unmarshal text")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -332,7 +332,7 @@ func (p *Point) UnmarshalText(input []byte) error {
 func (p *Point) MarshalJSON() ([]byte, error) {
 	res, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "Could not marshal point to json")
+		return nil, errs.WrapSerialisation(err, "Could not marshal point to json")
 	}
 	return res, nil
 }
@@ -340,7 +340,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(&k256Instance, input)
 	if err != nil {
-		return errs.WrapSerializationError(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	P, ok := pt.(*Point)
 	if !ok {

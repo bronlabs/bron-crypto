@@ -95,7 +95,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x, y *big.Int) {
 	Byy := utils.NatFromBig(By, fp.New().Params.Modulus)
 	p1, err := c.Point().Set(Bxx, Byy)
 	if err != nil {
-		panic(errs.WrapSerializationError(err, "set pointt"))
+		panic(errs.WrapSerialisation(err, "set pointt"))
 	}
 	if len(k) > 32 {
 		panic("invalid scalar length")

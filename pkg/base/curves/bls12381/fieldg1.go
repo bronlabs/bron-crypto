@@ -264,7 +264,7 @@ func (e *FieldElementG1) FromScalar(sc curves.Scalar) (curves.FieldElement, erro
 	}
 	result, err := e.SetBytes(sc.Bytes())
 	if err != nil {
-		return nil, errs.WrapSerializationError(err, "could not convert from scalar")
+		return nil, errs.WrapSerialisation(err, "could not convert from scalar")
 	}
 	return result, nil
 }
