@@ -1,6 +1,10 @@
 package noise
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/errs"
+import (
+	"sync"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+)
 
 type EncryptionContext struct {
 	Suite *Suite
@@ -15,9 +19,12 @@ type EncryptionContext struct {
 	Round uint64
 	// flag to indicate if this is the initializer or the responder
 	IsInitiator bool
+	lock        sync.Mutex
 }
 
 func (s *EncryptionContext) Encrypt(payload []byte) (P2PMessage, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	err := s.Suite.Validate()
 	if err != nil {
 		return P2PMessage{}, errs.WrapInvalidType(err, "invalid ciphersuite")
@@ -36,6 +43,8 @@ func (s *EncryptionContext) Encrypt(payload []byte) (P2PMessage, error) {
 }
 
 func (s *EncryptionContext) Decrypt(message *P2PMessage) (plaintext []byte, valid bool, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	err = s.Suite.Validate()
 	if err != nil {
 		return []byte{}, false, errs.WrapInvalidType(err, "invalid ciphersuite")
