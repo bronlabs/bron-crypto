@@ -1,6 +1,7 @@
 package lindell17
 
 import (
+	"crypto/subtle"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -10,6 +11,49 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
+
+// DecomposeInQThirdsBis splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
+func DecomposeInQThirdsBis(scalar curves.Scalar, prng io.Reader) (xPrime, xPrimePrime curves.Scalar, err error) {
+	xNat := scalar.Nat()
+	qNat := scalar.Curve().Profile().SubGroupOrder().Nat()
+	// Sample x” from [q/3, 2q/3)
+	qThirds := qNat.Div(qNat, saferith.ModulusFromUint64(3), qNat.AnnouncedLen())
+	twoqThirds := qNat.Mul(qThirds, new(saferith.Nat).SetUint64(2), qNat.AnnouncedLen())
+	twoqThirdsMinus2 := qNat.Sub(twoqThirds, new(saferith.Nat).SetUint64(2), qNat.AnnouncedLen())
+	xPrimePrimeNat, err := utils.RandomNat(prng, qThirds, twoqThirdsMinus2)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not get random number")
+	}
+	// Set x' so that x = 3x' + x” and x” be in range [q/3, 2q/3)
+	xPrimeBytes := make([]byte, utils.CeilDiv(qNat.AnnouncedLen(), 8))
+	jSelected := 0
+	for j := 0; j <= 2; j++ {
+		// x” = (x - x' + j) / 3 + q/3
+		xPrimeJ := xNat.Sub(xNat, xPrimePrimeNat, qNat.AnnouncedLen())
+		xPrimeJ = xPrimeJ.Add(xPrimeJ, new(saferith.Nat).SetUint64(uint64(j)), qNat.AnnouncedLen())
+		xPrimeJ = xPrimeJ.Div(xPrimeJ, saferith.ModulusFromUint64(3), qNat.AnnouncedLen())
+		xPrimeJ = xPrimeJ.Add(xPrimeJ, qThirds, qNat.AnnouncedLen())
+		// b = (x == 3x' + x”)
+		xPrimeNatTriple := qNat.Mul(xPrimeJ, new(saferith.Nat).SetUint64(3), qNat.AnnouncedLen())
+		xExpected := qNat.Add(xPrimeNatTriple, xPrimePrimeNat, qNat.AnnouncedLen())
+		b := int(xNat.Eq(xExpected))
+		// xPrimeNat = b * xPrimeNat + (1 - b) * xPrimeNat
+		subtle.ConstantTimeCopy(b, xPrimeJ.Bytes(), xPrimeBytes)
+		jSelected = subtle.ConstantTimeSelect(b, j, jSelected)
+	}
+	// x' = x' + jSelected
+	xPrimeNat := xNat.Add(new(saferith.Nat).SetBytes(xPrimeBytes), new(saferith.Nat).SetUint64(uint64(jSelected)), qNat.AnnouncedLen())
+	// Cast to scalar
+	xPrime, err = scalar.Curve().Scalar().SetNat(xPrimeNat)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not set xPrime with nat")
+	}
+	xPrimePrime, err = scalar.Curve().Scalar().SetNat(xPrimePrimeNat)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not set xPrimePrime with nat")
+	}
+	return xPrime, xPrimePrime, nil
+}
 
 // DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).
 func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, err error) {
