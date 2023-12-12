@@ -94,7 +94,6 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 	}
 
 	publicKeyShares := &tsignatures.PublicKeyShares{
-		Curve:                   p.GetCohortConfig().CipherSuite.Curve,
 		PublicKey:               refreshedSigningKeyShare.PublicKey,
 		SharesMap:               publicKeySharesMap,
 		FeldmanCommitmentVector: combinedCommitmentVectors[p.GetSharingId()],

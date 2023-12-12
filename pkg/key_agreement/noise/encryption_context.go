@@ -1,6 +1,8 @@
 package noise
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/errs"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+)
 
 type EncryptionContext struct {
 	Suite *Suite

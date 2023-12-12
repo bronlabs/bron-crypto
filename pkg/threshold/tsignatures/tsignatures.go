@@ -32,7 +32,6 @@ func (s *SigningKeyShare) Validate() error {
 }
 
 type PublicKeyShares struct {
-	Curve                   curves.Curve
 	PublicKey               curves.Point
 	SharesMap               map[types.IdentityHash]curves.Point
 	FeldmanCommitmentVector []curves.Point
@@ -43,9 +42,6 @@ type PublicKeyShares struct {
 func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
 	if p == nil {
 		return errs.NewIsNil("receiver of this method is nil")
-	}
-	if p.Curve == nil {
-		return errs.NewIsNil("curve is nil")
 	}
 	if len(p.FeldmanCommitmentVector) == 0 && len(p.FeldmanCommitmentVector) > len(p.SharesMap) {
 		return errs.NewInvalidLength("feldman commitment vector length is invalid")
@@ -58,7 +54,7 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
 	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
 	for i := 0; i < cohortConfig.Protocol.TotalParties; i++ {
-		sharingIds[i] = p.Curve.Scalar().New(uint64(i + 1))
+		sharingIds[i] = p.PublicKey.Scalar().New(uint64(i + 1))
 		identityKey, exists := sharingIdToIdentityKey[i+1]
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
@@ -69,8 +65,8 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 		}
 		partialPublicKeys[i] = partialPublicKey
 	}
-	evaluateAt := p.Curve.Scalar().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
-	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.Curve, sharingIds, partialPublicKeys, evaluateAt)
+	evaluateAt := p.PublicKey.Curve().Scalar().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
 	}

@@ -220,7 +220,6 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 	}
 
 	publicKeyShares := &tsignatures.PublicKeyShares{
-		Curve:                   p.CohortConfig.CipherSuite.Curve,
 		PublicKey:               publicKey,
 		SharesMap:               publicKeySharesMap,
 		FeldmanCommitmentVector: p.state.commitments,

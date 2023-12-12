@@ -55,7 +55,6 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 				PublicKey: schnorrPublicKey,
 			},
 			PublicKeyShares: &tsignatures.PublicKeyShares{
-				Curve:     curve,
 				PublicKey: schnorrPublicKey,
 				SharesMap: publicKeySharesMap,
 			},
