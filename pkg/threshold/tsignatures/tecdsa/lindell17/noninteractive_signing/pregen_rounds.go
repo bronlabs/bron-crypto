@@ -1,7 +1,6 @@
 package noninteractive_signing
 
 import (
-	"bytes"
 	"io"
 	"strconv"
 
@@ -144,8 +143,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 }
 
 func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
-	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	c, w, err := commitments.Commit(commitmentMessage)
+	c, w, err := commitments.Commit(sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not commit the message")
 	}
@@ -153,8 +151,7 @@ func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point)
 }
 
 func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curves.Point, bigRCommitment commitments.Commitment, bigRWitness commitments.Witness) error {
-	commitmentMessage := bytes.Join([][]byte{sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()}, nil)
-	if err := commitments.Open(commitmentMessage, bigRCommitment, bigRWitness); err != nil {
+	if err := commitments.Open(sid, bigRCommitment, bigRWitness, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()); err != nil {
 		return errs.WrapVerificationFailed(err, "commitment could not be opened")
 	}
 	return nil

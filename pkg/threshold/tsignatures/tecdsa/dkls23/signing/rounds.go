@@ -1,8 +1,7 @@
 package signing
 
 import (
-	"bytes"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -69,8 +68,12 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*
 
 		// step 1.3.1
 		idHash := participant.Hash()
-		message := prepareCommitmentMessage(ic.MyShamirId, ic.IdentityKeyToShamirId[idHash], ic.UniqueSessionId, ic.state.R_i.ToAffineCompressed())
-		commitmentToInstanceKey, witness, err := commitments.Commit(message)
+		commitmentToInstanceKey, witness, err := commitments.Commit(
+			ic.UniqueSessionId,
+			bitstring.ToBytesLE(ic.MyShamirId),
+			bitstring.ToBytesLE(ic.IdentityKeyToShamirId[idHash]),
+			ic.state.R_i.ToAffineCompressed(),
+		)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
 		}
@@ -202,13 +205,8 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.1.3
-		supposedlyCommittedMessage := prepareCommitmentMessage(ic.IdentityKeyToShamirId[idHash], ic.MyShamirId, ic.UniqueSessionId, ic.state.receivedR_i[idHash].ToAffineCompressed())
-		if err := commitments.Open(
-			supposedlyCommittedMessage,
-			ic.state.receivedCommitmentsToInstanceKey[idHash],
-			receivedP2PMessage.WitnessOfTheCommitmentToInstanceKey,
-		); err != nil {
-			return nil, errs.WrapTotalAbort(err, idHash, "message could not be openned")
+		if err := commitments.Open(ic.UniqueSessionId, ic.state.receivedCommitmentsToInstanceKey[idHash], receivedP2PMessage.WitnessOfTheCommitmentToInstanceKey, bitstring.ToBytesLE(ic.IdentityKeyToShamirId[idHash]), bitstring.ToBytesLE(ic.MyShamirId), ic.state.receivedR_i[idHash].ToAffineCompressed()); err != nil {
+			return nil, errs.WrapTotalAbort(err, idHash, "message could not be opened")
 		}
 
 		// step 3.1.4
@@ -316,18 +314,4 @@ func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, par
 	}
 	// step 4.8
 	return sigma, nil
-}
-
-func prepareCommitmentMessage(myShamirId, theOtherShamirId int, uniqueSessionId, R_i []byte) []byte {
-	return bytes.Join(
-		[][]byte{
-			{
-				byte(myShamirId),
-				byte(theOtherShamirId),
-			},
-			uniqueSessionId,
-			R_i,
-		},
-		nil,
-	)
 }

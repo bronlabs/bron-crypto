@@ -43,7 +43,10 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}
-		commitment, witness, err := commitments.Commit(seedForThisParticipant)
+		commitment, witness, err := commitments.Commit(
+			p.UniqueSessionId,
+			seedForThisParticipant,
+		)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with sharing id %d", sharingId)
 		}
@@ -115,7 +118,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (pr
 		if message.Witness == nil {
 			return nil, errs.NewMissing("participant with sharingId %d sent empty witness", sharingId)
 		}
-		if err := commitments.Open(message.Message, commitment, message.Witness); err != nil {
+		if err := commitments.Open(p.UniqueSessionId, commitment, message.Witness, message.Message); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, sharingId, "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds[participant.Hash()]

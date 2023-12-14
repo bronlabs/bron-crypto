@@ -49,12 +49,11 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	}
 	primaryCosigner.state.bigR1 = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarBaseMult(primaryCosigner.state.k1)
 
-	bigR1CommitmentMessage := append(
-		append(primaryCosigner.sessionId,
-			primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed()...),
-		primaryCosigner.state.bigR1.ToAffineCompressed()...,
+	bigR1Commitment, bigR1Witness, err := commitments.Commit(
+		primaryCosigner.sessionId,
+		primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed(),
+		primaryCosigner.state.bigR1.ToAffineCompressed(),
 	)
-	bigR1Commitment, bigR1Witness, err := commitments.Commit(bigR1CommitmentMessage)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to R1")
 	}
@@ -147,8 +146,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", secondaryCosigner.round)
 	}
 
-	bigR1CommitmentMessage := append(append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...), round3Output.BigR1.ToAffineCompressed()...)
-	err = commitments.Open(bigR1CommitmentMessage, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness)
+	err = commitments.Open(secondaryCosigner.sessionId, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed(), round3Output.BigR1.ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "primary", "cannot open R1 commitment")
 	}

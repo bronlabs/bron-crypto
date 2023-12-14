@@ -74,8 +74,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	cDoublePrimeMessage := append(verifier.state.a.Bytes(), verifier.state.b.Bytes()...)
-	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(cDoublePrimeMessage)
+	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(
+		verifier.sessionId,
+		verifier.state.a.Bytes(),
+		verifier.state.b.Bytes(),
+	)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to a and b")
 	}
@@ -130,8 +133,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	bigQHatMessage := prover.state.bigQHat.ToAffineCompressed()
-	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(bigQHatMessage)
+	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(prover.sessionId, prover.state.bigQHat.ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
 	}
@@ -178,8 +180,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	cDoublePrimeMessage := append(input.A.Bytes(), input.B.Bytes()...)
-	if err := commitments.Open(cDoublePrimeMessage, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness); err != nil {
+	if err := commitments.Open(prover.sessionId, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness, input.A.Bytes(), input.B.Bytes()); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 
@@ -209,8 +210,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.NewInvalidRound("%d != 5", verifier.round)
 	}
 
-	bigQHatMessage := input.BigQHat.ToAffineCompressed()
-	if err := commitments.Open(bigQHatMessage, verifier.state.cHat, input.BigQHatWitness); err != nil {
+	if err := commitments.Open(verifier.sessionId, verifier.state.cHat, input.BigQHatWitness, input.BigQHat.ToAffineCompressed()); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
 

@@ -170,9 +170,12 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *sa
 
 	return &Prover{
 		Participant: Participant{
-			pk:    &secretKey.PublicKey,
-			bigQ:  curve.ScalarBaseMult(x),
-			round: 2,
+			pk:         &secretKey.PublicKey,
+			bigQ:       curve.ScalarBaseMult(x),
+			round:      2,
+			sessionId:  sessionId,
+			transcript: transcript,
+			prng:       prng,
 		},
 		rangeProver: rangeProver,
 		sk:          secretKey,

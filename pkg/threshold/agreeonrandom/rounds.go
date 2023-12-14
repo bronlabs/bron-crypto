@@ -31,7 +31,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate random scalar")
 	}
-	commitment, witness, err := commitments.Commit(r_i.Bytes())
+	commitment, witness, err := commitments.CommitWithoutSession(r_i.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyAuthKey.Hash())
 	}
@@ -68,7 +68,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		if p.state.receivedCommitments[key] == nil {
 			return nil, errs.NewIdentifiableAbort(key, "could not find commitment for participant %x", key)
 		}
-		if err := commitments.Open(message.Ri.Bytes(), p.state.receivedCommitments[key], message.Witness); err != nil {
+		if err := commitments.OpenWithoutSession(p.state.receivedCommitments[key], message.Witness, message.Ri.Bytes()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, key, "commitment from participant with sharing id can't be opened")
 		}
 	}

@@ -144,6 +144,7 @@ func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionPar
 		MyAuthKey:           authKey,
 		CohortConfig:        cohortConfig,
 		Shard:               shard,
+		UniqueSessionId:     uniqueSessionId,
 		SessionParticipants: sessionParticipants,
 		sessionShamirIDs:    sessionShamirIDs,
 		prng:                tprng,

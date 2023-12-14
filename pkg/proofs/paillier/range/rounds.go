@@ -69,8 +69,10 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sid) and send to P
-	esidMessage := append(verifier.state.e.Bytes(), verifier.sid...)
-	esidCommitment, esidWitness, err := commitments.Commit(esidMessage)
+	esidCommitment, esidWitness, err := commitments.Commit(
+		verifier.sid,
+		verifier.state.e.Bytes(),
+	)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sid")
 	}
@@ -160,8 +162,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 		return nil, errs.NewInvalidRound("%d != 4", prover.round)
 	}
 
-	esidMessage := append(input.E.Bytes(), prover.sid...)
-	err = commitments.Open(esidMessage, prover.state.esidCommitment, input.EsidWitness)
+	err = commitments.Open(prover.sid, prover.state.esidCommitment, input.EsidWitness, input.E.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}

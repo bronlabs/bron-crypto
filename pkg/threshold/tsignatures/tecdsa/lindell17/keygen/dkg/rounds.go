@@ -304,11 +304,11 @@ func (p *Participant) Round4(input map[types.IdentityHash]*Round3Broadcast) (out
 		}
 		round4Outputs[idHash].LpdlPrimeRound1Output, err = p.state.lpdlPrimeVerifiers[idHash].Round1()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
+			return nil, errs.WrapFailed(err, "cannot run round 1 of LPDL verifier")
 		}
 		round4Outputs[idHash].LpdlDoublePrimeRound1Output, err = p.state.lpdlDoublePrimeVerifiers[idHash].Round1()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot run round 1 of LP verifier")
+			return nil, errs.WrapFailed(err, "cannot run round 1 of LPDLP verifier")
 		}
 	}
 
@@ -460,21 +460,16 @@ func (p *Participant) Round8(input map[types.IdentityHash]*Round7P2P) (shard *li
 }
 
 func commit(bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	message := []byte{}
-	message = append(message, bigQPrime.ToAffineCompressed()...)
-	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
-	message = append(message, sid...)
-	message = append(message, pid.ToAffineCompressed()...)
-	return commitments.Commit(message)
+	return commitments.Commit(
+		sid,
+		bigQPrime.ToAffineCompressed(),
+		bigQDoublePrime.ToAffineCompressed(),
+		pid.ToAffineCompressed(),
+	)
 }
 
 func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (err error) {
-	message := []byte{}
-	message = append(message, bigQPrime.ToAffineCompressed()...)
-	message = append(message, bigQDoublePrime.ToAffineCompressed()...)
-	message = append(message, sid...)
-	message = append(message, pid.ToAffineCompressed()...)
-	return commitments.Open(message, commitment, witness)
+	return commitments.Open(sid, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed())
 }
 
 func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sid []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {

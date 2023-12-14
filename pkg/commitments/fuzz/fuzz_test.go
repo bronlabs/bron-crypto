@@ -17,9 +17,9 @@ var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, hashIndex uint, message []byte) {
 		base.CommitmentHashFunction = allHashes[int(hashIndex)%len(allHashes)]
-		commitment, witness, err := commitments.Commit(message)
+		commitment, witness, err := commitments.CommitWithoutSession(message)
 		require.NoError(t, err)
-		err = commitments.Open(message, commitment, witness)
+		err = commitments.OpenWithoutSession(commitment, witness, message)
 		require.NoError(t, err)
 	})
 }

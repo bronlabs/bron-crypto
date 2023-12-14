@@ -1,7 +1,6 @@
 package interactive_signing
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -174,8 +173,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 }
 
 func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	commitment, witness, err = commitments.Commit(message)
+	commitment, witness, err = commitments.Commit(sid, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
@@ -184,8 +182,7 @@ func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Co
 }
 
 func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	message := bytes.Join([][]byte{[]byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, sid, bigS}, nil)
-	if err := commitments.Open(message, commitment, witness); err != nil {
+	if err := commitments.Open(sid, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS); err != nil {
 		return errs.WrapVerificationFailed(err, "couldn't open")
 	}
 	return nil
