@@ -20,7 +20,7 @@ func TestHappyPath(t *testing.T) {
 	sessionId := []byte("sessionId")
 	message := []byte("something")
 	base.CommitmentHashFunction = sha3.New256
-	commitment, witness, err := commitments.CommitWithoutSession(sessionId, message)
+	commitment, witness, err := commitments.Commit(sessionId, message)
 	require.NoError(t, err)
 	require.NotNil(t, commitment)
 	require.NotNil(t, witness)
