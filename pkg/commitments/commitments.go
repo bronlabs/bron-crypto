@@ -1,9 +1,11 @@
 package commitments
 
 import (
+	"bytes"
 	"crypto/hmac"
 	crand "crypto/rand"
 	"crypto/subtle"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"hash"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -33,9 +35,12 @@ func CommitWithoutSession(message ...[]byte) (Commitment, Witness, error) {
 	}
 
 	hmacHash := func() hash.Hash { return hmac.New(base.CommitmentHashFunction, witness) }
-	commitment, err := hashing.Hash(hmacHash, message...)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "computing commitment hash")
+	commitment := []byte{}
+	for _, m := range message {
+		commitment, err = hashing.Hash(hmacHash, commitment, m)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "computing commitment hash")
+		}
 	}
 	return commitment, witness, nil
 }
@@ -50,10 +55,15 @@ func OpenWithoutSession(commitment Commitment, witness Witness, message ...[]byt
 	}
 
 	hmacHash := func() hash.Hash { return hmac.New(base.CommitmentHashFunction, witness) }
-	recomputedCommitment, err := hashing.Hash(hmacHash, message...)
-	if err != nil {
-		return errs.WrapFailed(err, "recomputing commitment hash")
+	recomputedCommitment := []byte{}
+	for _, m := range message {
+		var err error
+		recomputedCommitment, err = hashing.Hash(hmacHash, recomputedCommitment, m)
+		if err != nil {
+			return errs.WrapFailed(err, "recomputing commitment hash")
+		}
 	}
+
 	if subtle.ConstantTimeCompare(commitment, recomputedCommitment) != 1 {
 		return errs.NewVerificationFailed("commitment is invalid")
 	}
@@ -66,11 +76,13 @@ func Commit(sessionId []byte, message ...[]byte) (Commitment, Witness, error) {
 		return nil, nil, errs.NewInvalidArgument("sessionId is empty/nil")
 	}
 
-	messageWithSessionId := append(append([][]byte{}, sessionId), message...)
+	sessionIdMessage := bytes.Join([][]byte{[]byte("sessionId"), sessionId, bitstring.ToBytesLE(len(sessionId))}, nil)
+	messageWithSessionId := append(append([][]byte{}, sessionIdMessage), message...)
 	return CommitWithoutSession(messageWithSessionId...)
 }
 
 func Open(sessionId []byte, commitment Commitment, witness Witness, message ...[]byte) error {
-	messageWithSessionId := append(append([][]byte{}, sessionId), message...)
+	sessionIdMessage := bytes.Join([][]byte{[]byte("sessionId"), sessionId, bitstring.ToBytesLE(len(sessionId))}, nil)
+	messageWithSessionId := append(append([][]byte{}, sessionIdMessage), message...)
 	return OpenWithoutSession(commitment, witness, messageWithSessionId...)
 }
