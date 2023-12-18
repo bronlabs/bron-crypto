@@ -51,6 +51,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 
 	bigR1Commitment, bigR1Witness, err := commitments.Commit(
 		primaryCosigner.sessionId,
+		primaryCosigner.prng,
 		primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed(),
 		primaryCosigner.state.bigR1.ToAffineCompressed(),
 	)

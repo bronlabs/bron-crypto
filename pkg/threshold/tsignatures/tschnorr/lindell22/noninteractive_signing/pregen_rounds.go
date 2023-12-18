@@ -63,7 +63,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 		bigR2[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k2[i])
 
 		// 3. compute Rcom = commit(R, R2, pid, sid, S)
-		bigRCommitment[i], bigRWitness[i], err = commit(bigR[i], bigR2[i], i, p.tau, p.state.pid, p.sid, p.state.bigS)
+		bigRCommitment[i], bigRWitness[i], err = commit(p.prng, bigR[i], bigR2[i], i, p.tau, p.state.pid, p.sid, p.state.bigS)
 		if err != nil {
 			return nil, errs.NewFailed("cannot commit to R")
 		}
@@ -184,8 +184,8 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 	}, nil
 }
 
-func commit(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sid, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, bigS)
+func commit(prng io.Reader, bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	commitment, witness, err = commitments.Commit(sid, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), []byte(strconv.Itoa(i)), []byte(strconv.Itoa(tau)), pid, bigS)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}

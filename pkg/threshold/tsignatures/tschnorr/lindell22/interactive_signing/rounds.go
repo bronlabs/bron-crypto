@@ -49,7 +49,7 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	bigR := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k)
 
 	// 3. compute Rcom = commit(R, pid, sid, S)
-	bigRCommitment, bigRWitness, err := commit(bigR, p.state.pid, p.sid, p.state.bigS)
+	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sid, p.state.bigS)
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
@@ -172,8 +172,8 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 	}, nil
 }
 
-func commit(bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sid, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
+func commit(prng io.Reader, bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	commitment, witness, err = commitments.Commit(sid, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
