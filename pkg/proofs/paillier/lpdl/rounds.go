@@ -76,6 +76,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	// 1.ii. compute c'' = commit(a, b)
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := commitments.Commit(
 		verifier.sessionId,
+		verifier.prng,
 		verifier.state.a.Bytes(),
 		verifier.state.b.Bytes(),
 	)
@@ -133,7 +134,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(prover.sessionId, prover.state.bigQHat.ToAffineCompressed())
+	bigQHatCommitment, bigQHatWitness, err := commitments.Commit(prover.sessionId, prover.prng, prover.state.bigQHat.ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
 	}

@@ -87,7 +87,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	bigQDoublePrime := p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQWitness, err := commit(bigQPrime, bigQDoublePrime, p.sessionId, p.myAuthKey.PublicKey())
+	bigQCommitment, bigQWitness, err := commit(p.prng, bigQPrime, bigQDoublePrime, p.sessionId, p.myAuthKey.PublicKey())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
 	}
@@ -459,9 +459,10 @@ func (p *Participant) Round8(input map[types.IdentityHash]*Round7P2P) (shard *li
 	}, nil
 }
 
-func commit(bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	return commitments.Commit(
 		sid,
+		prng,
 		bigQPrime.ToAffineCompressed(),
 		bigQDoublePrime.ToAffineCompressed(),
 		pid.ToAffineCompressed(),

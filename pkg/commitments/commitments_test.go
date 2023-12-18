@@ -1,6 +1,7 @@
 package commitments_test
 
 import (
+	crand "crypto/rand"
 	"encoding/hex"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestHappyPath(t *testing.T) {
 	sessionId := []byte("sessionId")
 	message := []byte("something")
 	base.CommitmentHashFunction = sha3.New256
-	commitment, witness, err := commitments.CommitWithoutSession(sessionId, message)
+	commitment, witness, err := commitments.Commit(sessionId, crand.Reader, message)
 	require.NoError(t, err)
 	require.NotNil(t, commitment)
 	require.NotNil(t, witness)
@@ -65,7 +66,7 @@ var testResults = []entry{
 func init() {
 	for i := range testResults {
 		entry := &testResults[i]
-		entry.commit, entry.witness, entry.err = commitments.CommitWithoutSession(entry.msg)
+		entry.commit, entry.witness, entry.err = commitments.CommitWithoutSession(crand.Reader, entry.msg)
 	}
 }
 
@@ -124,7 +125,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		c, _, err := commitments.CommitWithoutSession(msg)
+		c, _, err := commitments.CommitWithoutSession(crand.Reader, msg)
 		if err != nil {
 			t.Error(err)
 		}
@@ -162,7 +163,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		_, dee, err := commitments.CommitWithoutSession(msg)
+		_, dee, err := commitments.CommitWithoutSession(crand.Reader, msg)
 		require.NoError(t, err)
 
 		// Ensure each nonce is unique

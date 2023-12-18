@@ -45,7 +45,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 			return nil, errs.WrapFailed(err, "cannot generate random k")
 		}
 		bigR[i] = p.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k[i])
-		bigRCommitment[i], bigRWitness[i], err = commit(p.sid, i, p.myAuthKey, bigR[i])
+		bigRCommitment[i], bigRWitness[i], err = commit(p.prng, p.sid, i, p.myAuthKey, bigR[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot commit to R")
 		}
@@ -142,8 +142,8 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 	}, nil
 }
 
-func commit(sid []byte, i int, party integration.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
-	c, w, err := commitments.Commit(sid, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed())
+func commit(prng io.Reader, sid []byte, i int, party integration.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
+	c, w, err := commitments.Commit(sid, prng, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not commit the message")
 	}

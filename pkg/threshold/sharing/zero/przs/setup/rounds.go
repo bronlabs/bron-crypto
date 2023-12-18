@@ -45,6 +45,7 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 		}
 		commitment, witness, err := commitments.Commit(
 			p.UniqueSessionId,
+			p.prng,
 			seedForThisParticipant,
 		)
 		if err != nil {

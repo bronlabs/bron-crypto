@@ -71,6 +71,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	// 1.iv. compute commitment to (e, sid) and send to P
 	esidCommitment, esidWitness, err := commitments.Commit(
 		verifier.sid,
+		verifier.prng,
 		verifier.state.e.Bytes(),
 	)
 	if err != nil {

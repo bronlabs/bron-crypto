@@ -70,6 +70,7 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*
 		idHash := participant.Hash()
 		commitmentToInstanceKey, witness, err := commitments.Commit(
 			ic.UniqueSessionId,
+			ic.prng,
 			bitstring.ToBytesLE(ic.MyShamirId),
 			bitstring.ToBytesLE(ic.IdentityKeyToShamirId[idHash]),
 			ic.state.R_i.ToAffineCompressed(),

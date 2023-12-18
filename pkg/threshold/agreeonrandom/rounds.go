@@ -31,7 +31,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate random scalar")
 	}
-	commitment, witness, err := commitments.CommitWithoutSession(r_i.Bytes())
+	commitment, witness, err := commitments.CommitWithoutSession(p.prng, r_i.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyAuthKey.Hash())
 	}

@@ -1,6 +1,7 @@
 package commitments_test
 
 import (
+	crand "crypto/rand"
 	"os"
 	"testing"
 
@@ -21,7 +22,7 @@ func Test_MeasureConstantTime_commit(t *testing.T) {
 	internal.RunMeasurement(500, "commitments_commit", func(i int) {
 		message = internal.GetBigEndianBytesWithLowestBitsSet(64, i)
 	}, func() {
-		commitments.Commit(message)
+		commitments.CommitWithoutSession(crand.Reader, message)
 	})
 }
 
@@ -36,7 +37,7 @@ func Test_MeasureConstantTime_open(t *testing.T) {
 	var message []byte
 	internal.RunMeasurement(500, "commitments_commit", func(i int) {
 		message := internal.GetBigEndianBytesWithLowestBitsSet(64, i)
-		commitment, witness, _ = commitments.Commit(message)
+		commitment, witness, _ = commitments.CommitWithoutSession(crand.Reader, message)
 	}, func() {
 		for i := 0; i < 200; i++ {
 			commitments.Open(message, commitment, witness)
