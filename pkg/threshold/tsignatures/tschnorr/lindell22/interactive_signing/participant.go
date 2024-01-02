@@ -26,6 +26,7 @@ type state struct {
 	k           curves.Scalar
 	bigR        curves.Point
 	bigRWitness commitments.Witness
+	zeroS       map[types.IdentityHash]curves.Scalar
 
 	theirBigRCommitment map[types.IdentityHash]commitments.Commitment
 

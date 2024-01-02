@@ -30,6 +30,7 @@ type state struct {
 	bigR2               []curves.Point
 	bigRWitness         []commitments.Witness
 	theirBigRCommitment []map[types.IdentityHash]commitments.Commitment
+	zeroS               []map[types.IdentityHash]curves.Scalar
 
 	_ types.Incomparable
 }

@@ -34,6 +34,12 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
+type Round2P2P struct {
+	ZeroS curves.Scalar
+
+	_ types.Incomparable
+}
+
 func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
@@ -65,12 +71,13 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (outputBroadcast *Round2Broadcast, outputUnicast map[types.IdentityHash]*Round2P2P, err error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
 	p.state.theirBigRCommitment = make(map[types.IdentityHash]commitments.Commitment)
+	p.state.zeroS = make(map[types.IdentityHash]curves.Scalar)
 	for _, identity := range p.sessionParticipants.Iter() {
 		if identity.Hash() == p.myAuthKey.Hash() {
 			continue
@@ -78,45 +85,66 @@ func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (output
 
 		in, ok := input[identity.Hash()]
 		if !ok {
-			return nil, errs.NewMissing("no input from participant")
+			return nil, nil, errs.NewMissing("no input from participant")
 		}
 		p.state.theirBigRCommitment[identity.Hash()] = in.BigRCommitment
+
+		// 2. sample zeroS
+		p.state.zeroS[identity.Hash()], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		if err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random zero s")
+		}
 	}
 
 	// 1. compute proof of dlog knowledge of R
 	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot prove dlog")
+		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
 
-	// 2. broadcast proof and opening of R, revealing R
+	// 3. broadcast proof and opening of R, revealing R
+	// 4. (p2p) send zeroS[j] to party P_j
 	p.round++
-	return &Round2Broadcast{
+	broadcast := &Round2Broadcast{
 		BigR:        p.state.bigR,
 		BigRWitness: p.state.bigRWitness,
 		BigRProof:   bigRProof,
-	}, nil
+	}
+	unicast := make(map[types.IdentityHash]*Round2P2P)
+	for identity, zeroS := range p.state.zeroS {
+		unicast[identity] = &Round2P2P{
+			ZeroS: zeroS,
+		}
+	}
+
+	return broadcast, unicast, nil
 }
 
-func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (p *Cosigner) Round3(inputBroadcast map[types.IdentityHash]*Round2Broadcast, inputUnicast map[types.IdentityHash]*Round2P2P, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
 	bigR := p.state.bigR
+	zeroS := p.cohortConfig.CipherSuite.Curve.Scalar().Zero()
 	for _, identity := range p.sessionParticipants.Iter() {
 		if identity.Hash() == p.myAuthKey.Hash() {
 			continue
 		}
 
-		in, ok := input[identity.Hash()]
+		inBroadcast, ok := inputBroadcast[identity.Hash()]
+		if !ok {
+			return nil, errs.NewMissing("no input from participant")
+		}
+		inUnicast, ok := inputUnicast[identity.Hash()]
 		if !ok {
 			return nil, errs.NewMissing("no input from participant")
 		}
 
-		theirBigR := in.BigR
-		theirBigRWitness := in.BigRWitness
+		theirBigR := inBroadcast.BigR
+		theirBigRWitness := inBroadcast.BigRWitness
 		theirPid := identity.PublicKey().ToAffineCompressed()
+		theirZeroS := inUnicast.ZeroS
 
 		// 1. verify commitment
 		if err := openCommitment(theirBigR, theirPid, p.sid, p.state.bigS, p.state.theirBigRCommitment[identity.Hash()], theirBigRWitness); err != nil {
@@ -124,12 +152,14 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 		}
 
 		// 2. verify dlog
-		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(inBroadcast.BigRProof, theirBigR, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.Hash(), "cannot verify dlog proof")
 		}
 
 		// 3.i. compute sum of R
 		bigR = bigR.Add(theirBigR)
+
+		zeroS = zeroS.Add(p.state.zeroS[identity.Hash()].Sub(theirZeroS))
 	}
 
 	if p.taproot {
@@ -162,7 +192,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 	}
 
 	// 3.iv. compute s
-	s := p.state.k.Add(e.Mul(dPrime))
+	s := p.state.k.Add(e.Mul(dPrime)).Add(zeroS)
 
 	// 4. return (R, s) as partial signature
 	p.round++

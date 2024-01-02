@@ -52,30 +52,34 @@ func DoRound1(participants []*interactive_signing.Cosigner) (round2Inputs []map[
 	return round2Inputs, nil
 }
 
-func DoRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[types.IdentityHash]*interactive_signing.Round1Broadcast) (round3Inputs []map[types.IdentityHash]*interactive_signing.Round2Broadcast, err error) {
-	round2Outputs := make([]*interactive_signing.Round2Broadcast, len(participants))
+func DoRound2(participants []*interactive_signing.Cosigner, round2Inputs []map[types.IdentityHash]*interactive_signing.Round1Broadcast) (round3BroadcastInputs []map[types.IdentityHash]*interactive_signing.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*interactive_signing.Round2P2P, err error) {
+	round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
+	round2UnicastOutputs := make([]map[types.IdentityHash]*interactive_signing.Round2P2P, len(participants))
 	for i, participant := range participants {
-		round2Outputs[i], err = participant.Round2(round2Inputs[i])
+		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2(round2Inputs[i])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to do lindell22 round 2")
+			return nil, nil, errs.WrapFailed(err, "failed to do lindell22 round 2")
 		}
 	}
 
-	round3Inputs = make([]map[types.IdentityHash]*interactive_signing.Round2Broadcast, len(participants))
+	round3BroadcastInputs = make([]map[types.IdentityHash]*interactive_signing.Round2Broadcast, len(participants))
+	round3UnicastInputs = make([]map[types.IdentityHash]*interactive_signing.Round2P2P, len(participants))
 	for i := range participants {
-		round3Inputs[i] = make(map[types.IdentityHash]*interactive_signing.Round2Broadcast)
+		round3BroadcastInputs[i] = make(map[types.IdentityHash]*interactive_signing.Round2Broadcast)
+		round3UnicastInputs[i] = make(map[types.IdentityHash]*interactive_signing.Round2P2P)
 		for j := range participants {
-			round3Inputs[i][participants[j].GetAuthKey().Hash()] = round2Outputs[j]
+			round3BroadcastInputs[i][participants[j].GetAuthKey().Hash()] = round2BroadcastOutputs[j]
+			round3UnicastInputs[i][participants[j].GetAuthKey().Hash()] = round2UnicastOutputs[j][participants[i].GetAuthKey().Hash()]
 		}
 	}
 
-	return round3Inputs, nil
+	return round3BroadcastInputs, round3UnicastInputs, nil
 }
 
-func DoRound3(participants []*interactive_signing.Cosigner, round3Inputs []map[types.IdentityHash]*interactive_signing.Round2Broadcast, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func DoRound3(participants []*interactive_signing.Cosigner, round3BroadcastInputs []map[types.IdentityHash]*interactive_signing.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*interactive_signing.Round2P2P, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	partialSignatures = make([]*lindell22.PartialSignature, len(participants))
 	for i, participant := range participants {
-		partialSignatures[i], err = participant.Round3(round3Inputs[i], message)
+		partialSignatures[i], err = participant.Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to do lindell22 round 3")
 		}
@@ -90,12 +94,12 @@ func RunInteractiveSigning(participants []*interactive_signing.Cosigner, message
 		return nil, errs.WrapFailed(err, "failed to do lindell22 round 1")
 	}
 
-	r3i, err := DoRound2(participants, r2i)
+	r3bi, r3ui, err := DoRound2(participants, r2i)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to do lindell22 round 2")
 	}
 
-	partialSignatures, err = DoRound3(participants, r3i, message)
+	partialSignatures, err = DoRound3(participants, r3bi, r3ui, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to do lindell22 round 3")
 	}

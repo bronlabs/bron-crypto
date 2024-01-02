@@ -15,6 +15,7 @@ var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	bigRSum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K)
 	bigR2Sum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K2)
+	zeroS := c.cohortConfig.CipherSuite.Curve.Scalar().Zero()
 	for _, identity := range c.sessionParticipants.Iter() {
 		if identity.Hash() == c.myAuthKey.Hash() {
 			continue
@@ -22,6 +23,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 
 		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
 		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
+		zeroS = zeroS.Add(c.myPreSignature.MyZeroS[identity.Hash()].Sub(c.myPreSignature.TheirZeroS[identity.Hash()]))
 	}
 
 	delta, err := c.cohortConfig.CipherSuite.Curve.Scalar().Hash(
@@ -68,7 +70,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// 3.iv. compute s = k + d * e
-	s := k.Add(e.Mul(dPrime))
+	s := k.Add(e.Mul(dPrime)).Add(zeroS)
 
 	return &lindell22.PartialSignature{
 		R: c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k),
