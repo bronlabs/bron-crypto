@@ -67,8 +67,13 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		}
 	}
 
+	zeroS, err := c.przsSampleParticipant.Sample()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot sample zero share")
+	}
+
 	// 3.iv. compute s = k + d * e
-	s := k.Add(e.Mul(dPrime))
+	s := k.Add(e.Mul(dPrime)).Add(zeroS)
 
 	return &lindell22.PartialSignature{
 		R: c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k),

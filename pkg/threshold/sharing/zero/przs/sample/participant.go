@@ -4,12 +4,15 @@ import (
 	"encoding/hex"
 	"sort"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
@@ -28,10 +31,7 @@ type Participant struct {
 	_ types.Incomparable
 }
 
-func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []byte, authKey integration.AuthKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey], seededPrng csprng.CSPRNG) (*Participant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
-	}
+func NewParticipant(curve curves.Curve, uniqueSessionId []byte, authKey integration.AuthKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
 	if authKey == nil {
 		return nil, errs.NewInvalidArgument("my identity key is nil")
 	}
@@ -50,16 +50,13 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 	if !found {
 		return nil, errs.NewInvalidArgument("i'm not part of the participants")
 	}
-	if seededPrng == nil {
+	if seededPrngFactory == nil {
 		return nil, errs.NewInvalidArgument("prng is nil")
-	}
-	if seeds == nil {
-		return nil, errs.NewInvalidArgument("seeds are nil")
 	}
 	if len(seeds) == 0 {
 		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
 	}
-	err := checkSeedMatch(cohortConfig.Participants, seeds)
+	err := checkSeedMatch(authKey, presentParticipants, seeds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "seeds do not match participants")
 	}
@@ -79,13 +76,12 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 		}
 	}
 
-	// if you pass presentParticipants to below, sharing ids will be different
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
+	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, presentParticipants)
 	if mySharingId == -1 {
 		return nil, errs.NewMissing("my sharing id could not be found")
 	}
 	participant := &Participant{
-		Curve:                  cohortConfig.CipherSuite.Curve,
+		Curve:                  curve,
 		MyAuthKey:              authKey,
 		MySharingId:            mySharingId,
 		UniqueSessionId:        uniqueSessionId,
@@ -93,28 +89,22 @@ func NewParticipant(cohortConfig *integration.CohortConfig, uniqueSessionId []by
 		IdentityKeyToSharingId: identityKeyToSharingId,
 		Seeds:                  seeds,
 	}
-	if err = participant.CreatePrngs(seededPrng); err != nil {
+	if err = participant.CreatePrngs(seededPrngFactory); err != nil {
 		return nil, errs.WrapFailed(err, "could not seed prngs")
 	}
 	return participant, nil
 }
 
-func checkSeedMatch(participants *hashset.HashSet[integration.IdentityKey], seeds przs.PairwiseSeeds) error {
-	if participants.Len() != len(seeds)+1 {
-		return errs.NewFailed("number of participants and seeds do not match")
-	}
-	for seedKey := range seeds {
-		found := false
-		for _, idKey := range participants.Iter() {
-			if seedKey == idKey.Hash() {
-				found = true
-				break
-			}
+func checkSeedMatch(self integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], seeds przs.PairwiseSeeds) error {
+	for idHash := range participants.Iter() {
+		if idHash == self.Hash() {
+			continue
 		}
-		if !found {
-			return errs.NewFailed("seed for participant %s is missing", hex.EncodeToString(seedKey[:]))
+		if _, ok := seeds[idHash]; !ok {
+			return errs.NewFailed("seed for participant %s is missing", hex.EncodeToString(idHash[:]))
 		}
 	}
+
 	return nil
 }
 
@@ -132,7 +122,11 @@ func (p *Participant) CreatePrngs(seededPrng csprng.CSPRNG) error {
 		if !exists {
 			return errs.NewMissing("could not find shared seed for sharing id %d", sharingId)
 		}
-		prng, err := seededPrng.New(sharedSeed[:], p.UniqueSessionId)
+		salt, err := hashing.Hash(sha3.New256, p.UniqueSessionId)
+		if err != nil {
+			return errs.WrapFailed(err, "could not seed PRNG for sharing id %d", sharingId)
+		}
+		prng, err := seededPrng.New(sharedSeed[:], salt)
 		if err != nil {
 			return errs.WrapFailed(err, "could not seed PRNG for sharing id %d", sharingId)
 		}

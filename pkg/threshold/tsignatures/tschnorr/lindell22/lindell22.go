@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
@@ -43,6 +44,7 @@ type PreSignature struct {
 	K2    curves.Scalar
 	BigR  map[types.IdentityHash]curves.Point
 	BigR2 map[types.IdentityHash]curves.Point
+	Seeds przs.PairwiseSeeds
 
 	_ types.Incomparable
 }

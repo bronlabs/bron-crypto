@@ -43,10 +43,10 @@ func Test_CanInitialize(t *testing.T) {
 	prng, err := csprng.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
 
-	alice, err := NewParticipant(cohortConfig, uniqueSessionId, aliceIdentityKey.(integration.AuthKey), aliceSeeds, hashset.NewHashSet(identities), prng)
+	alice, err := NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, aliceIdentityKey.(integration.AuthKey), aliceSeeds, hashset.NewHashSet(identities), prng)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(cohortConfig, uniqueSessionId, bobIdentityKey.(integration.AuthKey), bobSeeds, hashset.NewHashSet(identities), prng)
+	bob, err := NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, bobIdentityKey.(integration.AuthKey), bobSeeds, hashset.NewHashSet(identities), prng)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {

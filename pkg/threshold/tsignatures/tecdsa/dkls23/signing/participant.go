@@ -116,7 +116,7 @@ func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionPar
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig, uniqueSessionId, authKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, authKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}

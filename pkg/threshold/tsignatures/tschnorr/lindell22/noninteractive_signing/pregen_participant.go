@@ -1,14 +1,17 @@
 package noninteractive_signing
 
 import (
+	"bytes"
 	"io"
 	"strconv"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -36,6 +39,8 @@ type state struct {
 
 type PreGenParticipant struct {
 	lindell22.Participant
+
+	przsSetupParticipants []*setup.Participant
 
 	myAuthKey   integration.AuthKey
 	mySharingId int
@@ -88,15 +93,25 @@ func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, sid []byte, co
 	bigS := interactive_signing.BigS(cohortConfig.Participants)
 	_, _, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
+	przsParticipants := make([]*setup.Participant, tau)
+	for t := 0; t < tau; t++ {
+		przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(t)}, nil)
+		przsParticipants[t], err = setup.NewParticipant(cohortConfig.CipherSuite.Curve, przsSid, myAuthKey, cohortConfig.Participants, transcript, prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
+		}
+	}
+
 	return &PreGenParticipant{
-		myAuthKey:    myAuthKey,
-		mySharingId:  mySharingId,
-		cohortConfig: cohortConfig,
-		tau:          tau,
-		sid:          sid,
-		transcript:   transcript,
-		round:        1,
-		prng:         prng,
+		przsSetupParticipants: przsParticipants,
+		myAuthKey:             myAuthKey,
+		mySharingId:           mySharingId,
+		cohortConfig:          cohortConfig,
+		tau:                   tau,
+		sid:                   sid,
+		transcript:            transcript,
+		round:                 1,
+		prng:                  prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

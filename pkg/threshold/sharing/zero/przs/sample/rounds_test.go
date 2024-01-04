@@ -216,15 +216,11 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
 
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}),
-	}
 	prng, err := chacha20.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
-	aliceParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, aliceIdentity.(integration.AuthKey), aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	bobParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, bobIdentity.(integration.AuthKey), bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	charlieParticipant, _ := sample.NewParticipant(cohortConfig, uniqueSessionId, charlieIdentity.(integration.AuthKey), charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}), prng)
+	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity.(integration.AuthKey), aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
+	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity.(integration.AuthKey), bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
+	charlieParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, charlieIdentity.(integration.AuthKey), charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}), prng)
 
 	aliceSample, err := aliceParticipant.Sample()
 	require.NoError(t, err)

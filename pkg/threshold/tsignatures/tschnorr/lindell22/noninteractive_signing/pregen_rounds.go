@@ -10,6 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
@@ -26,6 +28,12 @@ type Round1Broadcast struct {
 	_ types.Incomparable
 }
 
+type Round1P2P struct {
+	przs []*setup.Round1P2P
+
+	_ types.Incomparable
+}
+
 type Round2Broadcast struct {
 	BigR        []curves.Point
 	BigR2       []curves.Point
@@ -36,9 +44,13 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
+type Round2P2P struct {
+	przs []*setup.Round2P2P
+}
+
+func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastOutput map[types.IdentityHash]*Round1P2P, err error) {
 	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
 	k := make([]curves.Scalar, p.tau)
@@ -47,15 +59,16 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigR2 := make([]curves.Point, p.tau)
 	bigRCommitment := make([]commitments.Commitment, p.tau)
 	bigRWitness := make([]commitments.Witness, p.tau)
+	przsOutputs := make([]map[types.IdentityHash]*setup.Round1P2P, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k & k2
 		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
 		}
 		k2[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k2")
+			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k2")
 		}
 
 		// 2. compute R = k * G, R2 = k2 * G
@@ -65,7 +78,28 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 		// 3. compute Rcom = commit(R, R2, pid, sid, S)
 		bigRCommitment[i], bigRWitness[i], err = commit(p.prng, bigR[i], bigR2[i], i, p.tau, p.state.pid, p.sid, p.state.bigS)
 		if err != nil {
-			return nil, errs.NewFailed("cannot commit to R")
+			return nil, nil, errs.NewFailed("cannot commit to R")
+		}
+
+		przsOutputs[i], err = p.przsSetupParticipants[i].Round1()
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "PRZS round 1 failed")
+		}
+	}
+
+	broadcast := &Round1Broadcast{
+		BigRCommitment: bigRCommitment,
+	}
+	unicast := make(map[types.IdentityHash]*Round1P2P)
+	for hash := range p.cohortConfig.Participants.Iter() {
+		if hash == p.myAuthKey.Hash() {
+			continue
+		}
+		unicast[hash] = &Round1P2P{
+			przs: make([]*setup.Round1P2P, p.tau),
+		}
+		for t := 0; t < p.tau; t++ {
+			unicast[hash].przs[t] = przsOutputs[t][hash]
 		}
 	}
 
@@ -74,82 +108,114 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	p.state.bigR = bigR
 	p.state.bigR2 = bigR2
 	p.state.bigRWitness = bigRWitness
-
 	p.round++
-	return &Round1Broadcast{
-		BigRCommitment: bigRCommitment,
-	}, nil
+
+	return broadcast, unicast, nil
 }
 
-func (p *PreGenParticipant) Round2(input map[types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(broadcastInput map[types.IdentityHash]*Round1Broadcast, unicastInput map[types.IdentityHash]*Round1P2P) (broadcastOutput *Round2Broadcast, unicastOutput map[types.IdentityHash]*Round2P2P, err error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
 	theirBigRCommitment := make([]map[types.IdentityHash]commitments.Commitment, p.tau)
 	bigRProof := make([]*dlog.Proof, p.tau)
 	bigR2Proof := make([]*dlog.Proof, p.tau)
+	przsOutputs := make([]map[types.IdentityHash]*setup.Round2P2P, p.tau)
 	for i := 0; i < p.tau; i++ {
 		theirBigRCommitment[i] = make(map[types.IdentityHash]commitments.Commitment)
+		przsInput := make(map[types.IdentityHash]*setup.Round1P2P)
+
 		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if identity.Hash() == p.myAuthKey.Hash() {
 				continue
 			}
 
-			in, ok := input[identity.Hash()]
+			inBroadcast, ok := broadcastInput[identity.Hash()]
 			if !ok {
-				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+				return nil, nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
-			theirBigRCommitment[i][identity.Hash()] = in.BigRCommitment[i]
+			inUnicast, ok := unicastInput[identity.Hash()]
+			if !ok {
+				return nil, nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			}
+
+			theirBigRCommitment[i][identity.Hash()] = inBroadcast.BigRCommitment[i]
+			przsInput[identity.Hash()] = inUnicast.przs[i]
 		}
 
 		// 1. compute proof of dlog knowledge of R & R2
 		bigRProof[i], err = dlogProve(p.state.k[i], p.state.bigR[i], i, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot prove dlog")
+			return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 		}
 		bigR2Proof[i], err = dlogProve(p.state.k2[i], p.state.bigR2[i], i, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot prove dlog")
+			return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
+		}
+
+		przsOutputs[i], err = p.przsSetupParticipants[i].Round2(przsInput)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "PRZS round 2 failed")
 		}
 	}
 
-	p.state.theirBigRCommitment = theirBigRCommitment
-
-	// 2. broadcast proof and opening of R, R2, revealing R, R2
-	p.round++
-	return &Round2Broadcast{
+	broadcast := &Round2Broadcast{
 		BigR:        p.state.bigR,
 		BigR2:       p.state.bigR2,
 		BigRWitness: p.state.bigRWitness,
 		BigRProof:   bigRProof,
 		BigR2Proof:  bigR2Proof,
-	}, nil
+	}
+	unicast := make(map[types.IdentityHash]*Round2P2P)
+	for hash := range p.cohortConfig.Participants.Iter() {
+		if hash == p.myAuthKey.Hash() {
+			continue
+		}
+		unicast[hash] = &Round2P2P{
+			przs: make([]*setup.Round2P2P, p.tau),
+		}
+		for t := 0; t < p.tau; t++ {
+			unicast[hash].przs[t] = przsOutputs[t][hash]
+		}
+	}
+
+	p.state.theirBigRCommitment = theirBigRCommitment
+	p.round++
+
+	// 2. broadcast proof and opening of R, R2, revealing R, R2
+	return broadcast, unicast, nil
 }
 
-func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
+func (p *PreGenParticipant) Round3(broadcastInput map[types.IdentityHash]*Round2Broadcast, unicastInput map[types.IdentityHash]*Round2P2P) (preSignatureBatch *lindell22.PreSignatureBatch, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
 
 	BigR := make([]map[types.IdentityHash]curves.Point, p.tau)
 	BigR2 := make([]map[types.IdentityHash]curves.Point, p.tau)
+	seeds := make([]przs.PairwiseSeeds, p.tau)
 	for i := 0; i < p.tau; i++ {
 		BigR[i] = make(map[types.IdentityHash]curves.Point)
 		BigR2[i] = make(map[types.IdentityHash]curves.Point)
+		przsInput := make(map[types.IdentityHash]*setup.Round2P2P)
 		for _, identity := range p.cohortConfig.Participants.Iter() {
 			if identity.Hash() == p.myAuthKey.Hash() {
 				continue
 			}
 
-			in, ok := input[identity.Hash()]
+			inBroadcast, ok := broadcastInput[identity.Hash()]
+			if !ok {
+				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			}
+			inUnicast, ok := unicastInput[identity.Hash()]
 			if !ok {
 				return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
 
-			theirBigR := in.BigR[i]
-			theirBigR2 := in.BigR2[i]
-			theirBigRWitness := in.BigRWitness[i]
+			theirBigR := inBroadcast.BigR[i]
+			theirBigR2 := inBroadcast.BigR2[i]
+			theirBigRWitness := inBroadcast.BigRWitness[i]
 			theirPid := identity.PublicKey().ToAffineCompressed()
 
 			// 1. verify commitment
@@ -158,14 +224,21 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 			}
 
 			// 2. verify dlog
-			if err := dlogVerifyProof(in.BigRProof[i], theirBigR, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
+			if err := dlogVerifyProof(inBroadcast.BigRProof[i], theirBigR, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
 				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
 			BigR[i][identity.Hash()] = theirBigR
-			if err := dlogVerifyProof(in.BigR2Proof[i], theirBigR2, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
+			if err := dlogVerifyProof(inBroadcast.BigR2Proof[i], theirBigR2, i, p.sid, p.state.bigS, p.transcript.Clone()); err != nil {
 				return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 			}
 			BigR2[i][identity.Hash()] = theirBigR2
+
+			przsInput[identity.Hash()] = inUnicast.przs[i]
+		}
+
+		seeds[i], err = p.przsSetupParticipants[i].Round3(przsInput)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "PRZS round 1 failed")
 		}
 	}
 
@@ -176,6 +249,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 			K2:    p.state.k2[i],
 			BigR:  BigR[i],
 			BigR2: BigR2[i],
+			Seeds: seeds[i],
 		}
 	}
 

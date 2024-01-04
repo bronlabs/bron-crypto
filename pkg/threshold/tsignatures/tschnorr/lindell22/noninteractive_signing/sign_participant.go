@@ -1,12 +1,16 @@
 package noninteractive_signing
 
 import (
+	"bytes"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -14,6 +18,8 @@ import (
 
 type Cosigner struct {
 	lindell22.Participant
+
+	przsSampleParticipant *sample.Participant
 
 	myAuthKey           integration.AuthKey
 	mySharingId         int
@@ -68,7 +74,19 @@ func NewCosigner(myAuthKey integration.AuthKey, myShard *lindell22.Shard, cohort
 		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+
+	przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(preSignatureIndex)}, nil)
+	przsPrngFactory, err := chacha20.NewChachaPRNG(nil, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create PRNG factory")
+	}
+	przsParticipant, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, przsSid, myAuthKey, preSignatureBatch.PreSignatures[preSignatureIndex].Seeds, sessionParticipants, przsPrngFactory)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create PRZS sampler")
+	}
+
 	return &Cosigner{
+		przsSampleParticipant:  przsParticipant,
 		myAuthKey:              myAuthKey,
 		mySharingId:            mySharingId,
 		myShard:                myShard,

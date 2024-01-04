@@ -7,8 +7,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
@@ -26,6 +29,12 @@ type Round1Broadcast struct {
 	_ types.Incomparable
 }
 
+type Round1P2P struct {
+	przs *setup.Round1P2P
+
+	_ types.Incomparable
+}
+
 type Round2Broadcast struct {
 	BigRProof   *dlog.Proof
 	BigR        curves.Point
@@ -34,15 +43,21 @@ type Round2Broadcast struct {
 	_ types.Incomparable
 }
 
-func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
+type Round2P2P struct {
+	przs *setup.Round2P2P
+
+	_ types.Incomparable
+}
+
+func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput map[types.IdentityHash]*Round1P2P, err error) {
 	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
 	// 1. choose a random k
 	k, err := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
+		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
 	}
 
 	// 2. compute R = k * G
@@ -51,23 +66,37 @@ func (p *Cosigner) Round1() (output *Round1Broadcast, err error) {
 	// 3. compute Rcom = commit(R, pid, sid, S)
 	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sid, p.state.bigS)
 	if err != nil {
-		return nil, errs.NewFailed("cannot commit to R")
+		return nil, nil, errs.NewFailed("cannot commit to R")
+	}
+
+	// 5. run PRZS round 1
+	przsOutput, err := p.przsParticipant.Round1()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot run PRZS setup")
+	}
+
+	broadcast := &Round1Broadcast{
+		BigRCommitment: bigRCommitment,
+	}
+	unicast := make(map[types.IdentityHash]*Round1P2P)
+	for id, r1 := range przsOutput {
+		unicast[id] = &Round1P2P{
+			przs: r1,
+		}
 	}
 
 	p.state.k = k
 	p.state.bigR = bigR
 	p.state.bigRWitness = bigRWitness
+	p.round++
 
 	// 4. broadcast commitment
-	p.round++
-	return &Round1Broadcast{
-		BigRCommitment: bigRCommitment,
-	}, nil
+	return broadcast, unicast, nil
 }
 
-func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (output *Round2Broadcast, err error) {
+func (p *Cosigner) Round2(broadcastInput map[types.IdentityHash]*Round1Broadcast, unicastInput map[types.IdentityHash]*Round1P2P) (broadcastOutput *Round2Broadcast, unicastOutput map[types.IdentityHash]*Round2P2P, err error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
 	}
 
 	p.state.theirBigRCommitment = make(map[types.IdentityHash]commitments.Commitment)
@@ -76,9 +105,9 @@ func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (output
 			continue
 		}
 
-		in, ok := input[identity.Hash()]
+		in, ok := broadcastInput[identity.Hash()]
 		if !ok {
-			return nil, errs.NewMissing("no input from participant")
+			return nil, nil, errs.NewMissing("no input from participant")
 		}
 		p.state.theirBigRCommitment[identity.Hash()] = in.BigRCommitment
 	}
@@ -86,19 +115,37 @@ func (p *Cosigner) Round2(input map[types.IdentityHash]*Round1Broadcast) (output
 	// 1. compute proof of dlog knowledge of R
 	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.sid, p.state.bigS, p.transcript.Clone(), p.prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot prove dlog")
+		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
+	}
+
+	// 3. run PRZS round 2
+	przsInput := make(map[types.IdentityHash]*setup.Round1P2P)
+	for id, r2 := range unicastInput {
+		przsInput[id] = r2.przs
+	}
+	przsOutput, err := p.przsParticipant.Round2(przsInput)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot run PRZS setup")
+	}
+
+	broadcast := &Round2Broadcast{
+		BigR:        p.state.bigR,
+		BigRWitness: p.state.bigRWitness,
+		BigRProof:   bigRProof,
+	}
+	unicast := make(map[types.IdentityHash]*Round2P2P)
+	for id, r2 := range przsOutput {
+		unicast[id] = &Round2P2P{
+			przs: r2,
+		}
 	}
 
 	// 2. broadcast proof and opening of R, revealing R
 	p.round++
-	return &Round2Broadcast{
-		BigR:        p.state.bigR,
-		BigRWitness: p.state.bigRWitness,
-		BigRProof:   bigRProof,
-	}, nil
+	return broadcast, unicast, nil
 }
 
-func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (p *Cosigner) Round3(broadcastInput map[types.IdentityHash]*Round2Broadcast, unicastInput map[types.IdentityHash]*Round2P2P, message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	if p.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
 	}
@@ -109,7 +156,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 			continue
 		}
 
-		in, ok := input[identity.Hash()]
+		in, ok := broadcastInput[identity.Hash()]
 		if !ok {
 			return nil, errs.NewMissing("no input from participant")
 		}
@@ -128,7 +175,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 			return nil, errs.WrapIdentifiableAbort(err, identity.Hash(), "cannot verify dlog proof")
 		}
 
-		// 3.i. compute sum of R
+		// 4.i. compute sum of R
 		bigR = bigR.Add(theirBigR)
 	}
 
@@ -139,7 +186,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 		}
 	}
 
-	// 3.ii. compute e
+	// 4.ii. compute e
 	var e curves.Scalar
 	if p.taproot {
 		e, err = fiatShamir.GenerateChallenge(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
@@ -150,7 +197,7 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 
-	// 3.iii. compute additive share d_i'
+	// 4.iii. compute additive share d_i'
 	dPrime, err := ToAdditiveShare(p.mySigningKeyShare.Share, p.mySharingId, p.sessionParticipants, p.identityKeyToSharingId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
@@ -161,8 +208,30 @@ func (p *Cosigner) Round3(input map[types.IdentityHash]*Round2Broadcast, message
 		}
 	}
 
-	// 3.iv. compute s
-	s := p.state.k.Add(e.Mul(dPrime))
+	// 3. run PRZS round 3 to get zero share
+	przsInput := make(map[types.IdentityHash]*setup.Round2P2P)
+	for id, r3 := range unicastInput {
+		przsInput[id] = r3.przs
+	}
+	przsSeeds, err := p.przsParticipant.Round3(przsInput)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot run PRZS setup")
+	}
+	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
+	}
+	przsSampleParticipant, err := sample.NewParticipant(p.cohortConfig.CipherSuite.Curve, p.sid, p.myAuthKey, przsSeeds, p.sessionParticipants, seededPrng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
+	}
+	zeroS, err := przsSampleParticipant.Sample()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot sample zero share")
+	}
+
+	// 4.iv. compute s
+	s := p.state.k.Add(e.Mul(dPrime)).Add(zeroS)
 
 	// 4. return (R, s) as partial signature
 	p.round++

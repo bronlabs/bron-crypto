@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -34,6 +35,9 @@ type state struct {
 
 type Cosigner struct {
 	lindell22.Participant
+
+	przsParticipant *setup.Participant
+
 	myAuthKey         integration.AuthKey
 	mySharingId       int
 	mySigningKeyShare *tsignatures.SigningKeyShare
@@ -86,7 +90,13 @@ func NewCosigner(myAuthKey integration.AuthKey, sid []byte, sessionParticipants 
 	bigS := BigS(cohortConfig.Participants)
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
+	przsParticipant, err := setup.NewParticipant(cohortConfig.CipherSuite.Curve, sid, myAuthKey, sessionParticipants, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot initialise PRZS participant")
+	}
+
 	cosigner := &Cosigner{
+		przsParticipant:        przsParticipant,
 		myAuthKey:              myAuthKey,
 		mySharingId:            mySharingId,
 		mySigningKeyShare:      myShard.SigningKeyShare,
