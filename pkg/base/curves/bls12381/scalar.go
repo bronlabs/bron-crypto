@@ -324,8 +324,14 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	curve := s.Curve()
-	sc, err := serialisation.ScalarUnmarshalBinary(curve.Name(), s.SetBytes, input)
+	var sc curves.Scalar
+	var err error
+	// we obtain the curve by checking if the subfix matches NameG1 or NameG2
+	if bytes.HasSuffix(input, []byte(NameG1)) {
+		sc, err = serialisation.ScalarUnmarshalBinary(NameG1, s.SetBytes, input)
+	} else {
+		sc, err = serialisation.ScalarUnmarshalBinary(NameG2, s.SetBytes, input)
+	}
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
