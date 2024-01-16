@@ -28,7 +28,7 @@ type Round1Broadcast struct {
 }
 
 type Round1P2P struct {
-	przs *setup.Round1P2P
+	Przs *setup.Round1P2P
 
 	_ types.Incomparable
 }
@@ -42,7 +42,7 @@ type Round2Broadcast struct {
 }
 
 type Round2P2P struct {
-	przs *setup.Round2P2P
+	Przs *setup.Round2P2P
 
 	_ types.Incomparable
 }
@@ -79,7 +79,7 @@ func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput map
 	unicast := make(map[types.IdentityHash]*Round1P2P)
 	for id, r1 := range przsOutput {
 		unicast[id] = &Round1P2P{
-			przs: r1,
+			Przs: r1,
 		}
 	}
 
@@ -119,7 +119,7 @@ func (p *Cosigner) Round2(broadcastInput map[types.IdentityHash]*Round1Broadcast
 	// 3. run PRZS round 2
 	przsInput := make(map[types.IdentityHash]*setup.Round1P2P)
 	for id, r2 := range unicastInput {
-		przsInput[id] = r2.przs
+		przsInput[id] = r2.Przs
 	}
 	przsOutput, err := p.przsParticipant.Round2(przsInput)
 	if err != nil {
@@ -134,7 +134,7 @@ func (p *Cosigner) Round2(broadcastInput map[types.IdentityHash]*Round1Broadcast
 	unicast := make(map[types.IdentityHash]*Round2P2P)
 	for id, r2 := range przsOutput {
 		unicast[id] = &Round2P2P{
-			przs: r2,
+			Przs: r2,
 		}
 	}
 
@@ -210,7 +210,7 @@ func (p *Cosigner) Round3(broadcastInput map[types.IdentityHash]*Round2Broadcast
 	// 3. run PRZS round 3 to get zero share
 	przsInput := make(map[types.IdentityHash]*setup.Round2P2P)
 	for id, r3 := range unicastInput {
-		przsInput[id] = r3.przs
+		przsInput[id] = r3.Przs
 	}
 	przsSeeds, err := p.przsParticipant.Round3(przsInput)
 	if err != nil {
