@@ -1,8 +1,10 @@
 package dkg_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
 	"testing"
 
@@ -17,6 +19,7 @@ import (
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
@@ -65,6 +68,24 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 		err = shard.Validate(cohortConfig)
 		require.NoError(t, err)
 	}
+
+	shard := shards[0]
+	var buf bytes.Buffer
+	t.Run("should marshalling", func(t *testing.T) {
+		enc := gob.NewEncoder(&buf)
+		err = enc.Encode(shard)
+		require.NoError(t, err)
+		data := buf.Bytes()
+		require.True(t, len(data) > 0)
+	})
+
+	t.Run("should unmarshalling", func(t *testing.T) {
+		var recoveredShard boldyreva02.Shard[K]
+		dec := gob.NewDecoder(&buf)
+		err = dec.Decode(&recoveredShard)
+		require.NoError(t, err)
+		require.NotNil(t, recoveredShard)
+	})
 }
 
 func Test_HappyPath(t *testing.T) {
