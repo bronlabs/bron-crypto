@@ -4,7 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
-	dkls23 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
+	dkls24 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 	lindell17 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
 )
 
@@ -12,27 +12,27 @@ type Round1Broadcast = agreeonrandom.Round1Broadcast
 type Round2Broadcast = agreeonrandom.Round2Broadcast
 
 type (
-	Round3Broadcast = dkls23.Round1Broadcast
-	Round3P2P       = dkls23.Round1P2P
+	Round3Broadcast = dkls24.Round1Broadcast
+	Round3P2P       = dkls24.Round1P2P
 )
 
 type (
-	Round4Broadcast = dkls23.Round2Broadcast
-	Round4P2P       = dkls23.Round2P2P
+	Round4Broadcast = dkls24.Round2Broadcast
+	Round4P2P       = dkls24.Round2P2P
 )
 
 type (
-	Round5P2P       = dkls23.Round3P2P
+	Round5P2P       = dkls24.Round3P2P
 	Round5Broadcast = lindell17.Round1Broadcast
 )
 
 type (
-	Round6P2P       = dkls23.Round4P2P
+	Round6P2P       = dkls24.Round4P2P
 	Round6Broadcast = lindell17.Round2Broadcast
 )
 
 type (
-	Round7P2P       = dkls23.Round5P2P
+	Round7P2P       = dkls24.Round5P2P
 	Round7Broadcast = lindell17.Round3Broadcast
 )
 
@@ -77,7 +77,7 @@ func (p *Participant) Round3(round1output map[types.IdentityHash]*Round2Broadcas
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce session id")
 	}
-	p.Main, err = dkls23.NewParticipant(p.UniqueSessionId, p.GetAuthKey(), p.GetCohortConfig(), p.prng, p.transcript)
+	p.Main, err = dkls24.NewParticipant(p.UniqueSessionId, p.GetAuthKey(), p.GetCohortConfig(), p.prng, p.transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct main party")
 	}

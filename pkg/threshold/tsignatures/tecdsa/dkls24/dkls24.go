@@ -1,4 +1,4 @@
-package dkls23
+package dkls24
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"

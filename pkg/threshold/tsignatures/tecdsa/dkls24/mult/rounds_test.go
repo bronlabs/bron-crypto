@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
@@ -15,8 +16,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/mult/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult/testutils"
 )
 
 var cipherSuites = []*integration.CipherSuite{
@@ -43,7 +44,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
 			require.NoError(t, err)
 
-			alice, bob, err := testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
 			require.NoError(t, err)
 
 			a := [mult.L]curves.Scalar{}
@@ -51,12 +52,12 @@ func TestMultiplicationHappyPath(t *testing.T) {
 				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 			}
-			zA, zB, err := testutils.RunMult(t, alice, bob, a)
+			b, zA, zB, err := testutils.RunMult2(t, alice, bob, a)
 			require.NoError(t, err)
 			for i := 0; i < mult.L; i++ {
 				lhs := zA[i].Add(zB[i])
-				rhs := a[i].Mul(bob.BTilde[i])
-				require.Equal(t, 0, int(lhs.Cmp(rhs)))
+				rhs := a[i].Mul(b)
+				require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
 			}
 		})
 	}
@@ -78,7 +79,7 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
 			require.NoError(t, err)
 
-			alice, bob, err := testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid2)
+			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid2)
 			require.NoError(t, err)
 
 			a := [mult.L]curves.Scalar{}
@@ -87,7 +88,7 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			_, _, err = testutils.RunMult(t, alice, bob, a)
+			_, _, _, err = testutils.RunMult2(t, alice, bob, a)
 			require.Error(t, err)
 		})
 	}
@@ -111,7 +112,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
 			require.NoError(t, err)
 
-			alice, bob, err := testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
 			require.NoError(t, err)
 
 			a := [mult.L]curves.Scalar{}
@@ -121,7 +122,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 			}
 
 			// First run
-			bobOutput_Run1, err := bob.Round1()
+			b, bobOutput_Run1, err := bob.Round1()
 			require.NoError(t, err)
 			zA, aliceOutput_Run1, err := alice.Round2(bobOutput_Run1, a)
 			require.NoError(t, err)
@@ -131,15 +132,15 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 			// Check that the first multiplication is correct.
 			for i := 0; i < mult.L; i++ {
 				lhs := zA[i].Add(zB[i])
-				rhs := a[i].Mul(bob.BTilde[i])
-				require.Equal(t, 0, int(lhs.Cmp(rhs)))
+				rhs := a[i].Mul(b)
+				require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
 			}
 
 			// Second Run. Alice replays the messages from the first run.
-			alice, bob, err = testutils.MakeMultParticipants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+			alice, bob, err = testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
 			require.NoError(t, err)
 
-			bobOutput_Run2, err := bob.Round1()
+			_, bobOutput_Run2, err := bob.Round1()
 			require.NoError(t, err)
 			_, _, err = alice.Round2(bobOutput_Run2, a)
 			require.NoError(t, err)

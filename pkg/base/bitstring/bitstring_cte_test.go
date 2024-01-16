@@ -16,7 +16,7 @@ func Test_MeasureConstantTime_SelectBit(t *testing.T) {
 	vector := internal.GetBigEndianBytesWithLowestBitsSet(512, 0)
 	var tI int
 	internal.RunMeasurement(500, "bitstring_selectbit", func(i int) {
-		vector[i>>3] = 0x01 << (i & 0x07)
+		vector[i/8] = 0x01 << (i & 0x07)
 		tI = i
 	}, func() {
 		bitstring.SelectBit(vector, tI)

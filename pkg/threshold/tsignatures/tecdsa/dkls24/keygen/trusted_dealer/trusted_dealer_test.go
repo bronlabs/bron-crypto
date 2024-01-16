@@ -10,7 +10,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/trusted_dealer"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -37,7 +37,7 @@ func Test_HappyPath(t *testing.T) {
 		CipherSuite:  cipherSuite,
 		Participants: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),
 		Protocol: &integration.ProtocolConfig{
-			Name:                 protocols.DKLS23,
+			Name:                 protocols.DKLS24,
 			Threshold:            2,
 			TotalParties:         3,
 			SignatureAggregators: hashset.NewHashSet([]integration.IdentityKey{alice, bob, charlie}),

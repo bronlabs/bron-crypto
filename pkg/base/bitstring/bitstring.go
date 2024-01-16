@@ -6,14 +6,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// SelectBit interprets the byte-vector `vector` as if it were a _bit_-vector with len(vector) * 8 bits.
-// it extracts the `index`th such bit, interpreted in the little-endian way (i.e., both across bytes and within bytes).
-func SelectBit(vector []byte, index int) (byte, error) {
-	if index < 0 || index >= binary.Size(vector)*8 {
+// SelectBit gets the `i`th bit of a byte vector interpreted as little-endian packed bits.
+// E.g., [0x12, 0x34] --> [0,1,0,0, 1,0,0,0, 1,1,0,0, 0,0,1,0].
+func SelectBit(v []byte, i int) (byte, error) {
+	if i < 0 || i >= binary.Size(v)*8 {
 		return 0, errs.NewInvalidArgument("index out of bounds")
 	}
 	// the bitwise tricks index >> 3 == index // 8 and index & 0x07 == index % 8 are designed to avoid CPU division.
-	return vector[index>>3] >> (index & 0x07) & 0x01, nil
+	return v[i/8] >> (i & 0x07) & 0x01, nil
 }
 
 // ReverseBytes reverses the order of the bytes in a new slice.
@@ -52,7 +52,7 @@ func Memset(buffer []byte, value byte) {
 func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
-	if nRowsInput%8 != 0 {
+	if nRowsInput%8 != 0 || nRowsInput == 0 {
 		return nil, errs.NewInvalidArgument("input matrix must have a number of rows divisible by 8")
 	}
 	// check if array is a matrix
@@ -69,7 +69,7 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	for i := 0; i < nRowsOutput; i++ {
 		transposedMatrix[i] = make([]byte, nColsOutputBytes)
 	}
-	// Actually transpose the matrix bits
+	// transpose the matrix bits, one bit at a time
 	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
 			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
@@ -104,4 +104,44 @@ func ToBytesLE(i int) []byte {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(i))
 	return b
+}
+
+// RepeatBits repeats the bits in the input vector v `nrepetitions` times. E.g.,
+// if v = [0,1,0,1] and nrepetitions = 2, then the output is [0,0,1,1,0,0,1,1].
+// To do so, bits must be unpacked, repeated, and packed in the output.
+func RepeatBits(v []byte, nrepetitions int) []byte {
+	vOut := make([]byte, len(v)*nrepetitions)
+	nextBit := 0
+	for i := 0; i < len(v)*8; i++ {
+		bit := v[i/8] >> (i & 0x07) & 0x01
+		for j := 0; j < nrepetitions; j++ {
+			vOut[nextBit/8] |= bit << (nextBit & 0x07)
+			nextBit++
+		}
+	}
+	return vOut
+}
+
+// UnpackBits unpacks the bits in the input vector v.
+// E.g., [0xF0,0x12] ---> [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0].
+func UnpackBits(v []byte) []byte {
+	vOut := make([]byte, len(v)*8)
+	for i := 0; i < len(v)*8; i++ {
+		vOut[i] = v[i/8] >> (i & 0x07) & 0x01
+	}
+	return vOut
+}
+
+// PackBits packs the bits in the input vector v. Treats every non-zero input byte as 1.
+// E.g., [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0] ---> [0xF0,0x12].
+func PackBits(v []byte) []byte {
+	vOut := make([]byte, (len(v)+7)/8)
+	for i := 0; i < len(v); i++ {
+		bit := byte(0)
+		if v[i] != 0 {
+			bit = 1
+		}
+		vOut[i/8] |= bit << (i & 0x07)
+	}
+	return vOut
 }

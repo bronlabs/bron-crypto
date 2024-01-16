@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 )
 
 type Round1Broadcast = gennaro.Round1Broadcast
@@ -155,18 +155,18 @@ func (p *Participant) Round5(round4output map[types.IdentityHash]Round4P2P) (map
 	return baseOTP2P, nil
 }
 
-func (p *Participant) Round6(round5output map[types.IdentityHash]Round5P2P) (*dkls23.Shard, error) {
+func (p *Participant) Round6(round5output map[types.IdentityHash]Round5P2P) (*dkls24.Shard, error) {
 	for identity, receiver := range p.BaseOTReceiverParties {
 		if err := receiver.Round6Verify(round5output[identity]); err != nil {
 			return nil, errs.WrapFailed(err, "vsot as receiver for indentity %x", hex.EncodeToString(identity[:]))
 		}
 	}
-	p.Shard.PairwiseBaseOTs = map[types.IdentityHash]*dkls23.BaseOTConfig{}
+	p.Shard.PairwiseBaseOTs = map[types.IdentityHash]*dkls24.BaseOTConfig{}
 	for _, identity := range p.GetCohortConfig().Participants.Iter() {
 		if identity.PublicKey().Equal(p.MyAuthKey.PublicKey()) {
 			continue
 		}
-		p.Shard.PairwiseBaseOTs[identity.Hash()] = &dkls23.BaseOTConfig{
+		p.Shard.PairwiseBaseOTs[identity.Hash()] = &dkls24.BaseOTConfig{
 			AsSender:   p.BaseOTSenderParties[identity.Hash()].Output,
 			AsReceiver: p.BaseOTReceiverParties[identity.Hash()].Output,
 		}

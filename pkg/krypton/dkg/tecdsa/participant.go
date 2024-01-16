@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
-	dkls23 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
+	dkls24 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 	lindell17 "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -25,7 +25,7 @@ type Participant struct {
 
 	UniqueSessionId []byte
 	SIDParty        *agreeonrandom.Participant
-	Main            *dkls23.Participant
+	Main            *dkls24.Participant
 	Backup          *lindell17.Participant
 	Shard           *Shard
 

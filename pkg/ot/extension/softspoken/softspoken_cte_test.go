@@ -20,30 +20,28 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	}
 
 	// Fixed parameters
-	useForcedReuse := true
-	scalarsPerSlot := 2
-	inputBatchLen := 5
+	LOTe := 2
+	Xi := 5
 	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}
 	_, err := crand.Read(uniqueSessionId[:])
 	require.NoError(t, err)
-	var choices softspoken.OTeInputChoices
+	var choices softspoken.OTeChoices
 	var receiver *softspoken.Receiver
 	internal.RunMeasurement(500, "softspoken_round1", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
+		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		testutils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		testutils.CheckBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
 		// Set COTe inputs
-		choices, _, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
+		choices, _, err = testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
 		require.NoError(t, err)
 
 		// Setup COTe
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, LOTe, Xi)
 		require.NoError(t, err)
 	}, func() {
 		receiver.Round1(choices)
@@ -56,35 +54,33 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	}
 
 	// Fixed parameters
-	useForcedReuse := true
-	inputBatchLen := 5
-	scalarsPerSlot := 2
+	Xi := 5
+	LOTe := 2
 	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}
 	_, err := crand.Read(uniqueSessionId[:])
 	require.NoError(t, err)
-	var choices softspoken.OTeInputChoices
+	var choices softspoken.OTeChoices
 	var receiver *softspoken.Receiver
 	var round1Output *softspoken.Round1Output
-	var inputOpts softspoken.COTeMessage
+	var inputOpts softspoken.COTeMessageBatch
 	var sender *softspoken.Sender
 	internal.RunMeasurement(500, "softspoken_round2", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
+		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		testutils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		testutils.CheckBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
 		// Set COTe inputs
-		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
+		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
 		require.NoError(t, err)
 
 		// Setup COTe
-		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
+		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, LOTe, Xi)
 		require.NoError(t, err)
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, LOTe, Xi)
 		require.NoError(t, err)
 
 		_, round1Output, err = receiver.Round1(choices)
@@ -100,36 +96,34 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	}
 
 	// Fixed parameters
-	useForcedReuse := true
-	scalarsPerSlot := 2
-	inputBatchLen := 5
+	LOTe := 2
+	Xi := 5
 	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}
 	_, err := crand.Read(uniqueSessionId[:])
 	require.NoError(t, err)
-	var choices softspoken.OTeInputChoices
+	var choices softspoken.OTeChoices
 	var receiver *softspoken.Receiver
 	var round1Output *softspoken.Round1Output
-	var inputOpts softspoken.COTeMessage
+	var inputOpts softspoken.COTeMessageBatch
 	var sender *softspoken.Sender
 	var round2Output *softspoken.Round2Output
 	internal.RunMeasurement(500, "softspoken_round3", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
+		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		testutils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		testutils.CheckBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 
 		// Set COTe inputs
-		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
+		choices, inputOpts, err = testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
 		require.NoError(t, err)
 
 		// Setup COTe
-		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
+		sender, err = softspoken.NewCOtSender(baseOtReceiverOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, LOTe, Xi)
 		require.NoError(t, err)
-		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, useForcedReuse, nil)
+		receiver, err = softspoken.NewCOtReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, LOTe, Xi)
 		require.NoError(t, err)
 
 		_, round1Output, err = receiver.Round1(choices)

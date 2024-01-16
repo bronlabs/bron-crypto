@@ -24,16 +24,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	dkls23_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	batchSize := softspoken.Kappa
-	identities, cohortConfig, participants, shards, err := dkls23_testutils.KeyGen(curve, h, threshold, n, nil, nil)
+	identities, cohortConfig, participants, shards, err := dkls24_testutils.KeyGen(curve, h, threshold, n, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {
@@ -49,7 +49,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			require.NotNil(t, baseOTConfig.AsReceiver)
 		}
 	}
-	shardsMap := make(map[types.IdentityHash]*dkls23.Shard, len(shards))
+	shardsMap := make(map[types.IdentityHash]*dkls24.Shard, len(shards))
 	for i, shard := range shards {
 		shardsMap[identities[i].Hash()] = shard
 	}
@@ -202,7 +202,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 
 	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)

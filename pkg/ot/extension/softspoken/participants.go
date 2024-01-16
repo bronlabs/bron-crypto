@@ -15,10 +15,11 @@ import (
 
 type Receiver struct {
 	baseOtSeeds       *vsot.SenderOutput // k^i_0, k^i_1 ∈ [κ][2][κ]bits, the OTe seeds from a BaseOT as sender.
-	extPackedChoices  ExtPackedChoices   // x_i ∈ [η']bits, the extended packed choice bits.
-	oTeReceiverOutput OTeMessage         // v_x ∈ [LOTe][ξ][κ]bits, the resulting OTe message (linked to sender's {v_0, v_1}).
+	xPrime            ExtPackedChoices   // x_i ∈ [ξ*LOTe+σ]bits, the extended packed choice bits.
+	oTeReceiverOutput OTeMessageBatch    // v_x ∈ [ξ][LOTe*κ]bits, the resulting OTe message (linked to sender's {v_0, v_1}).
 
-	useForcedReuse bool // indicates whether the protocol should use forced reuse.
+	LOTe int // The number of elements (scalars/bitstrings) per OT message.
+	Xi   int // The number of OT messages (and the number of choice bits) for the OTe batch.
 
 	sid        []byte                 // Unique identifier of the current session (sid in DKLs19)
 	transcript transcripts.Transcript // Transcript containing the protocol's publicly exchanged messages.
@@ -32,7 +33,8 @@ type Receiver struct {
 type Sender struct {
 	baseOtSeeds *vsot.ReceiverOutput // Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits, OTe seeds from a BaseOT as receiver.
 
-	useForcedReuse bool // indicates whether the protocol should use forced reuse.
+	LOTe int // The number of elements (scalars/bitstrings) per OT message.
+	Xi   int // The number of OT messages (and the number of choice bits) for the OTe batch.
 
 	sid        []byte                 // Unique identifier of the current session (sid in DKLs19)
 	transcript transcripts.Transcript // Transcript containing the protocol's publicly exchanged messages.
@@ -44,7 +46,8 @@ type Sender struct {
 
 // NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewCOtReceiver(baseOtSeeds *vsot.SenderOutput, sid []byte, transcript transcripts.Transcript, curve curves.Curve, csrand io.Reader, useForcedReuse bool, prgFn csprng.CSPRNG,
+func NewCOtReceiver(baseOtSeeds *vsot.SenderOutput, sid []byte, transcript transcripts.Transcript,
+	curve curves.Curve, csrand io.Reader, prgFn csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
 	if err = validateParticipantInputs(baseOtSeeds, sid, curve, csrand); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid COTe participant input arguments")
@@ -54,19 +57,21 @@ func NewCOtReceiver(baseOtSeeds *vsot.SenderOutput, sid []byte, transcript trans
 		return nil, errs.WrapInvalidArgument(err, "could not set default inputs")
 	}
 	return &Receiver{
-		baseOtSeeds:    baseOtSeeds,
-		sid:            sid,
-		transcript:     t,
-		curve:          curve,
-		useForcedReuse: useForcedReuse,
-		prg:            prg,
-		csrand:         csrand,
+		baseOtSeeds: baseOtSeeds,
+		LOTe:        lOTe,
+		Xi:          Xi,
+		sid:         sid,
+		transcript:  t,
+		curve:       curve,
+		prg:         prg,
+		csrand:      csrand,
 	}, nil
 }
 
 // NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewCOtSender(baseOtSeeds *vsot.ReceiverOutput, sid []byte, transcript transcripts.Transcript, curve curves.Curve, csrand io.Reader, useForcedReuse bool, prgFn csprng.CSPRNG,
+func NewCOtSender(baseOtSeeds *vsot.ReceiverOutput, sid []byte, transcript transcripts.Transcript,
+	curve curves.Curve, csrand io.Reader, prgFn csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
 	if err = validateParticipantInputs(baseOtSeeds, sid, curve, csrand); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid COTe participant input arguments")
@@ -76,13 +81,14 @@ func NewCOtSender(baseOtSeeds *vsot.ReceiverOutput, sid []byte, transcript trans
 		return nil, errs.WrapInvalidArgument(err, "could not set default inputs")
 	}
 	return &Sender{
-		baseOtSeeds:    baseOtSeeds,
-		sid:            sid,
-		transcript:     t,
-		curve:          curve,
-		useForcedReuse: useForcedReuse,
-		prg:            prg,
-		csrand:         csrand,
+		baseOtSeeds: baseOtSeeds,
+		LOTe:        lOTe,
+		Xi:          Xi,
+		sid:         sid,
+		transcript:  t,
+		curve:       curve,
+		prg:         prg,
+		csrand:      csrand,
 	}, nil
 }
 
@@ -109,8 +115,8 @@ func setDefaultInputs(transcript transcripts.Transcript, sid []byte, prgFn csprn
 		t = transcript
 	}
 	t.AppendMessages("session_id", sid)
-	if prgFn == nil { // Default prng output size optimised for DKLs23 Mult.
-		etaPrimeBytes := (1 * XiBytes) + SigmaBytes // η' = LOTe*ξ + σ with LOTe = 1
+	if prgFn == nil { // Default prng output size optimised for DKLs24 Mult.
+		etaPrimeBytes := ((2 + 2) * (2*KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
 		prgFn, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sid)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "Could not initialise prg")

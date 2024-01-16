@@ -1,6 +1,12 @@
 package ct
 
-import "crypto/subtle"
+import (
+	"crypto/subtle"
+
+	"golang.org/x/exp/constraints"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+)
 
 // ConstantTimeEq returns 1 if x == y and 0 otherwise. Based on the subtle package.
 func ConstantTimeEq(x, y uint64) int {
@@ -28,4 +34,16 @@ func ConstantTimeLeq(x, y uint64) int {
 // ConstantTimeSelect returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
 func ConstantTimeSelect(v, x, y uint64) uint64 {
 	return ^(v-1)&x | (v-1)&y
+}
+
+// ConstantTimeSelect returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
+func ConstantTimeSelectScalar[T constraints.Integer](v T, x, y curves.Scalar) curves.Scalar {
+	xBytes := x.Bytes()
+	yBytes := y.Bytes()
+	subtle.ConstantTimeCopy(int(v), yBytes, xBytes)
+	z, err := y.SetBytes(yBytes)
+	if err != nil {
+		panic("scalar.SetBytes(scalar.Bytes()) should never fail")
+	}
+	return z
 }

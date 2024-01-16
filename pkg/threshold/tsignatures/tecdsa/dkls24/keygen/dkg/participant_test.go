@@ -72,7 +72,7 @@ func Test_CanInitialize(t *testing.T) {
 		CipherSuite:  cipherSuite,
 		Participants: hashset.NewHashSet(identityKeys),
 		Protocol: &integration.ProtocolConfig{
-			Name:                 protocols.DKLS23,
+			Name:                 protocols.DKLS24,
 			Threshold:            2,
 			TotalParties:         2,
 			SignatureAggregators: hashset.NewHashSet(identityKeys),

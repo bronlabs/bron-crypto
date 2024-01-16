@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 )
 
 func MakeDkgParticipants(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader, sid []byte) (participants []*dkg.Participant, err error) {
@@ -110,8 +110,8 @@ func DoDkgRound5(participants []*dkg.Participant, round5UnicastInputs []map[type
 	return round5UnicastOutputs, nil
 }
 
-func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[types.IdentityHash]dkg.Round5P2P) (shards []*dkls23.Shard, err error) {
-	shards = make([]*dkls23.Shard, len(participants))
+func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[types.IdentityHash]dkg.Round5P2P) (shards []*dkls24.Shard, err error) {
+	shards = make([]*dkls24.Shard, len(participants))
 	for i := range participants {
 		shards[i], err = participants[i].Round6(round6UnicastInputs[i])
 		if err != nil {
@@ -122,7 +122,7 @@ func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[type
 	return shards, nil
 }
 
-func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls23.Shard, err error) {
+func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls24.Shard, err error) {
 	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not make DKG participants")

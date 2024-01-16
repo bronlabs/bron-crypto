@@ -3,32 +3,37 @@ package softspoken
 import (
 	"strconv"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
-// HashSalted hashes the κ-bit length rows of a [L*ξ][κ] bit matrix, outputting
-// rows of κ bits in a [L][ξ][κ] bit matrix. sid is used as a salt.
-func HashSalted(sid []byte, bufferIn [][]byte,
-	bufferOut [][Xi][KappaBytes]byte,
-) (err error) {
-	L := len(bufferOut)
-	eta := len(bufferIn) // η = L*ξ
-	if eta != L*Xi {
-		return errs.NewInvalidArgument("input sizes don't match (%d != %d)", eta, L*Xi)
-	}
-	for l := 0; l < L; l++ {
-		for i := 0; i < Xi; i++ {
-			if len(bufferIn[i]) != KappaBytes {
-				return errs.NewInvalidArgument("input slice bit-size is not Kappa")
-			}
-			digest, err := hashing.Hash(sha3.New256, []byte("Copper_Softspoken_COTe"), sid, []byte(strconv.Itoa(i)), bufferIn[l*Xi+i])
+var (
+	HashFn = base.TranscriptHashFunction
+	dst    = []byte("Copper_Softspoken_COTe")
+)
+
+// HashSalted hashes the κ-bit length rows of a [LOTe*ξ][κ] bit matrix, outputs
+// rows of κ bits in a [ξ][LOTe*κ] bit matrix. sid is used as a salt.
+func HashSalted(sid []byte, bufferIn, bufferOut [][]byte) (err error) {
+	Xi := len(bufferOut)
+	LOTe := len(bufferIn) / Xi
+	for j := 0; j < Xi; j++ {
+		// Check lengths
+		if len(bufferIn[j]) != KappaBytes {
+			return errs.NewInvalidArgument("input slice bit-size is %d, should be %d", len(bufferIn[j]), KappaBytes)
+		}
+		if len(bufferOut[j]) != LOTe*KappaBytes {
+			return errs.NewInvalidArgument("output slice bit-size is %d, should be %d", len(bufferOut[j]), LOTe*KappaBytes)
+		}
+		// Hash each element separately, same
+		idx := []byte(strconv.Itoa(j))
+		for l := 0; l < LOTe; l++ {
+			digest, err := hashing.Hash(HashFn, dst, sid, idx, bufferIn[j*LOTe+l])
 			if err != nil {
 				return errs.WrapFailed(err, "writing into HashSalted")
 			}
-			copy(bufferOut[l][i][:], digest)
+			copy(bufferOut[j][l*KappaBytes:(l+1)*KappaBytes], digest)
 		}
 	}
 	return nil

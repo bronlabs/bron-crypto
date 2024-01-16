@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
 
 type Round1Broadcast struct {
@@ -81,16 +81,13 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, r1u map[types.IdentityHash]*
 		ic.state.witnessesOfCommitmentToInstanceKey[idHash] = witness
 
 		// step 1.3.2
-		multiplicationOutput, err := ic.subprotocols.multiplication[idHash].Bob.Round1()
+		b, multiplicationOutput, err := ic.subprotocols.multiplication[idHash].Bob.Round1()
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "multiplication round 1")
 		}
 
 		// step 1.3.3
-		ic.state.Chi_i[idHash] = ic.subprotocols.multiplication[idHash].Bob.BTilde[0] // this is effectively bob's input to the multiplication protocol
-		if ic.subprotocols.multiplication[idHash].Bob.BTilde[0].Cmp(ic.subprotocols.multiplication[idHash].Bob.BTilde[1]) != 0 {
-			return nil, nil, errs.WrapFailed(err, "bob's input is not compatible with forced reuse")
-		}
+		ic.state.Chi_i[idHash] = b
 
 		// step 1.3.4
 		outputP2P[idHash] = &Round1P2P{
@@ -175,7 +172,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast map[types.IdentityHash]*Round1B
 	}, outputP2P, nil
 }
 
-func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2Broadcast, round2outputP2P map[types.IdentityHash]*Round2P2P, message []byte) (*dkls23.PartialSignature, error) {
+func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2Broadcast, round2outputP2P map[types.IdentityHash]*Round2P2P, message []byte) (*dkls24.PartialSignature, error) {
 	if ic.round != 3 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 3", ic.round)
 	}
@@ -271,7 +268,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 
 	ic.round++
 	// step 3.7
-	return &dkls23.PartialSignature{
+	return &dkls24.PartialSignature{
 		Ui: u_i,
 		Wi: w_i,
 		Ri: ic.state.R_i,
@@ -279,7 +276,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast map[types.IdentityHash]*Round2B
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[types.IdentityHash]*dkls23.PartialSignature, message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite *integration.CipherSuite, publicKey curves.Point, partialSignatures map[types.IdentityHash]*dkls24.PartialSignature, message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve
 	w := curve.ScalarField().Zero()
 	u := curve.ScalarField().Zero()

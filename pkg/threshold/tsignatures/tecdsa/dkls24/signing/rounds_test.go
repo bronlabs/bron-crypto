@@ -20,8 +20,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
 var testCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
@@ -58,7 +58,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	}
 	for _, combinationIndices := range combinations {
 		identities := make([]integration.IdentityKey, threshold)
-		selectedShards := make([]*dkls23.Shard, threshold)
+		selectedShards := make([]*dkls24.Shard, threshold)
 		for i, index := range combinationIndices {
 			identities[i] = allIdentities[index]
 			selectedShards[i] = shards[index]
@@ -83,7 +83,7 @@ func Test_HappyPath(t *testing.T) {
 				boundedMessage := []byte("Hello World!")
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testHappyPath(t, protocols.DKLS23, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+					testHappyPath(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
 				})
 			}
 		}
@@ -124,7 +124,7 @@ func testFailForDifferentSID(t *testing.T, protocol protocols.Protocol, curve cu
 	}
 
 	identities := make([]integration.IdentityKey, threshold)
-	selectedShards := make([]*dkls23.Shard, threshold)
+	selectedShards := make([]*dkls24.Shard, threshold)
 	for i := 0; i < threshold; i++ {
 		identities[i] = allIdentities[i]
 		selectedShards[i] = shards[i]
@@ -160,7 +160,7 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 	require.NoError(t, err)
 
 	identities := make([]integration.IdentityKey, threshold)
-	selectedShards := make([]*dkls23.Shard, threshold)
+	selectedShards := make([]*dkls24.Shard, threshold)
 	for i := 0; i < threshold; i++ {
 		identities[i] = allIdentities[i]
 		selectedShards[i] = shards[i]
@@ -224,8 +224,8 @@ func Test_UnHappyPath(t *testing.T) {
 				boundedMessage := []byte("Hello World!")
 				t.Run(fmt.Sprintf("Interactive sign unhappy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
-					testFailForDifferentSID(t, protocols.DKLS23, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
-					testFailForReplayedMessages(t, protocols.DKLS23, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+					testFailForDifferentSID(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+					testFailForReplayedMessages(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
 				})
 			}
 		}

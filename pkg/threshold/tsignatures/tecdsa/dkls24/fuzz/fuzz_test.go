@@ -20,9 +20,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	dkls23_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -63,9 +63,9 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 	return identities
 }
 
-func doInteractiveSigning(t *testing.T, threshold int, identities []integration.IdentityKey, shards []*dkls23.Shard, message []byte, cipherSuite *integration.CipherSuite) {
+func doInteractiveSigning(t *testing.T, threshold int, identities []integration.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite *integration.CipherSuite) {
 	t.Helper()
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
 	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
@@ -74,11 +74,11 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []integration.
 	require.NoError(t, err)
 }
 
-func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, n, threshold int, identities []integration.IdentityKey) []*dkls23.Shard {
+func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, n, threshold int, identities []integration.IdentityKey) []*dkls24.Shard {
 	t.Helper()
 	var sid []byte
 	fz.Fuzz(&sid)
-	_, _, _, shards, err := dkls23_testutils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
+	_, _, _, shards, err := dkls24_testutils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.Skip("too many participants")

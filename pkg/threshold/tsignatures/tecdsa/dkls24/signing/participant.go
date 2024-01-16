@@ -11,22 +11,22 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/mult"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS23-"
+const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS24-"
 
-var _ dkls23.Participant = (*Cosigner)(nil)
+var _ dkls24.Participant = (*Cosigner)(nil)
 
 type Cosigner struct {
 	prng io.Reader
 
 	MyAuthKey  integration.AuthKey
 	MyShamirId int
-	Shard      *dkls23.Shard
+	Shard      *dkls24.Shard
 
 	UniqueSessionId       []byte
 	CohortConfig          *integration.CohortConfig
@@ -97,15 +97,15 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 	return false
 }
 
-// NewCosigner constructs the interactive DKLs23 cosigner.
-func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls23.Shard, cohortConfig *integration.CohortConfig, tprng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+// NewCosigner constructs the interactive DKLs24 cosigner.
+func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *dkls24.Shard, cohortConfig *integration.CohortConfig, tprng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
-	transcript.AppendMessages("DKLs23 Interactive Signing", uniqueSessionId)
+	transcript.AppendMessages("DKLs24 Interactive Signing", uniqueSessionId)
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
 	sessionShamirIDs := make([]int, sessionParticipants.Len())
@@ -170,7 +170,7 @@ func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionPar
 	return cosigner, nil
 }
 
-func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, shard *dkls23.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey]) error {
+func validateInput(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, shard *dkls24.Shard, sessionParticipants *hashset.HashSet[integration.IdentityKey]) error {
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapVerificationFailed(err, "cohort config is invalid")
 	}

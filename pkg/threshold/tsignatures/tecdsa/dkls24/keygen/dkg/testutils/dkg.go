@@ -8,12 +8,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/dkg"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
-func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities []integration.IdentityKey, sid []byte) ([]integration.IdentityKey, *integration.CohortConfig, []*dkg.Participant, []*dkls23.Shard, error) {
+func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities []integration.IdentityKey, sid []byte) ([]integration.IdentityKey, *integration.CohortConfig, []*dkg.Participant, []*dkls24.Shard, error) {
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  h,
@@ -26,7 +26,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 			return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct test identities")
 		}
 	}
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS23, identities, threshold, identities)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct cohort protocol")
 	}

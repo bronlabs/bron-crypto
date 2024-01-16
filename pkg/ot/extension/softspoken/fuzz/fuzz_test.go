@@ -20,9 +20,9 @@ import (
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test_OTe(f *testing.F) {
-	f.Add(uint(0), false, 3, 2, int64(1))
-	f.Add(uint(0), true, 3, 2, int64(1))
-	f.Fuzz(func(t *testing.T, curveIndex uint, useForcedReuse bool, inputBatchLen, scalarsPerSlot int, randomSeed int64) {
+	f.Add(uint(0), 3, 2, int64(1))
+	f.Add(uint(0), 3, 2, int64(1))
+	f.Fuzz(func(t *testing.T, curveIndex uint, Xi, LOTe int, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		uniqueSessionId := [vsot.DigestSize]byte{}
 		prng := rand.New(rand.NewSource(randomSeed))
@@ -30,7 +30,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		require.NoError(t, err)
 
 		// BaseOTs
-		baseOtSendOutput, baseOtRecOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
+		baseOtSendOutput, baseOtRecOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -38,7 +38,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 		// Set OTe inputs
-		choices, _, err := testutils.GenerateSoftspokenRandomInputs(inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
+		choices, _, err := testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -47,12 +47,12 @@ func Fuzz_Test_OTe(f *testing.F) {
 		}
 		// Run OTe
 		oTeSenderOutput, oTeReceiverOutput, err := testutils.RunSoftspokenOTe(
-			curve, uniqueSessionId[:], crand.Reader, baseOtSendOutput, baseOtRecOutput, choices)
+			curve, uniqueSessionId[:], crand.Reader, baseOtSendOutput, baseOtRecOutput, choices, LOTe, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		// Check OTe result
-		err = testutils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices)
+		err = testutils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices, LOTe, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -60,9 +60,9 @@ func Fuzz_Test_OTe(f *testing.F) {
 }
 
 func Fuzz_Test_COTe(f *testing.F) {
-	f.Add(uint(0), false, 3, 2, int64(1))
-	f.Add(uint(0), true, 3, 2, int64(1))
-	f.Fuzz(func(t *testing.T, curveIndex uint, useForcedReuse bool, inputBatchLen, scalarsPerSlot int, randomSeed int64) {
+	f.Add(uint(0), 4, 8, int64(1))
+	f.Add(uint(0), 4, 8, int64(1))
+	f.Fuzz(func(t *testing.T, curveIndex uint, LOTe, Xi int, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		uniqueSessionId := [vsot.DigestSize]byte{}
 		prng := rand.New(rand.NewSource(randomSeed))
@@ -75,14 +75,14 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunSoftspokenBaseOT(t, curve, uniqueSessionId[:], prng)
+		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		err = testutils.CheckSoftspokenBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
+		err = testutils.CheckBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -91,8 +91,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Set COTe inputs
-		choices, inputOpts, err := testutils.GenerateSoftspokenRandomInputs(
-			inputBatchLen, scalarsPerSlot, curve, useForcedReuse)
+		receiverChoices, senderInputs, err := testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -101,8 +100,8 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Run COTe
-		cOTeSenderOutputs, cOTeMessages, err := testutils.RunSoftspokenCOTe(
-			useForcedReuse, curve, uniqueSessionId[:], crand.Reader, baseOtSenderOutput, baseOtReceiverOutput, choices, inputOpts)
+		senderOutputs, receiverOutputs, err := testutils.RunSoftspokenCOTe(
+			curve, uniqueSessionId[:], crand.Reader, baseOtSenderOutput, baseOtReceiverOutput, receiverChoices, senderInputs, LOTe, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -111,7 +110,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Check COTe result
-		err = testutils.CheckSoftspokenCOTeOutputs(cOTeSenderOutputs, cOTeMessages, inputOpts, choices)
+		err = testutils.CheckSoftspokenCOTeOutputs(receiverChoices, senderInputs, receiverOutputs, senderOutputs, LOTe, Xi)
 		require.NoError(t, err)
 	})
 }

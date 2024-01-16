@@ -20,11 +20,7 @@ type Alice struct {
 	Curve           curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
-	gadget          [][Xi]curves.Scalar // Gadget (g) ∈ [ξ]ℤq is the gadget vector
-
-	aTilde [L]curves.Scalar // ã ∈ [L]ℤq is the vector of one-time pads of Alice
-	aHat   [L]curves.Scalar // â ∈ [L]ℤq is the vector of check values of Alice
-	gammaA [L]curves.Scalar // γ_A ∈ [L]ℤq is the derandomization mask of Alice
+	gadget          *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
 
 	_ types.Incomparable
 }
@@ -35,13 +31,10 @@ type Bob struct {
 	Curve           curves.Curve
 	transcript      transcripts.Transcript
 	uniqueSessionId []byte
-	gadget          [][Xi]curves.Scalar // Gadget (g) ∈ [LOTe][ξ]ℤq is the gadget vector
+	gadget          *[Xi]curves.Scalar // g ∈ [ξ]ℤq is the gadget vector
 
-	// beta (β) ∈ [ξ]bits is a vector of random bits used as input to COTe
-	// This should be considered as an enum. Only one field should be used
-	Beta [][XiBytes]byte
-	// BTilde (b̃) ∈ ℤq^L is the sum of the gadget vector elements weighted by the bits in beta
-	BTilde [L]curves.Scalar
+	Beta  []byte                  // β ∈ [ξ]bits is a vector of random bits used as receiver choices in OTe
+	Gamma [Xi][LOTe]curves.Scalar // γ ∈ [ξ]ℤq is the receiver output of OTe (chosen messages)
 
 	_ types.Incomparable
 }
@@ -54,7 +47,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, true, seededPrng)
+	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, seededPrng, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -80,7 +73,7 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, true, prgFn)
+	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, prgFn, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -114,15 +107,15 @@ func validateParticipantInputs[T any](curve curves.Curve, seedOtResults *T, uniq
 	return nil
 }
 
-func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget [][Xi]curves.Scalar, err error) {
-	gadget = make([][Xi]curves.Scalar, 1) // LOTe = 1 for Forced Reuse
+func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget *[Xi]curves.Scalar, err error) {
+	gadget = new([Xi]curves.Scalar)
 	transcript.AppendMessages("gadget vector", []byte("COPPER_KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes, err := transcript.ExtractBytes("gadget", base.WideFieldBytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}
-		gadget[0][i], err = curve.Scalar().SetBytesWide(bytes)
+		gadget[i], err = curve.Scalar().SetBytesWide(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

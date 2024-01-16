@@ -261,7 +261,7 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 			if err := nistTest.ScanTestConfig(); err != nil {
 				return errs.WrapSerialisation(err, "[line=%d] Error parsing test config", nistTest.LineNo)
 			}
-			returnedBits := make([]byte, nistTest.Config.ReturnedBitsLen>>3)
+			returnedBits := make([]byte, nistTest.Config.ReturnedBitsLen/8)
 
 			for nistTest.CountNo = 0; nistTest.CountNo < maxTestCount; nistTest.CountNo++ {
 				// Scan test state

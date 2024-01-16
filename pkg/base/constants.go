@@ -19,6 +19,7 @@ const HASH2CURVE_APP_TAG = "KRYPTON-H2C-"
 
 // Choices of hash functions.
 var (
-	CommitmentHashFunction = sha3.New256
-	TranscriptHashFunction = sha3.New256
+	CommitmentHashFunction   = sha3.New256
+	TranscriptHashFunction   = sha3.New256
+	RandomOracleHashFunction = sha3.New256
 )

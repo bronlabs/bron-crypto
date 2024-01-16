@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
@@ -22,7 +22,7 @@ import (
 )
 
 // TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*dkls23.Shard, error) {
+func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*dkls24.Shard, error) {
 	if err := cohortConfig.Validate(); err != nil {
 		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
 	}
@@ -30,7 +30,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	if cohortConfig.CipherSuite.Curve.Name() != k256.Name && cohortConfig.CipherSuite.Curve.Name() != p256.Name {
 		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
 	}
-	if cohortConfig.Protocol.Name != protocols.DKLS23 {
+	if cohortConfig.Protocol.Name != protocols.DKLS24 {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
 
@@ -70,18 +70,18 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 
 	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
 
-	results := map[types.IdentityHash]*dkls23.Shard{}
+	results := map[types.IdentityHash]*dkls24.Shard{}
 
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
 		share := shamirShares[sharingId-1].Value
-		results[identityKey.Hash()] = &dkls23.Shard{
-			SigningKeyShare: &dkls23.SigningKeyShare{
+		results[identityKey.Hash()] = &dkls24.Shard{
+			SigningKeyShare: &dkls24.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
 			},
 			// Not currently supported
 			PublicKeyShares: nil,
-			PairwiseSeeds:   dkls23.PairwiseSeeds{},
+			PairwiseSeeds:   dkls24.PairwiseSeeds{},
 		}
 	}
 
