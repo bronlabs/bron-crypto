@@ -13,25 +13,23 @@ import (
 func Test_DeriveAffine(t *testing.T) {
 	t.Parallel()
 
-	curve := pallas.New()
+	curve := pallas.NewCurve()
 	aNat, err := new(saferith.Nat).SetHex(strings.ToUpper("00"))
 	require.NoError(t, err)
-	a, err := new(pallas.FieldElement).SetNat(aNat)
-	require.NoError(t, err)
+	a := new(pallas.BaseFieldElement).SetNat(aNat)
 	bNat, err := new(saferith.Nat).SetHex(strings.ToUpper("05"))
 	require.NoError(t, err)
-	b, err := new(pallas.FieldElement).SetNat(bNat)
-	require.NoError(t, err)
+	b := new(pallas.BaseFieldElement).SetNat(bNat)
 
-	x := new(pallas.FieldElement).New(0xCafeBabe)
-	y, ok := (x.Mul(x).Mul(x).Add(x.Mul(a)).Add(b)).Sqrt()
-	require.True(t, ok)
+	x := pallas.NewBaseFieldElement(0xCafeBabe)
+	y, err := (x.Mul(x).Mul(x).Add(x.Mul(a)).Add(b)).Sqrt()
+	require.NoError(t, err)
 
 	pEven, pOdd, err := curve.DeriveFromAffineX(x)
 	require.NoError(t, err)
 
-	require.Zero(t, pEven.Y().Cmp(y))
-	require.True(t, pEven.Y().IsEven())
-	require.Zero(t, pOdd.Y().Cmp(y.Neg()))
-	require.True(t, pOdd.Y().IsOdd())
+	require.Zero(t, pEven.AffineY().Cmp(y))
+	require.True(t, pEven.AffineY().IsEven())
+	require.Zero(t, pOdd.AffineY().Cmp(y.Neg()))
+	require.True(t, pOdd.AffineY().IsOdd())
 }

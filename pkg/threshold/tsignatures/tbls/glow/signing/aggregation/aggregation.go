@@ -53,7 +53,7 @@ func validateInputs(uniqueSessionId []byte, publicKeyShares *glow.PublicKeyShare
 	return nil
 }
 
-func (a *Aggregator) Aggregate(partialSignatures map[types.IdentityHash]*glow.PartialSignature, message []byte) (*bls.Signature[bls.G2], error) {
+func (a *Aggregator) Aggregate(partialSignatures map[types.IdentityHash]*glow.PartialSignature, message []byte) (*bls.Signature[bls12381.G2], error) {
 	presentParticipantsToSharingId := make(map[types.IdentityHash]int, len(partialSignatures))
 	sharingIds := make([]int, len(partialSignatures))
 	i := 0
@@ -73,7 +73,7 @@ func (a *Aggregator) Aggregate(partialSignatures map[types.IdentityHash]*glow.Pa
 	}
 
 	sigma := bls12381.NewG2().Identity()
-	Hm, err := bls12381.New().PointG2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "couldn't hash message")
 	}

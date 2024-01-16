@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), []byte("secret"), int64(0))
@@ -24,7 +24,7 @@ func Fuzz_Test(f *testing.F) {
 
 		scheme, err := feldman.NewDealer(3, 5, curve)
 		require.NoError(t, err)
-		secret, err := curve.Scalar().Hash(secretBytes)
+		secret, err := curve.ScalarField().Hash(secretBytes)
 		require.NoError(t, err)
 		commitments, shares, err := scheme.Split(secret, prng)
 		require.Nil(t, err)

@@ -958,6 +958,7 @@ issues:
     # too much work for now
     - path: curves/
       linters:
+        - errcheck
         - gocritic
         - forbidigo
         - forcetypeassert
@@ -965,6 +966,19 @@ issues:
         - nakedret
         # TODO: ENABLE THIS
         - wrapcheck
+
+    - path: signatures/bls/
+      linters:
+        # so many castings to pairing point would then need redundant checks.
+        # fix when we move to actual algebraic interfaces
+        - errcheck
+        - forcetypeassert
+
+    # linter thinks value is unused if we type cast the interface and panic if not ok
+    - path: curves/
+      text: "SA4006"
+      linters:
+        staticcheck
 
     # contents of impl are not supposed to be used by outside libraries, its constants
     - path: impl/

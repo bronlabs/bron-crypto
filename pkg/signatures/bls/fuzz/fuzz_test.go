@@ -13,8 +13,8 @@ import (
 )
 
 type (
-	G1 = *bls12381.PointG1
-	G2 = *bls12381.PointG2
+	G1 = bls12381.G1
+	G2 = bls12381.G2
 )
 
 var schemes = []bls.RogueKeyPrevention{
@@ -59,7 +59,7 @@ func Fuzz_Test_Verify(f *testing.F) {
 		if scheme == bls.POP {
 			require.NotNil(t, pop)
 			require.False(t, pop.Value.IsIdentity())
-			require.True(t, pop.Value.IsTorsionFree())
+			require.True(t, pop.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
 			err = bls.PopVerify(privateKey.PublicKey, pop)
 			require.NoError(t, err)
 		} else {
@@ -67,7 +67,7 @@ func Fuzz_Test_Verify(f *testing.F) {
 		}
 		require.NotNil(t, signature)
 		require.False(t, signature.Value.IsIdentity())
-		require.True(t, signature.Value.IsTorsionFree())
+		require.True(t, signature.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
 
 		err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme, tag)
 		require.NoError(t, err)
@@ -90,7 +90,7 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 		for i := 0; i < int(boundedBatchSize); i++ {
 			m := message
 			if boundedScheme == bls.Basic {
-				p, err := bls12381.NewG1().Point().Random(crand.Reader)
+				p, err := bls12381.NewG2().Random(crand.Reader)
 				require.NoError(t, err)
 				m = p.ToAffineCompressed()
 			}
@@ -117,7 +117,7 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 		require.NoError(t, err)
 		require.NotNil(t, sigAg)
 		require.False(t, sigAg.Value.IsIdentity())
-		require.True(t, sigAg.Value.IsTorsionFree())
+		require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
 
 		if boundedScheme != bls.POP {
 			pops = nil

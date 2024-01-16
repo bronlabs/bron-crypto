@@ -24,12 +24,12 @@ func Test_HappyPathArt(t *testing.T) {
 		curve curves.Curve
 		n     int
 	}{
-		{k256.New(), 6},
-		{p256.New(), 11},
-		{pallas.New(), 3},
-		{edwards25519.New(), 5},
-		{bls12381.NewG1(), 7},
-		{bls12381.NewG1(), 10},
+		{k256.NewCurve(), 6},
+		{p256.NewCurve(), 11},
+		{pallas.NewCurve(), 3},
+		{edwards25519.NewCurve(), 5},
+		{bls12381.NewG2(), 7},
+		{bls12381.NewG2(), 10},
 	}
 
 	for _, testCase := range testCases {
@@ -45,9 +45,9 @@ func Test_HappyPathArt(t *testing.T) {
 			publicEphemeralKeys := make([]curves.Point, n)
 
 			for i := 0; i < n; i++ {
-				secretIdentityKeys[i], err = curve.Scalar().Random(crand.Reader)
+				secretIdentityKeys[i], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
-				secretEphemeralKeys[i], err = curve.Scalar().Random(crand.Reader)
+				secretEphemeralKeys[i], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 				publicIdentityKeys[i] = curve.ScalarBaseMult(secretIdentityKeys[i])
 				publicEphemeralKeys[i] = curve.ScalarBaseMult(secretEphemeralKeys[i])
@@ -86,7 +86,7 @@ func Test_HappyPathArt(t *testing.T) {
 func Test_ArtFailOnInvalidSetupMessage(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	n := 3
 	var err error
 
@@ -96,9 +96,9 @@ func Test_ArtFailOnInvalidSetupMessage(t *testing.T) {
 	publicEphemeralKeys := make([]curves.Point, n)
 
 	for i := 0; i < n; i++ {
-		secretIdentityKeys[i], err = curve.Scalar().Random(crand.Reader)
+		secretIdentityKeys[i], err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		secretEphemeralKeys[i], err = curve.Scalar().Random(crand.Reader)
+		secretEphemeralKeys[i], err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		publicIdentityKeys[i] = curve.ScalarBaseMult(secretIdentityKeys[i])
 		publicEphemeralKeys[i] = curve.ScalarBaseMult(secretEphemeralKeys[i])
@@ -121,7 +121,7 @@ func Test_ArtFailOnInvalidSetupMessage(t *testing.T) {
 
 	// let's do something sketchy here
 	// change the public key to some random and expect errors from every node
-	allPublicKeys[0], err = curve.Point().Random(crand.Reader)
+	allPublicKeys[0], err = curve.Random(crand.Reader)
 	require.NoError(t, err)
 
 	for _, member := range members {
@@ -138,12 +138,12 @@ func Test_HappyPathArtRatchet(t *testing.T) {
 		curve curves.Curve
 		n     int
 	}{
-		{k256.New(), 11},
-		{p256.New(), 3},
-		{pallas.New(), 41},
-		{edwards25519.New(), 17},
-		{bls12381.NewG1(), 3},
-		{bls12381.NewG1(), 40},
+		{k256.NewCurve(), 11},
+		{p256.NewCurve(), 3},
+		{pallas.NewCurve(), 41},
+		{edwards25519.NewCurve(), 17},
+		{bls12381.NewG2(), 3},
+		{bls12381.NewG2(), 40},
 	}
 
 	for _, testCase := range testCases {
@@ -159,9 +159,9 @@ func Test_HappyPathArtRatchet(t *testing.T) {
 			publicEphemeralKeys := make([]curves.Point, n)
 
 			for i := 0; i < n; i++ {
-				secretIdentityKeys[i], err = curve.Scalar().Random(crand.Reader)
+				secretIdentityKeys[i], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
-				secretEphemeralKeys[i], err = curve.Scalar().Random(crand.Reader)
+				secretEphemeralKeys[i], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 				publicIdentityKeys[i] = curve.ScalarBaseMult(secretIdentityKeys[i])
 				publicEphemeralKeys[i] = curve.ScalarBaseMult(secretEphemeralKeys[i])
@@ -195,7 +195,7 @@ func Test_HappyPathArtRatchet(t *testing.T) {
 			}
 
 			ratchetingMember := n / 2 // because why not
-			newPrivateKey, err := curve.Scalar().Random(crand.Reader)
+			newPrivateKey, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			newPublicKeys, err := members[ratchetingMember].UpdateKey(newPrivateKey)
 			require.NoError(t, err)

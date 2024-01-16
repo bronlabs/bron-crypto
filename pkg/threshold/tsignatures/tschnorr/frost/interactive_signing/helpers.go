@@ -3,18 +3,19 @@ package interactive_signing
 import (
 	"sort"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
 )
-
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 func ProducePartialSignature(
 	participant frost.Participant,
@@ -29,8 +30,8 @@ func ProducePartialSignature(
 ) (*frost.PartialSignature, error) {
 	cohortConfig := participant.GetCohortConfig()
 	mySharingId := participant.GetSharingId()
-	R := cohortConfig.CipherSuite.Curve.Point().Identity()
-	r_i := cohortConfig.CipherSuite.Curve.Scalar().Zero()
+	R := cohortConfig.CipherSuite.Curve.Identity()
+	r_i := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 
 	// we need to consistently order the Ds and Es
 	combinedDsAndEs := []byte{}
@@ -44,9 +45,13 @@ func ProducePartialSignature(
 	R_js := map[types.IdentityHash]curves.Point{}
 	for _, participant := range sessionParticipants.Iter() {
 		sharingId := identityKeyToSharingId[participant.Hash()]
-		r_j, err := cohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(sharingId)}, message, combinedDsAndEs)
+		rjMessage, err := hashing.HashChain(sha3.New256, []byte{byte(sharingId)}, message, combinedDsAndEs)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not hash to r_j")
+			return nil, errs.WrapHashingFailed(err, "couldn't produce rj message")
+		}
+		r_j, err := cohortConfig.CipherSuite.Curve.ScalarField().Hash(rjMessage)
+		if err != nil {
+			return nil, errs.WrapHashingFailed(err, "could not hash to r_j")
 		}
 		if sharingId == mySharingId {
 			r_i = r_j
@@ -70,6 +75,8 @@ func ProducePartialSignature(
 	if r_i.IsZero() {
 		return nil, errs.NewMissing("could not find r_i")
 	}
+
+	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(cohortConfig.CipherSuite.Curve)
 
 	c, err := fiatShamir.GenerateChallenge(
 		cohortConfig.CipherSuite,

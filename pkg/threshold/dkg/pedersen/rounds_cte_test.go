@@ -25,7 +25,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	}
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha3.New256,
 	}
 
@@ -55,7 +55,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	}
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha3.New256,
 	}
 

@@ -27,7 +27,7 @@ import (
 func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	hashFunc := sha512.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -82,7 +82,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 func Test_SignNonInteractiveThresholdBIP340(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	hashFunc := hashing_bip340.NewBip340HashChallenge
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

@@ -93,7 +93,7 @@ func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
@@ -107,7 +107,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestTwoSeparateExecutions(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
@@ -123,7 +123,7 @@ func TestTwoSeparateExecutions(t *testing.T) {
 
 func TestWithAttackerInput(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n

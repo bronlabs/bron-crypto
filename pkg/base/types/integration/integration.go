@@ -168,7 +168,7 @@ func (l ByPublicKey) Len() int {
 }
 
 func (l ByPublicKey) Less(i, j int) bool {
-	switch l[i].PublicKey().CurveName() {
+	switch l[i].PublicKey().Curve().Name() {
 	case edwards25519.Name:
 		iKey := binary.LittleEndian.Uint64(l[i].PublicKey().ToAffineCompressed())
 		jKey := binary.LittleEndian.Uint64(l[j].PublicKey().ToAffineCompressed())

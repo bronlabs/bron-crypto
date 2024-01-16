@@ -22,7 +22,7 @@ func benchmarkCombineHelper(b *testing.B, threshold, n int) error {
 	sid := []byte("sessionId")
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: bls12381.NewG1(),
+		Curve: bls12381.NewG2(),
 		Hash:  hashFunc,
 	}
 

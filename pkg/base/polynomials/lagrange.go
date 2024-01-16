@@ -10,8 +10,8 @@ func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves
 	if i < 0 || i > len(xs) {
 		return nil, errs.NewInvalidArgument("i is out of range")
 	}
-	numerator := curve.Scalar().One()
-	denominator := curve.Scalar().One()
+	numerator := curve.ScalarField().One()
+	denominator := curve.ScalarField().One()
 	for j, xj := range xs {
 		if j == i {
 			continue
@@ -39,7 +39,7 @@ func LagrangeBasis(curve curves.Curve, xs []curves.Scalar, x curves.Scalar) (map
 }
 
 func Interpolate(curve curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result := curve.Scalar().Zero()
+	result := curve.ScalarField().Zero()
 	ls, err := LagrangeBasis(curve, xs, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive all basis polynomials")

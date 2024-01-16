@@ -1,6 +1,7 @@
 package glow
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
@@ -15,8 +16,8 @@ type Participant interface {
 	IsSignatureAggregator() bool
 }
 
-type KeySubGroup = bls.G1
-type SignatureSubGroup = bls.G2
+type KeySubGroup = bls12381.G1
+type SignatureSubGroup = bls12381.G2
 
 type SigningKeyShare = boldyreva02.SigningKeyShare[KeySubGroup]
 type PublicKeyShares = boldyreva02.PublicKeyShares[KeySubGroup]

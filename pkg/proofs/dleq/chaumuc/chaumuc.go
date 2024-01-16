@@ -71,7 +71,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 		return nil, nil, errs.NewIsNil("main arguments can't be nil")
 	}
 
-	curve := x.Curve()
+	curve := x.ScalarField().Curve()
 
 	P1 := H1.Mul(x)
 	P2 := H2.Mul(x)
@@ -81,7 +81,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 	A2 := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i], err = curve.Scalar().Random(p.prng)
+		a[i], err = curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 		}
@@ -104,7 +104,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
-			e_i, err := curve.Scalar().Hash(e_i_bytes[:])
+			e_i, err := curve.ScalarField().Hash(e_i_bytes[:])
 			if err != nil {
 				return nil, nil, errs.WrapHashingFailed(err, "could not hash to scalar")
 			}
@@ -168,7 +168,7 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, extraCha
 		return errs.NewInvalidArgument("length of session id is 0")
 	}
 
-	if statement.H1.CurveName() != statement.H2.CurveName() {
+	if statement.H1.Curve().Name() != statement.H2.Curve().Name() {
 		return errs.NewInvalidCurve("this proof system requires both bases to be in the same group")
 	}
 
@@ -231,7 +231,7 @@ func h(A1, A2 [RBytes]curves.Point, H1, H2, P1, P2 curves.Point, i int, e, z cur
 	for j := 0; j < len(extraChellengeElements); j++ {
 		message[1+2*RBytes+8+j] = extraChellengeElements[j]
 	}
-	hashed, err := hashing.Hash(sha256.New, message...)
+	hashed, err := hashing.HashChain(sha256.New, message...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
 	}

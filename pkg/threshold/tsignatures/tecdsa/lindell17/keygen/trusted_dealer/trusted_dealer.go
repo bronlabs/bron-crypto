@@ -54,11 +54,11 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[types.Ident
 	}
 
 	// verify public key
-	fieldOrder := cohortConfig.CipherSuite.Curve.Profile().Field().Order()
+	fieldOrder := cohortConfig.CipherSuite.Curve.BaseField().Order()
 	recoveredPublicKey := cohortConfig.CipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
-	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
-		utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder),
-		utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder),
+	publicKey, err := cohortConfig.CipherSuite.Curve.NewPoint(
+		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder)),
+		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder)),
 	)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "invalid ECDSA public key")
@@ -111,7 +111,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
 	}
 
-	eCurve, err := curveutils.ToEllipticCurve(curve)
+	eCurve, err := curveutils.ToGoEllipticCurve(curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert krypton curve to go curve")
 	}
@@ -121,14 +121,10 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
 
-	privateKey, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.Profile().SubGroupOrder().BitLen()))
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert go private key bytes to a krypton scalar")
-	}
-
-	publicKey, err := cohortConfig.CipherSuite.Curve.Point().Set(
-		utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
-		utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()),
+	privateKey := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.SubGroupOrder().BitLen()))
+	publicKey, err := cohortConfig.CipherSuite.Curve.NewPoint(
+		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.SubGroupOrder())),
+		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.SubGroupOrder())),
 	)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a krypton point")

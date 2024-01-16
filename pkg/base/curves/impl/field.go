@@ -90,7 +90,7 @@ func (f *FieldValue) Cmp(rhs *FieldValue) int {
 }
 
 // cmpHelper returns -1 if lhs < rhs
-// -1 if lhs == rhs
+// 0 if lhs == rhs
 // 1 if lhs > rhs
 // Public only for convenience for some internal implementations.
 func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int {

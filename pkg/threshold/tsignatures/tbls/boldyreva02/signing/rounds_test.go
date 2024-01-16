@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
@@ -28,12 +29,12 @@ func TestHappyPath(t *testing.T) {
 				t.Parallel()
 				t.Run("short keys", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningRoundTrip[bls.G1, bls.G2](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.SigningRoundTrip[bls12381.G1, bls12381.G2](boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 				t.Run("short signatures", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningRoundTrip[bls.G2, bls.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.SigningRoundTrip[bls12381.G2, bls12381.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 			})

@@ -20,7 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test(f *testing.F) {
@@ -37,9 +37,9 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 		nativePublicKey := &nativePrivateKey.PublicKey
 
-		publicKey, err := curve.Point().Set(
-			new(saferith.Nat).SetBig(nativePublicKey.X, curve.Profile().Field().Order().BitLen()),
-			new(saferith.Nat).SetBig(nativePublicKey.Y, curve.Profile().Field().Order().BitLen()),
+		publicKey, err := curve.NewPoint(
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetBig(nativePublicKey.X, curve.BaseField().Order().BitLen())),
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetBig(nativePublicKey.Y, curve.BaseField().Order().BitLen())),
 		)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -52,11 +52,8 @@ func Fuzz_Test(f *testing.F) {
 		nativeR, nativeS, err := nativeEcdsa.Sign(crand.Reader, nativePrivateKey, messageHash)
 		require.NoError(t, err)
 
-		r, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeR, curve.Profile().SubGroupOrder().BitLen()))
-		require.NoError(t, err)
-
-		s, err := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeS, curve.Profile().SubGroupOrder().BitLen()))
-		require.NoError(t, err)
+		r := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeR, curve.SubGroupOrder().BitLen()))
+		s := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeS, curve.SubGroupOrder().BitLen()))
 		verified := false
 		for v := 0; v < 4; v++ {
 			if verified == false {

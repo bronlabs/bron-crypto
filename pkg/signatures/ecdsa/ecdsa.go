@@ -63,17 +63,17 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 
 	//nolint:gocritic // below is not a switch
 	if p, ok := bigR.(*k256.Point); ok {
-		rx = p.X().Nat()
-		ry = p.Y().Nat()
+		rx = p.AffineX().Nat()
+		ry = p.AffineY().Nat()
 	} else if p, ok := bigR.(*p256.Point); ok {
-		rx = p.X().Nat()
-		ry = p.Y().Nat()
+		rx = p.AffineX().Nat()
+		ry = p.AffineY().Nat()
 	} else {
-		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.CurveName())
+		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.Curve().Name())
 	}
 
 	curve := bigR.Curve()
-	subGroupOrder := curve.Profile().SubGroupOrder()
+	subGroupOrder := curve.SubGroupOrder()
 
 	var recoveryId int
 	if ry.Byte(0)&0b1 == 0 {
@@ -96,13 +96,13 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.NewIsNil("no recovery id")
 	}
 
-	curve := signature.R.Curve()
+	curve := signature.R.ScalarField().Curve()
 	// Calculate point R = (x1, x2) where
 	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx := signature.R.Nat()
 	if (*signature.V & 2) != 0 {
-		rx = new(saferith.Nat).Add(rx, curve.Profile().SubGroupOrder().Nat(), curve.Profile().Field().Order().BitLen())
+		rx = new(saferith.Nat).Add(rx, curve.SubGroupOrder().Nat(), curve.BaseField().Order().BitLen())
 	}
 	rxBytes := rx.Bytes()
 	if len(rxBytes) < 32 {
@@ -134,10 +134,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
-	rInv, err := signature.R.Invert()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot calculate inverse of R.x")
-	}
+	rInv := signature.R.MultiplicativeInverse()
 	publicKey := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
 
 	return publicKey, nil
@@ -147,9 +144,6 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	curve := publicKey.Curve()
 	if curve.Name() != k256.Name && curve.Name() != p256.Name {
 		return errs.NewFailed("curve is not supported")
-	}
-	if !publicKey.IsOnCurve() {
-		return errs.NewVerificationFailed("public key is not on curve")
 	}
 	if publicKey.IsIdentity() {
 		return errs.NewIsIdentity("public key is identity")
@@ -169,14 +163,14 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		return errs.WrapFailed(err, "could not produce message digest")
 	}
 
-	nativeCurve, err := curveutils.ToEllipticCurve(curve)
+	nativeCurve, err := curveutils.ToGoEllipticCurve(curve)
 	if err != nil {
 		return errs.WrapInvalidCurve(err, "krypton curve cannot be converted to Go's elliptic curve representation")
 	}
 
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
-		X:     publicKey.X().Nat().Big(), Y: publicKey.Y().Nat().Big(),
+		X:     publicKey.AffineX().Nat().Big(), Y: publicKey.AffineY().Nat().Big(),
 	}
 	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.Nat().Big(), signature.S.Nat().Big()); !ok {
 		return errs.NewVerificationFailed("signature verification failed")
@@ -185,7 +179,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 }
 
 func HashToInt(digest []byte, curve curves.Curve) (*saferith.Nat, error) {
-	orderBytes := len(curve.Profile().SubGroupOrder().Bytes())
+	orderBytes := len(curve.SubGroupOrder().Bytes())
 	if len(digest) > orderBytes {
 		digest = digest[:orderBytes]
 	}
@@ -193,7 +187,7 @@ func HashToInt(digest []byte, curve curves.Curve) (*saferith.Nat, error) {
 	ret := new(saferith.Nat).SetBytes(digest)
 	excess := (len(digest) - orderBytes) * 8
 	if excess > 0 {
-		ret.Rsh(ret, uint(excess), curve.Profile().SubGroupOrder().BitLen())
+		ret.Rsh(ret, uint(excess), curve.SubGroupOrder().BitLen())
 	}
 	return ret, nil
 }

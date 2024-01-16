@@ -17,14 +17,14 @@ import (
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	cipherSuite := &integration.CipherSuite{Curve: curve, Hash: sha3.New256}
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
 	var sharedSeed przs.Seed
-	hashed, err := hashing.Hash(sha3.New256, []byte("pepsi > coke"))
+	hashed, err := hashing.HashChain(sha3.New256, []byte("pepsi > coke"))
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 

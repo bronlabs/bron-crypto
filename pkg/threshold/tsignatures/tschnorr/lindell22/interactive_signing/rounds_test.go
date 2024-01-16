@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
@@ -26,7 +27,7 @@ func Test_SanityCheck(t *testing.T) {
 	t.Parallel()
 
 	hashFunc := sha512.New
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	suite := &integration.CipherSuite{
 		Curve: curve,
 		Hash:  hashFunc,
@@ -35,7 +36,7 @@ func Test_SanityCheck(t *testing.T) {
 
 	message := []byte("Hello World!")
 
-	eddsaPrivateKey, err := curve.Scalar().Random(prng)
+	eddsaPrivateKey, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
 	dHashed, err := hashing.Hash(hashFunc, eddsaPrivateKey.Bytes())
 	require.NoError(t, err)
@@ -45,20 +46,20 @@ func Test_SanityCheck(t *testing.T) {
 	require.NoError(t, err)
 	publicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
-	nonce, err := curve.Scalar().Random(prng)
+	nonce, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
 	bigR := curve.ScalarBaseMult(nonce)
 
 	eBytes, err := hashing.Hash(hashFunc, bigR.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 	require.NoError(t, err)
 
-	e, err := curve.Scalar().SetBytesWide(eBytes)
+	e, err := curve.Scalar().SetBytesWide(bitstring.ReverseBytes(eBytes)) // SetBytesWide expects big endian across all curves and it internally reverses it.
 	require.NoError(t, err)
 
 	bigS := nonce.Add(e.Mul(schnorrPrivateKey))
 
 	// verify native
-	nativeSignature := append(bigR.ToAffineCompressed()[:], bigS.Bytes()...)
+	nativeSignature := append(bigR.ToAffineCompressed()[:], bitstring.ReverseBytes(bigS.Bytes())...)
 	ok := nativeEddsa.Verify(publicKey.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 
@@ -79,7 +80,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
 	hashFunc := sha512.New
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	prng := crand.Reader
 	message := []byte("Hello World!")
 	th := 2
@@ -122,7 +123,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	t.Parallel()
 
 	hashFunc := hashing_bip340.NewBip340HashChallenge
-	curve := k256.New()
+	curve := k256.NewCurve()
 	prng := crand.Reader
 	message := []byte("Hello World!")
 	th := 2

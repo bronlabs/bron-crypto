@@ -80,25 +80,18 @@ func testHappyPath(t *testing.T, threshold, n int) {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, inG1 := range []bool{true, false} {
-		for _, thresholdConfig := range []struct {
-			t int
-			n int
-		}{
-			{t: 2, n: 2},
-			{t: 2, n: 3},
-			{t: 3, n: 3},
-		} {
-			boundedInG1 := inG1
-			boundedThresholdConfig := thresholdConfig
-			t.Run(fmt.Sprintf("Happy path with inG1=%t and t=%d and n=%d", boundedInG1, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-				t.Parallel()
-				if boundedInG1 {
-					testHappyPath(t, boundedThresholdConfig.t, boundedThresholdConfig.n)
-				} else {
-					testHappyPath(t, boundedThresholdConfig.t, boundedThresholdConfig.n)
-				}
-			})
-		}
+	for _, thresholdConfig := range []struct {
+		t int
+		n int
+	}{
+		{t: 2, n: 2},
+		{t: 2, n: 3},
+		{t: 3, n: 3},
+	} {
+		boundedThresholdConfig := thresholdConfig
+		t.Run(fmt.Sprintf("Happy path with inG1=%t and t=%d and n=%d", true, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+			t.Parallel()
+			testHappyPath(t, boundedThresholdConfig.t, boundedThresholdConfig.n)
+		})
 	}
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test(f *testing.F) {
@@ -37,9 +37,9 @@ func Fuzz_Test(f *testing.F) {
 			Curve: curve,
 			Hash:  h,
 		}
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		set := hashset.NewHashSet(identities)
 		th = th % uint8(set.Len())

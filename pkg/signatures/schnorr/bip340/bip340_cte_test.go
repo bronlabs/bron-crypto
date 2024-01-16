@@ -23,10 +23,10 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 	aux := make([]byte, 32)
 	_, _ = crand.Read(aux)
 	message := make([]byte, 32)
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	internal.RunMeasurement(500, "bip340_signing", func(i int) {
-		sk, err := curve.Scalar().Random(crand.Reader)
+		sk, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		privateKey, err := bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
@@ -51,10 +51,10 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	aux := make([]byte, 32)
 	_, _ = crand.Read(aux)
 	message := make([]byte, 32)
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	internal.RunMeasurement(500, "bip340_verify", func(i int) {
-		sk, err = curve.Scalar().Random(crand.Reader)
+		sk, err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
@@ -80,10 +80,10 @@ func Test_MeasureConstantTime_batchverify(t *testing.T) {
 	aux := make([]byte, 32)
 	_, _ = crand.Read(aux)
 	message := make([]byte, 32)
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	internal.RunMeasurement(500, "bip340_batchverify", func(i int) {
-		sk, err = curve.Scalar().Random(crand.Reader)
+		sk, err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)

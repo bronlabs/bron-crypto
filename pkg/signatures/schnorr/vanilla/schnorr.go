@@ -7,15 +7,14 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 )
-
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 type PublicKey struct {
 	A curves.Point
@@ -38,7 +37,10 @@ type Signature struct {
 }
 
 func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := bytes.Join([][]byte{s.R.ToAffineCompressed(), s.S.Bytes()}, nil)
+	serializedSignature := bytes.Join([][]byte{
+		s.R.ToAffineCompressed(),
+		bitstring.ReverseBytes(s.S.Bytes()),
+	}, nil)
 	return serializedSignature, nil
 }
 
@@ -60,7 +62,7 @@ func NewKeys(scalar curves.Scalar) (*PublicKey, *PrivateKey, error) {
 	privateKey := &PrivateKey{
 		S: scalar,
 		PublicKey: PublicKey{
-			A: scalar.Curve().ScalarBaseMult(scalar),
+			A: scalar.ScalarField().Curve().ScalarBaseMult(scalar),
 		},
 	}
 
@@ -75,7 +77,7 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
 
-	scalar, err := curve.Scalar().Random(prng)
+	scalar, err := curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
@@ -90,8 +92,8 @@ func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer,
 	if err := suite.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid cipher suite")
 	}
-	if privateKey == nil || privateKey.S == nil || privateKey.S.CurveName() != suite.Curve.Name() ||
-		privateKey.A == nil || privateKey.A.CurveName() != suite.Curve.Name() ||
+	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve.Name() ||
+		privateKey.A == nil || privateKey.A.Curve().Name() != suite.Curve.Name() ||
 		!suite.Curve.ScalarBaseMult(privateKey.S).Equal(privateKey.A) {
 
 		return nil, errs.NewInvalidArgument("invalid private key")
@@ -104,13 +106,14 @@ func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer,
 }
 
 func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
-	k, err := signer.suite.Curve.Scalar().Random(prng)
+	k, err := signer.suite.Curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
 	R := signer.suite.Curve.ScalarBaseMult(k)
 	a := signer.suite.Curve.ScalarBaseMult(signer.privateKey.S)
 
+	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(signer.suite.Curve)
 	e, err := fiatShamir.GenerateChallenge(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
@@ -127,11 +130,11 @@ func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte
 	if err := suite.Validate(); err != nil {
 		return errs.WrapInvalidArgument(err, "invalid cipher suite")
 	}
-	if publicKey == nil || !publicKey.A.IsOnCurve() || publicKey.A.IsIdentity() || publicKey.A.CurveName() != suite.Curve.Name() {
+	if publicKey == nil || publicKey.A.IsIdentity() || publicKey.A.Curve().Name() != suite.Curve.Name() {
 		return errs.NewInvalidArgument("invalid signature")
 	}
-	if signature == nil || signature.R == nil || !signature.R.IsOnCurve() || signature.R.CurveName() != suite.Curve.Name() ||
-		signature.S == nil || signature.S.CurveName() != suite.Curve.Name() {
+	if signature == nil || signature.R == nil || signature.R.Curve().Name() != suite.Curve.Name() ||
+		signature.S == nil || signature.S.ScalarField().Name() != suite.Curve.Name() {
 
 		return errs.NewInvalidArgument("invalid signature")
 	}
@@ -160,12 +163,14 @@ func IsEd25519Compliant(suite *integration.CipherSuite) bool {
 }
 
 func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
+	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(suite.Curve)
 	e, err := fiatShamir.GenerateChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
 
-	cofactor := suite.Curve.Profile().Cofactor()
+	cofactorNat := suite.Curve.Cofactor()
+	cofactor := suite.Curve.ScalarField().Element().SetNat(cofactorNat)
 	left := suite.Curve.ScalarBaseMult(signature.S.Mul(cofactor))
 	right := signature.R.Mul(cofactor).Add(publicKey.A.Mul(e.Mul(cofactor)))
 	if !left.Equal(right) {

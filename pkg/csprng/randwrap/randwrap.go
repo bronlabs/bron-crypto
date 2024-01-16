@@ -133,7 +133,7 @@ func bindDevice(prng io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not json marshal device profile")
 	}
-	info, err := hashing.Hash(sha3.New256, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
+	info, err := hashing.HashChain(sha3.New256, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not hash device info")
 	}

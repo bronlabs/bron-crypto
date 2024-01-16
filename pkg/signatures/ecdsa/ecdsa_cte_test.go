@@ -23,7 +23,7 @@ func Test_MeasureConstantTime_ecdsa(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 	nativeCurve := elliptic.P256()
-	curve := p256.New()
+	curve := p256.NewCurve()
 
 	hashFunc := sha256.New
 	message := []byte("Hello")
@@ -38,20 +38,17 @@ func Test_MeasureConstantTime_ecdsa(t *testing.T) {
 		require.NoError(t, err)
 		nativePublicKey := &nativePrivateKey.PublicKey
 
-		publicKey, err = curve.Point().Set(
-			new(saferith.Nat).SetBig(nativePublicKey.X, curve.Profile().Field().Order().BitLen()),
-			new(saferith.Nat).SetBig(nativePublicKey.Y, curve.Profile().Field().Order().BitLen()),
+		publicKey, err = curve.NewPoint(
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetBig(nativePublicKey.X, curve.BaseField().Order().BitLen())),
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetBig(nativePublicKey.Y, curve.BaseField().Order().BitLen())),
 		)
 		require.NoError(t, err)
 
 		nativeR, nativeS, err := nativeEcdsa.Sign(crand.Reader, nativePrivateKey, messageHash)
 		require.NoError(t, err)
 
-		r, err = curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeR, curve.Profile().SubGroupOrder().BitLen()))
-		require.NoError(t, err)
-
-		s, err = curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeS, curve.Profile().SubGroupOrder().BitLen()))
-		require.NoError(t, err)
+		r = curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeR, curve.SubGroupOrder().BitLen()))
+		s = curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeS, curve.SubGroupOrder().BitLen()))
 	}, func() {
 		for v := 0; v < 4; v++ {
 			ecdsa.Verify(&ecdsa.Signature{V: &v, R: r, S: s}, hashFunc, publicKey, message)

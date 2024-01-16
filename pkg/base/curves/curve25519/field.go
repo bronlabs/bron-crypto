@@ -2,206 +2,231 @@ package curve25519
 
 import (
 	"io"
+	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
-type FieldProfile struct{}
+var (
+	curve25519BaseFieldInitOnce sync.Once
+	curve25519BaseFieldInstance BaseField
+)
 
-func (*FieldProfile) Curve() curves.Curve {
-	return &curve25519Instance
-}
-
-func (*FieldProfile) Order() *saferith.Modulus {
-	return baseFieldOrder
-}
-
-func (*FieldProfile) Characteristic() *saferith.Nat {
-	return baseFieldOrder.Nat()
-}
-
-func (*FieldProfile) ExtensionDegree() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(1)
-}
-
-func (*FieldProfile) FieldBytes() int {
-	return base.FieldBytes
-}
-
-func (*FieldProfile) WideFieldBytes() int {
-	return base.WideFieldBytes
-}
-
-var _ curves.FieldElement = (*FieldElement)(nil)
-
-type FieldElement struct {
-	v [base.FieldBytes]byte
-
+type BaseField struct {
 	_ types.Incomparable
 }
 
-func (*FieldElement) Profile() curves.FieldProfile {
-	return &FieldProfile{}
+func curve25519BaseFieldInit() {
+	curve25519BaseFieldInstance = BaseField{}
 }
 
-func (*FieldElement) Hash(x []byte) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
+func NewBaseField() *BaseField {
+	curve25519BaseFieldInitOnce.Do(curve25519BaseFieldInit)
+	return &curve25519BaseFieldInstance
 }
 
-func (*FieldElement) Value() curves.FieldValue {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Curve() curves.Curve {
+	return NewCurve()
 }
 
-func (*FieldElement) Modulus() *saferith.Modulus {
-	// TODO implement me
-	panic("implement me")
+// === Basic Methods.
+
+func (*BaseField) Name() string {
+	return Name
 }
 
-func (e *FieldElement) Clone() curves.FieldElement {
-	return &FieldElement{
-		v: e.v,
+func (*BaseField) Order() *saferith.Modulus {
+	return baseFieldOrder
+}
+
+func (f *BaseField) Element() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
+}
+
+func (*BaseField) Operators() []algebra.Operator {
+	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
+}
+
+func (f *BaseField) OperateOver(operator algebra.Operator, xs ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	var current curves.BaseFieldElement
+	switch operator {
+	case algebra.Addition:
+		current = f.AdditiveIdentity()
+		for _, x := range xs {
+			current = current.Add(x)
+		}
+	case algebra.Multiplication:
+		current = f.MultiplicativeIdentity()
+		for _, x := range xs {
+			current = current.Mul(x)
+		}
+	case algebra.PointAddition:
+		fallthrough
+	default:
+		return nil, errs.NewInvalidType("operator %v is not supported", operator)
 	}
+	return current, nil
 }
 
-func (*FieldElement) SubfieldElement(index uint64) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
+	els, err := NewCurve().HashToFieldElements(1, x, nil)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not hash to field element in edwards25519")
+	}
+	return els[0], nil
 }
 
-func (*FieldElement) Cmp(rhs curves.FieldElement) int {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
+	panic("not implemented")
 }
 
-func (*FieldElement) New(value uint64) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+// === Additive Groupoid Methods.
+
+func (*BaseField) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (*FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
+// === Multiplicative Groupoid Methods.
+
+func (*BaseField) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (*FieldElement) Zero() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+// === Additive Monoid Methods.
+
+func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
+	panic("not implemented")
 }
 
-func (*FieldElement) One() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+// === Multiplicative Monoid Methods.
+
+func (*BaseField) MultiplicativeIdentity() curves.BaseFieldElement {
+	panic("not implemented")
 }
 
-func (*FieldElement) IsZero() bool {
-	// TODO implement me
-	panic("implement me")
+// === Additive Group Methods.
+
+func (*BaseField) Sub(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (*FieldElement) IsOne() bool {
-	// TODO implement me
-	panic("implement me")
+// === Multiplicative Group Methods.
+
+func (*BaseField) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (*FieldElement) IsOdd() bool {
-	return false
+// === Ring Methods.
+
+func (*BaseField) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	pp, ok := p.(*BaseFieldElement)
+	if !ok {
+		return nil, errs.NewInvalidType("given point is not from this field")
+	}
+	return pp.Sqrt()
 }
 
-func (*FieldElement) IsEven() bool {
-	// TODO implement me
-	panic("implement me")
+// === Finite Field Methods.
+
+func (f *BaseField) Characteristic() *saferith.Nat {
+	return f.Order().Nat()
 }
 
-func (*FieldElement) Square() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) ExtensionDegree() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(1)
 }
 
-func (*FieldElement) Double() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (f *BaseField) FrobeniusAutomorphism(e curves.BaseFieldElement) curves.BaseFieldElement {
+	return e.Exp(new(BaseFieldElement).SetNat(f.Characteristic()))
 }
 
-func (*FieldElement) Sqrt() (curves.FieldElement, bool) {
-	// TODO implement me
-	panic("implement me")
+func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
+	result := e
+	currentDegree := new(saferith.Nat).SetUint64(1)
+	currentTerm := result
+	for currentDegree.Eq(f.ExtensionDegree()) == 1 {
+		currentTerm = f.FrobeniusAutomorphism(currentTerm)
+		result = result.Add(currentTerm)
+		currentDegree = utils.IncrementNat(currentDegree)
+	}
+	return result
 }
 
-func (*FieldElement) Cube() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) FieldBytes() int {
+	return base.FieldBytes
 }
 
-func (*FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) WideFieldBytes() int {
+	return base.WideFieldBytes
 }
 
-func (*FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+// === Zp Methods.
+
+func (*BaseField) New(v uint64) curves.BaseFieldElement {
+	return NewBaseFieldElement(v)
 }
 
-func (*FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (f *BaseField) Zero() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
 }
 
-func (*FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (f *BaseField) One() curves.BaseFieldElement {
+	return f.MultiplicativeIdentity()
 }
 
-func (*FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+// === Ordering Methods.
+
+func (f *BaseField) Top() curves.BaseFieldElement {
+	return f.Zero().Sub(f.One())
 }
 
-func (*FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (f *BaseField) Bottom() curves.BaseFieldElement {
+	return f.Zero()
 }
 
-func (*FieldElement) Neg() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Join(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Join(y)
 }
 
-func (*FieldElement) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Meet(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Meet(y)
 }
 
-func (*FieldElement) Nat() *saferith.Nat {
-	// TODO implement me
-	panic("implement me")
+func (*BaseField) Max(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	max := x
+	for _, y := range ys {
+		max = max.Max(y)
+	}
+	return max
 }
 
-func (*FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (e *FieldElement) Bytes() []byte {
-	return e.v[:]
-}
-
-func (*FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	return nil, nil
+func (*BaseField) Min(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	min := x
+	for _, y := range ys {
+		min = min.Min(y)
+	}
+	return min
 }

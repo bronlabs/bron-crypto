@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), uint(256), []byte("sid"), []byte("test"), int64(0))

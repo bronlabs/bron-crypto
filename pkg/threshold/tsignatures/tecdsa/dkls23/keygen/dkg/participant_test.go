@@ -46,15 +46,15 @@ func (k *mockedIdentityKey) Verify(signature []byte, message []byte) error {
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := edwards25519.New()
-	alicePublicKey, err := curve.Point().Random(crand.Reader)
+	curve := edwards25519.NewCurve()
+	alicePublicKey, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
 	aliceIdentityKey := &mockedIdentityKey{
 		curve:     curve,
 		publicKey: alicePublicKey,
 	}
 
-	bobPublicKey, err := curve.Point().Random(crand.Reader)
+	bobPublicKey, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
 	bobIdentityKey := &mockedIdentityKey{
 		curve:     curve,

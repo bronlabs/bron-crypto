@@ -31,8 +31,8 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 	transcriptAppLabel := "Lindell2017NonInteractiveSignTest"
 
 	supportedCurves := []curves.Curve{
-		p256.New(),
-		k256.New(),
+		p256.NewCurve(),
+		k256.NewCurve(),
 	}
 
 	for _, c := range supportedCurves {
@@ -41,7 +41,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			t.Parallel()
 
 			cipherSuite := &integration.CipherSuite{
-				Curve: p256.New(),
+				Curve: p256.NewCurve(),
 				Hash:  sha256.New,
 			}
 

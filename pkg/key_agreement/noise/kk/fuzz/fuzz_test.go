@@ -16,7 +16,7 @@ import (
 )
 
 var allHashes = []noise.SupportedHash{noise.NOISE_HASH_SHA3256, noise.NOISE_HASH_BLAKE2S}
-var allCurves = []curves.Curve{k256.New(), edwards25519.New(), curve25519.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), edwards25519.NewCurve(), curve25519.NewCurve()}
 
 func Fuzz_KK(f *testing.F) {
 	f.Add(uint(0), uint(0), uint64(0), uint64(1), []byte("sid"), []byte("message"), []byte("handshakeMessage1"), []byte("handshakeMessage2"), int64(0))

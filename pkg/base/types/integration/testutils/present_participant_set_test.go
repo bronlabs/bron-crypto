@@ -19,12 +19,12 @@ import (
 
 func TestCheckExistIdentity(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha3.New256,
 	}
-	sk1, err := edwards25519.New().Scalar().Hash([]byte{1})
+	sk1, err := edwards25519.NewCurve().ScalarField().Hash([]byte{1})
 	require.NoError(t, err)
-	sk2, err := edwards25519.New().Scalar().Hash([]byte{2})
+	sk2, err := edwards25519.NewCurve().ScalarField().Hash([]byte{2})
 	require.NoError(t, err)
 	identityAlice, err := MakeTestIdentity(cipherSuite, sk1)
 	require.NoError(t, err)

@@ -15,7 +15,7 @@ import (
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	cipherSuite := &integration.CipherSuite{Curve: curve, Hash: sha3.New256}
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)

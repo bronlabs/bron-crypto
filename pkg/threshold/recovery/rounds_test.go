@@ -79,7 +79,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{k256.New()} {
+	for _, curve := range []curves.Curve{k256.NewCurve()} {
 		for _, thresholdConfig := range []struct {
 			t int
 			n int
@@ -100,8 +100,8 @@ func Test_HappyPath(t *testing.T) {
 
 func TestSanity(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
-	secret, err := curve.Scalar().Random(crand.Reader)
+	curve := k256.NewCurve()
+	secret, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 
 	dealer, err := shamir.NewDealer(2, 3, curve)
@@ -110,13 +110,13 @@ func TestSanity(t *testing.T) {
 	require.NoError(t, err)
 
 	alice := shares[0]
-	aliceX := curve.Scalar().New(uint64(alice.Id))
+	aliceX := curve.ScalarField().New(uint64(alice.Id))
 
 	bob := shares[1]
-	bobX := curve.Scalar().New(uint64(bob.Id))
+	bobX := curve.ScalarField().New(uint64(bob.Id))
 
 	charlie := shares[2]
-	charlieX := curve.Scalar().New(uint64(charlie.Id))
+	charlieX := curve.ScalarField().New(uint64(charlie.Id))
 
 	xs := []curves.Scalar{bobX, charlieX}
 

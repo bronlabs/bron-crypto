@@ -92,7 +92,7 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	curve := bigQ.Curve()
-	q := curve.Profile().SubGroupOrder()
+	q := curve.SubGroupOrder()
 	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
 
 	rangeProofTranscript := transcript.Clone()
@@ -161,8 +161,8 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *sa
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	curve := x.Curve()
-	q := curve.Profile().SubGroupOrder()
+	curve := x.ScalarField().Curve()
+	q := curve.SubGroupOrder()
 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
 
 	rangeProofTranscript := transcript.Clone()

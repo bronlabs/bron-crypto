@@ -1011,7 +1011,7 @@ func (g1 *G1) osswu3mod4(u *Fp) {
 	// xd = tv2 + tv3
 	xd.Add(&tv2, &tv3)
 	// x1n = xd + 1
-	x1n.Add(&xd, &r)
+	x1n.Add(&xd, &R)
 	// x1n = x1n * B
 	x1n.Mul(&x1n, &osswuMapB)
 	// xd = -A * xd
@@ -1059,7 +1059,7 @@ func (g1 *G1) osswu3mod4(u *Fp) {
 func (g1 *G1) isogenyMap(a *G1) {
 	const Degree = 16
 	var xs [Degree]Fp
-	xs[0] = r
+	xs[0] = R
 	xs[1].Set(&a.X)
 	xs[2].Square(&a.X)
 	for i := 3; i < Degree; i++ {

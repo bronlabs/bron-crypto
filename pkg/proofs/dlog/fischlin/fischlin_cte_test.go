@@ -18,14 +18,14 @@ func Test_MeasureConstantTime_prove(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	sid := internal.GetBigEndianBytesWithLowestBitsSet(32, 32)
 	prover, err := fischlin.NewProver(curve.Generator(), sid[:], nil, crand.Reader)
 	require.NoError(t, err)
 
 	var secret curves.Scalar
 	internal.RunMeasurement(500, "fischlin_prove", func(i int) {
-		secret, err = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 	}, func() {
 		prover.Prove(secret)
@@ -37,7 +37,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	sid := internal.GetBigEndianBytesWithLowestBitsSet(32, 32)
 	prover, err := fischlin.NewProver(curve.Generator(), sid[:], nil, crand.Reader)
 	require.NoError(t, err)
@@ -45,11 +45,11 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	var proof *fischlin.Proof
 	var statement fischlin.Statement
 	internal.RunMeasurement(500, "fischlin_verify", func(i int) {
-		secret, err := curve.Scalar().Random(crand.Reader)
+		secret, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		proof, statement, err = prover.Prove(secret)
 		require.NoError(t, err)
 	}, func() {
-		fischlin.Verify(curve.Point().Generator(), statement, proof, sid[:])
+		fischlin.Verify(curve.Generator(), statement, proof, sid[:])
 	})
 }

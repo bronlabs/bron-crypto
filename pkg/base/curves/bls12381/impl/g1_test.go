@@ -97,7 +97,7 @@ func TestG1Double(t *testing.T) {
 			0x25cfc2b522d11720,
 			0x06361c83f8d09b15,
 		},
-		Z: r,
+		Z: R,
 	}
 
 	require.Equal(t, 1, e.Equal(t0))

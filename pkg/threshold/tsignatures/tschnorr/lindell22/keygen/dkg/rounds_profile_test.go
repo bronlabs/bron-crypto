@@ -2,14 +2,15 @@ package dkg_test
 
 import (
 	"crypto/sha512"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"golang.org/x/crypto/sha3"
 	"hash"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"golang.org/x/crypto/sha3"
 )
 
 func TestRunProfile(t *testing.T) {
@@ -30,9 +31,9 @@ func TestRunProfile(t *testing.T) {
 		n, _ = strconv.Atoi(os.Getenv("PROFILE_N"))
 	}
 	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = edwards25519.New()
+		curve = edwards25519.NewCurve()
 	} else {
-		curve = k256.New()
+		curve = k256.NewCurve()
 	}
 	if os.Getenv("PROFILE_HASH") == "SHA3" {
 		h = sha3.New256
@@ -43,4 +44,3 @@ func TestRunProfile(t *testing.T) {
 		testHappyPath(t, curve, h, th, n)
 	}
 }
-

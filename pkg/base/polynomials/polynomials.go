@@ -32,11 +32,11 @@ func NewRandomPolynomial(intercept curves.Scalar, degree int, prng io.Reader) (p
 	if degree < 1 {
 		return nil, errs.NewIncorrectCount("degree must be greater than zero")
 	}
-	p = &Polynomial{Curve: intercept.Curve()}
+	p = &Polynomial{Curve: intercept.ScalarField().Curve()}
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
 	for i := 1; i < degree; i++ {
-		p.Coefficients[i], err = intercept.Random(prng)
+		p.Coefficients[i], err = intercept.ScalarField().Random(prng)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not generate random coefficient")
 		}

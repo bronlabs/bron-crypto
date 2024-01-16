@@ -10,11 +10,12 @@ var fqModulusBytes = [base.FieldBytes]byte{0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0
 
 const (
 	// The BLS parameter x for BLS12-381 is -0xd201000000010000.
-	paramX               = uint64(0xd201000000010000)
-	Limbs                = 6
-	FieldBytes           = 48
-	WideFieldBytes       = 96
-	DoubleWideFieldBytes = 192
+	paramX            = uint64(0xd201000000010000)
+	Limbs             = 6
+	FieldBytes        = 48
+	WideFieldBytes    = 96
+	FieldBytesFp2     = FieldBytes * 2
+	WideFieldBytesFp2 = WideFieldBytes * 2
 )
 
 // mac Multiply and Accumulate - compute a + (b * c) + d, return the result and new carry.

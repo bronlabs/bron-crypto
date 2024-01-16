@@ -95,8 +95,8 @@ func (f *Fp2) Sgn0() int {
 	return t
 }
 
-// FrobeniusMap raises this element to p.
-func (f *Fp2) FrobeniusMap(a *Fp2) *Fp2 {
+// FrobeniusAutomorphism raises this element to p.
+func (f *Fp2) FrobeniusAutomorphism(a *Fp2) *Fp2 {
 	// This is always just a conjugation. If you're curious why, here's
 	// an article about it: https://alicebob.cryptoland.net/the-frobenius-endomorphism-with-finite-fields/
 	return f.Conjugate(a)

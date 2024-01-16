@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
@@ -21,8 +22,7 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	pointInK := new(K)
-	keysSubGroup := (*pointInK).Curve()
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: keysSubGroup,
@@ -88,7 +88,7 @@ func Benchmark_Basic(b *testing.B) {
 
 	b.Run("short keys", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := testutils.SigningRoundTrip[bls.G1, bls.G2](threshold, total, bls.Basic)
+			err := testutils.SigningRoundTrip[bls12381.G1, bls12381.G2](threshold, total, bls.Basic)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -97,7 +97,7 @@ func Benchmark_Basic(b *testing.B) {
 
 	b.Run("short signatures", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := testutils.SigningRoundTrip[bls.G2, bls.G1](threshold, total, bls.Basic)
+			err := testutils.SigningRoundTrip[bls12381.G2, bls12381.G1](threshold, total, bls.Basic)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -115,7 +115,7 @@ func Benchmark_Combine(b *testing.B) {
 
 	b.Run("short keys", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := benchmarkCombineHelper[bls.G1, bls.G2](b, threshold, total)
+			err := benchmarkCombineHelper[bls12381.G1, bls12381.G2](b, threshold, total)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -124,7 +124,7 @@ func Benchmark_Combine(b *testing.B) {
 
 	b.Run("short signatures", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			err := benchmarkCombineHelper[bls.G2, bls.G1](b, threshold, total)
+			err := benchmarkCombineHelper[bls12381.G2, bls12381.G1](b, threshold, total)
 			if err != nil {
 				b.Fatal(err)
 			}

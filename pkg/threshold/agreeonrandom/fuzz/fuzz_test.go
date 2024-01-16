@@ -22,7 +22,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test_rounds(f *testing.F) {
@@ -35,9 +35,9 @@ func Fuzz_Test_rounds(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		_, err := testutils.RunAgreeOnRandom(curve, allIdentities, prng)
 		if err != nil && !errs.IsKnownError(err) {
@@ -93,9 +93,9 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 			Hash:  h,
 		}
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0].(integration.AuthKey), hashset.NewHashSet(allIdentities), nil, prng)
 		if err != nil && !errs.IsKnownError(err) {

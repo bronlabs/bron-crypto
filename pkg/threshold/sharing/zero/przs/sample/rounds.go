@@ -6,9 +6,9 @@ import (
 )
 
 func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
-	zeroShare = p.Curve.Scalar().Zero()
+	zeroShare = p.Curve.ScalarField().Zero()
 	for sharingId := range p.Prngs {
-		sample, err := p.Curve.Scalar().Random(p.Prngs[sharingId])
+		sample, err := p.Curve.ScalarField().Random(p.Prngs[sharingId])
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not sample scalar")
 		}

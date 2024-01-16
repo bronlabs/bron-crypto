@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken/testutils"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test_OTe(f *testing.F) {
 	f.Add(uint(0), false, 3, 2, int64(1))

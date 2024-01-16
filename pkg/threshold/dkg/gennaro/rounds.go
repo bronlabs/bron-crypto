@@ -38,7 +38,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	a_i0, err := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	a_i0, err := p.CohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
@@ -54,7 +54,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 
 	proverTranscript := hagrid.NewTranscript(DlogProofLabel, nil)
 	proverTranscript.AppendMessages("sharing id")
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, proverTranscript.Clone(), p.prng)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Generator(), p.UniqueSessionId, proverTranscript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
@@ -178,7 +178,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 
 		transcript := hagrid.NewTranscript(DlogProofLabel, nil)
 		transcript.AppendMessages("sharing id", bitstring.ToBytesLE(senderSharingId))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
+		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")
 		}
 
@@ -186,8 +186,8 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
 		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(k))
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(p.MySharingId)).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.ScalarField().New(uint64(k))
+			iToK := p.CohortConfig.CipherSuite.Curve.ScalarField().New(uint64(p.MySharingId)).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

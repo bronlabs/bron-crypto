@@ -31,6 +31,7 @@ var fqGenerator = [impl.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f
 var fqModulusLimbs = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
 
 var fqModulusHex = strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
+var FqModulus, _ = saferith.ModulusFromHex(fqModulusHex)
 
 func FqNew() *impl.FieldValue {
 	return &impl.FieldValue{
@@ -41,14 +42,12 @@ func FqNew() *impl.FieldValue {
 }
 
 func bls12381FqParamsInit() {
-	fqModulus, _ := saferith.ModulusFromHex(fqModulusHex)
-
 	bls12381FqParams = impl.FieldParams{
 		R:            [impl.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
 		R2:           [impl.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
 		R3:           [impl.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
 		ModulusLimbs: [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
-		Modulus:      fqModulus,
+		Modulus:      FqModulus,
 	}
 }
 

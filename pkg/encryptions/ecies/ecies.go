@@ -36,12 +36,9 @@ func Encrypt(myPrivateKey *PrivateKey, receiverPublicKey PublicKey, message, AD 
 	if myPrivateKey == nil || receiverPublicKey == nil || message == nil || prng == nil {
 		return nil, nil, errs.NewIsNil("nil arguments")
 	}
+	// step 1.1: since the public key is deserialized, it's already on curve so just checking for my private key's identity.
 	if myPrivateKey.S.IsZero() {
 		return nil, nil, errs.NewIsZero("my private key is zero")
-	}
-	// step 1.1
-	if !receiverPublicKey.IsOnCurve() {
-		return nil, nil, errs.NewInvalidCoordinates("receiver public key not on curve")
 	}
 
 	// step 1.2
@@ -88,7 +85,7 @@ func EncryptEphemeral(myPrivateKey *PrivateKey, message, AD []byte, prng io.Read
 		return nil, nil, nil, errs.NewIsNil("my private key is nil")
 	}
 	for ephemeralPublicKey == nil || ephemeralPublicKey.IsIdentity() {
-		ephemeralPublicKey, err = myPrivateKey.S.Curve().Point().Random(prng)
+		ephemeralPublicKey, err = myPrivateKey.S.ScalarField().Curve().Random(prng)
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "could not generate random point")
 		}
@@ -110,12 +107,9 @@ func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, ta
 	if len(tag) != 64 {
 		return nil, errs.NewInvalidLength("authentication tag's length is not 64: it is %d", len(tag))
 	}
+	// step 2.1: since the public key is deserialized, it's already on curve so just checking for identity.
 	if myPrivateKey.S.IsZero() {
 		return nil, errs.NewIsZero("my private key is zero")
-	}
-	// step 2.1
-	if !senderPublicKey.IsOnCurve() {
-		return nil, errs.NewInvalidCoordinates("sender public key is not on curve")
 	}
 
 	// step 2.2

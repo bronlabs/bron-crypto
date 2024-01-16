@@ -65,11 +65,11 @@ func (p *Participant) Round2(round1broadcast map[types.IdentityHash]*Round1Broad
 	curve := p.GetCohortConfig().CipherSuite.Curve
 
 	// step 2.3.1
-	lostPartySharingIdScalar := curve.Scalar().New(uint64(lostPartySharingId))
+	lostPartySharingIdScalar := curve.ScalarField().New(uint64(lostPartySharingId))
 	recovererSharingIdScalar := make([]curves.Scalar, len(p.sortedPresentRecoverersList))
 	myIndex := -1
 	for i, recovererSharingId := range partiesOfAdditiveConversion[1:] { // 0th index is the lost party
-		recovererSharingIdScalar[i] = curve.Scalar().New(uint64(recovererSharingId))
+		recovererSharingIdScalar[i] = curve.ScalarField().New(uint64(recovererSharingId))
 		if p.GetSharingId() == recovererSharingId {
 			myIndex = i
 		}

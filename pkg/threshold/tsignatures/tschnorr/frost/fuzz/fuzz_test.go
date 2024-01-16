@@ -44,7 +44,7 @@ var (
 
 // we assume that input curves and hash functions are valid
 var (
-	allCurves = []curves.Curve{edwards25519.New(), k256.New(), p256.New()}
+	allCurves = []curves.Curve{edwards25519.NewCurve(), k256.NewCurve(), p256.NewCurve()}
 	allHashes = []func() hash.Hash{sha3.New256, sha512.New, sha256.New}
 )
 
@@ -274,7 +274,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&transcriptPrefixes)
 		fz.Fuzz(&transcriptSuffixes)
 		fz.Fuzz(&secretValue)
-		commitedScalar, err := curve.Scalar().Hash([]byte(secretValue))
+		commitedScalar, err := curve.ScalarField().Hash([]byte(secretValue))
 		require.NoError(t, err)
 		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, commitedScalar)
 		require.NoError(t, err)

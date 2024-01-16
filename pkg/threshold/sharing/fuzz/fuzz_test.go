@@ -17,13 +17,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test_polynomial(f *testing.F) {
 	f.Add(uint(0), []byte("test"), int64(0), 4, uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, s []byte, randomSeed int64, degree int, x uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		secret, err := curve.Scalar().Hash(s)
+		secret, err := curve.ScalarField().Hash(s)
 		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randomSeed))
 
@@ -36,7 +36,7 @@ func Fuzz_Test_polynomial(f *testing.F) {
 		}
 		require.NotNil(t, poly)
 		require.Equal(t, poly.Coefficients[0], secret)
-		poly.Evaluate(curve.Scalar().New(x))
+		poly.Evaluate(curve.ScalarField().New(x))
 	})
 }
 
@@ -53,7 +53,7 @@ func Fuzz_Test_Interpolate(f *testing.F) {
 	f.Add(uint(0), uint64(1), uint64(2), uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, x uint64, y uint64, at uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		_, err := polynomials.Interpolate(curve, []curves.Scalar{curve.Scalar().New(x)}, []curves.Scalar{curve.Scalar().New(y)}, curve.Scalar().New(at))
+		_, err := polynomials.Interpolate(curve, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Scalar{curve.ScalarField().New(y)}, curve.ScalarField().New(at))
 		require.NoError(t, err)
 	})
 }
@@ -62,9 +62,9 @@ func Fuzz_Test_InterpolateInTheExponent(f *testing.F) {
 	f.Add(uint(0), uint64(1), uint64(2), uint64(2), uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, x uint64, px uint64, py uint64, at uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		p, err := curve.Point().Set(
-			new(saferith.Nat).SetUint64(px),
-			new(saferith.Nat).SetUint64(py),
+		p, err := curve.NewPoint(
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetUint64(px)),
+			curve.BaseField().Element().SetNat(new(saferith.Nat).SetUint64(py)),
 		)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
@@ -72,7 +72,7 @@ func Fuzz_Test_InterpolateInTheExponent(f *testing.F) {
 		if err != nil {
 			t.Skip(err.Error())
 		}
-		_, err = polynomials.InterpolateInTheExponent(curve, []curves.Scalar{curve.Scalar().New(x)}, []curves.Point{p}, curve.Scalar().New(at))
+		_, err = polynomials.InterpolateInTheExponent(curve, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Point{p}, curve.ScalarField().New(at))
 		require.NoError(t, err)
 	})
 }

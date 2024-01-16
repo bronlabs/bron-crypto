@@ -16,7 +16,7 @@ import (
 func Test_PreGenHappyPath(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	hashFunc := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

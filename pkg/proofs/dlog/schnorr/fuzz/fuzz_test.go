@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve()}
 
 func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, sid []byte, secretBytes []byte, randomSeed int64) {

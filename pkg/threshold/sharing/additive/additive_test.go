@@ -18,12 +18,12 @@ import (
 
 func TestSplitAndCombine(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
+	curve := k256.NewCurve()
 	dealer, err := additive.NewDealer(5, curve)
 	require.Nil(t, err)
 	require.NotNil(t, dealer)
 
-	secret, err := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
 
 	shares, err := dealer.Split(secret, crand.Reader)
@@ -41,7 +41,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 	t.Parallel()
 	total := 5
 	threshold := 3
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New(), p256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve(), p256.NewCurve()} {
 		boundedCurve := curve
 		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
@@ -49,7 +49,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 			require.Nil(t, err)
 			require.NotNil(t, shamirDealer)
 
-			secret, err := boundedCurve.Scalar().Hash([]byte("2+2=5"))
+			secret, err := boundedCurve.ScalarField().Hash([]byte("2+2=5"))
 			require.NoError(t, err)
 
 			shamirShares, err := shamirDealer.Split(secret, crand.Reader)

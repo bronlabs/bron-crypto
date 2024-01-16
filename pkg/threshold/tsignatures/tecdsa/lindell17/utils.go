@@ -15,37 +15,37 @@ import (
 func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, err error) {
 	switch {
 	case inEighteenth(0, 3, scalar):
-		xPrime, err = randomInEighteenth(9, 10, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(9, 10, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(3, 6, scalar):
-		xPrime, err = randomInEighteenth(10, 11, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(10, 11, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(6, 9, scalar):
-		xPrime, err = randomInEighteenth(11, 12, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(11, 12, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(9, 12, scalar):
-		xPrime, err = randomInEighteenth(6, 7, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(6, 7, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(12, 15, scalar):
-		xPrime, err = randomInEighteenth(7, 8, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(7, 8, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(15, 18, scalar):
-		xPrime, err = randomInEighteenth(8, 9, scalar.CurveName(), prng)
+		xPrime, err = randomInEighteenth(8, 9, scalar.ScalarField().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
@@ -66,8 +66,8 @@ func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (
 
 // IsInSecondThird check if scalar s: q/3 <= s < 2q/3 (q being subgroup order).
 func IsInSecondThird(scalar curves.Scalar) bool {
-	curve := scalar.Curve()
-	order := curve.Profile().SubGroupOrder().Nat()
+	curve := scalar.ScalarField().Curve()
+	order := curve.SubGroupOrder().Nat()
 	orderPlusTwo := new(saferith.Nat).Add(order, new(saferith.Nat).SetUint64(2), -1)
 	l := new(saferith.Nat).Div(orderPlusTwo, saferith.ModulusFromUint64(3), order.AnnouncedLen())
 	orderTimesTwo := new(saferith.Nat).Add(order, order, -1)
@@ -79,8 +79,8 @@ func IsInSecondThird(scalar curves.Scalar) bool {
 }
 
 func inEighteenth(lowBoundInclusive, highBoundExclusive uint64, x curves.Scalar) bool {
-	curve := x.Curve()
-	order := curve.Profile().SubGroupOrder()
+	curve := x.ScalarField().Curve()
+	order := curve.SubGroupOrder()
 
 	orderTimesLow := new(saferith.Nat).Mul(order.Nat(), new(saferith.Nat).SetUint64(lowBoundInclusive), -1)
 	orderTimesLowPlusSeventeen := new(saferith.Nat).Add(orderTimesLow, new(saferith.Nat).SetUint64(17), -1)
@@ -100,7 +100,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 	if err != nil {
 		return nil, errs.WrapInvalidCurve(err, "could not get curve")
 	}
-	order := curve.Profile().SubGroupOrder().Nat()
+	order := curve.SubGroupOrder().Nat()
 
 	orderTimesLow := new(saferith.Nat).Mul(order, new(saferith.Nat).SetUint64(lowBoundInclusive), -1)
 	orderTimesLowPlusSeventeen := new(saferith.Nat).Add(orderTimesLow, new(saferith.Nat).SetUint64(17), -1)
@@ -115,10 +115,6 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 		return nil, errs.WrapFailed(err, "could not get random number")
 	}
 
-	xScalar, err := curve.Scalar().SetNat(x)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not set big int")
-	}
-
+	xScalar := curve.Scalar().SetNat(x)
 	return xScalar, nil
 }

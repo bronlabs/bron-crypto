@@ -2,286 +2,248 @@ package bls12381
 
 import (
 	"io"
+	"sync"
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
-const (
-	ExtensionDegree = 2
-	FieldBytes      = base.FieldBytes * ExtensionDegree
-	WideFieldBytes  = base.WideFieldBytes * ExtensionDegree
+var (
+	g2BaseFieldInitOnce sync.Once
+	g2BaseFieldInstance BaseFieldG2
 )
 
-var _ curves.FieldProfile = (*FieldProfileG2)(nil)
+var (
+	p2 = new(saferith.Nat).Mul(p.Nat(), p.Nat(), -1)
+)
 
-type FieldProfileG2 struct{}
+var _ curves.BaseField = (*BaseFieldG2)(nil)
 
-func (*FieldProfileG2) Order() *saferith.Modulus {
-	return saferith.ModulusFromNat(new(saferith.Nat).Mul(p.Nat(), p.Nat(), -1))
-}
-
-func (*FieldProfileG2) Characteristic() *saferith.Nat {
-	return p.Nat()
-}
-
-func (*FieldProfileG2) ExtensionDegree() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(ExtensionDegree)
-}
-
-func (*FieldProfileG2) FieldBytes() int {
-	return bimpl.FieldBytes
-}
-
-func (*FieldProfileG2) WideFieldBytes() int {
-	return bimpl.WideFieldBytes
-}
-
-var _ curves.FieldElement = (*FieldElementG2)(nil)
-
-type FieldElementG2 struct {
-	v *bimpl.Fp2
-
+type BaseFieldG2 struct {
 	_ types.Incomparable
 }
 
-func NewFieldElementG2() *FieldElementG2 {
-	emptyElement := &FieldElementG2{}
-	result, _ := emptyElement.One().(*FieldElementG2)
-	return result
+func g2BaseFieldInit() {
+	g2BaseFieldInstance = BaseFieldG2{}
 }
 
-func (*FieldElementG2) Value() curves.FieldValue {
-	return nil
+func NewBaseFieldG2() *BaseFieldG2 {
+	g2BaseFieldInitOnce.Do(g2BaseFieldInit)
+	return &g2BaseFieldInstance
 }
 
-func (e *FieldElementG2) Modulus() *saferith.Modulus {
-	return e.Profile().Order()
+func (*BaseFieldG2) Curve() curves.Curve {
+	return NewG2()
 }
 
-func (e *FieldElementG2) Clone() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Set(e.v),
+// ==== Basic Methods.
+
+func (*BaseFieldG2) Name() string {
+	return NameG2
+}
+
+func (*BaseFieldG2) Order() *saferith.Modulus {
+	return saferith.ModulusFromNat(p2)
+}
+
+func (f *BaseFieldG2) Element() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
+}
+
+func (*BaseFieldG2) Operators() []algebra.Operator {
+	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
+}
+
+func (f *BaseFieldG2) OperateOver(operator algebra.Operator, xs ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	var current curves.BaseFieldElement
+	switch operator {
+	case algebra.Addition:
+		current = f.AdditiveIdentity()
+		for _, x := range xs {
+			current = current.Add(x)
+		}
+	case algebra.Multiplication:
+		current = f.MultiplicativeIdentity()
+		for _, x := range xs {
+			current = current.Mul(x)
+		}
+	case algebra.PointAddition:
+		fallthrough
+	default:
+		return nil, errs.NewInvalidType("operator %v is not supported", operator)
 	}
+	return current, nil
 }
 
-func (*FieldElementG2) Cmp(rhs curves.FieldElement) int {
-	panic("not implemented")
+func (*BaseFieldG2) Random(prng io.Reader) (curves.BaseFieldElement, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	result, err := NewBaseFieldElementG2(0).V.Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSampleFailed(err, "could not generate random field element")
+	}
+	return &BaseFieldElementG2{V: result}, nil
 }
 
-func (*FieldElementG2) Profile() curves.FieldProfile {
-	return &FieldProfileG2{}
-}
-
-func (*FieldElementG2) Hash(x []byte) (curves.FieldElement, error) {
+func (*BaseFieldG2) Hash(x []byte) (curves.BaseFieldElement, error) {
 	els, err := NewG2().HashToFieldElements(1, x, nil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not hash to field element in bls12381 G1")
+		return nil, errs.WrapFailed(err, "could not hash to field element in bls12381 G2")
 	}
 	return els[0], nil
 }
 
-func (*FieldElementG2) New(value uint64) curves.FieldElement {
-	return nil
-}
+// === Additive Groupoid Methods.
 
-func (e *FieldElementG2) Random(prng io.Reader) (curves.FieldElement, error) {
-	result, err := e.v.Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not sample random element in bls12381 G2")
+func (*BaseFieldG2) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
 	}
-	return &FieldElementG2{v: result}, nil
+	return sum
 }
 
-func (*FieldElementG2) Zero() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).SetZero(),
+// === Multiplicative Groupoid Methods.
+
+func (*BaseFieldG2) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
 	}
+	return sum
 }
 
-func (*FieldElementG2) One() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).SetOne(),
-	}
-}
+// === Additive Monoid Methods.
 
-func (e *FieldElementG2) IsZero() bool {
-	return e.v.IsZero() == 1
-}
-
-func (e *FieldElementG2) IsOne() bool {
-	return e.v.IsOne() == 1
-}
-
-func (e *FieldElementG2) IsOdd() bool {
-	return e.Bytes()[0]&1 == 1
-}
-
-func (e *FieldElementG2) IsEven() bool {
-	return e.Bytes()[0]&1 == 0
-}
-
-func (e *FieldElementG2) Square() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Square(e.v),
+func (*BaseFieldG2) AdditiveIdentity() curves.BaseFieldElement {
+	return &BaseFieldElementG2{
+		V: new(bimpl.Fp2).SetZero(),
 	}
 }
 
-func (e *FieldElementG2) SubfieldElement(index uint64) curves.FieldElement {
-	if index&0x1 == 0 {
-		return &FieldElementG1{
-			v: &e.v.A,
-		}
-	} else {
-		return &FieldElementG1{
-			v: &e.v.B,
-		}
+// === Multiplicative Monoid Methods.
+
+func (*BaseFieldG2) MultiplicativeIdentity() curves.BaseFieldElement {
+	return &BaseFieldElementG2{
+		V: new(bimpl.Fp2).SetOne(),
 	}
 }
 
-func (e *FieldElementG2) Double() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Double(e.v),
+// === Additive Group Methods.
+
+func (*BaseFieldG2) Sub(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
 	}
+	return sum
 }
 
-func (e *FieldElementG2) Sqrt() (curves.FieldElement, bool) {
-	result, wasSquare := new(bimpl.Fp2).Sqrt(e.v)
-	return &FieldElementG2{
-		v: result,
-	}, wasSquare == 1
+// === Multiplicative Group Methods.
+
+func (*BaseFieldG2) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (e *FieldElementG2) Cube() curves.FieldElement {
-	return e.Square().Mul(e)
-}
+// === Ring Methods.
 
-func (e *FieldElementG2) Add(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElementG2)
+func (*BaseFieldG2) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	pp, ok := p.(*BaseFieldElementG2)
 	if !ok {
-		panic("not a bls12381 G2 Fp2 element")
+		return nil, errs.NewInvalidType("given point is not from this field")
 	}
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Add(e.v, n.v),
-	}
+	return pp.Sqrt()
 }
 
-func (e *FieldElementG2) Sub(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElementG2)
-	if !ok {
-		panic("not a bls12381 G2 Fp2 element")
+// === Finite Field Methods.
+
+func (*BaseFieldG2) Characteristic() *saferith.Nat {
+	return p.Nat()
+}
+
+func (*BaseFieldG2) ExtensionDegree() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(2)
+}
+
+func (f *BaseFieldG2) FrobeniusAutomorphism(e curves.BaseFieldElement) curves.BaseFieldElement {
+	return e.Exp(new(BaseFieldElementG2).SetNat(f.Characteristic()))
+}
+
+func (f *BaseFieldG2) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
+	result := e
+	currentDegree := new(saferith.Nat).SetUint64(1)
+	currentTerm := result
+	for currentDegree.Eq(f.ExtensionDegree()) == 1 {
+		currentTerm = f.FrobeniusAutomorphism(currentTerm)
+		result = result.Add(currentTerm)
+		currentDegree = utils.IncrementNat(currentDegree)
 	}
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Sub(e.v, n.v),
+	return result
+}
+
+func (*BaseFieldG2) FieldBytes() int {
+	return bimpl.FieldBytesFp2
+}
+
+func (*BaseFieldG2) WideFieldBytes() int {
+	return bimpl.WideFieldBytesFp2
+}
+
+// === Zp Methods.
+
+func (*BaseFieldG2) New(v uint64) curves.BaseFieldElement {
+	return NewBaseFieldElementG2(v)
+}
+
+func (f *BaseFieldG2) Zero() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
+}
+
+func (f *BaseFieldG2) One() curves.BaseFieldElement {
+	return f.MultiplicativeIdentity()
+}
+
+// === Ordering Methods.
+
+func (f *BaseFieldG2) Top() curves.BaseFieldElement {
+	return f.Zero().Sub(f.One())
+}
+
+func (f *BaseFieldG2) Bottom() curves.BaseFieldElement {
+	return f.Zero()
+}
+
+func (*BaseFieldG2) Join(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Join(y)
+}
+
+func (*BaseFieldG2) Meet(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Meet(y)
+}
+
+func (*BaseFieldG2) Max(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	max := x
+	for _, y := range ys {
+		max = max.Max(y)
 	}
+	return max
 }
 
-func (e *FieldElementG2) Mul(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElementG2)
-	if !ok {
-		panic("not a bls12381 G2 Fp2 element")
+func (*BaseFieldG2) Min(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	min := x
+	for _, y := range ys {
+		min = min.Min(y)
 	}
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Mul(e.v, n.v),
-	}
-}
-
-func (e *FieldElementG2) MulAdd(y, z curves.FieldElement) curves.FieldElement {
-	return e.Mul(y).Add(z)
-}
-
-func (e *FieldElementG2) Div(rhs curves.FieldElement) curves.FieldElement {
-	r, ok := rhs.(*FieldElementG2)
-	if ok {
-		v, wasInverted := new(bimpl.Fp2).Invert(r.v)
-		if wasInverted != 1 {
-			panic("cannot invert rhs")
-		}
-		v.Mul(v, e.v)
-		return &FieldElementG2{v: v}
-	} else {
-		panic("rhs is not bls12381 G2 Fp2 field element")
-	}
-}
-
-func (*FieldElementG2) Exp(rhs curves.FieldElement) curves.FieldElement {
-	return nil
-}
-
-func (e *FieldElementG2) Neg() curves.FieldElement {
-	return &FieldElementG2{
-		v: new(bimpl.Fp2).Neg(e.v),
-	}
-}
-
-func (e *FieldElementG2) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	return e.SetBytes(value.Bytes())
-}
-
-func (e *FieldElementG2) Nat() *saferith.Nat {
-	aNat := e.v.A.Nat()
-	bNat := e.v.B.Nat()
-	nat := bNat.Add(bNat, aNat.Mul(aNat, e.Profile().Order().Nat(), WideFieldBytes), WideFieldBytes)
-	return nat
-}
-
-func (e *FieldElementG2) SetBytes(input []byte) (curves.FieldElement, error) {
-	if len(input) != FieldBytes {
-		return nil, errs.NewInvalidLength("input length (%d != %d bytes)", len(input), FieldBytes)
-	}
-	input = bitstring.ReverseBytes(input)
-	a, oka := e.v.A.SetBytes((*[bimpl.FieldBytes]byte)(input[:bimpl.FieldBytes]))
-	b, okb := e.v.B.SetBytes((*[bimpl.FieldBytes]byte)(input[bimpl.FieldBytes:]))
-	if oka != 1 || okb != 1 {
-		return nil, errs.NewFailed("could not set byte")
-	}
-	return &FieldElementG2{
-		v: &bimpl.Fp2{
-			A: *a,
-			B: *b,
-		},
-	}, nil
-}
-
-func (*FieldElementG2) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	if len(input) > WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length > %d bytes", WideFieldBytes)
-	}
-	var buffer [WideFieldBytes]byte
-	copy(buffer[:], input) // pad with zeroes
-	a, err := NewG1().FieldElement().SetBytesWide(buffer[0:FieldBytes])
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element A")
-	}
-	b, err := NewG1().FieldElement().SetBytesWide(buffer[FieldBytes:WideFieldBytes])
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element B")
-	}
-	aG1, _ := a.(*FieldElementG1)
-	bG1, _ := b.(*FieldElementG1)
-	return &FieldElementG2{
-		v: &bimpl.Fp2{
-			A: *aG1.v,
-			B: *bG1.v,
-		},
-	}, nil
-}
-
-func (*FieldElementG2) Bytes() []byte {
-	// TODO: Makes some weird pieces break when implemented
-	return nil
-}
-
-func (*FieldElementG2) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
-	return nil, errs.NewMissing("not implemented")
-}
-
-func (*FieldElementG2) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	return nil, errs.NewMissing("not implemented")
+	return min
 }

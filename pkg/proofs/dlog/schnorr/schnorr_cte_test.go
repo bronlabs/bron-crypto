@@ -17,14 +17,14 @@ func Test_MeasureConstantTime_prove(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	sid := internal.GetBigEndianBytesWithLowestBitsSet(32, 32)
 	var err error
 	var secret curves.Scalar
 	var prover *Prover
 
 	internal.RunMeasurement(500, "schnorr_prove", func(i int) {
-		secret, err = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)
@@ -38,7 +38,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 	sid := internal.GetBigEndianBytesWithLowestBitsSet(32, 32)
 	var err error
 	var secret curves.Scalar
@@ -46,7 +46,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	var proof *Proof
 	var statement Statement
 	internal.RunMeasurement(500, "schnorr_verify", func(i int) {
-		secret, err = curve.Scalar().Random(crand.Reader)
+		secret, err = curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		prover, err = NewProver(curve.Generator(), sid[:], nil)
 		require.NoError(t, err)

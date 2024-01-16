@@ -34,7 +34,7 @@ type (
 // This implements step 1 of Name 7 of DKLs18, page 16.
 func (sender *Sender) Round1ComputeAndZkpToPublicKey() (sigma *dlog.Proof, p curves.Point, err error) {
 	// Sample the secret key and compute the public key.
-	sender.SecretKey, err = sender.Curve.Scalar().Random(crand.Reader)
+	sender.SecretKey, err = sender.Curve.ScalarField().Random(crand.Reader)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "generating random scalar")
 	}
@@ -65,7 +65,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 	result := make([]ReceiversMaskedChoices, receiver.BatchSize)
 	receiver.Output.OneTimePadDecryptionKey = make([]OneTimePadDecryptionKey, receiver.BatchSize)
 	for i := 0; i < receiver.BatchSize; i++ {
-		a, err := receiver.Curve.Scalar().Random(crand.Reader)
+		a, err := receiver.Curve.ScalarField().Random(crand.Reader)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "generating random scalar")
 		}
@@ -81,7 +81,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], result[i], option1Bytes)
 		// compute the internal rho
 		rho := receiver.SenderPublicKey.Mul(a)
-		output, err := hashing.Hash(sha3.New256, receiver.UniqueSessionId, []byte{byte(i)}, rho.ToAffineCompressed())
+		output, err := hashing.HashChain(sha3.New256, receiver.UniqueSessionId, []byte{byte(i)}, rho.ToAffineCompressed())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "creating one time pad decryption keys")
 		}
@@ -117,7 +117,7 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 		baseEncryptionKeyMaterial[1] = receiverChoiceMinusSenderPublicKey.Mul(sender.SecretKey)
 
 		for k := 0; k < KeyCount; k++ {
-			output, err := hashing.Hash(sha3.New256, sender.UniqueSessionId, []byte{byte(i)}, baseEncryptionKeyMaterial[k].ToAffineCompressed())
+			output, err := hashing.HashChain(sha3.New256, sender.UniqueSessionId, []byte{byte(i)}, baseEncryptionKeyMaterial[k].ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapFailed(err, "creating one time pad encryption keys")
 			}

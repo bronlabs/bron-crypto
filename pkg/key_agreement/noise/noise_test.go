@@ -21,7 +21,7 @@ type Message struct {
 }
 
 func TestVectorKPattern(t *testing.T) {
-	curve := curve25519.New()
+	curve := curve25519.NewCurve()
 	// ref: https://github.com/symbolicsoft/noiseexplorer/blob/master/implementations/tests/cacophony.json
 	t.Run("case Noise_K_25519_ChaChaPoly_BLAKE2s", func(t *testing.T) {
 		messages := []Message{
@@ -113,7 +113,7 @@ func TestVectorKPattern(t *testing.T) {
 }
 
 func TestVectorKKPattern(t *testing.T) {
-	curve := curve25519.New()
+	curve := curve25519.NewCurve()
 	// ref: https://github.com/symbolicsoft/noiseexplorer/blob/master/implementations/tests/cacophony.json
 	t.Run("case Noise_KK_25519_ChaChaPoly_BLAKE2s", func(t *testing.T) {
 		messages := []Message{

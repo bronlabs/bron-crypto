@@ -53,7 +53,7 @@ type DHKEMScheme struct {
 
 func NewP256HKDFSha256Scheme() *DHKEMScheme {
 	return &DHKEMScheme{
-		curve: p256.New(),
+		curve: p256.NewCurve(),
 		kdf:   NewKDFSHA256(),
 	}
 }
@@ -93,7 +93,7 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 	case p256.Name:
 		dpkPrk := s.kdf.labeledExtract(s.suiteID(), nil, []byte("dkp_prk"), ikm)
 		counter := 0
-		sk := s.curve.Scalar().Zero()
+		sk := s.curve.ScalarField().Zero()
 		var err error
 		for sk.IsZero() || err != nil {
 			if counter > 255 {

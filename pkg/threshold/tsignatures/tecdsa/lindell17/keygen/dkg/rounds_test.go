@@ -28,7 +28,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 
@@ -158,8 +158,7 @@ func Test_HappyPath(t *testing.T) {
 					require.NoError(t, err)
 					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare, err := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
-					require.NoError(t, err)
+					theirDecryptedSigningShare := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}
 			}

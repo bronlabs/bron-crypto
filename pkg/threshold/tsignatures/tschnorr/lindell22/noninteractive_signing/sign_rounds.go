@@ -3,14 +3,15 @@ package noninteractive_signing
 import (
 	"strconv"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 )
-
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	bigRSum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K)
@@ -24,13 +25,18 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
 	}
 
-	delta, err := c.cohortConfig.CipherSuite.Curve.Scalar().Hash(
+	deltaMessage, err := hashing.HashChain(sha3.New256,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigRSum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),
 		[]byte(strconv.Itoa(c.myPreSignatureIndex)),
 		message,
 	)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "couldn't produce delta message")
+	}
+
+	delta, err := c.cohortConfig.CipherSuite.Curve.ScalarField().Hash(deltaMessage)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
 	}
@@ -39,13 +45,14 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	bigR := bigRSum.Add(bigR2Sum.Mul(delta))
 
 	if c.taproot {
-		if bigR.Y().IsOdd() {
+		if bigR.AffineY().IsOdd() {
 			k = k.Neg()
 			bigR = bigR.Neg()
 		}
 	}
 
 	// 3.ii. compute e = H(R || pk || message)
+	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(c.cohortConfig.CipherSuite.Curve)
 	var e curves.Scalar
 	if c.taproot {
 		e, err = fiatShamir.GenerateChallenge(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
@@ -62,7 +69,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
 	if c.taproot {
-		if c.myShard.SigningKeyShare.PublicKey.Y().IsOdd() {
+		if c.myShard.SigningKeyShare.PublicKey.AffineY().IsOdd() {
 			dPrime = dPrime.Neg()
 		}
 	}

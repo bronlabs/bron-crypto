@@ -28,7 +28,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 
@@ -82,7 +82,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
@@ -107,8 +107,8 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []curves.Curve{
-		p256.New(),
-		k256.New(),
+		p256.NewCurve(),
+		k256.NewCurve(),
 	}
 
 	for _, c := range supportedCurves {

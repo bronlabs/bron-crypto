@@ -31,7 +31,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test(f *testing.F) {
@@ -232,9 +232,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 
 	t.Run("proving something irrelevant", func(t *testing.T) {
 		t.Parallel()
-		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil, prng)
+		prover, err := fischlin.NewProver(cipherSuite.Curve.Generator(), uniqueSessionId, nil, prng)
 		require.NoError(t, err)
-		randomScalar, err := cipherSuite.Curve.Scalar().Random(prng)
+		randomScalar, err := cipherSuite.Curve.ScalarField().Random(prng)
 		require.NoError(t, err)
 		proof, _, err := prover.Prove(randomScalar)
 		require.NoError(t, err)
@@ -248,9 +248,9 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
-		prover, err := fischlin.NewProver(cipherSuite.Curve.Point().Generator(), uniqueSessionId, nil, prng)
+		prover, err := fischlin.NewProver(cipherSuite.Curve.Generator(), uniqueSessionId, nil, prng)
 		require.NoError(t, err)
-		proof, _, err := prover.Prove(cipherSuite.Curve.Scalar().Zero())
+		proof, _, err := prover.Prove(cipherSuite.Curve.ScalarField().Zero())
 		require.NoError(t, err)
 		r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
 		for identity := range r3Ins[attackerIndex] {
@@ -421,7 +421,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
+	for _, curve := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -445,7 +445,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestShouldAbortIfAliceReusesValueFromPreviousDkgRound(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -470,7 +470,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgRound(t *testing.T) {
 func TestShouldAbortIfAliceReusesValueFromPreviousDkgExecution(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				tAlpha int
@@ -498,7 +498,7 @@ func TestShouldAbortIfAliceReusesValueFromPreviousDkgExecution(t *testing.T) {
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				tAlpha int
@@ -526,7 +526,7 @@ func TestInvalidSid(t *testing.T) {
 func TestAliceDlogProofIsUnique(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				threshold int
@@ -552,7 +552,7 @@ func TestAliceDlogProofIsUnique(t *testing.T) {
 func TestAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				threshold int
@@ -578,7 +578,7 @@ func TestAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T) {
 func TestAbortOnRogueKeyAttack(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			boundedCurve := curve
 			boundedHash := h

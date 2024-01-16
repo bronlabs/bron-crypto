@@ -22,7 +22,7 @@ func doFischlin(curve curves.Curve, sid []byte, prng io.Reader) error {
 	if err != nil {
 		return err
 	}
-	secret, err := curve.Scalar().Random(crand.Reader)
+	secret, err := curve.ScalarField().Random(crand.Reader)
 	if err != nil {
 		return errs.WrapRandomSampleFailed(err, "failed to generate random scalar")
 	}
@@ -31,7 +31,7 @@ func doFischlin(curve curves.Curve, sid []byte, prng io.Reader) error {
 		return err
 	}
 
-	err = fischlin.Verify(curve.Point().Generator(), statement, proof, sid[:])
+	err = fischlin.Verify(curve.Generator(), statement, proof, sid[:])
 	if err != nil {
 		return err
 	}
@@ -42,9 +42,9 @@ func TestZKPOverMultipleCurves(t *testing.T) {
 	t.Parallel()
 	uniqueSessionId := sha3.Sum256([]byte("random seed"))
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	for _, curve := range curveInstances {
 		boundedCurve := curve
@@ -68,27 +68,27 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 
 	uniqueSessionId := sha3.Sum256([]byte("random seed"))
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	for _, curve := range curveInstances {
 		boundedCurve := curve
 		t.Run(fmt.Sprintf("running the test for curve %s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
-			prover, err := fischlin.NewProver(boundedCurve.Point().Generator(), uniqueSessionId[:], nil, crand.Reader)
+			prover, err := fischlin.NewProver(boundedCurve.Generator(), uniqueSessionId[:], nil, crand.Reader)
 			require.NoError(t, err)
 			require.NotNil(t, prover)
 			require.NotNil(t, prover.BasePoint)
 
-			secret, err := boundedCurve.Scalar().Random(crand.Reader)
+			secret, err := boundedCurve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			proof, _, err := prover.Prove(secret)
 			require.NoError(t, err)
-			badStatement, err := boundedCurve.Point().Random(crand.Reader)
+			badStatement, err := boundedCurve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			err = fischlin.Verify(boundedCurve.Point().Generator(), badStatement, proof, uniqueSessionId[:])
+			err = fischlin.Verify(boundedCurve.Generator(), badStatement, proof, uniqueSessionId[:])
 			require.True(t, errs.IsVerificationFailed(err))
 		})
 	}

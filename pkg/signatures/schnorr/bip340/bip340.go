@@ -35,11 +35,11 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 		return nil, errs.NewIsNil("secret is nil")
 	}
 
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	// 1. (implicit) Let d' = int(sk)
 	dPrime := scalar
-	if dPrime.CurveName() != curve.Name() {
+	if dPrime.ScalarField().Name() != curve.Name() {
 		return nil, errs.NewFailed("unsupported curve")
 	}
 
@@ -78,7 +78,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	if len(aux) != auxSizeBytes {
 		return nil, errs.NewInvalidArgument("aux must have 32 bytes")
 	}
-	curve := signer.privateKey.S.Curve()
+	curve := signer.privateKey.S.ScalarField().Curve()
 
 	// 4. Let d = d' if P.y even, otherwise let d = n - d'
 	bigP := curve.ScalarBaseMult(signer.privateKey.S)
@@ -142,13 +142,13 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 }
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
-	if publicKey.A.CurveName() != k256.Name || signature.R.CurveName() != k256.Name || signature.S.CurveName() != k256.Name {
+	if publicKey.A.Curve().Name() != k256.Name || signature.R.Curve().Name() != k256.Name || signature.S.ScalarField().Curve().Name() != k256.Name {
 		return errs.NewInvalidArgument("curve not supported")
 	}
 	if signature.R == nil || signature.S == nil || signature.R.IsIdentity() || signature.S.IsZero() {
 		return errs.NewVerificationFailed("some signature elements are nil/zero")
 	}
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	// 1. Let P = lift_x(int(pk)).
 	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
@@ -167,7 +167,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).
 	// 8. Fail if x(R) ≠ r.
-	if bigR.IsIdentity() || !bigR.Y().IsEven() || signature.R.X().Cmp(bigR.X()) != 0 {
+	if bigR.IsIdentity() || !bigR.AffineY().IsEven() || signature.R.AffineX().Cmp(bigR.AffineX()) != 0 {
 		return errs.NewVerificationFailed("signature is invalid")
 	}
 
@@ -175,7 +175,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 }
 
 func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]byte, prng io.Reader) (err error) {
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
 		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal and greater than zero")
@@ -183,10 +183,10 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 
 	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
 	a := make([]curves.Scalar, len(signatures))
-	a[0] = curve.Scalar().One()
+	a[0] = curve.ScalarField().One()
 	for i := 1; i < len(signatures); i++ {
 		for {
-			a[i], err = curve.Scalar().Random(prng)
+			a[i], err = curve.ScalarField().Random(prng)
 			if err != nil {
 				return errs.WrapRandomSampleFailed(err, "cannot generate random scalar")
 			}
@@ -197,7 +197,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 	}
 
 	// For i = 1 .. u:
-	left := curve.Scalar().Zero()
+	left := curve.ScalarField().Zero()
 	ae := make([]curves.Scalar, len(signatures))
 	bigR := make([]curves.Point, len(signatures))
 	bigP := make([]curves.Point, len(signatures))
@@ -257,7 +257,7 @@ func encodePoint(p curves.Point) []byte {
 
 // negScalarIfPointYOdd negates point if point.y is even.
 func negPointIfPointYOdd(point curves.Point) curves.Point {
-	if point.Y().IsOdd() {
+	if point.AffineY().IsOdd() {
 		return point.Neg()
 	} else {
 		return point
@@ -266,7 +266,7 @@ func negPointIfPointYOdd(point curves.Point) curves.Point {
 
 // negScalarIfPointYOdd negates scalar x if point.y is even.
 func negScalarIfPointYOdd(x curves.Scalar, point curves.Point) curves.Scalar {
-	if point.Y().IsOdd() {
+	if point.AffineY().IsOdd() {
 		return x.Neg()
 	} else {
 		return x

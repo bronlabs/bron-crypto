@@ -25,9 +25,6 @@ func (s *SigningKeyShare) Validate() error {
 	if s.PublicKey.IsIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
-	if !s.PublicKey.IsOnCurve() {
-		return errs.NewMembership("public key is not on curve")
-	}
 	return nil
 }
 
@@ -54,7 +51,7 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
 	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
 	for i := 0; i < cohortConfig.Protocol.TotalParties; i++ {
-		sharingIds[i] = p.PublicKey.Scalar().New(uint64(i + 1))
+		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(i + 1))
 		identityKey, exists := sharingIdToIdentityKey[i+1]
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
@@ -65,7 +62,7 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 		}
 		partialPublicKeys[i] = partialPublicKey
 	}
-	evaluateAt := p.PublicKey.Curve().Scalar().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	evaluateAt := p.PublicKey.Curve().ScalarField().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
 	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")

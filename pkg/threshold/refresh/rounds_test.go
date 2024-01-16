@@ -121,7 +121,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterati
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, iteration := range []int{1, 5} {
 				for _, thresholdConfig := range []struct {

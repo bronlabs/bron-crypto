@@ -3,10 +3,13 @@ package gennaro
 import (
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -72,7 +75,11 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_GENNARO_DKG-", nil)
 	}
 	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
-	H, err := cohortConfig.CipherSuite.Curve.Point().Hash([]byte(NothingUpMySleeve))
+	HMessage, err := hashing.HashChain(sha3.New256, uniqueSessionId, []byte(NothingUpMySleeve))
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not produce dlog of H")
+	}
+	H, err := cohortConfig.CipherSuite.Curve.Hash(HMessage)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "failed to hash to curve for H")
 	}

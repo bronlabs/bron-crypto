@@ -25,7 +25,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignatu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct a prover")
 	}
-	Hm, err := bls12381.New().PointG2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not hash message")
 	}
@@ -41,7 +41,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignatu
 	}, nil
 }
 
-func (c *Cosigner) Aggregate(partialSignatures map[types.IdentityHash]*glow.PartialSignature, message []byte) (*bls.Signature[bls.G2], error) {
+func (c *Cosigner) Aggregate(partialSignatures map[types.IdentityHash]*glow.PartialSignature, message []byte) (*bls.Signature[bls12381.G2], error) {
 	if c.round != 2 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 2", c.round)
 	}

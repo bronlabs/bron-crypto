@@ -23,11 +23,11 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Commitments: make([]*AttestedCommitmentToNoncePair, p.Tau),
 	}
 	for j := 0; j < p.Tau; j++ {
-		dj, err := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		dj, err := p.CohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not generate random dj")
 		}
-		ej, err := p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		ej, err := p.CohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not generate random ej")
 		}

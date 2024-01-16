@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
@@ -60,8 +61,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	pointInK := new(K)
-	keysSubGroup := (*pointInK).Curve()
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: keysSubGroup,

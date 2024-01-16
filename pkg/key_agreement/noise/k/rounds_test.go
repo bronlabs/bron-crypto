@@ -16,7 +16,7 @@ import (
 
 func TestHappyPath(t *testing.T) {
 	var allHashes = []noise.SupportedHash{noise.NOISE_HASH_SHA3256, noise.NOISE_HASH_BLAKE2S}
-	for _, c := range []curves.Curve{k256.New(), edwards25519.New(), curve25519.New()} {
+	for _, c := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve(), curve25519.NewCurve()} {
 		for _, hashFunc := range allHashes {
 			happyPath(t, c, hashFunc)
 		}

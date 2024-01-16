@@ -15,7 +15,7 @@ func TestFpSetOne(t *testing.T) {
 	var fp Fp
 	fp.SetOne()
 	require.NotNil(t, fp)
-	require.Equal(t, fp, r)
+	require.Equal(t, fp, R)
 }
 
 func TestFpSetUint64(t *testing.T) {
@@ -227,7 +227,7 @@ func TestFpBigInt(t *testing.T) {
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e.Neg(&e)
-	b.ModNeg(b, fpModulus)
+	b.ModNeg(b, FpModulus)
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
@@ -238,7 +238,7 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(tv2[:])
 		e := new(saferith.Nat).SetBytes(tv2[:])
-		e.Mod(e, fpModulus)
+		e.Mod(e, FpModulus)
 
 		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)

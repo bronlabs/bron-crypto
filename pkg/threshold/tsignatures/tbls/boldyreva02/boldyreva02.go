@@ -2,6 +2,7 @@ package boldyreva02
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -16,7 +17,7 @@ type Participant interface {
 }
 
 type SigningKeyShare[K bls.KeySubGroup] struct {
-	Share     curves.PairingScalar
+	Share     curves.Scalar
 	PublicKey *bls.PublicKey[K]
 
 	_ types.Incomparable
@@ -50,9 +51,7 @@ func (p *PublicKeyShares[K]) Validate(cohortConfig *integration.CohortConfig) er
 		return errs.NewIsNil("public key is nil")
 	}
 	curve := p.PublicKey.Y.Curve()
-	pointInK := new(K)
-
-	if p.PublicKey.Y.CurveName() != (*pointInK).CurveName() {
+	if !bls12381.InCorrectSubGroup[K](p.PublicKey.Y) {
 		return errs.NewInvalidCurve("key subgroup is different than public key subgroup")
 	}
 
@@ -60,7 +59,7 @@ func (p *PublicKeyShares[K]) Validate(cohortConfig *integration.CohortConfig) er
 	sharingIds := make([]curves.Scalar, cohortConfig.Participants.Len())
 	partialPublicKeys := make([]curves.Point, cohortConfig.Participants.Len())
 	for i := 0; i < cohortConfig.Participants.Len(); i++ {
-		sharingIds[i] = curve.Scalar().New(uint64(i + 1))
+		sharingIds[i] = curve.ScalarField().New(uint64(i + 1))
 		identityKey, exists := sharingIdToIdentityKey[i+1]
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
@@ -69,12 +68,12 @@ func (p *PublicKeyShares[K]) Validate(cohortConfig *integration.CohortConfig) er
 		if !exists {
 			return errs.NewMissing("partial public key doesn't exist for id hash %x", identityKey.Hash())
 		}
-		if partialPublicKey.CurveName() != (*pointInK).CurveName() {
+		if !bls12381.InCorrectSubGroup[K](partialPublicKey) {
 			return errs.NewInvalidCurve("partial public key %d is in wrong subgroup", i)
 		}
 		partialPublicKeys[i] = partialPublicKey
 	}
-	evaluateAt := curve.Scalar().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
+	evaluateAt := curve.ScalarField().New(0) // because f(0) would be the private key which means interpolating in the exponent should give us the public key
 	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(curve, sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")

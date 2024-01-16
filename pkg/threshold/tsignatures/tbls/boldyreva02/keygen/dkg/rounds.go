@@ -47,10 +47,7 @@ func (p *Participant[K]) Round3(round2output map[types.IdentityHash]*Round2Broad
 		return nil, errs.WrapFailed(err, "gennaro round 2 failed")
 	}
 
-	share, ok := signingKeyShareVanilla.Share.(curves.PairingScalar)
-	if !ok {
-		return nil, errs.NewInvalidType("share was not a pairing scalar")
-	}
+	share := signingKeyShareVanilla.Share
 	publicKeyPoint, ok := signingKeyShareVanilla.PublicKey.(curves.PairingPoint)
 	if !ok {
 		return nil, errs.NewInvalidType("share was not a pairing point")

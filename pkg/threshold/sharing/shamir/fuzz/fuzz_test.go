@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), []byte("msg"), int64(0))
@@ -31,7 +31,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 
-		messageScalar, err := curve.Scalar().Hash(message)
+		messageScalar, err := curve.ScalarField().Hash(message)
 		require.Nil(t, err)
 		shares, err := scheme.Split(messageScalar, prng)
 		require.Nil(t, err)

@@ -3,9 +3,10 @@ package trusted_dealer_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"testing"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -19,7 +20,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
+	curve := k256.NewCurve()
 	h := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

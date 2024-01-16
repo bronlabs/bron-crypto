@@ -12,21 +12,22 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	hs := []func() hash.Hash{
 		sha3.New256,
@@ -64,7 +65,7 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 	message := []byte("something")
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha512.New,
 	}
 	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
@@ -77,7 +78,7 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 	signature, err := signer.Sign(message, crand.Reader)
 	require.NoError(t, err)
 
-	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
+	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes())}, nil)
 	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 }
@@ -86,9 +87,9 @@ func Test_InvalidMessageOrSignatureFailure(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	hs := []func() hash.Hash{
 		sha3.New256,
@@ -126,7 +127,7 @@ func Test_InvalidMessageOrSignatureWithEd25519Verifier(t *testing.T) {
 	message := []byte("something")
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha512.New,
 	}
 	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)

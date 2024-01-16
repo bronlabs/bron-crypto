@@ -1,107 +1,69 @@
 package pallas
 
 import (
-	"bytes"
-	"crypto/subtle"
-	"io"
-
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.Point = (*Point)(nil)
+var _ curves.JacobianCoordinates = (*Point)(nil)
 
 type Point struct {
-	Value *Ep
+	V *Ep
 
 	_ types.Incomparable
 }
 
 func NewPoint() *Point {
-	emptyPoint := &Point{}
-	result, _ := emptyPoint.Identity().(*Point)
-	return result
+	return NewCurve().Identity().(*Point)
 }
 
-func (*Point) Curve() curves.Curve {
-	return &pallasInstance
-}
+// === Basic Methods.
 
-func (*Point) CurveName() string {
-	return Name
-}
-
-func (p *Point) Random(reader io.Reader) (curves.Point, error) {
-	var seed [base.WideFieldBytes]byte
-	_, _ = reader.Read(seed[:])
-	return p.Hash(seed[:])
-}
-
-func (*Point) Hash(inputs ...[]byte) (curves.Point, error) {
-	p := new(Ep)
-	u, err := New().HashToFieldElements(2, bytes.Join(inputs, nil), nil)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of P256 failed")
+func (p *Point) Equal(rhs curves.Point) bool {
+	if rhs == nil {
+		panic("rhs is nil")
 	}
-	u0, ok0 := u[0].(*FieldElement)
-	u1, ok1 := u[1].(*FieldElement)
-	if !ok0 || !ok1 {
-		return nil, errs.NewHashingFailed("cast to P256 field element failed")
+	r, ok := rhs.(*Point)
+	if !ok {
+		panic("rhs is not a pallas point")
 	}
-	p = p.Map(u0.v, u1.v)
-	return &Point{Value: p}, nil
-}
-
-func (*Point) Identity() curves.Point {
-	return &Point{Value: new(Ep).Identity()}
-}
-
-func (*Point) Generator() curves.Point {
-	return &Point{Value: new(Ep).Generator()}
+	return p.V.Equal(r.V)
 }
 
 func (p *Point) Clone() curves.Point {
-	return &Point{Value: new(Ep).Set(p.Value)}
+	return &Point{V: new(Ep).Set(p.V)}
 }
 
-func (p *Point) ClearCofactor() curves.Point {
-	return p.Clone()
+// === Groupoid Methods.
+
+func (p *Point) Operate(rhs curves.Point) curves.Point {
+	return p.Add(rhs)
 }
 
-func (*Point) IsSmallOrder() bool {
-	return false
+func (p *Point) OperateIteratively(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.ApplyAdd(q, n)
 }
 
-func (p *Point) IsIdentity() bool {
-	return p.Value.IsIdentity()
+func (p *Point) Order() *saferith.Modulus {
+	if p.IsIdentity() {
+		return saferith.ModulusFromUint64(0)
+	}
+	q := p.Clone()
+	order := new(saferith.Nat).SetUint64(1)
+	for !q.IsIdentity() {
+		q = q.Add(p)
+		utils.IncrementNat(order)
+	}
+	return saferith.ModulusFromNat(order)
 }
 
-func (p *Point) IsNegative() bool {
-	return p.Value.GetY().IsOdd()
-}
-
-func (p *Point) IsOnCurve() bool {
-	return p.Value.IsOnCurve()
-}
-
-func (p *Point) Double() curves.Point {
-	return &Point{Value: new(Ep).Double(p.Value)}
-}
-
-func (*Point) Scalar() curves.Scalar {
-	return &Scalar{Value: new(fq.Fq).SetZero()}
-}
-
-func (p *Point) Neg() curves.Point {
-	return &Point{Value: new(Ep).Neg(p.Value)}
-}
+// === Additive Groupoid Methods.
 
 func (p *Point) Add(rhs curves.Point) curves.Point {
 	if rhs == nil {
@@ -111,7 +73,51 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 	if !ok {
 		panic("rhs is not a pallas point")
 	}
-	return &Point{Value: new(Ep).Add(p.Value, r.Value)}
+	return &Point{V: new(Ep).Add(p.V, r.V)}
+}
+
+func (p *Point) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Add(q.Mul(NewScalarField().Element().SetNat(n)))
+}
+
+func (p *Point) Double() curves.Point {
+	return &Point{V: new(Ep).Double(p.V)}
+}
+
+func (p *Point) Triple() curves.Point {
+	return p.Double().Add(p)
+}
+
+// === Monoid Methods.
+
+func (p *Point) IsIdentity() bool {
+	return p.V.IsIdentity()
+}
+
+// === Additive Monoid Methods.
+
+func (p *Point) IsAdditiveIdentity() bool {
+	return p.IsIdentity()
+}
+
+// === Group Methods.
+
+func (p *Point) Inverse() curves.Point {
+	return &Point{V: new(Ep).Neg(p.V)}
+}
+
+func (p *Point) IsInverse(of curves.Point) bool {
+	return p.Operate(of).IsIdentity()
+}
+
+// === Additive Group Methods.
+
+func (p *Point) AdditiveInverse() curves.Point {
+	return p.Inverse()
+}
+
+func (p *Point) IsAdditiveInverse(of curves.Point) bool {
+	return p.IsInverse(of)
 }
 
 func (p *Point) Sub(rhs curves.Point) curves.Point {
@@ -122,8 +128,14 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 	if !ok {
 		panic("rhs is not a pallas point")
 	}
-	return &Point{Value: new(Ep).Sub(p.Value, r.Value)}
+	return &Point{V: new(Ep).Sub(p.V, r.V)}
 }
+
+func (p *Point) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Sub(q.Mul(NewScalarField().Element().SetNat(n)))
+}
+
+// === Vector Space Methods.
 
 func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
@@ -133,46 +145,80 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	if !ok {
 		panic("rhs is not a pallas point")
 	}
-	return &Point{Value: new(Ep).Mul(p.Value, s.Value)}
+	return &Point{V: new(Ep).Mul(p.V, s.V)}
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	if rhs == nil {
-		panic("rhs is nil")
-	}
-	r, ok := rhs.(*Point)
-	if !ok {
-		panic("rhs is not a pallas point")
-	}
-	return p.Value.Equal(r.Value)
+// === Curve Methods.
+
+func (*Point) Curve() curves.Curve {
+	return &pallasInstance
 }
 
-func (p *Point) Set(x, y *saferith.Nat) (curves.Point, error) {
-	xx := subtle.ConstantTimeCompare(x.Bytes(), []byte{})
-	yy := subtle.ConstantTimeCompare(y.Bytes(), []byte{})
-	xElem := new(fp.Fp).SetNat(x)
-	var data [32]byte
-	if yy == 1 {
-		if xx == 1 {
-			return &Point{Value: new(Ep).Identity()}, nil
-		}
-		data = xElem.Bytes()
-		return p.FromAffineCompressed(data[:])
-	}
-	yElem := new(fp.Fp).SetNat(y)
-	value := &Ep{X: xElem, Y: yElem, Z: new(fp.Fp).SetOne()}
-	if !value.IsOnCurve() {
-		return nil, errs.NewMembership("point is not on the curve")
-	}
-	return &Point{Value: value}, nil
+func (p *Point) Neg() curves.Point {
+	return p.Inverse()
 }
+
+func (p *Point) IsNegative() bool {
+	return p.V.GetY().IsOdd()
+}
+
+func (*Point) IsSmallOrder() bool {
+	return false
+}
+
+func (p *Point) IsTorsionElement(order *saferith.Modulus) bool {
+	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
+	return p.Mul(e).IsIdentity()
+}
+
+func (p *Point) ClearCofactor() curves.Point {
+	return p.Clone()
+}
+
+// === Coordinates interface methods.
+
+func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
+	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+}
+
+func (p *Point) AffineX() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: p.V.GetX(),
+	}
+}
+
+func (p *Point) AffineY() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: p.V.GetY(),
+	}
+}
+
+func (p *Point) JacobianX() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: p.V.X,
+	}
+}
+
+func (p *Point) JacobianY() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: p.V.Y,
+	}
+}
+
+func (p *Point) JacobianZ() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: p.V.Z,
+	}
+}
+
+// === Serialisation.
 
 func (p *Point) ToAffineCompressed() []byte {
-	return p.Value.ToAffineCompressed()
+	return p.V.ToAffineCompressed()
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
-	return p.Value.ToAffineUncompressed()
+	return p.V.ToAffineUncompressed()
 }
 
 func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
@@ -180,7 +226,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Point{Value: value}, nil
+	return &Point{V: value}, nil
 }
 
 func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
@@ -188,7 +234,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Point{Value: value}, nil
+	return &Point{V: value}, nil
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
@@ -208,28 +254,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
-	p.Value = ppt.Value
-	return nil
-}
-
-func (p *Point) MarshalText() ([]byte, error) {
-	res, err := serialisation.PointMarshalText(p)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
-	}
-	return res, nil
-}
-
-func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := serialisation.PointUnmarshalText(&pallasInstance, input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal")
-	}
-	ppt, ok := pt.(*Point)
-	if !ok {
-		return errs.NewInvalidType("invalid point")
-	}
-	p.Value = ppt.Value
+	p.V = ppt.V
 	return nil
 }
 
@@ -250,40 +275,12 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.Value = P.Value
+	p.V = P.V
 	return nil
 }
 
-func (p *Point) X() curves.FieldElement {
-	return &FieldElement{
-		v: p.Value.GetX(),
-	}
-}
-
-func (p *Point) Y() curves.FieldElement {
-	return &FieldElement{
-		v: p.Value.GetY(),
-	}
-}
-
-func (p *Point) JacobianX() curves.FieldElement {
-	return &FieldElement{
-		v: p.Value.X,
-	}
-}
-
-func (p *Point) JacobianY() curves.FieldElement {
-	return &FieldElement{
-		v: p.Value.Y,
-	}
-}
-
-func (p *Point) Jacobian() curves.FieldElement {
-	return &FieldElement{
-		v: p.Value.Z,
-	}
-}
+// === Misc.
 
 func (p *Point) GetEp() *Ep {
-	return new(Ep).Set(p.Value)
+	return new(Ep).Set(p.V)
 }

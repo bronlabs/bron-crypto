@@ -1,143 +1,68 @@
 package bls12381
 
 import (
-	"bytes"
-	"io"
-	"reflect"
-
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.PairingPoint = (*PointG1)(nil)
+var _ curves.ProjectiveCurveCoordinates = (*PointG1)(nil)
 
 type PointG1 struct {
-	Value *bls12381impl.G1
+	V *bls12381impl.G1
 
 	_ types.Incomparable
 }
 
 func NewPointG1() *PointG1 {
-	emptyPoint := &PointG1{}
-	result, _ := emptyPoint.Identity().(*PointG1)
-	return result
+	return NewG1().Identity().(*PointG1)
 }
 
-func (*PointG1) Curve() curves.Curve {
-	return NewG1()
-}
+// === Basic Methods.
 
-func (*PointG1) PairingCurve() curves.PairingCurve {
-	return New()
-}
-
-func (*PointG1) PairingCurveName() string {
-	return NamePairing
-}
-
-func (*PointG1) Random(reader io.Reader) (curves.Point, error) {
-	pt := new(bls12381impl.G1)
-	u0, err := bls12381g1.FieldElement().Random(reader)
-	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "couldn't generate random field element")
-	}
-	u1, err := bls12381g1.FieldElement().Random(reader)
-	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "couldn't generate random field element")
-	}
-	u0fe, ok0 := u0.(*FieldElementG1)
-	u1fe, ok1 := u1.(*FieldElementG1)
-	if !ok0 || !ok1 {
-		return nil, errs.WrapHashingFailed(err, "Cast to BLS12381 G1 field elements failed")
-	}
-	pt.Map(u0fe.v, u1fe.v)
-	return &PointG1{Value: pt}, nil
-}
-
-func (*PointG1) Hash(inputs ...[]byte) (curves.Point, error) {
-	pt := new(bls12381impl.G1)
-	u, err := NewG1().HashToFieldElements(2, bytes.Join(inputs, nil), nil)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of BLS12381 G1 failed")
-	}
-	u0, ok0 := u[0].(*FieldElementG1)
-	u1, ok1 := u[1].(*FieldElementG1)
-	if !ok0 || !ok1 {
-		return nil, errs.WrapHashingFailed(err, "Cast to BLS12381 G1 field elements failed")
-	}
-	pt.Map(u0.v, u1.v)
-	return &PointG1{Value: pt}, nil
-}
-
-func (*PointG1) HashWithDst(input, dst []byte) (curves.PairingPoint, error) {
-	pt := new(bls12381impl.G1)
-	u, err := NewG1().HashToFieldElements(2, input, dst)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of BLS12381 G1 failed")
-	}
-	u0, ok0 := u[0].(*FieldElementG1)
-	u1, ok1 := u[1].(*FieldElementG1)
-	if !ok0 || !ok1 {
-		return nil, errs.WrapHashingFailed(err, "Cast to BLS12381 G1 field elements failed")
-	}
-	pt.Map(u0.v, u1.v)
-	return &PointG1{Value: pt}, nil
-}
-
-func (p *PointG1) IsTorsionFree() bool {
-	return p.Value.InCorrectSubgroup() == 1
-}
-
-func (*PointG1) Identity() curves.Point {
-	return &PointG1{
-		Value: new(bls12381impl.G1).Identity(),
+func (p *PointG1) Equal(rhs curves.Point) bool {
+	r, ok := rhs.(*PointG1)
+	if ok {
+		return p.V.Equal(r.V) == 1
+	} else {
+		return false
 	}
 }
 
-func (p *PointG1) IsSmallOrder() bool {
-	return p.ClearCofactor().IsIdentity()
+func (p *PointG1) Clone() curves.Point {
+	return &PointG1{V: new(bls12381impl.G1).Set(p.V)}
 }
 
-func (*PointG1) Generator() curves.Point {
-	return &PointG1{
-		Value: new(bls12381impl.G1).Generator(),
+// === Groupoid Methods.
+
+func (p *PointG1) Operate(rhs curves.Point) curves.Point {
+	return p.Add(rhs)
+}
+
+func (p *PointG1) OperateIteratively(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.ApplyAdd(q, n)
+}
+
+func (p *PointG1) Order() *saferith.Modulus {
+	if p.IsIdentity() {
+		return saferith.ModulusFromUint64(0)
 	}
-}
-
-func (p *PointG1) IsIdentity() bool {
-	return p.Value.IsIdentity() == 1
-}
-
-func (p *PointG1) IsNegative() bool {
-	// According to https://github.com/zcash/librustzcash/blob/6e0364cd42a2b3d2b958a54771ef51a8db79dd29/pairing/src/bls12_381/README.md#serialization
-	// This bit represents the sign of the `y` coordinate which is what we want
-	return (p.Value.ToCompressed()[0]>>5)&1 == 1
-}
-
-func (p *PointG1) IsOnCurve() bool {
-	return p.Value.IsOnCurve() == 1
-}
-
-func (p *PointG1) Double() curves.Point {
-	return &PointG1{Value: new(bls12381impl.G1).Double(p.Value)}
-}
-
-func (*PointG1) Scalar() curves.Scalar {
-	return &Scalar{
-		Value:  bls12381impl.FqNew(),
-		Point_: new(PointG1),
+	q := p.Clone()
+	order := new(saferith.Nat).SetUint64(1)
+	for !q.IsIdentity() {
+		q = q.Add(p)
+		utils.IncrementNat(order)
 	}
+	return saferith.ModulusFromNat(order)
 }
 
-func (p *PointG1) Neg() curves.Point {
-	return &PointG1{Value: new(bls12381impl.G1).Neg(p.Value)}
-}
+// === Additive Groupoid Methods.
 
 func (p *PointG1) Add(rhs curves.Point) curves.Point {
 	if rhs == nil {
@@ -145,10 +70,54 @@ func (p *PointG1) Add(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*PointG1)
 	if ok {
-		return &PointG1{Value: new(bls12381impl.G1).Add(p.Value, r.Value)}
+		return &PointG1{V: new(bls12381impl.G1).Add(p.V, r.V)}
 	} else {
 		panic("rhs is not PointBls12381G1")
 	}
+}
+
+func (p *PointG1) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Add(q.Mul(NewScalarFieldG1().Element().SetNat(n)))
+}
+
+func (p *PointG1) Double() curves.Point {
+	return &PointG1{V: new(bls12381impl.G1).Double(p.V)}
+}
+
+func (p *PointG1) Triple() curves.Point {
+	return p.Double().Add(p)
+}
+
+// === Monoid Methods.
+
+func (p *PointG1) IsIdentity() bool {
+	return p.V.IsIdentity() == 1
+}
+
+// === Additive Monoid Methods.
+
+func (p *PointG1) IsAdditiveIdentity() bool {
+	return p.IsIdentity()
+}
+
+// === Group Methods.
+
+func (p *PointG1) Inverse() curves.Point {
+	return &PointG1{V: new(bls12381impl.G1).Neg(p.V)}
+}
+
+func (p *PointG1) IsInverse(of curves.Point) bool {
+	return p.Operate(of).IsIdentity()
+}
+
+// === Additive Group Methods.
+
+func (p *PointG1) AdditiveInverse() curves.Point {
+	return p.Inverse()
+}
+
+func (p *PointG1) IsAdditiveInverse(of curves.Point) bool {
+	return p.IsInverse(of)
 }
 
 func (p *PointG1) Sub(rhs curves.Point) curves.Point {
@@ -157,11 +126,17 @@ func (p *PointG1) Sub(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*PointG1)
 	if ok {
-		return &PointG1{Value: new(bls12381impl.G1).Sub(p.Value, r.Value)}
+		return &PointG1{V: new(bls12381impl.G1).Sub(p.V, r.V)}
 	} else {
 		panic("rhs is not PointBls12381G1")
 	}
 }
+
+func (p *PointG1) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Sub(q.Mul(NewScalarFieldG1().Element().SetNat(n)))
+}
+
+// === Vector Space Methods.
 
 func (p *PointG1) Mul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
@@ -169,44 +144,108 @@ func (p *PointG1) Mul(rhs curves.Scalar) curves.Point {
 	}
 	r, ok := rhs.(*Scalar)
 	if ok {
-		return &PointG1{Value: new(bls12381impl.G1).Mul(p.Value, r.Value)}
+		return &PointG1{V: new(bls12381impl.G1).Mul(p.V, r.V)}
 	} else {
 		panic("rhs is not ScalarBls12381")
 	}
 }
 
-func (p *PointG1) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*PointG1)
-	if ok {
-		return p.Value.Equal(r.Value) == 1
-	} else {
-		return false
-	}
+// === Curve Methods.
+
+func (*PointG1) Curve() curves.Curve {
+	return NewG1()
 }
 
-func (p *PointG1) Clone() curves.Point {
-	return &PointG1{Value: new(bls12381impl.G1).Set(p.Value)}
+func (p *PointG1) Neg() curves.Point {
+	return p.Inverse()
+}
+
+func (p *PointG1) IsNegative() bool {
+	// According to https://github.com/zcash/librustzcash/blob/6e0364cd42a2b3d2b958a54771ef51a8db79dd29/pairing/src/bls12_381/README.md#serialization
+	// This bit represents the sign of the `y` coordinate which is what we want
+	return (p.V.ToCompressed()[0]>>5)&1 == 1
+}
+
+func (p *PointG1) IsSmallOrder() bool {
+	return p.ClearCofactor().IsIdentity()
 }
 
 func (p *PointG1) ClearCofactor() curves.Point {
-	return &PointG1{Value: new(bls12381impl.G1).ClearCofactor(p.Value)}
+	return &PointG1{V: new(bls12381impl.G1).ClearCofactor(p.V)}
 }
 
-func (*PointG1) Set(x, y *saferith.Nat) (curves.Point, error) {
-	value, err := new(bls12381impl.G1).SetNat(x, y)
-	if err != nil {
-		return nil, errs.NewInvalidCoordinates("invalid coordinates")
-	}
-	return &PointG1{Value: value}, nil
+// === Pairing Methods.
+
+func (*PointG1) PairingCurve() curves.PairingCurve {
+	return NewPairingCurve()
 }
+
+func (*PointG1) OtherPrimeAlgebraicSubGroup() curves.Curve {
+	return NewG2()
+}
+
+func (p *PointG1) IsTorsionElement(order *saferith.Modulus) bool {
+	if order.Nat().Eq(p.Curve().SubGroupOrder().Nat()) == 1 {
+		return p.V.InCorrectSubgroup() == 1
+	}
+	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
+	return p.Mul(e).IsIdentity()
+}
+
+func (p *PointG1) Pair(rhs curves.PairingPoint) curves.GtMember {
+	e := new(bls12381impl.Engine)
+	e.AddPair(p.V, rhs.(*PointG2).V)
+
+	value := e.Result()
+
+	return &GtMember{V: value}
+}
+
+// === Coordinate Interface Methods.
+
+func (p *PointG1) AffineCoordinates() []curves.BaseFieldElement {
+	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+}
+
+func (p *PointG1) AffineX() curves.BaseFieldElement {
+	return &BaseFieldElementG1{
+		V: p.V.GetX(),
+	}
+}
+
+func (p *PointG1) AffineY() curves.BaseFieldElement {
+	return &BaseFieldElementG1{
+		V: p.V.GetY(),
+	}
+}
+
+func (p *PointG1) ProjectiveX() curves.BaseFieldElement {
+	return &BaseFieldElementG1{
+		V: &p.V.X,
+	}
+}
+
+func (p *PointG1) ProjectiveY() curves.BaseFieldElement {
+	return &BaseFieldElementG1{
+		V: &p.V.Y,
+	}
+}
+
+func (p *PointG1) ProjectiveZ() curves.BaseFieldElement {
+	return &BaseFieldElementG1{
+		V: &p.V.Z,
+	}
+}
+
+// === Serialisation.
 
 func (p *PointG1) ToAffineCompressed() []byte {
-	out := p.Value.ToCompressed()
+	out := p.V.ToCompressed()
 	return out[:]
 }
 
 func (p *PointG1) ToAffineUncompressed() []byte {
-	out := p.Value.ToUncompressed()
+	out := p.V.ToUncompressed()
 	return out[:]
 }
 
@@ -217,7 +256,7 @@ func (*PointG1) FromAffineCompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine compressed")
 	}
-	return &PointG1{Value: value}, nil
+	return &PointG1{V: value}, nil
 }
 
 func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
@@ -227,90 +266,7 @@ func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine uncompressed")
 	}
-	return &PointG1{Value: value}, nil
-}
-
-func (*PointG1) CurveName() string {
-	return NameG1
-}
-
-func multiScalarMultBls12381G1(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	nPoints := make([]*bls12381impl.G1, len(points))
-	nScalars := make([]*impl.FieldValue, len(scalars))
-	for i, pt := range points {
-		pp, ok := pt.(*PointG1)
-		if !ok {
-			return nil, errs.NewFailed("invalid point type %s, expected PointBls12381G1", reflect.TypeOf(pt).Name())
-		}
-		nPoints[i] = pp.Value
-	}
-	for i, sc := range scalars {
-		s, ok := sc.(*Scalar)
-		if !ok {
-			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarBls12381", reflect.TypeOf(sc).Name())
-		}
-		nScalars[i] = s.Value
-	}
-	value, err := new(bls12381impl.G1).SumOfProducts(nPoints, nScalars)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "multi scalar multiplication failed")
-	}
-	return &PointG1{Value: value}, nil
-}
-
-func (*PointG1) OtherGroup() curves.PairingPoint {
-	p1, ok := new(PointG2).Identity().(curves.PairingPoint)
-	if !ok {
-		panic("invalid point type")
-	}
-	return p1
-}
-
-func (p *PointG1) Pairing(rhs curves.PairingPoint) curves.Scalar {
-	pt, ok := rhs.(*PointG2)
-	if !ok {
-		panic("rhs is not PointBls12381G2")
-	}
-	e := new(bls12381impl.Engine)
-	e.AddPair(p.Value, pt.Value)
-
-	value := e.Result()
-
-	return &ScalarGt{Value: value}
-}
-
-func (p *PointG1) X() curves.FieldElement {
-	return &FieldElementG1{
-		v: p.Value.GetX(),
-	}
-}
-
-func (p *PointG1) Y() curves.FieldElement {
-	return &FieldElementG1{
-		v: p.Value.GetY(),
-	}
-}
-
-func (p *PointG1) ProjectiveX() curves.FieldElement {
-	return &FieldElementG1{
-		v: &p.Value.X,
-	}
-}
-
-func (p *PointG1) ProjectiveY() curves.FieldElement {
-	return &FieldElementG1{
-		v: &p.Value.Y,
-	}
-}
-
-func (p *PointG1) ProjectiveZ() curves.FieldElement {
-	return &FieldElementG1{
-		v: &p.Value.Z,
-	}
-}
-
-func (*PointG1) Modulus() *saferith.Modulus {
-	return p
+	return &PointG1{V: value}, nil
 }
 
 func (p *PointG1) MarshalBinary() ([]byte, error) {
@@ -330,28 +286,7 @@ func (p *PointG1) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
-	p.Value = ppt.Value
-	return nil
-}
-
-func (p *PointG1) MarshalText() ([]byte, error) {
-	result, err := serialisation.PointMarshalText(p)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't marshal to text")
-	}
-	return result, nil
-}
-
-func (p *PointG1) UnmarshalText(input []byte) error {
-	pt, err := serialisation.PointUnmarshalText(NewG1(), input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal")
-	}
-	ppt, ok := pt.(*PointG1)
-	if !ok {
-		return errs.NewInvalidType("invalid point")
-	}
-	p.Value = ppt.Value
+	p.V = ppt.V
 	return nil
 }
 
@@ -372,6 +307,6 @@ func (p *PointG1) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.Value = P.Value
+	p.V = P.V
 	return nil
 }

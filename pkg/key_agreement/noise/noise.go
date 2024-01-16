@@ -54,7 +54,7 @@ func isEmptyKey(curve curves.Curve, k [32]byte) bool {
 
 func MapToNoiseCurve(curve curves.Curve) string {
 	switch curve.Name() {
-	case curve25519.New().Name_:
+	case curve25519.Name:
 		return "25519"
 	default:
 		return "unknown-curve"
@@ -66,12 +66,12 @@ func incrementNonce(n uint64) uint64 {
 }
 
 // Dh execute a Diffie-Hellman key exchange function.
-func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) curves.FieldElement {
-	if curve.Name() == curve25519.New().Name_ {
+func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) curves.BaseFieldElement {
+	if curve.Name() == curve25519.Name {
 		publicKeyCurve22519, ok := publicKey.(*curve25519.Point)
 		if ok {
 			// curve25519's internal is using X25519
-			return publicKeyCurve22519.X25519(privateKey).X()
+			return publicKeyCurve22519.X25519(privateKey).AffineX()
 		}
 		panic("could not cast public key to curve25519 point")
 	} else {
@@ -86,7 +86,7 @@ func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) cu
 func NewSigner(prng io.Reader, curve curves.Curve, privateKey curves.Scalar) Signer {
 	var err error
 	if privateKey == nil {
-		privateKey, err = curve.Scalar().Random(prng)
+		privateKey, err = curve.ScalarField().Random(prng)
 		if err != nil {
 			panic("Could not sample private key")
 		}

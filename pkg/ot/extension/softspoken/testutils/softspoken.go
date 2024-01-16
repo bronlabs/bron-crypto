@@ -197,7 +197,7 @@ func GenerateSoftspokenRandomInputs(inputBatchLen, scalarsPerSlot int, curve cur
 		for i := 0; i < softspoken.Xi; i++ {
 			inputOpts[l][i] = make([]curves.Scalar, scalarsPerSlot)
 			for k := 0; k < scalarsPerSlot; k++ {
-				inputOpts[l][i][k], err = curve.Scalar().Random(crand.Reader)
+				inputOpts[l][i][k], err = curve.ScalarField().Random(crand.Reader)
 				if err != nil {
 					return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 				}

@@ -1,4 +1,4 @@
-package bls12381
+package bls12381_test
 
 import (
 	crand "crypto/rand"
@@ -9,244 +9,263 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
 func TestScalarBls12381G1Random(t *testing.T) {
-	bls12381g1 := NewG1()
-	sc, err := bls12381g1.Scalar().Random(testutils.TestRng())
+	curve := bls12381.NewG1()
+	sc, err := curve.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
-	s, ok := sc.(*Scalar)
+	s, ok := sc.(*bls12381.Scalar)
 	require.True(t, ok)
 	expected, _ := new(saferith.Nat).SetHex(strings.ToUpper("15d9b1eb5cc9ab27c2630ea4bcfdaa64f3d2ce7cd85fa33f32fc967fe0d4c764"))
-	require.Equal(t, s.Value.Nat(), expected)
+	require.Equal(t, s.V.Nat(), expected)
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
-		sc, err := bls12381g1.Scalar().Random(crand.Reader)
+		sc, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		_, ok := sc.(*Scalar)
+		_, ok := sc.(*bls12381.Scalar)
 		require.True(t, ok)
 		require.True(t, !sc.IsZero())
 	}
 }
 
-func TestScalarBls12381G1Hash(t *testing.T) {
-	var b [32]byte
-	bls12381G1 := NewG1()
-	sc, err := bls12381G1.Scalar().Hash(b[:])
-	require.NoError(t, err)
-	s, ok := sc.(*Scalar)
-	require.True(t, ok)
-	expected, _ := new(saferith.Nat).SetHex(strings.ToUpper("1c9c9f9d9a90992dd8738dce5616cb79bb5344d5c4d2e37c31462e3e3ead4b7c"))
-	require.Equal(t, s.Value.Nat(), expected)
-}
-
 func TestScalarBls12381G1Zero(t *testing.T) {
-	bls12381G1 := NewG1()
-	sc := bls12381G1.Scalar().Zero()
+	bls12381G1 := bls12381.NewG1()
+	sc := bls12381G1.ScalarField().Zero()
 	require.True(t, sc.IsZero())
 	require.True(t, sc.IsEven())
 }
 
 func TestScalarBls12381G1One(t *testing.T) {
-	bls12381G1 := NewG1()
-	sc := bls12381G1.Scalar().One()
+	bls12381G1 := bls12381.NewG1()
+	sc := bls12381G1.ScalarField().One()
 	require.True(t, sc.IsOne())
 	require.True(t, sc.IsOdd())
 }
 
 func TestScalarBls12381G1New(t *testing.T) {
-	bls12381G1 := NewG1()
-	three := bls12381G1.Scalar().New(3)
+	g1 := bls12381.NewG1()
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
 	require.True(t, three.IsOdd())
-	four := bls12381G1.Scalar().New(4)
+	four, err := bls12381.NewScalar(g1, 4)
+	require.NoError(t, err)
 	require.True(t, four.IsEven())
-	neg1 := bls12381G1.Scalar().New(1).Neg()
+	one, err := bls12381.NewScalar(g1, 1)
+	require.NoError(t, err)
+	neg1 := one.Neg()
 	require.True(t, neg1.IsEven())
-	neg2 := bls12381G1.Scalar().New(2).Neg()
+	two, err := bls12381.NewScalar(g1, 2)
+	require.NoError(t, err)
+	neg2 := two.Neg()
 	require.True(t, neg2.IsOdd())
 }
 
 func TestScalarBls12381G1Square(t *testing.T) {
-	bls12381G1 := NewG1()
-	three := bls12381G1.Scalar().New(3)
-	nine := bls12381G1.Scalar().New(9)
-	require.Equal(t, three.Square().Cmp(nine), 0)
+	g1 := bls12381.NewG1()
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
+	require.Equal(t, (int(three.Square().Cmp(nine))), 0)
 }
 
 func TestScalarBls12381G1Cube(t *testing.T) {
-	bls12381G1 := NewG1()
-	three := bls12381G1.Scalar().New(3)
-	twentySeven := bls12381G1.Scalar().New(27)
+	g1 := bls12381.NewG1()
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	twentySeven, err := bls12381.NewScalar(g1, 27)
+	require.NoError(t, err)
 	print(hex.EncodeToString(three.Cube().Bytes()))
-	require.Equal(t, three.Cube().Cmp(twentySeven), 0)
+	require.Equal(t, int(three.Cube().Cmp(twentySeven)), 0)
 }
 
 func TestScalarBls12381G1Double(t *testing.T) {
-	bls12381G1 := NewG1()
-	three := bls12381G1.Scalar().New(3)
-	six := bls12381G1.Scalar().New(6)
-	require.Equal(t, three.Double().Cmp(six), 0)
-}
-
-func TestScalarBls12381G1Neg(t *testing.T) {
-	bls12381G1 := NewG1()
-	one := bls12381G1.Scalar().One()
-	neg1 := bls12381G1.Scalar().New(1).Neg()
-	require.Equal(t, one.Neg().Cmp(neg1), 0)
-	lotsOfThrees := bls12381G1.Scalar().New(333333)
-	expected := bls12381G1.Scalar().New(333333).Neg()
-	require.Equal(t, lotsOfThrees.Neg().Cmp(expected), 0)
+	g1 := bls12381.NewG1()
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	six, err := bls12381.NewScalar(g1, 6)
+	require.NoError(t, err)
+	require.Equal(t, int(three.Double().Cmp(six)), 0)
 }
 
 func TestScalarBls12381G1Invert(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
-	actual, _ := nine.Invert()
-	sa, _ := actual.(*Scalar)
-	expectedNat, _ := new(saferith.Nat).SetHex(strings.ToUpper("19c308bd25b13848eef068e557794c72f62a247271c6bf1c38e38e38aaaaaaab"))
-	expected, err := bls12381G1.Scalar().SetNat(expectedNat)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
-	require.Equal(t, sa.Cmp(expected), 0)
+	actual := nine.MultiplicativeInverse()
+	sa, _ := actual.(*bls12381.Scalar)
+	expectedNat, _ := new(saferith.Nat).SetHex(strings.ToUpper("19c308bd25b13848eef068e557794c72f62a247271c6bf1c38e38e38aaaaaaab"))
+	expected := g1.Scalar().SetNat(expectedNat)
+	require.Equal(t, int(sa.Cmp(expected)), 0)
 }
 
 func TestScalarBls12381G1Sqrt(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
 	actual, err := nine.Sqrt()
 	require.NoError(t, err)
-	sa, _ := actual.(*Scalar)
+	sa, _ := actual.(*bls12381.Scalar)
 	expectedNat, _ := new(saferith.Nat).SetHex(strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffefffffffe"))
-	expected, err := bls12381G1.Scalar().SetNat(expectedNat)
-	require.NoError(t, err)
-	require.Equal(t, sa.Cmp(expected), 0)
+	expected := g1.Scalar().SetNat(expectedNat)
+	require.Equal(t, int(sa.Cmp(expected)), 0)
 }
 
 func TestScalarBls12381G1Add(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
-	six := bls12381G1.Scalar().New(6)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
+	six, err := bls12381.NewScalar(g1, 6)
+	require.NoError(t, err)
 	fifteen := nine.Add(six)
 	require.NotNil(t, fifteen)
-	expected := bls12381G1.Scalar().New(15)
-	require.Equal(t, expected.Cmp(fifteen), 0)
+	expected, err := bls12381.NewScalar(g1, 15)
+	require.NoError(t, err)
+	require.Equal(t, int(expected.Cmp(fifteen)), 0)
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
 	n.Sub(n, new(saferith.Nat).SetUint64(3), qq.Params.Modulus.BitLen())
 
-	upper, err := bls12381G1.Scalar().SetNat(n)
-	require.NoError(t, err)
+	upper := g1.Scalar().SetNat(n)
 	actual := upper.Add(nine)
 	require.NotNil(t, actual)
-	require.Equal(t, actual.Cmp(six), 0)
+	require.Equal(t, int(actual.Cmp(six)), 0)
 }
 
 func TestScalarBls12381G1Sub(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
-	six := bls12381G1.Scalar().New(6)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
+	six, err := bls12381.NewScalar(g1, 6)
+	require.NoError(t, err)
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
 	n.Sub(n, new(saferith.Nat).SetUint64(3), qq.Params.Modulus.BitLen())
 
-	expected, err := bls12381G1.Scalar().SetNat(n)
-	require.NoError(t, err)
+	expected := g1.Scalar().SetNat(n)
 	actual := six.Sub(nine)
-	require.Equal(t, expected.Cmp(actual), 0)
+	require.Equal(t, int(expected.Cmp(actual)), 0)
 
 	actual = nine.Sub(six)
-	require.Equal(t, actual.Cmp(bls12381G1.Scalar().New(3)), 0)
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	require.Equal(t, int(actual.Cmp(three)), 0)
 }
 
 func TestScalarBls12381G1Mul(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
-	six := bls12381G1.Scalar().New(6)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
+	six, err := bls12381.NewScalar(g1, 6)
+	require.NoError(t, err)
 	actual := nine.Mul(six)
-	require.Equal(t, actual.Cmp(bls12381G1.Scalar().New(54)), 0)
+	fiftyFour, err := bls12381.NewScalar(g1, 54)
+	require.NoError(t, err)
+	require.Equal(t, int(actual.Cmp(fiftyFour)), 0)
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
 	n.Sub(n, new(saferith.Nat).SetUint64(1), qq.Params.Modulus.BitLen())
-	upper, err := bls12381G1.Scalar().SetNat(n)
+	upper := g1.Scalar().SetNat(n)
+	one, err := bls12381.NewScalar(g1, 1)
 	require.NoError(t, err)
-	require.Equal(t, upper.Mul(upper).Cmp(bls12381G1.Scalar().New(1)), 0)
+	require.Equal(t, int(upper.Mul(upper).Cmp(one)), 0)
 }
 
 func TestScalarBls12381G1Div(t *testing.T) {
-	bls12381G1 := NewG1()
-	nine := bls12381G1.Scalar().New(9)
+	g1 := bls12381.NewG1()
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
 	actual := nine.Div(nine)
-	require.Equal(t, actual.Cmp(bls12381G1.Scalar().New(1)), 0)
-	require.Equal(t, bls12381G1.Scalar().New(54).Div(nine).Cmp(bls12381G1.Scalar().New(6)), 0)
+	one, err := bls12381.NewScalar(g1, 1)
+	require.NoError(t, err)
+	require.Equal(t, int(actual.Cmp(one)), 0)
+	fiftyFour, err := bls12381.NewScalar(g1, 54)
+	require.NoError(t, err)
+	six, err := bls12381.NewScalar(g1, 6)
+	require.NoError(t, err)
+	require.Equal(t, int(fiftyFour.Div(nine).Cmp(six)), 0)
 }
 
 func TestScalarBls12381G1Exp(t *testing.T) {
-	bls12381g1 := NewG1()
-	seventeen := bls12381g1.Scalar().New(17)
+	g1 := bls12381.NewG1()
+	seventeen, err := bls12381.NewScalar(g1, 17)
+	require.NoError(t, err)
 
-	toZero := seventeen.Exp(bls12381g1.Scalar().Zero())
-	require.True(t, toZero.Cmp(bls12381g1.Scalar().One()) == 0)
+	toZero := seventeen.Exp(g1.ScalarField().Zero())
+	require.True(t, toZero.Cmp(g1.ScalarField().One()) == algebra.Equal)
 
-	toOne := seventeen.Exp(bls12381g1.Scalar().One())
-	require.True(t, toOne.Cmp(seventeen) == 0)
+	toOne := seventeen.Exp(g1.ScalarField().One())
+	require.True(t, toOne.Cmp(seventeen) == algebra.Equal)
 
-	toTwo := seventeen.Exp(bls12381g1.Scalar().New(2))
-	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
+	two, err := bls12381.NewScalar(g1, 2)
+	require.NoError(t, err)
+	toTwo := seventeen.Exp(two)
+	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == algebra.Equal)
 
-	toThree := seventeen.Exp(bls12381g1.Scalar().New(3))
-	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	toThree := seventeen.Exp(three)
+	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == algebra.Equal)
 }
 
 func TestScalarBls12381G1Serialize(t *testing.T) {
-	bls12381G1 := NewG1()
-	sc := bls12381G1.Scalar().New(255)
+	g1 := bls12381.NewG1()
+	sc, err := bls12381.NewScalar(g1, 255)
+	require.NoError(t, err)
 	sequence := sc.Bytes()
 	require.Equal(t, len(sequence), 32)
 	require.Equal(t, sequence, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff})
-	ret, err := bls12381G1.Scalar().SetBytes(sequence)
+	ret, err := g1.Scalar().SetBytes(sequence)
 	require.NoError(t, err)
-	require.Equal(t, ret.Cmp(sc), 0)
+	require.Equal(t, 0, int(ret.Cmp(sc)))
 
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
-		sc, err = bls12381G1.Scalar().Random(crand.Reader)
+		ssc, err := g1.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
+		sc, ok := ssc.(*bls12381.Scalar)
+		require.True(t, ok)
 		sequence = sc.Bytes()
 		require.Equal(t, len(sequence), 32)
-		ret, err = bls12381G1.Scalar().SetBytes(sequence)
+		ret, err = g1.Scalar().SetBytes(sequence)
 		require.NoError(t, err)
-		require.Equal(t, ret.Cmp(sc), 0)
+		require.Equal(t, int(ret.Cmp(sc)), 0)
 	}
 }
 
 func TestScalarBls12381G1Nil(t *testing.T) {
-	bls12381G1 := NewG1()
-	one := bls12381G1.Scalar().New(1)
+	g1 := bls12381.NewG1()
+	one, err := bls12381.NewScalar(g1, 1)
+	require.NoError(t, err)
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
 	require.Panics(t, func() { one.Div(nil) })
-	_, err := bls12381G1.Scalar().Random(nil)
+	_, err = g1.ScalarField().Random(nil)
 	require.Error(t, err)
-	require.Equal(t, one.Cmp(nil), -2)
-	_, err = bls12381G1.Scalar().SetNat(nil)
-	require.Error(t, err)
+	require.Equal(t, int(one.Cmp(nil)), -2)
+	v := g1.Scalar().SetNat(nil)
+	require.Nil(t, v)
 }
 
 func TestScalarBls12381Point(t *testing.T) {
-	bls12381G1 := NewG1()
-	_, ok := bls12381G1.Point().Identity().(*PointG1)
+	bls12381G1 := bls12381.NewG1()
+	_, ok := bls12381G1.Identity().(*bls12381.PointG1)
 	require.True(t, ok)
-	bls12381G2 := NewG2()
-	_, ok = bls12381G2.Point().Identity().(*PointG2)
+	bls12381G2 := bls12381.NewG2()
+	_, ok = bls12381G2.Identity().(*bls12381.PointG2)
 	require.True(t, ok)
 }
 
 // func TestPointBls12381G2Random(t *testing.T) {
 // 	bls12381G2 := NewG2()
-// 	sc := bls12381G2.Point().Random(testutils.TestRng())
+// 	sc := bls12381G2.Random(testutils.TestRng())
 // 	s, ok := sc.(*PointG2)
 // 	require.True(t, ok)
 // 	expectedX, _ := new(big.Int).SetString("13520facd10fc1cd71384d86b445b0e65ac1bf9205e86cd02837c064d1886b8aa3dc5348845bb06216601de5628315600967df84901b1c4f1fac87f9fc13d02f9c3a0f8cf462c86d2b4bbddf7b8520a3df2a5c541724a2c7ddc9eec45f0b2f74", 16)
@@ -255,7 +274,7 @@ func TestScalarBls12381Point(t *testing.T) {
 // 	require.Equal(t, s.Y(), expectedY)
 // 	// Try 10 random values
 // 	for i := 0; i < 10; i++ {
-// 		sc := bls12381G2.Point().Random(crand.Reader)
+// 		sc := bls12381G2.Random(crand.Reader)
 // 		_, ok := sc.(*PointG2)
 // 		require.True(t, ok)
 // 		require.True(t, !sc.IsIdentity())
@@ -275,73 +294,84 @@ func TestScalarBls12381Point(t *testing.T) {
 // }
 
 func TestPointBls12381G2Identity(t *testing.T) {
-	bls12381G2 := NewG2()
-	sc := bls12381G2.Point().Identity()
+	bls12381G2 := bls12381.NewG2()
+	sc := bls12381G2.Identity()
 	require.True(t, sc.IsIdentity())
 	require.Equal(t, sc.ToAffineCompressed(), []byte{0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 }
 
 func TestPointBls12381G2Generator(t *testing.T) {
-	bls12381G2 := NewG2()
-	sc := bls12381G2.Point().Generator()
-	s, ok := sc.(*PointG2)
+	bls12381G2 := bls12381.NewG2()
+	sc := bls12381G2.Generator()
+	s, ok := sc.(*bls12381.PointG2)
 	require.True(t, ok)
-	require.Equal(t, 1, s.Value.Equal(new(bls12381impl.G2).Generator()))
+	require.Equal(t, 1, s.V.Equal(new(bls12381impl.G2).Generator()))
 }
 
 func TestPointBls12381G2Set(t *testing.T) {
-	bls12381G2 := NewG2()
-	identity, err := bls12381G2.Point().Set(new(saferith.Nat).SetUint64(0), new(saferith.Nat).SetUint64(0))
+	bls12381G2 := bls12381.NewG2()
+	z := bls12381G2.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
+	identity, err := bls12381G2.NewPoint(z, z)
 	require.NoError(t, err)
 	require.True(t, identity.IsIdentity())
-	generator := new(bls12381impl.G2).Generator().ToUncompressed()
-	_, err = bls12381G2.Point().Set(new(saferith.Nat).SetBytes(generator[:96]), new(saferith.Nat).SetBytes(generator[96:]))
+
+	generator := bls12381G2.Generator().(*bls12381.PointG2)
+	g, err := bls12381G2.NewPoint(generator.AffineX(), generator.AffineY())
 	require.NoError(t, err)
+	require.True(t, generator.Equal(g))
 }
 
 func TestPointBls12381G2Double(t *testing.T) {
-	bls12381G2 := NewG2()
-	g := bls12381G2.Point().Generator()
+	g2 := bls12381.NewG2()
+	g := g2.Generator()
 	gg2 := g.Double()
-	require.True(t, gg2.Equal(g.Mul(bls12381G2.Scalar().New(2))))
-	i := bls12381G2.Point().Identity()
+	two, err := bls12381.NewScalar(g2, 2)
+	require.NoError(t, err)
+	require.True(t, gg2.Equal(g.Mul(two)))
+	i := g2.Identity()
 	require.True(t, i.Double().Equal(i))
 }
 
 func TestPointBls12381G2Neg(t *testing.T) {
-	bls12381G2 := NewG1()
-	g := bls12381G2.Point().Generator().Neg()
-	require.True(t, g.Neg().Equal(bls12381G2.Point().Generator()))
-	require.True(t, bls12381G2.Point().Identity().Neg().Equal(bls12381G2.Point().Identity()))
+	bls12381G2 := bls12381.NewG2()
+	g := bls12381G2.Generator().Neg()
+	require.True(t, g.Neg().Equal(bls12381G2.Generator()))
+	require.True(t, bls12381G2.Identity().Neg().Equal(bls12381G2.Identity()))
 }
 
 func TestPointBls12381G2Add(t *testing.T) {
-	bls12381G2 := NewG2()
-	pt := bls12381G2.Point().Generator()
+	g2 := bls12381.NewG2()
+	pt := g2.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
-	require.True(t, pt.Mul(bls12381G2.Scalar().New(3)).Equal(pt.Add(pt).Add(pt)))
+	three, err := bls12381.NewScalar(g2, 3)
+	require.NoError(t, err)
+	require.True(t, pt.Mul(three).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointBls12381G2Sub(t *testing.T) {
-	bls12381G2 := NewG2()
-	g := bls12381G2.Point().Generator()
-	pt := bls12381G2.Point().Generator().Mul(bls12381G2.Scalar().New(4))
+	g2 := bls12381.NewG2()
+	g := g2.Generator()
+	four, err := bls12381.NewScalar(g2, 4)
+	require.NoError(t, err)
+	pt := g2.Generator().Mul(four)
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
 }
 
 func TestPointBls12381G2Mul(t *testing.T) {
-	bls12381G2 := NewG2()
-	g := bls12381G2.Point().Generator()
-	pt := bls12381G2.Point().Generator().Mul(bls12381G2.Scalar().New(4))
+	g2 := bls12381.NewG2()
+	g := g2.Generator()
+	four, err := bls12381.NewScalar(g2, 4)
+	require.NoError(t, err)
+	pt := g2.Generator().Mul(four)
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
 func TestPointBls12381G2Serialize(t *testing.T) {
-	bls12381G2 := NewG2()
-	ss, err := bls12381G2.Scalar().Random(testutils.TestRng())
+	bls12381G2 := bls12381.NewG2()
+	ss, err := bls12381G2.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
-	g := bls12381G2.Point().Generator()
+	g := bls12381G2.Generator()
 
 	ppt := g.Mul(ss)
 	expectedAffineCompressed, _ := hex.DecodeString("9393bcab9607b91e8572088cafd02c7669d462386d24bc26f8249a2ef0776897e23adf5e050f1e49d64dfab62e45d72d05e7307720a88a2e69c9e33f0d935d892db312b053545817ec4b4c8edc7e639d5226b93a46f142b79f7574679aa74910")
@@ -357,7 +387,7 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		s, err := bls12381G2.Scalar().Random(crand.Reader)
+		s, err := bls12381G2.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		pt := g.Mul(s)
 		cmprs := pt.ToAffineCompressed()
@@ -375,21 +405,21 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 }
 
 func TestPointBls12381G2Nil(t *testing.T) {
-	bls12381G2 := NewG2()
-	one := bls12381G2.Point().Generator()
+	bls12381G2 := bls12381.NewG2()
+	one := bls12381G2.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
-	_, err := bls12381G2.Scalar().Random(nil)
+	_, err := bls12381G2.ScalarField().Random(nil)
 	require.Error(t, err)
 	require.False(t, one.Equal(nil))
-	_, err = bls12381G2.Scalar().SetNat(nil)
-	require.Error(t, err)
+	v := bls12381G2.Scalar().SetNat(nil)
+	require.Nil(t, v)
 }
 
 // func TestPointBls12381G1Random(t *testing.T) {
 // 	bls12381G1 := NewG1()
-// 	sc := bls12381G1.Point().Random(testutils.TestRng())
+// 	sc := bls12381G1.Random(testutils.TestRng())
 // 	s, ok := sc.(*PointG1)
 // 	require.True(t, ok)
 // 	expectedX, _ := new(big.Int).SetString("191b78617711a9aca6092c50d8c715db4856b84e48b9aa07dc42719335751b2ef3dfa2f6f15afc6dba2d0fb3be63dd83", 16)
@@ -398,7 +428,7 @@ func TestPointBls12381G2Nil(t *testing.T) {
 // 	require.Equal(t, s.Y(), expectedY)
 // 	// Try 10 random values
 // 	for i := 0; i < 10; i++ {
-// 		sc := bls12381G1.Point().Random(crand.Reader)
+// 		sc := bls12381G1.Random(crand.Reader)
 // 		_, ok := sc.(*PointG1)
 // 		require.True(t, ok)
 // 		require.True(t, !sc.IsIdentity())
@@ -418,74 +448,85 @@ func TestPointBls12381G2Nil(t *testing.T) {
 // }
 
 func TestPointBls12381G1Identity(t *testing.T) {
-	bls12381G1 := NewG1()
-	sc := bls12381G1.Point().Identity()
+	bls12381G1 := bls12381.NewG1()
+	sc := bls12381G1.Identity()
 	require.True(t, sc.IsIdentity())
 	require.Equal(t, sc.ToAffineCompressed(), []byte{0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 }
 
 func TestPointBls12381G1Generator(t *testing.T) {
-	bls12381G1 := NewG1()
-	sc := bls12381G1.Point().Generator()
-	s, ok := sc.(*PointG1)
+	bls12381G1 := bls12381.NewG1()
+	sc := bls12381G1.Generator()
+	s, ok := sc.(*bls12381.PointG1)
 	g := new(bls12381impl.G1).Generator()
 	require.True(t, ok)
-	require.Equal(t, 1, s.Value.Equal(g))
+	require.Equal(t, 1, s.V.Equal(g))
 }
 
 func TestPointBls12381G1Set(t *testing.T) {
-	bls12381G1 := NewG1()
-	iden, err := bls12381G1.Point().Set(new(saferith.Nat).SetUint64(0), new(saferith.Nat).SetUint64(0))
+	bls12381G1 := bls12381.NewG1()
+	z := bls12381G1.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
+	iden, err := bls12381G1.NewPoint(z, z)
 	require.NoError(t, err)
 	require.True(t, iden.IsIdentity())
 	generator := new(bls12381impl.G1).Generator().ToUncompressed()
-	_, err = bls12381G1.Point().Set(new(saferith.Nat).SetBytes(generator[:48]), new(saferith.Nat).SetBytes(generator[48:]))
+	gx := bls12381.NewBaseFieldG1().Element().SetNat(new(saferith.Nat).SetBytes(generator[:48]))
+	gy := bls12381.NewBaseFieldG1().Element().SetNat(new(saferith.Nat).SetBytes(generator[48:]))
+	_, err = bls12381G1.NewPoint(gx, gy)
 	require.NoError(t, err)
 }
 
 func TestPointBls12381G1Double(t *testing.T) {
-	bls12381G1 := NewG1()
-	g := bls12381G1.Point().Generator()
-	g2 := g.Double()
-	require.True(t, g2.Equal(g.Mul(bls12381G1.Scalar().New(2))))
-	i := bls12381G1.Point().Identity()
+	g1 := bls12381.NewG1()
+	g := g1.Generator()
+	gDouble := g.Double()
+	two, err := bls12381.NewScalar(g1, 2)
+	require.NoError(t, err)
+	require.True(t, gDouble.Equal(g.Mul(two)))
+	i := g1.Identity()
 	require.True(t, i.Double().Equal(i))
 }
 
 func TestPointBls12381G1Neg(t *testing.T) {
-	bls12381G1 := NewG1()
-	g := bls12381G1.Point().Generator().Neg()
-	require.True(t, g.Neg().Equal(bls12381G1.Point().Generator()))
-	require.True(t, bls12381G1.Point().Identity().Neg().Equal(bls12381G1.Point().Identity()))
+	bls12381G1 := bls12381.NewG1()
+	g := bls12381G1.Generator().Neg()
+	require.True(t, g.Neg().Equal(bls12381G1.Generator()))
+	require.True(t, bls12381G1.Identity().Neg().Equal(bls12381G1.Identity()))
 }
 
 func TestPointBls12381G1Add(t *testing.T) {
-	bls12381G1 := NewG1()
-	pt := bls12381G1.Point().Generator()
+	g1 := bls12381.NewG1()
+	pt := g1.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
-	require.True(t, pt.Mul(bls12381G1.Scalar().New(3)).Equal(pt.Add(pt).Add(pt)))
+	three, err := bls12381.NewScalar(g1, 3)
+	require.NoError(t, err)
+	require.True(t, pt.Mul(three).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointBls12381G1Sub(t *testing.T) {
-	bls12381G1 := NewG1()
-	g := bls12381G1.Point().Generator()
-	pt := bls12381G1.Point().Generator().Mul(bls12381G1.Scalar().New(4))
+	g1 := bls12381.NewG1()
+	g := g1.Generator()
+	four, err := bls12381.NewScalar(g1, 4)
+	require.NoError(t, err)
+	pt := g1.Generator().Mul(four)
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
 }
 
 func TestPointBls12381G1Mul(t *testing.T) {
-	bls12381G1 := NewG1()
-	g := bls12381G1.Point().Generator()
-	pt := bls12381G1.Point().Generator().Mul(bls12381G1.Scalar().New(4))
+	g1 := bls12381.NewG1()
+	g := g1.Generator()
+	four, err := bls12381.NewScalar(g1, 4)
+	require.NoError(t, err)
+	pt := g1.Generator().Mul(four)
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
 func TestPointBls12381G1Serialize(t *testing.T) {
-	bls12381G1 := NewG1()
-	ss, err := bls12381G1.Scalar().Random(testutils.TestRng())
+	bls12381G1 := bls12381.NewG1()
+	ss, err := bls12381G1.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
-	g := bls12381G1.Point().Generator()
+	g := bls12381G1.Generator()
 
 	ppt := g.Mul(ss)
 	expectedCompressed, _ := hex.DecodeString("afb98569c797d3ce0dcc2fd84da6460a1fa60aba50b6bf349b75f611f5fbfd80b3d7551c5112ddcee43ccc7124c8d2af")
@@ -501,7 +542,7 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		s, err := bls12381G1.Scalar().Random(crand.Reader)
+		s, err := bls12381G1.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		pt := g.Mul(s)
 		cmprs := pt.ToAffineCompressed()
@@ -519,32 +560,41 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 }
 
 func TestPointBls12381G1Nil(t *testing.T) {
-	bls12381G1 := NewG1()
-	one := bls12381G1.Point().Generator()
+	bls12381G1 := bls12381.NewG1()
+	one := bls12381G1.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
-	_, err := bls12381G1.Scalar().Random(nil)
+	_, err := bls12381G1.ScalarField().Random(nil)
 	require.False(t, one.Equal(nil))
 	require.Error(t, err)
-	_, err = bls12381G1.Scalar().SetNat(nil)
-	require.Error(t, err)
+	v := bls12381G1.Scalar().SetNat(nil)
+	require.Nil(t, v)
 }
 
 func TestPointBls12381G1SumOfProducts(t *testing.T) {
-	lhs := new(PointG1).Generator().Mul(new(Scalar).New(50))
+	g1 := bls12381.NewG1()
+	fifty, err := bls12381.NewScalar(g1, 50)
+	require.NoError(t, err)
+	eight, err := bls12381.NewScalar(g1, 8)
+	require.NoError(t, err)
+	nine, err := bls12381.NewScalar(g1, 9)
+	require.NoError(t, err)
+	ten, err := bls12381.NewScalar(g1, 10)
+	require.NoError(t, err)
+	eleven, err := bls12381.NewScalar(g1, 11)
+	require.NoError(t, err)
+	twelve, err := bls12381.NewScalar(g1, 12)
+	require.NoError(t, err)
+	lhs := bls12381.NewG1().Generator().Mul(fifty)
 	points := make([]curves.Point, 5)
 	for i := range points {
-		points[i] = new(PointG1).Generator()
+		points[i] = bls12381.NewG1().Generator()
 	}
 	scalars := []curves.Scalar{
-		new(Scalar).New(8),
-		new(Scalar).New(9),
-		new(Scalar).New(10),
-		new(Scalar).New(11),
-		new(Scalar).New(12),
+		eight, nine, ten, eleven, twelve,
 	}
-	rhs, err := NewG1().MultiScalarMult(scalars, points)
+	rhs, err := bls12381.NewG1().MultiScalarMult(scalars, points)
 	require.NoError(t, err)
 	require.NotNil(t, rhs)
 	require.True(t, lhs.Equal(rhs))

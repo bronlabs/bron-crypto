@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
@@ -40,7 +39,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	bigRWitness := make([]commitments.Witness, p.tau)
 
 	for i := 0; i < p.tau; i++ {
-		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate random k")
 		}
@@ -158,12 +157,7 @@ func openCommitment(sid []byte, i int, party integration.IdentityKey, bigR curve
 }
 
 func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, k curves.Scalar, bigR curves.Point, prng io.Reader) (proof *dlog.Proof, err error) {
-	curveName := k.CurveName()
-	curve, err := curveutils.GetCurveByName(curveName)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid curve %s", curveName)
-	}
-
+	curve := k.ScalarField().Curve()
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
 	prover, err := dlog.NewProver(curve.Generator(), sid, transcript, prng)
@@ -183,12 +177,7 @@ func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party integ
 }
 
 func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party integration.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
-	curveName := bigR.CurveName()
-	curve, err := curveutils.GetCurveByName(curveName)
-	if err != nil {
-		return errs.WrapFailed(err, "invalid curve %s", curveName)
-	}
-
+	curve := bigR.Curve()
 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 	transcript.AppendPoints("pid", party.PublicKey())
 	if err := dlog.Verify(curve.Generator(), bigR, proof, sid); err != nil {

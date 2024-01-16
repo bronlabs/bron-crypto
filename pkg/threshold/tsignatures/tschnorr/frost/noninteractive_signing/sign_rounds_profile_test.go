@@ -33,9 +33,9 @@ func TestRunProfile(t *testing.T) {
 		n, _ = strconv.Atoi(os.Getenv("PROFILE_N"))
 	}
 	if os.Getenv("PROFILE_CURVE") == "ED25519" {
-		curve = edwards25519.New()
+		curve = edwards25519.NewCurve()
 	} else {
-		curve = k256.New()
+		curve = k256.NewCurve()
 	}
 	if os.Getenv("PROFILE_HASH") == "SHA3" {
 		h = sha3.New256

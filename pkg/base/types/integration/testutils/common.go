@@ -64,12 +64,12 @@ func (k *TestAuthKey) Sign(message []byte) []byte {
 }
 
 func (k *TestAuthKey) Verify(signature, message []byte) error {
-	r := k.suite.Curve.Point().Identity()
+	r := k.suite.Curve.Identity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
 		return errs.NewSerialisation("cannot deserialize signature")
 	}
-	s := k.suite.Curve.Scalar().Zero()
+	s := k.suite.Curve.ScalarField().Zero()
 	switch len(s.Bytes()) {
 	case base.WideFieldBytes:
 		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
@@ -104,12 +104,12 @@ type TestDeterministicAuthKey struct {
 
 func (k *TestDeterministicAuthKey) PrivateKey() curves.Scalar {
 	hashed := sha512.Sum512(k.privateKey.Seed())
-	result, _ := edwards25519.NewScalar().SetBytesWithClamping(hashed[:32])
+	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
 	return result
 }
 
 func (k *TestDeterministicAuthKey) PublicKey() curves.Point {
-	result, err := edwards25519.New().Point().FromAffineCompressed(k.publicKey)
+	result, err := edwards25519.NewCurve().Point().FromAffineCompressed(k.publicKey)
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +142,6 @@ func (h *HexBytes) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return errs.WrapFailed(err, "could not unmarshal hex bytes")
 	}
-
 	if s == "" {
 		*h = nil
 		return nil
@@ -153,6 +152,35 @@ func (h *HexBytes) UnmarshalJSON(b []byte) error {
 	decoded, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return errs.WrapFailed(err, "could not decode hex bytes")
+	}
+	*h = decoded
+	return nil
+}
+
+type HexBytesArray [][]byte
+
+func (h *HexBytesArray) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return errs.WrapFailed(err, "could not unmarshal hex bytes")
+	}
+
+	if s == "" {
+		*h = nil
+		return nil
+	}
+
+	hexes := strings.Split(s, ",")
+
+	decoded := make([][]byte, len(hexes))
+
+	for i, h := range hexes {
+		var err error
+		hexStr := strings.TrimPrefix(h, "0x")
+		decoded[i], err = hex.DecodeString(hexStr)
+		if err != nil {
+			return errs.WrapFailed(err, "could not decode hex bytes")
+		}
 	}
 	*h = decoded
 	return nil

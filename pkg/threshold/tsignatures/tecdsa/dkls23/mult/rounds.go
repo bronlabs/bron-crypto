@@ -29,7 +29,7 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 
 	// step 1.2
 	for i := 0; i < L; i++ {
-		bob.BTilde[i] = bob.Curve.Scalar().Zero()
+		bob.BTilde[i] = bob.Curve.ScalarField().Zero()
 		for j := 0; j < Xi; j++ {
 			// constant time branching, because we'll add if even if we don't need it
 			addedCurrent := bob.BTilde[i].Add(bob.gadget[0][j])
@@ -58,12 +58,12 @@ func (bob *Bob) Round1() (*Round1Output, error) {
 func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceInput) (s *OutputShares, r2o *Round2Output, err error) {
 	for i := 0; i < L; i++ {
 		// step 2.1
-		alice.aTilde[i], err = alice.Curve.Scalar().Random(alice.csrand)
+		alice.aTilde[i], err = alice.Curve.ScalarField().Random(alice.csrand)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a tilde")
 		}
 		// step 2.2
-		alice.aHat[i], err = alice.Curve.Scalar().Random(alice.csrand)
+		alice.aHat[i], err = alice.Curve.ScalarField().Random(alice.csrand)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "alice failed to sample a hat")
 		}
@@ -125,7 +125,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.9
 	r := [Xi]curves.Scalar{}
 	for j := 0; j < Xi; j++ {
-		r[j] = alice.Curve.Scalar().Zero()
+		r[j] = alice.Curve.ScalarField().Zero()
 		for i := 0; i < L; i++ {
 			r[j] = r[j].Add(chiTilde[i].Mul(zTildeA[i][j]))
 			r[j] = r[j].Add(chiHat[i].Mul(zHatA[i][j]))
@@ -138,7 +138,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	for _, element := range &r {
 		toBeHashed = append(toBeHashed, element.Bytes()...)
 	}
-	rTilde, err := alice.Curve.Scalar().Hash(toBeHashed)
+	rTilde, err := alice.Curve.ScalarField().Hash(toBeHashed)
 	if err != nil {
 		return nil, nil, errs.WrapHashingFailed(err, "alice failed to hash r tilde")
 	}
@@ -153,7 +153,7 @@ func (alice *Alice) Round2(round1output *softspoken.Round1Output, a RvoleAliceIn
 	// step 2.12
 	output := &OutputShares{}
 	for i := 0; i < L; i++ {
-		output[i] = alice.Curve.Scalar().Zero() // gamma_b of DKLs19 is zero
+		output[i] = alice.Curve.ScalarField().Zero() // gamma_b of DKLs19 is zero
 		for j := 0; j < Xi; j++ {
 			output[i] = output[i].Add(alice.gadget[0][j].Mul(zTildeA[i][j]))
 		}
@@ -209,7 +209,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	// step 2.5
 	rTildeBElements := [Xi]curves.Scalar{}
 	for j := 0; j < Xi; j++ {
-		current := bob.Curve.Scalar().Zero()
+		current := bob.Curve.ScalarField().Zero()
 		for i := 0; i < L; i++ {
 			// constant time branching
 			addedCurrent := current.Add(round2output.U[i])
@@ -234,7 +234,7 @@ func (bob *Bob) Round3(round2output *Round2Output) (output *OutputShares, err er
 	for _, element := range &rTildeBElements {
 		rhs = append(rhs, element.Bytes()...)
 	}
-	rTildeB, err := bob.Curve.Scalar().Hash(rhs)
+	rTildeB, err := bob.Curve.ScalarField().Hash(rhs)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "bob failed to hash r tilde")
 	}

@@ -76,7 +76,7 @@ func (t *Transcript) appendMessage(label string, message []byte) {
 // with the label=label_i.
 func (t *Transcript) AppendScalars(label string, scalars ...curves.Scalar) {
 	for i, scalar := range scalars {
-		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(scalar.CurveName()))
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(scalar.ScalarField().Curve().Name()))
 		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), scalar.Bytes())
 	}
 }
@@ -86,7 +86,7 @@ func (t *Transcript) AppendScalars(label string, scalars ...curves.Scalar) {
 // is 1, label is used directly.
 func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 	for i, point := range points {
-		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(point.CurveName()))
+		t.AppendMessages(fmt.Sprintf("curve_name_%d", i), []byte(point.Curve().Name()))
 		t.AppendMessages(fmt.Sprintf("%s_%d", label, i), point.ToAffineCompressed())
 	}
 }

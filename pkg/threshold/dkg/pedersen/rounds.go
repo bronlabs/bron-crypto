@@ -36,7 +36,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u map[
 	}
 
 	if a_i0 == nil {
-		a_i0, err = p.CohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		a_i0, err = p.CohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 		}
@@ -55,7 +55,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u map[
 
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Point().Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
+	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
 	}
@@ -125,7 +125,7 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 
 			transcript := hagrid.NewTranscript(DkgLabel, nil)
 			transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(senderSharingId))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Point().Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
+			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
 				return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "abort from dlog proof given sharing id ")
 			}
 		} else if broadcastedMessageFromSender.DlogProof != nil {
@@ -149,8 +149,8 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 		iToKs := make([]curves.Scalar, p.CohortConfig.Protocol.Threshold)
 		C_lks := make([]curves.Point, p.CohortConfig.Protocol.Threshold)
 		for k := 0; k < p.CohortConfig.Protocol.Threshold; k++ {
-			exp := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(k))
-			iToK := p.CohortConfig.CipherSuite.Curve.Scalar().New(uint64(p.MySharingId)).Exp(exp)
+			exp := p.CohortConfig.CipherSuite.Curve.ScalarField().New(uint64(k))
+			iToK := p.CohortConfig.CipherSuite.Curve.ScalarField().New(uint64(p.MySharingId)).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

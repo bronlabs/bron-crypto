@@ -17,15 +17,15 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []curves.Curve{
-		k256.New(),
-		p256.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
 		// TODO: reenable when curve order is here
 		// edwards25519.New(),
 	}
 
 	for _, c := range supportedCurves {
 		curve := c
-		order := curve.Profile().SubGroupOrder()
+		order := curve.SubGroupOrder()
 		oneThird := new(saferith.Nat).Div(new(saferith.Nat).Add(order.Nat(), new(saferith.Nat).SetUint64(2), -1), saferith.ModulusFromUint64(3), -1)
 		twoThird := new(saferith.Nat).Div(new(saferith.Nat).Add(new(saferith.Nat).SetUint64(2), new(saferith.Nat).Mul(order.Nat(), new(saferith.Nat).SetUint64(2), -1), -1), saferith.ModulusFromUint64(3), -1)
 
@@ -52,9 +52,7 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 			t.Parallel()
 
 			for _, xInt := range edgeCases {
-				x, err := curve.Scalar().SetNat(xInt)
-				require.NoError(t, err)
-
+				x := curve.Scalar().SetNat(xInt)
 				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))
@@ -73,8 +71,8 @@ func Test_ShouldSplit(t *testing.T) {
 	}
 
 	supportedCurves := []curves.Curve{
-		k256.New(),
-		p256.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
 		// TODO: reenable when curve order is here
 		// edwards25519.New(),
 	}
@@ -85,7 +83,7 @@ func Test_ShouldSplit(t *testing.T) {
 			t.Parallel()
 
 			for i := 0; i < n; i++ {
-				x, err := curve.Scalar().Random(crand.Reader)
+				x, err := curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 
 				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
@@ -99,7 +97,7 @@ func Test_ShouldSplit(t *testing.T) {
 }
 
 func Test_Test(t *testing.T) {
-	curve := k256.New()
-	s := curve.Scalar().One()
+	curve := k256.NewCurve()
+	s := curve.ScalarField().One()
 	lindell17.DecomposeInQThirdsDeterministically(s, crand.Reader)
 }

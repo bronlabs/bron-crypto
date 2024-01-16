@@ -150,7 +150,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 
 func TestSignEmptyMessage(t *testing.T) {
 	t.Helper()
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	h := sha3.New256
 
 	cipherSuite := &integration.CipherSuite{
@@ -282,7 +282,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 	require.NoError(t, err)
 
 	// use random scalar
-	partialSignatures[maliciousParty].Zi, err = curve.Scalar().Random(crand.Reader)
+	partialSignatures[maliciousParty].Zi, err = curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities[:threshold], partialSignatures)
 	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
@@ -292,7 +292,7 @@ func testRandomPartialSignature(t *testing.T, protocol protocols.Protocol, curve
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -317,7 +317,7 @@ func Test_HappyPath(t *testing.T) {
 func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int
@@ -343,7 +343,7 @@ func TestShouldAbortOnSignPreviousRoundReuse(t *testing.T) {
 func TestShouldAbortOnRandomPartialSignature(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, thresholdConfig := range []struct {
 				t int

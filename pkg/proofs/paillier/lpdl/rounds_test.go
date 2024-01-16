@@ -26,14 +26,13 @@ func Test_HappyPath(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := p256.New()
-	q := curve.Profile().SubGroupOrder()
+	curve := p256.NewCurve()
+	q := curve.SubGroupOrder()
 
 	xNat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
 
-	x, err := curve.Scalar().SetNat(xNat)
-	require.NoError(t, err)
+	x := curve.Scalar().SetNat(xNat)
 
 	bigQ := curve.ScalarBaseMult(x)
 	xEncrypted, r, err := pk.Encrypt(xNat)
@@ -54,18 +53,16 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := p256.New()
-	q := curve.Profile().SubGroupOrder()
+	curve := p256.NewCurve()
+	q := curve.SubGroupOrder()
 
 	x1Nat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x1, err := curve.Scalar().SetNat(x1Nat)
-	require.NoError(t, err)
+	x1 := curve.Scalar().SetNat(x1Nat)
 
 	x2Nat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x2, err := curve.Scalar().SetNat(x2Nat)
-	require.NoError(t, err)
+	x2 := curve.Scalar().SetNat(x2Nat)
 
 	bigQ2 := curve.ScalarBaseMult(x2)
 	x1Encrypted, r, err := pk.Encrypt(x1Nat)
@@ -86,16 +83,16 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := p256.New()
-	q := curve.Profile().SubGroupOrder()
+	curve := p256.NewCurve()
+	q := curve.SubGroupOrder()
 
 	xNat, err := randomIntInRange(q.Nat(), prng)
 	require.NoError(t, err)
-	x, err := curve.Scalar().SetNat(xNat)
+	x := curve.Scalar().SetNat(xNat)
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMult(x)
 
-	x2Int, err := curve.Scalar().Random(prng)
+	x2Int, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
 	x2IntNat := x2Int.Nat()
 	x2Encrypted, r, err := pk.Encrypt(x2IntNat)
@@ -115,21 +112,19 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	pk, sk, err := paillier.NewKeys(1024)
 	require.NoError(t, err)
 	prng := crand.Reader
-	curve := p256.New()
-	q := curve.Profile().SubGroupOrder()
+	curve := p256.NewCurve()
+	q := curve.SubGroupOrder()
 
 	xLowNat, err := randomIntOutRangeLow(q.Nat(), prng)
 	require.NoError(t, err)
-	xLow, err := curve.Scalar().SetNat(xLowNat)
-	require.NoError(t, err)
+	xLow := curve.Scalar().SetNat(xLowNat)
 	bigQLow := curve.ScalarBaseMult(xLow)
 	xLowEncrypted, _, err := pk.Encrypt(xLowNat)
 	require.NoError(t, err)
 
 	xHighNat, err := randomIntOutRangeHigh(q.Nat(), prng)
 	require.NoError(t, err)
-	xHigh, err := curve.Scalar().SetNat(xHighNat)
-	require.NoError(t, err)
+	xHigh := curve.Scalar().SetNat(xHighNat)
 	bigQHigh := curve.ScalarBaseMult(xHigh)
 	xHighEncrypted, r, err := pk.Encrypt(xHighNat)
 	require.NoError(t, err)

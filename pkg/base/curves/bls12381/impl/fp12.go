@@ -178,8 +178,8 @@ func (f *Fp12) Conjugate(arg *Fp12) *Fp12 {
 	return f
 }
 
-// FrobeniusMap raises this element to p.
-func (f *Fp12) FrobeniusMap(arg *Fp12) *Fp12 {
+// FrobeniusAutomorphism raises this element to p.
+func (f *Fp12) FrobeniusAutomorphism(arg *Fp12) *Fp12 {
 	var a, b, up1epm1div6 Fp6
 
 	// (u + 1)^((p - 1) / 6)
@@ -202,8 +202,8 @@ func (f *Fp12) FrobeniusMap(arg *Fp12) *Fp12 {
 		},
 	}
 
-	a.FrobeniusMap(&arg.A)
-	b.FrobeniusMap(&arg.B)
+	a.FrobeniusAutomorphism(&arg.A)
+	b.FrobeniusAutomorphism(&arg.B)
 
 	// b' = b' * (u + 1)^((p - 1) / 6)
 	b.Mul(&b, &up1epm1div6)

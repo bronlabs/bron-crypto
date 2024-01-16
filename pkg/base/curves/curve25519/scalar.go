@@ -1,12 +1,13 @@
 package curve25519
 
 import (
+	"crypto/subtle"
 	"encoding/binary"
-	"io"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -16,193 +17,278 @@ import (
 var _ curves.Scalar = (*Scalar)(nil)
 
 type Scalar struct {
-	Value [32]byte
+	V [32]byte
 
 	_ types.Incomparable
 }
 
-func (*Scalar) Random(prng io.Reader) (curves.Scalar, error) {
-	if prng == nil {
-		panic("prng in nil")
-	}
-	var seed [32]byte
-	if _, err := prng.Read(seed[:]); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
-	}
-	return &Scalar{Value: seed}, nil
-}
-
-func (*Scalar) Hash(bytes ...[]byte) (curves.Scalar, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) Zero() curves.Scalar {
-	return &Scalar{
-		Value: [32]byte{
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-		},
-	}
-}
-
-func (*Scalar) One() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) IsZero() bool {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) IsOne() bool {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) IsOdd() bool {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) IsEven() bool {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) New(value uint64) curves.Scalar {
+func NewScalar(input uint64) *Scalar {
 	s := make([]byte, 32)
-	binary.LittleEndian.PutUint64(s, value)
+	binary.LittleEndian.PutUint64(s, input)
 	var scalar [32]byte
 	copy(scalar[:], s)
-	return &Scalar{Value: scalar}
+	return &Scalar{V: scalar}
 }
 
-func (*Scalar) Cmp(rhs curves.Scalar) int {
-	// TODO implement me
-	panic("implement me")
+// === Basic Methods.
+
+func (s *Scalar) Equal(rhs curves.Scalar) bool {
+	r, ok := rhs.(*Scalar)
+	return ok && subtle.ConstantTimeCompare(s.V[:], r.V[:]) == 1
 }
 
-func (*Scalar) Square() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+func (s *Scalar) Clone() curves.Scalar {
+	return &Scalar{
+		V: s.V,
+	}
+}
+
+// === Additive Groupoid Methods.
+
+func (*Scalar) Add(rhs curves.Scalar) curves.Scalar {
+	panic("not implemented")
+}
+
+func (s *Scalar) ApplyAdd(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+	reducedN := new(Scalar).SetNat(n)
+	return s.Add(x.Mul(reducedN))
 }
 
 func (*Scalar) Double() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
-func (*Scalar) Invert() (curves.Scalar, error) {
-	// TODO implement me
-	panic("implement me")
+func (s *Scalar) Triple() curves.Scalar {
+	return s.Double().Add(s)
 }
 
-func (*Scalar) Sqrt() (curves.Scalar, error) {
-	// TODO implement me
-	panic("implement me")
+// === Multiplicative Groupoid Methods.
+
+func (*Scalar) Mul(rhs curves.Scalar) curves.Scalar {
+	panic("not implemented")
+}
+
+func (s *Scalar) ApplyMul(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+	reducedN := new(Scalar).SetNat(n)
+	return s.Mul(x.Exp(reducedN))
+}
+
+func (*Scalar) Square() curves.Scalar {
+	panic("not implemented")
 }
 
 func (*Scalar) Cube() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
-func (*Scalar) Add(rhs curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+// === Additive Monoid Methods.
+
+func (*Scalar) IsAdditiveIdentity() bool {
+	panic("not implemented")
+}
+
+// === Multiplicative Monoid Methods.
+
+func (*Scalar) IsMultiplicativeIdentity() bool {
+	panic("not implemented")
+}
+
+// === Additive Group Methods.
+
+func (*Scalar) AdditiveInverse() curves.Scalar {
+	panic("not implemented")
+}
+
+func (s *Scalar) IsAdditiveInverse(of curves.Scalar) bool {
+	return s.Add(of).IsAdditiveIdentity()
 }
 
 func (*Scalar) Sub(rhs curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
-func (*Scalar) Mul(rhs curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+func (s *Scalar) ApplySub(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+	reducedN := new(Scalar).SetNat(n)
+	return s.Sub(x.Mul(reducedN))
 }
 
-func (*Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+// === Multiplicative Group Methods.
+
+func (*Scalar) MultiplicativeInverse() curves.Scalar {
+	panic("not implemented")
+}
+
+func (s *Scalar) IsMultiplicativeInverse(of curves.Scalar) bool {
+	return s.Mul(of).IsMultiplicativeIdentity()
 }
 
 func (*Scalar) Div(rhs curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
-func (*Scalar) Exp(k curves.Scalar) curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+func (s *Scalar) ApplyDiv(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+	reducedN := new(Scalar).SetNat(n)
+	return s.Div(x.Exp(reducedN))
 }
 
-func (*Scalar) Neg() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+// === Ring Methods.
+
+func (*Scalar) Sqrt() (curves.Scalar, error) {
+	panic("not implemented")
 }
 
-func (*Scalar) SetNat(v *saferith.Nat) (curves.Scalar, error) {
-	// TODO implement me
-	panic("implement me")
+func (*Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
+	panic("not implemented")
+}
+
+// === Finite Field Methods.
+
+func (s *Scalar) SubFieldElement(index uint) curves.Scalar {
+	return s
+}
+
+func (s *Scalar) Norm() curves.Scalar {
+	return s
+}
+
+// === Zp Methods.
+
+func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
+	v := NewScalarField().One()
+	for i := NewScalarField().Zero(); i.Cmp(k) < 0; i = i.Add(NewScalarField().One()) {
+		v = v.Mul(s)
+	}
+	return v
+}
+
+func (s *Scalar) Neg() curves.Scalar {
+	return s.AdditiveInverse()
+}
+
+func (s *Scalar) IsZero() bool {
+	return s.IsAdditiveIdentity()
+}
+
+func (s *Scalar) IsOne() bool {
+	return s.IsMultiplicativeIdentity()
+}
+
+func (*Scalar) IsOdd() bool {
+	panic("not implemented")
+}
+
+func (*Scalar) IsEven() bool {
+	panic("not implemented")
+}
+
+func (s *Scalar) Increment() {
+	ee, ok := s.Add(s.ScalarField().One()).(*Scalar)
+	if !ok {
+		panic("invalid type")
+	}
+	s.V = ee.V
+}
+
+func (s *Scalar) Decrement() {
+	ee, ok := s.Sub(s.ScalarField().One()).(*Scalar)
+	if !ok {
+		panic("invalid type")
+	}
+	s.V = ee.V
+}
+
+// === Ordering Methods.
+
+func (*Scalar) Cmp(rhs curves.Scalar) algebra.Ordering {
+	panic("not implemented")
+}
+
+func (s *Scalar) IsBottom() bool {
+	return s.IsZero()
+}
+
+func (s *Scalar) IsTop() bool {
+	return s.Add(s.ScalarField().One()).IsZero()
+}
+
+func (s *Scalar) Join(rhs curves.Scalar) curves.Scalar {
+	return s.Max(rhs)
+}
+
+func (s *Scalar) Max(rhs curves.Scalar) curves.Scalar {
+	switch s.Cmp(rhs) {
+	case algebra.Incomparable:
+		panic("incomparable")
+	case algebra.LessThan:
+		return rhs
+	case algebra.Equal, algebra.GreaterThan:
+		return s
+	default:
+		panic("comparison output not supported")
+	}
+}
+
+func (s *Scalar) Meet(rhs curves.Scalar) curves.Scalar {
+	return s.Min(rhs)
+}
+
+func (s *Scalar) Min(rhs curves.Scalar) curves.Scalar {
+	switch s.Cmp(rhs) {
+	case algebra.Incomparable:
+		panic("incomparable")
+	case algebra.LessThan, algebra.Equal:
+		return s
+	case algebra.GreaterThan:
+		return rhs
+	default:
+		panic("comparison output not supported")
+	}
+}
+
+// === Curve Methods.
+
+func (*Scalar) ScalarField() curves.ScalarField {
+	return NewScalarField()
+}
+
+// === Serialisation.
+
+func (s *Scalar) Uint64() uint64 {
+	return s.Nat().Big().Uint64()
+}
+
+func (*Scalar) SetNat(x *saferith.Nat) curves.Scalar {
+	panic("not implemented")
 }
 
 func (*Scalar) Nat() *saferith.Nat {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) Uint64() uint64 {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
 func (s *Scalar) Bytes() []byte {
-	return s.Value[:]
+	return s.V[:]
 }
 
-func (*Scalar) SetBytes(bytes []byte) (curves.Scalar, error) {
+func (*Scalar) SetBytesWide(input []byte) (sc curves.Scalar, err error) {
+	panic("not implemented")
+}
+
+func (*Scalar) SetBytes(input []byte) (sc curves.Scalar, err error) {
 	var ss [base.FieldBytes]byte
-	copy(ss[:], bytes)
-	return &Scalar{Value: ss}, nil
-}
-
-func (*Scalar) SetBytesWide(bytes []byte) (curves.Scalar, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) Clone() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Scalar) Curve() curves.Curve {
-	return &curve25519Instance
-}
-
-func (*Scalar) CurveName() string {
-	return Name
+	copy(ss[:], input)
+	return &Scalar{V: ss}, nil
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	buffer, err := serialisation.ScalarMarshalBinary(s)
+	res, err := serialisation.ScalarLikeMarshalBinary[curves.Scalar](s.ScalarField().Name(), s.ScalarField().FieldBytes(), s)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
-	return buffer, nil
+	return res, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := serialisation.ScalarUnmarshalBinary(Name, s.SetBytes, input)
+	sc, err := serialisation.ScalarLikeUnmarshalBinary(Name, s.SetBytes, s.ScalarField().FieldBytes(), input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
@@ -210,41 +296,20 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewInvalidType("invalid scalar")
 	}
-	s.Value = ss.Value
-	return nil
-}
-
-func (s *Scalar) MarshalText() ([]byte, error) {
-	buffer, err := serialisation.ScalarMarshalText(s)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
-	}
-	return buffer, nil
-}
-
-func (s *Scalar) UnmarshalText(input []byte) error {
-	sc, err := serialisation.ScalarUnmarshalText(Name, s.SetBytes, input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal")
-	}
-	ss, ok := sc.(*Scalar)
-	if !ok {
-		return errs.NewInvalidType("invalid scalar")
-	}
-	s.Value = ss.Value
+	s.V = ss.V
 	return nil
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	buffer, err := serialisation.ScalarMarshalJson(Name, s)
+	res, err := serialisation.ScalarLikeMarshalJson[curves.Scalar](Name, s)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
-	return buffer, nil
+	return res, nil
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := serialisation.NewScalarFromJSON(s.SetBytes, input)
+	sc, err := serialisation.NewScalarLikeFromJSON(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a scalar from json")
 	}
@@ -252,6 +317,6 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	s.Value = S.Value
+	s.V = S.V
 	return nil
 }

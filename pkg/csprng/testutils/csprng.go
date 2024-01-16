@@ -2,14 +2,52 @@ package testutils
 
 import (
 	"bytes"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
-func Test_prng(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {
+type MockReader struct {
+	index int
+	seed  []byte
+
+	_ types.Incomparable
+}
+
+var (
+	mockRngInitonce sync.Once
+	mockRng         MockReader
+)
+
+func NewMockReader() {
+	mockRng.index = 0
+	mockRng.seed = make([]byte, 32)
+	for i := range mockRng.seed {
+		mockRng.seed[i] = 1
+	}
+}
+
+func TestRng() *MockReader {
+	mockRngInitonce.Do(NewMockReader)
+	return &mockRng
+}
+
+func (m *MockReader) Read(p []byte) (n int, err error) {
+	limit := len(m.seed)
+	for i := range p {
+		p[i] = m.seed[m.index]
+		m.index++
+		m.index %= limit
+	}
+	n = len(p)
+	return n, nil
+}
+
+func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {
 	t.Helper()
 	// hardoded random 32B keys
 	keys := [][]byte{

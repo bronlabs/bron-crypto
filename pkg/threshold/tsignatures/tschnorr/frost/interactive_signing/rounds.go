@@ -20,11 +20,11 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, err error) {
 	if ic.round != 1 {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", ic.round)
 	}
-	ic.state.d_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.d_i, err = ic.CohortConfig.CipherSuite.Curve.ScalarField().Random(ic.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random d_i")
 	}
-	ic.state.e_i, err = ic.CohortConfig.CipherSuite.Curve.Scalar().Random(ic.prng)
+	ic.state.e_i, err = ic.CohortConfig.CipherSuite.Curve.ScalarField().Random(ic.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random e_i")
 	}
@@ -109,15 +109,9 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output map[types.Identity
 		if D_i.IsIdentity() {
 			return nil, nil, errs.NewMissing("D_i of sharing id %d is at infinity", sharingId)
 		}
-		if !D_i.IsOnCurve() {
-			return nil, nil, errs.NewMissing("D_i of sharing id %d is not on curve", sharingId)
-		}
 		E_i := receivedMessage.Ei
 		if E_i.IsIdentity() {
 			return nil, nil, errs.NewIsIdentity("E_i of sharing id %d is at infinity", sharingId)
-		}
-		if !E_i.IsOnCurve() {
-			return nil, nil, errs.NewMembership("E_i of sharing id %d is not on curve", sharingId)
 		}
 
 		D_alpha[senderIdentityKey.Hash()] = D_i

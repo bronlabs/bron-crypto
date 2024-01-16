@@ -2,164 +2,153 @@ package curve25519
 
 import (
 	"crypto/subtle"
-	"io"
 
 	"github.com/cronokirby/saferith"
-	"golang.org/x/crypto/curve25519"
+	curve25519n "golang.org/x/crypto/curve25519"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.Point = (*Point)(nil)
 
 type Point struct {
-	Value [32]byte
+	V [32]byte
 
 	_ types.Incomparable
 }
 
-func (p *Point) X() curves.FieldElement {
-	return &FieldElement{v: p.Value}
+// === Basic Methods.
+
+func (p *Point) Equal(rhs curves.Point) bool {
+	return subtle.ConstantTimeCompare(p.V[:], rhs.(*Point).V[:]) == 1
 }
 
-func (*Point) Y() curves.FieldElement {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) Random(prng io.Reader) (curves.Point, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) Hash(bytes ...[]byte) (curves.Point, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) Identity() curves.Point {
+func (p *Point) Clone() curves.Point {
 	return &Point{
-		Value: [32]byte{
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-		},
+		V: p.V,
 	}
 }
 
-func (*Point) Generator() curves.Point {
-	var result [32]byte
-	copy(result[:], curve25519.Basepoint)
-	return &Point{
-		Value: result,
+// === Groupoid Methods.
+
+func (p *Point) Operate(rhs curves.Point) curves.Point {
+	return p.Add(rhs)
+}
+
+func (p *Point) OperateIteratively(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.ApplyAdd(q, n)
+}
+
+func (p *Point) Order() *saferith.Modulus {
+	if p.IsIdentity() {
+		return saferith.ModulusFromUint64(0)
 	}
+	q := p.Clone()
+	order := new(saferith.Nat).SetUint64(1)
+	for !q.IsIdentity() {
+		q = q.Add(p)
+		utils.IncrementNat(order)
+	}
+	return saferith.ModulusFromNat(order)
 }
 
-func (p *Point) IsIdentity() bool {
-	return p.Equal(p.Identity())
+// === Additive Groupoid Methods.
+
+func (*Point) Add(rhs curves.Point) curves.Point {
+	panic("not implemented")
 }
 
-func (*Point) IsNegative() bool {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) IsOnCurve() bool {
-	// TODO implement me
-	panic("implement me")
+func (p *Point) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Add(q.Mul(NewScalarField().Element().SetNat(n)))
 }
 
 func (*Point) Double() curves.Point {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
-func (*Point) Scalar() curves.Scalar {
-	// TODO implement me
-	panic("implement me")
+func (p *Point) Triple() curves.Point {
+	return p.Double().Add(p)
 }
 
-func (*Point) Neg() curves.Point {
-	// TODO implement me
-	panic("implement me")
+// === Monoid Methods.
+
+func (p *Point) IsIdentity() bool {
+	return p.Equal(p.Curve().Identity())
 }
 
-func (*Point) ClearCofactor() curves.Point {
-	// TODO implement me
-	panic("implement me")
+// === Additive Monoid Methods.
+
+func (p *Point) IsAdditiveIdentity() bool {
+	return p.IsIdentity()
 }
 
-func (*Point) Clone() curves.Point {
-	// TODO implement me
-	panic("implement me")
+// === Group Methods.
+
+func (*Point) Inverse() curves.Point {
+	panic("not implemented")
 }
 
-func (*Point) Add(rhs curves.Point) curves.Point {
-	// TODO implement me
-	panic("implement me")
+func (p *Point) IsInverse(of curves.Point) bool {
+	return p.Operate(of).IsIdentity()
+}
+
+// === Additive Group Methods.
+
+func (p *Point) AdditiveInverse() curves.Point {
+	return p.Inverse()
+}
+
+func (p *Point) IsAdditiveInverse(of curves.Point) bool {
+	return p.IsInverse(of)
 }
 
 func (*Point) Sub(rhs curves.Point) curves.Point {
-	// TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
+
+func (p *Point) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
+	return p.Sub(q.Mul(NewScalarField().Element().SetNat(n)))
+}
+
+// === Vector Space Methods.
 
 func (p *Point) Mul(rhs curves.Scalar) curves.Point {
-	var ss []byte
-	ss, err := curve25519.X25519(rhs.Bytes(), p.Value[:])
+	s, ok := rhs.(*Scalar)
+	if !ok {
+		panic("invalid type")
+	}
+	ss, err := curve25519n.X25519(
+		s.Bytes(),
+		p.V[:],
+	)
 	if err != nil {
 		panic(err)
 	}
 	var result [32]byte
 	copy(result[:], ss)
-	return &Point{Value: result}
+	return &Point{V: result}
 }
 
-func (p *Point) X25519(rhs curves.Scalar) curves.Point {
-	var ss []byte
-	ss, err := curve25519.X25519(rhs.Bytes(), p.Value[:])
-	if err != nil {
-		panic(err)
-	}
-	var result [32]byte
-	copy(result[:], ss)
-	return &Point{Value: result}
+// === Curve Methods.
+
+func (*Point) Curve() curves.Curve {
+	return NewCurve()
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	return subtle.ConstantTimeCompare(p.Value[:], rhs.ToAffineCompressed()) == 1
+func (p *Point) Neg() curves.Point {
+	return p.Inverse()
 }
 
-func (*Point) Set(x, y *saferith.Nat) (curves.Point, error) {
-	// TODO implement me
-	panic("implement me")
+func (*Point) IsNegative() bool {
+	panic("not implemented")
 }
 
-func (p *Point) ToAffineCompressed() []byte {
-	return p.Value[:]
-}
-
-func (*Point) ToAffineUncompressed() []byte {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) FromAffineCompressed(bytes []byte) (curves.Point, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (*Point) FromAffineUncompressed(bytes []byte) (curves.Point, error) {
-	// TODO implement me
-	panic("implement me")
+func (*Point) ClearCofactor() curves.Point {
+	panic("not implemented")
 }
 
 func (p *Point) IsSmallOrder() bool {
@@ -179,80 +168,110 @@ func (p *Point) IsSmallOrder() bool {
 	}
 
 	for _, testValue := range outsidePrimeSubgroupValues {
-		if subtle.ConstantTimeCompare(p.Value[:], testValue) == 1 {
+		if subtle.ConstantTimeCompare(p.V[:], testValue) == 1 {
 			panic("Invalid public key")
 		}
 	}
 	return true
 }
 
-func (*Point) Curve() curves.Curve {
-	return &curve25519Instance
+func (p *Point) IsTorsionElement(order *saferith.Modulus) bool {
+	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
+	return p.Mul(e).IsIdentity()
 }
 
-func (*Point) CurveName() string {
-	return Name
+// === Misc.
+
+func (p *Point) X25519(sc curves.Scalar) curves.Point {
+	return p.Mul(sc)
+}
+
+// === Coordinates.
+
+func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
+	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+}
+
+func (p *Point) AffineX() curves.BaseFieldElement {
+	return &BaseFieldElement{V: p.V}
+}
+
+func (*Point) AffineY() curves.BaseFieldElement {
+	panic("not implemented")
+}
+
+func (*Point) ExtendedX() curves.BaseFieldElement {
+	panic("not implemented")
+}
+
+func (*Point) ExtendedY() curves.BaseFieldElement {
+	panic("not implemented")
+}
+
+func (*Point) ExtendedZ() curves.BaseFieldElement {
+	panic("not implemented")
+}
+
+func (*Point) ExtendedT() curves.BaseFieldElement {
+	panic("not implemented")
+}
+
+// === Serialisation.
+
+func (p *Point) ToAffineCompressed() []byte {
+	return p.V[:]
+}
+
+func (*Point) ToAffineUncompressed() []byte {
+	panic("not implemented")
+}
+
+func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
+	panic("not implemented")
+}
+
+func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
+	panic("not implemented")
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	buffer, err := serialisation.PointMarshalBinary(p)
+	point, err := serialisation.PointMarshalBinary(p)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal binary")
+		return nil, errs.WrapSerialisation(err, "marshal to point failed")
 	}
-	return buffer, nil
+	return point, nil
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
 	pt, err := serialisation.PointUnmarshalBinary(&curve25519Instance, input)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal binary")
+		return errs.WrapSerialisation(err, "unmarshal binary failed")
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
 		return errs.NewInvalidType("invalid point")
 	}
-	p.Value = ppt.Value
-	return nil
-}
-
-func (p *Point) MarshalText() ([]byte, error) {
-	buffer, err := serialisation.PointMarshalText(p)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal text")
-	}
-	return buffer, nil
-}
-
-func (p *Point) UnmarshalText(input []byte) error {
-	pt, err := serialisation.PointUnmarshalText(&curve25519Instance, input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal text")
-	}
-	ppt, ok := pt.(*Point)
-	if !ok {
-		return errs.NewInvalidType("invalid point")
-	}
-	p.Value = ppt.Value
+	p.V = ppt.V
 	return nil
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	buffer, err := serialisation.PointMarshalJson(p)
+	point, err := serialisation.PointMarshalJson(p)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
+		return nil, errs.WrapSerialisation(err, "marshal to json failed")
 	}
-	return buffer, nil
+	return point, nil
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
 	pt, err := serialisation.NewPointFromJSON(&curve25519Instance, input)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal")
+		return errs.WrapSerialisation(err, "could not extract a point from json")
 	}
 	P, ok := pt.(*Point)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.Value = P.Value
+	p.V = P.V
 	return nil
 }

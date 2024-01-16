@@ -1,12 +1,16 @@
 package pallas
 
 import (
+	"crypto/subtle"
+	"io"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
@@ -15,9 +19,7 @@ import (
 	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
-const (
-	Name string = "pallas"
-)
+const Name = "pallas"
 
 var (
 	pallasInitonce sync.Once
@@ -54,58 +56,21 @@ var (
 	z    = new(fp.Fp).SetRaw(&[4]uint64{0x992d30ecfffffff4, 0x224698fc094cf91b, 0x0000000000000000, 0x4000000000000000})
 )
 
-var _ curves.CurveProfile = (*CurveProfile)(nil)
-
-type CurveProfile struct{}
-
-func (*CurveProfile) Field() curves.FieldProfile {
-	return &FieldProfile{}
-}
-
-func (*CurveProfile) SubGroupOrder() *saferith.Modulus {
-	return fq.Modulus
-}
-
-func (*CurveProfile) Cofactor() curves.Scalar {
-	return pallasInstance.Scalar().One()
-}
-
-func (*CurveProfile) ToPairingCurve() curves.PairingCurve {
-	return nil
-}
-
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	Scalar_       curves.Scalar
-	Point_        curves.Point
-	FieldElement_ curves.FieldElement
-	Name_         string
-	Profile_      curves.CurveProfile
-
 	hashing.CurveHasher
 
 	_ types.Incomparable
 }
 
 func pallasInit() {
-	pallasInstance = Curve{
-		Scalar_:       new(Scalar).Zero(),
-		Point_:        new(Point).Identity(),
-		FieldElement_: new(FieldElement).Zero(),
-		Name_:         Name,
-		Profile_:      &CurveProfile{},
-	}
+	pallasInstance = Curve{}
 	pallasInstance.CurveHasher = hashing.NewCurveHasherSha256(
 		curves.Curve(&pallasInstance),
 		base.HASH2CURVE_APP_TAG,
 		hashing.DST_TAG_SSWU,
 	)
-}
-
-func New() *Curve {
-	pallasInitonce.Do(pallasInit)
-	return &pallasInstance
 }
 
 // SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
@@ -119,65 +84,216 @@ func (c *Curve) SetHasherAppTag(appTag string) {
 	)
 }
 
-func (c *Curve) Profile() curves.CurveProfile {
-	return c.Profile_
+func NewCurve() *Curve {
+	pallasInitonce.Do(pallasInit)
+	return &pallasInstance
 }
 
-func (c *Curve) Scalar() curves.Scalar {
-	return c.Scalar_
+// === Basic Methods.
+
+func (*Curve) Name() string {
+	return Name
+}
+
+func (c *Curve) Order() *saferith.Modulus {
+	return c.SubGroupOrder()
+}
+
+func (c *Curve) Element() curves.Point {
+	return c.Identity()
+}
+
+func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
+	if operator != algebra.PointAddition {
+		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+	}
+	current := c.Identity()
+	for _, p := range ps {
+		current = current.Operate(p)
+	}
+	return current, nil
+}
+
+func (*Curve) Operators() []algebra.Operator {
+	return []algebra.Operator{algebra.PointAddition}
+}
+
+func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	var seed [64]byte
+	_, _ = prng.Read(seed[:])
+	return c.Hash(seed[:])
+}
+
+func (c *Curve) Hash(input []byte) (curves.Point, error) {
+	return c.HashWithDst(input, nil)
+}
+
+func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
+	p := new(Ep)
+	u, err := NewCurve().HashToFieldElements(2, input, dst)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "hash to field element of P256 failed")
+	}
+	u0, ok0 := u[0].(*BaseFieldElement)
+	u1, ok1 := u[1].(*BaseFieldElement)
+	if !ok0 || !ok1 {
+		return nil, errs.NewHashingFailed("cast to P256 field element failed")
+	}
+	p = p.Map(u0.V, u1.V)
+	return &Point{V: p}, nil
+}
+
+// === Additive Groupoid Methods.
+
+func (*Curve) Add(x curves.Point, ys ...curves.Point) curves.Point {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
+}
+
+// === Monoid Methods.
+
+func (*Curve) Identity() curves.Point {
+	return &Point{V: new(Ep).Identity()}
+}
+
+// === Additive Monoid Methods.
+
+func (c *Curve) AdditiveIdentity() curves.Point {
+	return c.Identity()
+}
+
+// === Group Methods.
+
+func (*Curve) Cofactor() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(1)
+}
+
+// === Additive Group Methods.
+
+func (*Curve) Sub(x curves.Point, ys ...curves.Point) curves.Point {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
+}
+
+// === Cyclic Group Methods.
+
+func (*Curve) Generator() curves.Point {
+	return &Point{V: new(Ep).Generator()}
+}
+
+// === Variety Methods.
+
+func (*Curve) Dimension() int {
+	return 1
+}
+
+func (*Curve) Discriminant() *saferith.Int {
+	result, _ := new(saferith.Nat).SetHex(strings.ToUpper("2a30"))
+	return new(saferith.Int).SetNat(result).Neg(1)
+}
+
+// === Algebraic Curve Methods.
+
+func (*Curve) BaseField() curves.BaseField {
+	return NewBaseField()
+}
+
+func (c *Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
+	if x == nil || y == nil {
+		return nil, errs.NewIsNil("argument is nil")
+	}
+
+	xx, ok := x.(*BaseFieldElement)
+	if !ok {
+		return nil, errs.NewInvalidType("x is not the right type")
+	}
+	yy, ok := y.(*BaseFieldElement)
+	if !ok {
+		return nil, errs.NewInvalidType("y is not the right type")
+	}
+
+	xxx := subtle.ConstantTimeCompare(xx.Bytes(), []byte{})
+	yyy := subtle.ConstantTimeCompare(yy.Bytes(), []byte{})
+	xElem := new(fp.Fp).SetNat(xx.Nat())
+	var data [32]byte
+	if yyy == 1 {
+		if xxx == 1 {
+			return &Point{V: new(Ep).Identity()}, nil
+		}
+		data = xElem.Bytes()
+		return c.Point().FromAffineCompressed(data[:])
+	}
+	yElem := new(fp.Fp).SetNat(yy.Nat())
+	value := &Ep{X: xElem, Y: yElem, Z: new(fp.Fp).SetOne()}
+	if !value.IsOnCurve() {
+		return nil, errs.NewMembership("point is not on the curve")
+	}
+	return &Point{V: value}, nil
+}
+
+// === Elliptic Curve Methods.
+
+func (c *Curve) ScalarRing() curves.ScalarField {
+	return c.ScalarField()
+}
+
+func (*Curve) ScalarField() curves.ScalarField {
+	return NewScalarField()
 }
 
 func (c *Curve) Point() curves.Point {
-	return c.Point_
+	return c.Identity()
 }
 
-func (c *Curve) Name() string {
-	return c.Name_
+func (c *Curve) Scalar() curves.Scalar {
+	return c.ScalarField().Element()
 }
 
-func (c *Curve) FieldElement() curves.FieldElement {
-	return c.FieldElement_
+func (c *Curve) BaseFieldElement() curves.BaseFieldElement {
+	return c.BaseField().Zero()
 }
 
-func (c *Curve) Generator() curves.Point {
-	return c.Point_.Generator()
+func (c *Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
+	pp, ok := p.(*Point)
+	if !ok {
+		panic("given point is not of the right type")
+	}
+	x := pp.AffineX()
+	y := pp.AffineY()
+	characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
+	result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
+	if err != nil {
+		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
+	}
+	return result
 }
 
-func (c *Curve) Identity() curves.Point {
-	return c.Point_.Identity()
+func (*Curve) TraceOfFrobenius() *saferith.Int {
+	// TODO: find number of rational points
+	panic("not implemented.")
+}
+
+func (*Curve) JInvariant() *saferith.Int {
+	return new(saferith.Int).SetUint64(0)
+}
+
+// === Prime SubGroup Methods.
+
+func (*Curve) SubGroupOrder() *saferith.Modulus {
+	return fq.Modulus
 }
 
 func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
 	return c.Generator().Mul(sc)
-}
-
-func (*Curve) DeriveFromAffineX(x curves.FieldElement) (evenY, oddY curves.Point, err error) {
-	xc, ok := x.(*FieldElement)
-	if !ok {
-		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")
-	}
-	rhs := rhsPallas(xc.v)
-	y, wasQr := new(fp.Fp).Sqrt(rhs)
-	if !wasQr {
-		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
-	}
-	p1e := new(Ep)
-	p1e.X = xc.v
-	p1e.Y = new(fp.Fp).Set(y)
-	p1e.Z = new(fp.Fp).SetOne()
-
-	p2e := new(Ep)
-	p2e.X = xc.v
-	p2e.Y = new(fp.Fp).Neg(new(fp.Fp).Set(y))
-	p2e.Z = new(fp.Fp).SetOne()
-
-	p1 := &Point{Value: p1e}
-	p2 := &Point{Value: p2e}
-
-	if p1.Y().IsEven() {
-		return p1, p2, nil
-	}
-	return p2, p1, nil
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
@@ -187,7 +303,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointPallas", reflect.TypeOf(pt).Name())
 		}
-		eps[i] = ps.Value
+		eps[i] = ps.V
 	}
 	nScalars := make([]*saferith.Nat, len(scalars))
 	for i, s := range scalars {
@@ -195,12 +311,43 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		if !ok {
 			return nil, errs.NewInvalidType("not a pallas scalar")
 		}
-		nScalars[i] = sc.Value.Nat()
+		nScalars[i] = sc.V.Nat()
 	}
 
 	value := PippengerMultiScalarMultPallas(eps, nScalars)
-	return &Point{Value: value}, nil
+	return &Point{V: value}, nil
 }
+
+func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
+	xc, ok := x.(*BaseFieldElement)
+	if !ok {
+		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")
+	}
+	rhs := rhsPallas(xc.V)
+	y, wasQr := new(fp.Fp).Sqrt(rhs)
+	if !wasQr {
+		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
+	}
+	p1e := new(Ep)
+	p1e.X = xc.V
+	p1e.Y = new(fp.Fp).Set(y)
+	p1e.Z = new(fp.Fp).SetOne()
+
+	p2e := new(Ep)
+	p2e.X = xc.V
+	p2e.Y = new(fp.Fp).Neg(new(fp.Fp).Set(y))
+	p2e.Z = new(fp.Fp).SetOne()
+
+	p1 := &Point{V: p1e}
+	p2 := &Point{V: p2e}
+
+	if p1.AffineY().IsEven() {
+		return p1, p2, nil
+	}
+	return p2, p1, nil
+}
+
+// === Misc.
 
 // rhs of the curve equation.
 func rhsPallas(x *fp.Fp) *fp.Fp {

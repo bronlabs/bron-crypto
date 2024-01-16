@@ -62,11 +62,11 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	przsOutputs := make([]map[types.IdentityHash]*setup.Round1P2P, p.tau)
 	for i := 0; i < p.tau; i++ {
 		// 1. choose a random k & k2
-		k[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k[i], err = p.cohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
 		}
-		k2[i], err = p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+		k2[i], err = p.cohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k2")
 		}
@@ -276,7 +276,7 @@ func openCommitment(bigR, bigR2 curves.Point, i, tau int, pid, sid, bigS []byte,
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, presigIndex int, sid, bigS []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
-	curve := x.Curve()
+	curve := x.ScalarField().Curve()
 
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	transcript.AppendMessages(transcriptDLogPreSignatureIndexLabel, []byte(strconv.Itoa(presigIndex)))

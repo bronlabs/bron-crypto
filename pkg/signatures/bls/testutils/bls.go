@@ -9,8 +9,8 @@ import (
 )
 
 type (
-	G1 = *bls12381.PointG1
-	G2 = *bls12381.PointG2
+	G1 = bls12381.G1
+	G2 = bls12381.G2
 )
 
 func keygenInG1() (*bls.PrivateKey[G1], error) {
@@ -56,7 +56,7 @@ func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		if pop.Value.IsIdentity() {
 			return nil, nil, nil, errs.NewIsNil("pop is identity")
 		}
-		if !pop.Value.IsTorsionFree() {
+		if !pop.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()) {
 			return nil, nil, nil, errs.NewIsNil("pop is torsion free")
 		}
 		err = bls.PopVerify(privateKey.PublicKey, pop)
@@ -72,7 +72,7 @@ func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 	if signature.Value.IsIdentity() {
 		return nil, nil, nil, errs.NewIsNil("signature is identity")
 	}
-	if !signature.Value.IsTorsionFree() {
+	if !signature.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()) {
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 
@@ -104,7 +104,7 @@ func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 		if pop.Value.IsIdentity() {
 			return nil, nil, nil, errs.NewIsNil("pop is identity")
 		}
-		if !pop.Value.IsTorsionFree() {
+		if !pop.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()) {
 			return nil, nil, nil, errs.NewIsNil("pop is not torsion free")
 		}
 		err = bls.PopVerify(privateKey.PublicKey, pop)
@@ -120,7 +120,7 @@ func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 	if signature.Value.IsIdentity() {
 		return nil, nil, nil, errs.NewIsNil("signature is identity")
 	}
-	if !signature.Value.IsTorsionFree() {
+	if !signature.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()) {
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 

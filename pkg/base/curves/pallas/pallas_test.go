@@ -8,9 +8,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
 func Test_PointPallasAddDoubleMul(t *testing.T) {
@@ -30,16 +31,14 @@ func Test_PointPallasAddDoubleMul(t *testing.T) {
 }
 
 func TestPointPointPallasHash(t *testing.T) {
-	h0, err := pallas.New().Generator().Hash(nil)
+	h0, err := pallas.NewCurve().Hash(nil)
 	require.NoError(t, err)
-	require.True(t, h0.IsOnCurve())
-	h1, err := pallas.New().Point().Hash([]byte{})
+	h1, err := pallas.NewCurve().Hash([]byte{})
 	require.NoError(t, err)
-	require.True(t, h1.IsOnCurve())
 	require.True(t, h0.Equal(h1))
-	h2, err := pallas.New().Point().Hash([]byte{1})
+	h2, err := pallas.NewCurve().Hash([]byte{1})
 	require.NoError(t, err)
-	require.True(t, h2.IsOnCurve())
+	require.False(t, h2.Equal(h1))
 }
 
 func TestPointPointPallasNeg(t *testing.T) {
@@ -51,9 +50,9 @@ func TestPointPointPallasNeg(t *testing.T) {
 }
 
 func TestPointPointPallasRandom(t *testing.T) {
-	aP, err := pallas.New().Point().Random(testutils.TestRng())
+	aP, err := pallas.NewCurve().Random(testutils.TestRng())
 	require.NoError(t, err)
-	a := aP.(*pallas.Point).Value
+	a := aP.(*pallas.Point).V
 	require.NotNil(t, a.X)
 	require.NotNil(t, a.Y)
 	require.NotNil(t, a.Z)
@@ -61,13 +60,13 @@ func TestPointPointPallasRandom(t *testing.T) {
 }
 
 func TestPointPointPallasSerialize(t *testing.T) {
-	sc, err := new(pallas.Scalar).Random(testutils.TestRng())
+	sc, err := pallas.NewScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
 	ss, ok := sc.(*pallas.Scalar)
 	require.True(t, ok)
 	g := new(pallas.Ep).Generator()
 
-	ppt := new(pallas.Ep).Mul(g, ss.Value)
+	ppt := new(pallas.Ep).Mul(g, ss.V)
 	print(hex.EncodeToString(ppt.ToAffineUncompressed()))
 	expectedC, _ := hex.DecodeString("f4a6aa863d2684fe9d38fccc06335442ac944d631f9d6d91c7ffaa0793400035")
 	expectedU, _ := hex.DecodeString("f4a6aa863d2684fe9d38fccc06335442ac944d631f9d6d91c7ffaa07934000355039909db940377fb685855b7c4dac4a4d79b9ced311036f389fc7e2c09a1f35")
@@ -82,11 +81,11 @@ func TestPointPointPallasSerialize(t *testing.T) {
 
 	// smoke test
 	for i := 0; i < 25; i++ {
-		sc, err := new(pallas.Scalar).Random(testutils.TestRng())
+		sc, err := pallas.NewScalarField().Random(testutils.TestRng())
 		require.NoError(t, err)
 		s, ok := sc.(*pallas.Scalar)
 		require.True(t, ok)
-		pt := new(pallas.Ep).Mul(g, s.Value)
+		pt := new(pallas.Ep).Mul(g, s.V)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 32)
 		retC, err := new(pallas.Ep).FromAffineCompressed(cmprs)
@@ -102,14 +101,14 @@ func TestPointPointPallasSerialize(t *testing.T) {
 }
 
 func TestPointPointPallasCMove(t *testing.T) {
-	a, err := pallas.New().Point().Random(crand.Reader)
+	a, err := pallas.NewCurve().Random(crand.Reader)
 	require.NoError(t, err)
-	b, err := pallas.New().Point().Random(crand.Reader)
+	b, err := pallas.NewCurve().Random(crand.Reader)
 	require.NoError(t, err)
 	aEp := a.(*pallas.Point)
 	bEp := b.(*pallas.Point)
-	require.True(t, new(pallas.Ep).CMove(aEp.Value, bEp.Value, 1).Equal(bEp.Value))
-	require.True(t, new(pallas.Ep).CMove(aEp.Value, bEp.Value, 0).Equal(aEp.Value))
+	require.True(t, new(pallas.Ep).CMove(aEp.V, bEp.V, 1).Equal(bEp.V))
+	require.True(t, new(pallas.Ep).CMove(aEp.V, bEp.V, 0).Equal(aEp.V))
 }
 
 func TestPointPointPallasSumOfProducts(t *testing.T) {
@@ -120,11 +119,11 @@ func TestPointPointPallasSumOfProducts(t *testing.T) {
 		pallasPoints[i] = new(pallas.Ep).Generator()
 	}
 	scalars := []*saferith.Nat{
-		new(pallas.Scalar).New(8).Nat(),
-		new(pallas.Scalar).New(9).Nat(),
-		new(pallas.Scalar).New(10).Nat(),
-		new(pallas.Scalar).New(11).Nat(),
-		new(pallas.Scalar).New(12).Nat(),
+		pallas.NewScalar(8).Nat(),
+		pallas.NewScalar(9).Nat(),
+		pallas.NewScalar(10).Nat(),
+		pallas.NewScalar(11).Nat(),
+		pallas.NewScalar(12).Nat(),
 	}
 	rhs := pallas.PippengerMultiScalarMultPallas(pallasPoints, scalars)
 	require.NotNil(t, rhs)
@@ -132,29 +131,28 @@ func TestPointPointPallasSumOfProducts(t *testing.T) {
 }
 
 func TestScalarMul(t *testing.T) {
-	curve := pallas.New()
-	nine := curve.Scalar().New(9)
-	six := curve.Scalar().New(6)
+	nine := pallas.NewScalar(9)
+	six := pallas.NewScalar(6)
 	actual := nine.Mul(six)
-	require.Equal(t, actual.Cmp(curve.Scalar().New(54)), 0)
+	require.Equal(t, actual.Cmp(pallas.NewScalar(54)), algebra.Equal)
 
-	upper := curve.Scalar().New(1).Neg()
-	require.Equal(t, upper.Mul(upper).Cmp(curve.Scalar().New(1)), 0)
+	upper := pallas.NewScalar(1).Neg()
+	require.Equal(t, upper.Mul(upper).Cmp(pallas.NewScalar(1)), algebra.Equal)
 }
 
 func TestScalarExp(t *testing.T) {
-	curve := pallas.New()
-	seventeen := curve.Scalar().New(17)
+	curve := pallas.NewCurve()
+	seventeen := pallas.NewScalar(17)
 
-	toZero := seventeen.Exp(curve.Scalar().Zero())
-	require.True(t, toZero.Cmp(curve.Scalar().One()) == 0)
+	toZero := seventeen.Exp(curve.ScalarField().Zero())
+	require.True(t, toZero.Cmp(curve.ScalarField().One()) == 0)
 
-	toOne := seventeen.Exp(curve.Scalar().One())
+	toOne := seventeen.Exp(curve.ScalarField().One())
 	require.True(t, toOne.Cmp(seventeen) == 0)
 
-	toTwo := seventeen.Exp(curve.Scalar().New(2))
+	toTwo := seventeen.Exp(pallas.NewScalar(2))
 	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
 
-	toThree := seventeen.Exp(curve.Scalar().New(3))
+	toThree := seventeen.Exp(pallas.NewScalar(3))
 	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
 }

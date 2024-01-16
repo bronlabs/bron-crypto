@@ -24,8 +24,7 @@ import (
 func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	t.Helper()
 
-	pointInK := new(K)
-	curve := (*pointInK).Curve()
+	curve := bls12381.GetSourceSubGroup[K]()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,
@@ -84,9 +83,9 @@ func Test_HappyPath(t *testing.T) {
 			t.Run(fmt.Sprintf("Happy path with inG1=%t and t=%d and n=%d", boundedInG1, boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 				t.Parallel()
 				if boundedInG1 {
-					testHappyPath[bls.G1](t, boundedThresholdConfig.t, boundedThresholdConfig.n)
+					testHappyPath[bls12381.G1](t, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				} else {
-					testHappyPath[bls.G2](t, boundedThresholdConfig.t, boundedThresholdConfig.n)
+					testHappyPath[bls12381.G2](t, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				}
 			})
 		}
@@ -104,7 +103,7 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 	bobSubGroup := bls12381.NewG2()
 
 	idCipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 
@@ -131,10 +130,10 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 	cohortConfigBob, err := integration_testutils.MakeCohortProtocol(bobCipherSuite, protocols.BLS, identities, threshold, identities)
 	require.NoError(t, err)
 
-	alice, err := dkg.NewParticipant[bls.G1](sid, aliceId.(integration.AuthKey), cohortConfigAlice, nil, crand.Reader)
+	alice, err := dkg.NewParticipant[bls12381.G1](sid, aliceId.(integration.AuthKey), cohortConfigAlice, nil, crand.Reader)
 	require.NoError(t, err)
 
-	bob, err := dkg.NewParticipant[bls.G2](sid, bobId.(integration.AuthKey), cohortConfigBob, nil, crand.Reader)
+	bob, err := dkg.NewParticipant[bls12381.G2](sid, bobId.(integration.AuthKey), cohortConfigBob, nil, crand.Reader)
 	require.NoError(t, err)
 
 	aliceR1Broadcast, aliceR1P2P, err := alice.Round1()

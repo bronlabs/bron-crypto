@@ -273,19 +273,19 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 	t.Parallel()
 	message1 := []byte("something")
 	message2 := []byte("bitcointranscation")
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	t.Run(fmt.Sprintf("running the test for curve %s", curve.Name()), func(t *testing.T) {
 		t.Parallel()
 
-		sk1, err := curve.Scalar().Random(crand.Reader)
+		sk1, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		aliceKey, err := bip340.NewPrivateKey(sk1)
 		require.NoError(t, err)
 		alice := bip340.NewSigner(aliceKey)
 		require.NotNil(t, alice)
 
-		sk2, err := curve.Scalar().Random(crand.Reader)
+		sk2, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		bobKey, err := bip340.NewPrivateKey(sk2)
 		require.NoError(t, err)
@@ -322,7 +322,7 @@ func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewSerialisation("invalid length")
 	}
-	curve := k256.New()
+	curve := k256.NewCurve()
 	k, err := curve.Scalar().SetBytes(input)
 	if err != nil {
 		return nil, errs.NewSerialisation("invalid scalar")
@@ -352,7 +352,7 @@ func unmarshalSignature(input []byte) (*bip340.Signature, error) {
 	if err != nil {
 		return nil, errs.NewSerialisation("invalid signature")
 	}
-	s, err := k256.New().Scalar().SetBytes(input[32:])
+	s, err := k256.NewCurve().Scalar().SetBytes(input[32:])
 	if err != nil {
 		return nil, errs.NewSerialisation("invalid signature")
 	}
@@ -369,7 +369,7 @@ func encodePoint(p curves.Point) []byte {
 }
 
 func decodePoint(data []byte) (curves.Point, error) {
-	curve := k256.New()
+	curve := k256.NewCurve()
 	p, err := curve.Point().FromAffineCompressed(bytes.Join([][]byte{{0x02}, data}, nil))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decode point")

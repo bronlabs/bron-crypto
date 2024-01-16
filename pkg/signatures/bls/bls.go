@@ -50,6 +50,9 @@ type Signer[K KeySubGroup, S SignatureSubGroup] struct {
 }
 
 func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], scheme RogueKeyPrevention) (*Signer[K, S], error) {
+	if SameSubGroup[K, S]() {
+		return nil, errs.NewInvalidType("key and signature subgroups should not be the same")
+	}
 	if err := privateKey.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "private key validation failed")
 	}
@@ -186,11 +189,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 		dst = tag
 	}
 
-	p, ok := signature.Value.(S)
-	if !ok {
-		return errs.NewInvalidType("signature is not in the right subgroup")
-	}
-	if err := coreVerify(publicKey, message, p, dst); err != nil {
+	if err := coreVerify[K, S](publicKey, message, signature.Value, dst); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid signature")
 	}
 	return nil
@@ -200,7 +199,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 // Basic: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify
 // MessageAugmentation: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
-func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSiganture *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
+func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignature *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
 	if SameSubGroup[K, S]() {
 		return errs.NewInvalidType("key and signature should be in different subgroups")
 	}
@@ -254,7 +253,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 	var dst []byte
 	var err error
 	if len(tag) == 0 {
-		dst, err = GetDst(scheme, (*new(K)).CurveName() == bls12381.NameG1)
+		dst, err = GetDst(scheme, bls12381.GetSourceSubGroup[K]().Name() == bls12381.NameG1)
 		if err != nil {
 			return errs.WrapFailed(err, "could not get domain separation tag")
 		}
@@ -262,12 +261,8 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 		dst = tag
 	}
 
-	sigValue, ok := aggregatedSiganture.Value.(S)
-	if !ok {
-		return errs.NewInvalidType("this should never happen")
-	}
 	// step 3.1.1.2
-	if err := coreAggregateVerify(publicKeys, messages, sigValue, dst); err != nil {
+	if err := coreAggregateVerify[K, S](publicKeys, messages, aggregatedSignature.Value, dst); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid signature bundle")
 	}
 	return nil
@@ -313,12 +308,8 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 		return errs.WrapFailed(err, "could not get domain separation tag")
 	}
 
-	value, ok := aggregatedSignature.Value.(S)
-	if !ok {
-		return errs.NewInvalidType("value of the signature is not in the same subgroup")
-	}
 	// step 3.3.4.6
-	if err := coreVerify(aggregatePublicKey, message, value, dst); err != nil {
+	if err := coreVerify[K, S](aggregatePublicKey, message, aggregatedSignature.Value, dst); err != nil {
 		return errs.WrapVerificationFailed(err, "invalid signature")
 	}
 	return nil

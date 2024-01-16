@@ -26,7 +26,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	if cohortConfig.Protocol.Name != protocols.FROST {
 		return nil, errs.NewInvalidArgument("protocol not supported")
 	}
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate ed25519 compliant private key")

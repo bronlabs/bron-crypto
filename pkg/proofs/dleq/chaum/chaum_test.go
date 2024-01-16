@@ -22,15 +22,15 @@ func doChaum(curve curves.Curve, sid []byte, prng io.Reader) error {
 	if err != nil {
 		return errs.WrapFailed(err, "failed to create prover")
 	}
-	x, err := curve.Scalar().Random(crand.Reader)
+	x, err := curve.ScalarField().Random(crand.Reader)
 	if err != nil {
 		return errs.WrapRandomSampleFailed(err, "failed to generate random scalar")
 	}
-	H1, err := curve.Point().Random(crand.Reader)
+	H1, err := curve.Random(crand.Reader)
 	if err != nil {
 		return errs.WrapRandomSampleFailed(err, "failed to generate random scalar")
 	}
-	H2, err := curve.Point().Random(crand.Reader)
+	H2, err := curve.Random(crand.Reader)
 	if err != nil {
 		return errs.WrapRandomSampleFailed(err, "failed to generate random scalar")
 	}
@@ -51,9 +51,9 @@ func TestZKPOverMultipleCurves(t *testing.T) {
 	t.Parallel()
 	uniqueSessionId := sha3.Sum256([]byte("random seed"))
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	for _, curve := range curveInstances {
 		boundedCurve := curve
@@ -70,9 +70,9 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 
 	uniqueSessionId := sha3.Sum256([]byte("random seed"))
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		edwards25519.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		edwards25519.NewCurve(),
 	}
 	for _, curve := range curveInstances {
 		boundedCurve := curve
@@ -82,16 +82,16 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, prover)
 
-			secret, err := boundedCurve.Scalar().Random(crand.Reader)
+			secret, err := boundedCurve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
-			H1, err := boundedCurve.Point().Random(crand.Reader)
+			H1, err := boundedCurve.Random(crand.Reader)
 			require.NoError(t, err)
-			H2, err := boundedCurve.Point().Random(crand.Reader)
+			H2, err := boundedCurve.Random(crand.Reader)
 			require.NoError(t, err)
 			proof, correctStatement, err := prover.Prove(secret, H1, H2)
 			require.NoError(t, err)
 
-			H3, err := boundedCurve.Point().Random(crand.Reader)
+			H3, err := boundedCurve.Random(crand.Reader)
 			require.NoError(t, err)
 			require.False(t, H1.Equal(H3), "buy a lotter ticket")
 			require.False(t, H2.Equal(H3), "buy a lotter ticket")

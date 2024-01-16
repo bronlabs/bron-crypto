@@ -21,11 +21,11 @@ import (
 
 var cipherSuites = []*integration.CipherSuite{
 	{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha3.New256,
 	},
 	{
-		Curve: p256.New(),
+		Curve: p256.NewCurve(),
 		Hash:  sha3.New256,
 	},
 }
@@ -48,7 +48,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 			}
 			zA, zB, err := testutils.RunMult(t, alice, bob, a)
@@ -56,7 +56,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 			for i := 0; i < mult.L; i++ {
 				lhs := zA[i].Add(zB[i])
 				rhs := a[i].Mul(bob.BTilde[i])
-				require.Equal(t, 0, lhs.Cmp(rhs))
+				require.Equal(t, 0, int(lhs.Cmp(rhs)))
 			}
 		})
 	}
@@ -83,7 +83,7 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 			}
 
@@ -116,7 +116,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 
 			a := [mult.L]curves.Scalar{}
 			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.Scalar().Random(crand.Reader)
+				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
 			}
 
@@ -132,7 +132,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 			for i := 0; i < mult.L; i++ {
 				lhs := zA[i].Add(zB[i])
 				rhs := a[i].Mul(bob.BTilde[i])
-				require.Equal(t, 0, lhs.Cmp(rhs))
+				require.Equal(t, 0, int(lhs.Cmp(rhs)))
 			}
 
 			// Second Run. Alice replays the messages from the first run.

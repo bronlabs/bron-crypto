@@ -3,18 +3,19 @@ package aggregation
 import (
 	"sort"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 )
-
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 type SignatureAggregator struct {
 	CohortConfig           *integration.CohortConfig
@@ -121,7 +122,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 	// for identifiable abort, you need R_js
 	recomputedR_js := map[types.IdentityHash]curves.Point{}
 	if sa.parameters.R == nil {
-		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Point().Identity()
+		sa.parameters.R = sa.CohortConfig.CipherSuite.Curve.Identity()
 		combinedDsAndEs := []byte{}
 		// we need to consistently order the Ds and Es
 		sortedIdentities := integration.ByPublicKey(sa.SessionParticipants.List())
@@ -134,7 +135,11 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 		for _, jIdentityKey := range sa.SessionParticipants.Iter() {
 			j := sa.IdentityKeyToSharingId[jIdentityKey.Hash()]
 
-			r_j, err := sa.CohortConfig.CipherSuite.Curve.Scalar().Hash([]byte{byte(j)}, sa.Message, combinedDsAndEs)
+			rjMessage, err := hashing.HashChain(sha3.New256, []byte{byte(j)}, sa.Message, combinedDsAndEs)
+			if err != nil {
+				return nil, errs.WrapHashingFailed(err, "could not produce r_j message")
+			}
+			r_j, err := sa.CohortConfig.CipherSuite.Curve.ScalarField().Hash(rjMessage)
 			if err != nil {
 				return nil, errs.WrapHashingFailed(err, "could not hash for r_j")
 			}
@@ -173,6 +178,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 			return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 		}
 
+		fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(sa.CohortConfig.CipherSuite.Curve)
 		c, err := fiatShamir.GenerateChallenge(
 			sa.CohortConfig.CipherSuite,
 			sa.parameters.R.ToAffineCompressed(),
@@ -217,7 +223,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 		}
 	}
 
-	s := sa.CohortConfig.CipherSuite.Curve.Scalar().Zero()
+	s := sa.CohortConfig.CipherSuite.Curve.ScalarField().Zero()
 	for _, partialSignature := range partialSignatures {
 		s = s.Add(partialSignature.Zi)
 	}

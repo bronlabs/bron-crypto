@@ -11,7 +11,7 @@ import (
 
 func Test_ChachaPrng(t *testing.T) {
 	// run the test
-	testutils.Test_prng(t, chacha20.NewChachaPRNG)
+	testutils.PrngTester(t, chacha20.NewChachaPRNG)
 }
 
 func Test_TmmoPrng(t *testing.T) {
@@ -19,5 +19,5 @@ func Test_TmmoPrng(t *testing.T) {
 	NewNistPrngShort := func(seed, salt []byte) (csprng.CSPRNG, error) {
 		return tmmohash.NewTmmoPrng(32, 16*7, seed, salt)
 	}
-	testutils.Test_prng(t, NewNistPrngShort)
+	testutils.PrngTester(t, NewNistPrngShort)
 }

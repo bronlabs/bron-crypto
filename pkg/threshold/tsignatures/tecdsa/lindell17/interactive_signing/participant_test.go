@@ -20,7 +20,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	prng := crand.Reader
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)

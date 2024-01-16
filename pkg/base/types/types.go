@@ -1,5 +1,9 @@
 package types
 
+type IdentityHash [32]byte
+
+type Incomparable [0]func()
+
 type Hashable interface {
 	Hash() [32]byte
 }

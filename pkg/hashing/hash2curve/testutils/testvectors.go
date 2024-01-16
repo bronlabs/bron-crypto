@@ -42,7 +42,7 @@ type TestCase struct {
 	Q1yI string
 }
 
-func SetCurveHasher(curve curves.Curve, tv *TestVector) (hashing.CurveHasher, error) {
+func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hashing.CurveHasher, error) {
 	appTag, found := strings.CutSuffix(tv.Dst, tv.SuiteName)
 	if !found {
 		return nil, errs.NewVerificationFailed("could not cut suffix from dst")
@@ -69,15 +69,46 @@ func SetCurveHasher(curve curves.Curve, tv *TestVector) (hashing.CurveHasher, er
 	return ch, nil
 }
 
+func SetCurveHasher(curve curves.Curve, ch hashing.CurveHasher) curves.Curve {
+	switch curve.Name() {
+	case p256.NewCurve().Name():
+		c := p256.NewCurve()
+		c.CurveHasher = ch
+		return c
+	case edwards25519.NewCurve().Name():
+		c := edwards25519.NewCurve()
+		c.CurveHasher = ch
+		return c
+	case k256.NewCurve().Name():
+		c := k256.NewCurve()
+		c.CurveHasher = ch
+		return c
+	case curve25519.NewCurve().Name():
+		c := edwards25519.NewCurve()
+		c.CurveHasher = ch
+		return c
+	case bls12381.NewG1().Name():
+		c := bls12381.NewG1()
+		c.CurveHasher = ch
+		return c
+	case bls12381.NewG2().Name():
+		c := bls12381.NewG2()
+		c.CurveHasher = ch
+		return c
+	default:
+		panic("unsupported curve")
+	}
+}
+
 func NewHash2CurveTestVector(curve curves.Curve) *TestVector {
 	switch curve.Name() {
-	case p256.New().Name():
+	case p256.NewCurve().Name():
 		return P256_TestVector
-	case edwards25519.New().Name():
+	case edwards25519.NewCurve().Name():
 		return Edwards25519_TestVector
-	case k256.New().Name():
+	case k256.NewCurve().Name():
 		return Secp256k1_TestVector
-	case curve25519.New().Name():
+	case curve25519.NewCurve().Name():
 		return Curve25519_TestVector
 	case bls12381.NewG1().Name():
 		return BLS12381G1_TestVector

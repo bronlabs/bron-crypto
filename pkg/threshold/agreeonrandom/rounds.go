@@ -27,7 +27,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
 
-	r_i, err := p.Curve.Scalar().Random(p.prng)
+	r_i, err := p.Curve.ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate random scalar")
 	}

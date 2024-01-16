@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-var testCurve = edwards25519.New()
+var testCurve = edwards25519.NewCurve()
 
 func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 	_, err := feldman.NewDealer(0, 0, testCurve)
@@ -40,11 +40,11 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 	_, err = scheme.Combine([]*shamir.Share{
 		{
 			Id:    1,
-			Value: testCurve.Scalar().New(3),
+			Value: testCurve.ScalarField().New(3),
 		},
 		{
 			Id:    1,
-			Value: testCurve.Scalar().New(3),
+			Value: testCurve.ScalarField().New(3),
 		},
 	}...)
 	require.NotNil(t, err)
@@ -57,18 +57,18 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 	shares := []*shamir.Share{
 		{
 			Id:    0,
-			Value: testCurve.Scalar().New(3),
+			Value: testCurve.ScalarField().New(3),
 		},
 		{
 			Id:    2,
-			Value: testCurve.Scalar().New(3),
+			Value: testCurve.ScalarField().New(3),
 		},
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 	shares[0] = &shamir.Share{
 		Id:    4,
-		Value: testCurve.Scalar().New(3),
+		Value: testCurve.ScalarField().New(3),
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
@@ -79,7 +79,7 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
-	secret, err := testCurve.Scalar().Hash([]byte("test"))
+	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	require.NoError(t, err)
@@ -98,7 +98,7 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
-	secret, err := testCurve.Scalar().Hash([]byte("test"))
+	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
 	commitments, shares, err := scheme.Split(secret, crand.Reader)
 	for _, s := range shares {

@@ -14,7 +14,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	if p.round != 1 {
 		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
 	}
-	round1broadcast, round1p2p, err := p.PedersenParty.Round1(p.GetCohortConfig().CipherSuite.Curve.Scalar().Zero())
+	round1broadcast, round1p2p, err := p.PedersenParty.Round1(p.GetCohortConfig().CipherSuite.Curve.ScalarField().Zero())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of pedersen with free coefficient of zero")
 	}

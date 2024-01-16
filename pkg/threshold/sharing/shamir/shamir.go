@@ -23,7 +23,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
 	}
-	shareCurve := ss.Value.Curve()
+	shareCurve := ss.Value.ScalarField().Curve()
 	if shareCurve.Name() != curve.Name() {
 		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurve.Name(), curve.Name())
 	}
@@ -32,7 +32,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 }
 
 func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
-	curve := ss.Value.Curve()
+	curve := ss.Value.ScalarField().Curve()
 	coefficients, err := LagrangeCoefficients(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
@@ -95,7 +95,7 @@ func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reade
 	}
 	shares := make([]*Share, s.Total)
 	for i := range shares {
-		x := s.Curve.Scalar().New(uint64(i + 1))
+		x := s.Curve.ScalarField().New(uint64(i + 1))
 		shares[i] = &Share{
 			Id:    i + 1,
 			Value: poly.Evaluate(x),
@@ -139,9 +139,9 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = share.Value
-		xs[i] = s.Curve.Scalar().New(uint64(share.Id))
+		xs[i] = s.Curve.ScalarField().New(uint64(share.Id))
 	}
-	return s.interpolate(xs, ys, s.Curve.Scalar().Zero())
+	return s.interpolate(xs, ys, s.Curve.ScalarField().Zero())
 }
 
 func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
@@ -166,9 +166,9 @@ func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		}
 		dups[share.Id] = true
 		ys[i] = s.Curve.ScalarBaseMult(share.Value)
-		xs[i] = s.Curve.Scalar().New(uint64(share.Id))
+		xs[i] = s.Curve.ScalarField().New(uint64(share.Id))
 	}
-	return s.interpolatePoint(xs, ys, s.Curve.Scalar().Zero())
+	return s.interpolatePoint(xs, ys, s.Curve.ScalarField().Zero())
 }
 
 func (s *Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
@@ -190,9 +190,9 @@ func (s *Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluat
 func LagrangeCoefficients(curve curves.Curve, sharingIds []int) (map[int]curves.Scalar, error) {
 	sharingIdsScalar := make([]curves.Scalar, len(sharingIds))
 	for i := 0; i < len(sharingIds); i++ {
-		sharingIdsScalar[i] = curve.Scalar().New(uint64(sharingIds[i]))
+		sharingIdsScalar[i] = curve.ScalarField().New(uint64(sharingIds[i]))
 	}
-	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.Scalar().Zero()) // secret is at 0
+	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.ScalarField().Zero()) // secret is at 0
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute all basis polynomialsa at x=0")
 	}

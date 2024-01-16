@@ -2,6 +2,7 @@ package aggregation
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
@@ -45,7 +46,7 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares 
 	if err := cohortConfig.Validate(); err != nil {
 		return errs.WrapInvalidArgument(err, "cohort config is invalid")
 	}
-	if cohortConfig.CipherSuite.Curve.Name() != (*new(K)).CurveName() {
+	if cohortConfig.CipherSuite.Curve.Name() != bls12381.GetSourceSubGroup[K]().Name() {
 		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
 	}
 	if err := publicKeyShares.Validate(cohortConfig); err != nil {
@@ -58,10 +59,8 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 	if bls.SameSubGroup[K, S]() {
 		return nil, nil, errs.NewInvalidType("key and signature subgroups can't be the same")
 	}
-	pointInK := new(K)
-	pointInS := new(S)
-	keySubGroup := (*pointInK).Curve()
-	signatureSubGroup := (*pointInS).Curve()
+	keySubGroup := bls12381.GetSourceSubGroup[K]()
+	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
 
 	presentParticipantsToSharingId := make(map[types.IdentityHash]int, len(partialSignatures))
 	sharingIds := make([]int, len(partialSignatures))
@@ -81,8 +80,8 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 		return nil, nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
 
-	sigma := signatureSubGroup.Point().Identity()
-	sigmaPOP := signatureSubGroup.Point().Identity()
+	sigma := signatureSubGroup.Identity()
+	sigmaPOP := signatureSubGroup.Identity()
 
 	// step 2.1
 	for identityHash, psig := range partialSignatures {

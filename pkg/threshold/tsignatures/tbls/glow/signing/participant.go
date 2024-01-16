@@ -3,6 +3,7 @@ package signing
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
@@ -15,7 +16,7 @@ import (
 )
 
 type Cosigner struct {
-	signer       *bls.Signer[bls.G1, bls.G2]
+	signer       *bls.Signer[bls12381.G1, bls12381.G2]
 	cohortConfig *integration.CohortConfig
 
 	myAuthKey              integration.AuthKey
@@ -61,11 +62,11 @@ func NewCosigner(sid []byte, myAuthKey integration.AuthKey, sessionParticipants 
 
 	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 
-	signingKeyShareAsPrivateKey, err := bls.NewPrivateKey[bls.G1](myShard.SigningKeyShare.Share)
+	signingKeyShareAsPrivateKey, err := bls.NewPrivateKey[bls12381.G1](myShard.SigningKeyShare.Share)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not consider my signing key share as a bls private key")
 	}
-	signer, err := bls.NewSigner[bls.G1, bls.G2](signingKeyShareAsPrivateKey, bls.Basic)
+	signer, err := bls.NewSigner[bls12381.G1, bls12381.G2](signingKeyShareAsPrivateKey, bls.Basic)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't construct bls cosigner")
 	}

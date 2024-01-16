@@ -30,8 +30,8 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		return nil, errs.NewInvalidLength("ikm is too short. Must be at least 32")
 	}
 
-	pointInK := new(K)
-	d := (*pointInK).Scalar().Zero()
+	keySubGroup := bls12381.GetSourceSubGroup[K]()
+	d := keySubGroup.ScalarField().Zero()
 
 	// We assume h models a random oracle, so we don't parametrize salt.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
@@ -60,13 +60,9 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		// step 2.3.4
 		v := bimpl.FqNew().SetBytesWide(&okm)
 
-		pairingIdentityInK, ok := (*pointInK).Identity().(curves.PairingPoint)
-		if !ok {
-			return nil, errs.NewInvalidType("could not get pairable identity point in K")
-		}
 		d = &bls12381.Scalar{
-			Value:  v,
-			Point_: pairingIdentityInK,
+			V: v,
+			G: keySubGroup,
 		}
 		salt, err = hashing.Hash(sha256.New, salt)
 		if err != nil {
@@ -75,14 +71,9 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 	}
 
 	// 2.4: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sktopk
-	Y, ok := (*pointInK).Curve().ScalarBaseMult(d).(curves.PairingPoint)
-	if !ok {
-		return nil, errs.NewInvalidType("public key could not be converted to pairing point. This should never happen.")
-	}
-	dValue, ok := d.(*bls12381.Scalar)
-	if !ok {
-		return nil, errs.NewInvalidType("d could not be converted to a bls scalar. This should never happen.")
-	}
+	Y := keySubGroup.ScalarBaseMult(d).(curves.PairingPoint)
+	dValue := d.(*bls12381.Scalar)
+	dValue.G = keySubGroup
 
 	return &PrivateKey[K]{
 		d: dValue,

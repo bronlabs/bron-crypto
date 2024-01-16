@@ -31,10 +31,7 @@ func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, 
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
 func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat, pk *paillier.PublicKey, cKey *paillier.CipherText, prng io.Reader) (c3 *paillier.CipherText, err error) {
-	k2Inv, err := k2.Invert()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot invert k2")
-	}
+	k2Inv := k2.MultiplicativeInverse()
 
 	// c1 = Enc(ρq + k2^(-1) * m')
 	c1Plain := k2Inv.Mul(mPrime).Nat()
@@ -81,10 +78,7 @@ func MessageToScalar(hashFunc func() hash.Hash, curve curves.Curve, message []by
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
 	}
-	mPrime, err := curve.Scalar().SetNat(mPrimeInt)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot hash to scalar")
-	}
+	mPrime := curve.Scalar().SetNat(mPrimeInt)
 
 	return mPrime, nil
 }

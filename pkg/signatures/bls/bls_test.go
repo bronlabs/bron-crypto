@@ -106,12 +106,12 @@ func TestCannotVerify(t *testing.T) {
 				t.Parallel()
 				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 				require.NoError(t, err)
-				p, err := bls12381.NewG2().Point().Random(prng)
+				p, err := bls12381.NewG2().Random(prng)
 				require.NoError(t, err)
 				signature.Value, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				signature.Value = bls12381.NewG2().Point().Identity().(curves.PairingPoint)
+				signature.Value = bls12381.NewG2().Identity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -120,12 +120,12 @@ func TestCannotVerify(t *testing.T) {
 				t.Parallel()
 				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 				require.NoError(t, err)
-				p, err := bls12381.NewG1().Point().Random(prng)
+				p, err := bls12381.NewG2().Random(prng)
 				require.NoError(t, err)
 				signature.Value, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				signature.Value = bls12381.NewG1().Point().Identity().(curves.PairingPoint)
+				signature.Value = bls12381.NewG2().Identity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -136,12 +136,12 @@ func TestCannotVerify(t *testing.T) {
 				t.Parallel()
 				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(message, boundedScheme)
 				require.NoError(t, err)
-				p, err := bls12381.NewG1().Point().Random(prng)
+				p, err := bls12381.NewG2().Random(prng)
 				require.NoError(t, err)
 				privateKey.PublicKey.Y, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				privateKey.PublicKey.Y = bls12381.NewG1().Point().Identity().(curves.PairingPoint)
+				privateKey.PublicKey.Y = bls12381.NewG2().Identity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -150,12 +150,12 @@ func TestCannotVerify(t *testing.T) {
 				t.Parallel()
 				privateKey, signature, pop, err := testutils.RoundTripWithKeysInG2(message, boundedScheme)
 				require.NoError(t, err)
-				p, err := bls12381.NewG2().Point().Random(prng)
+				p, err := bls12381.NewG2().Random(prng)
 				require.NoError(t, err)
 				privateKey.PublicKey.Y, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				privateKey.PublicKey.Y = bls12381.NewG2().Point().Identity().(curves.PairingPoint)
+				privateKey.PublicKey.Y = bls12381.NewG2().Identity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -184,7 +184,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				for i := 0; i < boundedBatchSize; i++ {
 					m := message[:]
 					if boundedScheme == bls.Basic {
-						p, err := bls12381.NewG1().Point().Random(crand.Reader)
+						p, err := bls12381.NewG2().Random(crand.Reader)
 						require.NoError(t, err)
 						m = p.ToAffineCompressed()
 					}
@@ -200,7 +200,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, sigAg)
 				require.False(t, sigAg.Value.IsIdentity())
-				require.True(t, sigAg.Value.IsTorsionFree())
+				require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
 
 				if boundedScheme != bls.POP {
 					pops = nil
@@ -228,7 +228,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				for i := 0; i < boundedBatchSize2; i++ {
 					m := message
 					if boundedScheme2 == bls.Basic {
-						p, err := bls12381.NewG2().Point().Random(crand.Reader)
+						p, err := bls12381.NewG2().Random(crand.Reader)
 						require.NoError(t, err)
 						m = p.ToAffineCompressed()
 					}
@@ -244,7 +244,7 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, sigAg)
 				require.False(t, sigAg.Value.IsIdentity())
-				require.True(t, sigAg.Value.IsTorsionFree())
+				require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()))
 
 				if boundedScheme2 != bls.POP {
 					pops = nil
@@ -265,14 +265,14 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 
 func testSignVector(t *testing.T, v *signVector) {
 	t.Helper()
-	privateKey := &bls.PrivateKey[bls.G1]{}
+	privateKey := &bls.PrivateKey[bls12381.G1]{}
 	err := privateKey.UnmarshalBinary(v.Input.PrivateKey)
 	// the test vectors only test whether the private key is zero or not
 	if v.Output == nil {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
-		signer, err := bls.NewSigner[bls.G1, bls.G2](privateKey, bls.Basic)
+		signer, err := bls.NewSigner[bls12381.G1, bls12381.G2](privateKey, bls.Basic)
 		require.NoError(t, err)
 
 		signature, _, err := signer.Sign(v.Input.Message, []byte(bls.DstSignaturePopInG2))
@@ -310,12 +310,12 @@ func TestSignVectors(t *testing.T) {
 
 func testVerifyVector(t *testing.T, v *verifyVector, name string) {
 	t.Helper()
-	publicKey := &bls.PublicKey[bls.G1]{}
+	publicKey := &bls.PublicKey[bls12381.G1]{}
 	err := publicKey.UnmarshalBinary(v.Input.PublicKey)
 	if !v.Output && strings.Contains(name, "infinity_pubkey") {
 		require.Error(t, err)
 	} else {
-		signature := &bls.Signature[bls.G2]{}
+		signature := &bls.Signature[bls12381.G2]{}
 		err := signature.UnmarshalBinary(v.Input.Signature)
 		if !v.Output && strings.Contains(name, "signature") {
 			require.Error(t, err)
@@ -358,9 +358,9 @@ func TestVerifyVectors(t *testing.T) {
 
 func testAggregateVector(t *testing.T, v *aggregateVector, name string) {
 	t.Helper()
-	signatures := make([]*bls.Signature[bls.G2], len(v.Input))
+	signatures := make([]*bls.Signature[bls12381.G2], len(v.Input))
 	for i, value := range v.Input {
-		signatures[i] = &bls.Signature[bls.G2]{}
+		signatures[i] = &bls.Signature[bls12381.G2]{}
 		err := signatures[i].UnmarshalBinary(value)
 		// we are deviating from the test vectors, because we don't allow infinity signatures to be aggregated in the first place.
 		if strings.Contains(name, "infinity_signature") {
@@ -408,17 +408,17 @@ func TestAggregateVectors(t *testing.T) {
 
 func testAggregateVerifyVector(t *testing.T, v *aggregateVerifyVector, name string) {
 	t.Helper()
-	aggregatedSignature := &bls.Signature[bls.G2]{}
+	aggregatedSignature := &bls.Signature[bls12381.G2]{}
 	err := aggregatedSignature.UnmarshalBinary(v.Input.Signature)
 	if strings.Contains(name, "signature") {
 		require.Error(t, err)
 		return
 	}
 
-	publicKeys := make([]*bls.PublicKey[bls.G1], len(v.Input.PublicKeys))
+	publicKeys := make([]*bls.PublicKey[bls12381.G1], len(v.Input.PublicKeys))
 	foundError := false
 	for i, value := range v.Input.PublicKeys {
-		publicKeys[i] = &bls.PublicKey[bls.G1]{}
+		publicKeys[i] = &bls.PublicKey[bls12381.G1]{}
 		err := publicKeys[i].UnmarshalBinary(value)
 		if err != nil {
 			foundError = true

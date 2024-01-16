@@ -21,7 +21,7 @@ import (
 func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 	t.Parallel()
 	suite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha512.New,
 	}
 

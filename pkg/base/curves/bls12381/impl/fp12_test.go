@@ -400,18 +400,18 @@ func TestFp12Arithmetic(t *testing.T) {
 
 	require.Equal(t, 1, d.Mul(&d, &aa).IsOne())
 
-	require.Equal(t, 0, aa.Equal(d.FrobeniusMap(&aa)))
-	d.FrobeniusMap(&aa).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d).
-		FrobeniusMap(&d)
+	require.Equal(t, 0, aa.Equal(d.FrobeniusAutomorphism(&aa)))
+	d.FrobeniusAutomorphism(&aa).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d).
+		FrobeniusAutomorphism(&d)
 	require.Equal(t, 1, aa.Equal(&d))
 }

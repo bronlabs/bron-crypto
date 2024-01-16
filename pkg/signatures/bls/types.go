@@ -29,19 +29,14 @@ const (
 	ProofOfPossessionSizeInG1 = 48
 )
 
-type (
-	G1 = *bls12381.PointG1
-	G2 = *bls12381.PointG2
-)
-
-type KeySubGroup interface {
-	curves.PairingPoint
-	G1 | G2
-}
+type KeySubGroup = bls12381.SourceSubGroups
 
 var (
-	_ encoding.BinaryMarshaler   = (*PrivateKey[*bls12381.PointG1])(nil)
-	_ encoding.BinaryUnmarshaler = (*PrivateKey[*bls12381.PointG1])(nil)
+	_ encoding.BinaryMarshaler   = (*PrivateKey[bls12381.G1])(nil)
+	_ encoding.BinaryUnmarshaler = (*PrivateKey[bls12381.G1])(nil)
+
+	_ encoding.BinaryMarshaler   = (*PrivateKey[bls12381.G2])(nil)
+	_ encoding.BinaryUnmarshaler = (*PrivateKey[bls12381.G2])(nil)
 )
 
 type PrivateKey[K KeySubGroup] struct {
@@ -51,19 +46,20 @@ type PrivateKey[K KeySubGroup] struct {
 	_ types.Incomparable
 }
 
-func NewPrivateKey[K KeySubGroup](d curves.PairingScalar) (*PrivateKey[K], error) {
+func NewPrivateKey[K KeySubGroup](d curves.Scalar) (*PrivateKey[K], error) {
 	sk, ok := d.(*bls12381.Scalar)
 	if !ok {
-		return nil, errs.NewInvalidType("d is not a bls scalar")
+		return nil, errs.NewInvalidType("scalar is not for the right subgroup")
 	}
-	pointInK := new(K)
-	if (*pointInK).CurveName() != d.CurveName() {
-		return nil, errs.NewInvalidCurve("Key subgroup and d's subgroup are not the same")
+	sk.G = bls12381.GetSourceSubGroup[K]()
+	if bls12381.GetSourceSubGroup[K]().Name() != d.ScalarField().Curve().Name() {
+		return nil, errs.NewInvalidCurve(
+			"Key subgroup (%s) and d's subgroup (%s) are not the same",
+			bls12381.GetSourceSubGroup[K]().Name(),
+			d.ScalarField().Curve().Name(),
+		)
 	}
-	Y, ok := d.Curve().ScalarBaseMult(sk).(curves.PairingPoint)
-	if !ok {
-		return nil, errs.NewInvalidType("could not convert public key to pairing point")
-	}
+	Y := d.ScalarField().Curve().ScalarBaseMult(sk).(curves.PairingPoint)
 	return &PrivateKey[K]{
 		d: sk,
 		PublicKey: &PublicKey[K]{
@@ -72,7 +68,7 @@ func NewPrivateKey[K KeySubGroup](d curves.PairingScalar) (*PrivateKey[K], error
 	}, nil
 }
 
-func (sk *PrivateKey[K]) D() curves.PairingScalar {
+func (sk *PrivateKey[K]) D() curves.Scalar {
 	return sk.d
 }
 
@@ -112,15 +108,11 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't set bytes")
 	}
-	point := new(K)
 	sk.d = &bls12381.Scalar{
-		Value:  value,
-		Point_: *point,
+		V: value,
+		G: bls12381.GetSourceSubGroup[K](),
 	}
-	Y, ok := sk.d.Curve().ScalarBaseMult(sk.d).(curves.PairingPoint)
-	if !ok {
-		return errs.NewInvalidType("could not convert public key to pairing point")
-	}
+	Y := sk.d.ScalarField().Curve().ScalarBaseMult(sk.d).(curves.PairingPoint)
 	sk.PublicKey = &PublicKey[K]{
 		Y: Y,
 	}
@@ -129,8 +121,11 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 }
 
 var (
-	_ encoding.BinaryMarshaler   = (*PublicKey[*bls12381.PointG1])(nil)
-	_ encoding.BinaryUnmarshaler = (*PublicKey[*bls12381.PointG1])(nil)
+	_ encoding.BinaryMarshaler   = (*PublicKey[bls12381.G1])(nil)
+	_ encoding.BinaryUnmarshaler = (*PublicKey[bls12381.G1])(nil)
+
+	_ encoding.BinaryMarshaler   = (*PublicKey[bls12381.G2])(nil)
+	_ encoding.BinaryUnmarshaler = (*PublicKey[bls12381.G2])(nil)
 )
 
 type PublicKey[K KeySubGroup] struct {
@@ -143,6 +138,7 @@ type PublicKey[K KeySubGroup] struct {
 // Note that if the RogueKeyPreventionScheme is POP, this public key must be accompanied with a proof of possession.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keyvalidate
 func (pk *PublicKey[K]) Validate() error {
+	subGroup := bls12381.GetSourceSubGroup[K]()
 	if pk == nil {
 		return errs.NewIsNil("public key is nil")
 	}
@@ -155,7 +151,7 @@ func (pk *PublicKey[K]) Validate() error {
 	if pk.Y.IsSmallOrder() {
 		return errs.NewIsIdentity("public key value is small order")
 	}
-	if !pk.Y.IsTorsionFree() {
+	if !pk.Y.IsTorsionElement(subGroup.SubGroupOrder()) {
 		return errs.NewVerificationFailed("public key is not torsion free")
 	}
 	return nil
@@ -190,31 +186,30 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	}
 	blob := make([]byte, size)
 	copy(blob, data)
-	t := new(K)
-	p, err := (*t).FromAffineCompressed(blob)
+	g := bls12381.GetSourceSubGroup[K]()
+	p, err := g.Element().FromAffineCompressed(blob)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
 	if p.IsIdentity() {
 		return errs.NewIsZero("public keys cannot be zero")
 	}
-	var ok bool
-	pk.Y, ok = p.(curves.PairingPoint)
-	if !ok {
-		return errs.NewSerialisation("point is not a pairing type")
-	}
+	pk.Y = p.(curves.PairingPoint)
 	return nil
 }
 
 func (*PublicKey[K]) InG1() bool {
-	return (*new(K)).CurveName() == bls12381.NameG1
+	return bls12381.GetSourceSubGroup[K]().Name() == bls12381.NewG1().Name()
 }
 
 type SignatureSubGroup = KeySubGroup
 
 var (
-	_ encoding.BinaryMarshaler   = (*Signature[*bls12381.PointG2])(nil)
-	_ encoding.BinaryUnmarshaler = (*Signature[*bls12381.PointG2])(nil)
+	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G2])(nil)
+	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G2])(nil)
+
+	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G1])(nil)
+	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G1])(nil)
 )
 
 type Signature[S SignatureSubGroup] struct {
@@ -252,8 +247,8 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	}
 	blob := make([]byte, size)
 	copy(blob, data)
-	t := new(S)
-	p, err := (*t).FromAffineCompressed(blob)
+	g := bls12381.GetSourceSubGroup[S]()
+	p, err := g.Element().FromAffineCompressed(blob)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
@@ -261,22 +256,21 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 		return errs.NewIsZero("signatures cannot be zero")
 	}
 
-	var ok bool
-	sig.Value, ok = p.(curves.PairingPoint)
-	if !ok {
-		return errs.NewSerialisation("point is not a pairing type")
-	}
+	sig.Value = p.(curves.PairingPoint)
 	return nil
 }
 
 func (*Signature[S]) inG1() bool {
-	return (*new(S)).CurveName() == bls12381.NameG1
+	return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
 }
 
 // type aliasing of generic types is not supported. So, sitll have to copy identical stuff.
 var (
-	_ encoding.BinaryMarshaler   = (*Signature[*bls12381.PointG2])(nil)
-	_ encoding.BinaryUnmarshaler = (*Signature[*bls12381.PointG2])(nil)
+	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G2])(nil)
+	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G2])(nil)
+
+	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G1])(nil)
+	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G1])(nil)
 )
 
 type ProofOfPossession[S SignatureSubGroup] struct {
@@ -314,8 +308,8 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 	}
 	blob := make([]byte, size)
 	copy(blob, data)
-	t := new(S)
-	p, err := (*t).FromAffineCompressed(blob)
+	g := bls12381.GetSourceSubGroup[S]()
+	p, err := g.Element().FromAffineCompressed(blob)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
@@ -323,14 +317,10 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 		return errs.NewIsZero("public keys cannot be zero")
 	}
 
-	var ok bool
-	pop.Value, ok = p.(curves.PairingPoint)
-	if !ok {
-		return errs.NewSerialisation("point is not a pairing type")
-	}
+	pop.Value = p.(curves.PairingPoint)
 	return nil
 }
 
-func (pop *ProofOfPossession[S]) inG1() bool {
-	return pop.Value.CurveName() == bls12381.NameG1
+func (*ProofOfPossession[S]) inG1() bool {
+	return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
 }

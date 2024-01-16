@@ -1,6 +1,8 @@
 package bls12381impl
 
 import (
+	"crypto/subtle"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -721,28 +723,28 @@ func (g2 *G2) Set(a *G2) *G2 {
 func (*G2) Nat() (x, y *saferith.Nat) {
 	var t G2
 	out := t.ToUncompressed()
-	x = new(saferith.Nat).SetBytes(out[:WideFieldBytes])
-	y = new(saferith.Nat).SetBytes(out[WideFieldBytes:])
+	x = new(saferith.Nat).SetBytes(out[:WideFieldBytesFp2])
+	y = new(saferith.Nat).SetBytes(out[WideFieldBytesFp2:])
 	return x, y
 }
 
-// SetNat creates a point from affine x, y
-// and returns the point if it is on the curve.
-func (g2 *G2) SetNat(x, y *saferith.Nat) (*G2, error) {
-	var tt [DoubleWideFieldBytes]byte
-
-	if x.EqZero() != 0 && y.EqZero() != 0 {
+func (g2 *G2) SetComponents(xFE, yFE *[FieldBytesFp2]byte) (*G2, error) {
+	var tt [WideFieldBytesFp2]byte
+	zero := [FieldBytesFp2]byte{}
+	if subtle.ConstantTimeCompare(xFE[:], zero[:]) == 1 || subtle.ConstantTimeCompare(yFE[:], zero[:]) == 1 {
 		return g2.Identity(), nil
 	}
-	x.FillBytes(tt[:WideFieldBytes])
-	y.FillBytes(tt[WideFieldBytes:])
-
+	// TODO: mismatch of real vs imaginary ordering between serialised point and field element so we have to resot to this fuckary. Clean up later.
+	copy(tt[:FieldBytes], xFE[FieldBytes:])                                // xb
+	copy(tt[FieldBytes:WideFieldBytes], xFE[:FieldBytes])                  // xa
+	copy(tt[FieldBytesFp2:FieldBytesFp2+FieldBytes], yFE[FieldBytes:])     // yb
+	copy(tt[FieldBytesFp2+FieldBytes:WideFieldBytesFp2], yFE[:FieldBytes]) // ya
 	return g2.FromUncompressed(&tt)
 }
 
 // ToCompressed serialises this element into compressed form.
-func (g2 *G2) ToCompressed() [WideFieldBytes]byte {
-	var out [WideFieldBytes]byte
+func (g2 *G2) ToCompressed() [FieldBytesFp2]byte {
+	var out [FieldBytesFp2]byte
 	var t G2
 	t.ToAffine(g2)
 	xABytes := t.X.A.Bytes()
@@ -810,8 +812,8 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 }
 
 // ToUncompressed serialises this element into uncompressed form.
-func (g2 *G2) ToUncompressed() [DoubleWideFieldBytes]byte {
-	var out [DoubleWideFieldBytes]byte
+func (g2 *G2) ToUncompressed() [WideFieldBytesFp2]byte {
+	var out [WideFieldBytesFp2]byte
 	var t G2
 	t.ToAffine(g2)
 	bytes := t.X.B.Bytes()
@@ -828,7 +830,7 @@ func (g2 *G2) ToUncompressed() [DoubleWideFieldBytes]byte {
 }
 
 // FromUncompressed deserializes this element from uncompressed form.
-func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
+func (g2 *G2) FromUncompressed(input *[WideFieldBytesFp2]byte) (*G2, error) {
 	var a, b Fp
 	var t [FieldBytes]byte
 	var p G2
@@ -846,7 +848,7 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - x.B not in field")
 	}
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:WideFieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:FieldBytesFp2]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - x.A not in field")
@@ -855,12 +857,12 @@ func (g2 *G2) FromUncompressed(input *[DoubleWideFieldBytes]byte) (*G2, error) {
 	p.X.B.Set(&b)
 	p.X.A.Set(&a)
 
-	copy(t[:], bitstring.ReverseBytes(input[WideFieldBytes:WideFieldBytes+FieldBytes]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytesFp2:FieldBytesFp2+FieldBytes]))
 	_, valid = b.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - y.B not in field")
 	}
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes+WideFieldBytes:]))
+	copy(t[:], bitstring.ReverseBytes(input[FieldBytesFp2+FieldBytes:]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - y.A not in field")
@@ -992,10 +994,10 @@ func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.FieldValue) (*G2, erro
 }
 
 func (g2 *G2) psi(a *G2) *G2 {
-	g2.X.FrobeniusMap(&a.X)
-	g2.Y.FrobeniusMap(&a.Y)
+	g2.X.FrobeniusAutomorphism(&a.X)
+	g2.Y.FrobeniusAutomorphism(&a.Y)
 	// z = frobenius(z)
-	g2.Z.FrobeniusMap(&a.Z)
+	g2.Z.FrobeniusAutomorphism(&a.Z)
 
 	// x = frobenius(x)/((u+1)^((p-1)/3))
 	g2.X.Mul(&g2.X, &psiCoeffX)

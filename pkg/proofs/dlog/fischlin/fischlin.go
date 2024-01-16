@@ -72,7 +72,7 @@ func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (sigma
 	A := [RBytes]curves.Point{}
 	for i := 0; i < RBytes; i++ {
 		// step P.1
-		a[i], err = curve.Scalar().Random(p.prng)
+		a[i], err = curve.ScalarField().Random(p.prng)
 		if err != nil {
 			return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
 		}
@@ -94,7 +94,7 @@ func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (sigma
 				return nil, nil, errs.WrapFailed(err, "cannot sample challenge")
 			}
 			// we are hashing e_i to the scalar field for ease of use. We still have the right amount of entropy
-			e_i, err := curve.Scalar().Hash(e_i_bytes[:])
+			e_i, err := curve.ScalarField().Hash(e_i_bytes[:])
 			if err != nil {
 				return nil, nil, errs.WrapHashingFailed(err, "could not hash the challenge")
 			}
@@ -203,7 +203,7 @@ func h(basepoint curves.Point, A [RBytes]curves.Point, i int, e, z curves.Scalar
 		message[RBytes+5+j] = extraChellengeElements[j]
 	}
 
-	hashed, err := hashing.Hash(sha256.New, message...)
+	hashed, err := hashing.HashChain(sha256.New, message...)
 	if err != nil {
 		return [LBytes]byte{}, errs.WrapFailed(err, "could not produce a hash")
 	}

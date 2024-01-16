@@ -23,7 +23,7 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 
 	curve := cohortConfig.CipherSuite.Curve
-	schnorrPrivateKey, err := curve.Scalar().Random(prng)
+	schnorrPrivateKey, err := curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random schnorr private key")
 	}

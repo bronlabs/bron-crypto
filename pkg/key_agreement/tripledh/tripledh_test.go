@@ -20,11 +20,11 @@ func Test_HappyPathTripleDH(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []curves.Curve{
-		k256.New(),
-		p256.New(),
-		pallas.New(),
-		edwards25519.New(),
-		bls12381.NewG1(),
+		k256.NewCurve(),
+		p256.NewCurve(),
+		pallas.NewCurve(),
+		edwards25519.NewCurve(),
+		bls12381.NewG2(),
 		bls12381.NewG2(),
 	}
 
@@ -33,16 +33,16 @@ func Test_HappyPathTripleDH(t *testing.T) {
 		t.Run(fmt.Sprintf("x3dh for %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
 
-			aliceSk, err := curve.Scalar().Random(crand.Reader)
+			aliceSk, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			alicePk := curve.ScalarBaseMult(aliceSk)
-			aliceEsk, err := curve.Scalar().Random(crand.Reader)
+			aliceEsk, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			aliceEpk := curve.ScalarBaseMult(aliceEsk)
-			bobSk, err := curve.Scalar().Random(crand.Reader)
+			bobSk, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			bobPk := curve.ScalarBaseMult(bobSk)
-			bobEsk, err := curve.Scalar().Random(crand.Reader)
+			bobEsk, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			bobEpk := curve.ScalarBaseMult(bobEsk)
 

@@ -15,15 +15,15 @@ import (
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{k256.New(), edwards25519.New()} {
+	for _, curve := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve()} {
 		c := curve
 		t.Run(fmt.Sprintf("running test for curve =%s", c.Name()), func(t *testing.T) {
 			t.Parallel()
-			alicePrivateKey, err := c.Scalar().Random(crand.Reader)
+			alicePrivateKey, err := c.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			alicePublicKey := c.ScalarBaseMult(alicePrivateKey)
 
-			bobPrivateKey, err := c.Scalar().Random(crand.Reader)
+			bobPrivateKey, err := c.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			bobPublicKey := c.ScalarBaseMult(bobPrivateKey)
 

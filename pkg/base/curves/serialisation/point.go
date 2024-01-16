@@ -9,8 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-const scalarBytes = base.FieldBytes
-
 func PointMarshalBinary(point curves.Point) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
@@ -27,7 +25,7 @@ func PointMarshalBinary(point curves.Point) ([]byte, error) {
 }
 
 func PointUnmarshalBinary(curve curves.Curve, input []byte) (curves.Point, error) {
-	if len(input) < scalarBytes+1+len(curve.Name()) {
+	if len(input) < base.FieldBytes+1+len(curve.Name()) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	sep := byte(':')
@@ -60,7 +58,7 @@ func PointMarshalText(point curves.Point) ([]byte, error) {
 }
 
 func PointUnmarshalText(curve curves.Curve, input []byte) (curves.Point, error) {
-	if len(input) < scalarBytes*2+1+len(curve.Name()) {
+	if len(input) < base.FieldBytes*2+1+len(curve.Name()) {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	sep := byte(':')

@@ -153,7 +153,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 
 func TestSignNilMessage(t *testing.T) {
 	t.Helper()
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	hash := sha3.New256
 
 	cipherSuite := &integration.CipherSuite{
@@ -192,7 +192,7 @@ func TestSignNilMessage(t *testing.T) {
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
 			for _, tau := range []int{2, 5} {
 				for firstUnusedPreSignatureIndex := 0; firstUnusedPreSignatureIndex < tau; firstUnusedPreSignatureIndex++ {

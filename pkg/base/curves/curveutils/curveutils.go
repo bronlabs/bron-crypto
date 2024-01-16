@@ -16,15 +16,15 @@ import (
 var allCurvesMapper = map[string]curves.Curve{
 	bls12381.NameG1:   bls12381.NewG1(),
 	bls12381.NameG2:   bls12381.NewG2(),
-	curve25519.Name:   curve25519.New(),
-	edwards25519.Name: edwards25519.New(),
-	k256.Name:         k256.New(),
-	p256.Name:         p256.New(),
-	pallas.Name:       pallas.New(),
+	curve25519.Name:   curve25519.NewCurve(),
+	edwards25519.Name: edwards25519.NewCurve(),
+	k256.Name:         k256.NewCurve(),
+	p256.Name:         p256.NewCurve(),
+	pallas.Name:       pallas.NewCurve(),
 }
 
-// ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.
-func ToEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
+// ToGoEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.
+func ToGoEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
 	switch c.Name() {
 	case k256.Name:
 		return k256.NewElliptic(), nil

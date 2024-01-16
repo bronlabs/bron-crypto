@@ -36,7 +36,7 @@ var (
 
 // we assume that input curves and hash functions are valid
 var (
-	allCurves = []curves.Curve{k256.New(), p256.New()}
+	allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
 	allHashes = []func() hash.Hash{sha256.New}
 )
 

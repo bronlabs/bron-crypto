@@ -16,14 +16,14 @@ import (
 func TestEphemeral(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range []curves.Curve{k256.New(), edwards25519.New()} {
+	for _, c := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve()} {
 		curve := c
 		prng := crand.Reader
 		message := []byte("there are no test vectors in a cryptography standard developed by an IEEE committee which they charge a fuckton for")
 		AD := []byte("no there really isn't any")
 		t.Run(fmt.Sprintf("running curve=%s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
-			S, err := curve.Scalar().Random(prng)
+			S, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
 			alice := &ecies.PrivateKey{
 				S:         S,

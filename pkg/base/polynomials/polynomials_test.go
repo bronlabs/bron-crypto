@@ -14,8 +14,8 @@ import (
 
 func TestNewPoly(t *testing.T) {
 	t.Parallel()
-	curve := bls12381.NewG1()
-	secret, err := curve.Scalar().Hash([]byte("test"))
+	curve := bls12381.NewG2()
+	secret, err := curve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
 
 	poly, err := p.NewRandomPolynomial(secret, 4, crand.Reader)
@@ -27,7 +27,7 @@ func TestNewPoly(t *testing.T) {
 
 func TestLi(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
+	curve := k256.NewCurve()
 	for _, test := range []struct {
 		i        int
 		xs       []int
@@ -92,7 +92,7 @@ func TestLi(t *testing.T) {
 			if tt.x < 0 {
 				sign = -1
 			}
-			xScalar := curve.Scalar().New(uint64(sign * tt.x))
+			xScalar := curve.ScalarField().New(uint64(sign * tt.x))
 			if sign == -1 {
 				xScalar = xScalar.Neg()
 			}
@@ -102,7 +102,7 @@ func TestLi(t *testing.T) {
 				if tt.xs[i] < 0 {
 					sign = -1
 				}
-				xsScalar[i] = curve.Scalar().New(uint64(sign * tt.xs[i]))
+				xsScalar[i] = curve.ScalarField().New(uint64(sign * tt.xs[i]))
 				if sign == -1 {
 					xsScalar[i] = xsScalar[i].Neg()
 				}
@@ -111,7 +111,7 @@ func TestLi(t *testing.T) {
 			if tt.expected < 0 {
 				sign2 = -1
 			}
-			expectedScalar := curve.Scalar().New(uint64(sign2 * tt.expected))
+			expectedScalar := curve.ScalarField().New(uint64(sign2 * tt.expected))
 			if sign2 == -1 {
 				expectedScalar = expectedScalar.Neg()
 			}
@@ -124,7 +124,7 @@ func TestLi(t *testing.T) {
 
 func TestAllBasisPolynomials(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
+	curve := k256.NewCurve()
 	for _, test := range []struct {
 		xs       []int
 		x        int
@@ -228,7 +228,7 @@ func TestAllBasisPolynomials(t *testing.T) {
 			if tt.x < 0 {
 				signX = -1
 			}
-			xScalar := curve.Scalar().New(uint64(signX * tt.x))
+			xScalar := curve.ScalarField().New(uint64(signX * tt.x))
 			if signX == -1 {
 				xScalar = xScalar.Neg()
 			}
@@ -238,7 +238,7 @@ func TestAllBasisPolynomials(t *testing.T) {
 				if tt.xs[i] < 0 {
 					signXs = -1
 				}
-				xsScalar[i] = curve.Scalar().New(uint64(signXs * tt.xs[i]))
+				xsScalar[i] = curve.ScalarField().New(uint64(signXs * tt.xs[i]))
 				if signXs == -1 {
 					xsScalar[i] = xsScalar[i].Neg()
 				}
@@ -249,7 +249,7 @@ func TestAllBasisPolynomials(t *testing.T) {
 				if v < 0 {
 					signV = -1
 				}
-				expectedScalar[k] = curve.Scalar().New(uint64(signV * v))
+				expectedScalar[k] = curve.ScalarField().New(uint64(signV * v))
 				if signV == -1 {
 					expectedScalar[k] = expectedScalar[k].Neg()
 				}

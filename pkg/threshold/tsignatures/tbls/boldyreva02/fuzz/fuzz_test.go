@@ -29,8 +29,8 @@ var schemes = []bls.RogueKeyPrevention{
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), uint64(0), uint64(1), uint64(2), []byte("sid"), []byte("message"), int64(0))
 	f.Fuzz(func(t *testing.T, schemeIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, sid []byte, message []byte, randomSeed int64) {
-		roundtrip[bls.G1, bls.G2](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message, randomSeed)
-		roundtrip[bls.G2, bls.G1](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message, randomSeed)
+		roundtrip[bls12381.G1, bls12381.G2](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message, randomSeed)
+		roundtrip[bls12381.G2, bls12381.G1](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message, randomSeed)
 	})
 }
 
@@ -39,17 +39,16 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	scheme := schemes[schemeIndex%uint(len(schemes))]
 	hashFunc := sha256.New
 
-	pointInK := new(K)
-	keysSubGroup := (*pointInK).Curve()
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: keysSubGroup,
 		Hash:  hashFunc,
 	}
 
-	aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(aliceSecret))
-	bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(bobSecret))
-	charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.Scalar().New(charlieSecret))
+	aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(aliceSecret))
+	bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(bobSecret))
+	charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(charlieSecret))
 	identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
 	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
@@ -93,8 +92,7 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKey, threshold, n int, randomSeed int64) map[types.IdentityHash]*boldyreva02.Shard[K] {
 	t.Helper()
 
-	pointInK := new(K)
-	curve := (*pointInK).Curve()
+	curve := bls12381.GetSourceSubGroup[K]()
 
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

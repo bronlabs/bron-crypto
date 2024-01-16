@@ -71,7 +71,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 		return nil, nil, errs.NewIsNil("main arguments can't be nil")
 	}
 
-	curve := x.Curve()
+	curve := x.ScalarField().Curve()
 
 	// step 1 and 2
 	statement := &Statement{
@@ -82,7 +82,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 	}
 
 	// step 3
-	k, err := curve.Scalar().Random(p.prng)
+	k, err := curve.ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
@@ -105,7 +105,7 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge scalar")
 	}
 
-	c, err := curve.Scalar().Hash(digest)
+	c, err := curve.ScalarField().Hash(digest)
 	if err != nil {
 		return nil, nil, errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
 	}
@@ -162,7 +162,7 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, transcri
 	if err != nil {
 		return errs.WrapFailed(err, "could not extract bytes from transcript")
 	}
-	recomputedChallenge, err := curve.Scalar().Hash(digest)
+	recomputedChallenge, err := curve.ScalarField().Hash(digest)
 	if err != nil {
 		return errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
 	}

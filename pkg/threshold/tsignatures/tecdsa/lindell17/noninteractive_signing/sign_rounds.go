@@ -11,11 +11,8 @@ import (
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx := bigR.X().Nat()
-	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get R.x")
-	}
+	bigRx := bigR.AffineX().Nat()
+	r := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 
 	paillierPublicKey := p.myShard.PaillierPublicKeys[p.theirIdentityKey.Hash()]
 	cKey := p.myShard.PaillierEncryptedShares[p.theirIdentityKey.Hash()]
@@ -33,7 +30,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q := p.cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()
+	q := p.cohortConfig.CipherSuite.Curve.SubGroupOrder()
 	mPrime, err := interactive_signing.MessageToScalar(p.cohortConfig.CipherSuite.Hash, p.cohortConfig.CipherSuite.Curve, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -52,11 +49,8 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 
 func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSignature, message []byte) (sigma *ecdsa.Signature, err error) {
 	bigR := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].BigR[p.theirIdentityKey.Hash()]
-	bigRx := bigR.X().Nat()
-	r, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get R.x")
-	}
+	bigRx := bigR.AffineX().Nat()
+	r := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 
 	paillierSecretKey := p.myShard.PaillierSecretKey
 	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
@@ -67,15 +61,9 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}
-	sPrime, err := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set scalar value")
-	}
+	sPrime := p.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
 
-	k1Inv, err := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].K.Invert()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot invert k1")
-	}
+	k1Inv := p.myPreSignatureBatch.PreSignatures[p.preSignatureIndex].K.MultiplicativeInverse()
 	sDoublePrime := k1Inv.Mul(sPrime)
 
 	sigma = &ecdsa.Signature{

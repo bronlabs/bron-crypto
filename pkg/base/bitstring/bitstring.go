@@ -27,14 +27,15 @@ func ReverseBytes(inBytes []byte) []byte {
 	return outBytes
 }
 
-// ReverseAndPadBytes reverses the order of the bytes in a new slice.
-func ReverseAndPadBytes(inBytes []byte, padLen int) []byte {
+func PadToLeft(inBytes []byte, padLen int) []byte {
+	outBytes := make([]byte, padLen+len(inBytes))
+	copy(outBytes[padLen:], inBytes)
+	return outBytes
+}
+
+func PadToRight(inBytes []byte, padLen int) []byte {
 	outBytes := make([]byte, len(inBytes)+padLen)
-
-	for i, j := 0, len(inBytes)-1; j >= 0; i, j = i+1, j-1 {
-		outBytes[i] = inBytes[j]
-	}
-
+	copy(outBytes[:len(outBytes)-padLen], inBytes)
 	return outBytes
 }
 

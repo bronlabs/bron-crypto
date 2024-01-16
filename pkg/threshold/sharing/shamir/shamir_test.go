@@ -12,7 +12,7 @@ import (
 )
 
 func TestShamirSplitInvalidArgs(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	_, err := shamir.NewDealer(0, 0, curve)
 	require.NotNil(t, err)
 	_, err = shamir.NewDealer(3, 2, curve)
@@ -25,7 +25,7 @@ func TestShamirSplitInvalidArgs(t *testing.T) {
 }
 
 func TestShamirCombineNoShares(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
@@ -34,55 +34,55 @@ func TestShamirCombineNoShares(t *testing.T) {
 }
 
 func TestShamirCombineDuplicateShare(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Combine([]*shamir.Share{
 		{
 			Id:    1,
-			Value: curve.Scalar().New(3),
+			Value: curve.ScalarField().New(3),
 		},
 		{
 			Id:    1,
-			Value: curve.Scalar().New(3),
+			Value: curve.ScalarField().New(3),
 		},
 	}...)
 	require.NotNil(t, err)
 }
 
 func TestShamirCombineBadIdentifier(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 	shares := []*shamir.Share{
 		{
 			Id:    0,
-			Value: curve.Scalar().New(3),
+			Value: curve.ScalarField().New(3),
 		},
 		{
 			Id:    2,
-			Value: curve.Scalar().New(3),
+			Value: curve.ScalarField().New(3),
 		},
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 	shares[0] = &shamir.Share{
 		Id:    4,
-		Value: curve.Scalar().New(3),
+		Value: curve.ScalarField().New(3),
 	}
 	_, err = scheme.Combine(shares...)
 	require.NotNil(t, err)
 }
 
 func TestShamirCombineSingle(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	randomScalar, err := curve.Scalar().Hash([]byte("test"))
+	randomScalar, err := curve.ScalarField().Hash([]byte("test"))
 	require.Nil(t, err)
 	shares, err := scheme.Split(randomScalar, crand.Reader)
 	require.Nil(t, err)
@@ -94,11 +94,11 @@ func TestShamirCombineSingle(t *testing.T) {
 
 // Test ComputeL function to compute Lagrange coefficients.
 func TestShamirComputeL(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 2, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
-	secret, err := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.ScalarField().Hash([]byte("test"))
 	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
@@ -121,12 +121,12 @@ func TestShamirComputeL(t *testing.T) {
 }
 
 func TestShamirAllCombinations(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(3, 5, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret, err := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.ScalarField().Hash([]byte("test"))
 	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
@@ -145,7 +145,7 @@ func TestShamirAllCombinations(t *testing.T) {
 				rSecret, err := scheme.Combine(shares[i], shares[j], shares[k])
 				require.Nil(t, err)
 				require.NotNil(t, rSecret)
-				require.Equal(t, rSecret.Cmp(secret), 0)
+				require.Equal(t, int(rSecret.Cmp(secret)), 0)
 			}
 		}
 	}
@@ -153,12 +153,12 @@ func TestShamirAllCombinations(t *testing.T) {
 
 func TestAdditiveAllCombinations(t *testing.T) {
 	t.Parallel()
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(3, 5, curve)
 	require.Nil(t, err)
 	require.NotNil(t, scheme)
 
-	secret, err := curve.Scalar().Hash([]byte("test"))
+	secret, err := curve.ScalarField().Hash([]byte("test"))
 	require.Nil(t, err)
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
@@ -183,7 +183,7 @@ func TestAdditiveAllCombinations(t *testing.T) {
 
 				rSecret := iAdditive.Add(jAdditive.Add(kAdditive))
 				require.NotNil(t, rSecret)
-				require.Equal(t, rSecret.Cmp(secret), 0)
+				require.Equal(t, int(rSecret.Cmp(secret)), 0)
 			}
 		}
 	}
@@ -191,17 +191,17 @@ func TestAdditiveAllCombinations(t *testing.T) {
 
 // Ensures that Share's un/marshal successfully.
 func TestMarshalJsonRoundTrip(t *testing.T) {
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	shares := []shamir.Share{
-		{Id: 0, Value: curve.Scalar().New(300)},
-		{Id: 2, Value: curve.Scalar().New(300000)},
-		{Id: 20, Value: curve.Scalar().New(12812798)},
-		{Id: 31, Value: curve.Scalar().New(17)},
-		{Id: 57, Value: curve.Scalar().New(5066680)},
-		{Id: 128, Value: curve.Scalar().New(3005)},
-		{Id: 19, Value: curve.Scalar().New(317)},
-		{Id: 7, Value: curve.Scalar().New(323)},
-		{Id: 222, Value: curve.Scalar().New(1).Neg()},
+		{Id: 0, Value: curve.ScalarField().New(300)},
+		{Id: 2, Value: curve.ScalarField().New(300000)},
+		{Id: 20, Value: curve.ScalarField().New(12812798)},
+		{Id: 31, Value: curve.ScalarField().New(17)},
+		{Id: 57, Value: curve.ScalarField().New(5066680)},
+		{Id: 128, Value: curve.ScalarField().New(3005)},
+		{Id: 19, Value: curve.ScalarField().New(317)},
+		{Id: 7, Value: curve.ScalarField().New(323)},
+		{Id: 222, Value: curve.ScalarField().New(1).Neg()},
 	}
 	// Run all the tests!
 	for _, in := range shares {

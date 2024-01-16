@@ -23,7 +23,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	useForcedReuse := true
 	scalarsPerSlot := 2
 	inputBatchLen := 5
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}
@@ -59,7 +59,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	useForcedReuse := true
 	inputBatchLen := 5
 	scalarsPerSlot := 2
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}
@@ -103,7 +103,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	useForcedReuse := true
 	scalarsPerSlot := 2
 	inputBatchLen := 5
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	// Session ID
 	uniqueSessionId := [vsot.DigestSize]byte{}

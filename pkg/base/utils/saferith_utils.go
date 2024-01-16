@@ -10,6 +10,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
+func IncrementNat(n *saferith.Nat) *saferith.Nat {
+	return new(saferith.Nat).Add(n, new(saferith.Nat).SetUint64(1), n.AnnouncedLen()+1)
+}
+
+func DecrementNat(n *saferith.Nat) *saferith.Nat {
+	return new(saferith.Nat).Sub(n, new(saferith.Nat).SetUint64(1), n.AnnouncedLen())
+}
+
 func NatFromBig(x *big.Int, m *saferith.Modulus) *saferith.Nat {
 	xx := new(saferith.Nat).SetBytes(x.Bytes())
 	if m == nil || m.Big().Int64() == 0 {

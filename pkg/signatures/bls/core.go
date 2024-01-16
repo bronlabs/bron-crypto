@@ -4,23 +4,22 @@ import (
 	"bytes"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coresign
 func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], message, dst []byte) (curves.PairingPoint, error) {
+	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.6.1
-	Hm, err := privateKey.d.OtherGroup().HashWithDst(message, dst)
+	Hm, err := privateKey.PublicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not hash message")
 	}
 	// step 2.6.2
-	result, ok := Hm.Mul(privateKey.d).(curves.PairingPoint)
-	if !ok {
-		return nil, errs.NewInvalidType("result was not pairable. this should never happen")
-	}
-	if !result.IsTorsionFree() {
+	result := Hm.Mul(privateKey.d).(curves.PairingPoint)
+	if !result.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
 		return nil, errs.NewInvalidCurve("point is not on correct subgroup")
 	}
 	return result, nil
@@ -28,13 +27,14 @@ func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], mes
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreverify
-func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], message []byte, value S, dst []byte) error {
+func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], message []byte, value curves.PairingPoint, dst []byte) error {
+	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.7.2
 	if value == nil || message == nil || publicKey == nil {
 		return errs.NewInvalidArgument("signature or message or public key cannot be nil or zero")
 	}
 	// step 2.7.3
-	if value.IsIdentity() || !value.IsTorsionFree() {
+	if value.IsIdentity() || !value.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
 		return errs.NewMembership("signature is not in the correct subgroup")
 	}
 
@@ -52,28 +52,30 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	// that'll be done in multipairing
 
 	// step 2.7.6
-	Hm, err := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+	Hm, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
 	if err != nil {
 		return errs.WrapHashingFailed(err, "could not hash message")
 	}
 
-	generatorOfKeysSubGroup, ok := publicKey.Y.Generator().(curves.PairingPoint)
-	if !ok {
-		return errs.NewInvalidType("could not convert public key generator to a pairing point. this should never happen")
-	}
-	pkInverse, ok := publicKey.Y.Neg().(curves.PairingPoint)
-	if !ok {
-		return errs.NewInvalidType("inverse of public key is not pairable. This should never happen.")
-	}
+	generatorOfKeysSubGroup := publicKey.Y.Curve().Generator().(curves.PairingPoint)
+	pkInverse := publicKey.Y.Neg().(curves.PairingPoint)
 
 	// e(pk^-1, H(m)) * e(g1, s) == 1
 	if keysInG1 {
-		if scalarGt := curve.MultiPairing(pkInverse, Hm, generatorOfKeysSubGroup, value); !scalarGt.IsOne() {
+		scalarGt, err := curve.MultiPair(pkInverse, Hm.(curves.PairingPoint), generatorOfKeysSubGroup, value)
+		if err != nil {
+			return errs.WrapFailed(err, "could not compute multipairing")
+		}
+		if !scalarGt.IsIdentity() {
 			return errs.NewVerificationFailed("incorrect multipairing result")
 		}
 	} else {
 		// e(H(m), pk^-1) * e(s, g2) == 1
-		if scalarGt := curve.MultiPairing(Hm, pkInverse, value, generatorOfKeysSubGroup); !scalarGt.IsOne() {
+		scalarGt, err := curve.MultiPair(Hm.(curves.PairingPoint), pkInverse, value, generatorOfKeysSubGroup)
+		if err != nil {
+			return errs.WrapFailed(err, "could not compute multipairing")
+		}
+		if !scalarGt.IsIdentity() {
 			return errs.NewVerificationFailed("incorrect multipairing result")
 		}
 	}
@@ -82,13 +84,14 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreaggregateverify
-func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignatureValue S, dst []byte) error {
+func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignatureValue curves.PairingPoint, dst []byte) error {
+	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.9.2
 	if aggregatedSignatureValue == nil {
 		return errs.NewIsNil("aggregated signature value is nil")
 	}
 	// step 2.9.3
-	if aggregatedSignatureValue.IsIdentity() || !aggregatedSignatureValue.IsTorsionFree() {
+	if aggregatedSignatureValue.IsIdentity() || !aggregatedSignatureValue.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
 		return errs.NewMembership("signature is not in the correct subgroup")
 	}
 
@@ -128,43 +131,38 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 			return errs.NewIsNil("nil message is not alloed at index %d", i)
 		}
 		// step 2.9.8
-		Q, err := publicKey.Y.OtherGroup().HashWithDst(message, dst)
+		Q, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
 		if err != nil {
 			return errs.WrapHashingFailed(err, "could not hash message %d", i)
 		}
 
 		if keysInG1 {
 			multiPairingInputs[mpInputIndexOfG1] = publicKey.Y
-			multiPairingInputs[mpInputIndexOfG2] = Q
+			multiPairingInputs[mpInputIndexOfG2] = Q.(curves.PairingPoint)
 		} else {
-			multiPairingInputs[mpInputIndexOfG1] = Q
+			multiPairingInputs[mpInputIndexOfG1] = Q.(curves.PairingPoint)
 			multiPairingInputs[mpInputIndexOfG2] = publicKey.Y
 		}
 	}
 
-	generatorOfKeysSubGroup, ok := publicKeys[0].Y.Generator().(curves.PairingPoint)
-	if !ok {
-		return errs.NewInvalidType("could not convert public key generator to a pairing point. this should never happen")
-	}
+	generatorOfKeysSubGroup := publicKeys[0].Y.Curve().Generator().(curves.PairingPoint)
 
 	lastG1Index := 2 * len(publicKeys)
 	if keysInG1 {
-		gInv, ok := generatorOfKeysSubGroup.Neg().(curves.PairingPoint)
-		if !ok {
-			return errs.NewInvalidType("this will never be not okay")
-		}
+		gInv := generatorOfKeysSubGroup.Neg().(curves.PairingPoint)
 		multiPairingInputs[lastG1Index] = gInv
 		multiPairingInputs[lastG1Index+1] = aggregatedSignatureValue
 	} else {
-		sInv, ok := aggregatedSignatureValue.Neg().(curves.PairingPoint)
-		if !ok {
-			return errs.NewInvalidType("hell is frozen")
-		}
+		sInv := aggregatedSignatureValue.Neg().(curves.PairingPoint)
 		multiPairingInputs[lastG1Index] = sInv
 		multiPairingInputs[lastG1Index+1] = generatorOfKeysSubGroup
 	}
 
-	if scalarGt := aggregatedSignatureValue.PairingCurve().MultiPairing(multiPairingInputs...); !scalarGt.IsOne() {
+	scalarGt, err := aggregatedSignatureValue.PairingCurve().MultiPair(multiPairingInputs...)
+	if err != nil {
+		return errs.WrapFailed(err, "multipairing failed")
+	}
+	if !scalarGt.IsIdentity() {
 		return errs.NewVerificationFailed("incorrect pairing result")
 	}
 	return nil
@@ -201,11 +199,7 @@ func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop 
 		return errs.WrapFailed(err, "could not marshal public ky")
 	}
 	dst := GetPOPDst(publicKey.InG1())
-	p, ok := pop.Value.(S)
-	if !ok {
-		return errs.NewInvalidType("pop is not in the right subgroup")
-	}
-	return coreVerify(publicKey, message, p, dst)
+	return coreVerify[K, S](publicKey, message, pop.Value, dst)
 }
 
 // See section 3.2.1 from
@@ -225,21 +219,18 @@ func AggregateSignatures[S SignatureSubGroup](signatures ...*Signature[S]) (*Sig
 	if len(signatures) < 1 {
 		return nil, errs.NewIncorrectCount("at least one signature is needed")
 	}
-	s := new(S)
-	result := (*s).Identity()
+	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
+	result := signatureSubGroup.Identity()
 	for i, signature := range signatures {
 		if signature == nil {
 			return nil, errs.NewIsNil("signature %d is nil", i)
 		}
-		if signature.Value.IsIdentity() || !signature.Value.IsTorsionFree() || signature.Value.ClearCofactor().IsIdentity() {
+		if signature.Value.IsIdentity() || !signature.Value.IsTorsionElement(signatureSubGroup.SubGroupOrder()) || signature.Value.ClearCofactor().IsIdentity() {
 			return nil, errs.NewVerificationFailed("signature is invalid")
 		}
 		result = result.Add(signature.Value)
 	}
-	value, ok := result.(curves.PairingPoint)
-	if !ok {
-		return nil, errs.NewInvalidType("couldn't convert to pairing point")
-	}
+	value := result.(curves.PairingPoint)
 	return &Signature[S]{
 		Value: value,
 	}, nil
@@ -249,30 +240,25 @@ func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey
 	if len(publicKeys) < 1 {
 		return nil, errs.NewIncorrectCount("at least one public key is needed")
 	}
-	k := new(K)
-	result := (*k).Identity()
+	keySubGroup := bls12381.GetSourceSubGroup[K]()
+	result := keySubGroup.Identity()
 	for i, publicKey := range publicKeys {
 		if publicKey == nil {
 			return nil, errs.NewIsNil("public key %d is nil", i)
 		}
-		if publicKey.Y.IsIdentity() || !publicKey.Y.IsTorsionFree() || publicKey.Y.ClearCofactor().IsIdentity() {
+		if publicKey.Y.IsIdentity() || !publicKey.Y.IsTorsionElement(keySubGroup.SubGroupOrder()) || publicKey.Y.ClearCofactor().IsIdentity() {
 			return nil, errs.NewVerificationFailed("public key is invalid")
 		}
 		result = result.Add(publicKey.Y)
 	}
-	value, ok := result.(curves.PairingPoint)
-	if !ok {
-		return nil, errs.NewInvalidType("couldn't convert to pairing point")
-	}
+	value := result.(curves.PairingPoint)
 	return &PublicKey[K]{
 		Y: value,
 	}, nil
 }
 
 func SameSubGroup[K KeySubGroup, S SignatureSubGroup]() bool {
-	p := new(K)
-	q := new(S)
-	return (*p).CurveName() == (*q).CurveName()
+	return bls12381.GetSourceSubGroup[K]().Name() == bls12381.GetSourceSubGroup[S]().Name()
 }
 
 func allUnique(messages [][]byte) (bool, error) {

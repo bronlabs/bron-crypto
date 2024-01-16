@@ -58,7 +58,7 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 	require.NoError(t, err)
 	require.Len(t, zeroShares, len(identities))
 
-	zeroSum := cohortConfig.CipherSuite.Curve.Scalar().Zero()
+	zeroSum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 	for _, zeroShare := range zeroShares {
 		require.False(t, zeroShare.IsZero())
 		zeroSum = zeroSum.Add(zeroShare)
@@ -67,7 +67,7 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 
 	// test sum of all the shares but one doesn't add up to zero
 	for i := range zeroShares {
-		zeroSum = cohortConfig.CipherSuite.Curve.Scalar().Zero()
+		zeroSum = cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 		for j, zeroShare := range zeroShares {
 			if i != j {
 				zeroSum = zeroSum.Add(zeroShare)
@@ -89,7 +89,7 @@ func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, id
 	require.NoError(t, err)
 	require.Len(t, zeroShares, len(identities))
 
-	sum := cohortConfig.CipherSuite.Curve.Scalar().Zero()
+	sum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 	for _, share := range zeroShares {
 		require.False(t, share.IsZero())
 		sum = sum.Add(share)
@@ -160,7 +160,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 }
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{5} {
 			boundedCurve := curve
 			boundedN := n
@@ -174,7 +174,7 @@ func Test_HappyPath(t *testing.T) {
 
 func TestInvalidSid(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{2, 5} {
 			boundedCurve := curve
 			boundedN := n
@@ -188,7 +188,7 @@ func TestInvalidSid(t *testing.T) {
 
 func Test_InvalidParticipants(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		boundedCurve := curve
 		t.Run(fmt.Sprintf("InvalidParticipants path with curve=%s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
@@ -232,7 +232,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	require.NoError(t, err)
 	require.False(t, charlieSample.IsZero())
 
-	sum := curve.Scalar().Zero()
+	sum := curve.ScalarField().Zero()
 	sum = sum.Add(aliceSample)
 	sum = sum.Add(bobSample)
 	sum = sum.Add(charlieSample)

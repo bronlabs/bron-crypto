@@ -1,12 +1,16 @@
-package hashing
+package fiatshamir
 
 import (
 	"hash"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 type MappingMethod uint
@@ -22,23 +26,30 @@ const (
 )
 
 type FiatShamir struct {
-	hashingMethod func(h func() hash.Hash, xs ...[]byte) ([]byte, error)
-	mappingMethod MappingMethod
+	hashingMethod   func(h func() hash.Hash, xs ...[]byte) ([]byte, error)
+	mappingMethod   MappingMethod
+	bigEndianDigest bool
 }
 
 // NewFiatShamir returns a FiatShamir instance that uses the provided hashing method.
-func NewFiatShamir(hashingMethod func(h func() hash.Hash, xs ...[]byte) ([]byte, error), mappingMethod MappingMethod) *FiatShamir {
+func NewFiatShamir(hashingMethod func(h func() hash.Hash, xs ...[]byte) ([]byte, error), mappingMethod MappingMethod, bigEndianDigest bool) *FiatShamir {
 	return &FiatShamir{
-		hashingMethod: hashingMethod,
-		mappingMethod: mappingMethod,
+		hashingMethod:   hashingMethod,
+		mappingMethod:   mappingMethod,
+		bigEndianDigest: bigEndianDigest,
 	}
 }
 
 // NewSchnorrCompatibleFiatShamir returns a FiatShamir instance compatible with Schnorr signing scheme.
-func NewSchnorrCompatibleFiatShamir() *FiatShamir {
+func NewSchnorrCompatibleFiatShamir(curve curves.Curve) *FiatShamir {
+	bigEndianDigest := true
+	if curve.Name() == edwards25519.NewCurve().Name() || curve.Name() == curve25519.NewCurve().Name() {
+		bigEndianDigest = false
+	}
 	return &FiatShamir{
-		hashingMethod: Hash,
-		mappingMethod: SameAsHashSize,
+		hashingMethod:   hashing.Hash,
+		mappingMethod:   SameAsHashSize,
+		bigEndianDigest: bigEndianDigest,
 	}
 }
 
@@ -56,6 +67,9 @@ func (fs *FiatShamir) GenerateChallenge(cipherSuite *integration.CipherSuite, xs
 	digest, err := fs.hashingMethod(cipherSuite.Hash, xs...)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not compute fiat shamir hash")
+	}
+	if !fs.bigEndianDigest {
+		digest = bitstring.ReverseBytes(digest)
 	}
 
 	switch fs.mappingMethod {

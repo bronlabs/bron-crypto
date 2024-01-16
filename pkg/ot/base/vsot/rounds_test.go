@@ -17,8 +17,8 @@ import (
 func TestOtOnMultipleCurves(t *testing.T) {
 	t.Parallel()
 	curveInstances := []curves.Curve{
-		k256.New(),
-		p256.New(),
+		k256.NewCurve(),
+		p256.NewCurve(),
 	}
 	for _, curve := range curveInstances {
 		batchSize := 256

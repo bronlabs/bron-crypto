@@ -24,7 +24,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
-var testCurves = []curves.Curve{k256.New(), p256.New()}
+var testCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
 var testHashFunctions = []func() hash.Hash{sha3.New256, sha256.New}
 var testThresholdConfigs = []struct{ t, n int }{
 	{t: 2, n: 3},

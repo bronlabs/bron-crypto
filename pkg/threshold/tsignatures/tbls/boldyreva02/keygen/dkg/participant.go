@@ -41,8 +41,7 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, authKey integrati
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
 
-	pointInK := new(K)
-	inG1 := (*pointInK).CurveName() == bls12381.NameG1
+	inG1 := bls12381.GetSourceSubGroup[K]().Name() == bls12381.NameG1
 	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG1) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG2) {
 		return nil, errs.NewInvalidCurve("cohort config curve mismatch with the declared subgroup")
 	}
@@ -69,8 +68,12 @@ func validateInputs[K bls.KeySubGroup](uniqueSessionId []byte, cohortConfig *int
 	if cohortConfig.Protocol == nil {
 		return errs.NewIsNil("cohort config protocol is nil")
 	}
-	if cohortConfig.CipherSuite.Curve.Name() != (*new(K)).CurveName() {
-		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
+	if cohortConfig.CipherSuite.Curve.Name() != bls12381.GetSourceSubGroup[K]().Name() {
+		return errs.NewInvalidArgument(
+			"cohort config curve (%s) mismatch with the declared subgroup (%s)",
+			cohortConfig.CipherSuite.Curve.Name(),
+			bls12381.GetSourceSubGroup[K]().Name(),
+		)
 	}
 	if len(uniqueSessionId) == 0 {
 		return errs.NewInvalidArgument("unique session id is empty")

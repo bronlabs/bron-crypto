@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), []byte("sid"), int64(0), []byte("secret"))
@@ -29,14 +29,14 @@ func Fuzz_Test(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		secret, err := curve.Scalar().Hash(secretBytes)
+		secret, err := curve.ScalarField().Hash(secretBytes)
 		if err != nil {
 			t.Skip()
 		}
 		proof, statement, err := prover.Prove(secret)
 		require.NoError(t, err)
 
-		err = fischlin.Verify(curve.Point().Generator(), statement, proof, sid[:])
+		err = fischlin.Verify(curve.Generator(), statement, proof, sid[:])
 		require.NoError(t, err)
 	})
 }

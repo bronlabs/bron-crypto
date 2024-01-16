@@ -12,13 +12,13 @@ import (
 type Share = shamir.Share
 
 func Verify(share *Share, commitments []curves.Point) (err error) {
-	curve := share.Value.Curve()
+	curve := share.Value.ScalarField().Curve()
 	err = share.Validate(curve)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "share validation failed")
 	}
-	x := curve.Scalar().New(uint64(share.Id))
-	i := curve.Scalar().One()
+	x := curve.ScalarField().New(uint64(share.Id))
+	i := curve.ScalarField().One()
 
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
@@ -31,7 +31,7 @@ func Verify(share *Share, commitments []curves.Point) (err error) {
 	}
 	rhs = rhs.Add(commitments[0])
 
-	lhs := commitments[0].Generator().Mul(share.Value)
+	lhs := commitments[0].Curve().Generator().Mul(share.Value)
 	if lhs.Equal(rhs) {
 		return nil
 	} else {

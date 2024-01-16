@@ -122,7 +122,7 @@ func (p *Participant) CreatePrngs(seededPrng csprng.CSPRNG) error {
 		if !exists {
 			return errs.NewMissing("could not find shared seed for sharing id %d", sharingId)
 		}
-		salt, err := hashing.Hash(sha3.New256, p.UniqueSessionId)
+		salt, err := hashing.HashChain(sha3.New256, p.UniqueSessionId)
 		if err != nil {
 			return errs.WrapFailed(err, "could not seed PRNG for sharing id %d", sharingId)
 		}

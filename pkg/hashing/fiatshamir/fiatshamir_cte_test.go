@@ -1,4 +1,4 @@
-package hashing_test
+package fiatshamir_test
 
 import (
 	"os"

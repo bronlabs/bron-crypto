@@ -9,5 +9,5 @@ import (
 
 func Test_ChachaPrng(t *testing.T) {
 	// run the test
-	testutils.Test_prng(t, chacha20.NewChachaPRNG)
+	testutils.PrngTester(t, chacha20.NewChachaPRNG)
 }

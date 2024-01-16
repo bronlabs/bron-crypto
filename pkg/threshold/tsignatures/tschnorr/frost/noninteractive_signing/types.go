@@ -41,14 +41,8 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	if ac.D.IsIdentity() {
 		return errs.NewIsIdentity("D is at infinity")
 	}
-	if !ac.D.IsOnCurve() {
-		return errs.NewMembership("D is not on the curve")
-	}
 	if ac.E.IsIdentity() {
 		return errs.NewIsIdentity("E is at infinity")
-	}
-	if !ac.E.IsOnCurve() {
-		return errs.NewMembership("E is not on the curve")
 	}
 	dCurve := ac.D.Curve()
 	eCurve := ac.E.Curve()

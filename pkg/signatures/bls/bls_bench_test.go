@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 )
 
@@ -15,24 +16,24 @@ func Benchmark_TwoPartyManyMessageVerify_ShortKeys(b *testing.B) {
 	}
 	batchSize := 1000
 
-	alicePrivateKey, err := bls.KeyGen[bls.G1](crand.Reader)
+	alicePrivateKey, err := bls.KeyGen[bls12381.G1](crand.Reader)
 	require.NoError(b, err)
-	bobPrivateKey, err := bls.KeyGen[bls.G1](crand.Reader)
-	require.NoError(b, err)
-
-	alice, err := bls.NewSigner[bls.G1, bls.G2](alicePrivateKey, bls.Basic)
+	bobPrivateKey, err := bls.KeyGen[bls12381.G1](crand.Reader)
 	require.NoError(b, err)
 
-	bob, err := bls.NewSigner[bls.G1, bls.G2](bobPrivateKey, bls.Basic)
+	alice, err := bls.NewSigner[bls12381.G1, bls12381.G2](alicePrivateKey, bls.Basic)
+	require.NoError(b, err)
+
+	bob, err := bls.NewSigner[bls12381.G1, bls12381.G2](bobPrivateKey, bls.Basic)
 	require.NoError(b, err)
 
 	aliceMessages := make([][]byte, batchSize)
-	aliceSignatures := make([]*bls.Signature[bls.G2], batchSize)
-	alicePKs := make([]*bls.PublicKey[bls.G1], batchSize)
+	aliceSignatures := make([]*bls.Signature[bls12381.G2], batchSize)
+	alicePKs := make([]*bls.PublicKey[bls12381.G1], batchSize)
 
 	bobMessages := make([][]byte, batchSize)
-	bobSignatures := make([]*bls.Signature[bls.G2], batchSize)
-	bobPKs := make([]*bls.PublicKey[bls.G1], batchSize)
+	bobSignatures := make([]*bls.Signature[bls12381.G2], batchSize)
+	bobPKs := make([]*bls.PublicKey[bls12381.G1], batchSize)
 
 	for i := 0; i < batchSize; i++ {
 		aliceMessages[i] = make([]byte, 32)

@@ -78,7 +78,7 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 	curve := p.BasePoint.Curve()
 
 	statement := p.BasePoint.Mul(x)
-	k, err := curve.Scalar().Random(prng)
+	k, err := curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
 	}

@@ -43,7 +43,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 		return nil, errs.NewInvalidRound("round mismatch %d != 1", primaryCosigner.round)
 	}
 
-	primaryCosigner.state.k1, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(primaryCosigner.prng)
+	primaryCosigner.state.k1, err = primaryCosigner.cohortConfig.CipherSuite.Curve.ScalarField().Random(primaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k1")
 	}
@@ -74,7 +74,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
 
-	secondaryCosigner.state.k2, err = secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().Random(secondaryCosigner.prng)
+	secondaryCosigner.state.k2, err = secondaryCosigner.cohortConfig.CipherSuite.Curve.ScalarField().Random(secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "cannot generate k2")
 	}
@@ -128,11 +128,8 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 
 	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
-	bigRx := primaryCosigner.state.bigR.X().Nat()
-	primaryCosigner.state.r, err = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get R.x")
-	}
+	bigRx := primaryCosigner.state.bigR.AffineX().Nat()
+	primaryCosigner.state.r = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 
 	primaryCosigner.round++
 	return &Round3OutputP2P{
@@ -154,16 +151,13 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 
 	bigR1ProofSessionId := append(secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed()...)
 	secondaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
-	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Point().Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId); err != nil {
+	if err := dlog.Verify(secondaryCosigner.cohortConfig.CipherSuite.Curve.Generator(), round3Output.BigR1, round3Output.BigR1Proof, bigR1ProofSessionId); err != nil {
 		return nil, errs.WrapTotalAbort(err, "primary", "cannot verify R1 dlog proof")
 	}
 
 	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
-	bigRx := bigR.X().Nat()
-	r, err := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get R.x")
-	}
+	bigRx := bigR.AffineX().Nat()
+	r := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 
 	k2 := secondaryCosigner.state.k2
 	shamirShare := &shamir.Share{
@@ -180,7 +174,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q := secondaryCosigner.cohortConfig.CipherSuite.Curve.Profile().SubGroupOrder()
+	q := secondaryCosigner.cohortConfig.CipherSuite.Curve.SubGroupOrder()
 	mPrime, err := MessageToScalar(secondaryCosigner.cohortConfig.CipherSuite.Hash, secondaryCosigner.cohortConfig.CipherSuite.Curve, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -212,15 +206,8 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err != nil {
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
 	}
-	sPrime, err := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot set scalar value")
-	}
-
-	k1Inv, err := primaryCosigner.state.k1.Invert()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot invert k1")
-	}
+	sPrime := primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(sPrimeInt)
+	k1Inv := primaryCosigner.state.k1.MultiplicativeInverse()
 	sDoublePrime := k1Inv.Mul(sPrime)
 
 	v := new(int)

@@ -21,7 +21,7 @@ func Test_MeasureConstantTime_encrypt(t *testing.T) {
 	hashKeySeed := [32]byte{}
 	_, err := crand.Read(hashKeySeed[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(t, k256.New(), batchSize, hashKeySeed[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(t, k256.NewCurve(), batchSize, hashKeySeed[:], crand.Reader)
 	require.NoError(t, err)
 
 	for i := 0; i < batchSize; i++ {
@@ -52,7 +52,7 @@ func Test_MeasureConstantTime_decrypt(t *testing.T) {
 	hashKeySeed := [32]byte{}
 	_, err := crand.Read(hashKeySeed[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(t, k256.New(), batchSize, hashKeySeed[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(t, k256.NewCurve(), batchSize, hashKeySeed[:], crand.Reader)
 	require.NoError(t, err)
 
 	for i := 0; i < batchSize; i++ {

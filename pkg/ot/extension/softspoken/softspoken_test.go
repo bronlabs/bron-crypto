@@ -14,8 +14,8 @@ import (
 )
 
 var curveInstances = []curves.Curve{
-	k256.New(),
-	p256.New(),
+	k256.NewCurve(),
+	p256.NewCurve(),
 }
 
 func Test_HappyPath_OTe(t *testing.T) {

@@ -199,8 +199,8 @@ func (f *Fp6) MulByNonResidue(arg *Fp6) *Fp6 {
 	return f
 }
 
-// FrobeniusMap raises this element to p.
-func (f *Fp6) FrobeniusMap(arg *Fp6) *Fp6 {
+// FrobeniusAutomorphism raises this element to p.
+func (f *Fp6) FrobeniusAutomorphism(arg *Fp6) *Fp6 {
 	var a, b, c Fp2
 	pm1Div3 := Fp2{
 		A: Fp{},
@@ -224,9 +224,9 @@ func (f *Fp6) FrobeniusMap(arg *Fp6) *Fp6 {
 		},
 		B: Fp{},
 	}
-	a.FrobeniusMap(&arg.A)
-	b.FrobeniusMap(&arg.B)
-	c.FrobeniusMap(&arg.C)
+	a.FrobeniusAutomorphism(&arg.A)
+	b.FrobeniusAutomorphism(&arg.B)
+	c.FrobeniusAutomorphism(&arg.C)
 
 	// b = b * (u + 1)^((p - 1) / 3)
 	b.Mul(&b, &pm1Div3)

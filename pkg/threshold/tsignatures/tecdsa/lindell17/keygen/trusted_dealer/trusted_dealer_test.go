@@ -21,7 +21,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	curve := k256.New()
+	curve := k256.NewCurve()
 	h := sha256.New
 	cipherSuite := &integration.CipherSuite{
 		Curve: curve,

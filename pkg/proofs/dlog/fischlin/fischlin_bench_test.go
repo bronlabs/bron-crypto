@@ -11,7 +11,7 @@ func BenchmarkFischlin(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping test in short mode.")
 	}
-	curve := k256.New()
+	curve := k256.NewCurve()
 	sid := []byte("sid")
 	for i := 0; i < b.N; i++ {
 		doFischlin(curve, sid, crand.Reader)

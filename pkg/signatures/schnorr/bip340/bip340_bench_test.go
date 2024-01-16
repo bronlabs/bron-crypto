@@ -15,7 +15,7 @@ func Benchmark_Verify(b *testing.B) {
 		b.Skip("skipping benchmark in short mode.")
 	}
 	batchSize := 10000
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	aux := make([]byte, 32)
 	_, err := crand.Read(aux)
@@ -26,7 +26,7 @@ func Benchmark_Verify(b *testing.B) {
 	publicKeys := make([]*bip340.PublicKey, batchSize)
 	signatures := make([]*bip340.Signature, batchSize)
 	for i := 0; i < batchSize; i++ {
-		sk, err := curve.Scalar().Random(crand.Reader)
+		sk, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(b, err)
 		privateKeys[i], err = bip340.NewPrivateKey(sk)
 		require.NoError(b, err)
@@ -71,18 +71,18 @@ func Benchmark_TwoPartyManyMessageVerify(b *testing.B) {
 		b.Skip("skipping benchmark in short mode.")
 	}
 	batchSize := 10000
-	curve := k256.New()
+	curve := k256.NewCurve()
 
 	aux := make([]byte, 32)
 	_, err := crand.Read(aux)
 	require.NoError(b, err)
-	sk1, err := curve.Scalar().Random(crand.Reader)
+	sk1, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(b, err)
 	alicePrivateKey, err := bip340.NewPrivateKey(sk1)
 	require.NoError(b, err)
 	alice := bip340.NewSigner(alicePrivateKey)
 
-	sk2, err := curve.Scalar().Random(crand.Reader)
+	sk2, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(b, err)
 	bobPrivateKey, err := bip340.NewPrivateKey(sk2)
 	require.NoError(b, err)

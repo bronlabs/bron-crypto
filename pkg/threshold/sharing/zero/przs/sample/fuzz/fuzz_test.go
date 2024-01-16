@@ -22,7 +22,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
-var allCurves = []curves.Curve{k256.New(), p256.New(), edwards25519.New(), pallas.New()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
 func Fuzz_Test(f *testing.F) {
@@ -35,9 +35,9 @@ func Fuzz_Test(f *testing.F) {
 			Hash:  h,
 		}
 
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.Scalar().New(charlieSecret))
+		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
 		cohortConfig := &integration.CohortConfig{
@@ -79,7 +79,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 
-		sum := cohortConfig.CipherSuite.Curve.Scalar().Zero()
+		sum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 		for _, sample := range samples {
 			require.False(t, sample.IsZero())
 			sum = sum.Add(sample)
@@ -88,7 +88,7 @@ func Fuzz_Test(f *testing.F) {
 
 		// test sum of all the shares but one doesn't add up to zero
 		for i := range samples {
-			sum = cohortConfig.CipherSuite.Curve.Scalar().Zero()
+			sum = cohortConfig.CipherSuite.Curve.ScalarField().Zero()
 			for j, sample := range samples {
 				if i != j {
 					sum = sum.Add(sample)

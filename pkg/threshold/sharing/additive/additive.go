@@ -21,7 +21,7 @@ type Share struct {
 // In case after conversion, resharing of the new shamir share is desired. A new protocol must
 // be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
 func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, error) {
-	curve := s.Value.Curve()
+	curve := s.Value.ScalarField().Curve()
 	shamirDealer, err := shamir.NewDealer(t, n, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct shamir share")
@@ -73,9 +73,9 @@ func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 		return nil, errs.NewIsZero("invalid secret")
 	}
 	shares := make([]*Share, d.Total)
-	partialSum := d.Curve.Scalar().Zero()
+	partialSum := d.Curve.ScalarField().Zero()
 	for i := 1; i < d.Total; i++ {
-		share, err := d.Curve.Scalar().Random(prng)
+		share, err := d.Curve.ScalarField().Random(prng)
 		if err != nil {
 			return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 		}
@@ -90,7 +90,7 @@ func (d *Dealer) Combine(shares []*Share) (curves.Scalar, error) {
 	if len(shares) != d.Total {
 		return nil, errs.NewFailed("len(shares) != N")
 	}
-	secret := d.Curve.Scalar().Zero()
+	secret := d.Curve.ScalarField().Zero()
 	for _, share := range shares {
 		if share == nil || share.Value.IsZero() {
 			return nil, errs.NewIsZero("found a share with value %s", share.Value.Nat().String())

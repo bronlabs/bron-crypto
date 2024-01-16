@@ -29,8 +29,8 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 		return errs.WrapVerificationFailed(err, "invalid blind share")
 	}
 
-	x := curve.Scalar().New(uint64(share.Id))
-	i := curve.Scalar().One()
+	x := curve.ScalarField().New(uint64(share.Id))
+	i := curve.ScalarField().One()
 	is := make([]curves.Scalar, len(commitments))
 	for j := 1; j < len(commitments); j++ {
 		i = i.Mul(x)
@@ -42,7 +42,7 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 	}
 	rhs = rhs.Add(commitments[0])
 
-	g := commitments[0].Generator().Mul(share.Value)
+	g := commitments[0].Curve().Generator().Mul(share.Value)
 	h := generator.Mul(blindShare.Value)
 	lhs := g.Add(h)
 
@@ -83,9 +83,6 @@ func validateInputs(threshold, total int, generator curves.Point) error {
 	if generator == nil {
 		return errs.NewIsNil("generator is nil")
 	}
-	if !generator.IsOnCurve() {
-		return errs.NewMembership("invalid generator")
-	}
 	if generator.IsIdentity() {
 		return errs.NewIsIdentity("invalid generator")
 	}
@@ -95,7 +92,7 @@ func validateInputs(threshold, total int, generator curves.Point) error {
 // Split creates the verifiers, blinding and shares.
 func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	// generate a random blinding factor
-	blinding, err := pd.Curve.Scalar().Random(prng)
+	blinding, err := pd.Curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}

@@ -2,107 +2,83 @@ package pallas
 
 import (
 	"io"
+	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
-var _ curves.FieldProfile = (*FieldProfile)(nil)
+var (
+	pallasBaseFieldInitOnce sync.Once
+	pallasBaseFieldInstance BaseField
+)
 
-type FieldProfile struct{}
+var _ curves.BaseField = (*BaseField)(nil)
 
-func (*FieldProfile) Curve() curves.Curve {
-	return &pallasInstance
-}
-
-func (*FieldProfile) Order() *saferith.Modulus {
-	return fp.Modulus
-}
-
-func (p *FieldProfile) Characteristic() *saferith.Nat {
-	return p.Order().Nat()
-}
-
-func (*FieldProfile) ExtensionDegree() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(1)
-}
-
-func (*FieldProfile) FieldBytes() int {
-	return base.FieldBytes
-}
-
-func (*FieldProfile) WideFieldBytes() int {
-	return base.WideFieldBytes
-}
-
-var _ curves.FieldElement = (*FieldElement)(nil)
-
-type FieldElement struct {
-	v *fp.Fp
-
+type BaseField struct {
 	_ types.Incomparable
 }
 
-func NewFieldElement() *FieldElement {
-	emptyElement := &FieldElement{}
-	result, _ := emptyElement.One().(*FieldElement)
-	return result
+func pallasBaseFieldInit() {
+	pallasBaseFieldInstance = BaseField{}
 }
 
-func (e *FieldElement) Value() curves.FieldValue {
-	v := e.v.ToRaw()
-	return v[:]
+func NewBaseField() *BaseField {
+	pallasBaseFieldInitOnce.Do(pallasBaseFieldInit)
+	return &pallasBaseFieldInstance
 }
 
-func (*FieldElement) Modulus() *saferith.Modulus {
+func (*BaseField) Curve() curves.Curve {
+	return NewCurve()
+}
+
+// === Basic Methods.
+
+func (*BaseField) Name() string {
+	return Name
+}
+
+func (*BaseField) Order() *saferith.Modulus {
 	return fp.Modulus
 }
 
-func (e *FieldElement) Clone() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).Set(e.v),
+func (f *BaseField) Element() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
+}
+
+func (*BaseField) Operators() []algebra.Operator {
+	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
+}
+
+func (f *BaseField) OperateOver(operator algebra.Operator, xs ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	var current curves.BaseFieldElement
+	switch operator {
+	case algebra.Addition:
+		current = f.AdditiveIdentity()
+		for _, x := range xs {
+			current = current.Add(x)
+		}
+	case algebra.Multiplication:
+		current = f.MultiplicativeIdentity()
+		for _, x := range xs {
+			current = current.Mul(x)
+		}
+	case algebra.PointAddition:
+		fallthrough
+	default:
+		return nil, errs.NewInvalidType("operator %v is not supported", operator)
 	}
+	return current, nil
 }
 
-func (e *FieldElement) Cmp(rhs curves.FieldElement) int {
-	rhse, ok := rhs.(*FieldElement)
-	if !ok {
-		return -2
-	}
-	return e.v.Cmp(rhse.v)
-}
-
-func (*FieldElement) Profile() curves.FieldProfile {
-	return &FieldProfile{}
-}
-
-func (*FieldElement) Hash(x []byte) (curves.FieldElement, error) {
-	els, err := New().HashToFieldElements(1, x, nil)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not hash to field element in pallas")
-	}
-	return els[0], nil
-}
-
-func (*FieldElement) New(value uint64) curves.FieldElement {
-	t := new(fp.Fp)
-	t.SetUint64(value)
-	return &FieldElement{
-		v: t,
-	}
-}
-
-func (e *FieldElement) SubfieldElement(index uint64) curves.FieldElement {
-	return e
-}
-
-func (e *FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
+func (f *BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
@@ -111,182 +87,165 @@ func (e *FieldElement) Random(prng io.Reader) (curves.FieldElement, error) {
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
 	}
-	value, err := e.SetBytesWide(seed[:])
+	value, err := f.Element().SetBytesWide(seed[:])
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not set bytes")
 	}
 	return value, nil
 }
 
-func (*FieldElement) Zero() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).SetZero(),
-	}
-}
-
-func (*FieldElement) One() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).SetOne(),
-	}
-}
-
-func (e *FieldElement) IsZero() bool {
-	return e.v.IsZero()
-}
-
-func (e *FieldElement) IsOne() bool {
-	return e.v.IsOne()
-}
-
-func (e *FieldElement) IsOdd() bool {
-	return e.v.IsOdd()
-}
-
-func (e *FieldElement) IsEven() bool {
-	return !e.v.IsOdd()
-}
-
-func (e *FieldElement) Square() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).Square(e.v),
-	}
-}
-
-func (e *FieldElement) Double() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).Double(e.v),
-	}
-}
-
-func (e *FieldElement) Sqrt() (curves.FieldElement, bool) {
-	result, wasSquare := new(fp.Fp).Sqrt(e.v)
-	return &FieldElement{
-		v: result,
-	}, wasSquare
-}
-
-func (e *FieldElement) Cube() curves.FieldElement {
-	return e.Square().Mul(e)
-}
-
-func (e *FieldElement) Add(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElement)
-	if !ok {
-		panic("not a pallas Fp element")
-	}
-	return &FieldElement{
-		v: new(fp.Fp).Add(e.v, n.v),
-	}
-}
-
-func (e *FieldElement) Sub(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElement)
-	if !ok {
-		panic("not a pallas Fp element")
-	}
-	return &FieldElement{
-		v: new(fp.Fp).Sub(e.v, n.v),
-	}
-}
-
-func (e *FieldElement) Mul(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElement)
-	if !ok {
-		panic("not a pallas Fp element")
-	}
-	return &FieldElement{
-		v: new(fp.Fp).Mul(e.v, n.v),
-	}
-}
-
-func (e *FieldElement) MulAdd(y, z curves.FieldElement) curves.FieldElement {
-	return e.Mul(y).Add(z)
-}
-
-func (e *FieldElement) Div(rhs curves.FieldElement) curves.FieldElement {
-	r, ok := rhs.(*FieldElement)
-	if ok {
-		v, wasInverted := new(fp.Fp).Invert(r.v)
-		if !wasInverted {
-			panic("cannot invert rhs")
-		}
-		v.Mul(v, e.v)
-		return &FieldElement{v: v}
-	} else {
-		panic("rhs is not pallas base field element")
-	}
-}
-
-func (e *FieldElement) Exp(rhs curves.FieldElement) curves.FieldElement {
-	n, ok := rhs.(*FieldElement)
-	if !ok {
-		panic("not a pallas base field element")
-	}
-	return &FieldElement{
-		v: e.v.Exp(e.v, n.v),
-	}
-}
-
-func (e *FieldElement) Neg() curves.FieldElement {
-	return &FieldElement{
-		v: new(fp.Fp).Neg(e.v),
-	}
-}
-
-func (e *FieldElement) SetNat(value *saferith.Nat) (curves.FieldElement, error) {
-	e.v = new(fp.Fp).SetNat(value)
-	return e, nil
-}
-
-func (e *FieldElement) Nat() *saferith.Nat {
-	return e.v.Nat()
-}
-
-func (e *FieldElement) SetBytes(input []byte) (curves.FieldElement, error) {
-	if len(input) != base.FieldBytes {
-		return nil, errs.NewInvalidLength("input length %d > %d bytes", len(input), base.FieldBytes)
-	}
-	buffer := bitstring.ReverseBytes(input)
-	result, err := e.v.SetBytes((*[base.FieldBytes]byte)(buffer))
+func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
+	els, err := NewCurve().HashToFieldElements(1, x, nil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not set byte")
+		return nil, errs.WrapHashingFailed(err, "could not hash to field element in pallas")
 	}
-	return &FieldElement{
-		v: result,
-	}, nil
+	return els[0], nil
 }
 
-func (e *FieldElement) SetBytesWide(input []byte) (curves.FieldElement, error) {
-	if len(input) > base.WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length > %d bytes", base.WideFieldBytes)
+// === Additive Groupoid Methods.
+
+func (*BaseField) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
 	}
-	buffer := bitstring.ReverseAndPadBytes(input, base.WideFieldBytes-len(input))
-	result := e.v.SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
-	return &FieldElement{
-		v: result,
-	}, nil
+	return sum
 }
 
-func (e *FieldElement) Bytes() []byte {
-	v := e.v.Bytes()
-	return v[:]
+// === Multiplicative Groupoid Methods.
+
+func (*BaseField) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
 
-func (e *FieldElement) FromScalar(sc curves.Scalar) (curves.FieldElement, error) {
-	if sc.CurveName() != Name {
-		return nil, errs.NewInvalidType("scalar is not a pallas scalar")
+// === Additive Monoid Methods.
+
+func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: new(fp.Fp).SetZero(),
 	}
-	result, err := e.SetBytes(sc.Bytes())
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert from scalar")
-	}
-	return result, nil
 }
 
-func (e *FieldElement) Scalar(curve curves.Curve) (curves.Scalar, error) {
-	results, err := curve.Scalar().SetBytes(e.Bytes())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert field element to scalar")
+// === Multiplicative Monoid Methods.
+
+func (*BaseField) MultiplicativeIdentity() curves.BaseFieldElement {
+	return &BaseFieldElement{
+		V: new(fp.Fp).SetOne(),
 	}
-	return results, nil
+}
+
+// === Additive Group Methods.
+
+func (*BaseField) Sub(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
+}
+
+// === Multiplicative Group Methods.
+
+func (*BaseField) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
+}
+
+// === Ring Methods.
+
+func (*BaseField) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	pp, ok := p.(*BaseFieldElement)
+	if !ok {
+		return nil, errs.NewInvalidType("given point is not from this field")
+	}
+	return pp.Sqrt()
+}
+
+// === Finite Field Methods.
+
+func (f *BaseField) Characteristic() *saferith.Nat {
+	return f.Order().Nat()
+}
+
+func (*BaseField) ExtensionDegree() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(1)
+}
+
+func (f *BaseField) FrobeniusAutomorphism(e curves.BaseFieldElement) curves.BaseFieldElement {
+	return e.Exp(new(BaseFieldElement).SetNat(f.Characteristic()))
+}
+
+func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
+	result := e
+	currentDegree := new(saferith.Nat).SetUint64(1)
+	currentTerm := result
+	for currentDegree.Eq(f.ExtensionDegree()) == 1 {
+		currentTerm = f.FrobeniusAutomorphism(currentTerm)
+		result = result.Add(currentTerm)
+		currentDegree = utils.IncrementNat(currentDegree)
+	}
+	return result
+}
+
+func (*BaseField) FieldBytes() int {
+	return base.FieldBytes
+}
+
+func (*BaseField) WideFieldBytes() int {
+	return base.WideFieldBytes
+}
+
+// === Zp Methods.
+
+func (*BaseField) New(v uint64) curves.BaseFieldElement {
+	return NewBaseFieldElement(v)
+}
+
+func (f *BaseField) Zero() curves.BaseFieldElement {
+	return f.AdditiveIdentity()
+}
+
+func (f *BaseField) One() curves.BaseFieldElement {
+	return f.MultiplicativeIdentity()
+}
+
+// === Ordering Methods.
+
+func (f *BaseField) Top() curves.BaseFieldElement {
+	return f.Zero().Sub(f.One())
+}
+
+func (f *BaseField) Bottom() curves.BaseFieldElement {
+	return f.Zero()
+}
+
+func (*BaseField) Join(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Join(y)
+}
+
+func (*BaseField) Meet(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+	return x.Meet(y)
+}
+
+func (*BaseField) Max(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	max := x
+	for _, y := range ys {
+		max = max.Max(y)
+	}
+	return max
+}
+
+func (*BaseField) Min(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+	min := x
+	for _, y := range ys {
+		min = min.Min(y)
+	}
+	return min
 }

@@ -1,9 +1,11 @@
 package trusted_dealer
 
 import (
+	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -26,11 +28,14 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol.Name)
 	}
 
-	pointInK := new(K)
-	subGroup := (*pointInK).Curve()
+	subGroup := bls12381.GetSourceSubGroup[K]()
 
 	if cohortConfig.CipherSuite.Curve.Name() != subGroup.Name() {
-		return nil, errs.NewInvalidCurve("cohort's subgroup is not the same the generic type")
+		return nil, errs.NewInvalidCurve(
+			"cohort's subgroup (%s) is not the same the generic type (%s)",
+			cohortConfig.CipherSuite.Curve.Name(),
+			subGroup.Name(),
+		)
 	}
 
 	if prng == nil {
@@ -65,10 +70,7 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 
 	shards := make(map[types.IdentityHash]*boldyreva02.Shard[K])
 	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		share, ok := shamirShares[sharingId-1].Value.(curves.PairingScalar)
-		if !ok {
-			return nil, errs.NewInvalidType("share is not a pairing scalar")
-		}
+		share := shamirShares[sharingId-1].Value
 		shards[identityKey.Hash()] = &boldyreva02.Shard[K]{
 			SigningKeyShare: &boldyreva02.SigningKeyShare[K]{
 				Share:     share,

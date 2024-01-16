@@ -32,7 +32,7 @@ var (
 
 // we assume that input curves and hash functions are valid
 var (
-	allCurves = []curves.Curve{k256.New(), p256.New()}
+	allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
 	allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 )
 
@@ -54,7 +54,7 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.Ci
 	fz.Fuzz(&secretValue)
 	identities := make([]integration.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		commitedScalar, err := cipherSuite.Curve.Scalar().Hash(secretValue)
+		commitedScalar, err := cipherSuite.Curve.ScalarField().Hash(secretValue)
 		require.NoError(t, err)
 		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, commitedScalar)
 		identities[i] = identity

@@ -39,7 +39,7 @@ func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with sharing id %d", sharingId)
 		}
-		seedForThisParticipant, err := hashing.Hash(base.CommitmentHashFunction, p.UniqueSessionId, randomBytes[:])
+		seedForThisParticipant, err := hashing.HashChain(base.CommitmentHashFunction, p.UniqueSessionId, randomBytes[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with sharing id %d", sharingId)
 		}
@@ -132,7 +132,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2P2P) (pr
 		} else {
 			orderedAppendedSeeds = append(message.Message, myContributedSeed.seed...)
 		}
-		finalSeedBytes, err := hashing.Hash(base.CommitmentHashFunction, orderedAppendedSeeds)
+		finalSeedBytes, err := hashing.HashChain(base.CommitmentHashFunction, orderedAppendedSeeds)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", sharingId)
 		}

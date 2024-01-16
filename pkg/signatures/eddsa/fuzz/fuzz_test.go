@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
 
-var allCurves = []curves.Curve{edwards25519.New()}
+var allCurves = []curves.Curve{edwards25519.NewCurve()}
 var allHashes = []func() hash.Hash{sha512.New}
 
 func Fuzz_Test(f *testing.F) {

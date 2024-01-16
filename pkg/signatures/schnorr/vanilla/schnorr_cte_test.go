@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_MeasureConstantTime_signing(t *testing.T) {
@@ -20,7 +20,7 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 	}
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha3.New256,
 	}
 	var err error
@@ -44,7 +44,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 	}
 
 	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.New(),
+		Curve: edwards25519.NewCurve(),
 		Hash:  sha3.New256,
 	}
 	var err error

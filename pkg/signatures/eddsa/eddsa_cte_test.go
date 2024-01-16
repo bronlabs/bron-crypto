@@ -22,7 +22,7 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	curve := edwards25519.New()
+	curve := edwards25519.NewCurve()
 	message := []byte("Hello")
 	hashFunc := sha256.New
 	suite := &integration.CipherSuite{

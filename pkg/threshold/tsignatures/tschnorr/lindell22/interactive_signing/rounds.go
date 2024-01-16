@@ -8,15 +8,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
-
-var fiatShamir = hashing.NewSchnorrCompatibleFiatShamir()
 
 const (
 	commitmentDomainRLabel = "Lindell2022InteractiveSignR"
@@ -55,7 +53,7 @@ func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput map
 	}
 
 	// 1. choose a random k
-	k, err := p.cohortConfig.CipherSuite.Curve.Scalar().Random(p.prng)
+	k, err := p.cohortConfig.CipherSuite.Curve.ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate random k")
 	}
@@ -180,13 +178,14 @@ func (p *Cosigner) Round3(broadcastInput map[types.IdentityHash]*Round2Broadcast
 	}
 
 	if p.taproot {
-		if bigR.Y().IsOdd() {
+		if bigR.AffineY().IsOdd() {
 			p.state.k = p.state.k.Neg()
 			bigR = bigR.Neg()
 		}
 	}
 
-	// 4.ii. compute e
+	// 3.ii. compute e
+	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(p.cohortConfig.CipherSuite.Curve)
 	var e curves.Scalar
 	if p.taproot {
 		e, err = fiatShamir.GenerateChallenge(p.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
@@ -203,7 +202,7 @@ func (p *Cosigner) Round3(broadcastInput map[types.IdentityHash]*Round2Broadcast
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
 	if p.taproot {
-		if p.mySigningKeyShare.PublicKey.Y().IsOdd() {
+		if p.mySigningKeyShare.PublicKey.AffineY().IsOdd() {
 			dPrime = dPrime.Neg()
 		}
 	}
@@ -258,8 +257,7 @@ func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitm
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, transcript transcripts.Transcript, prng io.Reader) (proof *dlog.Proof, err error) {
-	curve := x.Curve()
-
+	curve := x.ScalarField().Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	prover, err := dlog.NewProver(curve.Generator(), sid, transcript, prng)
 	if err != nil {

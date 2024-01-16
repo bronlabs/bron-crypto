@@ -67,7 +67,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	for _, curve := range []curves.Curve{edwards25519.New(), k256.New()} {
+	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, n := range []int{2, 10} {
 			boundedCurve := curve
 			boundedN := n

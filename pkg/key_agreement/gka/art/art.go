@@ -23,8 +23,8 @@ type AsynchronousRatchetTree struct {
 // The leaf node with the lexicographically lowest identity key becomes a leader of the group
 // (i.e. generates keys at non-leaves nodes which other group members updates on).
 func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirIdentityKeys, theirEphemeralKeys []curves.Point) (ratchetTree *AsynchronousRatchetTree, err error) {
-	myPublicIdentityKey := myAuthKey.Curve().ScalarBaseMult(myAuthKey)
-	myPublicEphemeralKey := myEphemeralKey.Curve().ScalarBaseMult(myEphemeralKey)
+	myPublicIdentityKey := myAuthKey.ScalarField().Curve().ScalarBaseMult(myAuthKey)
+	myPublicEphemeralKey := myEphemeralKey.ScalarField().Curve().ScalarBaseMult(myEphemeralKey)
 
 	// 1. [Build ART] Construct full binary tree.
 	leaves := make([]*node, len(theirIdentityKeys))
@@ -61,7 +61,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 			}
 
 			leaves[i].privateNodeKey = secret
-			leaves[i].publicNodeKey = leaves[i].privateNodeKey.Curve().ScalarBaseMult(leaves[i].privateNodeKey)
+			leaves[i].publicNodeKey = leaves[i].privateNodeKey.ScalarField().Curve().ScalarBaseMult(leaves[i].privateNodeKey)
 		}
 	} else {
 		// I am NOT a leader.
@@ -76,7 +76,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 				}
 
 				leaves[i].privateNodeKey = secret
-				leaves[i].publicNodeKey = leaves[i].privateNodeKey.Curve().ScalarBaseMult(leaves[i].privateNodeKey)
+				leaves[i].publicNodeKey = leaves[i].privateNodeKey.ScalarField().Curve().ScalarBaseMult(leaves[i].privateNodeKey)
 			}
 		}
 	}
@@ -86,7 +86,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 	allLeavesSize := 1 << utils.CeilLog2(len(leaves))
 	remainingLeavesSize := allLeavesSize - len(leaves)
 	fullLeaves := append(append(make([]*node, 0), leaves...), make([]*node, remainingLeavesSize)...)
-	tree := NewArrayTree[*node](fullLeaves)
+	tree := NewArrayTree(fullLeaves)
 	for i, n := range tree {
 		if n == nil {
 			tree[i] = &node{}
@@ -162,7 +162,7 @@ func (p *AsynchronousRatchetTree) UpdateKey(newPrivateKey curves.Scalar) (pk []c
 
 		// 1.i [Ratchet] Set net node keys in the corresponding leaf.
 		p.tree[i].privateNodeKey = newPrivateKey
-		p.tree[i].publicNodeKey = p.tree[i].privateNodeKey.Curve().ScalarBaseMult(p.tree[i].privateNodeKey)
+		p.tree[i].publicNodeKey = p.tree[i].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[i].privateNodeKey)
 
 		// 1.ii [Ratchet] Void all node keys on the path from the leaf to the root of the tree.
 		j := p.tree.Parent(i)
@@ -248,11 +248,11 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value at %d", parent)
 				}
-				p.tree[parent].privateNodeKey, err = p.tree[left].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				p.tree[parent].privateNodeKey, err = p.tree[left].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
 					return errs.NewHashingFailed("cannot hash secret value at %d", parent)
 				}
-				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
+				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 
 			// 4.ii [Build ART] the left child has node public key, the right child has node private key.
 			case p.tree[left].publicNodeKey != nil && p.tree[right].privateNodeKey != nil:
@@ -260,11 +260,11 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value %d", parent)
 				}
-				p.tree[parent].privateNodeKey, err = p.tree[right].privateNodeKey.Curve().Scalar().Hash(sk.Bytes())
+				p.tree[parent].privateNodeKey, err = p.tree[right].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
 					return errs.NewHashingFailed("cannot hash secret value %d", parent)
 				}
-				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
+				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 
 			// 4.iii [Build ART] The right child is empty (while the left is not).
 			case p.tree[left].publicNodeKey != nil && parent >= p.size:
@@ -296,7 +296,7 @@ func (b byIdentity) Len() int {
 }
 
 func (b byIdentity) Less(i, j int) bool {
-	return b[i].publicIdentityKey.X().Cmp(b[j].publicIdentityKey.X()) < 0
+	return b[i].publicIdentityKey.AffineX().Cmp(b[j].publicIdentityKey.AffineX()) < 0
 }
 
 func (b byIdentity) Swap(i, j int) {

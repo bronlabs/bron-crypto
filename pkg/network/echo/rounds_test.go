@@ -16,7 +16,7 @@ import (
 
 func TestHappyPath(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha3.New256,
 	}
 	happyPath(t, cipherSuite, 3)
@@ -74,7 +74,7 @@ func happyPath(t *testing.T, cipherSuite *integration.CipherSuite, n int) {
 
 func TestFailIfOnlyTwoParticipants(t *testing.T) {
 	cipherSuite := &integration.CipherSuite{
-		Curve: k256.New(),
+		Curve: k256.NewCurve(),
 		Hash:  sha3.New256,
 	}
 	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
