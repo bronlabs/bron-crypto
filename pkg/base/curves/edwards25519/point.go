@@ -9,7 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -461,17 +461,24 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	point, err := serialisation.PointMarshalBinary(p)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "marshal to point failed")
+	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
+	if len(res) < 1 {
+		return nil, errs.NewSerialisation("could not marshal")
 	}
-	return point, nil
+	return res, nil
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := serialisation.PointUnmarshalBinary(&edwards25519Instance, input)
+	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
-		return errs.WrapSerialisation(err, "unmarshal binary failed")
+		return errs.WrapSerialisation(err, "could not unmarshal binary")
+	}
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != p.Curve().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
@@ -482,17 +489,24 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	point, err := serialisation.PointMarshalJson(p)
+	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "marshal to json failed")
+		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
-	return point, nil
+	return res, nil
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := serialisation.NewPointFromJSON(&edwards25519Instance, input)
+	pt, err := impl.UnmarshalJson(p.FromAffineCompressed, input)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract a point from json")
+		return errs.WrapSerialisation(err, "could not unmarshal")
+	}
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != p.Curve().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	P, ok := pt.(*Point)
 	if !ok {

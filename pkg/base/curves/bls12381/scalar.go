@@ -11,7 +11,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -411,28 +410,40 @@ func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalBinary[curves.Scalar](s.ScalarField().Name(), s.ScalarField().FieldBytes(), s)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
+	res := impl.MarshalBinary(s.ScalarField().Curve().Name(), s.Bytes)
+	if len(res) < 1 {
+		return nil, errs.NewSerialisation("could not marshal")
 	}
 	return res, nil
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := serialisation.ScalarLikeUnmarshalBinary(Name, s.SetBytes, s.ScalarField().FieldBytes(), input)
+	sc, err := impl.UnmarshalBinary(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
-		return errs.NewInvalidType("invalid scalar")
+		return errs.NewInvalidType("invalid base field element")
 	}
 	s.V = ss.V
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "couldn't extract name from input")
+	}
+	switch name {
+	case NameG1:
+		s.G = NewG1()
+	case NameG2:
+		s.G = NewG2()
+	default:
+		return errs.NewInvalidType("name %s is not supported", name)
+	}
 	return nil
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalJson[curves.Scalar](Name, s)
+	res, err := impl.MarshalJson(s.ScalarField().Curve().Name(), s.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -440,14 +451,26 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := serialisation.NewScalarLikeFromJSON(s.SetBytes, input)
+	name, _, err := impl.ParseJSON(input)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract a scalar from json")
+		return errs.WrapSerialisation(err, "couldn't extract name from input")
 	}
-	Sc, ok := sc.(*Scalar)
+	switch name {
+	case NameG1:
+		s.G = NewG1()
+	case NameG2:
+		s.G = NewG2()
+	default:
+		return errs.NewInvalidType("name %s is not supported", name)
+	}
+	sc, err := impl.UnmarshalJson(s.SetBytes, input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract a base field element from json")
+	}
+	S, ok := sc.(*Scalar)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	s.V = Sc.V
+	s.V = S.V
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -321,17 +321,24 @@ func (*BaseFieldElement) BaseField() curves.BaseField {
 // === Serialisation.
 
 func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalBinary[curves.Scalar](e.BaseField().Curve().Name(), e.BaseField().FieldBytes(), e)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
+	res := impl.MarshalBinary(e.BaseField().Curve().Name(), e.Bytes)
+	if len(res) < 1 {
+		return nil, errs.NewSerialisation("could not marshal")
 	}
 	return res, nil
 }
 
 func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
-	sc, err := serialisation.ScalarLikeUnmarshalBinary(Name, e.SetBytes, e.BaseField().FieldBytes(), input)
+	sc, err := impl.UnmarshalBinary(e.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
+	}
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != e.BaseField().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElement)
 	if !ok {
@@ -342,7 +349,7 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 }
 
 func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalJson[curves.BaseFieldElement](Name, e)
+	res, err := impl.MarshalJson(e.BaseField().Curve().Name(), e.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -350,9 +357,16 @@ func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
-	sc, err := serialisation.NewScalarLikeFromJSON(e.SetBytes, input)
+	sc, err := impl.UnmarshalJson(e.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
+	}
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != e.BaseField().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElement)
 	if !ok {

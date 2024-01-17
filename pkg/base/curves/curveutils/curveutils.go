@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
@@ -49,4 +50,100 @@ func GetAllCurves() []curves.Curve {
 		allCurves = append(allCurves, c)
 	}
 	return allCurves
+}
+
+func NewPointFromJSON(input []byte) (curves.Point, error) {
+	name, data, err := impl.ParseJSON(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	point, err := curve.Point().FromAffineCompressed(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize json into point")
+	}
+	return point, nil
+}
+
+func NewPointFromBinary(input []byte) (curves.Point, error) {
+	name, data, err := impl.ParseBinary(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	point, err := curve.Point().FromAffineCompressed(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize binary into point")
+	}
+	return point, nil
+}
+
+func NewScalarFromJSON(input []byte) (curves.Scalar, error) {
+	name, data, err := impl.ParseJSON(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	scalar, err := curve.ScalarField().Element().SetBytes(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize json into scalar")
+	}
+	return scalar, nil
+}
+
+func NewScalarFromBinary(input []byte) (curves.Scalar, error) {
+	name, data, err := impl.ParseBinary(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	scalar, err := curve.ScalarField().Element().SetBytes(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize binary into scalar")
+	}
+	return scalar, nil
+}
+
+func NewBaseFieldElementFromJSON(input []byte) (curves.BaseFieldElement, error) {
+	name, data, err := impl.ParseJSON(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	element, err := curve.BaseField().Element().SetBytes(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize json into scalar")
+	}
+	return element, nil
+}
+
+func NewBaseFieldElementFromBinary(input []byte) (curves.BaseFieldElement, error) {
+	name, data, err := impl.ParseBinary(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
+	}
+	curve, err := GetCurveByName(name)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not get curve corresponding to name '%s'", name)
+	}
+	element, err := curve.BaseField().Element().SetBytes(data)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize binary into scalar")
+	}
+	return element, nil
 }

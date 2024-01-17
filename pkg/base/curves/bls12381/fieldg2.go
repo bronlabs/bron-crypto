@@ -81,11 +81,11 @@ func (f *BaseFieldG2) OperateOver(operator algebra.Operator, xs ...curves.BaseFi
 	return current, nil
 }
 
-func (*BaseFieldG2) Random(prng io.Reader) (curves.BaseFieldElement, error) {
+func (f *BaseFieldG2) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	result, err := NewBaseFieldElementG2(0).V.Random(prng)
+	result, err := f.Element().(*BaseFieldElementG2).V.Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSampleFailed(err, "could not generate random field element")
 	}

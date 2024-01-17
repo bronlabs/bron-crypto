@@ -54,8 +54,8 @@ func (*ScalarField[S]) Curve() curves.Curve {
 
 // === Basic Methods.
 
-func (*ScalarField[_]) Name() string {
-	return Name
+func (*ScalarField[G]) Name() string {
+	return GetSourceSubGroup[G]().Name()
 }
 
 func (*ScalarField[_]) Order() *saferith.Modulus {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/serialisation"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -188,17 +188,24 @@ func (*GtMember) Gt() curves.Gt {
 // === Serialisation.
 
 func (g *GtMember) MarshalBinary() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalBinary[curves.GtMember](g.Gt().Name(), bls12381impl.GtFieldBytes, g)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal")
+	res := impl.MarshalBinary(g.Gt().Name(), g.Bytes)
+	if len(res) < 1 {
+		return nil, errs.NewSerialisation("could not marshal")
 	}
 	return res, nil
 }
 
 func (g *GtMember) UnmarshalBinary(input []byte) error {
-	sc, err := serialisation.ScalarLikeUnmarshalBinary(Name, g.SetBytes, bls12381impl.GtFieldBytes, input)
+	sc, err := impl.UnmarshalBinary(g.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
+	}
+	name, _, err := impl.ParseBinary(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != g.Gt().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*GtMember)
 	if !ok {
@@ -209,7 +216,7 @@ func (g *GtMember) UnmarshalBinary(input []byte) error {
 }
 
 func (g *GtMember) MarshalJSON() ([]byte, error) {
-	res, err := serialisation.ScalarLikeMarshalJson[curves.GtMember](Name, g)
+	res, err := impl.MarshalJson(g.Gt().Name(), g.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -217,9 +224,16 @@ func (g *GtMember) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GtMember) UnmarshalJSON(input []byte) error {
-	sc, err := serialisation.NewScalarLikeFromJSON(g.SetBytes, input)
+	sc, err := impl.UnmarshalJson(g.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
+	}
+	name, _, err := impl.ParseJSON(input)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not extract name from input")
+	}
+	if name != g.Gt().Name() {
+		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*GtMember)
 	if !ok {
