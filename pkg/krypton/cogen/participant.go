@@ -35,6 +35,12 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 }
 
 func NewParticipant(newCogenAuthKey func() (integration.AuthKey, error), newCogenIdentityKey func(curves.Point) (integration.IdentityKey, error)) (*Participant, error) {
+	if newCogenAuthKey == nil {
+		return nil, errs.NewInvalidArgument("newCogenAuthKey is nil")
+	}
+	if newCogenIdentityKey == nil {
+		return nil, errs.NewInvalidArgument("newCogenIdentityKey is nil")
+	}
 	authKey, err := newCogenAuthKey()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate auth key")
