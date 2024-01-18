@@ -10,13 +10,14 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/cronokirby/saferith"
-	"golang.org/x/crypto/sha3"
 )
 
 var curve = k256.NewCurve()

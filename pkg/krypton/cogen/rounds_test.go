@@ -1,15 +1,16 @@
 package cogen_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/krypton/cogen"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -97,7 +98,7 @@ func makeParticipant(n int) ([]*cogen.Participant, error) {
 	participants := make([]*cogen.Participant, n)
 	for i := 0; i < n; i++ {
 		participant, err := cogen.NewParticipant(func() (integration.AuthKey, error) {
-			return NewCogenAuthKey(rand.Reader)
+			return NewCogenAuthKey(crand.Reader)
 		}, func(publicKey curves.Point) (integration.IdentityKey, error) {
 			return NewCogenIdentityKey(publicKey)
 		})

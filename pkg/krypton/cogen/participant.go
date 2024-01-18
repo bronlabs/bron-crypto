@@ -26,11 +26,11 @@ func (p *Participant) GetAuthKey() integration.AuthKey {
 	return p.myAuthKey
 }
 
-func (p *Participant) GetSharingId() int {
+func (*Participant) GetSharingId() int {
 	return -1
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
+func (*Participant) GetCohortConfig() *integration.CohortConfig {
 	return nil
 }
 
