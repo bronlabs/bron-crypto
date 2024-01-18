@@ -13,9 +13,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 const NameG2 = "BLS12381G2" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -31,17 +31,17 @@ var (
 var _ curves.Curve = (*G2)(nil)
 
 type G2 struct {
-	hashing.CurveHasher
+	hash2curve.CurveHasher
 
 	_ types.Incomparable
 }
 
 func g2Init() {
 	g2Instance = G2{}
-	g2Instance.CurveHasher = hashing.NewCurveHasherSha256(
+	g2Instance.CurveHasher = hash2curve.NewCurveHasherSha256(
 		curves.Curve(&g2Instance),
 		base.HASH2CURVE_APP_TAG,
-		hashing.DST_TAG_SSWU,
+		hash2curve.DstTagSswu,
 	)
 }
 
@@ -49,10 +49,10 @@ func g2Init() {
 // custom "appTag". Not exposed in the `curves.Curve` interface, as by
 // default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
 func (c *G2) SetHasherAppTag(appTag string) {
-	c.CurveHasher = hashing.NewCurveHasherSha256(
+	c.CurveHasher = hash2curve.NewCurveHasherSha256(
 		curves.Curve(&g2Instance),
 		appTag,
-		hashing.DST_TAG_SSWU,
+		hash2curve.DstTagSswu,
 	)
 }
 

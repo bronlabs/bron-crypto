@@ -10,9 +10,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 const NameGt = "BLS12381Gt"
@@ -27,7 +27,7 @@ var (
 var _ curves.Gt = (*Gt)(nil)
 
 type Gt struct {
-	hashing.CurveHasher
+	hash2curve.CurveHasher
 
 	_ types.Incomparable
 }

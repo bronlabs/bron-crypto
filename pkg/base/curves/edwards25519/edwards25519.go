@@ -15,9 +15,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 const Name = "edwards25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -46,17 +46,17 @@ var (
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	hashing.CurveHasher
+	hash2curve.CurveHasher
 
 	_ types.Incomparable
 }
 
 func ed25519Init() {
 	edwards25519Instance = Curve{}
-	edwards25519Instance.CurveHasher = hashing.NewCurveHasherSha512(
+	edwards25519Instance.CurveHasher = hash2curve.NewCurveHasherSha512(
 		curves.Curve(&edwards25519Instance),
 		base.HASH2CURVE_APP_TAG,
-		hashing.DST_TAG_ELLIGATOR2,
+		hash2curve.DstTagElligator2,
 	)
 }
 
@@ -64,10 +64,10 @@ func ed25519Init() {
 // custom "appTag". Not exposed in the `curves.Curve` interface, as by
 // default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
 func (c *Curve) SetHasherAppTag(appTag string) {
-	c.CurveHasher = hashing.NewCurveHasherSha512(
+	c.CurveHasher = hash2curve.NewCurveHasherSha512(
 		curves.Curve(&edwards25519Instance),
 		appTag,
-		hashing.DST_TAG_ELLIGATOR2,
+		hash2curve.DstTagElligator2,
 	)
 }
 
@@ -136,7 +136,7 @@ func (*Curve) Map(fieldElement []byte) curves.Point {
 	return toEdwards(m1, signBit)
 }
 
-// Perform hashing to the ed25519 group using the Elligator2 mapping
+// Hash performs hashing to the ed25519 group using the Elligator2 mapping
 //
 // See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
 func (c *Curve) Hash(input []byte) (curves.Point, error) {

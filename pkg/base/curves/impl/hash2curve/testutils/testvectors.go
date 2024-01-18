@@ -8,10 +8,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/hash2curve"
 )
 
 // TestVector implements the test vectors for hash to curve, as specified in
@@ -42,24 +42,24 @@ type TestCase struct {
 	Q1yI string
 }
 
-func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hashing.CurveHasher, error) {
+func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hash2curve.CurveHasher, error) {
 	appTag, found := strings.CutSuffix(tv.Dst, tv.SuiteName)
 	if !found {
 		return nil, errs.NewVerificationFailed("could not cut suffix from dst")
 	}
-	suiteIdSections := strings.Split(tv.SuiteName, hashing.DST_ID_SEPARATOR)
-	if len(suiteIdSections) != 5 || suiteIdSections[0] != curve.Name() || suiteIdSections[3] != hashing.DST_ENC_VAR {
+	suiteIdSections := strings.Split(tv.SuiteName, hash2curve.DstIdSeparator)
+	if len(suiteIdSections) != 5 || suiteIdSections[0] != curve.Name() || suiteIdSections[3] != hash2curve.DstEncVar {
 		return nil, errs.NewVerificationFailed("invalid dst")
 	}
 	mapperTag := suiteIdSections[2]
-	var ch hashing.CurveHasher
+	var ch hash2curve.CurveHasher
 	switch hasherNCurveTag := suiteIdSections[1]; {
-	case strings.Contains(hasherNCurveTag, hashing.DST_TAG_SHA256):
-		ch = hashing.NewCurveHasherSha256(curve, appTag, mapperTag)
-	case strings.Contains(hasherNCurveTag, hashing.DST_TAG_SHA512):
-		ch = hashing.NewCurveHasherSha512(curve, appTag, mapperTag)
-	case strings.Contains(hasherNCurveTag, hashing.DST_TAG_SHAKE256):
-		ch = hashing.NewShake256Hasher(curve, appTag, mapperTag)
+	case strings.Contains(hasherNCurveTag, hash2curve.DstTagSha256):
+		ch = hash2curve.NewCurveHasherSha256(curve, appTag, mapperTag)
+	case strings.Contains(hasherNCurveTag, hash2curve.DstTagSha512):
+		ch = hash2curve.NewCurveHasherSha512(curve, appTag, mapperTag)
+	case strings.Contains(hasherNCurveTag, hash2curve.DstTagShake256):
+		ch = hash2curve.NewShake256Hasher(curve, appTag, mapperTag)
 	default:
 		return nil, errs.NewVerificationFailed("unsupported hasher")
 	}
@@ -69,7 +69,7 @@ func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hashing.CurveHasher, e
 	return ch, nil
 }
 
-func SetCurveHasher(curve curves.Curve, ch hashing.CurveHasher) curves.Curve {
+func SetCurveHasher(curve curves.Curve, ch hash2curve.CurveHasher) curves.Curve {
 	switch curve.Name() {
 	case p256.NewCurve().Name():
 		c := p256.NewCurve()
@@ -103,24 +103,24 @@ func SetCurveHasher(curve curves.Curve, ch hashing.CurveHasher) curves.Curve {
 func NewHash2CurveTestVector(curve curves.Curve) *TestVector {
 	switch curve.Name() {
 	case p256.NewCurve().Name():
-		return P256_TestVector
+		return p256TestVector
 	case edwards25519.NewCurve().Name():
-		return Edwards25519_TestVector
+		return edwards25519TestVector
 	case k256.NewCurve().Name():
-		return Secp256k1_TestVector
+		return secp256k1TestVector
 	case curve25519.NewCurve().Name():
-		return Curve25519_TestVector
+		return curve25519TestVector
 	case bls12381.NewG1().Name():
-		return BLS12381G1_TestVector
+		return bls12381g1TestVector
 	case bls12381.NewG2().Name():
-		return BLS12381G2_TestVector
+		return bls12381g2TestVector
 	default:
 		panic("unsupported curve")
 	}
 }
 
 // RFC 9380 Appendix J.1.1. P256_XMD:SHA-256_SSWU_RO_
-var P256_TestVector = &TestVector{
+var p256TestVector = &TestVector{
 	SuiteName: "P256_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-P256_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
@@ -187,7 +187,7 @@ var P256_TestVector = &TestVector{
 }
 
 // RFC 9380 Appendix J.4.1. curve25519_XMD:SHA-512_ELL2_RO_
-var Curve25519_TestVector = &TestVector{
+var curve25519TestVector = &TestVector{
 	SuiteName: "curve25519_XMD:SHA-512_ELL2_RO_",
 	Dst:       "QUUX-V01-CS02-with-curve25519_XMD:SHA-512_ELL2_RO_",
 	TestCases: []TestCase{{
@@ -254,7 +254,7 @@ var Curve25519_TestVector = &TestVector{
 }
 
 // RFC 9380 Appendix J.5.1. edwards25519_XMD:SHA-512_ELL2_RO_
-var Edwards25519_TestVector = &TestVector{
+var edwards25519TestVector = &TestVector{
 	SuiteName: "edwards25519_XMD:SHA-512_ELL2_RO_",
 	Dst:       "QUUX-V01-CS02-with-edwards25519_XMD:SHA-512_ELL2_RO_",
 	TestCases: []TestCase{{
@@ -321,7 +321,7 @@ var Edwards25519_TestVector = &TestVector{
 }
 
 // RFC 9380 Appendix J.8.1. secp256k1_XMD:SHA-256_SSWU_RO_
-var Secp256k1_TestVector = &TestVector{
+var secp256k1TestVector = &TestVector{
 	SuiteName: "secp256k1_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-secp256k1_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
@@ -388,7 +388,7 @@ var Secp256k1_TestVector = &TestVector{
 }
 
 // RFC 9380 Appendix J.9.1. BLS12381G1_XMD:SHA-256_SSWU_RO_
-var BLS12381G1_TestVector = &TestVector{
+var bls12381g1TestVector = &TestVector{
 	SuiteName: "BLS12381G1_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
@@ -451,7 +451,7 @@ var BLS12381G1_TestVector = &TestVector{
 }
 
 // RFC 9380 Appendix J.10.1. BLS12381G2_XMD:SHA-256_SSWU_RO_
-var BLS12381G2_TestVector = &TestVector{
+var bls12381g2TestVector = &TestVector{
 	SuiteName: "BLS12381G2_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{

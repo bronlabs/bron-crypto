@@ -7,7 +7,7 @@ unbiased hash-to-curve functions, used encoding or hashing an arbitrary string t
 The following functions are exported in this package:
 1. `hash_to_scalar(msg, count) -> (u_0, ..., u_(count - 1))`, a stylistic alias for `hash_to_field` (see below).
 2. [`hash_to_curve(msg) -> (P)`](https://datatracker.ietf.org/doc/html/rfc9380#name-encoding-byte-strings-to-el) is a uniform encoding from byte strings to points in the prime-order subgroup of the EC. That is, the distribution of its output is statistically close to uniform. It's specification is is as follows:
-```golang
+```
 1. u = hash_to_field(msg, 2)
 2. Q0 = map_to_curve(u[0])
 3. Q1 = map_to_curve(u[1])
@@ -22,7 +22,7 @@ The constructions in this section rely on three basic functions from RFC-9380:
 [`hash_to_field(msg, count) -> (u_0, ..., u_(count - 1))`](https://datatracker.ietf.org/doc/html/rfc9380#hashtofield) hashes arbitrary-length byte strings to a list of one or more elements of a finite field F.
 It requires an expansion function `expand_message` (one of [`expand_message_xmd`](https://datatracker.ietf.org/doc/html/rfc9380#name-expand_message_xmd) or [`expand_message_xof`](https://datatracker.ietf.org/doc/html/rfc9380#name-expand_message_xof)).
 
-```golang
+```
 // Parameters:
 - DST, a domain separation tag (see Section 3.1).
 - F, a finite field of characteristic p and order q = p^m.
