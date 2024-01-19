@@ -1,7 +1,9 @@
 package edwards25519
 
 import (
+	"encoding"
 	"encoding/binary"
+	"encoding/json"
 
 	filippo_field "filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
@@ -16,6 +18,9 @@ import (
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
+var _ encoding.BinaryMarshaler = (*BaseFieldElement)(nil)
+var _ encoding.BinaryUnmarshaler = (*BaseFieldElement)(nil)
+var _ json.Unmarshaler = (*BaseFieldElement)(nil)
 
 type BaseFieldElement struct {
 	V *filippo_field.Element
@@ -329,7 +334,7 @@ func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(e.SetBytes, input)
+	sc, err := impl.UnmarshalBinary(NewBaseFieldElement(0).SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}

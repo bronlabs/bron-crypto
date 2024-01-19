@@ -1,13 +1,16 @@
 package k256
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
+	k256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -16,6 +19,9 @@ import (
 
 var _ curves.Point = (*Point)(nil)
 var _ curves.ProjectiveCurveCoordinates = (*Point)(nil)
+var _ encoding.BinaryMarshaler = (*Point)(nil)
+var _ encoding.BinaryUnmarshaler = (*Point)(nil)
+var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
 	V *impl.EllipticPoint
@@ -40,7 +46,7 @@ func (p *Point) Equal(rhs curves.Point) bool {
 
 func (p *Point) Clone() curves.Point {
 	return &Point{
-		V: secp256k1.PointNew().Set(p.V),
+		V: k256impl.PointNew().Set(p.V),
 	}
 }
 
@@ -75,7 +81,7 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*Point)
 	if ok {
-		value := secp256k1.PointNew().Add(p.V, r.V)
+		value := k256impl.PointNew().Add(p.V, r.V)
 		return &Point{V: value}
 	} else {
 		panic("rhs is not PointK256")
@@ -87,7 +93,7 @@ func (p *Point) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
 }
 
 func (p *Point) Double() curves.Point {
-	value := secp256k1.PointNew().Double(p.V)
+	value := k256impl.PointNew().Double(p.V)
 	return &Point{V: value}
 }
 
@@ -110,7 +116,7 @@ func (p *Point) IsAdditiveIdentity() bool {
 // === Group Methods.
 
 func (p *Point) Inverse() curves.Point {
-	value := secp256k1.PointNew().Neg(p.V)
+	value := k256impl.PointNew().Neg(p.V)
 	return &Point{V: value}
 }
 
@@ -134,7 +140,7 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 	}
 	r, ok := rhs.(*Point)
 	if ok {
-		value := secp256k1.PointNew().Sub(p.V, r.V)
+		value := k256impl.PointNew().Sub(p.V, r.V)
 		return &Point{V: value}
 	} else {
 		panic("rhs is not PointK256")
@@ -153,7 +159,7 @@ func (p *Point) Mul(rhs curves.Scalar) curves.Point {
 	}
 	r, ok := rhs.(*Scalar)
 	if ok {
-		value := secp256k1.PointNew().Mul(p.V, r.V)
+		value := k256impl.PointNew().Mul(p.V, r.V)
 		return &Point{V: value}
 	} else {
 		panic("rhs is not ScalarK256")
@@ -229,7 +235,7 @@ func (p *Point) ToAffineCompressed() []byte {
 	var x [33]byte
 	x[0] = byte(2)
 
-	t := secp256k1.PointNew().ToAffine(p.V)
+	t := k256impl.PointNew().ToAffine(p.V)
 
 	x[0] |= t.Y.Bytes()[0] & 1
 
@@ -241,7 +247,7 @@ func (p *Point) ToAffineCompressed() []byte {
 func (p *Point) ToAffineUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
-	t := secp256k1.PointNew().ToAffine(p.V)
+	t := k256impl.PointNew().ToAffine(p.V)
 	arr := t.X.Bytes()
 	copy(out[1:33], bitstring.ReverseBytes(arr[:]))
 	arr = t.Y.Bytes()
@@ -249,7 +255,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
+func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	var raw [base.FieldBytes]byte
 	if len(input) != 33 {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
@@ -266,9 +272,10 @@ func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 		return nil, errs.WrapInvalidCoordinates(err, "x")
 	}
 
-	value := secp256k1.PointNew().Identity()
+	value := k256impl.PointNew().Identity()
 	rhs := fp.New()
-	p.V.Arithmetic.RhsEq(rhs, x)
+	arith := &k256impl.PointArithmetic{}
+	arith.RhsEq(rhs, x)
 	// test that rhs is quadratic residue
 	// if not, then this Point is at infinity
 	y, wasQr := fp.New().Sqrt(rhs)
@@ -304,7 +311,7 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "y")
 	}
-	value := secp256k1.PointNew()
+	value := k256impl.PointNew()
 	value.X = x
 	value.Y = y
 	value.Z.SetOne()

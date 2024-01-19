@@ -1,6 +1,9 @@
 package bls12381
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -13,6 +16,9 @@ import (
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG1)(nil)
+var _ encoding.BinaryMarshaler = (*BaseFieldElementG1)(nil)
+var _ encoding.BinaryUnmarshaler = (*BaseFieldElementG1)(nil)
+var _ json.Unmarshaler = (*BaseFieldElementG1)(nil)
 
 type BaseFieldElementG1 struct {
 	V *bimpl.Fp
@@ -309,7 +315,7 @@ func (e *BaseFieldElementG1) MarshalBinary() ([]byte, error) {
 }
 
 func (e *BaseFieldElementG1) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(e.SetBytes, input)
+	sc, err := impl.UnmarshalBinary(NewBaseFieldElementG1(0).SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}

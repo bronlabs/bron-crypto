@@ -1,4 +1,4 @@
-package k256arith
+package impl
 
 import (
 	"sync"
@@ -22,7 +22,7 @@ func PointNew() *impl.EllipticPoint {
 		Y:          fp.New(),
 		Z:          fp.New(),
 		Params:     getK256PointParams(),
-		Arithmetic: &k256PointArithmetic{},
+		Arithmetic: &PointArithmetic{},
 	}
 }
 
@@ -240,11 +240,11 @@ func getK256PointIsogenyParams() *impl.IsogenyParams {
 	return &k256PointIsogenyParams
 }
 
-var _ impl.EllipticPointArithmetic = (*k256PointArithmetic)(nil)
+var _ impl.EllipticPointArithmetic = (*PointArithmetic)(nil)
 
-type k256PointArithmetic struct{}
+type PointArithmetic struct{}
 
-func (k k256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
+func (k PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
 	sswuParams := getK256PointSswuParams()
 	isoParams := getK256PointIsogenyParams()
 
@@ -264,7 +264,7 @@ func (k k256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoin
 	return nil
 }
 
-func (k256PointArithmetic) Double(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) Double(out, arg *impl.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 9)
 	var yy, zz, xy2, bzz, bzz3, bzz9 [impl.FieldLimbs]uint64
@@ -308,7 +308,7 @@ func (k256PointArithmetic) Double(out, arg *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
+func (PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 7).
 	var xx, yy, zz, nXxYy, nYyZz, nXxZz [impl.FieldLimbs]uint64
@@ -395,7 +395,7 @@ func (k256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k k256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
+func (k PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.New().Square(affine.Y)
@@ -404,7 +404,7 @@ func (k k256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	return lhs.Equal(rhs) == 1
 }
 
-func (k256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	var wasInverted int
 	var zero, x, y, z [impl.FieldLimbs]uint64
 	f := arg.X.Arithmetic
@@ -426,7 +426,7 @@ func (k256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (k256PointArithmetic) RhsEq(out, x *impl.FieldValue) {
+func (PointArithmetic) RhsEq(out, x *impl.FieldValue) {
 	// Elliptic curve equation for secp256k1 is: y^2 = x^3 + 7
 	out.Square(x)
 	out.Mul(out, x)

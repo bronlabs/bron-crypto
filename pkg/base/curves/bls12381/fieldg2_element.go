@@ -2,6 +2,8 @@ package bls12381
 
 import (
 	"crypto/subtle"
+	"encoding"
+	"encoding/json"
 	"fmt"
 
 	"github.com/cronokirby/saferith"
@@ -16,6 +18,9 @@ import (
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG2)(nil)
+var _ encoding.BinaryMarshaler = (*BaseFieldElementG1)(nil)
+var _ encoding.BinaryUnmarshaler = (*BaseFieldElementG1)(nil)
+var _ json.Unmarshaler = (*BaseFieldElementG2)(nil)
 
 type BaseFieldElementG2 struct {
 	V *bimpl.Fp2
@@ -336,7 +341,7 @@ func (e *BaseFieldElementG2) MarshalBinary() ([]byte, error) {
 }
 
 func (e *BaseFieldElementG2) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(e.SetBytes, input)
+	sc, err := impl.UnmarshalBinary(NewBaseFieldElementG2(0).SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}

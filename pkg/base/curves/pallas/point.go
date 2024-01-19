@@ -1,6 +1,9 @@
 package pallas
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -12,6 +15,9 @@ import (
 
 var _ curves.Point = (*Point)(nil)
 var _ curves.JacobianCoordinates = (*Point)(nil)
+var _ encoding.BinaryMarshaler = (*Point)(nil)
+var _ encoding.BinaryUnmarshaler = (*Point)(nil)
+var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
 	V *Ep

@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
-	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
+	k256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -106,7 +106,7 @@ func (c *Curve) Hash(input []byte) (curves.Point, error) {
 }
 
 func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
-	p := secp256k1.PointNew()
+	p := k256impl.PointNew()
 	u, err := NewCurve().HashToFieldElements(2, input, dst)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "hash to field element of K256 failed")
@@ -137,7 +137,7 @@ func (*Curve) Add(x curves.Point, ys ...curves.Point) curves.Point {
 
 func (*Curve) Identity() curves.Point {
 	return &Point{
-		V: secp256k1.PointNew().Identity(),
+		V: k256impl.PointNew().Identity(),
 	}
 }
 
@@ -167,7 +167,7 @@ func (*Curve) Sub(x curves.Point, ys ...curves.Point) curves.Point {
 
 func (*Curve) Generator() curves.Point {
 	return &Point{
-		V: secp256k1.PointNew().Generator(),
+		V: k256impl.PointNew().Generator(),
 	}
 }
 
@@ -200,7 +200,7 @@ func (*Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 	if !ok {
 		return nil, errs.NewInvalidType("y is not the right type")
 	}
-	value, err := secp256k1.PointNew().SetNat(xx.Nat(), yy.Nat())
+	value, err := k256impl.PointNew().SetNat(xx.Nat(), yy.Nat())
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "could not set x,y")
 	}
@@ -279,7 +279,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		}
 		nScalars[i] = s.V
 	}
-	value := secp256k1.PointNew()
+	value := k256impl.PointNew()
 	_, err := value.SumOfProducts(nPoints, nScalars)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
@@ -294,18 +294,18 @@ func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.P
 	}
 	rhs := fp.New()
 	cPoint := new(Point)
-	cPoint.V = secp256k1.PointNew()
+	cPoint.V = k256impl.PointNew()
 	cPoint.V.Arithmetic.RhsEq(rhs, xc.V)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
 		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
 	}
-	p1e := secp256k1.PointNew().Identity()
+	p1e := k256impl.PointNew().Identity()
 	p1e.X = xc.V
 	p1e.Y = fp.New().Set(y)
 	p1e.Z.SetOne()
 
-	p2e := secp256k1.PointNew().Identity()
+	p2e := k256impl.PointNew().Identity()
 	p2e.X = xc.V
 	p2e.Y = fp.New().Neg(fp.New().Set(y))
 	p2e.Z.SetOne()

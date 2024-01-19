@@ -1,6 +1,9 @@
 package bls12381
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -13,6 +16,9 @@ import (
 
 var _ curves.PairingPoint = (*PointG2)(nil)
 var _ curves.ProjectiveCurveCoordinates = (*PointG2)(nil)
+var _ encoding.BinaryMarshaler = (*PointG1)(nil)
+var _ encoding.BinaryUnmarshaler = (*PointG1)(nil)
+var _ json.Unmarshaler = (*PointG2)(nil)
 
 type PointG2 struct {
 	V *bls12381impl.G2

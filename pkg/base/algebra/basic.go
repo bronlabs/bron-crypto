@@ -1,7 +1,6 @@
 package algebra
 
 import (
-	"encoding"
 	"encoding/json"
 	"io"
 
@@ -48,8 +47,28 @@ type AbstractStructuredSetElement[S Structure, E Element] interface {
 	// Clone returns a deep copy of this element.
 	Clone() E
 
+	// We regularly want to unmarshal into an interfacel To do that we'll use a helper function instead of embedding the unmarshaller here.
 	json.Marshaler
-	json.Unmarshaler
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
+}
+
+type NatLike[E Element] interface {
+	// SetNat returns a new element set to the value of `v mod S.Order()`.
+	SetNat(v *saferith.Nat) E
+	// Nat casts this element as a Nat.
+	Nat() *saferith.Nat
+}
+
+type BytesLike[E Element] interface {
+	// Bytes returns the canonical big-endian byte representation of this element.
+	// s.t. this = Σ_{i=0}^{k-1} (this.Bytes()[i] << 8*(k-i-1) ). The result
+	// is always FieldBytes long.
+	Bytes() []byte
+	// SetBytes creates an element from a big-endian byte representation
+	// s.t. element = Σ_{i=0}^{k-1} (input[i] << 8*(k-i-1) ). The input must be exactly
+	// FieldBytes long.
+	// WARNING: do not use it for uniform sampling, use SetBytesWide instead.
+	SetBytes(bytes []byte) (E, error)
+	// SetBytesWide creates an element from uniformly sampled bytes, reducing the result
+	// with S.Order(). The input must be at most k*WideFieldBytes long.
+	SetBytesWide(bytes []byte) (E, error)
 }

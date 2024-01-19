@@ -23,7 +23,7 @@ func New() *impl.FieldValue {
 	return &impl.FieldValue{
 		Value:      [impl.FieldLimbs]uint64{},
 		Params:     getP256FqParams(),
-		Arithmetic: p256FqArithmetic{},
+		Arithmetic: Arithmetic{},
 	}
 }
 
@@ -50,47 +50,47 @@ func getP256FqParams() *impl.FieldParams {
 	return &p256FqParams
 }
 
-// p256FqArithmetic is a struct with all the methods needed for working
+// Arithmetic is a struct with all the methods needed for working
 // in mod q.
-type p256FqArithmetic struct{}
+type Arithmetic struct{}
 
 // ToMontgomery converts this field to montgomery form.
-func (p256FqArithmetic) ToMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) ToMontgomery(out, arg *[impl.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
 // FromMontgomery converts this field from montgomery form.
-func (p256FqArithmetic) FromMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) FromMontgomery(out, arg *[impl.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Neg performs modular negation.
-func (p256FqArithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Square performs modular square.
-func (p256FqArithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Mul performs modular multiplication.
-func (p256FqArithmetic) Mul(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Mul(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Add performs modular addition.
-func (p256FqArithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Sub performs modular subtraction.
-func (p256FqArithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Sqrt performs modular square root.
-func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
 	// c1 := s
@@ -152,7 +152,7 @@ func (f p256FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64
 }
 
 // Invert performs modular inverse.
-func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f Arithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://briansmith.org/ecc-inversion-addition-chains-01#p256_field_inversion
 	var x1, x10, x11, x101, x111, x1010, x1111, x10101, x101010, x101111 [impl.FieldLimbs]uint64
@@ -274,18 +274,18 @@ func (f p256FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]ui
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (p256FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
+func (Arithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (p256FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (p256FqArithmetic) Selectznz(out, arg1, arg2 *[impl.FieldLimbs]uint64, choice int) {
+func (Arithmetic) Selectznz(out, arg1, arg2 *[impl.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }
 

@@ -2,7 +2,9 @@ package curve25519
 
 import (
 	"crypto/subtle"
+	"encoding"
 	"encoding/binary"
+	"encoding/json"
 
 	"github.com/cronokirby/saferith"
 
@@ -15,6 +17,9 @@ import (
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
+var _ encoding.BinaryMarshaler = (*Scalar)(nil)
+var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
+var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
 	V [32]byte

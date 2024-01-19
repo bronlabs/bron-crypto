@@ -1,6 +1,9 @@
 package bls12381
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -12,6 +15,9 @@ import (
 )
 
 var _ curves.GtMember = (*GtMember)(nil)
+var _ encoding.BinaryMarshaler = (*GtMember)(nil)
+var _ encoding.BinaryUnmarshaler = (*GtMember)(nil)
+var _ json.Unmarshaler = (*GtMember)(nil)
 
 type GtMember struct {
 	V *bls12381impl.Gt

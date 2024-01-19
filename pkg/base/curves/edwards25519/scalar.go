@@ -1,6 +1,8 @@
 package edwards25519
 
 import (
+	"encoding"
+	"encoding/json"
 	"strings"
 
 	filippo "filippo.io/edwards25519"
@@ -16,6 +18,9 @@ import (
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
+var _ encoding.BinaryMarshaler = (*Scalar)(nil)
+var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
+var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
 	V *filippo.Scalar

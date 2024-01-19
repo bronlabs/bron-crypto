@@ -2,6 +2,8 @@ package edwards25519
 
 import (
 	"crypto/subtle"
+	"encoding"
+	"encoding/json"
 
 	filippo "filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
@@ -17,6 +19,9 @@ import (
 
 var _ curves.Point = (*Point)(nil)
 var _ curves.ExtendedCoordinates = (*Point)(nil)
+var _ encoding.BinaryMarshaler = (*Point)(nil)
+var _ encoding.BinaryUnmarshaler = (*Point)(nil)
+var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
 	V *filippo.Point

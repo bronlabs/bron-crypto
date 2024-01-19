@@ -2,6 +2,8 @@ package curve25519
 
 import (
 	"crypto/subtle"
+	"encoding"
+	"encoding/json"
 
 	"github.com/cronokirby/saferith"
 	curve25519n "golang.org/x/crypto/curve25519"
@@ -14,6 +16,9 @@ import (
 )
 
 var _ curves.Point = (*Point)(nil)
+var _ encoding.BinaryMarshaler = (*Point)(nil)
+var _ encoding.BinaryUnmarshaler = (*Point)(nil)
+var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
 	V [32]byte

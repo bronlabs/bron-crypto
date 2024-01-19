@@ -1,4 +1,4 @@
-package p256
+package impl
 
 import (
 	"sync"
@@ -20,7 +20,7 @@ func PointNew() *impl.EllipticPoint {
 		Y:          fp.New(),
 		Z:          fp.New(),
 		Params:     getP256PointParams(),
-		Arithmetic: &p256PointArithmetic{},
+		Arithmetic: &PointArithmetic{},
 	}
 }
 
@@ -98,9 +98,9 @@ func p256PointSswuParamsInit() {
 	}
 }
 
-type p256PointArithmetic struct{}
+type PointArithmetic struct{}
 
-func (k p256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
+func (k PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
 	sswuParams := getP256PointSswuParams()
 
 	q0x, q0y := sswuParams.Osswu3mod4(u0)
@@ -117,7 +117,7 @@ func (k p256PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoin
 	return nil
 }
 
-func (p256PointArithmetic) Double(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) Double(out, arg *impl.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 6)
 	var xx, yy, zz, xy2, yz2, xz2, bzz, bzz3 [impl.FieldLimbs]uint64
@@ -179,7 +179,7 @@ func (p256PointArithmetic) Double(out, arg *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (p256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
+func (PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 4).
 	var xx, yy, zz, zz3, bxz, bxz3 [impl.FieldLimbs]uint64
@@ -263,7 +263,7 @@ func (p256PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k p256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
+func (k PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.New().Square(affine.Y)
@@ -272,7 +272,7 @@ func (k p256PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	return lhs.Equal(rhs) == 1
 }
 
-func (p256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	var wasInverted int
 	var zero, x, y, z [impl.FieldLimbs]uint64
 	f := arg.X.Arithmetic
@@ -294,7 +294,7 @@ func (p256PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (p256PointArithmetic) RhsEq(out, x *impl.FieldValue) {
+func (PointArithmetic) RhsEq(out, x *impl.FieldValue) {
 	// Elliptic curve equation for p256 is: y^2 = x^3 ax + b
 	out.Square(x)
 	out.Mul(out, x)

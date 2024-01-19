@@ -1,6 +1,9 @@
 package k256
 
 import (
+	"encoding"
+	"encoding/json"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -14,6 +17,9 @@ import (
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
+var _ encoding.BinaryMarshaler = (*Scalar)(nil)
+var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
+var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
 	V *impl.FieldValue
