@@ -1,0 +1,68 @@
+package randomised_fischlin
+
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+)
+
+var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
+	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.CommitmentState, sigma.Challenge, sigma.Response,
+])(nil)
+
+type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response] struct {
+	sessionId     []byte
+	transcript    transcripts.Transcript
+	sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]
+}
+
+func (v verifier[X, W, A, S, E, Z]) Verify(statement X, proof compiler.NIZKPoKProof) error {
+	if proof == nil {
+		return errs.NewIsNil("proof")
+	}
+	rfProof, ok := proof.(*Proof[A, E, Z])
+	if !ok {
+		return errs.NewInvalidType("input proof")
+	}
+
+	if len(rfProof.A) != r || len(rfProof.E) != r || len(rfProof.Z) != r {
+		return errs.NewInvalidArgument("invalid length")
+	}
+
+	v.transcript.AppendMessages(statementLabel, v.sigmaProtocol.SerializeStatement(statement))
+
+	commitmentSerialized := make([]byte, 0)
+	challengeSerialized := make([]byte, 0)
+	for i := 0; i < r; i++ {
+		commitmentSerialized = append(commitmentSerialized, v.sigmaProtocol.SerializeCommitment(rfProof.A[i])...)
+		challengeSerialized = append(challengeSerialized, v.sigmaProtocol.SerializeChallenge(rfProof.E[i])...)
+	}
+	v.transcript.AppendMessages(commitmentLabel, commitmentSerialized)
+	v.transcript.AppendMessages(challengeLabel, challengeSerialized)
+
+	// step 1. parse (a_i, e_i, z_i) for i in [r] and set a = (a_i) for every i in [r]
+	a := make([]byte, 0)
+	for i := 0; i < r; i++ {
+		a = append(a, v.sigmaProtocol.SerializeCommitment(rfProof.A[i])...)
+	}
+
+	// step 2. for each i in [r] verify that hash(a, i, e_i, z_i) == 0 and SigmaV(x, (a_i, e_i, z_i)) is true, abort if not
+	for i := 0; i < r; i++ {
+		digest, err := hash(v.sessionId, a, bitstring.ToBytesLE(i), v.sigmaProtocol.SerializeChallenge(rfProof.E[i]), v.sigmaProtocol.SerializeResponse(rfProof.Z[i]))
+		if err != nil {
+			return errs.WrapHashingFailed(err, "cannot hash")
+		}
+		if !isAllZeros(digest) {
+			return errs.NewVerificationFailed("invalid challenge")
+		}
+		err = v.sigmaProtocol.Verify(statement, rfProof.A[i], rfProof.E[i], rfProof.Z[i])
+		if err != nil {
+			return errs.WrapVerificationFailed(err, "verification failed")
+		}
+	}
+
+	// step 3. accept
+	return nil
+}

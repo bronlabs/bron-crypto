@@ -274,8 +274,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 
 	value := p256impl.PointNew().Identity()
 	rhs := fp.New()
-	arith := &p256impl.PointArithmetic{}
-	arith.RhsEq(rhs, x)
+	value.Arithmetic.RhsEq(rhs, x)
 	// test that rhs is quadratic residue
 	// if not, then this Point is at infinity
 	y, wasQr := fp.New().Sqrt(rhs)
