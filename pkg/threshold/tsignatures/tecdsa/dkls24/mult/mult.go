@@ -83,12 +83,12 @@ type (
 // 			7.1. eta_k = ahat_k + sum_i^l (theta_{i*rho + k} * a_i)
 // 		8. for j in [Xi]:
 // 			8.1. mubold_j = sum_k^rho (alpha_0_{j,l+k} + sum_i^l (theta_{i*rho + k} * alpha_0_{j,i}))
-// 		9. mu = H (sid || mubold) of length 2*lambda_c
+// 		9. Mu = H (sid || mubold) of length 2*lambda_c
 // 			NOTE: This can be achieved directly with a variable length hash function.
-// 		10. Send(atilde, eta, mu) to B
+// 		10. Send(atilde, eta, Mu) to B
 //         RETURN c
 
-// 	B.Round3(atilde, eta, mu)
+// 	B.Round3(atilde, eta, Mu)
 //         1. Run OTE.Round3(...) --> gamma
 // 		2. theta <- H_Zq(sid || atilde) of length l*rho
 //         3. for j in [Xi]:
@@ -96,6 +96,6 @@ type (
 //             3.2 dhat_{j,k} = gamma_{j,l+k} + beta_j * ahat_{j,k}  for all k in [rho]
 //             3.3 muBoldPrime_{j,k} = dhat_{j,k} - beta_j * eta_k + sum_i^l (theta_{i*rho + k} * ddot_{j,i})  for all k in [rho]
 //         4. muPrime = H (sid || muBoldPrime) of length 2*lambda_c
-//         5. Check if muPrime == mu, ABORT otherwise
+//         5. Check if muPrime == Mu, ABORT otherwise
 //         6. Compute d_i = sum_j (g_j * ddot_{j,i})  for all i in [l]
 //         RETURN d

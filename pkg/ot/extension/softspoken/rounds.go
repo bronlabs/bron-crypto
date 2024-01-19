@@ -13,7 +13,7 @@ import (
 )
 
 type Round1Output struct {
-	u        ExtMessageBatch   // [κ][η']bits
+	U        ExtMessageBatch   // [κ][η']bits
 	Witness  Witness           // [κ][σ]bits
 	Response ChallengeResponse // [σ] + [κ][σ]bits
 
@@ -60,14 +60,14 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 	}
 	// step 1.1.3 (Ext.3)
 	for i := 0; i < Kappa; i++ {
-		r1Out.u[i] = make([]byte, etaPrimeBytes) // u_i = t^i_0 + t^i_1 + Δ_i
-		subtle.XORBytes(r1Out.u[i], t[0][i], t[1][i])
-		subtle.XORBytes(r1Out.u[i], r1Out.u[i], R.xPrime)
+		r1Out.U[i] = make([]byte, etaPrimeBytes) // u_i = t^i_0 + t^i_1 + Δ_i
+		subtle.XORBytes(r1Out.U[i], t[0][i], t[1][i])
+		subtle.XORBytes(r1Out.U[i], r1Out.U[i], R.xPrime)
 	}
 
 	// CONSISTENCY CHECK
 	// step 1.2.1.[1-2] (*)(Check.1, Fiat-Shamir)
-	r1Out.Witness, err = commitWitness(R.transcript, &r1Out.u, nil, R.csrand)
+	r1Out.Witness, err = commitWitness(R.transcript, &r1Out.U, nil, R.csrand)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
 	}
@@ -114,11 +114,11 @@ type Round2Output struct {
 func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
 ) (oTeSenderOutput *[2]OTeMessageBatch, cOTeSenderOutput COTeMessageBatch, r2out *Round2Output, err error) {
 	// Sanitise inputs, compute sizes
-	if r1out == nil || len(r1out.u) != Kappa || len(r1out.Witness) != Kappa ||
+	if r1out == nil || len(r1out.U) != Kappa || len(r1out.Witness) != Kappa ||
 		len(r1out.Response.T_val) != Kappa || len(r1out.Response.X_val) != SigmaBytes {
 
-		return nil, nil, nil, errs.NewInvalidLength("wrong r1out length (u (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
-			len(r1out.u), Kappa, len(r1out.Witness), Kappa, len(r1out.Response.T_val), Kappa, len(r1out.Response.X_val), SigmaBytes)
+		return nil, nil, nil, errs.NewInvalidLength("wrong r1out length (U (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
+			len(r1out.U), Kappa, len(r1out.Witness), Kappa, len(r1out.Response.T_val), Kappa, len(r1out.Response.X_val), SigmaBytes)
 	}
 	Eta := S.LOTe * S.Xi                // η = LOTe*ξ
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
@@ -139,17 +139,17 @@ func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
 	extCorrelations := ExtMessageBatch{}
 	qiTemp := make([]byte, EtaPrimeBytes)
 	for i := 0; i < Kappa; i++ {
-		if len(r1out.u[i]) != EtaPrimeBytes {
-			return nil, nil, nil, errs.NewInvalidLength("u[%d] length is %d, should be %d", i, len(r1out.u[i]), EtaPrimeBytes)
+		if len(r1out.U[i]) != EtaPrimeBytes {
+			return nil, nil, nil, errs.NewInvalidLength("U[%d] length is %d, should be %d", i, len(r1out.U[i]), EtaPrimeBytes)
 		}
 		extCorrelations[i] = t_Delta[i]
-		subtle.XORBytes(qiTemp, r1out.u[i], t_Delta[i])
+		subtle.XORBytes(qiTemp, r1out.U[i], t_Delta[i])
 		subtle.ConstantTimeCopy(S.baseOtSeeds.RandomChoiceBits[i], extCorrelations[i], qiTemp)
 	}
 
 	// CONSISTENCY CHECK
 	// step 2.2.1.1 (*)(Fiat-Shamir): Append the expansionMask to the transcript
-	_, err = commitWitness(S.transcript, &r1out.u, r1out.Witness, S.csrand)
+	_, err = commitWitness(S.transcript, &r1out.U, r1out.Witness, S.csrand)
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
 	}
