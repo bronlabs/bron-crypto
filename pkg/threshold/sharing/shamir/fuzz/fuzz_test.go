@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
-func Fuzz_Test(f *testing.F) {
+func FuzzShamir(f *testing.F) {
 	f.Add(uint(0), []byte("msg"), int64(0))
 	f.Fuzz(func(t *testing.T, curveIndex uint, message []byte, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
@@ -39,5 +40,17 @@ func Fuzz_Test(f *testing.F) {
 		secret, err := scheme.Combine(shares...)
 		require.Nil(t, err)
 		require.Equal(t, secret, messageScalar)
+	})
+}
+
+func FuzzLagrangeCoefficients(f *testing.F) {
+	f.Add(uint(0), 1, 2, 3)
+	f.Fuzz(func(t *testing.T, curveIndex uint, x1 int, x2 int, x3 int) {
+		curve := allCurves[int(curveIndex)%len(allCurves)]
+		fmt.Println(curve.Name())
+		_, err := shamir.LagrangeCoefficients(curve, []int{x1, x2, x3})
+		if err != nil && !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		}
 	})
 }

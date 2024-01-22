@@ -188,9 +188,15 @@ func (s *Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluat
 }
 
 func LagrangeCoefficients(curve curves.Curve, sharingIds []int) (map[int]curves.Scalar, error) {
+	sharingIdsHashSet := make(map[int]any, len(sharingIds))
 	sharingIdsScalar := make([]curves.Scalar, len(sharingIds))
 	for i := 0; i < len(sharingIds); i++ {
-		sharingIdsScalar[i] = curve.ScalarField().New(uint64(sharingIds[i]))
+		id := sharingIds[i]
+		if _, exists := sharingIdsHashSet[id]; exists {
+			return nil, errs.NewDuplicate("sharing id %d is duplicate", id)
+		}
+		sharingIdsHashSet[id] = true
+		sharingIdsScalar[i] = curve.ScalarField().New(uint64(id))
 	}
 	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.ScalarField().Zero()) // secret is at 0
 	if err != nil {

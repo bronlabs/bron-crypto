@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -64,7 +65,7 @@ func Fuzz_Test_ScalarNeg(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, i uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		v := curve.ScalarField().New(i)
-		require.Equal(t, 0, v.Neg().Neg().Cmp(v))
+		require.Equal(t, algebra.Equal, v.Neg().Neg().Cmp(v))
 	})
 }
 
@@ -91,7 +92,7 @@ func Fuzz_Test_ScalarSub(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, i uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		v := curve.ScalarField().New(i)
-		require.Equal(t, 0, v.Sub(v).Cmp(curve.ScalarField().Zero()))
+		require.Equal(t, algebra.Equal, v.Sub(v).Cmp(curve.ScalarField().Zero()))
 	})
 }
 

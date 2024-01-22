@@ -14,12 +14,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
-func Fuzz_Test_polynomial(f *testing.F) {
+func FuzzPolynomial(f *testing.F) {
 	f.Add(uint(0), []byte("test"), int64(0), 4, uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, s []byte, randomSeed int64, degree int, x uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
@@ -40,16 +39,7 @@ func Fuzz_Test_polynomial(f *testing.F) {
 	})
 }
 
-func Fuzz_Test_LagrangeCoefficients(f *testing.F) {
-	f.Add(uint(0), 1, 2, 3)
-	f.Fuzz(func(t *testing.T, curveIndex uint, x1 int, x2 int, x3 int) {
-		curve := allCurves[int(curveIndex)%len(allCurves)]
-		_, err := shamir.LagrangeCoefficients(curve, []int{x1, x2, x3})
-		require.NoError(t, err)
-	})
-}
-
-func Fuzz_Test_Interpolate(f *testing.F) {
+func FuzzInterpolate(f *testing.F) {
 	f.Add(uint(0), uint64(1), uint64(2), uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, x uint64, y uint64, at uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
@@ -58,7 +48,7 @@ func Fuzz_Test_Interpolate(f *testing.F) {
 	})
 }
 
-func Fuzz_Test_InterpolateInTheExponent(f *testing.F) {
+func FuzzInterpolateInTheExponent(f *testing.F) {
 	f.Add(uint(0), uint64(1), uint64(2), uint64(2), uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, x uint64, px uint64, py uint64, at uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]

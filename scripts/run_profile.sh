@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/usr/bin/env sh
 
 packageName=$1
 if [[ -z $packageName ]]; then
@@ -17,15 +17,21 @@ do
         if [[ $func == "func" ]]; then
             continue
         fi
-        if [[ $file != *$packageName* ]]; then
+        case "$file" in
+          *"$packageName"*)
+            ;; # Do nothing if $file is a substring of $packageName
+          *)
             continue
-        fi
+            ;;
+        esac
+        set -x
         parentDir=$(dirname $file)
         mkdir -p ${TMPDIR}${parentDir}
         let COUNTER++
         PROFILE_TEST=1 go test -timeout 300s -run ^$func\$ $parentDir -memprofile ${TMPDIR}${parentDir}/memprofile.out -cpuprofile ${TMPDIR}${parentDir}/cpuprofile.out
         go tool pprof -top ${TMPDIR}${parentDir}/memprofile.out | grep copperexchange
         go tool pprof -top ${TMPDIR}${parentDir}/cpuprofile.out | grep copperexchange
+        set +x
     done
 done
 

@@ -2,7 +2,6 @@ package gennaro_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
 	"hash"
@@ -19,8 +18,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
@@ -30,25 +27,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
-
-var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
-var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
-
-func Fuzz_Test(f *testing.F) {
-	f.Add(uint(0), uint(0), uint64(1), uint64(2), []byte("sid"), int64(0), uint8(2), uint8(3))
-	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, a uint64, b uint64, sid []byte, randomSeed int64, th uint8, n uint8) {
-		curve := allCurves[int(curveIndex)%len(allCurves)]
-		h := allHashes[int(hashIndex)%len(allHashes)]
-		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
-		n = (n % 4) + 1
-		th = th % n
-		testHappyPath(t, cipherSuite.Curve, cipherSuite.Hash, int(th), int(n), prng)
-	})
-}
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, prng io.Reader) {
 	t.Helper()

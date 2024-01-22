@@ -1,6 +1,7 @@
-#!/bin/sh -x
+#!/usr/bin/env sh
 
 packageName=$1
+flag=$2
 if [[ -z $packageName ]]; then
     echo "Usage: ./run_unittest.sh <packageName>"
     exit 1
@@ -10,9 +11,15 @@ files=$(find . -name "$packageName")
 
 for file in ${files}
 do
-    if [[ $file != *$packageName* ]]; then
-        continue
-    fi
+        case "$file" in
+          *"$packageName"*)
+            ;; # Do nothing if $file is a substring of $packageName
+          *)
+            continue
+            ;;
+        esac
     parentDir=$(dirname $file)
-    go test -count=100 -test.short -timeout 0s "$parentDir/$packageName/..."
+    set -x
+    go test -count=1000 $flag -timeout 0s "$parentDir/$packageName/..."
+    set +x
 done

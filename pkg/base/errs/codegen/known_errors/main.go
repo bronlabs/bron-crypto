@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-const tmpl = `//nolint:nolintlint,gci,gofmt // we want to use pkg/errors only here, but nowhere else
+const tmpl = `
 package errs
 
 var knownErrors = []ErrorType{

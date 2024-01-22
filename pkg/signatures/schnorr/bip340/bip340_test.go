@@ -227,7 +227,7 @@ func doTestSign(privateKeyString string, messageString string, auxString string)
 		return nil, errs.WrapFailed(err, "cannot decode message")
 	}
 
-	signer := bip340.NewSigner(bip340PrivateKey)
+	signer, _ := bip340.NewSigner(bip340PrivateKey)
 
 	aux, err := hex.DecodeString(auxString)
 	if err != nil {
@@ -282,14 +282,14 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		require.NoError(t, err)
 		aliceKey, err := bip340.NewPrivateKey(sk1)
 		require.NoError(t, err)
-		alice := bip340.NewSigner(aliceKey)
+		alice, _ := bip340.NewSigner(aliceKey)
 		require.NotNil(t, alice)
 
 		sk2, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		bobKey, err := bip340.NewPrivateKey(sk2)
 		require.NoError(t, err)
-		bob := bip340.NewSigner(bobKey)
+		bob, _ := bip340.NewSigner(bobKey)
 		require.NotNil(t, bob)
 
 		signatureAlice, err := alice.Sign(message1, nil, crand.Reader)

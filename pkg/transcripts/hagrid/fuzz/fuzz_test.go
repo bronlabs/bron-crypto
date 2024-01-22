@@ -9,8 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-func Fuzz_Test(f *testing.F) {
-	f.Fuzz(func(t *testing.T, label []byte, message []byte, l int) {
+func FuzzHagrid(f *testing.F) {
+	f.Fuzz(func(t *testing.T, label []byte, message []byte, l uint) {
 		mt := hagrid.NewTranscript(string(label), nil)
 		mt.AppendMessages(string(label), message)
 		_, err := mt.ExtractBytes(string(label), l)

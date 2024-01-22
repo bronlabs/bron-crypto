@@ -27,7 +27,10 @@ func Fuzz_Test(f *testing.F) {
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
-		signer := bip340.NewSigner(privateKey)
+		if err != nil {
+			t.Skip(err.Error())
+		}
+		signer, err := bip340.NewSigner(privateKey)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

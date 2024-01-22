@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding"
 	"encoding/json"
-	"fmt"
 
 	"github.com/cronokirby/saferith"
 
@@ -266,17 +265,14 @@ func (e *BaseFieldElementG2) Cmp(rhs curves.BaseFieldElement) algebra.Ordering {
 	}
 	normCheck := e.Norm().Cmp(other.Norm())
 	if normCheck != algebra.Equal {
-		fmt.Println("normCheck")
 		return normCheck
 	}
 	realCheck := e.SubFieldElement(0).Cmp(other.SubFieldElement(0))
 	if realCheck != algebra.Equal {
-		fmt.Println("realCheck")
 		return realCheck
 	}
 	imaginaryCheck := e.SubFieldElement(1).Cmp(other.SubFieldElement(1))
 	if imaginaryCheck != algebra.Equal {
-		fmt.Println("i check")
 		return imaginaryCheck
 	}
 	return algebra.Equal

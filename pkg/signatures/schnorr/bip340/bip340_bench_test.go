@@ -31,7 +31,7 @@ func Benchmark_Verify(b *testing.B) {
 		privateKeys[i], err = bip340.NewPrivateKey(sk)
 		require.NoError(b, err)
 
-		signer := bip340.NewSigner(privateKeys[i])
+		signer, _ := bip340.NewSigner(privateKeys[i])
 
 		message := make([]byte, 32)
 		_, err = crand.Read(message)
@@ -80,13 +80,13 @@ func Benchmark_TwoPartyManyMessageVerify(b *testing.B) {
 	require.NoError(b, err)
 	alicePrivateKey, err := bip340.NewPrivateKey(sk1)
 	require.NoError(b, err)
-	alice := bip340.NewSigner(alicePrivateKey)
+	alice, _ := bip340.NewSigner(alicePrivateKey)
 
 	sk2, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(b, err)
 	bobPrivateKey, err := bip340.NewPrivateKey(sk2)
 	require.NoError(b, err)
-	bob := bip340.NewSigner(bobPrivateKey)
+	bob, _ := bip340.NewSigner(bobPrivateKey)
 
 	aliceMessages := make([][]byte, batchSize)
 	aliceSignatures := make([]*bip340.Signature, batchSize)

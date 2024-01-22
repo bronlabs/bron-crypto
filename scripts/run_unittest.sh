@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/usr/bin/env sh
 
 packageName=$1
 flag=$2
@@ -11,9 +11,16 @@ files=$(find . -name "$packageName")
 
 for file in ${files}
 do
-    if [[ $file != *$packageName* ]]; then
+    case "$file" in
+      *"$packageName"*)
+        ;; # Do nothing if $file is a substring of $packageName
+      *)
         continue
-    fi
+        ;;
+    esac
     parentDir=$(dirname $file)
-    go test $flag -timeout 0s "$parentDir/$packageName/..."
+    packageDir="$parentDir/$packageName"
+    set -x
+    go test $flag -timeout 0 "$packageDir/..."
+    set +x
 done

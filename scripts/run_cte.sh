@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/usr/bin/env sh
 
 packageName=$1
 if [[ -z $packageName ]]; then
@@ -17,12 +17,18 @@ do
         if [[ $func == "func" ]]; then
             continue
         fi
-        if [[ $file != *$packageName* ]]; then
+        case "$file" in
+          *"$packageName"*)
+            ;; # Do nothing if $file is a substring of $packageName
+          *)
             continue
-        fi
+            ;;
+        esac
         parentDir=$(dirname $file)
         let COUNTER++
+        set -x
         EXEC_TIME_TEST=1 go test -timeout 300s -run ^$func\$ $parentDir
+        set +x
     done
 done
 

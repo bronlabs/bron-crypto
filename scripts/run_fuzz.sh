@@ -1,8 +1,9 @@
-#!/bin/sh -x
+#!/usr/bin/env sh
 
 packageName=$1
+flag=$2
 if [[ -z $packageName ]]; then
-    echo "Usage: ./run_fuzz.sh <packageName>"
+    echo "Usage: ./scripts/run_fuzz.sh <packageName>"
     exit 1
 fi
 
@@ -17,12 +18,18 @@ do
         if [[ $func == "func" ]]; then
             continue
         fi
-        if [[ $file != *$packageName* ]]; then
+        case "$file" in
+          *"$packageName"*)
+            ;; # Do nothing if $file is a substring of $packageName
+          *)
             continue
-        fi
+            ;;
+        esac
         parentDir=$(dirname $file)
         let COUNTER++
-        go test $parentDir -fuzz="^$func\$" -parallel=10 -fuzztime=120s
+        set -x
+        go test $parentDir -fuzz="^$func\$" $flag
+        set +x
     done
 done
 

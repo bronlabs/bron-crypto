@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 )
 
-func Fuzz_Test_hash(f *testing.F) {
+func FuzzHashChain(f *testing.F) {
 	f.Fuzz(func(t *testing.T, a []byte) {
 		_, err := hashing.HashChain(sha256.New, a)
 		if err != nil && !errs.IsKnownError(err) {
@@ -20,7 +20,7 @@ func Fuzz_Test_hash(f *testing.F) {
 	})
 }
 
-func Fuzz_Test_hashaes(f *testing.F) {
+func FuzzTmmo(f *testing.F) {
 	f.Fuzz(func(t *testing.T, input []byte, iv []byte, length int) {
 		h, err := tmmohash.NewTmmoHash(length, 64, iv)
 		if err != nil && !errs.IsKnownError(err) {

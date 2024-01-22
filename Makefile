@@ -1,16 +1,24 @@
+include scripts/Makefile
+
 GOENV=GO111MODULE=on
 GO=${GOENV} go
 
 COVERAGE_OUT=/tmp/coverage.out
+SCRIPTS_DIR=./scripts
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 
 .PHONY: all
-all: build lint fmt test
+all: build lint test
+
+.PHONY: codegen
+codegen:
+	${GO} generate ./...
+	golangci-lint run --fix ./pkg/base/errs
 
 .PHONY: build
 build:
-	${GO} generate ./...
+	$(MAKE) codegen
 	${GO} build ./...
 
 .PHONY: bench
@@ -19,16 +27,20 @@ bench:
 
 .PHONY: clean
 clean:
-	${GO} clean -cache -modcache -i -r
+	${GO} clean -cache -modcache -r -i
+
+.PHONY: clean-test
+clean-test:
+	${GO} clean -testcache
+
+.PHONY: clean-fuzz
+clean-fuzz:
+	find . -type d -path "*/testdata" -exec rm -r -i {}/fuzz \;
 
 .PHONY: cover
 cover: ## compute and display test coverage report
 	${GO} test -short -coverprofile=${COVERAGE_OUT} ./...
 	${GO} tool cover -html=${COVERAGE_OUT}
-
-.PHONY: fmt
-fmt:
-	${GO} fmt ./...
 
 .PHONY: githooks
 githooks:
@@ -38,81 +50,40 @@ githooks:
 .PHONY: lint
 lint:
 	${GO} vet ./...
-	golangci-lint run --timeout=60m
+	golangci-lint run --timeout=5m
+
+.PHONY: lint-long
+lint-long:
+	${GO} vet ./...
+	golangci-lint run --timeout=120m
 
 .PHONY: lint-fix
 lint-fix:
 	${GO} vet ./...
-	golangci-lint run --fix
-
-.PHONY: deflake
-deflake: ## Runs tests many times to detect flakes
-	${GO} test -count=1000 -short -timeout 0 ${TEST_CLAUSE} ./...
+	${GO} fmt ./...
+	golangci-lint run --fix --timeout=120m
 
 .PHONY: test
 test:
 	${GO} test -short ${TEST_CLAUSE} ./...
 
-.PHONY: test-clean
-test-clean: ## Clear test cache and force all tests to be rerun
-	${GO} clean -testcache && ${GO} test -count=1 -short ${TEST_CLAUSE} ./...
-
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
 	${GO} test ${TEST_CLAUSE} -timeout 120m ./...
 
-.PHONY: test-clean-long
-test-clean-long: ## Clear test cache and force all tests to be rerun
-	${GO} clean -testcache && ${GO} test -count=1 ${TEST_CLAUSE} ./...
+.PHONY: deflake
+deflake: ## Runs short tests many times to detect flakes
+	${GO} test -count=1000 -short -timeout 0 ${TEST_CLAUSE} ./...
 
-.PHONY: short-test-package-%
-short-test-package-%:
-	$(MAKE) short-unit-test-${*}
+.PHONY: deflake-long
+deflake-long: ## Runs tests many times to detect flakes
+	${GO} test -count=1000 -timeout 0 ${TEST_CLAUSE} ./...
 
-.PHONY: test-package-%
-test-package-%: ## for example `make test-package-hashing` to run all test under hashing package
-	$(MAKE) fuzz-test-${*}
-	$(MAKE) profile-test-${*}
-	$(MAKE) benchmark-test-${*}
-	$(MAKE) cte-test-${*}
-	$(MAKE) unit-test-${*}
-	$(MAKE) deflake-test-${*}
+.PHONY: fuzz
+fuzz:
+	$(MAKE) fuzz-test-pkg
 
-.PHONY: fuzz-test-%
-fuzz-test-%:
-	chmod +x scripts/run_fuzz.sh
-	./scripts/run_fuzz.sh ${*}
+.PHONY: fuzz-long
+fuzz-long:
+	$(MAKE) fuzz-test-long-pkg
 
-.PHONY: profile-test-%
-profile-test-%:
-	chmod +x scripts/run_profile.sh
-	./scripts/run_profile.sh ${*}
-
-.PHONY: benchmark-test-%
-benchmark-test-%:
-	chmod +x scripts/run_benchmark.sh
-	./scripts/run_benchmark.sh ${*}
-
-.PHONY: cte-test-%
-cte-test-%:
-	chmod +x scripts/run_cte.sh
-	./scripts/run_cte.sh ${*}
-
-.PHONY: unittest-test-%
-unit-test-%:
-	chmod +x scripts/run_unittest.sh
-	./scripts/run_unittest.sh ${*}
-
-.PHONY: short-unittest-test-%
-short-unit-test-%:
-	chmod +x scripts/run_unittest.sh
-	./scripts/run_unittest.sh ${*} -test.short
-
-.PHONY: deflake-test-%
-deflake-test-%:
-	chmod +x scripts/run_deflake.sh
-	./scripts/run_deflake.sh ${*}
-
-.PHONY: test-nightly
-test-nightly:
-	$(MAKE) test-package-pkg

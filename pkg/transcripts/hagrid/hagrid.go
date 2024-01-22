@@ -94,7 +94,7 @@ func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 // ExtractBytes generates outLen bytes of pseudorandom data with its `prng`
 // based on the current transcript state and the supplied label. If the `prng`
 // is nil, a Shake256 hash is used instead.
-func (t *Transcript) ExtractBytes(label string, outLen int) (out []byte, err error) {
+func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err error) {
 	// AdditionalData[label]
 	t.ratchet([]byte(label))
 	out = make([]byte, outLen)

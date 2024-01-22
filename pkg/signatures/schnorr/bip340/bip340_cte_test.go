@@ -30,7 +30,7 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 		require.NoError(t, err)
 		privateKey, err := bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
-		signer = bip340.NewSigner(privateKey)
+		signer, _ = bip340.NewSigner(privateKey)
 
 	}, func() {
 		_, _ = signer.Sign(message, aux, nil)
@@ -58,7 +58,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		require.NoError(t, err)
 		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
-		signer = bip340.NewSigner(privateKey)
+		signer, _ = bip340.NewSigner(privateKey)
 		signature, err = signer.Sign(message, aux, nil)
 		require.NoError(t, err)
 	}, func() {
@@ -87,7 +87,7 @@ func Test_MeasureConstantTime_batchverify(t *testing.T) {
 		require.NoError(t, err)
 		privateKey, err = bip340.NewPrivateKey(sk)
 		require.NoError(t, err)
-		signer = bip340.NewSigner(privateKey)
+		signer, _ = bip340.NewSigner(privateKey)
 		require.NoError(t, err)
 		signature, err = signer.Sign(message, aux, nil)
 		require.NoError(t, err)

@@ -115,10 +115,7 @@ func (h *TmmoHash) Write(input []byte) (n int, err error) {
 	// A) Align the input into blocks of AesBlockSize bytes. Pad 0s if unalligned.
 	inputLength := len(input)
 	inputBlocks := utils.CeilDiv(inputLength, AesBlockSize)
-	if inputLength%AesBlockSize != 0 {
-		pad := make([]byte, inputLength%AesBlockSize)
-		input = append(input, pad...)
-	}
+	input = bitstring.PadToRight(input, (AesBlockSize-(inputLength%AesBlockSize))%AesBlockSize)
 	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
 	for i := 0; i < h.outputBlocks; i++ {
 		outputBlock := h.digest[i*AesBlockSize : (i+1)*AesBlockSize]

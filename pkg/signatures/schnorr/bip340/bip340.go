@@ -45,7 +45,7 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 
 	// 2. Fail if d' = 0 or d' ≥ n (implicit)
 	if dPrime.IsZero() {
-		return nil, errs.NewIsNil("secret is zero")
+		return nil, errs.NewIsZero("secret is zero")
 	}
 
 	// 3. Let P = d'⋅G
@@ -58,10 +58,13 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 		S: dPrime.Clone(),
 	}, nil
 }
-func NewSigner(privateKey *PrivateKey) *Signer {
+func NewSigner(privateKey *PrivateKey) (*Signer, error) {
+	if privateKey == nil {
+		return nil, errs.NewIsNil("private key")
+	}
 	return &Signer{
 		privateKey: privateKey,
-	}
+	}, nil
 }
 
 func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, error) {

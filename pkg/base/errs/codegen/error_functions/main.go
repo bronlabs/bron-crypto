@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-const tmpl = `//nolint:depguard,wrapcheck,gci,gofmt // we want to use pkg/errors only here, but nowhere else
+const tmpl = `//nolint:depguard,wrapcheck // we want to use pkg/errors only here, but nowhere else
 package errs
 
 import (
