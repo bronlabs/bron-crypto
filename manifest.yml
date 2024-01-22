@@ -7,7 +7,7 @@ include:
 
 conf:
   test-suite ? {{ vars.test-suite }}-{{ info.feature }}:
-    "-": "test-long"
+    "-": "test-master"
     "^-.+": "test"
     "*": "test-{{ vars.test-suite }}"
 
