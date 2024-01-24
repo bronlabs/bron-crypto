@@ -1,4 +1,4 @@
-package signing
+package interactive_signing
 
 import (
 	"io"

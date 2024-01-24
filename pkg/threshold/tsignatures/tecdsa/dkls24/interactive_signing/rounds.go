@@ -1,4 +1,4 @@
-package signing
+package interactive_signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
