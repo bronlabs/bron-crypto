@@ -9,17 +9,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 )
 
-func NewFiatShamirSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[curves.Point, curves.Scalar], error) {
+func NewFiatShamirSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[new_schnorr.Statement, new_schnorr.Witness], error) {
 	sigma, err := new_schnorr.NewSigmaProtocol(base, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	fs, err := fiat_shamir.NewCompiler(sigma)
+	fs, err := fiatShamir.NewCompiler(sigma)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create FiatShamir compiler")
 	}
@@ -27,13 +27,13 @@ func NewFiatShamirSchnorr(base curves.Point, prng io.Reader) (compiler.NICompile
 	return fs, nil
 }
 
-func NewFiatShamirBatchSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[[]curves.Point, []curves.Scalar], error) {
+func NewFiatShamirBatchSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness], error) {
 	sigma, err := batch_schnorr.NewSigmaProtocol(base, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	fs, err := fiat_shamir.NewCompiler(sigma)
+	fs, err := fiatShamir.NewCompiler(sigma)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Fiat-Shamir compiler")
 	}
@@ -41,13 +41,13 @@ func NewFiatShamirBatchSchnorr(base curves.Point, prng io.Reader) (compiler.NICo
 	return fs, nil
 }
 
-func NewFiatShamirChaumPedersen(g1, g2 curves.Point, prng io.Reader) (compiler.NICompiler[*new_chaum.Statement, curves.Scalar], error) {
+func NewFiatShamirChaumPedersen(g1, g2 curves.Point, prng io.Reader) (compiler.NICompiler[*new_chaum.Statement, new_chaum.Witness], error) {
 	sigma, err := new_chaum.NewSigmaProtocol(g1, g2, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	fs, err := fiat_shamir.NewCompiler(sigma)
+	fs, err := fiatShamir.NewCompiler(sigma)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Fiat-Shamir compiler")
 	}
@@ -55,13 +55,13 @@ func NewFiatShamirChaumPedersen(g1, g2 curves.Point, prng io.Reader) (compiler.N
 	return fs, nil
 }
 
-func NewRandomisedFischlinSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[curves.Point, curves.Scalar], error) {
+func NewRandomisedFischlinSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[new_schnorr.Statement, new_schnorr.Witness], error) {
 	sigma, err := new_schnorr.NewSigmaProtocol(base, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	rf, err := randomised_fischlin.NewCompiler(sigma, prng)
+	rf, err := randomisedFischlin.NewCompiler(sigma, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Randomised Fischlin compiler")
 	}
@@ -69,13 +69,13 @@ func NewRandomisedFischlinSchnorr(base curves.Point, prng io.Reader) (compiler.N
 	return rf, nil
 }
 
-func NewRandomisedFischlinBatchSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[[]curves.Point, []curves.Scalar], error) {
+func NewRandomisedFischlinBatchSchnorr(base curves.Point, prng io.Reader) (compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness], error) {
 	sigma, err := batch_schnorr.NewSigmaProtocol(base, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	rf, err := randomised_fischlin.NewCompiler(sigma, prng)
+	rf, err := randomisedFischlin.NewCompiler(sigma, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Randomised Fischlin compiler")
 	}
@@ -83,13 +83,13 @@ func NewRandomisedFischlinBatchSchnorr(base curves.Point, prng io.Reader) (compi
 	return rf, nil
 }
 
-func NewRandomisedFischlinChaumPedersen(g1, g2 curves.Point, prng io.Reader) (compiler.NICompiler[*new_chaum.Statement, curves.Scalar], error) {
+func NewRandomisedFischlinChaumPedersen(g1, g2 curves.Point, prng io.Reader) (compiler.NICompiler[*new_chaum.Statement, new_chaum.Witness], error) {
 	sigma, err := new_chaum.NewSigmaProtocol(g1, g2, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Schnorr protocol")
 	}
 
-	rf, err := randomised_fischlin.NewCompiler(sigma, prng)
+	rf, err := randomisedFischlin.NewCompiler(sigma, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Randomised Fischlin compiler")
 	}

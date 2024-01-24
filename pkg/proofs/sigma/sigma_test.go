@@ -38,9 +38,10 @@ func Test_HappyPathSchnorr(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			witness, err := curve.ScalarField().Random(crand.Reader)
+			w, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
-			statement := curve.ScalarBaseMult(witness)
+			witness := new_schnorr.Witness(w)
+			statement := new_schnorr.Statement(curve.ScalarBaseMult(witness))
 			prng := crand.Reader
 			protocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)

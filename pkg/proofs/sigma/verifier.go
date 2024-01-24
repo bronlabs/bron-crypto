@@ -9,13 +9,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-type Verifier[X Statement, W Witness, A Commitment, S CommitmentState, E Challenge, Z Response] struct {
-	participant[X, W, A, S, E, Z]
+type Verifier[X Statement, W Witness, A Commitment, S State, Z Response] struct {
+	participant[X, W, A, S, Z]
 
 	prng io.Reader
 }
 
-func NewVerifier[X Statement, W Witness, A Commitment, S CommitmentState, E Challenge, Z Response](sessionId []byte, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, E, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, E, Z], error) {
+func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sessionId []byte, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("sessionId is empty")
 	}
@@ -30,8 +30,8 @@ func NewVerifier[X Statement, W Witness, A Commitment, S CommitmentState, E Chal
 	transcript.AppendMessages(sessionIdLabel, sessionId)
 	transcript.AppendMessages(statementLabel, sigmaProtocol.SerializeStatement(statement))
 
-	return &Verifier[X, W, A, S, E, Z]{
-		participant: participant[X, W, A, S, E, Z]{
+	return &Verifier[X, W, A, S, Z]{
+		participant: participant[X, W, A, S, Z]{
 			sessionId:     sessionId,
 			transcript:    transcript,
 			sigmaProtocol: sigmaProtocol,
@@ -42,40 +42,35 @@ func NewVerifier[X Statement, W Witness, A Commitment, S CommitmentState, E Chal
 	}, nil
 }
 
-func (v *Verifier[X, W, A, S, E, Z]) Round2(commitment A) (E, error) {
-	var zero E
+func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 	v.transcript.AppendMessages(commitmentLabel, v.sigmaProtocol.SerializeCommitment(commitment))
 
 	if v.round != 2 {
-		return zero, errs.NewInvalidRound("r != 2 (%d)", v.round)
+		return nil, errs.NewInvalidRound("r != 2 (%d)", v.round)
 	}
 
-	entropy := make([]byte, 32)
-	_, err := io.ReadFull(v.prng, entropy)
+	challengeBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
+	_, err := io.ReadFull(v.prng, challengeBytes)
 	if err != nil {
-		return zero, errs.WrapFailed(err, "cannot read PRNG")
+		return nil, errs.WrapFailed(err, "cannot read PRNG")
 	}
 
-	challenge, err := v.sigmaProtocol.GenerateChallenge(entropy)
-	if err != nil {
-		return zero, errs.WrapFailed(err, "cannot generate challenge")
-	}
-	v.transcript.AppendMessages(challengeLabel, v.sigmaProtocol.SerializeChallenge(challenge))
+	v.transcript.AppendMessages(challengeLabel, challengeBytes)
 
 	v.commitment = commitment
-	v.challenge = challenge
+	v.challengeBytes = challengeBytes
 	v.round += 2
-	return challenge, nil
+	return challengeBytes, nil
 }
 
-func (v *Verifier[X, W, A, S, E, Z]) Verify(response Z) error {
+func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 	v.transcript.AppendMessages(responseLabel, v.sigmaProtocol.SerializeResponse(response))
 
 	if v.round != 4 {
 		return errs.NewInvalidRound("r != 4 (%d)", v.round)
 	}
 
-	err := v.sigmaProtocol.Verify(v.statement, v.commitment, v.challenge, response)
+	err := v.sigmaProtocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {
 		return errs.WrapVerificationFailed(err, "verification failed")
 	}

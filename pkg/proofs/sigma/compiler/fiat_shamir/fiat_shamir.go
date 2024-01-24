@@ -1,4 +1,4 @@
-package fiat_shamir
+package fiatShamir
 
 import (
 	"fmt"
@@ -24,22 +24,22 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 }
 
 var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*fs[
-	sigma.Statement, sigma.Witness, sigma.Statement, sigma.CommitmentState, sigma.Challenge, sigma.Response,
+	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
 ])(nil)
 
-type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response] struct {
-	sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]
+type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
 func NewCompiler[
-	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response,
-](sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]) (compiler.NICompiler[X, W], error) {
-	return &fs[X, W, A, S, E, Z]{
+	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
+](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NICompiler[X, W], error) {
+	return &fs[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil
 }
 
-func (c fs[X, W, A, S, E, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+func (c fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("sessionId is empty")
 	}
@@ -52,13 +52,13 @@ func (c fs[X, W, A, S, E, Z]) NewProver(sessionId []byte, transcript transcripts
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
 
-	return &prover[X, W, A, S, E, Z]{
+	return &prover[X, W, A, S, Z]{
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
 }
 
-func (c fs[X, W, A, S, E, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+func (c fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("sessionId is empty")
 	}
@@ -71,7 +71,7 @@ func (c fs[X, W, A, S, E, Z]) NewVerifier(sessionId []byte, transcript transcrip
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
 
-	return &verifier[X, W, A, S, E, Z]{
+	return &verifier[X, W, A, S, Z]{
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil

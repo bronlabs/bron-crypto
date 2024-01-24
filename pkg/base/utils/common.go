@@ -14,7 +14,15 @@ func Min[T constraints.Ordered](a, b T) T {
 	return b
 }
 
-// A one-line way to cast a bool to any integer type.
+// Max returns the minimum of two elements.
+func Max[T constraints.Ordered](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
 	if b {
 		return 1

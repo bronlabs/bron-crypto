@@ -1,4 +1,4 @@
-package fiat_shamir_test
+package fiatShamir_test
 
 import (
 	"bytes"
@@ -45,7 +45,7 @@ func Test_HappyPathWithBatchSchnorr(t *testing.T) {
 			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := fiat_shamir.NewCompiler(schnorrProtocol)
+			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -98,7 +98,7 @@ func Test_HappyPathWithSchnorr(t *testing.T) {
 			schnorrProtocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := fiat_shamir.NewCompiler(schnorrProtocol)
+			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -151,7 +151,7 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			schnorrProtocol, err := new_chaum.NewSigmaProtocol(g1, g2, prng)
 			require.NoError(t, err)
 
-			nizk, err := fiat_shamir.NewCompiler(schnorrProtocol)
+			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)

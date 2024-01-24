@@ -1,4 +1,4 @@
-package new_schnorr
+package new_schnorr_test
 
 import (
 	crand "crypto/rand"
@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
 )
 
 var supportedCurve = []curves.Curve{
@@ -35,7 +36,7 @@ func Test_HappyPath(t *testing.T) {
 			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			protocol, err := NewSigmaProtocol(base, crand.Reader)
+			protocol, err := new_schnorr.NewSigmaProtocol(base, crand.Reader)
 			require.NoError(t, err)
 
 			witness, err := curve.ScalarField().Random(crand.Reader)
@@ -43,18 +44,86 @@ func Test_HappyPath(t *testing.T) {
 			statement := base.Mul(witness)
 
 			// round 1
-			commitment, state, err := protocol.GenerateCommitment(statement, witness)
+			commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 			require.NoError(t, err)
 
 			// round 2
-			entropy := make([]byte, 32)
-			_, err = io.ReadFull(crand.Reader, entropy)
-			require.NoError(t, err)
-			challenge, err := protocol.GenerateChallenge(entropy)
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
 			require.NoError(t, err)
 
 			// round 3
-			response, err := protocol.GenerateResponse(statement, witness, state, challenge)
+			response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+			require.NoError(t, err)
+
+			// verify
+			err = protocol.Verify(statement, commitment, challenge, response)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func Test_InvalidStatement(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range supportedCurve {
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			base, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			protocol, err := new_schnorr.NewSigmaProtocol(base, crand.Reader)
+			require.NoError(t, err)
+
+			witness, err := curve.ScalarField().Random(crand.Reader)
+			require.NoError(t, err)
+			statement, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			// round 1
+			commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+			require.NoError(t, err)
+
+			// round 2
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
+			require.NoError(t, err)
+
+			// round 3
+			response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+			require.NoError(t, err)
+
+			// verify
+			err = protocol.Verify(statement, commitment, challenge, response)
+			require.Error(t, err)
+		})
+	}
+}
+
+func Test_Simulator(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range supportedCurve {
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			base, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			protocol, err := new_schnorr.NewSigmaProtocol(base, crand.Reader)
+			require.NoError(t, err)
+
+			statement, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			// simulate
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
+			require.NoError(t, err)
+			commitment, response, err := protocol.RunSimulator(statement, challenge)
 			require.NoError(t, err)
 
 			// verify

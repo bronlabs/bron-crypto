@@ -9,15 +9,35 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
+type Statement curves.Point
+
+var _ sigma.Statement = Statement(nil)
+
+type Witness curves.Scalar
+
+var _ sigma.Witness = Witness(nil)
+
+type Commitment curves.Point
+
+var _ sigma.Commitment = Commitment(nil)
+
+type State curves.Scalar
+
+var _ sigma.State = State(nil)
+
+type Response curves.Scalar
+
+var _ sigma.Response = Response(nil)
+
 type schnorr struct {
 	base  curves.Point
 	curve curves.Curve
 	prng  io.Reader
 }
 
-var _ sigma.Protocol[curves.Point, curves.Scalar, curves.Point, curves.Scalar, curves.Scalar, curves.Scalar] = (*schnorr)(nil)
+var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*schnorr)(nil)
 
-func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[curves.Point, curves.Scalar, curves.Point, curves.Scalar, curves.Scalar, curves.Scalar], error) {
+func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
 	if base == nil {
 		return nil, errs.NewIsNil("base")
 	}
@@ -32,17 +52,7 @@ func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[curves.
 	}, nil
 }
 
-func (s *schnorr) GenerateCommitment(statement curves.Point, witness curves.Scalar) (curves.Point, curves.Scalar, error) {
-	if statement == nil || witness == nil {
-		return nil, nil, errs.NewInvalidArgument("statement/witness is")
-	}
-	if witness.ScalarField().Curve().Name() != s.curve.Name() || statement.Curve().Name() != s.curve.Name() {
-		return nil, nil, errs.NewInvalidArgument("curve mismatch between statement and witness")
-	}
-	if !s.base.Mul(witness).Equal(statement) {
-		return nil, nil, errs.NewInvalidArgument("statement/witness mismatch")
-	}
-
+func (s *schnorr) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
 	k, err := s.curve.ScalarField().Random(s.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
@@ -52,44 +62,45 @@ func (s *schnorr) GenerateCommitment(statement curves.Point, witness curves.Scal
 	return r, k, nil
 }
 
-func (s *schnorr) GenerateChallenge(entropy []byte) (curves.Scalar, error) {
-	if len(entropy) == 0 {
-		return nil, errs.NewInvalidArgument("entropy is empty")
-	}
-
-	c, err := s.curve.ScalarField().Hash(entropy)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
-	}
-
-	return c, nil
-}
-
-func (s *schnorr) GenerateResponse(_ curves.Point, witness, state, challenge curves.Scalar) (curves.Scalar, error) {
+func (s *schnorr) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes []byte) (Response, error) {
 	if witness == nil || witness.ScalarField().Curve().Name() != s.curve.Name() {
 		return nil, errs.NewInvalidArgument("invalid curve")
 	}
-	if state == nil || state.ScalarField().Curve().Name() != s.curve.Name() || challenge == nil || challenge.ScalarField().Curve().Name() != s.curve.Name() {
+	if state == nil || state.ScalarField().Curve().Name() != s.curve.Name() {
 		return nil, errs.NewInvalidArgument("invalid curve")
 	}
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return nil, errs.NewIsNil("invalid challenge bytes length")
+	}
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cannot hash to scalar")
+	}
 
-	z := state.Add(witness.Mul(challenge))
+	z := state.Add(witness.Mul(e))
 	return z, nil
 }
 
-func (s *schnorr) Verify(statement, commitment curves.Point, challenge, response curves.Scalar) error {
-	if statement == nil || commitment == nil || challenge == nil || response == nil {
+func (s *schnorr) Verify(statement Statement, commitment Commitment, challengeBytes []byte, response Response) error {
+	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
 	if statement.Curve().Name() != s.curve.Name() {
 		return errs.NewInvalidArgument("invalid curve")
 	}
-	if commitment.Curve().Name() != s.curve.Name() || challenge.ScalarField().Curve().Name() != s.curve.Name() || response.ScalarField().Curve().Name() != s.curve.Name() {
+	if commitment.Curve().Name() != s.curve.Name() || response.ScalarField().Curve().Name() != s.curve.Name() {
 		return errs.NewInvalidArgument("invalid curve")
+	}
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
 	left := s.base.Mul(response)
-	right := statement.Mul(challenge).Add(commitment)
+	right := statement.Mul(e).Add(commitment)
 	if !left.Equal(right) {
 		return errs.NewVerificationFailed("verification failed")
 	}
@@ -97,22 +108,65 @@ func (s *schnorr) Verify(statement, commitment curves.Point, challenge, response
 	return nil
 }
 
+func (s *schnorr) RunSimulator(statement Statement, challengeBytes []byte) (Commitment, Response, error) {
+	if statement == nil || statement.Curve().Name() != s.curve.Name() {
+		return nil, nil, errs.NewInvalidArgument("statement")
+	}
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return nil, nil, errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	z, err := s.curve.ScalarField().Random(s.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
+	}
+
+	a := s.base.Mul(z).Sub(statement.Mul(e))
+	return a, z, nil
+}
+
+func (s *schnorr) ValidateStatement(statement Statement, witness Witness) error {
+	if statement == nil ||
+		witness == nil ||
+		statement.Curve().Name() != witness.ScalarField().Curve().Name() ||
+		!s.base.Mul(witness).Equal(statement) {
+
+		return errs.NewInvalidArgument("invalid statement")
+	}
+
+	return nil
+}
+
+func (s *schnorr) GetChallengeBytesLength() int {
+	return s.curve.ScalarField().WideFieldBytes()
+}
+
 func (*schnorr) DomainSeparationLabel() string {
 	return "ZKPOK_DLOG_SCHNORR"
 }
 
-func (*schnorr) SerializeStatement(statement curves.Point) []byte {
+func (*schnorr) SerializeStatement(statement Statement) []byte {
 	return statement.ToAffineCompressed()
 }
 
-func (*schnorr) SerializeCommitment(commitment curves.Point) []byte {
+func (*schnorr) SerializeCommitment(commitment Commitment) []byte {
 	return commitment.ToAffineCompressed()
 }
 
-func (*schnorr) SerializeChallenge(challenge curves.Scalar) []byte {
-	return challenge.Bytes()
+func (*schnorr) SerializeResponse(response Response) []byte {
+	return response.Bytes()
 }
 
-func (*schnorr) SerializeResponse(response curves.Scalar) []byte {
-	return response.Bytes()
+func (s *schnorr) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+	e, err := s.curve.ScalarField().Zero().SetBytesWide(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
+	}
+
+	return e, nil
 }

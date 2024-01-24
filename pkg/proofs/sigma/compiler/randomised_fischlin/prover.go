@@ -1,4 +1,4 @@
-package randomised_fischlin
+package randomisedFischlin
 
 import (
 	"io"
@@ -11,17 +11,17 @@ import (
 )
 
 var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.CommitmentState, sigma.Challenge, sigma.Response,
+	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
-type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response] struct {
+type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sessionId     []byte
 	transcript    transcripts.Transcript
-	sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]
+	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
 
-func (p prover[X, W, A, S, E, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
+func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendMessages(statementLabel, p.sigmaProtocol.SerializeStatement(statement))
 
 	a := make([]byte, 0)
@@ -31,7 +31,7 @@ func (p prover[X, W, A, S, E, Z]) Prove(statement X, witness W) (compiler.NIZKPo
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
 	for i := 0; i < r; i++ {
 		var err error
-		aI[i], stateI[i], err = p.sigmaProtocol.GenerateCommitment(statement, witness)
+		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate commitment")
 		}
@@ -40,32 +40,30 @@ func (p prover[X, W, A, S, E, Z]) Prove(statement X, witness W) (compiler.NIZKPo
 		a = append(a, p.sigmaProtocol.SerializeCommitment(aI[i])...)
 	}
 
-	eI := make([]E, r)
+	eI := make([][]byte, r)
 	zI := make([]Z, r)
 
 	// step 3. for each i [r]
 	for i := 0; i < r; i++ {
 		// step 3.a set e to empty
-		eBytesSet := make([][]byte, 0)
+		eSet := make([][]byte, 0)
 		for {
+			// gather some stats
+
 			// step 3.b sample e_i...
-			eBytes, err := sample(eBytesSet, p.prng)
+			e, err := sample(eSet, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
 			if err != nil {
-				return nil, err
-			}
-			e, err := p.sigmaProtocol.GenerateChallenge(eBytes)
-			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot generate challenge")
+				return nil, errs.WrapRandomSampleFailed(err, "cannot sample challenge bytes")
 			}
 
 			// ...and compute z_i = SigmaP_z(state_i, e_i)
-			z, err := p.sigmaProtocol.GenerateResponse(statement, witness, stateI[i], e)
+			z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, aI[i], stateI[i], e)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate response")
 			}
-			digest, err := hash(p.sessionId, a, bitstring.ToBytesLE(i), p.sigmaProtocol.SerializeChallenge(e), p.sigmaProtocol.SerializeResponse(z))
+			digest, err := hash(p.sessionId, a, bitstring.ToBytesLE(i), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
-				return nil, err
+				return nil, errs.WrapHashingFailed(err, "cannot compute digest")
 			}
 
 			// step 3.c if hash(a, i, e_i, z_i) != 0 append e_i to e and repeat step 3.b
@@ -74,21 +72,19 @@ func (p prover[X, W, A, S, E, Z]) Prove(statement X, witness W) (compiler.NIZKPo
 				zI[i] = z
 				break
 			}
-			eBytesSet = append(eBytesSet, eBytes)
+			eSet = append(eSet, e)
 		}
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	challengeSerialized := make([]byte, 0)
 	for i := 0; i < r; i++ {
 		commitmentSerialized = append(commitmentSerialized, p.sigmaProtocol.SerializeCommitment(aI[i])...)
-		challengeSerialized = append(challengeSerialized, p.sigmaProtocol.SerializeChallenge(eI[i])...)
 	}
 	p.transcript.AppendMessages(commitmentLabel, commitmentSerialized)
-	p.transcript.AppendMessages(challengeLabel, challengeSerialized)
+	p.transcript.AppendMessages(challengeLabel, eI...)
 
 	// step 4. output (a_i, e_i, z_i) for every i in [r]
-	proof := &Proof[A, E, Z]{
+	proof := &Proof[A, Z]{
 		A: aI,
 		E: eI,
 		Z: zI,

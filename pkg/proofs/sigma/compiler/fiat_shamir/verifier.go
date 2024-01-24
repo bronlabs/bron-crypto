@@ -1,4 +1,4 @@
-package fiat_shamir
+package fiatShamir
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -8,15 +8,15 @@ import (
 )
 
 var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.CommitmentState, sigma.Challenge, sigma.Response,
+	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
-type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response] struct {
+type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	transcript    transcripts.Transcript
-	sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]
+	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
-func (v verifier[X, W, A, S, E, Z]) Verify(statement X, proof compiler.NIZKPoKProof) error {
+func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof) error {
 	if proof == nil {
 		return errs.NewIsNil("proof")
 	}
@@ -30,13 +30,9 @@ func (v verifier[X, W, A, S, E, Z]) Verify(statement X, proof compiler.NIZKPoKPr
 	a := fsProof.A
 	v.transcript.AppendMessages(commitmentLabel, v.sigmaProtocol.SerializeCommitment(a))
 
-	challenge, err := v.transcript.ExtractBytes(challengeLabel, 32)
+	e, err := v.transcript.ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
 		return errs.WrapFailed(err, "cannot extract bytes from transcript")
-	}
-	e, err := v.sigmaProtocol.GenerateChallenge(challenge)
-	if err != nil {
-		return errs.WrapFailed(err, "cannot generate challenge")
 	}
 
 	z := fsProof.Z

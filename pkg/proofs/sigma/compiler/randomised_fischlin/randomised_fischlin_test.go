@@ -1,4 +1,4 @@
-package randomised_fischlin_test
+package randomisedFischlin_test
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/new_chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
@@ -45,7 +45,7 @@ func Test_HappyPathWithBatchSchnorr(t *testing.T) {
 			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := randomised_fischlin.NewCompiler(schnorrProtocol, prng)
+			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -98,7 +98,7 @@ func Test_HappyPathWithSchnorr(t *testing.T) {
 			schnorrProtocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := randomised_fischlin.NewCompiler(schnorrProtocol, prng)
+			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -151,7 +151,7 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			schnorrProtocol, err := new_chaum.NewSigmaProtocol(g1, g2, prng)
 			require.NoError(t, err)
 
-			nizk, err := randomised_fischlin.NewCompiler(schnorrProtocol, prng)
+			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)

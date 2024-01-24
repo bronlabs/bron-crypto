@@ -9,15 +9,35 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
+type Statement []curves.Point
+
+var _ sigma.Statement = Statement(nil)
+
+type Witness []curves.Scalar
+
+var _ sigma.Witness = Witness(nil)
+
+type Commitment curves.Point
+
+var _ sigma.Commitment = Commitment(nil)
+
+type State curves.Scalar
+
+var _ sigma.State = State(nil)
+
+type Response curves.Scalar
+
+var _ sigma.Response = Response(nil)
+
 type batchSchnorr struct {
 	base  curves.Point
 	curve curves.Curve
 	prng  io.Reader
 }
 
-var _ sigma.Protocol[[]curves.Point, []curves.Scalar, curves.Point, curves.Scalar, curves.Scalar, curves.Scalar] = (*batchSchnorr)(nil)
+var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*batchSchnorr)(nil)
 
-func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[[]curves.Point, []curves.Scalar, curves.Point, curves.Scalar, curves.Scalar, curves.Scalar], error) {
+func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
 	if base == nil {
 		return nil, errs.NewIsNil("base is nil")
 	}
@@ -32,21 +52,7 @@ func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[[]curve
 	}, nil
 }
 
-func (b *batchSchnorr) GenerateCommitment(statement []curves.Point, witness []curves.Scalar) (curves.Point, curves.Scalar, error) {
-	if len(statement) == 0 || len(witness) == 0 || len(statement) != len(witness) {
-		return nil, nil, errs.NewInvalidArgument("length mismatch statement/witness or empty")
-	}
-	for i := range statement {
-		x := witness[i]
-		y := statement[i]
-		if x.ScalarField().Curve().Name() != b.curve.Name() || y.Curve().Name() != b.curve.Name() {
-			return nil, nil, errs.NewInvalidArgument("curve mismatch between statement and witness")
-		}
-		if !b.base.Mul(x).Equal(y) {
-			return nil, nil, errs.NewInvalidArgument("statement/witness mismatch")
-		}
-	}
-
+func (b *batchSchnorr) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
 	k, err := b.curve.ScalarField().Random(b.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "random scalar failed")
@@ -56,38 +62,32 @@ func (b *batchSchnorr) GenerateCommitment(statement []curves.Point, witness []cu
 	return r, k, nil
 }
 
-func (b *batchSchnorr) GenerateChallenge(entropy []byte) (curves.Scalar, error) {
-	if len(entropy) == 0 {
-		return nil, errs.NewInvalidArgument("entropy is empty")
-	}
-
-	e, err := b.curve.ScalarField().Hash(entropy)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to scalar failed")
-	}
-
-	return e, nil
-}
-
-func (b *batchSchnorr) GenerateResponse(_ []curves.Point, witness []curves.Scalar, state, challenge curves.Scalar) (curves.Scalar, error) {
+func (b *batchSchnorr) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes []byte) (Response, error) {
 	for _, w := range witness {
 		if w.ScalarField().Curve().Name() != b.curve.Name() {
 			return nil, errs.NewInvalidArgument("invalid curve")
 		}
 	}
-	if state.ScalarField().Curve().Name() != b.curve.Name() || challenge.ScalarField().Curve().Name() != b.curve.Name() {
+	if state.ScalarField().Curve().Name() != b.curve.Name() {
 		return nil, errs.NewInvalidArgument("invalid curve")
+	}
+	if len(challengeBytes) != b.GetChallengeBytesLength() {
+		return nil, errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+	e, err := b.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
 	coefficients := make([]curves.Scalar, len(witness)+1)
 	copy(coefficients, witness)
 	coefficients[len(witness)] = state
-	z := evalPolyAt(challenge, coefficients)
+	z := evalPolyAt(e, coefficients)
 	return z, nil
 }
 
-func (b *batchSchnorr) Verify(statement []curves.Point, commitment curves.Point, challenge, response curves.Scalar) error {
-	if len(statement) == 0 || commitment == nil || challenge == nil || response == nil {
+func (b *batchSchnorr) Verify(statement Statement, commitment Commitment, challengeBytes []byte, response Response) error {
+	if len(statement) == 0 || commitment == nil || challengeBytes == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
 	for _, x := range statement {
@@ -95,14 +95,21 @@ func (b *batchSchnorr) Verify(statement []curves.Point, commitment curves.Point,
 			return errs.NewInvalidArgument("invalid curve")
 		}
 	}
-	if commitment.Curve().Name() != b.curve.Name() || challenge.ScalarField().Curve().Name() != b.curve.Name() || response.ScalarField().Curve().Name() != b.curve.Name() {
+	if commitment.Curve().Name() != b.curve.Name() || response.ScalarField().Curve().Name() != b.curve.Name() {
 		return errs.NewInvalidArgument("invalid curve")
+	}
+	if len(challengeBytes) != b.GetChallengeBytesLength() {
+		return errs.NewInvalidArgument("empty challenge")
+	}
+	e, err := b.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
 	coefficients := make([]curves.Point, len(statement)+1)
 	copy(coefficients, statement)
 	coefficients[len(statement)] = b.base.Mul(response).Neg()
-	z := evalPolyInExponentAt(challenge, coefficients)
+	z := evalPolyInExponentAt(e, coefficients)
 	if !commitment.Neg().Equal(z) {
 		return errs.NewVerificationFailed("verification failed")
 	}
@@ -110,11 +117,61 @@ func (b *batchSchnorr) Verify(statement []curves.Point, commitment curves.Point,
 	return nil
 }
 
+func (b *batchSchnorr) RunSimulator(statement Statement, challengeBytes []byte) (Commitment, Response, error) {
+	if statement == nil {
+		return nil, nil, errs.NewIsNil("statement")
+	}
+	for _, s := range statement {
+		if s.Curve().Name() != b.curve.Name() {
+			return nil, nil, errs.NewInvalidArgument("invalid curve")
+		}
+	}
+	if len(challengeBytes) != b.GetChallengeBytesLength() {
+		return nil, nil, errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+
+	e, err := b.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot map challenge bytes to scalar")
+	}
+
+	z, err := b.curve.ScalarField().Random(b.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
+	}
+
+	coefficients := make([]curves.Point, len(statement)+1)
+	copy(coefficients, statement)
+	coefficients[len(statement)] = b.curve.Identity()
+
+	a := b.base.Mul(z).Sub(evalPolyInExponentAt(e, coefficients))
+
+	return a, z, nil
+}
+
+func (b *batchSchnorr) ValidateStatement(statement Statement, witness Witness) error {
+	if len(statement) == 0 || len(statement) != len(witness) {
+		return errs.NewInvalidArgument("invalid statement")
+	}
+
+	for i, s := range statement {
+		if !b.base.Mul(witness[i]).Equal(s) {
+			return errs.NewInvalidArgument("invalid statement")
+		}
+	}
+
+	return nil
+}
+
+func (b *batchSchnorr) GetChallengeBytesLength() int {
+	return b.curve.ScalarField().WideFieldBytes()
+}
+
 func (*batchSchnorr) DomainSeparationLabel() string {
 	return "ZKPOK_BATCH_DLOG_SCHNORR"
 }
 
-func (*batchSchnorr) SerializeStatement(statement []curves.Point) []byte {
+func (*batchSchnorr) SerializeStatement(statement Statement) []byte {
 	result := make([]byte, 0)
 	for _, p := range statement {
 		result = append(result, p.ToAffineCompressed()...)
@@ -122,16 +179,21 @@ func (*batchSchnorr) SerializeStatement(statement []curves.Point) []byte {
 	return result
 }
 
-func (*batchSchnorr) SerializeCommitment(commitment curves.Point) []byte {
+func (*batchSchnorr) SerializeCommitment(commitment Commitment) []byte {
 	return commitment.ToAffineCompressed()
 }
 
-func (*batchSchnorr) SerializeChallenge(challenge curves.Scalar) []byte {
-	return challenge.Bytes()
+func (*batchSchnorr) SerializeResponse(response Response) []byte {
+	return response.Bytes()
 }
 
-func (*batchSchnorr) SerializeResponse(response curves.Scalar) []byte {
-	return response.Bytes()
+func (b *batchSchnorr) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+	e, err := b.curve.ScalarField().Zero().SetBytesWide(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
+	}
+
+	return e, nil
 }
 
 func evalPolyAt(at curves.Scalar, coefficients []curves.Scalar) curves.Scalar {

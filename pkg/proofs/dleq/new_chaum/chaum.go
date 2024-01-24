@@ -18,10 +18,26 @@ type Statement struct {
 	_ types.Incomparable
 }
 
+var _ sigma.Statement = (*Statement)(nil)
+
+type Witness curves.Scalar
+
+var _ sigma.Witness = Witness(nil)
+
 type Commitment struct {
 	A1 curves.Point
 	A2 curves.Point
 }
+
+var _ sigma.Commitment = (*Commitment)(nil)
+
+type State curves.Scalar
+
+var _ sigma.State = State(nil)
+
+type Response curves.Scalar
+
+var _ sigma.Response = Response(nil)
 
 type chaum struct {
 	g1    curves.Point
@@ -30,9 +46,9 @@ type chaum struct {
 	prng  io.Reader
 }
 
-var _ sigma.Protocol[*Statement, curves.Scalar, *Commitment, curves.Scalar, curves.Scalar, curves.Scalar] = (*chaum)(nil)
+var _ sigma.Protocol[*Statement, Witness, *Commitment, State, Response] = (*chaum)(nil)
 
-func NewSigmaProtocol(g1, g2 curves.Point, prng io.Reader) (sigma.Protocol[*Statement, curves.Scalar, *Commitment, curves.Scalar, curves.Scalar, curves.Scalar], error) {
+func NewSigmaProtocol(g1, g2 curves.Point, prng io.Reader) (sigma.Protocol[*Statement, Witness, *Commitment, State, Response], error) {
 	if g1 == nil || g2 == nil {
 		return nil, errs.NewIsNil("g1 or g2 is nil")
 	}
@@ -51,14 +67,7 @@ func NewSigmaProtocol(g1, g2 curves.Point, prng io.Reader) (sigma.Protocol[*Stat
 	}, nil
 }
 
-func (c *chaum) GenerateCommitment(statement *Statement, witness curves.Scalar) (*Commitment, curves.Scalar, error) {
-	if statement == nil || statement.X1 == nil || statement.X2 == nil || witness == nil {
-		return nil, nil, errs.NewIsNil("witness or statement")
-	}
-	if !c.g1.Mul(witness).Equal(statement.X1) || !c.g2.Mul(witness).Equal(statement.X2) {
-		return nil, nil, errs.NewInvalidArgument("invalid statement")
-	}
-
+func (c *chaum) ComputeProverCommitment(_ *Statement, _ Witness) (*Commitment, State, error) {
 	s, err := c.curve.ScalarField().Random(c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
@@ -73,53 +82,91 @@ func (c *chaum) GenerateCommitment(statement *Statement, witness curves.Scalar) 
 	}, s, nil
 }
 
-func (c *chaum) GenerateChallenge(entropy []byte) (curves.Scalar, error) {
-	if len(entropy) == 0 {
-		return nil, errs.NewInvalidArgument("entropy is empty")
-	}
-
-	e, err := c.curve.ScalarField().Hash(entropy)
-	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to scalar failed")
-	}
-
-	return e, nil
-}
-
-func (c *chaum) GenerateResponse(statement *Statement, witness, state, challenge curves.Scalar) (curves.Scalar, error) {
-	if statement == nil || statement.X1 == nil || statement.X2 == nil || statement.X1.Curve().Name() != c.curve.Name() || statement.X2.Curve().Name() != c.curve.Name() {
-		return nil, errs.NewInvalidArgument("invalid curve")
-	}
+func (c *chaum) ComputeProverResponse(_ *Statement, witness Witness, _ *Commitment, state State, challengeBytes []byte) (Response, error) {
 	if witness == nil || witness.ScalarField().Curve().Name() != c.curve.Name() {
 		return nil, errs.NewInvalidArgument("invalid curve")
 	}
-	if state == nil || state.ScalarField().Curve().Name() != c.curve.Name() || challenge == nil || challenge.ScalarField().Curve().Name() != c.curve.Name() {
+	if state == nil || state.ScalarField().Curve().Name() != c.curve.Name() {
 		return nil, errs.NewInvalidArgument("invalid curve")
 	}
-	if !c.g1.Mul(witness).Equal(statement.X1) || !c.g2.Mul(witness).Equal(statement.X2) {
-		return nil, errs.NewInvalidArgument("invalid statement")
+	if len(challengeBytes) != c.GetChallengeBytesLength() {
+		return nil, errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
-	z := state.Add(witness.Mul(challenge))
+	z := state.Add(witness.Mul(e))
 	return z, nil
 }
 
-func (c *chaum) Verify(statement *Statement, commitment *Commitment, challenge, response curves.Scalar) error {
-	if statement == nil || statement.X1 == nil || statement.X2 == nil || commitment == nil || challenge == nil || response == nil {
+func (c *chaum) Verify(statement *Statement, commitment *Commitment, challengeBytes []byte, response Response) error {
+	if statement == nil || statement.X1 == nil || statement.X2 == nil || commitment == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
 	if statement.X1.Curve().Name() != c.curve.Name() || statement.X2.Curve().Name() != c.curve.Name() {
 		return errs.NewInvalidArgument("invalid curve")
 	}
-	if commitment.A1.Curve().Name() != c.curve.Name() || commitment.A2.Curve().Name() != c.curve.Name() || challenge.ScalarField().Curve().Name() != c.curve.Name() || response.ScalarField().Curve().Name() != c.curve.Name() {
+	if commitment.A1.Curve().Name() != c.curve.Name() || commitment.A2.Curve().Name() != c.curve.Name() || response.ScalarField().Curve().Name() != c.curve.Name() {
 		return errs.NewInvalidArgument("invalid curve")
 	}
+	if len(challengeBytes) != c.GetChallengeBytesLength() {
+		return errs.NewInvalidArgument("invalid challenge bytes length")
+	}
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return errs.WrapInvalidArgument(err, "cannot hash to scalar")
+	}
 
-	if !c.g1.Mul(response).Sub(statement.X1.Mul(challenge).Add(commitment.A1)).IsIdentity() {
+	if !c.g1.Mul(response).Sub(statement.X1.Mul(e).Add(commitment.A1)).IsIdentity() {
 		return errs.NewVerificationFailed("verification, failed")
 	}
-	if !c.g2.Mul(response).Sub(statement.X2.Mul(challenge).Add(commitment.A2)).IsIdentity() {
+	if !c.g2.Mul(response).Sub(statement.X2.Mul(e).Add(commitment.A2)).IsIdentity() {
 		return errs.NewVerificationFailed("verification, failed")
+	}
+
+	return nil
+}
+
+func (c *chaum) RunSimulator(statement *Statement, challengeBytes []byte) (*Commitment, Response, error) {
+	if statement == nil ||
+		statement.X1 == nil || statement.X1.Curve().Name() != c.curve.Name() ||
+		statement.X2 == nil || statement.X2.Curve().Name() != c.curve.Name() {
+
+		return nil, nil, errs.NewInvalidArgument("statement")
+	}
+	if len(challengeBytes) == 0 {
+		return nil, nil, errs.NewInvalidArgument("randomness is empty")
+	}
+
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	z, err := c.g1.Curve().ScalarField().Random(c.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
+	}
+
+	a := &Commitment{
+		A1: c.g1.Mul(z).Sub(statement.X1.Mul(e)),
+		A2: c.g2.Mul(z).Sub(statement.X2.Mul(e)),
+	}
+
+	return a, z, nil
+}
+
+func (c *chaum) GetChallengeBytesLength() int {
+	return c.curve.ScalarField().WideFieldBytes()
+}
+func (c *chaum) ValidateStatement(statement *Statement, witness Witness) error {
+	if statement == nil || witness == nil ||
+		!c.g1.Mul(witness).Equal(statement.X1) ||
+		!c.g2.Mul(witness).Equal(statement.X2) {
+
+		return errs.NewInvalidArgument("invalid statement")
 	}
 
 	return nil
@@ -137,10 +184,15 @@ func (*chaum) SerializeCommitment(commitment *Commitment) []byte {
 	return bytes.Join([][]byte{commitment.A1.ToAffineCompressed(), commitment.A2.ToAffineCompressed()}, nil)
 }
 
-func (*chaum) SerializeChallenge(challenge curves.Scalar) []byte {
-	return challenge.Bytes()
+func (*chaum) SerializeResponse(response Response) []byte {
+	return response.Bytes()
 }
 
-func (*chaum) SerializeResponse(response curves.Scalar) []byte {
-	return response.Bytes()
+func (c *chaum) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+	e, err := c.curve.ScalarField().Zero().SetBytesWide(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
+	}
+
+	return e, nil
 }

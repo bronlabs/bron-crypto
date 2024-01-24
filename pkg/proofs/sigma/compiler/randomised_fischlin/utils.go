@@ -1,4 +1,4 @@
-package randomised_fischlin
+package randomisedFischlin
 
 import (
 	"bytes"
@@ -27,11 +27,11 @@ func hash(data ...[]byte) ([]byte, error) {
 	return result[:lBytes], nil
 }
 
-func sample(existing [][]byte, prng io.Reader) ([]byte, error) {
+func sample(existing [][]byte, length int, prng io.Reader) ([]byte, error) {
 outer:
 	for {
-		ei := make([]byte, tBytes)
-		_, err := io.ReadFull(prng, ei)
+		ei := make([]byte, length)
+		_, err := io.ReadFull(prng, ei[:tBytes])
 		if err != nil {
 			return nil, errs.NewFailed("cannot read from PRNG")
 		}

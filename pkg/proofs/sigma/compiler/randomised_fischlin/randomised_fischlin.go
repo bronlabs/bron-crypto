@@ -1,4 +1,4 @@
-package randomised_fischlin
+package randomisedFischlin
 
 import (
 	crand "crypto/rand"
@@ -21,32 +21,31 @@ const (
 	commitmentLabel = "commitmentLabel"
 	challengeLabel  = "challengeLabel"
 
-	lambda         = base.ComputationalSecurity
-	lambdaNextPow2 = lambda | (lambda >> 1) | (lambda >> 2) | (lambda >> 4) | (lambda >> 8) | (lambda >> 16)
-	lambdaLog2     = lambdaNextPow2 & ^(lambdaNextPow2 >> 1)
-	l              = 8
-	r              = lambda / l
-	t              = lambdaLog2 * l
-	lBytes         = l / 8
-	tBytes         = t / 8
+	lambda     = base.ComputationalSecurity
+	lambdaLog2 = 7
+	l          = 8
+	r          = lambda / l
+	t          = lambdaLog2 * l
+	lBytes     = l / 8
+	tBytes     = t / 8
 )
 
-type Proof[A sigma.Commitment, E sigma.Challenge, Z sigma.Response] struct {
-	A []A `json:"a"`
-	E []E `json:"e"`
-	Z []Z `json:"z"`
+type Proof[A sigma.Commitment, Z sigma.Response] struct {
+	A []A      `json:"a"`
+	E [][]byte `json:"e"`
+	Z []Z      `json:"z"`
 }
 
 var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*rf[
-	sigma.Statement, sigma.Witness, sigma.Statement, sigma.CommitmentState, sigma.Challenge, sigma.Response,
+	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
 ])(nil)
 
-type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response] struct {
-	sigmaProtocol sigma.Protocol[X, W, A, S, E, Z]
+type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
 
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.CommitmentState, E sigma.Challenge, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, E, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
@@ -54,13 +53,13 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		prng = crand.Reader
 	}
 
-	return &rf[X, W, A, S, E, Z]{
+	return &rf[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 		prng:          prng,
 	}, nil
 }
 
-func (c rf[X, W, A, S, E, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+func (c rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("sessionId is empty")
 	}
@@ -73,7 +72,7 @@ func (c rf[X, W, A, S, E, Z]) NewProver(sessionId []byte, transcript transcripts
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
 
-	return &prover[X, W, A, S, E, Z]{
+	return &prover[X, W, A, S, Z]{
 		sessionId:     sessionId,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
@@ -81,7 +80,7 @@ func (c rf[X, W, A, S, E, Z]) NewProver(sessionId []byte, transcript transcripts
 	}, nil
 }
 
-func (c rf[X, W, A, S, E, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+func (c rf[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewInvalidArgument("sessionId is empty")
 	}
@@ -94,7 +93,7 @@ func (c rf[X, W, A, S, E, Z]) NewVerifier(sessionId []byte, transcript transcrip
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
 
-	return &verifier[X, W, A, S, E, Z]{
+	return &verifier[X, W, A, S, Z]{
 		sessionId:     sessionId,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
