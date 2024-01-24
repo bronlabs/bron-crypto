@@ -21,7 +21,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
@@ -72,22 +72,16 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 	}
 
-	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
-	require.NoError(t, err)
-	require.NotNil(t, shamirDealer)
-	shamirShares := make([]*shamir.Share, len(participants))
-	for i := 0; i < len(participants); i++ {
-		shamirShares[i] = &shamir.Share{
-			Id:    participants[i].GetSharingId(),
-			Value: signingKeyShares[i].Share,
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := make(map[integration.IdentityKey]*tsignatures.SigningKeyShare)
+		for i := 0; i < threshold; i++ {
+			shardMap[identities[i]] = signingKeyShares[i]
 		}
-	}
-
-	reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
-	require.NoError(t, err)
-
-	derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
-	require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(threshold, n, cohortConfig.Participants, shardMap)
+		require.NoError(t, err)
+		recoveredPublicKey := curve.ScalarBaseMult(recoveredPrivateKey)
+		require.True(t, recoveredPublicKey.Equal(signingKeyShares[0].PublicKey))
+	})
 }
 
 func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {

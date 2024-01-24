@@ -20,6 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/testutils"
 )
 
@@ -59,6 +60,15 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		err = shard.Validate(cohortConfig)
 		require.NoError(t, err)
 	}
+
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := make(map[integration.IdentityKey]*tsignatures.SigningKeyShare)
+		for i := 0; i < threshold; i++ {
+			shardMap[identities[i]] = shards[i].SigningKeyShare
+		}
+		_, err := tsignatures.ConstructPrivateKey(threshold, n, cohortConfig.Participants, shardMap)
+		require.NoError(t, err)
+	})
 }
 
 func Test_HappyPath(t *testing.T) {

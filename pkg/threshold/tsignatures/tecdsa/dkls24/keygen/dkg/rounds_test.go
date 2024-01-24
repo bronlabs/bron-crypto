@@ -24,6 +24,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -189,6 +190,17 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 				}
 			}
 		}
+	})
+
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := make(map[integration.IdentityKey]*tsignatures.SigningKeyShare)
+		for i := 0; i < threshold; i++ {
+			shardMap[identities[i]] = shards[i].SigningKeyShare
+		}
+		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(threshold, n, cohortConfig.Participants, shardMap)
+		require.NoError(t, err)
+		recoveredPublicKey := curve.ScalarBaseMult(recoveredPrivateKey)
+		require.True(t, recoveredPublicKey.Equal(shards[0].SigningKeyShare.PublicKey))
 	})
 }
 

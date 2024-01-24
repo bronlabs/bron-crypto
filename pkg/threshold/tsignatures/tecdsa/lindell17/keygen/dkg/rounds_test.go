@@ -16,6 +16,7 @@ import (
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	gennaro_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	lindell17_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -163,5 +164,16 @@ func Test_HappyPath(t *testing.T) {
 				}
 			}
 		}
+	})
+
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := make(map[integration.IdentityKey]*tsignatures.SigningKeyShare)
+		for i := 0; i < 2; i++ {
+			shardMap[identities[i]] = shards[i].SigningKeyShare
+		}
+		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(2, 3, cohortConfig.Participants, shardMap)
+		require.NoError(t, err)
+		recoveredPublicKey := cipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
+		require.True(t, recoveredPublicKey.Equal(shards[0].SigningKeyShare.PublicKey))
 	})
 }

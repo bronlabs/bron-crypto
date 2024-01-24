@@ -2,10 +2,12 @@ package tsignatures
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 type SigningKeyShare struct {
@@ -26,6 +28,56 @@ func (s *SigningKeyShare) Validate() error {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	return nil
+}
+
+func ConstructPrivateKey(threshold, n int, allParticipantIdKeys *hashset.HashSet[integration.IdentityKey], keyShares map[integration.IdentityKey]*SigningKeyShare) (curves.Scalar, error) {
+	if len(keyShares) <= 1 || len(keyShares) != threshold {
+		return nil, errs.NewFailed("not enough key shares")
+	}
+	if allParticipantIdKeys == nil || allParticipantIdKeys.Len() <= 1 {
+		return nil, errs.NewFailed("not enough participant keys")
+	}
+	for _, keyShare := range keyShares {
+		if err := keyShare.Validate(); err != nil {
+			return nil, errs.WrapVerificationFailed(err, "key share is invalid")
+		}
+	}
+	var curve curves.Curve
+	for idKey, keyShare := range keyShares {
+		if err := keyShare.Validate(); err != nil {
+			return nil, errs.WrapVerificationFailed(err, "key share is invalid")
+		}
+		curve = idKey.PublicKey().Curve()
+		break
+	}
+	if curve == nil {
+		return nil, errs.NewFailed("failed to get the curve")
+	}
+	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create shamir dealer")
+	}
+	shares := make([]*shamir.Share, len(keyShares))
+	shareIndex := 0
+	for idKey, keyShare := range keyShares {
+		_, _, sharingId := integration.DeriveSharingIds(idKey, allParticipantIdKeys)
+		shares[shareIndex] = &shamir.Share{
+			Id:    sharingId,
+			Value: keyShare.Share,
+		}
+		shareIndex++
+	}
+	recoveredPrivateKey, err := shamirDealer.Combine(shares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to combine shares")
+	}
+	recoveredPublicKey := curve.ScalarBaseMult(recoveredPrivateKey)
+	for _, keyShare := range keyShares {
+		if !recoveredPublicKey.Equal(keyShare.PublicKey) {
+			return nil, errs.NewVerificationFailed("reconstructed public key is incorrect")
+		}
+	}
+	return recoveredPrivateKey, nil
 }
 
 type PublicKeyShares struct {

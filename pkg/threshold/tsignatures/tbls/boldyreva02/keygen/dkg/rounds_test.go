@@ -17,6 +17,7 @@ import (
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
@@ -65,6 +66,14 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 		err = shard.Validate(cohortConfig)
 		require.NoError(t, err)
 	}
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := make(map[integration.IdentityKey]*boldyreva02.SigningKeyShare[K])
+		for i := 0; i < threshold; i++ {
+			shardMap[identities[i]] = shards[i].SigningKeyShare
+		}
+		_, err := boldyreva02.ConstructPrivateKey(threshold, n, cohortConfig.Participants, shardMap)
+		require.NoError(t, err)
+	})
 }
 
 func Test_HappyPath(t *testing.T) {
