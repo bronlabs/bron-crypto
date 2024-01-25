@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 )
 
 var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
@@ -80,9 +81,9 @@ func Test_CanInitialize(t *testing.T) {
 			SignatureAggregators: hashset.NewHashSet(identityKeys),
 		},
 	}
-	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, nil, crand.Reader)
+	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, nil, randomisedFischlin.Name, crand.Reader)
 	require.NoError(t, err)
-	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, nil, crand.Reader)
+	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, nil, randomisedFischlin.Name, crand.Reader)
 	require.NoError(t, err)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)

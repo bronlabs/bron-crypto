@@ -6,12 +6,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 type Share = shamir.Share
 
-func Verify(share *Share, commitments []curves.Point) (err error) {
+func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifier[batch_schnorr.Statement], proof compiler.NIZKPoKProof) (err error) {
 	curve := share.Value.ScalarField().Curve()
 	err = share.Validate(curve)
 	if err != nil {
@@ -32,11 +34,15 @@ func Verify(share *Share, commitments []curves.Point) (err error) {
 	rhs = rhs.Add(commitments[0])
 
 	lhs := commitments[0].Curve().Generator().Mul(share.Value)
-	if lhs.Equal(rhs) {
-		return nil
-	} else {
+	if !lhs.Equal(rhs) {
 		return errs.NewVerificationFailed("not equal")
 	}
+
+	if err := verifier.Verify(commitments, proof); err != nil {
+		return errs.NewVerificationFailed("invalid proof")
+	}
+
+	return nil
 }
 
 type Dealer struct {
@@ -54,7 +60,7 @@ func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
 	return dealer, nil
 }
 
-func (f *Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curves.Point, shares []*Share, err error) {
+func (f *Dealer) Split(secret curves.Scalar, prover compiler.NIProver[batch_schnorr.Statement, batch_schnorr.Witness], prng io.Reader) (commitments []curves.Point, shares []*Share, proof compiler.NIZKPoKProof, err error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
@@ -62,13 +68,17 @@ func (f *Dealer) Split(secret curves.Scalar, prng io.Reader) (commitments []curv
 	}
 	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+		return nil, nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
 	}
 	commitments = make([]curves.Point, f.Threshold)
 	for i := range commitments {
 		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
 	}
-	return commitments, shares, nil
+	proof, err = prover.Prove(commitments, poly.Coefficients)
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "cannot create a proof")
+	}
+	return commitments, shares, proof, nil
 }
 
 func (f *Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {

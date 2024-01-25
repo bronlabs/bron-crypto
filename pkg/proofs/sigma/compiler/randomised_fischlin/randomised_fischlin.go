@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	Name compiler.Name = "RandomisedFischlin"
+
 	domainSeparationTag = "COPPER_SIGMA_NIZKPOK_RANDOMISED_FISCHLIN-"
 
 	sessionIdLabel  = "sessionIdLabel"

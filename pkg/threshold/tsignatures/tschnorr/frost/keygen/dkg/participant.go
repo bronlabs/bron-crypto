@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -32,7 +33,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
 	}
-	party, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, nil, prng)
+	party, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, nil, randomisedFischlin.Name, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}

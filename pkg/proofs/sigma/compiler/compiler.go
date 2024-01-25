@@ -5,6 +5,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
+type Name string
+
 type NIZKPoKProof any
 
 type NIProver[X sigma.Statement, W sigma.Witness] interface {

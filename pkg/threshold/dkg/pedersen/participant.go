@@ -7,6 +7,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -48,11 +51,12 @@ type State struct {
 	ShareVector []*feldman.Share
 	Commitments []curves.Point
 	A_i0        curves.Scalar
+	NiCompiler  compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness]
 
 	_ types.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, nonInteractiveCompilerName compiler.Name, prng io.Reader) (*Participant, error) {
 	err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng)
 	if err != nil {
 		return nil, errs.NewInvalidArgument("invalid input arguments")
@@ -61,13 +65,25 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_PEDERSEN_DKG-", nil)
 	}
 	transcript.AppendMessages("dkg", uniqueSessionId)
+
+	protocol, err := batch_schnorr.NewSigmaProtocol(cohortConfig.CipherSuite.Curve.Generator(), prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create dlog protocol")
+	}
+	niCompiler, err := compilerUtils.MakeNonInteractive(nonInteractiveCompilerName, protocol, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create randomised fischlin compiler")
+	}
+
 	result := &Participant{
 		MyAuthKey:       authKey,
 		UniqueSessionId: uniqueSessionId,
-		State:           &State{},
-		prng:            prng,
-		CohortConfig:    cohortConfig,
-		Transcript:      transcript,
+		State: &State{
+			NiCompiler: niCompiler,
+		},
+		prng:         prng,
+		CohortConfig: cohortConfig,
+		Transcript:   transcript,
 	}
 	result.SharingIdToIdentityKey, result.IdentityHashToSharingId, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
 	result.round = 1

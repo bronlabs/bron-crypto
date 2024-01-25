@@ -1,6 +1,7 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -8,7 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
@@ -29,12 +29,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 	schnorrPublicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
-	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
+	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
 
-	_, shamirShares, err := dealer.Split(schnorrPrivateKey, prng)
+	shamirShares, err := dealer.Split(schnorrPrivateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}

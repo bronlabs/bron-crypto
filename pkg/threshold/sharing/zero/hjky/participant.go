@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -42,7 +43,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
 
-	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
+	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, randomisedFischlin.Name, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}

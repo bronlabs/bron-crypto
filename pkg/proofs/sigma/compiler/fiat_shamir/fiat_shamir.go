@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	Name compiler.Name = "FiatShamir"
+
 	domainSeparationTag = "COPPER_SIGMA_NIZKPOK_FIAT_SHAMIR-"
 	sessionIdLabel      = "sessionIdLabel"
 	statementLabel      = "statementLabel"

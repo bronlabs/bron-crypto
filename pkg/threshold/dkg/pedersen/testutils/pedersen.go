@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -30,7 +31,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, nil, prng)
+		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, nil, randomisedFischlin.Name, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
@@ -81,11 +83,19 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 
 	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
-	commitments, shares, err := scheme.Split(secret, crand.Reader)
+	batchSchnorr, err := batch_schnorr.NewSigmaProtocol(testCurve.Generator(), crand.Reader)
+	require.NoError(t, err)
+	fischlinBatchSchnorr, err := randomisedFischlin.NewCompiler(batchSchnorr, crand.Reader)
+	require.NoError(t, err)
+	prover, err := fischlinBatchSchnorr.NewProver([]byte("test"), nil)
+	require.NoError(t, err)
+	commitments, shares, proof, err := scheme.Split(secret, prover, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, shares)
 	for _, s := range shares {
-		err = feldman.Verify(s, commitments)
+		verifier, err := fischlinBatchSchnorr.NewVerifier([]byte("test"), nil)
+		require.NoError(t, err)
+		err = feldman.Verify(s, commitments, verifier, proof)
 		require.NoError(t, err)
 	}
 	secret2, err := scheme.Combine(shares...)
@@ -100,9 +110,21 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 
 	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
-	commitments, shares, err := scheme.Split(secret, crand.Reader)
+
+	dlogProofProtocol, err := batch_schnorr.NewSigmaProtocol(testCurve.Generator(), crand.Reader)
+	require.NoError(t, err)
+	randomisedFischlinCompiler, err := randomisedFischlin.NewCompiler(dlogProofProtocol, crand.Reader)
+	require.NoError(t, err)
+
+	sid := []byte("TestEd25519FeldmanAllCombinations")
+
+	prover, err := randomisedFischlinCompiler.NewProver(sid, nil)
+	require.NoError(t, err)
+	commitments, shares, proof, err := scheme.Split(secret, prover, crand.Reader)
 	for _, s := range shares {
-		err = feldman.Verify(s, commitments)
+		verifier, err := randomisedFischlinCompiler.NewVerifier(sid, nil)
+		require.NoError(t, err)
+		err = feldman.Verify(s, commitments, verifier, proof)
 		require.NoError(t, err)
 	}
 	require.NoError(t, err)
