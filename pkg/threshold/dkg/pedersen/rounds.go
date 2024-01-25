@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -14,7 +14,7 @@ import (
 
 type Round1Broadcast struct {
 	Ci        []curves.Point
-	DlogProof *dlog.Proof
+	DlogProof compiler.NIZKPoKProof
 
 	_ types.Incomparable
 }
@@ -46,26 +46,20 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u map[
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
-	commitments, shares, err := dealer.Split(a_i0, p.prng)
+
+	transcript := hagrid.NewTranscript(DkgLabel, nil)
+	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
+	prover, err := p.State.NiCompiler.NewProver(p.UniqueSessionId, p.Transcript.Clone())
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
+	}
+
+	commitments, shares, proof, err := dealer.Split(a_i0, prover, p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't split the secret via feldman dealer")
 	}
 	p.State.ShareVector = shares
 	p.State.Commitments = commitments
-
-	transcript := hagrid.NewTranscript(DkgLabel, nil)
-	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Generator(), p.UniqueSessionId, transcript.Clone(), p.prng)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "couldn't create DLOG prover")
-	}
-	var proof *dlog.Proof
-	if !a_i0.IsZero() {
-		proof, _, err = prover.Prove(a_i0)
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "couldn't sign")
-		}
-	}
 
 	outboundP2PMessages := map[types.IdentityHash]*Round1P2P{}
 
@@ -118,20 +112,6 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		if !p.State.A_i0.IsZero() {
-			if broadcastedMessageFromSender.DlogProof == nil {
-				return nil, nil, errs.NewMissing("have the dlog proof for sharing id %d", senderSharingId)
-			}
-
-			transcript := hagrid.NewTranscript(DkgLabel, nil)
-			transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(senderSharingId))
-			if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.DlogProof, p.UniqueSessionId); err != nil {
-				return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "abort from dlog proof given sharing id ")
-			}
-		} else if broadcastedMessageFromSender.DlogProof != nil {
-			return nil, nil, errs.NewMissing("have the dlog proof for sharing id %d when a_i0 is zero", senderSharingId)
-		}
-
 		p2pMessageFromSender, exists := round1outputP2P[senderIdentityKey.Hash()]
 		if !exists {
 			return nil, nil, errs.NewMissing("did not get a p2p message from sender with sharing id %d", senderSharingId)
@@ -141,7 +121,14 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 			Id:    p.MySharingId,
 			Value: receivedSecretKeyShare,
 		}
-		if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci); err != nil {
+
+		transcript := hagrid.NewTranscript(DkgLabel, nil)
+		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(senderSharingId))
+		verifier, err := p.State.NiCompiler.NewVerifier(p.UniqueSessionId, p.Transcript.Clone())
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
+		}
+		if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci, verifier, broadcastedMessageFromSender.DlogProof); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from feldman given sharing id")
 		}
 

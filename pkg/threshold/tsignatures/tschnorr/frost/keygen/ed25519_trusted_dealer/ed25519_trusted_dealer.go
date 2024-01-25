@@ -2,12 +2,12 @@ package trusted_dealer
 
 import (
 	"crypto/ed25519"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -40,11 +40,11 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.WrapSerialisation(err, "could not convert ed25519 public key bytes to an ed25519 point")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
+	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
-	_, shamirShares, err := dealer.Split(privateKey, prng)
+	shamirShares, err := dealer.Split(privateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}

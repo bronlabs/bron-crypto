@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -130,12 +131,12 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a krypton point")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
+	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
 
-	_, shamirShares, err := dealer.Split(privateKey, prng)
+	shamirShares, err := dealer.Split(privateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}

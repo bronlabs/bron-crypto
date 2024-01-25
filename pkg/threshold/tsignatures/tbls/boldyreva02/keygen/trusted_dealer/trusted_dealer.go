@@ -1,6 +1,7 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
@@ -11,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
@@ -47,12 +47,12 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 		return nil, errs.WrapFailed(err, "failed to do keygen")
 	}
 
-	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Participants.Len(), subGroup)
+	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Participants.Len(), subGroup)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
 
-	_, shamirShares, err := dealer.Split(privateKey.D(), prng)
+	shamirShares, err := dealer.Split(privateKey.D(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
