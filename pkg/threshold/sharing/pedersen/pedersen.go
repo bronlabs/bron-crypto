@@ -58,6 +58,7 @@ type Output struct {
 	Blinding                        curves.Scalar
 	BlindingShares, SecretShares    []*Share
 	Commitments, BlindedCommitments []curves.Point
+	PolynomialCoefficients          []curves.Scalar
 	Generator                       curves.Point
 
 	_ types.Incomparable
@@ -128,7 +129,13 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	}
 
 	return &Output{
-		Blinding: blinding, BlindingShares: blindingShares, SecretShares: shares, Commitments: commitments, BlindedCommitments: blindedCommitments, Generator: pd.Generator,
+		Blinding:               blinding,
+		BlindingShares:         blindingShares,
+		SecretShares:           shares,
+		Commitments:            commitments,
+		BlindedCommitments:     blindedCommitments,
+		PolynomialCoefficients: poly.Coefficients,
+		Generator:              pd.Generator,
 	}, nil
 }
 

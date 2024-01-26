@@ -8,11 +8,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
+func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
 	if len(identities) != cohortConfig.Protocol.TotalParties {
 		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
 	}
@@ -29,7 +31,7 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 		if !cohortConfig.IsInCohort(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, prng, nil)
+		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, niCompilerName, prng, nil)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -76,7 +78,7 @@ func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []map[types.I
 }
 
 func RunDKG(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, err error) {
-	participants, err := MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	participants, err := MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
 	if err != nil {
 		return nil, nil, err
 	}

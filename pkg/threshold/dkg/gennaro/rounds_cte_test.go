@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
@@ -42,7 +43,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 	}, func() {
 		testutils.DoDkgRound1(participants)
@@ -74,7 +75,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)
@@ -112,7 +113,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)

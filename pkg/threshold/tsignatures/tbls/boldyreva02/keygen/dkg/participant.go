@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -50,7 +51,7 @@ func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, authKey integrati
 	}
 	transcript.AppendMessages("threshold bls dkg", uniqueSessionId)
 	transcript.AppendMessages("keys subgroup", []byte(cohortConfig.CipherSuite.Curve.Name()))
-	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, prng, transcript)
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct tbls dkg participant out of gennaro dkg participant")
 	}

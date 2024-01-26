@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/new_chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
@@ -183,6 +184,100 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			require.NoError(t, err)
 
 			require.True(t, bytes.Equal(proverBytes, verifierBytes))
+		})
+	}
+}
+
+func Test_VerificationFailsOnInvalidStatement(t *testing.T) {
+	t.Parallel()
+
+	for i, c := range supportedCurve {
+		i := i
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			prng := crand.Reader
+			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
+
+			schnorrProtocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			require.NoError(t, err)
+
+			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
+			require.NoError(t, err)
+
+			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			prover, err := nizk.NewProver(sessionId, proverTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, prover)
+
+			verifierTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, verifier)
+
+			witness, err := curve.ScalarField().Random(prng)
+			require.NoError(t, err)
+			statement := curve.ScalarBaseMult(witness)
+
+			proof, err := prover.Prove(statement, witness)
+			require.NoError(t, err)
+
+			statement, err = curve.Random(prng)
+			require.NoError(t, err)
+			err = verifier.Verify(statement, proof)
+			require.Error(t, err)
+			require.True(t, errs.IsVerificationFailed(err))
+		})
+	}
+}
+
+func Test_VerificationFailsOnInvalidWitness(t *testing.T) {
+	t.Parallel()
+
+	for i, c := range supportedCurve {
+		i := i
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			prng := crand.Reader
+			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
+
+			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			require.NoError(t, err)
+
+			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
+			require.NoError(t, err)
+
+			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			prover, err := nizk.NewProver(sessionId, proverTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, prover)
+
+			verifierTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, verifier)
+
+			n := 8
+			witness := make([]curves.Scalar, n)
+			statement := make([]curves.Point, n)
+			for k := range witness {
+				witness[k], err = curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				statement[k] = curve.ScalarBaseMult(witness[k])
+			}
+			witness[0], err = curve.ScalarField().Random(prng)
+			require.NoError(t, err)
+
+			proof, err := prover.Prove(statement, witness)
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			err = verifier.Verify(statement, proof)
+			require.Error(t, err)
+			require.True(t, errs.IsVerificationFailed(err))
 		})
 	}
 }

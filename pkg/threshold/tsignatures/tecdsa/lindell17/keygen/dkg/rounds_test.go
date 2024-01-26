@@ -3,6 +3,7 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := gennaro_dkg_testutils.DoDkgRound1(gennaroParticipants)

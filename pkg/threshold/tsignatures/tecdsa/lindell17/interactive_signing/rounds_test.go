@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	gennaro_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -186,7 +187,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 func doGennaroDkg(t *testing.T, sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares) {
 	t.Helper()
 
-	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(sid, cohortConfig, identities, nil)
+	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(sid, cohortConfig, identities, randomisedFischlin.Name, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := gennaro_dkg_testutils.DoDkgRound1(gennaroParticipants)

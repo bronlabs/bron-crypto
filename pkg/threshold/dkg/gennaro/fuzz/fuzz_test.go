@@ -20,6 +20,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -55,21 +56,21 @@ func FuzzGennaro(f *testing.F) {
 				SignatureAggregators: hashset.NewHashSet(identityKeys),
 			},
 		}
-		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(integration.AuthKey), cohortConfig, prng, nil)
+		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(integration.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(integration.AuthKey), cohortConfig, prng, nil)
+		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(integration.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(integration.AuthKey), cohortConfig, prng, nil)
+		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(integration.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

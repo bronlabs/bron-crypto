@@ -5,14 +5,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const DlogProofLabel = "COPPER_KRYPTON_GENNARO_DKG_DLOG_PROOF-"
+const (
+	dlogProofLabel = "COPPER_KRYPTON_GENNARO_DKG_DLOG_PROOF-"
+	sharingIdLabel = "sharing id"
+)
 
 type Round1Broadcast struct {
 	BlindedCommitments []curves.Point
@@ -28,8 +30,8 @@ type Round1P2P struct {
 }
 
 type Round2Broadcast struct {
-	Commitments []curves.Point
-	A_i0Proof   *dlog.Proof
+	Commitments      []curves.Point
+	CommitmentsProof compiler.NIZKPoKProof
 
 	_ types.Incomparable
 }
@@ -52,14 +54,14 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 		return nil, nil, errs.WrapFailed(err, "couldn't split")
 	}
 
-	proverTranscript := hagrid.NewTranscript(DlogProofLabel, nil)
-	proverTranscript.AppendMessages("sharing id")
-	prover, err := dlog.NewProver(p.CohortConfig.CipherSuite.Curve.Generator(), p.UniqueSessionId, proverTranscript.Clone(), p.prng)
+	proverTranscript := p.state.transcript.Clone()
+	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
+	prover, err := p.state.niCompiler.NewProver(p.UniqueSessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
 
-	a_i0Proof, _, err := prover.Prove(a_i0)
+	commitmentsProof, err := prover.Prove(dealt.Commitments, dealt.PolynomialCoefficients)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not prove dlog proof of a_i0")
 	}
@@ -84,7 +86,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	p.state.myPartialSecretShare = dealt.SecretShares[p.MySharingId-1]
 	p.state.commitments = dealt.Commitments
 	p.state.blindedCommitments = dealt.BlindedCommitments
-	p.state.a_i0Proof = a_i0Proof
+	p.state.commitmentsProof = commitmentsProof
 
 	p.round++
 	return &Round1Broadcast{
@@ -144,8 +146,8 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 	p.state.partialPublicKeyShares = partialPublicKeyShares
 	p.round++
 	return &Round2Broadcast{
-		Commitments: p.state.commitments,
-		A_i0Proof:   p.state.a_i0Proof,
+		Commitments:      p.state.commitments,
+		CommitmentsProof: p.state.commitmentsProof,
 	}, nil
 }
 
@@ -170,15 +172,19 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		if !exists {
 			return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with sharing id %d", senderSharingId)
 		}
-		if broadcastedMessageFromSender.A_i0Proof == nil {
+		if broadcastedMessageFromSender.CommitmentsProof == nil {
 			return nil, nil, errs.NewMissing("do not have the dlog proof of a_i0 for sharing id %d", senderSharingId)
 		}
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		transcript := hagrid.NewTranscript(DlogProofLabel, nil)
-		transcript.AppendMessages("sharing id", bitstring.ToBytesLE(senderSharingId))
-		if err := dlog.Verify(p.CohortConfig.CipherSuite.Curve.Generator(), senderCommitmentToTheirLocalSecret, broadcastedMessageFromSender.A_i0Proof, p.UniqueSessionId); err != nil {
+		verifierTranscript := p.state.transcript.Clone()
+		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(senderSharingId))
+		verifier, err := p.state.niCompiler.NewVerifier(p.UniqueSessionId, verifierTranscript)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")
+		}
+		if err := verifier.Verify(senderCommitmentVector, broadcastedMessageFromSender.CommitmentsProof); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")
 		}
 

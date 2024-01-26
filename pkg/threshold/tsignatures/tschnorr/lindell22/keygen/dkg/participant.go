@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -42,7 +43,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TSCHNORR_LINDELL22_DKG", nil)
 	}
 	transcript.AppendMessages("lindell22 dkg", uniqueSessionId)
-	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, prng, transcript)
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct lindell22 dkg participant out of gennaro dkg participant")
 	}
