@@ -21,7 +21,6 @@ import (
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
-	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
@@ -42,7 +41,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 		// fuzz identities
 		identities := fuzzIdentityKeys(t, fz, cipherSuite, n)
 		// do DKG
-		shards := doDkg(t, fz, cipherSuite, n, threshold, identities)
+		shards := doDkg(t, fz, cipherSuite, threshold, identities)
 		// do interactive signing
 		doInteractiveSigning(t, threshold, identities, shards, message, cipherSuite)
 	})
@@ -74,11 +73,14 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []integration.
 	require.NoError(t, err)
 }
 
-func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, n, threshold int, identities []integration.IdentityKey) []*dkls24.Shard {
+func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, threshold int, identities []integration.IdentityKey) []*dkls24.Shard {
 	t.Helper()
 	var sid []byte
 	fz.Fuzz(&sid)
-	_, _, _, shards, err := dkls24_testutils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
+
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
+	require.NoError(t, err)
+	_, shards, err := testutils.RunDKG(cipherSuite.Curve, cohortConfig, identities)
 	if err != nil {
 		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
 			t.Skip("too many participants")

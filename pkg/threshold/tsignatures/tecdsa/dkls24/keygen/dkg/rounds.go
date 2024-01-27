@@ -5,7 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
@@ -15,27 +15,18 @@ type Round1Broadcast = gennaro.Round1Broadcast
 type Round1P2P struct {
 	Gennaro      *gennaro.Round1P2P
 	ZeroSampling *zeroSetup.Round1P2P
-	VSOTSender   *vsot.Round1P2P
+	BaseOTSender bbot.Round1P2P
 
 	_ types.Incomparable
 }
 
 type Round2Broadcast = gennaro.Round2Broadcast
 type Round2P2P struct {
-	ZeroSampling *zeroSetup.Round2P2P
-	VSOTReceiver vsot.Round2P2P
+	ZeroSampling   *zeroSetup.Round2P2P
+	BaseOTReceiver bbot.Round2P2P
 
 	_ types.Incomparable
 }
-
-// Acting as sender.
-type Round3P2P = vsot.Round3P2P
-
-// Acting as receiver.
-type Round4P2P = vsot.Round4P2P
-
-// Acting as sender.
-type Round5P2P = vsot.Round5P2P
 
 func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
 	gennaroBroadcast, gennaroP2P, err := p.GennaroParty.Round1()
@@ -46,15 +37,12 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "zero sampling round 1 failed")
 	}
-	baseOTP2P := map[types.IdentityHash]*vsot.Round1P2P{}
+	baseOtP2P := map[types.IdentityHash]bbot.Round1P2P{}
 	for identity, party := range p.BaseOTSenderParties {
-		proof, publicKey, err := party.Round1ComputeAndZkpToPublicKey()
-		baseOTP2P[identity] = &vsot.Round1P2P{
-			Proof:     proof,
-			PublicKey: publicKey,
-		}
+		r1out, err := party.Round1()
+		baseOtP2P[identity] = r1out
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
+			return nil, nil, errs.WrapFailed(err, "BaseOT as sender for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 
@@ -64,7 +52,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 		p2pOutput[identity] = &Round1P2P{
 			Gennaro:      message,
 			ZeroSampling: zeroSamplingP2P[identity],
-			VSOTSender:   baseOTP2P[identity],
+			BaseOTSender: baseOtP2P[identity],
 		}
 	}
 	return gennaroBroadcast, p2pOutput, nil
@@ -73,11 +61,11 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, map[types.IdentityHash]*Round2P2P, error) {
 	gennaroRound1outputP2P := map[types.IdentityHash]*gennaro.Round1P2P{}
 	zeroSamplingRound1Output := map[types.IdentityHash]*zeroSetup.Round1P2P{}
-	vsotRound1Output := map[types.IdentityHash]*vsot.Round1P2P{}
+	baseOtRound1Output := map[types.IdentityHash]bbot.Round1P2P{}
 	for identity, message := range round1outputP2P {
 		gennaroRound1outputP2P[identity] = message.Gennaro
 		zeroSamplingRound1Output[identity] = message.ZeroSampling
-		vsotRound1Output[identity] = message.VSOTSender
+		baseOtRound1Output[identity] = message.BaseOTSender
 	}
 	gennaroBroadcast, err := p.GennaroParty.Round2(round1outputBroadcast, gennaroRound1outputP2P)
 	if err != nil {
@@ -87,32 +75,31 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "zero sampling round 2 failed")
 	}
-	baseOTP2P := map[types.IdentityHash]vsot.Round2P2P{}
+	baseOTP2P := map[types.IdentityHash]bbot.Round2P2P{}
 	for identity, receiver := range p.BaseOTReceiverParties {
-		baseOTP2P[identity], err = receiver.Round2VerifySchnorrAndPadTransfer(vsotRound1Output[identity].PublicKey, vsotRound1Output[identity].Proof)
+		baseOTP2P[identity], err = receiver.Round2(baseOtRound1Output[identity])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "vsot as receiver for identity %x", hex.EncodeToString(identity[:]))
+			return nil, nil, errs.WrapFailed(err, "base OT as receiver for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 	p2pOutput := make(map[types.IdentityHash]*Round2P2P, len(zeroSamplingP2P))
 	for identity, message := range zeroSamplingP2P {
 		p2pOutput[identity] = &Round2P2P{
-			ZeroSampling: message,
-			VSOTReceiver: baseOTP2P[identity],
+			ZeroSampling:   message,
+			BaseOTReceiver: baseOTP2P[identity],
 		}
 	}
 
 	return gennaroBroadcast, p2pOutput, nil
 }
 
-func (p *Participant) Round3(round2outputBroadcast map[types.IdentityHash]*Round2Broadcast, round2outputP2P map[types.IdentityHash]*Round2P2P) (map[types.IdentityHash]Round3P2P, error) {
+func (p *Participant) Round3(round2outputBroadcast map[types.IdentityHash]*Round2Broadcast, round2outputP2P map[types.IdentityHash]*Round2P2P) (s *dkls24.Shard, err error) {
 	zeroSamplingRound2Output := map[types.IdentityHash]*zeroSetup.Round2P2P{}
-	vsotRound2Output := map[types.IdentityHash]vsot.Round2P2P{}
+	baseOtRound2Output := map[types.IdentityHash]bbot.Round2P2P{}
 	for identity, message := range round2outputP2P {
 		zeroSamplingRound2Output[identity] = message.ZeroSampling
-		vsotRound2Output[identity] = message.VSOTReceiver
+		baseOtRound2Output[identity] = message.BaseOTReceiver
 	}
-	var err error
 	p.Shard.SigningKeyShare, p.Shard.PublicKeyShares, err = p.GennaroParty.Round3(round2outputBroadcast)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "gennaro round 3 failed")
@@ -121,44 +108,10 @@ func (p *Participant) Round3(round2outputBroadcast map[types.IdentityHash]*Round
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
-	baseOTP2P := map[types.IdentityHash]vsot.Round3P2P{}
 	for identity, sender := range p.BaseOTSenderParties {
-		baseOTP2P[identity], err = sender.Round3PadTransfer(vsotRound2Output[identity])
+		err = sender.Round3(baseOtRound2Output[identity])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
-		}
-	}
-	return baseOTP2P, nil
-}
-
-func (p *Participant) Round4(round3output map[types.IdentityHash]Round3P2P) (map[types.IdentityHash]Round4P2P, error) {
-	var err error
-	baseOTP2P := map[types.IdentityHash]vsot.Round4P2P{}
-	for identity, receiver := range p.BaseOTReceiverParties {
-		baseOTP2P[identity], err = receiver.Round4RespondToChallenge(round3output[identity])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "receiver round 4 vsot")
-		}
-	}
-	return baseOTP2P, nil
-}
-
-func (p *Participant) Round5(round4output map[types.IdentityHash]Round4P2P) (map[types.IdentityHash]Round5P2P, error) {
-	var err error
-	baseOTP2P := map[types.IdentityHash]vsot.Round5P2P{}
-	for identity, sender := range p.BaseOTSenderParties {
-		baseOTP2P[identity], err = sender.Round5Verify(round4output[identity])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "vsot as sender for identity %x", hex.EncodeToString(identity[:]))
-		}
-	}
-	return baseOTP2P, nil
-}
-
-func (p *Participant) Round6(round5output map[types.IdentityHash]Round5P2P) (*dkls24.Shard, error) {
-	for identity, receiver := range p.BaseOTReceiverParties {
-		if err := receiver.Round6Verify(round5output[identity]); err != nil {
-			return nil, errs.WrapFailed(err, "vsot as receiver for indentity %x", hex.EncodeToString(identity[:]))
+			return nil, errs.WrapFailed(err, "base OT as sender for identity %x", hex.EncodeToString(identity[:]))
 		}
 	}
 	p.Shard.PairwiseBaseOTs = map[types.IdentityHash]*dkls24.BaseOTConfig{}

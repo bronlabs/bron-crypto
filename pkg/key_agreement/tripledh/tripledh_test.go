@@ -46,9 +46,9 @@ func Test_HappyPathTripleDH(t *testing.T) {
 			require.NoError(t, err)
 			bobEpk := curve.ScalarBaseMult(bobEsk)
 
-			local, err := tripledh.DeriveSecretLocal(aliceSk, bobPk, aliceEsk, bobEpk)
+			local, err := tripledh.DeriveSharedScalarLocal(aliceSk, bobPk, aliceEsk, bobEpk)
 			require.NoError(t, err)
-			remote, err := tripledh.DeriveSecretRemote(alicePk, bobSk, aliceEpk, bobEsk)
+			remote, err := tripledh.DeriveSharedScalarRemote(alicePk, bobSk, aliceEpk, bobEsk)
 			require.NoError(t, err)
 
 			require.Zero(t, local.Cmp(remote))

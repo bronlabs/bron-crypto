@@ -5,10 +5,10 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -21,22 +21,29 @@ type Round1Output struct {
 }
 
 // Round1 uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
-func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Out *Round1Output, err error) {
+func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage, r1Out *Round1Output, err error) {
 	r1Out = &Round1Output{}
+	if len(x) == 0 {
+		x = make(ot.ChoiceBits, r.Xi/8)
+		if _, err := r.Csprng.Read(r.Output.Choices); err != nil {
+			return nil, nil, errs.WrapRandomSampleFailed(err, "generating random choice bits")
+		}
+	} else if len(x)%KappaBytes != 0 {
+		return nil, nil, errs.NewInvalidArgument("choice bits length must be a multiple of KappaBytes=%d (is %d)", KappaBytes, len(x))
+	}
+	r.Output.Choices = x
 
 	// Sanitise inputs and compute sizes
-	if len(x) != (R.Xi >> 3) {
-		return nil, nil, errs.NewInvalidArgument("wrong x length (is %d, expected %d)", len(x), R.Xi)
-	}
-	eta := R.LOTe * R.Xi // η = LOTe*ξ
+
+	eta := r.L * r.Xi // η = L*ξ
 	etaBytes := eta >> 3
 	etaPrimeBytes := etaBytes + SigmaBytes // η'= η + σ
 
 	// EXTENSION
 	// step 1.1.1 (Ext.1)
-	R.xPrime = make([]byte, etaPrimeBytes)                     // x' ∈ [η']bits
-	copy(R.xPrime[:etaBytes], bitstring.RepeatBits(x, R.LOTe)) // x' = {x0 || x0 || ... }_LOTe || {x1 || x1 || ... }_LOTe || ...
-	if _, err = R.csrand.Read(R.xPrime[etaBytes:]); err != nil {
+	r.xPrime = make([]byte, etaPrimeBytes)                  // x' ∈ [η']bits
+	copy(r.xPrime[:etaBytes], bitstring.RepeatBits(x, r.L)) // x' = {x0 || x0 || ... }_L || {x1 || x1 || ... }_L || ...
+	if _, err = r.Csprng.Read(r.xPrime[etaBytes:]); err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
 
@@ -45,16 +52,16 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 	for i := 0; i < Kappa; i++ {
 		t[0][i] = make([]byte, etaPrimeBytes) // k^i_0 --(PRG)--> t^i_0
 		t[1][i] = make([]byte, etaPrimeBytes) // k^i_1 --(PRG)--> t^i_1
-		if err = R.prg.Seed(R.baseOtSeeds.OneTimePadEncryptionKeys[i][0][:], R.sid); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.UniqueSessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe (Ext.2)")
 		}
-		if _, err = R.prg.Read(t[0][i]); err != nil {
+		if _, err = r.prg.Read(t[0][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe (Ext.2)")
 		}
-		if err = R.prg.Seed(R.baseOtSeeds.OneTimePadEncryptionKeys[i][1][:], R.sid); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.UniqueSessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
-		if _, err = R.prg.Read(t[1][i]); err != nil {
+		if _, err = r.prg.Read(t[1][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
 		}
 	}
@@ -62,25 +69,25 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 	for i := 0; i < Kappa; i++ {
 		r1Out.U[i] = make([]byte, etaPrimeBytes) // u_i = t^i_0 + t^i_1 + Δ_i
 		subtle.XORBytes(r1Out.U[i], t[0][i], t[1][i])
-		subtle.XORBytes(r1Out.U[i], r1Out.U[i], R.xPrime)
+		subtle.XORBytes(r1Out.U[i], r1Out.U[i], r.xPrime)
 	}
 
 	// CONSISTENCY CHECK
 	// step 1.2.1.[1-2] (*)(Check.1, Fiat-Shamir)
-	r1Out.Witness, err = commitWitness(R.transcript, &r1Out.U, nil, R.csrand)
+	r1Out.Witness, err = commitWitness(r.Transcript, &r1Out.U, nil, r.Csprng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
 	}
 	// step 1.2.1.3 (*)(Check.1, Fiat-Shamir)
 	M := eta / Sigma                                          // M = η/σ
-	challengeFiatShamir := generateChallenge(R.transcript, M) // χ
+	challengeFiatShamir := generateChallenge(r.Transcript, M) // χ
 	// step 1.2.2 (Check.2) Compute ẋ and ṫ
-	R.computeResponse(t, challengeFiatShamir, &r1Out.Response)
+	r.computeResponse(t, challengeFiatShamir, &r1Out.Response)
 
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript (to be used by protocols sharing the transcript)
-	R.transcript.AppendMessages("OTe_challengeResponse_x_val", r1Out.Response.X_val[:])
+	r.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1Out.Response.X_val[:])
 	for i := 0; i < Kappa; i++ {
-		R.transcript.AppendMessages("OTe_challengeResponse_t_val", r1Out.Response.T_val[i][:])
+		r.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1Out.Response.T_val[i][:])
 	}
 
 	// TRANSPOSE AND RANDOMISE
@@ -90,37 +97,30 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 		return nil, nil, errs.WrapFailed(err, "bad transposing t^i_0 for SoftSpoken COTe")
 	}
 	// step 1.3.2 (T&R.2) Hash η rows of t_j using the sid as salt (drop η' - η rows, used for consistency check)
-	R.oTeReceiverOutput = make(OTeMessageBatch, R.Xi)
-	for j := 0; j < R.Xi; j++ {
-		R.oTeReceiverOutput[j] = make(OTeMessage, R.LOTe*KappaBytes)
+	r.Output.ChosenMessages = make([]ot.ChosenMessage, r.Xi)
+	for j := 0; j < r.Xi; j++ {
+		r.Output.ChosenMessages[j] = make(ot.ChosenMessage, r.L)
+		for l := 0; l < r.L; l++ {
+			digest, err := hashing.Hash(ot.HashFunction, []byte(label), r.UniqueSessionId, bitstring.ToBytesLE(j), t_j[j*r.L+l])
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
+			}
+			copy(r.Output.ChosenMessages[j][l][:], digest)
+		}
 	}
-	err = HashSalted(R.sid, t_j[:eta], R.oTeReceiverOutput)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
-	}
-	return R.oTeReceiverOutput, r1Out, nil
+	return r.Output.ChosenMessages, r1Out, nil
 }
 
-// Round2Output is the sender's output of round2 of COTe, to be sent to the Receiver.
-type Round2Output struct {
-	Tau COTeMessageBatch
-
-	_ types.Incomparable
-}
-
-// Round2 uses the PRG to extend the baseOT results, verifies their consistency
-// and (COTe only, not in OTe) derandomizes them. Set cOTeSenderInput (α) to nil
-// for OTe functionality.
-func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
-) (oTeSenderOutput *[2]OTeMessageBatch, cOTeSenderOutput COTeMessageBatch, r2out *Round2Output, err error) {
+// Round2 uses the PRG to extend the baseOT results and verifies their consistency.
+func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, err error) {
 	// Sanitise inputs, compute sizes
 	if r1out == nil || len(r1out.U) != Kappa || len(r1out.Witness) != Kappa ||
 		len(r1out.Response.T_val) != Kappa || len(r1out.Response.X_val) != SigmaBytes {
 
-		return nil, nil, nil, errs.NewInvalidLength("wrong r1out length (U (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
+		return nil, errs.NewInvalidLength("wrong r1out length (U (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
 			len(r1out.U), Kappa, len(r1out.Witness), Kappa, len(r1out.Response.T_val), Kappa, len(r1out.Response.X_val), SigmaBytes)
 	}
-	Eta := S.LOTe * S.Xi                // η = LOTe*ξ
+	Eta := s.L * s.Xi                   // η = L*ξ
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
 
 	// EXTENSION
@@ -128,11 +128,11 @@ func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
 	t_Delta := ExtMessageBatch{}
 	for i := 0; i < Kappa; i++ {
 		t_Delta[i] = make([]byte, EtaPrimeBytes)
-		if err = S.prg.Seed(S.baseOtSeeds.OneTimePadDecryptionKey[i][:], S.sid); err != nil {
-			return nil, nil, nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe (Ext.2)")
+		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.UniqueSessionId); err != nil {
+			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe (Ext.2)")
 		}
-		if _, err = S.prg.Read(t_Delta[i]); err != nil {
-			return nil, nil, nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe (Ext.2)")
+		if _, err = s.prg.Read(t_Delta[i]); err != nil {
+			return nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe (Ext.2)")
 		}
 	}
 	// step 2.1.2 (Ext.2) Compute q_i = Δ_i • u_i + t_i
@@ -140,145 +140,64 @@ func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
 	qiTemp := make([]byte, EtaPrimeBytes)
 	for i := 0; i < Kappa; i++ {
 		if len(r1out.U[i]) != EtaPrimeBytes {
-			return nil, nil, nil, errs.NewInvalidLength("U[%d] length is %d, should be %d", i, len(r1out.U[i]), EtaPrimeBytes)
+			return nil, errs.NewInvalidLength("U[%d] length is %d, should be %d", i, len(r1out.U[i]), EtaPrimeBytes)
 		}
 		extCorrelations[i] = t_Delta[i]
 		subtle.XORBytes(qiTemp, r1out.U[i], t_Delta[i])
-		subtle.ConstantTimeCopy(S.baseOtSeeds.RandomChoiceBits[i], extCorrelations[i], qiTemp)
+		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Select(i)), extCorrelations[i], qiTemp)
 	}
 
 	// CONSISTENCY CHECK
 	// step 2.2.1.1 (*)(Fiat-Shamir): Append the expansionMask to the transcript
-	_, err = commitWitness(S.transcript, &r1out.U, r1out.Witness, S.csrand)
+	_, err = commitWitness(s.Transcript, &r1out.U, r1out.Witness, s.Csprng)
 	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
+		return nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
 	}
 	// step 2.2.1.2 (Check.1&2) Generate the challenge (χ) using Fiat-Shamir heuristic
 	M := Eta / Sigma
-	challengeFiatShamir := generateChallenge(S.transcript, M)
+	challengeFiatShamir := generateChallenge(s.Transcript, M)
 	// step 2.2.[2-3] (Check.3) Check the consistency of the challenge response computing q^i
-	err = S.verifyChallenge(challengeFiatShamir, &r1out.Response, &extCorrelations)
+	err = s.verifyChallenge(challengeFiatShamir, &r1out.Response, &extCorrelations)
 	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad consistency check for SoftSpoken COTe (Check.3)")
+		return nil, errs.WrapFailed(err, "bad consistency check for SoftSpoken COTe (Check.3)")
 	}
 	// (*)(Fiat-Shamir): Append the challenge response to the transcript
-	S.transcript.AppendMessages("OTe_challengeResponse_x_val", r1out.Response.X_val[:])
+	s.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1out.Response.X_val[:])
 	for i := 0; i < Kappa; i++ {
-		S.transcript.AppendMessages("OTe_challengeResponse_t_val", r1out.Response.T_val[i][:])
+		s.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1out.Response.T_val[i][:])
 	}
 
 	// TRANSPOSE AND RANDOMISE
 	// step 2.3.1 (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
 	qjTransposed, err := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
 	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad transposing q^i for SoftSpoken COTe")
+		return nil, errs.WrapFailed(err, "bad transposing q^i for SoftSpoken COTe")
 	}
 	qjTransposedPlusDelta := make([][]byte, Eta) // q_j+Δ ∈ [η][κ]bits
 	for j := 0; j < Eta; j++ {
 		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
 		// drop last η'-η rows, they are used only for the consistency check
-		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], S.baseOtSeeds.PackedRandomChoiceBits)
+		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.baseOtSeeds.Choices)
 	}
 	// step 2.3.2 (T&R.2) Randomise by hashing q_j and q_j+Δ
-	oTeSenderOutput = &[2]OTeMessageBatch{make(OTeMessageBatch, S.Xi), make(OTeMessageBatch, S.Xi)}
-	for j := 0; j < S.Xi; j++ {
-		oTeSenderOutput[0][j] = make(OTeMessage, S.LOTe*KappaBytes)
-		oTeSenderOutput[1][j] = make(OTeMessage, S.LOTe*KappaBytes)
-	}
-	err = HashSalted(S.sid, qjTransposed[:Eta], oTeSenderOutput[0])
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
-	}
-	err = HashSalted(S.sid, qjTransposedPlusDelta[:Eta], oTeSenderOutput[1])
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
-	}
-
-	// Return OTe and avoid derandomising if the input opts are not provided
-	if len(cOTeSenderInput) == 0 {
-		return oTeSenderOutput, nil, nil, nil
-	}
-
-	// DERANDOMISE
-	// step 2.4. (Derand)
-	if len(cOTeSenderInput) != S.Xi {
-		return nil, nil, nil, errs.NewInvalidArgument("wrong cOTeSenderInput lengths (is %d, expected %d)",
-			len(cOTeSenderInput), S.Xi)
-	}
-	cOTeSenderOutput = make(COTeMessageBatch, S.Xi)
-	r2out = &Round2Output{Tau: make(COTeMessageBatch, S.Xi)}
-	for j := 0; j < S.Xi; j++ {
-		if len(cOTeSenderInput[j]) != S.LOTe {
-			return nil, nil, nil, errs.NewInvalidLength("wrong cOTeSenderInput[%d] length (is %d, expected %d)",
-				j, len(cOTeSenderInput[j]), S.LOTe)
-		}
-		cOTeSenderOutput[j] = make([]curves.Scalar, S.LOTe)
-		r2out.Tau[j] = make([]curves.Scalar, S.LOTe)
-		for l := 0; l < S.LOTe; l++ {
-			// step 2.4.1   z_A_j = ECS(v_0_j)
-			cOTeSenderOutput[j][l], err = S.curve.Scalar().ScalarField().Hash(oTeSenderOutput[0][j][l*KappaBytes : (l+1)*KappaBytes])
+	s.Output.Messages = make([]ot.MessagePair, s.Xi)
+	for j := 0; j < s.Xi; j++ {
+		s.Output.Messages[j][0] = make(ot.Message, s.L)
+		s.Output.Messages[j][1] = make(ot.Message, s.L)
+		for l := 0; l < s.L; l++ {
+			digest, err := hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
 			if err != nil {
-				return nil, nil, nil, errs.WrapHashingFailed(err, "bad hashing v_0_j for SoftSpoken COTe (Derand.1)")
+				return nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
-			// step 2.4.2   τ_j = ECS(v_1_j)...
-			r2out.Tau[j][l], err = S.curve.Scalar().ScalarField().Hash(oTeSenderOutput[1][j][l*KappaBytes : (l+1)*KappaBytes])
+			copy(s.Output.Messages[j][0][l][:], digest)
+			digest, err = hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
 			if err != nil {
-				return nil, nil, nil, errs.WrapHashingFailed(err, "bad hashing v_1_j for SoftSpoken COTe (Derand.1)")
+				return nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}
-			//                              ... - z_A_j + α_j
-			r2out.Tau[j][l] = r2out.Tau[j][l].
-				Sub(cOTeSenderOutput[j][l]).Add(cOTeSenderInput[j][l])
+			copy(s.Output.Messages[j][1][l][:], digest)
 		}
 	}
-
-	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for j := 0; j < S.Xi; j++ {
-		for l := 0; l < S.LOTe; l++ {
-			S.transcript.AppendMessages("OTe_derandMask", r2out.Tau[j][l].Bytes())
-		}
-	}
-
-	return oTeSenderOutput, cOTeSenderOutput, r2out, nil
-}
-
-// Round3 uses the derandomization mask to derandomize the COTe output.
-func (R *Receiver) Round3(r2out *Round2Output) (cOTeReceiverOutput COTeMessageBatch, err error) {
-	// Sanitise input, compute sizes
-	if (r2out == nil) || (len(r2out.Tau) != R.Xi) {
-		return nil, errs.NewIsNil("nil in input arguments of Softspoken Round3")
-	}
-
-	// (*)(Fiat-Shamir): Append the derandomization mask to the transcript
-	for j := 0; j < R.Xi; j++ {
-		if len(r2out.Tau[j]) != R.LOTe {
-			return nil, errs.NewInvalidLength("wrong r2out.DerandMask[%d] length (is %d, should be %d)",
-				j, len(r2out.Tau[0]), R.LOTe)
-		}
-		for l := 0; l < R.LOTe; l++ {
-			R.transcript.AppendMessages("OTe_derandMask", r2out.Tau[j][l].Bytes())
-		}
-	}
-
-	// step 3.1 (Derand)
-	cOTeReceiverOutput = make(COTeMessageBatch, R.Xi)
-	for j := 0; j < R.Xi; j++ {
-		cOTeReceiverOutput[j] = make([]curves.Scalar, R.LOTe)
-		for l := 0; l < R.LOTe; l++ {
-			minus_v_x, err := R.curve.Scalar().ScalarField().Hash(R.oTeReceiverOutput[j][l*KappaBytes : (l+1)*KappaBytes])
-			if err != nil {
-				return nil, errs.WrapHashingFailed(err, "bad hashing v_x_j for SoftSpoken COTe (Derand.2)")
-			}
-			minus_v_x = minus_v_x.Neg()
-			bit, err := bitstring.SelectBit(R.xPrime, j*R.LOTe+l)
-			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot select bit")
-			}
-			// z_B_j = τ_j - ECS(v_x_j)  if x_j == 1
-			//       =     - ECS(v_x_j)  if x_j == 0
-			cOTeReceiverOutput[j][l] = ct.ConstantTimeSelectScalar(int(bit), r2out.Tau[j][l].Add(minus_v_x), minus_v_x)
-		}
-	}
-	return cOTeReceiverOutput, nil
+	return s.Output.Messages, nil
 }
 
 // -------------------------------------------------------------------------- //
@@ -327,14 +246,14 @@ func generateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
 }
 
 // computeResponse Computes the challenge response ẋ, ṫ^i ∀i∈[κ].
-func (R *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Challenge, challengeResponse *ChallengeResponse) {
+func (r *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Challenge, challengeResponse *ChallengeResponse) {
 	M := len(challenge)
 	etaBytes := (M * Sigma) / 8 // M = η/σ -> η = M*σ
 	// 		ẋ = x_{mσ:(m+1)σ} ...
-	copy(challengeResponse.X_val[:], R.xPrime[etaBytes:etaBytes+SigmaBytes])
+	copy(challengeResponse.X_val[:], r.xPrime[etaBytes:etaBytes+SigmaBytes])
 	// 		                ... + Σ{k=1}^{m} χ_j • xx_{(k-1)σ:kσ}
 	for k := 0; k < M; k++ {
-		x_hat_j := R.xPrime[k*SigmaBytes : (k+1)*SigmaBytes]
+		x_hat_j := r.xPrime[k*SigmaBytes : (k+1)*SigmaBytes]
 		Chi_j := challenge[k][:]
 		for k := 0; k < SigmaBytes; k++ {
 			challengeResponse.X_val[k] ^= (Chi_j[k] & x_hat_j[k])
@@ -356,7 +275,7 @@ func (R *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Cha
 }
 
 // verifyChallenge checks the consistency of the extension.
-func (S *Sender) verifyChallenge(
+func (s *Sender) verifyChallenge(
 	challenge Challenge,
 	challengeResponse *ChallengeResponse,
 	extCorrelations *ExtMessageBatch,
@@ -379,7 +298,7 @@ func (S *Sender) verifyChallenge(
 		}
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		subtle.XORBytes(qi_expected[:], challengeResponse.T_val[i][:], challengeResponse.X_val[:])
-		subtle.ConstantTimeCopy((1 - S.baseOtSeeds.RandomChoiceBits[i]), qi_expected[:], challengeResponse.T_val[i][:])
+		subtle.ConstantTimeCopy(1-int(s.baseOtSeeds.Choices.Select(i)), qi_expected[:], challengeResponse.T_val[i][:])
 		checkOk := subtle.ConstantTimeCompare(qi_expected[:], qi_val[:]) == 1
 		isCorrect = isCorrect && checkOk
 	}

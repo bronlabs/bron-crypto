@@ -3,17 +3,40 @@ package bitstring
 import (
 	"encoding/binary"
 
+	"golang.org/x/exp/constraints"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// SelectBit gets the `i`th bit of a byte vector interpreted as little-endian packed bits.
+// SelectBit gets the `i`th bit of a byte vector `v` interpreted as little-endian packed bits.
 // E.g., [0x12, 0x34] --> [0,1,0,0, 1,0,0,0, 1,1,0,0, 0,0,1,0].
-func SelectBit(v []byte, i int) (byte, error) {
-	if i < 0 || i >= binary.Size(v)*8 {
-		return 0, errs.NewInvalidArgument("index out of bounds")
+func SelectBit(v []byte, i int) byte {
+	// index & 0x07 == index % 8 are designed to avoid CPU division.
+	return v[i/8] >> (i & 0x07) & 0x01
+}
+
+// UnpackBits unpacks the bits in the input vector v.
+// E.g., [0xF0,0x12] ---> [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0].
+func UnpackBits[T constraints.Integer](v []byte) []T {
+	vOut := make([]T, len(v)*8)
+	for i := 0; i < len(v)*8; i++ {
+		vOut[i] = T(v[i/8] >> (i & 0x07) & 0x01)
 	}
-	// the bitwise tricks index >> 3 == index // 8 and index & 0x07 == index % 8 are designed to avoid CPU division.
-	return v[i/8] >> (i & 0x07) & 0x01, nil
+	return vOut
+}
+
+// PackBits packs the bits in the input vector v. Treats every non-zero input element as 1.
+// E.g., [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0] ---> [0xF0,0x12].
+func PackBits[T constraints.Integer](v []T) []byte {
+	vOut := make([]byte, (len(v)+7)/8)
+	for i := 0; i < len(v); i++ {
+		bit := byte(0)
+		if v[i] != 0 {
+			bit = 1
+		}
+		vOut[i/8] |= bit << (i & 0x07)
+	}
+	return vOut
 }
 
 // ReverseBytes reverses the order of the bytes in a new slice.
@@ -27,12 +50,14 @@ func ReverseBytes(inBytes []byte) []byte {
 	return outBytes
 }
 
+// PadToLeft pads the input bytes to the left with padLen zeroed bytes.
 func PadToLeft(inBytes []byte, padLen int) []byte {
 	outBytes := make([]byte, padLen+len(inBytes))
 	copy(outBytes[padLen:], inBytes)
 	return outBytes
 }
 
+// PadToRight pads the input bytes to the right with padLen zeroed bytes.
 func PadToRight(inBytes []byte, padLen int) []byte {
 	outBytes := make([]byte, len(inBytes)+padLen)
 	copy(outBytes[:len(outBytes)-padLen], inBytes)
@@ -118,30 +143,6 @@ func RepeatBits(v []byte, nrepetitions int) []byte {
 			vOut[nextBit/8] |= bit << (nextBit & 0x07)
 			nextBit++
 		}
-	}
-	return vOut
-}
-
-// UnpackBits unpacks the bits in the input vector v.
-// E.g., [0xF0,0x12] ---> [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0].
-func UnpackBits(v []byte) []byte {
-	vOut := make([]byte, len(v)*8)
-	for i := 0; i < len(v)*8; i++ {
-		vOut[i] = v[i/8] >> (i & 0x07) & 0x01
-	}
-	return vOut
-}
-
-// PackBits packs the bits in the input vector v. Treats every non-zero input byte as 1.
-// E.g., [1,1,1,1, 0,0,0,0, 0,0,0,1, 0,0,1,0] ---> [0xF0,0x12].
-func PackBits(v []byte) []byte {
-	vOut := make([]byte, (len(v)+7)/8)
-	for i := 0; i < len(v); i++ {
-		bit := byte(0)
-		if v[i] != 0 {
-			bit = 1
-		}
-		vOut[i/8] |= bit << (i & 0x07)
 	}
 	return vOut
 }

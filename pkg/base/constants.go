@@ -11,7 +11,7 @@ const ComputationalSecurityBytes = ComputationalSecurity / 8
 // FieldBytes is the number of bytes needed to represent a FieldElement|Scalar in most fields of the `curves` package.
 const FieldBytes = 32
 
-// WideFieldBytes is the number of bytes needed for sufficiently unbiased sampling of a FieldElement|Scalar in most fields.
+// WideFieldBytes is the maximum number of bytes accepted for sufficiently unbiased sampling of a FieldElement|Scalar in most fields.
 const WideFieldBytes = 64
 
 // Library-wide tag for Hash2Curve hashing as Random Oracle.

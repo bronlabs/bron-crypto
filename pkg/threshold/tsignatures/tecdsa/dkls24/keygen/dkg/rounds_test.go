@@ -21,20 +21,31 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
-	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
+	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
 	batchSize := softspoken.Kappa
-	identities, cohortConfig, participants, shards, err := dkls24_testutils.KeyGen(curve, h, threshold, n, nil, nil)
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
+	}
+
+	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
+	require.NoError(t, err)
+
+	participants, shards, err := dkls24_testutils.RunDKG(curve, cohortConfig, identities)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {
@@ -127,8 +138,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
-						meAsReceiver.OneTimePadDecryptionKey[i],
-						senderCounterParty.OneTimePadEncryptionKeys[i][myConfig.AsReceiver.RandomChoiceBits[i]],
+						meAsReceiver.ChosenMessages[i],
+						senderCounterParty.Messages[i][meAsReceiver.Choices.Select(i)],
 					)
 				}
 				meAsSender := myConfig.AsSender
@@ -136,8 +147,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 				for i := 0; i < batchSize; i++ {
 					require.Equal(
 						t,
-						receiverCounterParty.OneTimePadDecryptionKey[i],
-						meAsSender.OneTimePadEncryptionKeys[i][receiverCounterParty.RandomChoiceBits[i]],
+						receiverCounterParty.ChosenMessages[i],
+						meAsSender.Messages[i][receiverCounterParty.Choices.Select(i)],
 					)
 				}
 			}
@@ -148,12 +159,16 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		t.Parallel()
 
 		// Transfer messages
-		messages := make([][2][32]byte, batchSize)
+		messages := make([]ot.MessagePair, batchSize)
 		for i := 0; i < batchSize; i++ {
-			messages[i] = [2][32]byte{
-				sha256.Sum256([]byte(fmt.Sprintf("message[%d][0]", i))),
-				sha256.Sum256([]byte(fmt.Sprintf("message[%d][1]", i))),
+			m0 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][0]", i)))
+			m1 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][1]", i)))
+			messages[i] = ot.MessagePair{
+				make([]ot.MessageElement, 1),
+				make([]ot.MessageElement, 1),
 			}
+			messages[i][0][0] = ([ot.KappaBytes]byte)(m0[:ot.KappaBytes])
+			messages[i][1][0] = ([ot.KappaBytes]byte)(m1[:ot.KappaBytes])
 		}
 
 		for _, participant := range participants {
@@ -166,8 +181,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 				receiverCounterParty := shardsMap[counterPartyIdentity].PairwiseBaseOTs[participant.MyAuthKey.Hash()].AsReceiver
 
 				for _, pair := range []struct {
-					Sender   *vsot.SenderOutput
-					Receiver *vsot.ReceiverOutput
+					Sender   *ot.SenderRotOutput
+					Receiver *ot.ReceiverRotOutput
 				}{
 					{
 						Sender:   senderCounterParty,
@@ -178,12 +193,12 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 						Receiver: receiverCounterParty,
 					},
 				} {
-					ciphertexts, err := pair.Sender.Encrypt(messages)
+					ciphertexts, err := pair.Sender.Round2Encrypt(messages)
 					require.NoError(t, err)
-					decrypted, err := pair.Receiver.Decrypt(ciphertexts)
+					decrypted, err := pair.Receiver.Round3Decrypt(ciphertexts)
 					require.NoError(t, err)
 					for i := 0; i < batchSize; i++ {
-						choice := pair.Receiver.RandomChoiceBits[i]
+						choice := pair.Receiver.Choices.Select(i)
 						require.Equal(t, messages[i][choice], decrypted[i])
 						require.NotEqual(t, messages[i][1-choice], decrypted[i])
 					}

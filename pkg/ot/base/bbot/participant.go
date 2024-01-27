@@ -10,10 +10,9 @@
 // Ideal functionalities:
 //   - For the F^{R_{DL}}_{ZK}, we use ZKP Schnorr made non-interactive with the randomised Fischlim transform.
 //   - We use HMAC for realising the Random Oracle Hash function, the key for HMAC is received as input to the protocol.
-package vsot
+package bbot
 
 import (
-	crand "crypto/rand"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -22,51 +21,46 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-// Sender stores state for the "sender" role in OT. see Name 7 in Appendix A of DKLs18.
+const label = "COPPER-BATCHED-BASE-OT"
+
+// Sender obtains the 2 random messages for the 1|2 ROT.
 type Sender struct {
 	ot.Participant
 
-	Output *ot.SenderRotOutput // (x ∈[ξ]bits, r_x ∈[ξ][L][κ]bits), the batches of choice bits and chosen L×κ-bit messages of the 1|2 ROT.
+	Output *ot.SenderRotOutput // (s_0, s_1) ∈ [ξ][2][L][κ]bits, the batch of 2 L×κ-bit messages of the 1|2 ROT.
 
-	SecretKey curves.Scalar // The value `b` in the paper s.t. `b * G = B`, (re)used by all OTs.
-	PublicKey curves.Point  // PublicKey `B` is the public key of the secretKey.
+	MyEsk curves.Scalar // MyEsk is my ephemeral secret key.
 }
 
-// Receiver stores state for the "receiver" role in OT. Name 7, Appendix A, of DKLs.
+// Receiver chooses one message (with its choice bit) out of the sender's 1|2 ROT messages.
 type Receiver struct {
 	ot.Participant
 
-	Output *ot.ReceiverRotOutput // (s_0, s_1) ∈ [ξ][2][L][κ]bits, the batch of 2 L×κ-bit messages of the 1|2 ROT.
+	Output *ot.ReceiverRotOutput // (x ∈[ξ]bits, r_x ∈[ξ][L][κ]bits), the batches of choice bits and chosen L×κ-bit messages of the 1|2 ROT.
 
-	SenderPublicKey curves.Point // SenderPublicKey corresponds to "B" in the paper.
-	SenderChallenge []ot.Message // SenderChallenge is "xi" in the protocol.
+	MyEsk curves.Scalar // MyEsk is my ephemeral secret key.
 }
 
-// NewSender creates a new sender for the Random OT protocol.
+// NewSender constructs a Random OT sender.
 func NewSender(Xi, L int, curve curves.Curve, sid []byte, t transcripts.Transcript, csprng io.Reader) (*Sender, error) {
 	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "constructing sender")
 	}
 	return &Sender{
-		Participant: *participant,
 		Output:      &ot.SenderRotOutput{},
+		Participant: *participant,
 	}, nil
 }
 
-// NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
+// NewReceiver constructs a Random OT receiver.
 func NewReceiver(Xi, L int, curve curves.Curve, sid []byte, t transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
 	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
 	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "constructing receiver")
 	}
-	receiver := &Receiver{
-		Participant: *participant,
+	return &Receiver{
 		Output:      &ot.ReceiverRotOutput{},
-	}
-	receiver.Output.Choices = make(ot.ChoiceBits, Xi/8)
-	if _, err := crand.Read(receiver.Output.Choices); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "choosing random choice bits")
-	}
-	return receiver, nil
+		Participant: *participant,
+	}, nil
 }

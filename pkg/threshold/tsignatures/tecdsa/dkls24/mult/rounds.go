@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
@@ -17,7 +18,7 @@ type Round1Output = softspoken.Round1Output
 
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// step 1.1: Sample β ∈ [ξ]bits
-	bob.Beta = make([]byte, XiBytes)
+	bob.Beta = make(ot.ChoiceBits, XiBytes)
 	if _, err := bob.csrand.Read(bob.Beta); err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "bob could not sample beta")
 	}
@@ -28,15 +29,15 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 		return nil, nil, errs.WrapFailed(err, "bob step 1.3")
 	}
 	for j := 0; j < Xi; j++ {
-		for i := 0; i < LOTe; i++ {
-			bob.Gamma[j][i], err = bob.Curve.Scalar().ScalarField().Hash(OTeReceiverOut[j][i*LambdaBytes : (i+1)*LambdaBytes])
+		for l := 0; l < LOTe; l++ {
+			bob.Gamma[j][l], err = bob.Curve.Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "bob could not hash to gamma")
 			}
 		}
 	}
 
-	bob.Beta = bitstring.UnpackBits(bob.Beta) // unpack beta for easier access to individual bits
+	bob.Beta = bitstring.UnpackBits[byte](bob.Beta) // unpack beta for easier access to individual bits
 
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
 	b = bob.Curve.Scalar().ScalarField().Zero()
@@ -59,18 +60,18 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	C := new(OutputShares)
 
 	// step 2.1: Run OTE.Round2(...) --> (α0_j, α1_j) ∈ ℤq^[LOTe]   ∀j∈[ξ]
-	alphaBits, _, _, err := alice.sender.Round2(r1out, nil)
+	alphaBits, err := alice.sender.Round2(r1out)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "alice cote round 2")
 	}
 	var alpha0, alpha1 [Xi][LOTe]curves.Scalar
 	for j := 0; j < Xi; j++ {
-		for i := 0; i < LOTe; i++ {
-			alpha0[j][i], err = alice.Curve.Scalar().ScalarField().Hash(alphaBits[0][j][i*LambdaBytes : (i+1)*LambdaBytes])
+		for l := 0; l < LOTe; l++ {
+			alpha0[j][l], err = alice.Curve.Scalar().ScalarField().Hash(alphaBits[j][0][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapHashingFailed(err, "could not hash to alpha0j")
 			}
-			alpha1[j][i], err = alice.Curve.Scalar().ScalarField().Hash(alphaBits[1][j][i*LambdaBytes : (i+1)*LambdaBytes])
+			alpha1[j][l], err = alice.Curve.Scalar().ScalarField().Hash(alphaBits[j][1][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapHashingFailed(err, "could not hash to alpha1j")
 			}

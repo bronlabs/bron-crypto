@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -22,8 +22,8 @@ type Participant struct {
 	MyAuthKey             integration.AuthKey
 	GennaroParty          *gennaro.Participant
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   map[types.IdentityHash]*vsot.Sender
-	BaseOTReceiverParties map[types.IdentityHash]*vsot.Receiver
+	BaseOTSenderParties   map[types.IdentityHash]*bbot.Sender
+	BaseOTReceiverParties map[types.IdentityHash]*bbot.Receiver
 
 	Shard *dkls24.Shard
 
@@ -66,17 +66,17 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
 	}
-	senders := make(map[types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
-	receivers := make(map[types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
+	senders := make(map[types.IdentityHash]*bbot.Sender, cohortConfig.Participants.Len()-1)
+	receivers := make(map[types.IdentityHash]*bbot.Receiver, cohortConfig.Participants.Len()-1)
 	for _, participant := range cohortConfig.Participants.Iter() {
 		if participant.PublicKey().Equal(authKey.PublicKey()) {
 			continue
 		}
-		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
+		senders[participant.Hash()], err = bbot.NewSender(softspoken.Kappa, 1, cohortConfig.CipherSuite.Curve, uniqueSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
+		receivers[participant.Hash()], err = bbot.NewReceiver(softspoken.Kappa, 1, cohortConfig.CipherSuite.Curve, uniqueSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

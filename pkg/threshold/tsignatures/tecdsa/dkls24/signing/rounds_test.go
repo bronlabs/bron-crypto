@@ -46,7 +46,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
+	_, shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
@@ -106,7 +106,7 @@ func testFailForDifferentSID(t *testing.T, protocol protocols.Protocol, curve cu
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
+	_, shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
@@ -153,7 +153,7 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
+	_, shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
 	require.NoError(t, err)
 
 	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)

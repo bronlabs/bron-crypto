@@ -52,7 +52,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 	if leaves[0].publicIdentityKey.Equal(myPublicIdentityKey) {
 		// I am the leader.
 		for i := 1; i < len(leaves); i++ {
-			secret, err := tripledh.DeriveSecretLocal(
+			secret, err := tripledh.DeriveSharedScalarLocal(
 				leaves[0].privateIdentityKey, leaves[i].publicIdentityKey,
 				leaves[0].privateEphemeralKey, leaves[i].publicEphemeralKey,
 			)
@@ -67,7 +67,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 		// I am NOT a leader.
 		for i := 1; i < len(leaves); i++ {
 			if leaves[i].privateIdentityKey != nil && leaves[i].privateEphemeralKey != nil {
-				secret, err := tripledh.DeriveSecretRemote(
+				secret, err := tripledh.DeriveSharedScalarRemote(
 					leaves[0].publicIdentityKey, leaves[i].privateIdentityKey,
 					leaves[0].publicEphemeralKey, leaves[i].privateEphemeralKey,
 				)

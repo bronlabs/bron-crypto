@@ -28,8 +28,7 @@ func TestSelectBit(t *testing.T) {
 		0, 0, 0, 0, 1, 1, 1, 1, // 0b11110000
 	}
 	for i := 0; i < len(inputVector)*8; i++ {
-		output, err := bitstring.SelectBit(inputVector, i)
-		require.NoError(t, err)
+		output := bitstring.SelectBit(inputVector, i)
 		require.Equalf(t, expectedVector[i], output, "i=%d", i)
 	}
 
@@ -56,10 +55,8 @@ func TestTransposeBooleanMatrix(t *testing.T) {
 			// Check that the bit at position i in the jth row of the input matrix.
 			// is equal to the bit at position j in the ith row of the transposed matrix.
 			// using bitstring.SelectBit (careful! it takes a byte array as input)
-			output1, err := bitstring.SelectBit(inputMatrix[i], j)
-			require.NoError(t, err)
-			output2, err := bitstring.SelectBit(transposedMatrix[j][:], i)
-			require.NoError(t, err)
+			output1 := bitstring.SelectBit(inputMatrix[i], j)
+			output2 := bitstring.SelectBit(transposedMatrix[j][:], i)
 
 			require.Equal(t,
 				output1,
@@ -76,10 +73,8 @@ func TestRepeatBits(t *testing.T) {
 		outputVector := bitstring.RepeatBits(inputVector, nRepetitions)
 		for i := 0; i < len(inputVector)*8; i++ {
 			for j := 0; j < nRepetitions; j++ {
-				output, err := bitstring.SelectBit(outputVector, i*nRepetitions+j)
-				require.NoError(t, err)
-				input, err := bitstring.SelectBit(inputVector, i)
-				require.NoError(t, err)
+				output := bitstring.SelectBit(outputVector, i*nRepetitions+j)
+				input := bitstring.SelectBit(inputVector, i)
 				require.Equalf(t, input, output, "i=%d, j=%d", i, j)
 			}
 		}
@@ -95,10 +90,9 @@ func TestUnpackBits(t *testing.T) {
 		0b01011001, 0b00111101,
 		0b01111011, 0b00001111,
 	}
-	outputVector := bitstring.UnpackBits(inputVector)
+	outputVector := bitstring.UnpackBits[byte](inputVector)
 	for i := 0; i < len(inputVector)*8; i++ {
-		input, err := bitstring.SelectBit(inputVector, i)
-		require.NoError(t, err)
+		input := bitstring.SelectBit(inputVector, i)
 		require.Equal(t, input, outputVector[i])
 	}
 }
@@ -109,8 +103,7 @@ func TestPackBits(t *testing.T) {
 	inputVector := []byte{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0}
 	outputVector := bitstring.PackBits(inputVector)
 	for i := 0; i < len(inputVector); i++ {
-		output, err := bitstring.SelectBit(outputVector, i)
-		require.NoError(t, err)
+		output := bitstring.SelectBit(outputVector, i)
 		require.Equal(t, inputVector[i], output)
 	}
 }

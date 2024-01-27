@@ -74,94 +74,38 @@ func DoDkgRound2(participants []*dkg.Participant, round2BroadcastInputs []map[ty
 	return round2BroadcastOutputs, round2UnicastOutputs, nil
 }
 
-func DoDkgRound3(participants []*dkg.Participant, round3BroadcastInputs []map[types.IdentityHash]*dkg.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*dkg.Round2P2P) (round3UnicastOutputs []map[types.IdentityHash]dkg.Round3P2P, err error) {
-	round3UnicastOutputs = make([]map[types.IdentityHash]dkg.Round3P2P, len(participants))
+func DoDkgRound3(participants []*dkg.Participant, round3BroadcastInputs []map[types.IdentityHash]*dkg.Round2Broadcast, round3UnicastInputs []map[types.IdentityHash]*dkg.Round2P2P) (shards []*dkls24.Shard, err error) {
+	shards = make([]*dkls24.Shard, len(participants))
 	for i := range participants {
-		round3UnicastOutputs[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i])
+		shards[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not run DKG round 3")
 		}
 	}
-
-	return round3UnicastOutputs, nil
-}
-
-func DoDkgRound4(participants []*dkg.Participant, round4UnicastInputs []map[types.IdentityHash]dkg.Round3P2P) (round4UnicastOutputs []map[types.IdentityHash]dkg.Round4P2P, err error) {
-	round4UnicastOutputs = make([]map[types.IdentityHash]dkg.Round4P2P, len(participants))
-	for i := range participants {
-		round4UnicastOutputs[i], err = participants[i].Round4(round4UnicastInputs[i])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run DKG round 4")
-		}
-	}
-
-	return round4UnicastOutputs, nil
-}
-
-func DoDkgRound5(participants []*dkg.Participant, round5UnicastInputs []map[types.IdentityHash]dkg.Round4P2P) (round5UnicastOutputs []map[types.IdentityHash]dkg.Round5P2P, err error) {
-	round5UnicastOutputs = make([]map[types.IdentityHash]dkg.Round5P2P, len(participants))
-	for i := range participants {
-		round5UnicastOutputs[i], err = participants[i].Round5(round5UnicastInputs[i])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run DKG round 5")
-		}
-	}
-
-	return round5UnicastOutputs, nil
-}
-
-func DoDkgRound6(participants []*dkg.Participant, round6UnicastInputs []map[types.IdentityHash]dkg.Round5P2P) (shards []*dkls24.Shard, err error) {
-	shards = make([]*dkls24.Shard, len(participants))
-	for i := range participants {
-		shards[i], err = participants[i].Round6(round6UnicastInputs[i])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run DKG round 6")
-		}
-	}
-
 	return shards, nil
 }
 
-func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (shards []*dkls24.Shard, err error) {
-	participants, err := MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
+func RunDKG(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (participants []*dkg.Participant, shards []*dkls24.Shard, err error) {
+	participants, err = MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not make DKG participants")
+		return nil, nil, errs.WrapFailed(err, "could not make DKG participants")
 	}
 
 	r1OutsB, r1OutsU, err := DoDkgRound1(participants)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 1")
+		return nil, nil, errs.WrapFailed(err, "could not run DKG round 1")
 	}
 
 	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsB, r2OutsU, err := DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 2")
+		return nil, nil, errs.WrapFailed(err, "could not run DKG round 2")
 	}
 
 	r3InsB, r3InsU := integration_testutils.MapO2I(participants, r2OutsB, r2OutsU)
-	r3OutsU, err := DoDkgRound3(participants, r3InsB, r3InsU)
+	shards, err = DoDkgRound3(participants, r3InsB, r3InsU)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 3")
+		return nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
 	}
-
-	r4InsU := integration_testutils.MapUnicastO2I(participants, r3OutsU)
-	r4OutsU, err := DoDkgRound4(participants, r4InsU)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 4")
-	}
-
-	r5InsU := integration_testutils.MapUnicastO2I(participants, r4OutsU)
-	r5OutsU, err := DoDkgRound5(participants, r5InsU)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 5")
-	}
-
-	r6InsU := integration_testutils.MapUnicastO2I(participants, r5OutsU)
-	shards, err = DoDkgRound6(participants, r6InsU)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not run DKG round 6")
-	}
-
-	return shards, nil
+	return participants, shards, nil
 }

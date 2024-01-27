@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -39,7 +39,7 @@ type Bob struct {
 	_ types.Incomparable
 }
 
-func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
+func NewAlice(curve curves.Curve, seedOtResults *ot.ReceiverRotOutput, uniqueSessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
 	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
@@ -47,7 +47,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, seededPrng, LOTe, Xi)
+	sender, err := softspoken.NewSoftspokenSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, seededPrng, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -65,7 +65,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 	}, nil
 }
 
-func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
+func NewBob(curve curves.Curve, seedOtResults *ot.SenderRotOutput, uniqueSessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
 	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
@@ -73,7 +73,7 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, prgFn, LOTe, Xi)
+	receiver, err := softspoken.NewSoftspokenReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, prgFn, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}

@@ -5,127 +5,112 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const label = "KRYPTON_PRIMITIVES_SOFTSPOKEN_COTe"
+
 type Receiver struct {
-	baseOtSeeds       *vsot.SenderOutput // k^i_0, k^i_1 ∈ [κ][2][κ]bits, the OTe seeds from a BaseOT as sender.
-	xPrime            ExtPackedChoices   // x_i ∈ [ξ*LOTe+σ]bits, the extended packed choice bits.
-	oTeReceiverOutput OTeMessageBatch    // v_x ∈ [ξ][LOTe*κ]bits, the resulting OTe message (linked to sender's {v_0, v_1}).
+	ot.Participant
 
-	LOTe int // The number of elements (scalars/bitstrings) per OT message.
-	Xi   int // The number of OT messages (and the number of choice bits) for the OTe batch.
+	Output *ot.ReceiverRotOutput // v_x ∈ [ξ][LOTe*κ]bits, the resulting OTe message (linked to sender's (v_0, v_1)).
 
-	sid        []byte                 // Unique identifier of the current session (sid in DKLs19)
-	transcript transcripts.Transcript // Transcript containing the protocol's publicly exchanged messages.
-	curve      curves.Curve           // The elliptic curve used in the protocol.
-	prg        csprng.CSPRNG          // The pseudo-random generator function used for the OT expansion.
-	csrand     io.Reader              // A true randomness source.
-
-	_ types.Incomparable
+	baseOtSeeds *ot.SenderRotOutput // k^i_0, k^i_1 ∈ [κ][2][κ]bits, the OTe seeds from a BaseOT as sender.
+	xPrime      ExtPackedChoices    // x' ∈ [ξ*LOTe+σ]bits, the extended packed choice bits.
+	prg         csprng.CSPRNG       // The pseudo-random generator function used for the OT expansion.
 }
 
 type Sender struct {
-	baseOtSeeds *vsot.ReceiverOutput // Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits, OTe seeds from a BaseOT as receiver.
+	ot.Participant
 
-	LOTe int // The number of elements (scalars/bitstrings) per OT message.
-	Xi   int // The number of OT messages (and the number of choice bits) for the OTe batch.
+	Output *ot.SenderRotOutput // (v_0, v_1) ∈ [ξ][LOTe*κ]bits, the resulting OTe messages (linked to receiver's v_x).
 
-	sid        []byte                 // Unique identifier of the current session (sid in DKLs19)
-	transcript transcripts.Transcript // Transcript containing the protocol's publicly exchanged messages.
-	curve      curves.Curve           // The elliptic curve used in the protocol.
-	prg        csprng.CSPRNG          // The pseudo-random generator function used for the OT expansion.
-	csrand     io.Reader              // A true randomness source.
-	_          types.Incomparable
+	baseOtSeeds *ot.ReceiverRotOutput // Δ_i ∈ [κ]bits, k^i_{Δ_i} ∈ [κ][κ]bits, OTe seeds from a BaseOT as receiver.
+	prg         csprng.CSPRNG         // The pseudo-random generator function used for the OT expansion.
 }
 
-// NewCOtReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
+// NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewCOtReceiver(baseOtSeeds *vsot.SenderOutput, sid []byte, transcript transcripts.Transcript,
-	curve curves.Curve, csrand io.Reader, prgFn csprng.CSPRNG, lOTe, Xi int,
+func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sid []byte, t transcripts.Transcript,
+	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	if err = validateParticipantInputs(baseOtSeeds, sid, curve, csrand); err != nil {
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sid, label, t, csrand)
+	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid COTe participant input arguments")
 	}
-	t, prg, err := setDefaultInputs(transcript, sid, prgFn)
+	if baseOtSeeds == nil {
+		return nil, errs.NewIsNil("base OT seeds are nil")
+	}
+	if len(baseOtSeeds.Messages) != Kappa {
+		return nil, errs.NewInvalidLength("base OT seeds length mismatch (should be %d, is: %d)",
+			Kappa, len(baseOtSeeds.Messages))
+	}
+	for i := 0; i < Kappa; i++ {
+		if len(baseOtSeeds.Messages[i][0]) == 0 || len(baseOtSeeds.Messages[i][1]) == 0 {
+			return nil, errs.NewInvalidLength("base OT seed[%d] message empty", i)
+		}
+	}
+	prg, err = initialisePrg(prg, sid)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "could not set default inputs")
+		return nil, errs.WrapFailed(err, "Could not initialise receiver prg")
 	}
 	return &Receiver{
-		baseOtSeeds: baseOtSeeds,
-		LOTe:        lOTe,
-		Xi:          Xi,
-		sid:         sid,
-		transcript:  t,
-		curve:       curve,
+		Participant: *participant,
+		Output:      &ot.ReceiverRotOutput{},
 		prg:         prg,
-		csrand:      csrand,
+		baseOtSeeds: baseOtSeeds,
 	}, nil
 }
 
-// NewCOtSender creates a `Sender` instance for the SoftSpokenOT protocol.
+// NewSoftspokenSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewCOtSender(baseOtSeeds *vsot.ReceiverOutput, sid []byte, transcript transcripts.Transcript,
-	curve curves.Curve, csrand io.Reader, prgFn csprng.CSPRNG, lOTe, Xi int,
+func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sid []byte, t transcripts.Transcript,
+	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	if err = validateParticipantInputs(baseOtSeeds, sid, curve, csrand); err != nil {
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sid, label, t, csrand)
+	if err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid COTe participant input arguments")
 	}
-	t, prg, err := setDefaultInputs(transcript, sid, prgFn)
+	if baseOtSeeds == nil {
+		return nil, errs.NewIsNil("base OT seeds are nil")
+	}
+	if len(baseOtSeeds.ChosenMessages) != Kappa || len(baseOtSeeds.Choices) != KappaBytes {
+		return nil, errs.NewInvalidLength("base OT seeds length mismatch (should be %d,%d; is: %d,%d)",
+			Kappa, KappaBytes, len(baseOtSeeds.ChosenMessages), len(baseOtSeeds.Choices))
+	}
+	for i := 0; i < Kappa; i++ {
+		if len(baseOtSeeds.ChosenMessages[i]) == 0 {
+			return nil, errs.NewInvalidLength("base OT seed[%d] chosen message empty", i)
+		}
+	}
+	prg, err = initialisePrg(prg, sid)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "could not set default inputs")
+		return nil, errs.WrapFailed(err, "Could not initialise sender prg")
 	}
 	return &Sender{
 		baseOtSeeds: baseOtSeeds,
-		LOTe:        lOTe,
-		Xi:          Xi,
-		sid:         sid,
-		transcript:  t,
-		curve:       curve,
+		Output:      &ot.SenderRotOutput{},
 		prg:         prg,
-		csrand:      csrand,
+		Participant: *participant,
 	}, nil
 }
 
-func validateParticipantInputs[T any](baseOtSeeds *T, sid []byte, curve curves.Curve, rand io.Reader) (err error) {
-	if baseOtSeeds == nil {
-		return errs.NewIsNil("base OT seeds are nil")
-	}
-	if len(sid) == 0 {
-		return errs.NewIsNil("unique session id is empty")
-	}
-	if curve == nil {
-		return errs.NewIsNil("curve is nil")
-	}
-	if rand == nil {
-		return errs.NewIsNil("rand is nil")
-	}
-	return nil
-}
-
-func setDefaultInputs(transcript transcripts.Transcript, sid []byte, prgFn csprng.CSPRNG) (t transcripts.Transcript, prg csprng.CSPRNG, err error) {
-	if transcript == nil {
-		t = hagrid.NewTranscript("KRYPTON_PRIMITIVES_SOFTSPOKEN_COTe", nil)
-	} else {
-		t = transcript
-	}
-	t.AppendMessages("session_id", sid)
-	if prgFn == nil { // Default prng output size optimised for DKLs24 Mult.
-		etaPrimeBytes := ((2 + 2) * (2*KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
-		prgFn, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sid)
+func initialisePrg(prg csprng.CSPRNG, sid []byte) (csprng.CSPRNG, error) {
+	var err error
+	if prg == nil { // Default prng output size optimised for DKLs24 Mult.
+		etaPrimeBytes := ((2 + 2) * (KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
+		prg, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sid)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "Could not initialise prg")
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
 		}
 	} else {
-		prgFn, err = prgFn.New(nil, nil)
+		prg, err = prg.New(nil, nil)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "Could not initialise prg")
+			return nil, errs.WrapFailed(err, "Could not initialise prg")
 		}
 	}
-	return t, prgFn, nil
+	return prg, nil
 }
