@@ -43,11 +43,11 @@ func ConstructPrivateKey(threshold, n int, allParticipantIdKeys *hashset.HashSet
 		}
 	}
 	var curve curves.Curve
-	for idKey, keyShare := range keyShares {
+	for _, keyShare := range keyShares {
 		if err := keyShare.Validate(); err != nil {
 			return nil, errs.WrapVerificationFailed(err, "key share is invalid")
 		}
-		curve = idKey.PublicKey().Curve()
+		curve = keyShare.PublicKey.Curve()
 		break
 	}
 	if curve == nil {
