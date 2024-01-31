@@ -59,7 +59,7 @@ func NewRecoverer(uniqueSessionId []byte, authKey integration.AuthKey, lostParty
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, cohortConfig.Participants.List(), prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -87,7 +87,7 @@ func NewLostParty(uniqueSessionId []byte, authKey integration.AuthKey, publicKey
 	}
 	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, cohortConfig.Participants.List(), prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}

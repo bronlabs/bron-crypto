@@ -10,7 +10,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
-	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -21,7 +20,6 @@ const DkgLabel = "COPPER_DKLS24_DKG-"
 type Participant struct {
 	MyAuthKey             integration.AuthKey
 	GennaroParty          *gennaro.Participant
-	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   map[types.IdentityHash]*vsot.Sender
 	BaseOTReceiverParties map[types.IdentityHash]*vsot.Receiver
 
@@ -62,10 +60,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dkls24 dkg participant out of gennaro dkg participant")
 	}
-	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, authKey, cohortConfig.Participants, transcript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
-	}
+
 	senders := make(map[types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
 	receivers := make(map[types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
 	for _, participant := range cohortConfig.Participants.Iter() {
@@ -85,7 +80,6 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	return &Participant{
 		MyAuthKey:             authKey,
 		GennaroParty:          gennaroParty,
-		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
 		Shard:                 &dkls24.Shard{},

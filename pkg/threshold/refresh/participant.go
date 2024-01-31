@@ -46,7 +46,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, signing
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_KEY_REFRESH-", nil)
 	}
 	transcript.AppendMessages("key refresh", uniqueSessionId)
-	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, prng)
+	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, cohortConfig.Participants.List(), prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct hjky zero share sampling participant")
 	}

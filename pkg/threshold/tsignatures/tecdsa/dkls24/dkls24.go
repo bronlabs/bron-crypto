@@ -39,7 +39,6 @@ type BaseOTConfig struct {
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
-	PairwiseSeeds   PairwiseSeeds
 	PairwiseBaseOTs map[types.IdentityHash]*BaseOTConfig
 
 	_ types.Incomparable
@@ -55,4 +54,20 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 	// TODO: ensure all pairwise seeds are in cohort, after hashset is incorporated.
 	// TODO: ensure all pairwise base OTs seeds are in cohort, after hashset is incorporated.
 	return nil
+}
+
+type PreSignature struct {
+	R         curves.Scalar
+	Phi       curves.Scalar
+	Zeta      curves.Scalar
+	Cu        map[types.IdentityHash]curves.Scalar
+	Cv        map[types.IdentityHash]curves.Scalar
+	Du        map[types.IdentityHash]curves.Scalar
+	Dv        map[types.IdentityHash]curves.Scalar
+	Psi       map[types.IdentityHash]curves.Scalar
+	TheirBigR map[types.IdentityHash]curves.Point
+}
+
+type PreSignatureBatch struct {
+	PreSignatures []*PreSignature
 }

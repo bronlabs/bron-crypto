@@ -81,7 +81,6 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 			},
 			// Not currently supported
 			PublicKeyShares: nil,
-			PairwiseSeeds:   dkls24.PairwiseSeeds{},
 		}
 	}
 
@@ -94,7 +93,6 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 			if _, err := crand.Read(randomSeed[:]); err != nil {
 				return nil, errs.WrapRandomSampleFailed(err, "could not produce random seed")
 			}
-			results[identityKey].PairwiseSeeds[otherIdentityKey] = randomSeed
 		}
 	}
 	return results, nil

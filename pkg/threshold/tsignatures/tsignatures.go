@@ -124,3 +124,39 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 	}
 	return nil
 }
+
+func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int) (curves.Scalar, error) {
+	shamirIndices := make([]int, participants.Len())
+	i := -1
+	for _, identity := range participants.Iter() {
+		i++
+		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]
+	}
+	share := &shamir.Share{
+		Id:    mySharingId,
+		Value: shamirShare,
+	}
+	additiveShare, err := share.ToAdditive(shamirIndices)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert to additive share")
+	}
+
+	return additiveShare, nil
+}
+
+// ShamirReShare transform shamir sharing from (|t|, |n1|) to (|t|, |n2|),
+// where t ⊆ n1 ⊆ n2.
+func ShamirReShare(myIdentityKey integration.IdentityKey, share curves.Scalar, t, n1, n2 *hashset.HashSet[integration.IdentityKey]) (curves.Scalar, error) {
+	_, fromKeyToId, fromSharingId := integration.DeriveSharingIds(myIdentityKey, n1)
+	shareAdditive, err := ToAdditiveShare(share, fromSharingId, t, fromKeyToId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "shamir re-sharing failed")
+	}
+	_, toKeyToId, toSharingId := integration.DeriveSharingIds(myIdentityKey, n2)
+	lambda, err := ToAdditiveShare(share.ScalarField().One(), toSharingId, t, toKeyToId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "shamir re-sharing failed")
+	}
+
+	return shareAdditive.Div(lambda), nil
+}

@@ -1,4 +1,4 @@
-package signing_test
+package interactiveSigning_test
 
 import (
 	"crypto/sha256"
@@ -25,11 +25,51 @@ import (
 )
 
 var testCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}
-var testHashFunctions = []func() hash.Hash{sha3.New256, sha256.New}
+var testHashFunctions = []func() hash.Hash{sha256.New, sha3.New256}
 var testThresholdConfigs = []struct{ t, n int }{
 	{t: 2, n: 3},
 	{t: 2, n: 2},
+	{t: 3, n: 3},
 	{t: 3, n: 5},
+}
+
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+	for _, curve := range testCurves {
+		for _, h := range testHashFunctions {
+			for _, thresholdConfig := range testThresholdConfigs {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				boundedMessage := []byte("Hello World!")
+				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					testHappyPath(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+				})
+			}
+		}
+	}
+}
+
+func Test_UnHappyPath(t *testing.T) {
+	t.Parallel()
+	for _, curve := range testCurves {
+		for _, h := range testHashFunctions {
+			for _, thresholdConfig := range testThresholdConfigs {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				boundedMessage := []byte("Hello World!")
+				t.Run(fmt.Sprintf("Interactive sign unhappy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					testFailForDifferentSID(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+					testFailForReplayedMessages(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+				})
+			}
+		}
+	}
 }
 
 func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
@@ -69,72 +109,6 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 			require.NoError(t, err)
 		})
 	}
-}
-
-func Test_HappyPath(t *testing.T) {
-	t.Parallel()
-	for _, curve := range testCurves {
-		for _, h := range testHashFunctions {
-			for _, thresholdConfig := range testThresholdConfigs {
-				boundedCurve := curve
-				boundedHash := h
-				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-				boundedThresholdConfig := thresholdConfig
-				boundedMessage := []byte("Hello World!")
-				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-					t.Parallel()
-					testHappyPath(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
-				})
-			}
-		}
-	}
-}
-
-// This test sets the SID for the participants to be different before running the
-// protocol and checks that the signing fails.
-func testFailForDifferentSID(t *testing.T, protocol protocols.Protocol, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
-	t.Helper()
-
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
-	require.NoError(t, err)
-
-	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
-	require.NoError(t, err)
-
-	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
-	require.NoError(t, err)
-
-	// Set a divergent SID for the first participant. Since we run it for all
-	// possible combinations of shards-identities, this is equivalent to testing
-	// with a divergent SID on a different participant each time.
-	commonSid := []byte("Our chosen shared 32B session ID")
-	divergingSidP1 := []byte("My 32B session ID is different!!")
-	sids := make([][]byte, threshold)
-	sids[0] = divergingSidP1
-	for i := 1; i < threshold; i++ {
-		sids[i] = commonSid
-	}
-
-	identities := make([]integration.IdentityKey, threshold)
-	selectedShards := make([]*dkls24.Shard, threshold)
-	for i := 0; i < threshold; i++ {
-		identities[i] = allIdentities[i]
-		selectedShards[i] = shards[i]
-	}
-	t.Run(fmt.Sprintf("running the diverging SID unhappy path with identities %v", identities), func(t *testing.T) {
-		t.Parallel()
-		err := testutils.RunInteractiveSign(cohortConfig, identities, selectedShards, message, seededPrng, sids)
-		require.Error(t, err)
-	})
-
 }
 
 // This test runs the protocol correctly once, and then runs it again with one party
@@ -212,22 +186,49 @@ func testFailForReplayedMessages(t *testing.T, protocol protocols.Protocol, curv
 	})
 }
 
-func Test_UnHappyPath(t *testing.T) {
-	t.Parallel()
-	for _, curve := range testCurves {
-		for _, h := range testHashFunctions {
-			for _, thresholdConfig := range testThresholdConfigs {
-				boundedCurve := curve
-				boundedHash := h
-				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-				boundedThresholdConfig := thresholdConfig
-				boundedMessage := []byte("Hello World!")
-				t.Run(fmt.Sprintf("Interactive sign unhappy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-					t.Parallel()
-					testFailForDifferentSID(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
-					testFailForReplayedMessages(t, protocols.DKLS24, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
-				})
-			}
-		}
+// This test sets the SID for the participants to be different before running the
+// protocol and checks that the signing fails.
+func testFailForDifferentSID(t *testing.T, protocol protocols.Protocol, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
+
+	cipherSuite := &integration.CipherSuite{
+		Curve: curve,
+		Hash:  h,
 	}
+
+	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	shards, err := testutils.RunDKG(curve, cohortConfig, allIdentities)
+	require.NoError(t, err)
+
+	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
+
+	// Set a divergent SID for the first participant. Since we run it for all
+	// possible combinations of shards-identities, this is equivalent to testing
+	// with a divergent SID on a different participant each time.
+	commonSid := []byte("Our chosen shared 32B session ID")
+	divergingSidP1 := []byte("My 32B session ID is different!!")
+	sids := make([][]byte, threshold)
+	sids[0] = divergingSidP1
+	for i := 1; i < threshold; i++ {
+		sids[i] = commonSid
+	}
+
+	identities := make([]integration.IdentityKey, threshold)
+	selectedShards := make([]*dkls24.Shard, threshold)
+	for i := 0; i < threshold; i++ {
+		identities[i] = allIdentities[i]
+		selectedShards[i] = shards[i]
+	}
+	t.Run(fmt.Sprintf("running the diverging SID unhappy path with identities %v", identities), func(t *testing.T) {
+		t.Parallel()
+		err := testutils.RunInteractiveSign(cohortConfig, identities, selectedShards, message, seededPrng, sids)
+		require.Error(t, err)
+	})
+
 }

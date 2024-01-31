@@ -40,8 +40,6 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	for _, shard := range shards {
 		require.NotNil(t, shard.SigningKeyShare)
 		require.NotNil(t, shard.PublicKeyShares)
-		require.NotNil(t, shard.PairwiseSeeds)
-		require.Len(t, shard.PairwiseSeeds, cohortConfig.Participants.Len()-1)
 		require.NotNil(t, shard.PairwiseBaseOTs)
 		require.Len(t, shard.PairwiseBaseOTs, cohortConfig.Participants.Len()-1)
 		for _, baseOTConfig := range shard.PairwiseBaseOTs {
@@ -101,20 +99,6 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
 		require.True(t, shards[0].SigningKeyShare.PublicKey.Equal(derivedPublicKey))
-	})
-
-	t.Run("each pair of seeds for all parties match", func(t *testing.T) {
-		t.Parallel()
-		for i := range participants {
-			for j := range participants {
-				if i == j {
-					continue
-				}
-				seedOfIFromJ := shards[i].PairwiseSeeds[participants[j].GetAuthKey().Hash()]
-				seedOfJFromI := shards[j].PairwiseSeeds[participants[i].GetAuthKey().Hash()]
-				require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
-			}
-		}
 	})
 
 	t.Run("BaseOT encryption keys match", func(t *testing.T) {
@@ -218,7 +202,6 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(curve, cohortConfig, identities, nil, nil)
-	participants[0].ZeroSamplingParty.UniqueSessionId = []byte("invalid sid")
 	participants[0].GennaroParty.UniqueSessionId = []byte("invalid sid")
 	require.NoError(t, err)
 

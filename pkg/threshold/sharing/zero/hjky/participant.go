@@ -3,7 +3,12 @@ package hjky
 import (
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
@@ -34,16 +39,30 @@ func (p *Participant) GetCohortConfig() *integration.CohortConfig {
 	return p.PedersenParty.GetCohortConfig()
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng); err != nil {
+func NewParticipant(sid []byte, authKey integration.AuthKey, scalarField curves.ScalarField, threshold int, participants []integration.IdentityKey, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	cohortConfig := &integration.CohortConfig{
+		CipherSuite: &integration.CipherSuite{
+			Curve: scalarField.Curve(),
+			Hash:  sha3.New256,
+		},
+		Participants: hashset.NewHashSet(participants),
+		Protocol: &integration.ProtocolConfig{
+			Threshold:            threshold,
+			TotalParties:         len(participants),
+			Name:                 protocols.DKLS24,
+			SignatureAggregators: hashset.NewHashSet(participants),
+		},
+	}
+
+	if err := validateInputs(sid, authKey, cohortConfig, prng); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_ZERO_SHARE_SAMPLING-", nil)
 	}
-	transcript.AppendMessages("key refresh", uniqueSessionId)
+	transcript.AppendMessages("HJKY zero share session id", sid)
 
-	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, transcript, randomisedFischlin.Name, prng)
+	pedersenParty, err := pedersen.NewParticipant(sid, authKey, cohortConfig, transcript, randomisedFischlin.Name, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}
