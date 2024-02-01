@@ -36,7 +36,7 @@ func Test_HappyPath(t *testing.T) {
 
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, 2, identities)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
 	require.NoError(t, err)
@@ -60,12 +60,12 @@ func Test_HappyPath(t *testing.T) {
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_testutils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
-	transcripts := make([]transcripts.Transcript, len(identities))
+	xscripts := make([]transcripts.Transcript, len(identities))
 	for i := range identities {
-		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
+		xscripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
 	}
 
-	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)
+	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, xscripts, nil)
 	require.NoError(t, err)
 
 	r1o, err := lindell17_dkg_testutils.DoDkgRound1(lindellParticipants)
@@ -102,7 +102,7 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()
-		ok, err := testutils.TranscriptAtSameState("gimme something", transcripts)
+		ok, err := testutils.TranscriptAtSameState("gimme something", xscripts)
 		require.NoError(t, err)
 		require.True(t, ok)
 	})
