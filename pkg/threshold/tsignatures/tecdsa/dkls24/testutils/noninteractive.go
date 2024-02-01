@@ -17,9 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
-	t.Helper()
-
+func MakePreGenParticipants(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
 	parties := make([]*noninteractiveSigning.PreGenParticipant, len(identities))
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
@@ -43,8 +41,7 @@ func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdPr
 	return parties
 }
 
-func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant) []*dkls24.PreProcessingMaterial {
-	t.Helper()
+func RunPreGen(t require.TestingT, parties []*noninteractiveSigning.PreGenParticipant) []*dkls24.PreProcessingMaterial {
 	var err error
 
 	r1ob := make([]*signing.Round1Broadcast, len(parties))
