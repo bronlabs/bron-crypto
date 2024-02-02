@@ -12,7 +12,7 @@ type SetupParticipant struct {
 	myIdentity             integration.IdentityKey
 	mySharingId            int
 	parties                *hashset.HashSet[integration.IdentityKey]
-	maximalUnqualifiedSets []*PartySubSet
+	maximalUnqualifiedSets []*SubSet
 	threshold              int
 	prng                   io.Reader
 	state                  *state

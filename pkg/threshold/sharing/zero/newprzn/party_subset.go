@@ -7,48 +7,46 @@ import (
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-type PartySubSet struct {
-	n              int
-	keyToSharingid map[types.IdentityHash]int
-	subSet         map[int]integration.IdentityKey
+type SubSet struct {
+	n       int
+	keyToId map[types.IdentityHash]int
+	subSet  map[int]integration.IdentityKey
 }
 
-func (s *PartySubSet) Contains(id integration.IdentityKey) bool {
-	sharingId := s.keyToSharingid[id.Hash()]
-	idx := sharingId - 1
-	if _, ok := s.subSet[idx]; ok {
+func NewSubSets(allParties *hashset.HashSet[integration.IdentityKey], size int) []*SubSet {
+	idToKey, keyToId, _ := integration.DeriveSharingIds(allParties.List()[0], allParties)
+
+	subSets := make([]*SubSet, 0)
+	combinations := combin.Combinations(allParties.Len(), size)
+	for _, combination := range combinations {
+		subSet := make(map[int]integration.IdentityKey)
+		for _, index := range combination {
+			sharingId := index + 1
+			subSet[sharingId] = idToKey[sharingId]
+		}
+		subSets = append(subSets, &SubSet{
+			n:       allParties.Len(),
+			keyToId: keyToId,
+			subSet:  subSet,
+		})
+	}
+
+	return subSets
+}
+
+func (s *SubSet) Contains(id integration.IdentityKey) bool {
+	sharingId := s.keyToId[id.Hash()]
+	if _, ok := s.subSet[sharingId]; ok {
 		return true
 	} else {
 		return false
 	}
 }
 
-func (s *PartySubSet) GetMap() map[int]integration.IdentityKey {
-	return s.subSet
-}
-
-func (s *PartySubSet) Label() int {
+func (s *SubSet) Label() int {
 	label := 0
 	for k := range s.subSet {
-		label += 1 << k
+		label += 1 << (k - 1)
 	}
 	return label
-}
-
-func NewSubSets(allParties *hashset.HashSet[integration.IdentityKey], size int) []*PartySubSet {
-	idToKey, keyToId, _ := integration.DeriveSharingIds(allParties.List()[0], allParties)
-	subsets := make([]*PartySubSet, 0)
-	combinations := combin.Combinations(allParties.Len(), size)
-	for _, combination := range combinations {
-		subset := &PartySubSet{
-			n:              allParties.Len(),
-			keyToSharingid: keyToId,
-			subSet:         make(map[int]integration.IdentityKey),
-		}
-		for _, idx := range combination {
-			subset.subSet[idx] = idToKey[idx+1]
-		}
-		subsets = append(subsets, subset)
-	}
-	return subsets
 }

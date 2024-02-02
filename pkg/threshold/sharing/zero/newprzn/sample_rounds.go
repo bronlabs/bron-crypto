@@ -17,7 +17,7 @@ func (p *SampleParticipant) Sample() curves.Scalar {
 	return sample
 }
 
-func (p *SampleParticipant) evalFa(set *PartySubSet) curves.Scalar {
+func (p *SampleParticipant) evalFa(set *SubSet) curves.Scalar {
 	xs := make([]curves.Scalar, 1)
 	ys := make([]curves.Scalar, 1)
 
@@ -32,9 +32,15 @@ func (p *SampleParticipant) evalFa(set *PartySubSet) curves.Scalar {
 		}
 	}
 
+	//x := k256.NewCurve().ScalarField().New(uint64(p.mySharingId))
+	//f := ys[0].Add((x.Sub(xs[0])).Mul(ys[1].Sub(ys[0])).Div(xs[1].Sub(xs[0])))
+
 	dealer, _ := shamir.NewDealer(p.threshold+1, p.parties.Len(), k256.NewCurve())
 	shamirId := k256.NewCurve().ScalarField().New(uint64(p.mySharingId))
-	f, _ := dealer.Interpolate(xs, ys, shamirId)
+	f2, _ := dealer.Interpolate(xs, ys, shamirId)
+	//if f.Cmp(f2) == 0 {
+	//	println("ok")
+	//}
 
-	return f
+	return f2
 }

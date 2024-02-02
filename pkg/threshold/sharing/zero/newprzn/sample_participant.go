@@ -14,7 +14,7 @@ type SampleParticipant struct {
 	idToKey                map[int]integration.IdentityKey
 	keyToId                map[types.IdentityHash]int
 	parties                *hashset.HashSet[integration.IdentityKey]
-	maximalUnqualifiedSets []*PartySubSet
+	maximalUnqualifiedSets []*SubSet
 	threshold              int
 	prng                   io.Reader
 	ra                     map[int]curves.Scalar
