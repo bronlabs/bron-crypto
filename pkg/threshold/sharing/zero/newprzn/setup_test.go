@@ -22,8 +22,8 @@ func Test_HappyPath(t *testing.T) {
 		Hash:  sha256.New,
 	}
 
-	n := 5
-	threshold := 3
+	n := 3
+	threshold := 2
 	allIdentities, err := testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
@@ -74,7 +74,7 @@ func Test_HappyPath(t *testing.T) {
 		secrets = append(secrets, secret)
 	}
 
-	for i := 0; i < len(secrets)-1; i++ {
+	for i := 0; i < len(secrets); i++ {
 		require.Zero(t, secrets[i], secrets[i+1])
 	}
 }

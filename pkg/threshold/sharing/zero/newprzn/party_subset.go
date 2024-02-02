@@ -28,11 +28,11 @@ func (s *PartySubSet) GetMap() map[int]integration.IdentityKey {
 }
 
 func (s *PartySubSet) Label() int {
-	key := 0
+	label := 0
 	for k := range s.subSet {
-		key += 1 << k
+		label += 1 << k
 	}
-	return key
+	return label
 }
 
 func NewSubSets(allParties *hashset.HashSet[integration.IdentityKey], size int) []*PartySubSet {

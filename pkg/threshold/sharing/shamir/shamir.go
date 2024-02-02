@@ -141,7 +141,7 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 		ys[i] = share.Value
 		xs[i] = s.Curve.ScalarField().New(uint64(share.Id))
 	}
-	return s.interpolate(xs, ys, s.Curve.ScalarField().Zero())
+	return s.Interpolate(xs, ys, s.Curve.ScalarField().Zero())
 }
 
 func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
@@ -171,7 +171,7 @@ func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	return s.interpolatePoint(xs, ys, s.Curve.ScalarField().Zero())
 }
 
-func (s *Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
+func (s *Dealer) Interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
 	result, err := polynomials.Interpolate(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate")

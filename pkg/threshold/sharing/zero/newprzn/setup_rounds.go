@@ -2,7 +2,6 @@ package newprzn
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
@@ -48,16 +47,13 @@ func (p *SetupParticipant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 
 func (p *SetupParticipant) Round2(input map[types.IdentityHash]*Round1P2P) map[int]curves.Scalar {
 	result := make(map[int]curves.Scalar)
-	for k := range p.state.ra {
-		result[k] = k256.NewCurve().ScalarField().Zero()
+	for k, r := range p.state.ra {
+		result[k] = r
 	}
 	for _, r2Input := range input {
 		for k, v := range r2Input.Ra {
 			result[k] = result[k].Add(v)
 		}
-	}
-	for k, v := range p.state.ra {
-		result[k] = result[k].Add(v)
 	}
 
 	return result
