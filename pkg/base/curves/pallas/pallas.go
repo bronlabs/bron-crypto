@@ -17,6 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "pallas"
@@ -144,6 +145,19 @@ func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 	}
 	p = p.Map(u0.V, u1.V)
 	return &Point{V: p}, nil
+}
+
+func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+	x0p, ok0 := x0.(*Point)
+	x1p, ok1 := x1.(*Point)
+	p, okp := c.Element().(*Point)
+	if !ok0 || !ok1 || okp {
+		panic("Not a K256 point")
+	}
+	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[int](choice))
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[int](choice))
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[int](choice))
+	return p
 }
 
 // === Additive Groupoid Methods.

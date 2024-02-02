@@ -8,16 +8,17 @@ import (
 
 	filippo "filippo.io/edwards25519"
 	filippo_field "filippo.io/edwards25519/field"
-	ed "github.com/bwesterb/go-ristretto/edwards25519"
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "edwards25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -48,6 +49,8 @@ var _ curves.Curve = (*Curve)(nil)
 type Curve struct {
 	hash2curve.CurveHasher
 
+	*impl.Elligator2Params
+
 	_ types.Incomparable
 }
 
@@ -58,6 +61,7 @@ func ed25519Init() {
 		base.HASH2CURVE_APP_TAG,
 		hash2curve.DstTagElligator2,
 	)
+	edwards25519Instance.Elligator2Params = impl.NewElligator2Params(&edwards25519Instance, true)
 }
 
 // SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
@@ -106,50 +110,76 @@ func (*Curve) Operators() []algebra.Operator {
 }
 
 func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
-	}
-	var fieldElement [base.FieldBytes]byte
-	_, err := prng.Read(fieldElement[:])
+	u0, err := c.BaseField().Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not read random bytes (to be used as uniform field element)")
+		return nil, errs.WrapFailed(err, "could not generate random field element")
 	}
-	return c.Map(fieldElement[:]), nil
+	u1, err := c.BaseField().Random(prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random field element")
+	}
+	p0 := c.Map(u0)
+	p1 := c.Map(u1)
+	return p0.Add(p1).ClearCofactor(), nil
 }
 
-// Map a little-endian encoding of an ed25519 field element into a point on
-// ed25519 curve, using the Elligator2 map to curve25519 and a bidirectional
-// map to get to ed25519.
-//
-// The encoding follows `element = Σ_{i=0}^{k-1} (input[i] << 8*i)`.
-// Contrary to most curves (which often require checking if the field element is
-// reduced), this encoding is possible thanks to the proximity of the field
-// order to a power of 2. As a nice consequence, we don't need to use `SetBytesWide`
-// to reduce the bias of non-uniform sampling, as this direct method yields a small
-// bias (< 2^-250) already.
-//
-// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
-func (*Curve) Map(fieldElement []byte) curves.Point {
-	signBit := (fieldElement[31] & 0x80) >> 7
-	fe := new(ed.FieldElement).SetBytes((*[base.FieldBytes]byte)(fieldElement))
-	m1 := elligatorEncode(fe)
-	return toEdwards(m1, signBit)
-}
-
-// Hash performs hashing to the ed25519 group using the Elligator2 mapping
-//
-// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
 func (c *Curve) Hash(input []byte) (curves.Point, error) {
 	return c.HashWithDst(input, nil)
 }
 
 func (c *Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
-	buffer, err := NewCurve().ExpandMessage(base.FieldBytes, input, dst)
+	u, err := c.HashToFieldElements(2, input, dst)
 	if err != nil {
 		return nil, errs.WrapHashingFailed(err, "could not hash to field elements in ed25519")
 	}
-	point := c.Map(buffer)
-	return point, nil
+	p0 := c.Map(u[0])
+	p1 := c.Map(u[1])
+	return p0.Add(p1).ClearCofactor(), nil
+}
+
+// Map a an ed25519 field element into a point on ed25519 curve, using the
+// Elligator2 map to curve25519 and a bidirectional map.
+// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
+func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
+	xn, xd, yn, yd := c.MapToCurveElligator2edwards25519(u)
+	// To projective coordinates.
+	x := xn.Mul(yd)
+	y := yn.Mul(xd)
+	z := xd.Mul(yd)
+	// To extended coordinates.
+	xEd, okx := x.Mul(z).(*BaseFieldElement)
+	yEd, oky := y.Mul(z).(*BaseFieldElement)
+	zEd, okz := z.Square().(*BaseFieldElement)
+	tEd, okt := x.Mul(y).(*BaseFieldElement)
+	if !okx || !oky || !okz || !okt {
+		panic("could not convert to extended coordinates")
+	}
+	p, err := filippo.NewIdentityPoint().SetExtendedCoordinates(xEd.V, yEd.V, zEd.V, tEd.V)
+	if err != nil {
+		panic(err)
+	}
+	return &Point{V: p}
+}
+
+func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+	x0Ed, ok0 := x0.(*Point)
+	x1Ed, ok1 := x1.(*Point)
+	sEd, ok1s := c.Element().(*Point)
+	if !ok0 || !ok1 || ok1s {
+		panic("Not an edwards25519 point")
+	}
+	x0Ed_x, x0Ed_y, x0Ed_z, x0Ed_t := x0Ed.V.ExtendedCoordinates()
+	x1Ed_x, x1Ed_y, x1Ed_z, x1Ed_t := x1Ed.V.ExtendedCoordinates()
+	xEd := new(filippo_field.Element).Select(x1Ed_x, x0Ed_x, utils.BoolTo[int](choice))
+	yEd := new(filippo_field.Element).Select(x1Ed_y, x0Ed_y, utils.BoolTo[int](choice))
+	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, utils.BoolTo[int](choice))
+	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, utils.BoolTo[int](choice))
+	var err error
+	sEd.V, err = sEd.V.SetExtendedCoordinates(xEd, yEd, zEd, tEd)
+	if err != nil {
+		panic(err)
+	}
+	return sEd
 }
 
 // === Additive Groupoid Methods.
@@ -231,16 +261,9 @@ func (*Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 		return nil, errs.NewInvalidType("y is not the right type")
 	}
 
-	// check is identity
-	xElem := new(ed.FieldElement).SetBigInt(xx.Nat().Big())
-	yElem := new(ed.FieldElement).SetBigInt(yy.Nat().Big())
-
-	var data [32]byte
-	var affine [64]byte
-	xElem.BytesInto(&data)
-	copy(affine[:32], data[:])
-	yElem.BytesInto(&data)
-	copy(affine[32:], data[:])
+	var affine [base.WideFieldBytes]byte
+	copy(affine[:base.FieldBytes], xx.V.Bytes())
+	copy(affine[base.FieldBytes:], yy.V.Bytes())
 	return new(Point).FromAffineUncompressed(affine[:])
 }
 

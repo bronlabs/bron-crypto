@@ -2,6 +2,7 @@ package bitstring
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -144,4 +145,11 @@ func PackBits(v []byte) []byte {
 		vOut[i/8] |= bit << (i & 0x07)
 	}
 	return vOut
+}
+
+func TruncateWithEllipsis(text string, maxLen int) string {
+	if len(text) > maxLen {
+		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-maxLen)
+	}
+	return text
 }

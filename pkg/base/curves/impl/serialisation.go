@@ -35,7 +35,7 @@ func ParseJSON(data []byte) (name string, serialised []byte, err error) {
 	if err := json.Unmarshal(data, &e); err != nil {
 		return "", nil, errs.WrapSerialisation(err, "json unmarshal failed")
 	}
-	if len(e.Type) == 0 {
+	if e.Type == "" {
 		return "", nil, errs.NewMissing("curve name is not in the json")
 	}
 	if len(e.Bytes) == 0 {

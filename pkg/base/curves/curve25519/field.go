@@ -1,6 +1,7 @@
 package curve25519
 
 import (
+	"crypto/subtle"
 	"io"
 	"sync"
 
@@ -87,6 +88,18 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }
 
+func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+	xFp, ok1 := x0.(*BaseFieldElement)
+	yFp, ok2 := x1.(*BaseFieldElement)
+	if !ok1 || !ok2 {
+		panic("Not a BLS12381 G1 field element")
+	}
+	sFp := new(BaseFieldElement)
+	copy(sFp.V[:], xFp.V[:])
+	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), xFp.V[:], yFp.V[:])
+	return sFp
+}
+
 // === Additive Groupoid Methods.
 
 func (*BaseField) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
@@ -110,7 +123,9 @@ func (*BaseField) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElem
 // === Additive Monoid Methods.
 
 func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
-	panic("not implemented")
+	return &BaseFieldElement{
+		V: [32]byte{},
+	}
 }
 
 // === Multiplicative Monoid Methods.

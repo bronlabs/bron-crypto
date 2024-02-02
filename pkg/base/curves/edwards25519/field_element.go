@@ -219,7 +219,8 @@ func (e *BaseFieldElement) Norm() curves.BaseFieldElement {
 // === Zp Methods.
 
 func (e *BaseFieldElement) Exp(rhs curves.BaseFieldElement) curves.BaseFieldElement {
-	return e.ApplyMul(e, rhs.Nat())
+	r := new(saferith.Nat).Exp(e.Nat(), rhs.Nat(), e.BaseField().Order())
+	return e.BaseField().Element().SetNat(r)
 }
 
 func (e *BaseFieldElement) Neg() curves.BaseFieldElement {
@@ -420,7 +421,8 @@ func (e *BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, 
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("input length > %d bytes", base.WideFieldBytes)
 	}
-	buffer := bitstring.PadToRight(bitstring.ReverseBytes(input), 64-len(input))
+	inputLE := bitstring.ReverseBytes(input)
+	buffer := bitstring.PadToRight(inputLE, base.WideFieldBytes-len(input))
 	result, err := e.V.SetWideBytes(buffer)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not set bytes")
@@ -432,5 +434,5 @@ func (e *BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, 
 
 func (e *BaseFieldElement) Bytes() []byte {
 	result := e.V.Bytes()
-	return bitstring.ReverseBytes(result[:])
+	return bitstring.ReverseBytes(result)
 }

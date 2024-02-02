@@ -102,6 +102,17 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
+func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+	x0f, ok0 := x0.(*BaseFieldElement)
+	x1f, ok1 := x1.(*BaseFieldElement)
+	if !ok0 || !ok1 {
+		panic("Not a pallas field element")
+	}
+	return &BaseFieldElement{
+		V: new(fp.Fp).CMove(x0f.V, x1f.V, utils.BoolTo[int](choice)),
+	}
+}
+
 // === Additive Groupoid Methods.
 
 func (*BaseField) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {

@@ -284,7 +284,9 @@ func (e *BaseFieldElement) Uint64() uint64 {
 }
 
 func (*BaseFieldElement) SetNat(value *saferith.Nat) curves.BaseFieldElement {
-	panic("not implemented")
+	return &BaseFieldElement{
+		V: *(*[base.FieldBytes]byte)(value.Bytes()),
+	}
 }
 
 func (e *BaseFieldElement) Nat() *saferith.Nat {

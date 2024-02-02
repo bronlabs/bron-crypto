@@ -100,6 +100,17 @@ func (*BaseFieldG2) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
+func (*BaseFieldG2) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+	x0p2, ok0 := x0.(*BaseFieldElementG2)
+	x1p2, ok1 := x1.(*BaseFieldElementG2)
+	if !ok0 || !ok1 {
+		panic("Not a BLS12381 G2 field element")
+	}
+	return &BaseFieldElementG2{
+		V: new(bimpl.Fp2).CMove(x0p2.V, x1p2.V, utils.BoolTo[int](choice)),
+	}
+}
+
 // === Additive Groupoid Methods.
 
 func (*BaseFieldG2) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {

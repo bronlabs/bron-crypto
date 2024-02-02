@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	filippo.io/edwards25519 v1.0.0
-	github.com/bwesterb/go-ristretto v1.2.3
 	github.com/cronokirby/saferith v0.33.0
 	github.com/google/gofuzz v1.2.0
 	github.com/pkg/errors v0.9.1

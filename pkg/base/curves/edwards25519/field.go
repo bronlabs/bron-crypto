@@ -90,6 +90,9 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 }
 
 func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
 	buf := make([]byte, base.FieldBytes)
 	_, err := prng.Read(buf)
 	if err != nil {
@@ -102,6 +105,17 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	return &BaseFieldElement{
 		V: el,
 	}, nil
+}
+
+func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+	x0f, ok0 := x0.(*BaseFieldElement)
+	x1f, ok1 := x1.(*BaseFieldElement)
+	if !ok0 || !ok1 {
+		panic("Not an edwards25519 field element")
+	}
+	return &BaseFieldElement{
+		V: new(filippo_field.Element).Select(x1f.V, x0f.V, utils.BoolTo[int](choice)),
+	}
 }
 
 // === Additive Groupoid Methods.

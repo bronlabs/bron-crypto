@@ -96,6 +96,13 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
+func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
+	if choice {
+		return x1
+	}
+	return x0
+}
+
 // === Additive Groupoid Methods.
 
 func (*ScalarField) Add(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {

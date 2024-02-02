@@ -9,6 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -39,14 +40,11 @@ func Test_VectorsRFC9380(t *testing.T) {
 			err := runHash2FieldTests(t, curve, tv)
 			require.NoError(t, err)
 		})
-
-		if curve.Name() != edwards25519.Name {
-			t.Run(fmt.Sprintf("hash to curve (%s)", curve.Name()), func(t *testing.T) {
-				t.Parallel()
-				err := runHash2CurveTests(t, curve, tv)
-				require.NoError(t, err)
-			})
-		}
+		t.Run(fmt.Sprintf("hash to curve (%s)", curve.Name()), func(t *testing.T) {
+			t.Parallel()
+			err := runHash2CurveTests(t, curve, tv)
+			require.NoError(t, err)
+		})
 	}
 }
 
@@ -61,7 +59,7 @@ func runHash2CurveTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 
 	for _, ttc := range tv.TestCases {
 		tc := ttc
-		t.Run(fmt.Sprintf("message: %s", tc.Msg), func(t *testing.T) {
+		t.Run(fmt.Sprintf("message:%s", bitstring.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
 			t.Parallel()
 
 			p, err := ch.Curve().Hash([]byte(tc.Msg))
@@ -69,6 +67,8 @@ func runHash2CurveTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 
 			if curve.Name() != bls12381.NewG2().Name() {
 				expected := readPoint(t, curve, tc.Px, tc.Py)
+				require.EqualValues(t, expected.AffineX().Bytes(), p.AffineX().Bytes())
+				require.EqualValues(t, expected.AffineY().Bytes(), p.AffineY().Bytes())
 				require.True(t, p.Equal(expected))
 			} else {
 				pxExpected := hexDecode(t, tc.Px)
@@ -95,7 +95,7 @@ func runHash2FieldTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 	curve = testutils.SetCurveHasher(curve, ch)
 	for _, ttc := range tv.TestCases {
 		tc := ttc
-		t.Run(fmt.Sprintf("message: %s", tc.Msg), func(t *testing.T) {
+		t.Run(fmt.Sprintf("message: %s", bitstring.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
 			t.Parallel()
 
 			u, err := ch.HashToFieldElements(2, []byte(tc.Msg), nil)

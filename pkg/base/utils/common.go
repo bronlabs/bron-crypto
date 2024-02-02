@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"math/bits"
 
 	"golang.org/x/exp/constraints"
@@ -44,4 +45,13 @@ func FloorLog2(x int) int {
 // CeilLog2 return ceil(log2(x)).
 func CeilLog2(x int) int {
 	return 64 - bits.LeadingZeros64(uint64(x)-1)
+}
+
+// DecodeString decodes a hex string into a byte slice. It panics if the string is not a valid hex string.
+func DecodeString(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

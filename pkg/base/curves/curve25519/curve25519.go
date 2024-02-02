@@ -1,6 +1,7 @@
 package curve25519
 
 import (
+	"crypto/subtle"
 	"io"
 	"strings"
 	"sync"
@@ -11,9 +12,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "curve25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -32,6 +35,8 @@ var _ curves.Curve = (*Curve)(nil)
 type Curve struct {
 	hash2curve.CurveHasher
 
+	*impl.Elligator2Params
+
 	_ types.Incomparable
 }
 
@@ -42,6 +47,7 @@ func curve25519Init() {
 		base.HASH2CURVE_APP_TAG,
 		hash2curve.DstTagElligator2,
 	)
+	curve25519Instance.Elligator2Params = impl.NewElligator2Params(&curve25519Instance, true)
 }
 
 // SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
@@ -89,16 +95,59 @@ func (*Curve) Operators() []algebra.Operator {
 	return []algebra.Operator{algebra.PointAddition}
 }
 
-func (*Curve) Random(reader io.Reader) (curves.Point, error) {
-	panic("not implemented")
+func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
+	u0, err := c.BaseField().Random(prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random field element")
+	}
+	u1, err := c.BaseField().Random(prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random field element")
+	}
+	p0 := c.Map(u0)
+	p1 := c.Map(u1)
+	return p0.Add(p1).ClearCofactor(), nil
 }
 
-func (*Curve) Hash(input []byte) (curves.Point, error) {
-	panic("not implemented")
+func (c *Curve) Hash(input []byte) (curves.Point, error) {
+	return c.HashWithDst(input, nil)
 }
 
-func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
-	panic("not implemented")
+func (c *Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
+	u, err := c.HashToFieldElements(2, input, dst)
+	if err != nil {
+		return nil, errs.WrapHashingFailed(err, "could not hash to field elements in ed25519")
+	}
+	p0 := c.Map(u[0])
+	p1 := c.Map(u[1])
+	return p0.Add(p1).ClearCofactor(), nil
+}
+
+// Map a curve25519 field element into a point on curve25519, using the Elligator2 map.
+// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
+func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
+	xn, xd, yn, yd := c.MapToCurveElligator2Curve25519(u)
+	// To affine coordinates.
+	x := xn.Div(xd)
+	y := yn.Mul(yd)
+	p, err := c.NewPoint(x, y)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+// Select returns x0 if choice is false, and x1 if choice is true.
+func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+	x0p, ok0 := x0.(*Point)
+	x1p, ok1 := x1.(*Point)
+	if !ok0 || !ok1 {
+		panic("Not a curve25519 point")
+	}
+	el := new(Point)
+	copy(el.V[:], x0p.V[:])
+	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), el.V[:], x1p.V[:])
+	return el
 }
 
 // === Additive Groupoid Methods.

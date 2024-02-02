@@ -7,9 +7,9 @@ import (
 
 	filippo "filippo.io/edwards25519"
 	"filippo.io/edwards25519/field"
-	ed "github.com/bwesterb/go-ristretto/edwards25519"
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -30,7 +30,7 @@ type Point struct {
 }
 
 func NewPoint() *Point {
-	return NewCurve().Identity().(*Point)
+	return &Point{V: filippo.NewIdentityPoint()}
 }
 
 // === Basic Methods.
@@ -44,12 +44,6 @@ func (p *Point) Equal(rhs curves.Point) bool {
 		// We have that X = xZ and X' = x'Z'. Thus, x = x' is equivalent to
 		// (xZ)Z' = (x'Z')Z, and similarly for the y-coordinate.
 		return p.V.Equal(r.V) == 1
-		//  lhs1 := new(ed.FieldElement).Mul(&p.value.X, &r.value.Z)
-		//  rhs1 := new(ed.FieldElement).Mul(&r.value.X, &p.value.Z)
-		//  lhs2 := new(ed.FieldElement).Mul(&p.value.Y, &r.value.Z)
-		//  rhs2 := new(ed.FieldElement).Mul(&r.value.Y, &p.value.Z)
-		//
-		//  return lhs1.Equals(rhs1) && lhs2.Equals(rhs2)
 	} else {
 		return false
 	}
@@ -223,147 +217,6 @@ func (p *Point) IsTorsionElement(order *saferith.Modulus) bool {
 	return p.Mul(e).IsIdentity()
 }
 
-// === Misc.
-
-// sqrtRatio sets r to the non-negative square root of the ratio of u and v.
-//
-// If u/v is square, sqrtRatio returns r and 1. If u/v is not square, SqrtRatio
-// sets r according to Section 4.3 of draft-irtf-cfrg-ristretto255-decaf448-00,
-// and returns r and 0.
-func sqrtRatio(u, v *ed.FieldElement) (r *ed.FieldElement, wasSquare bool) {
-	sqrtM1 := ed.FieldElement{
-		533094393274173, 2016890930128738, 18285341111199,
-		134597186663265, 1486323764102114,
-	}
-	a := new(ed.FieldElement)
-	b := new(ed.FieldElement)
-	r = new(ed.FieldElement)
-
-	// r = (u * v3) * (u * v7)^((p-5)/8)
-	v2 := a.Square(v)
-	uv3 := b.Mul(u, b.Mul(v2, v))
-	uv7 := a.Mul(uv3, a.Square(v2))
-	r.Mul(uv3, r.Exp22523(uv7))
-
-	check := a.Mul(v, a.Square(r)) // check = v * r^2
-
-	uNeg := b.Neg(u)
-	correctSignSqrt := check.Equals(u)
-	flippedSignSqrt := check.Equals(uNeg)
-	flippedSignSqrtI := check.Equals(uNeg.Mul(uNeg, &sqrtM1))
-
-	rPrime := b.Mul(r, &sqrtM1) // r_prime = SQRT_M1 * r
-	// r = CT_SELECT(r_prime IF flipped_sign_sqrt | flipped_sign_sqrt_i ELSE r)
-	cselect(r, rPrime, r, flippedSignSqrt || flippedSignSqrtI)
-
-	r.Abs(r) // Choose the nonnegative square root.
-	return r, correctSignSqrt || flippedSignSqrt
-}
-
-// cselect sets v to a if cond == 1, and to b if cond == 0.
-func cselect(v, a, b *ed.FieldElement, cond bool) {
-	const mask64Bits uint64 = (1 << 64) - 1
-
-	m := uint64(0)
-	if cond {
-		m = mask64Bits
-	}
-	v[0] = (m & a[0]) | (^m & b[0])
-	v[1] = (m & a[1]) | (^m & b[1])
-	v[2] = (m & a[2]) | (^m & b[2])
-	v[3] = (m & a[3]) | (^m & b[3])
-	v[4] = (m & a[4]) | (^m & b[4])
-}
-
-func (p *Point) GetEdwardsPoint() *filippo.Point {
-	return filippo.NewIdentityPoint().Set(p.V)
-}
-
-func (*Point) SetEdwardsPoint(pt *filippo.Point) *Point {
-	return &Point{V: filippo.NewIdentityPoint().Set(pt)}
-}
-
-// Attempt to convert to an `EdwardsPoint`, using the supplied
-// choice of sign for the `EdwardsPoint`.
-//   - `sign`: a `u8` donating the desired sign of the resulting
-//     `EdwardsPoint`.  `0` denotes positive and `1` negative.
-func toEdwards(u *ed.FieldElement, sign byte) *Point {
-	one := new(ed.FieldElement).SetOne()
-	// To decompress the Montgomery u coordinate to an
-	// `EdwardsPoint`, we apply the birational map to obtain the
-	// Edwards y coordinate, then do Edwards decompression.
-	//
-	// The birational map is y = (u-1)/(u+1).
-	//
-	// The exceptional points are the zeros of the denominator,
-	// i.e., u = -1.
-	//
-	// But when u = -1, v^2 = u*(u^2+486662*u+1) = 486660.
-	//
-	// Since this is nonsquare mod p, u = -1 corresponds to a point
-	// on the twist, not the curve, so we can reject it early.
-	if u.Equals(new(ed.FieldElement).Neg(one)) {
-		return nil
-	}
-
-	// y = (u-1)/(u+1)
-	yLhs := new(ed.FieldElement).Sub(u, one)
-	yRhs := new(ed.FieldElement).Add(u, one)
-	yInv := new(ed.FieldElement).Inverse(yRhs)
-	y := new(ed.FieldElement).Mul(yLhs, yInv)
-	yBytes := y.Bytes()
-	yBytes[31] ^= sign << 7
-
-	pt, err := filippo.NewIdentityPoint().SetBytes(yBytes[:])
-	if err != nil {
-		return nil
-	}
-	pt.MultByCofactor(pt)
-	return &Point{V: pt}
-}
-
-// Perform the Elligator2 mapping to a Montgomery point encoded as a 32 byte value
-//
-// See <https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#section-6.7.1>
-func elligatorEncode(r0 *ed.FieldElement) *ed.FieldElement {
-	montgomeryA := &ed.FieldElement{
-		486662, 0, 0, 0, 0,
-	}
-	// montgomeryANeg is equal to -486662.
-	montgomeryANeg := &ed.FieldElement{
-		2251799813198567,
-		2251799813685247,
-		2251799813685247,
-		2251799813685247,
-		2251799813685247,
-	}
-	t := new(ed.FieldElement)
-	one := new(ed.FieldElement).SetOne()
-	// 2r^2
-	d1 := new(ed.FieldElement).Add(one, t.DoubledSquare(r0))
-	// A/(1+2r^2)
-	d := new(ed.FieldElement).Mul(montgomeryANeg, t.Inverse(d1))
-	dsq := new(ed.FieldElement).Square(d)
-	au := new(ed.FieldElement).Mul(montgomeryA, d)
-
-	inner := new(ed.FieldElement).Add(dsq, au)
-	inner.Add(inner, one)
-
-	// d^3 + Ad^2 + d
-	eps := new(ed.FieldElement).Mul(d, inner)
-	_, wasSquare := sqrtRatio(eps, one)
-
-	zero := new(ed.FieldElement).SetZero()
-	aTemp := new(ed.FieldElement).SetZero()
-	// 0 or A if non-square
-	cselect(aTemp, zero, montgomeryA, wasSquare)
-	// d, or d+A if non-square
-	u := new(ed.FieldElement).Add(d, aTemp)
-	// d or -d-A if non-square
-	cselect(u, u, new(ed.FieldElement).Neg(u), wasSquare)
-	return u
-}
-
 // === Coordinates.
 
 func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
@@ -442,17 +295,17 @@ func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
-	if len(inBytes) != 64 {
+	if len(inBytes) != base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("invalid byte sequence")
 	}
 	if subtle.ConstantTimeCompare(inBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == 1 {
 		return &Point{V: filippo.NewIdentityPoint()}, nil
 	}
-	x, err := new(field.Element).SetBytes(inBytes[:32])
+	x, err := new(field.Element).SetBytes(inBytes[:base.FieldBytes])
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "x")
 	}
-	y, err := new(field.Element).SetBytes(inBytes[32:])
+	y, err := new(field.Element).SetBytes(inBytes[base.FieldBytes:])
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "y")
 	}

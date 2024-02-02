@@ -219,7 +219,7 @@ func TestPointRandom(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Point)
 	require.True(t, ok)
-	expected, err := toRPt("19fc032736138ac12ae6e484c9af1ea6bc4b5467831b2e5aefc0415b1a943a88")
+	expected, err := toRPt("c19a6e2ba66c82502a2ff276a6c3003b52e0aea83f4ce0355a3b50a3078982dc")
 	require.NoError(t, err)
 	if !s.Equal(&edwards25519.Point{V: expected.V}) {
 		t.Errorf("\nGot : %s\nWant: %s",
@@ -236,30 +236,6 @@ func TestPointRandom(t *testing.T) {
 		pBytes := sc.ToAffineCompressed()
 		_, err = filippo.NewIdentityPoint().SetBytes(pBytes)
 		require.NoError(t, err)
-	}
-}
-
-func TestPointHash(t *testing.T) {
-	var b [32]byte
-	curve := edwards25519.NewCurve()
-	sc, err := curve.Hash(b[:])
-	require.NoError(t, err)
-	s, ok := sc.(*edwards25519.Point)
-	require.True(t, ok)
-	expected, err := toRPt("9be377b2f8cf4f0e0e89ee405a01ffe6ab6e339470e9fbd06787dcc5223b6343")
-	require.NoError(t, err)
-	if !s.Equal(&edwards25519.Point{V: expected.V}) {
-		t.Errorf("\nGot : %s\nWant: %s",
-			hex.EncodeToString(s.ToAffineCompressed()),
-			hex.EncodeToString(expected.ToAffineCompressed()))
-	}
-
-	// Fuzz test
-	for i := 0; i < 25; i++ {
-		_, _ = crand.Read(b[:])
-		sc, err = curve.Hash(b[:])
-		require.NoError(t, err)
-		require.NotNil(t, sc)
 	}
 }
 

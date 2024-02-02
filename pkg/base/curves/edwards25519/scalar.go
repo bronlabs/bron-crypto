@@ -363,7 +363,7 @@ func (s *Scalar) Nat() *saferith.Nat {
 
 func (s *Scalar) Bytes() []byte {
 	t := s.V.Bytes()
-	return bitstring.ReverseBytes(t[:])
+	return bitstring.ReverseBytes(t)
 }
 
 // SetBytesCanonical takes input a 32-byte long array and returns a ed25519 scalar.
