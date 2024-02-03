@@ -1,10 +1,11 @@
-package newprzn
+package prss
 
 import (
+	"gonum.org/v1/gonum/stat/combin"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"gonum.org/v1/gonum/stat/combin"
 )
 
 type SubSet struct {
