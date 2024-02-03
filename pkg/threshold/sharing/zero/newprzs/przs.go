@@ -1,4 +1,4 @@
-package prss
+package newprzs
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
 

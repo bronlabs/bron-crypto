@@ -1,4 +1,4 @@
-package prss_test
+package newprzs_test
 
 import (
 	crand "crypto/rand"
@@ -15,54 +15,54 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/prss"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/newprzs"
 )
 
-func Test_Setup(t *testing.T) {
+func Test_Sample(t *testing.T) {
+	n := 8
+	threshold := 3
 	cipherSuite := &integration.CipherSuite{
 		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
 
-	n := 5
-	threshold := 3
-	allIdentities, err := testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	config, err := testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, allIdentities, threshold, allIdentities)
+	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
 	require.NoError(t, err)
 
-	setupParticipants := make([]*prss.SetupParticipant, n)
-	for i, identity := range allIdentities {
-		setupParticipants[i], err = prss.NewSetupParticipant(identity.(integration.AuthKey), config, crand.Reader)
+	setupParticipants := make([]*newprzs.SetupParticipant, n)
+	for i, identity := range identities {
+		setupParticipants[i] = newprzs.NewSetupParticipant(identity.(integration.AuthKey), cohortConfig, crand.Reader)
+	}
+
+	r1Output := make([]map[types.IdentityHash]*newprzs.Round1P2P, n)
+	for i, participant := range setupParticipants {
+		r1Output[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
 
-	round1Outputs := make([]map[types.IdentityHash]*prss.Round1P2P, n)
+	r2Input := testutils.MapUnicastO2I(setupParticipants, r1Output)
+	seeds := make([]*newprzs.Seed, n)
 	for i, participant := range setupParticipants {
-		round1Outputs[i], err = participant.Round1()
+		seeds[i], err = participant.Round2(r2Input[i])
 		require.NoError(t, err)
 	}
 
-	round2Inputs := testutils.MapUnicastO2I(setupParticipants, round1Outputs)
-
-	seeds := make([]*prss.Seed, n)
-	for i, participant := range setupParticipants {
-		seeds[i] = participant.Round2(round2Inputs[i])
-	}
-
-	sampleParticipants := make([]*prss.SampleParticipant, n)
-	for i, identity := range allIdentities {
-		sampleParticipants[i], err = prss.NewSampleParticipant(identity.(integration.AuthKey), config, seeds[i].Ra, crand.Reader)
+	sampleParticipants := make([]*newprzs.SampleParticipant, n)
+	for i, identity := range identities {
+		sampleParticipants[i], err = newprzs.NewSampleParticipant(identity.(integration.AuthKey), cohortConfig, seeds[i], crand.Reader)
 		require.NoError(t, err)
 	}
 
 	samples := make([]curves.Scalar, n)
 	for i, participant := range sampleParticipants {
 		samples[i] = participant.Sample()
+		require.False(t, samples[i].IsZero())
 	}
 
-	combinations := combin.Combinations(n, threshold)
+	combinations := combin.Combinations(n, threshold+1)
 	secrets := make([]curves.Scalar, 0)
 	for _, combination := range combinations {
 		shares := make([]*shamir.Share, len(combination))
@@ -72,14 +72,14 @@ func Test_Setup(t *testing.T) {
 				Value: samples[c],
 			}
 		}
-		dealer, err := shamir.NewDealer(threshold, n, cipherSuite.Curve)
+		dealer, err := shamir.NewDealer(threshold+1, n, cipherSuite.Curve)
 		require.NoError(t, err)
 		secret, err := dealer.Combine(shares...)
 		require.NoError(t, err)
 		secrets = append(secrets, secret)
 	}
 
-	for i := 0; i < len(secrets)-1; i++ {
-		require.Zero(t, secrets[i].Cmp(secrets[i+1]))
+	for i := 0; i < len(secrets); i++ {
+		require.True(t, secrets[i].IsZero())
 	}
 }

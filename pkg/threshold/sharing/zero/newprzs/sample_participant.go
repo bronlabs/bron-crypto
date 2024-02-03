@@ -1,9 +1,8 @@
-package prss
+package newprzs
 
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
@@ -14,10 +13,9 @@ type SampleParticipant struct {
 	mySharingId  int
 	idToKey      map[int]integration.IdentityKey
 	keyToId      map[types.IdentityHash]int
-	subSets      []*SubSet
 	t            int
 	prng         io.Reader
-	ra           map[int]curves.Scalar
+	sampler      *Sampler
 }
 
 func (p *SampleParticipant) GetAuthKey() integration.AuthKey {
@@ -34,10 +32,10 @@ func (p *SampleParticipant) GetCohortConfig() *integration.CohortConfig {
 
 var _ integration.Participant = (*SetupParticipant)(nil)
 
-func NewSampleParticipant(myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, ra map[int]curves.Scalar, prng io.Reader) (*SampleParticipant, error) {
+func NewSampleParticipant(myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, seed *Seed, prng io.Reader) (*SampleParticipant, error) {
 	idToKey, keyToId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
 	t := cohortConfig.Protocol.Threshold - 1
-	subSets := NewSubSets(cohortConfig.Participants, cohortConfig.Protocol.TotalParties-t)
+	sampler := NewSampler(mySharingId-1, cohortConfig.Protocol.TotalParties, t, seed.Ra)
 
 	participant := &SampleParticipant{
 		cohortConfig: cohortConfig,
@@ -45,10 +43,9 @@ func NewSampleParticipant(myAuthKey integration.AuthKey, cohortConfig *integrati
 		mySharingId:  mySharingId,
 		idToKey:      idToKey,
 		keyToId:      keyToId,
-		subSets:      subSets,
+		sampler:      sampler,
 		t:            t,
 		prng:         prng,
-		ra:           ra,
 	}
 
 	return participant, nil
