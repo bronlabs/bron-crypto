@@ -39,6 +39,7 @@ type BaseOTConfig struct {
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
+	PairwiseSeeds   PairwiseSeeds
 	PairwiseBaseOTs map[types.IdentityHash]*BaseOTConfig
 
 	_ types.Incomparable

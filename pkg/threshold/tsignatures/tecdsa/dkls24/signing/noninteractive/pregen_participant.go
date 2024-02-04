@@ -3,11 +3,12 @@ package noninteractiveSigning
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
@@ -31,6 +32,7 @@ type PreGenParticipant struct {
 	CohortConfig          *integration.CohortConfig
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[types.IdentityHash]int
+	SessionParticipants   *hashset.HashSet[integration.IdentityKey]
 
 	transcript transcripts.Transcript
 	state      []*signing.SignerState
@@ -76,7 +78,7 @@ func (p *PreGenParticipant) IsSignatureAggregator() bool {
 	return false
 }
 
-func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, myShard *dkls24.Shard, uniqueSessionId []byte, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *dkls24.Shard, uniqueSessionId []byte, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
 	if err := validateInput(uniqueSessionId, cohortConfig, myShard); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "could not validate input")
 	}
@@ -86,17 +88,24 @@ func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, myShard *dkls2
 	transcript.AppendMessages("DKLs24 Interactive Signing", uniqueSessionId)
 
 	shamirIdToIdentityKey, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
+	sessionShamirIDs := make([]int, sessionParticipants.Len())
+	i := -1
+	for _, sessionParticipant := range sessionParticipants.Iter() {
+		i++
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipant.Hash()]
+	}
 
 	state := make([]*signing.SignerState, tau)
 	for t := 0; t < tau; t++ {
 		// step 0.2
-		zeroShareParticipant, err := hjky.NewParticipant(uniqueSessionId, myAuthKey, cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, cohortConfig.Participants.List(), prng, transcript.Clone())
+		zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, myAuthKey, myShard.PairwiseSeeds, sessionParticipants, seededPrng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 		}
+
 		// step 0.3
 		multipliers := make(map[types.IdentityHash]*signing.Multiplication)
-		for _, participant := range cohortConfig.Participants.Iter() {
+		for _, participant := range sessionParticipants.Iter() {
 			if participant.PublicKey().Equal(myAuthKey.PublicKey()) {
 				continue
 			}
@@ -115,9 +124,10 @@ func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, myShard *dkls2
 		}
 		state[t] = &signing.SignerState{
 			Protocols: &signing.SubProtocols{
-				ZeroShareParticipant: zeroShareParticipant,
-				Multiplication:       multipliers,
+				ZeroShareSampling: zeroShareSamplingParty,
+				Multiplication:    multipliers,
 			},
+			SessionShamirIDs: sessionShamirIDs,
 		}
 	}
 
@@ -132,6 +142,7 @@ func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, myShard *dkls2
 		state:                 state,
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
 		IdentityKeyToShamirId: identityKeyToShamirId,
+		SessionParticipants:   sessionParticipants,
 		MyShamirId:            myShamirId,
 		round:                 1,
 	}

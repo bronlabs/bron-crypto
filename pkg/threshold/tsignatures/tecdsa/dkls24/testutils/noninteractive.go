@@ -35,7 +35,7 @@ func MakePreGenParticipants(t *testing.T, tau int, sid []byte, cohortConfig *int
 			tran = trans[i]
 		}
 
-		parties[i], err = noninteractiveSigning.NewPreGenParticipant(tau, identities[i].(integration.AuthKey), shards[i], sid, cohortConfig, tran, prng, seededPrng)
+		parties[i], err = noninteractiveSigning.NewPreGenParticipant(tau, identities[i].(integration.AuthKey), hashset.NewHashSet(identities), shards[i], sid, cohortConfig, tran, prng, seededPrng)
 		require.NoError(t, err)
 	}
 

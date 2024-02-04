@@ -12,8 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
@@ -37,7 +37,7 @@ type Multiplication struct {
 
 type SubProtocols struct {
 	// use to get the secret key mask (zeta_i)
-	ZeroShareParticipant *hjky.Participant
+	ZeroShareSampling *sample.Participant
 	// pairwise multiplication protocol i.e. each party acts as alice and bob against every party
 	Multiplication map[types.IdentityHash]*Multiplication
 
@@ -60,14 +60,14 @@ type SignerState struct {
 	InstanceKeyWitness             map[types.IdentityHash]commitments.Witness
 	ReceivedInstanceKeyCommitments map[types.IdentityHash]commitments.Commitment
 	ReceivedBigR_i                 map[types.IdentityHash]curves.Point
+	SessionShamirIDs               []int
 	Protocols                      *SubProtocols
 
 	_ types.Incomparable
 }
 
 type Round1Broadcast struct {
-	BigR_i          curves.Point
-	ZeroShareOutput *hjky.Round1Broadcast
+	BigR_i curves.Point
 
 	_ types.Incomparable
 }
@@ -75,7 +75,6 @@ type Round1Broadcast struct {
 type Round1P2P struct {
 	InstanceKeyCommitment commitments.Commitment
 	MultiplicationOutput  *mult.Round1Output
-	ZeroShareOutput       *hjky.Round1P2P
 
 	_ types.Incomparable
 }
@@ -112,11 +111,6 @@ func DoRound1(p Participant, sessionParticipants *hashset.HashSet[integration.Id
 	// step 1.3
 	state.BigR_i = p.GetCohortConfig().CipherSuite.Curve.ScalarBaseMult(state.R_i)
 
-	zeroShareBroadcast, zeroShareUnicast, err := state.Protocols.ZeroShareParticipant.Round1()
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run round 1 of zero sampling")
-	}
-
 	state.InstanceKeyWitness = make(map[types.IdentityHash]commitments.Witness)
 	state.Chi_i = make(map[types.IdentityHash]curves.Scalar)
 	outputP2P := make(map[types.IdentityHash]*Round1P2P, sessionParticipants.Len())
@@ -152,13 +146,11 @@ func DoRound1(p Participant, sessionParticipants *hashset.HashSet[integration.Id
 		outputP2P[idHash] = &Round1P2P{
 			InstanceKeyCommitment: commitmentToInstanceKey,
 			MultiplicationOutput:  multiplicationOutput,
-			ZeroShareOutput:       zeroShareUnicast[idHash],
 		}
 	}
 
 	outputBroadcast := &Round1Broadcast{
-		BigR_i:          state.BigR_i,
-		ZeroShareOutput: zeroShareBroadcast,
+		BigR_i: state.BigR_i,
 	}
 
 	// step 1.4
@@ -166,29 +158,25 @@ func DoRound1(p Participant, sessionParticipants *hashset.HashSet[integration.Id
 }
 
 func DoRound2(p Participant, sessionParticipants *hashset.HashSet[integration.IdentityKey], state *SignerState, inputBroadcast map[types.IdentityHash]*Round1Broadcast, inputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, map[types.IdentityHash]*Round2P2P, error) {
-	zeroShareInputBroadcast := make(map[types.IdentityHash]*hjky.Round1Broadcast)
-	zeroShareInputUnicast := make(map[types.IdentityHash]*hjky.Round1P2P)
-	for id := range sessionParticipants.Iter() {
-		if id == p.GetAuthKey().Hash() {
-			continue
-		}
-		zeroShareInputBroadcast[id] = inputBroadcast[id].ZeroShareOutput
-		zeroShareInputUnicast[id] = inputP2P[id].ZeroShareOutput
-	}
-
 	// step 2.1
-	zeta_i, _, _, err := state.Protocols.ZeroShareParticipant.Round2(zeroShareInputBroadcast, zeroShareInputUnicast)
+	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "mask F_Zero (sample)")
 	}
-	// zeta_i is (t, t) sharing and has to be converted to (t, n) sharing
-	state.Zeta_i, err = tsignatures.ShamirReShare(p.GetAuthKey(), zeta_i, sessionParticipants, sessionParticipants, p.GetCohortConfig().Participants)
+	state.Zeta_i = zeta_i
+
+	// step 2.2
+	myShamirShare := &shamir.Share{
+		Id:    p.GetSharingId(),
+		Value: p.GetShard().SigningKeyShare.Share,
+	}
+	myAdditiveShare, err := myShamirShare.ToAdditive(state.SessionShamirIDs)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "mask F_Zero (sample)")
+		return nil, nil, errs.WrapFailed(err, "could not convert my shamir share to additive share")
 	}
 
 	// step 2.3
-	state.Sk_i = p.GetShard().SigningKeyShare.Share.Add(state.Zeta_i)
+	state.Sk_i = myAdditiveShare.Add(zeta_i)
 
 	// step 2.4
 	state.Pk_i = p.GetCohortConfig().CipherSuite.Curve.ScalarBaseMult(state.Sk_i)
@@ -251,15 +239,10 @@ func DoRound2(p Participant, sessionParticipants *hashset.HashSet[integration.Id
 }
 
 func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integration.IdentityKey], state *SignerState, inputBroadcast map[types.IdentityHash]*Round2Broadcast, inputP2P map[types.IdentityHash]*Round2P2P) (err error) {
-	lambda_i, err := tsignatures.ToAdditiveShare(p.GetCohortConfig().CipherSuite.Curve.ScalarField().One(), p.GetSharingId(), sessionParticipants, p.GetIdentityHashToSharingId())
-	if err != nil {
-		return errs.WrapFailed(err, "cannot calculate lambda")
-	}
-
 	state.Du_i = make(map[types.IdentityHash]curves.Scalar)
 	state.Dv_i = make(map[types.IdentityHash]curves.Scalar)
 	state.Psi_i = make(map[types.IdentityHash]curves.Scalar)
-	refreshedPublicKey := state.Pk_i.Mul(lambda_i) // this has zeta_i added so different from the one from public key share map
+	refreshedPublicKey := state.Pk_i // this has zeta_i added so different from the one from public key share map
 	for _, participant := range sessionParticipants.Iter() {
 		if participant.PublicKey().Equal(p.GetAuthKey().PublicKey()) {
 			continue
@@ -271,13 +254,7 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 		if !exists {
 			return errs.NewMissing("don't have broadcast message")
 		}
-
 		pk_j := receivedBroadcastMessage.Pk_i
-		lambda_j, err := tsignatures.ToAdditiveShare(p.GetCohortConfig().CipherSuite.Curve.ScalarField().One(), p.GetIdentityHashToSharingId()[idHash], sessionParticipants, p.GetIdentityHashToSharingId())
-		if err != nil {
-			return errs.WrapFailed(err, "cannot convert to additive share")
-		}
-		pk_jAdditive := pk_j.Mul(lambda_j)
 
 		// step 3.1.2
 		receivedP2PMessage, exists := inputP2P[idHash]
@@ -323,7 +300,7 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 			return errs.NewTotalAbort(idHash, "failed second check")
 		}
 
-		refreshedPublicKey = refreshedPublicKey.Add(pk_jAdditive)
+		refreshedPublicKey = refreshedPublicKey.Add(pk_j)
 
 		// We're partially evaluating what we need for future steps inside of this loop
 		state.Du_i[idHash] = du_ij
@@ -351,30 +328,19 @@ func DoRound3Epilogue(p Participant, sessionParticipants *hashset.HashSet[integr
 
 		cu_ij := cu[participant.Hash()]
 		cv_ij := cv[participant.Hash()]
-		cv_ijAdditive, err := tsignatures.ToAdditiveShare(cv_ij, p.GetSharingId(), sessionParticipants, p.GetIdentityHashToSharingId())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot convert to additive share")
-		}
 		du_ij := du[participant.Hash()]
 		dv_ij := dv[participant.Hash()]
-		dv_ijAdditive, err := tsignatures.ToAdditiveShare(dv_ij, p.GetIdentityHashToSharingId()[participant.Hash()], sessionParticipants, p.GetIdentityHashToSharingId())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot convert to additive share")
-		}
 		phiPsi = phiPsi.Add(psi[participant.Hash()])
 		cUdU = cUdU.Add(cu_ij).Add(du_ij)
-		cVdV = cVdV.Add(cv_ijAdditive).Add(dv_ijAdditive)
+		cVdV = cVdV.Add(cv_ij).Add(dv_ij)
 		R = R.Add(bigRs[participant.Hash()]) // step 3.3
 	}
 
 	// step 3.4
 	u_i := r.Mul(phiPsi).Add(cUdU)
+
 	// step 3.5
-	phiPsiAdditive, err := tsignatures.ToAdditiveShare(phiPsi, p.GetSharingId(), sessionParticipants, p.GetIdentityHashToSharingId())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert to additive share")
-	}
-	v_i := sk.Mul(phiPsiAdditive).Add(cVdV)
+	v_i := sk.Mul(phiPsi).Add(cVdV)
 
 	// step 3.6
 	rx := p.GetCohortConfig().CipherSuite.Curve.Scalar().SetNat(R.AffineX().Nat())

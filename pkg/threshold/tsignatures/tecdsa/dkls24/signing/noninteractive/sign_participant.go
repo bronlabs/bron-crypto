@@ -17,6 +17,7 @@ type Cosigner struct {
 	cohortConfig          *integration.CohortConfig
 	sessionParticipants   *hashset.HashSet[integration.IdentityKey]
 	identityKeyToShamirId map[types.IdentityHash]int
+	sessionShamirIds      []int
 	preSignature          *dkls24.PreSignature
 }
 
@@ -63,6 +64,12 @@ var _ dkls24.Participant = (*Cosigner)(nil)
 
 func NewCosigner(myAuthKey integration.AuthKey, myShard *dkls24.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignature *dkls24.PreSignature) (cosigner *Cosigner, err error) {
 	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
+	sessionShamirIDs := make([]int, sessionParticipants.Len())
+	i := -1
+	for _, sessionParticipant := range sessionParticipants.Iter() {
+		i++
+		sessionShamirIDs[i] = identityKeyToShamirId[sessionParticipant.Hash()]
+	}
 
 	return &Cosigner{
 		myAuthKey:             myAuthKey,
@@ -71,6 +78,7 @@ func NewCosigner(myAuthKey integration.AuthKey, myShard *dkls24.Shard, cohortCon
 		cohortConfig:          cohortConfig,
 		sessionParticipants:   sessionParticipants,
 		identityKeyToShamirId: identityKeyToShamirId,
+		sessionShamirIds:      sessionShamirIDs,
 		preSignature:          preSignature,
 	}, nil
 }

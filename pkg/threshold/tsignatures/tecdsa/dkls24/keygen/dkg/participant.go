@@ -2,6 +2,7 @@ package dkg
 
 import (
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -20,6 +21,7 @@ const DkgLabel = "COPPER_DKLS24_DKG-"
 type Participant struct {
 	MyAuthKey             integration.AuthKey
 	GennaroParty          *gennaro.Participant
+	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   map[types.IdentityHash]*vsot.Sender
 	BaseOTReceiverParties map[types.IdentityHash]*vsot.Receiver
 
@@ -56,9 +58,15 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(DkgLabel, nil)
 	}
+
 	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dkls24 dkg participant out of gennaro dkg participant")
+	}
+
+	zeroSamplingParty, err := zeroSetup.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, authKey, cohortConfig.Participants, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
 	}
 
 	senders := make(map[types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
@@ -80,6 +88,7 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	return &Participant{
 		MyAuthKey:             authKey,
 		GennaroParty:          gennaroParty,
+		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
 		Shard:                 &dkls24.Shard{},

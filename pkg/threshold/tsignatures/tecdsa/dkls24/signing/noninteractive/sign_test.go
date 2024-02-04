@@ -1,11 +1,9 @@
 package noninteractiveSigning_test
 
 import (
-	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"hash"
-	"io"
 	"reflect"
 	"runtime"
 	"strings"
@@ -51,8 +49,8 @@ func Test_HappyPath(t *testing.T) {
 				threshold := thresholdConfig.t
 				n := thresholdConfig.n
 				cipherSuite := &integration.CipherSuite{
-					Curve: k256.NewCurve(),
-					Hash:  sha256.New,
+					Curve: curve,
+					Hash:  h,
 				}
 				t.Run(fmt.Sprintf("NonInteractive sign happy path with curve=%s and hash=%s and t=%d and n=%d", curve.Name(), hashName[strings.LastIndex(hashName, "/")+1:], threshold, n), func(t *testing.T) {
 					t.Parallel()
@@ -66,35 +64,36 @@ func Test_HappyPath(t *testing.T) {
 					shards, err := testutils.RunDKG(cipherSuite.Curve, cohortConfig, allIdentities)
 					require.NoError(t, err)
 
-					preGenParties := testutils.MakePreGenParticipants(t, nTau, sessionId, cohortConfig, allIdentities, shards, nil, nil)
-					batches := testutils.RunPreGen(t, preGenParties)
-					require.NotNil(t, batches)
-					require.Len(t, batches, n)
+					combinations := combin.Combinations(n, threshold)
+					for _, combination := range combinations {
+						selectedIdentities := make([]integration.IdentityKey, threshold)
+						selectedShards := make([]*dkls24.Shard, threshold)
+						for i, idx := range combination {
+							selectedIdentities[i] = allIdentities[idx]
+							selectedShards[i] = shards[idx]
+						}
 
-					for tau := 0; tau < nTau; tau++ {
-						combinations := combin.Combinations(n, threshold)
-						for _, combination := range combinations {
-							cosignerIdentities := make([]integration.IdentityKey, len(combination))
-							cosignerShards := make([]*dkls24.Shard, len(combination))
-							preSignatures := make([]*dkls24.PreSignature, len(combination))
-							for idx, c := range combination {
-								preSignatures[idx] = batches[c].PreSignatures[tau]
-								cosignerIdentities[idx] = allIdentities[c]
-								cosignerShards[idx] = shards[c]
+						preGenParties := testutils.MakePreGenParticipants(t, nTau, sessionId, cohortConfig, selectedIdentities, selectedShards, nil, nil)
+						batches := testutils.RunPreGen(t, preGenParties)
+						require.NotNil(t, batches)
+						require.Len(t, batches, threshold)
+
+						for tau := 0; tau < nTau; tau++ {
+							selectedPreSignatures := make([]*dkls24.PreSignature, threshold)
+							for i := 0; i < threshold; i++ {
+								selectedPreSignatures[i] = batches[i].PreSignatures[tau]
 							}
 
-							cosigners := testutils.MakeNonInteractiveCosigners(t, cohortConfig, cosignerIdentities, cosignerShards, preSignatures)
-							var message [32]byte
-							_, err = io.ReadFull(crand.Reader, message[:])
-							require.NoError(t, err)
+							cosigners := testutils.MakeNonInteractiveCosigners(t, cohortConfig, selectedIdentities, selectedShards, selectedPreSignatures)
+							message := []byte("Hello World!")
 
 							partialSignatures := make(map[types.IdentityHash]*dkls24.PartialSignature)
 							for _, cosigner := range cosigners {
-								partialSignatures[cosigner.GetAuthKey().Hash()], err = cosigner.ProducePartialSignature(message[:])
+								partialSignatures[cosigner.GetAuthKey().Hash()], err = cosigner.ProducePartialSignature(message)
 								require.NoError(t, err)
 							}
 
-							signature, err := signing.Aggregate(cohortConfig.CipherSuite, shards[0].SigningKeyShare.PublicKey, partialSignatures, message[:])
+							signature, err := signing.Aggregate(cohortConfig.CipherSuite, selectedShards[0].SigningKeyShare.PublicKey, partialSignatures, message)
 							require.NoError(t, err)
 							require.NotNil(t, signature)
 						}

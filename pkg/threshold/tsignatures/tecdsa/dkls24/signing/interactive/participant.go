@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
@@ -32,7 +32,6 @@ type Cosigner struct {
 	ShamirIdToIdentityKey map[int]integration.IdentityKey
 	IdentityKeyToShamirId map[types.IdentityHash]int
 	SessionParticipants   *hashset.HashSet[integration.IdentityKey]
-	sessionShamirIDs      []int
 
 	transcript transcripts.Transcript
 	state      *signing.SignerState
@@ -97,7 +96,7 @@ func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionPar
 	}
 
 	// step 0.2
-	zeroShareParticipant, err := hjky.NewParticipant(uniqueSessionId, authKey, cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, sessionParticipants.List(), tprng, transcript.Clone())
+	zeroShareSamplingParty, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, uniqueSessionId, authKey, shard.PairwiseSeeds, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -128,19 +127,13 @@ func NewCosigner(uniqueSessionId []byte, authKey integration.AuthKey, sessionPar
 		Shard:               shard,
 		UniqueSessionId:     uniqueSessionId,
 		SessionParticipants: sessionParticipants,
-		sessionShamirIDs:    sessionShamirIDs,
 		prng:                tprng,
 		transcript:          transcript,
 		state: &signing.SignerState{
-			//InstanceKeyWitness:             make(map[types.IdentityHash]commitments.Witness),
-			//Chi_i:                          make(map[types.IdentityHash]curves.Scalar),
-			//Cu_i:                           make(map[types.IdentityHash]curves.Scalar),
-			//Cv_i:                           make(map[types.IdentityHash]curves.Scalar),
-			//ReceivedInstanceKeyCommitments: make(map[types.IdentityHash]commitments.Commitment),
-			//ReceivedBigR_i:                 make(map[types.IdentityHash]curves.Point),
+			SessionShamirIDs: sessionShamirIDs,
 			Protocols: &signing.SubProtocols{
-				ZeroShareParticipant: zeroShareParticipant,
-				Multiplication:       multipliers,
+				ZeroShareSampling: zeroShareSamplingParty,
+				Multiplication:    multipliers,
 			},
 		},
 		ShamirIdToIdentityKey: shamirIdToIdentityKey,
