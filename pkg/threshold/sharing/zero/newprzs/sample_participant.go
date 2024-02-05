@@ -1,10 +1,10 @@
 package newprzs
 
 import (
-	"io"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
 type SampleParticipant struct {
@@ -13,8 +13,6 @@ type SampleParticipant struct {
 	mySharingId  int
 	idToKey      map[int]integration.IdentityKey
 	keyToId      map[types.IdentityHash]int
-	t            int
-	prng         io.Reader
 	sampler      *Sampler
 }
 
@@ -32,10 +30,13 @@ func (p *SampleParticipant) GetCohortConfig() *integration.CohortConfig {
 
 var _ integration.Participant = (*SetupParticipant)(nil)
 
-func NewSampleParticipant(myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, seed *Seed, prng io.Reader) (*SampleParticipant, error) {
+func NewSampleParticipant(sessionId []byte, myAuthKey integration.AuthKey, cohortConfig *integration.CohortConfig, seed *Seed, seededPrngFactory csprng.CSPRNG) (*SampleParticipant, error) {
 	idToKey, keyToId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
-	t := cohortConfig.Protocol.Threshold - 1
-	sampler := NewSampler(mySharingId-1, cohortConfig.Protocol.TotalParties, t, seed.Ra)
+	t := cohortConfig.Protocol.Threshold - 2
+	sampler, err := NewSampler(mySharingId-1, cohortConfig.Protocol.TotalParties, t, cohortConfig.CipherSuite.Curve.ScalarField(), sessionId, seed.Keys, seededPrngFactory)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create sampler")
+	}
 
 	participant := &SampleParticipant{
 		cohortConfig: cohortConfig,
@@ -44,8 +45,6 @@ func NewSampleParticipant(myAuthKey integration.AuthKey, cohortConfig *integrati
 		idToKey:      idToKey,
 		keyToId:      keyToId,
 		sampler:      sampler,
-		t:            t,
-		prng:         prng,
 	}
 
 	return participant, nil

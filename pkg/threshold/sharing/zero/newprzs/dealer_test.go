@@ -2,36 +2,37 @@ package newprzs_test
 
 import (
 	crand "crypto/rand"
+	"crypto/subtle"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gonum.org/v1/gonum/stat/combin"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/newprzs"
 )
 
 func Test_Dealer(t *testing.T) {
 	n := 5
 	threshold := 3
-	field := k256.NewCurve().ScalarField()
-	dealt, err := newprzs.Deal(n, threshold-1, field, crand.Reader)
+	dealt, err := newprzs.Deal(n, threshold-1, crand.Reader)
 	require.NoError(t, err)
 
-	t.Run("every t parties have correct seeds", func(t *testing.T) {
-		secrets := make([]curves.Scalar, 0)
+	t.Run("should every have correct seeds", func(t *testing.T) {
+		secrets := make([]newprzs.Key, 0)
 		combinations := combin.Combinations(n, threshold)
 		for _, combination := range combinations {
-			seeds := make(map[int]curves.Scalar)
+			keys := make(map[int]newprzs.Key)
 			for _, idx := range combination {
 				for k, v := range dealt[idx] {
-					seeds[k] = v
+					keys[k] = v
 				}
 			}
-			secret := field.Zero()
-			for _, seed := range seeds {
-				secret = secret.Add(seed)
+			var secret newprzs.Key
+			for _, key := range keys {
+				oldSecret := secret
+				var newSecret newprzs.Key
+				subtle.XORBytes(newSecret[:], oldSecret[:], key[:])
+				secret = newSecret
 			}
 			secrets = append(secrets, secret)
 		}

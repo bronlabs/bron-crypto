@@ -3,7 +3,6 @@ package newprzs
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
@@ -19,7 +18,7 @@ type SetupParticipant struct {
 }
 
 type setupState struct {
-	ra map[int]curves.Scalar
+	ra map[int]Key
 }
 
 func (p *SetupParticipant) GetAuthKey() integration.AuthKey {

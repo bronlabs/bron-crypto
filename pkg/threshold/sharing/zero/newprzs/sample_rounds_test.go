@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/newprzs"
 )
@@ -25,6 +26,9 @@ func Test_Sample(t *testing.T) {
 		Curve: k256.NewCurve(),
 		Hash:  sha256.New,
 	}
+	sessionId := []byte("testSessionId")
+	seededPrngFactory, err := chacha20.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
 
 	identities, err := testutils.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -52,17 +56,18 @@ func Test_Sample(t *testing.T) {
 
 	sampleParticipants := make([]*newprzs.SampleParticipant, n)
 	for i, identity := range identities {
-		sampleParticipants[i], err = newprzs.NewSampleParticipant(identity.(integration.AuthKey), cohortConfig, seeds[i], crand.Reader)
+		sampleParticipants[i], err = newprzs.NewSampleParticipant(sessionId, identity.(integration.AuthKey), cohortConfig, seeds[i], seededPrngFactory)
 		require.NoError(t, err)
 	}
 
 	samples := make([]curves.Scalar, n)
 	for i, participant := range sampleParticipants {
-		samples[i] = participant.Sample()
+		samples[i], err = participant.Sample()
+		require.NoError(t, err)
 		require.False(t, samples[i].IsZero())
 	}
 
-	combinations := combin.Combinations(n, threshold+1)
+	combinations := combin.Combinations(n, threshold)
 	secrets := make([]curves.Scalar, 0)
 	for _, combination := range combinations {
 		shares := make([]*shamir.Share, len(combination))
@@ -72,7 +77,7 @@ func Test_Sample(t *testing.T) {
 				Value: samples[c],
 			}
 		}
-		dealer, err := shamir.NewDealer(threshold+1, n, cipherSuite.Curve)
+		dealer, err := shamir.NewDealer(threshold, n, cipherSuite.Curve)
 		require.NoError(t, err)
 		secret, err := dealer.Combine(shares...)
 		require.NoError(t, err)

@@ -1,18 +1,19 @@
 package newprzs
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"crypto/subtle"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type Round1P2P struct {
-	Ra map[int]curves.Scalar
+	Ra map[int]Key
 }
 
 func (p *SetupParticipant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 	n := p.cohortConfig.Protocol.TotalParties
 	t := p.cohortConfig.Protocol.Threshold - 1
-	dealt, err := Deal(n, t, p.cohortConfig.CipherSuite.Curve.ScalarField(), p.prng)
+	dealt, err := Deal(n, t, p.prng)
 	if err != nil {
 		return nil, err
 	}
@@ -32,15 +33,19 @@ func (p *SetupParticipant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
 }
 
 func (p *SetupParticipant) Round2(input map[types.IdentityHash]*Round1P2P) (*Seed, error) {
-	result := make(map[int]curves.Scalar)
+	result := make(map[int]Key)
 	for k, r := range p.state.ra {
 		result[k] = r
 	}
 	for _, r2Input := range input {
 		for k, v := range r2Input.Ra {
-			result[k] = result[k].Add(v)
+			lhs := result[k]
+			rhs := v
+			var newResult Key
+			subtle.XORBytes(newResult[:], lhs[:], rhs[:])
+			result[k] = newResult
 		}
 	}
 
-	return &Seed{Ra: result}, nil
+	return &Seed{Keys: result}, nil
 }
