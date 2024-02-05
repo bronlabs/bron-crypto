@@ -29,7 +29,7 @@ type Round1Broadcast struct {
 }
 
 type Round1P2P struct {
-	przs []*setup.Round1P2P
+	Przs []*setup.Round1P2P
 
 	_ types.Incomparable
 }
@@ -45,7 +45,7 @@ type Round2Broadcast struct {
 }
 
 type Round2P2P struct {
-	przs []*setup.Round2P2P
+	Przs []*setup.Round2P2P
 }
 
 func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastOutput map[types.IdentityHash]*Round1P2P, err error) {
@@ -96,10 +96,10 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 			continue
 		}
 		unicast[hash] = &Round1P2P{
-			przs: make([]*setup.Round1P2P, p.tau),
+			Przs: make([]*setup.Round1P2P, p.tau),
 		}
 		for t := 0; t < p.tau; t++ {
-			unicast[hash].przs[t] = przsOutputs[t][hash]
+			unicast[hash].Przs[t] = przsOutputs[t][hash]
 		}
 	}
 
@@ -141,7 +141,7 @@ func (p *PreGenParticipant) Round2(broadcastInput map[types.IdentityHash]*Round1
 			}
 
 			theirBigRCommitment[i][identity.Hash()] = inBroadcast.BigRCommitment[i]
-			przsInput[identity.Hash()] = inUnicast.przs[i]
+			przsInput[identity.Hash()] = inUnicast.Przs[i]
 		}
 
 		// 1. compute proof of dlog knowledge of R & R2
@@ -173,10 +173,10 @@ func (p *PreGenParticipant) Round2(broadcastInput map[types.IdentityHash]*Round1
 			continue
 		}
 		unicast[hash] = &Round2P2P{
-			przs: make([]*setup.Round2P2P, p.tau),
+			Przs: make([]*setup.Round2P2P, p.tau),
 		}
 		for t := 0; t < p.tau; t++ {
-			unicast[hash].przs[t] = przsOutputs[t][hash]
+			unicast[hash].Przs[t] = przsOutputs[t][hash]
 		}
 	}
 
@@ -233,7 +233,7 @@ func (p *PreGenParticipant) Round3(broadcastInput map[types.IdentityHash]*Round2
 			}
 			BigR2[i][identity.Hash()] = theirBigR2
 
-			przsInput[identity.Hash()] = inUnicast.przs[i]
+			przsInput[identity.Hash()] = inUnicast.Przs[i]
 		}
 
 		seeds[i], err = p.przsSetupParticipants[i].Round3(przsInput)
