@@ -88,8 +88,11 @@ func (*Scalar) Cube() curves.Scalar {
 
 // === Additive Monoid Methods.
 
-func (*Scalar) IsAdditiveIdentity() bool {
-	panic("not implemented")
+func (s *Scalar) IsAdditiveIdentity() bool {
+	return s.V == [32]byte{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	}
 }
 
 // === Multiplicative Monoid Methods.

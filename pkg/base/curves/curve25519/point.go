@@ -227,8 +227,8 @@ func (p *Point) ToAffineCompressed() []byte {
 	return p.V[:]
 }
 
-func (*Point) ToAffineUncompressed() []byte {
-	panic("not implemented")
+func (p *Point) ToAffineUncompressed() []byte {
+	return p.V[:]
 }
 
 func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {

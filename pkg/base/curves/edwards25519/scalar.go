@@ -366,7 +366,7 @@ func (s *Scalar) Bytes() []byte {
 	return bitstring.ReverseBytes(t)
 }
 
-// SetBytesCanonical takes input a 32-byte long array and returns a ed25519 scalar.
+// SetBytesCanonicalLE takes input a 32-byte long array and returns a ed25519 scalar.
 // The input must be 32-byte long and must be a reduced bytes.
 func (*Scalar) SetBytesCanonicalLE(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
@@ -379,7 +379,7 @@ func (*Scalar) SetBytesCanonicalLE(input []byte) (curves.Scalar, error) {
 	return &Scalar{V: value}, nil
 }
 
-// SetBytesWithClamping takes input a 32-byte long array, applies the buffer
+// SetBytesWithClampingLE takes input a 32-byte long array, applies the buffer
 // pruning described in RFC 8032, Section 5.1.5 (also known as clamping) and
 // returns the resulting ed25519 scalar.
 func (*Scalar) SetBytesWithClampingLE(input []byte) (curves.Scalar, error) {

@@ -1,4 +1,4 @@
-package dhc
+package ecsdvpDhc
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -6,9 +6,11 @@ import (
 )
 
 func DeriveSharedSecretValue(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point) (curves.BaseFieldElement, error) {
-	if myPrivateKey.ScalarField().Curve().Name() != otherPartyPublicKey.Curve().Name() {
+	curveName := myPrivateKey.ScalarField().Curve().Name()
+	if curveName != otherPartyPublicKey.Curve().Name() {
 		return nil, errs.NewInvalidCurve("curves of my private key and other guy's public key are not the same")
 	}
+
 	// assumption 1
 	if myPrivateKey.IsZero() {
 		return nil, errs.NewIsZero("invalid private key")

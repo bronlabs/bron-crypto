@@ -294,7 +294,9 @@ func (e *BaseFieldElement) Nat() *saferith.Nat {
 }
 
 func (*BaseFieldElement) SetBytes(input []byte) (curves.BaseFieldElement, error) {
-	panic("not implemented")
+	var result BaseFieldElement
+	copy(result.V[:], input)
+	return &result, nil
 }
 
 func (*BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, error) {

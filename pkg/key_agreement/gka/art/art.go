@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
@@ -244,7 +244,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 			switch {
 			// 4.i [Build ART] The left child has node private key, the right child has node public key.
 			case p.tree[left].privateNodeKey != nil && p.tree[right].publicNodeKey != nil:
-				sk, err := dhc.DeriveSharedSecretValue(p.tree[left].privateNodeKey, p.tree[right].publicNodeKey)
+				sk, err := dh.DiffieHellman(p.tree[left].privateNodeKey, p.tree[right].publicNodeKey)
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value at %d", parent)
 				}
@@ -256,7 +256,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 
 			// 4.ii [Build ART] the left child has node public key, the right child has node private key.
 			case p.tree[left].publicNodeKey != nil && p.tree[right].privateNodeKey != nil:
-				sk, err := dhc.DeriveSharedSecretValue(p.tree[right].privateNodeKey, p.tree[left].publicNodeKey)
+				sk, err := dh.DiffieHellman(p.tree[right].privateNodeKey, p.tree[left].publicNodeKey)
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value %d", parent)
 				}

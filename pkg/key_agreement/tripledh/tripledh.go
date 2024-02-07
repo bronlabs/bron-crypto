@@ -5,7 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 )
 
 // DeriveSecretLocal computes Triple Diffie-Hellman between two nodes.
@@ -14,19 +14,19 @@ import (
 //
 
 func DeriveSecretLocal(a curves.Scalar, B curves.Point, x curves.Scalar, Y curves.Point) (secret curves.Scalar, err error) {
-	dh1, err := dhc.DeriveSharedSecretValue(a, Y)
+	dh1, err := dh.DiffieHellman(a, Y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh2, err := dhc.DeriveSharedSecretValue(x, B)
+	dh2, err := dh.DiffieHellman(x, B)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh3, err := dhc.DeriveSharedSecretValue(x, Y)
+	dh3, err := dh.DiffieHellman(x, Y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh4, err := dhc.DeriveSharedSecretValue(a, B)
+	dh4, err := dh.DiffieHellman(a, B)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
@@ -43,19 +43,19 @@ func DeriveSecretLocal(a curves.Scalar, B curves.Point, x curves.Scalar, Y curve
 //
 
 func DeriveSecretRemote(A curves.Point, b curves.Scalar, X curves.Point, y curves.Scalar) (secret curves.Scalar, err error) {
-	dh1, err := dhc.DeriveSharedSecretValue(y, A)
+	dh1, err := dh.DiffieHellman(y, A)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh2, err := dhc.DeriveSharedSecretValue(b, X)
+	dh2, err := dh.DiffieHellman(b, X)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh3, err := dhc.DeriveSharedSecretValue(y, X)
+	dh3, err := dh.DiffieHellman(y, X)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	dh4, err := dhc.DeriveSharedSecretValue(b, A)
+	dh4, err := dh.DiffieHellman(b, A)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}

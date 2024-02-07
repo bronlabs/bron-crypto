@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 )
 
 type SupportedAEAD string
@@ -75,7 +75,7 @@ func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) cu
 		}
 		panic("could not cast public key to curve25519 point")
 	} else {
-		field, err := dhc.DeriveSharedSecretValue(privateKey, publicKey)
+		field, err := dh.DiffieHellman(privateKey, publicKey)
 		if err != nil {
 			panic(err)
 		}

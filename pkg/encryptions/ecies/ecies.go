@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/ecsvdp/dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 )
 
 const (
@@ -42,7 +42,7 @@ func Encrypt(myPrivateKey *PrivateKey, receiverPublicKey PublicKey, message, AD 
 	}
 
 	// step 1.2
-	z, err := dhc.DeriveSharedSecretValue(myPrivateKey.S, receiverPublicKey)
+	z, err := dh.DiffieHellman(myPrivateKey.S, receiverPublicKey)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not derive shared secret")
 	}
@@ -113,7 +113,7 @@ func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, ta
 	}
 
 	// step 2.2
-	z, err := dhc.DeriveSharedSecretValue(myPrivateKey.S, senderPublicKey)
+	z, err := dh.DiffieHellman(myPrivateKey.S, senderPublicKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive shared secret")
 	}
