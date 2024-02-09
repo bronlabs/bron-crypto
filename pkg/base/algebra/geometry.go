@@ -5,7 +5,7 @@ import "github.com/cronokirby/saferith"
 // AbstractAlgebraicVariety defines some methods that the structure ST must have to be an algebraic variety.
 // An algebraic variety is the set of solutions of some polynomial defined over a base field.
 // Note that "Abstract" prefix here is due to the conventions of this package. We are not interested in the scheme-theoretic treatment.
-// Note that these methods are not sufficient eg. we are also not defining interface methods related to projective space, even though
+// Note that these methods are not sufficient e.g. we are also not defining interface methods related to projective space, even though
 // these varieties must have projective embeddings (equivalent to above point).
 type AbstractAlgebraicVariety[ST Structure, E, F Element, BaseField EnrichedElement[F]] interface {
 	// Dimension returns the number of variables of the polynomial.
@@ -13,7 +13,7 @@ type AbstractAlgebraicVariety[ST Structure, E, F Element, BaseField EnrichedElem
 	// Discriminant returns some number as function of its coefficients. The exact definition is context dependent.
 	// eg. for elliptic curves it would be -16(4a^3+27b^2)
 	Discriminant() *saferith.Int
-	// FrobeniusEndomorphism returns an element whose coordinates are coordinates of p, each raised to the power of characteristic of the base field.
+	// FrobeniusEndomorphism returns an element whose coordinates are coordinates of p, each raised to the power of characteristic of the basefield.
 	FrobeniusEndomorphism(p E) E
 	// BaseField returns the base field of the algebraic variety ST.
 	BaseField() BaseField

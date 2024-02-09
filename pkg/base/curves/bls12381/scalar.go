@@ -9,7 +9,6 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
@@ -383,15 +382,15 @@ func (s *Scalar) Nat() *saferith.Nat {
 
 func (s *Scalar) Bytes() []byte {
 	t := s.V.Bytes()
-	return bitstring.ReverseBytes(t[:])
+	return utils.SliceReverse(t[:])
 }
 
 func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
-	reducedInput := utils.NatFromBytes(input, r)
-	buffer := bitstring.PadToRight(bitstring.ReverseBytes(reducedInput.Bytes()), base.FieldBytes-len(reducedInput.Bytes()))
+	reducedInput := utils.Saferith.NatFromBytes(input, r)
+	buffer := utils.SlicePadRight(utils.SliceReverse(reducedInput.Bytes()), base.FieldBytes-len(reducedInput.Bytes()))
 	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "couldn't set bytes")
@@ -406,7 +405,7 @@ func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("invalid length > %d", base.WideFieldBytes)
 	}
-	buffer := bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
+	buffer := utils.SlicePadRight(utils.SliceReverse(input), base.WideFieldBytes-len(input))
 	value := bls12381impl.FqNew().SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
 	return &Scalar{
 		V: value,

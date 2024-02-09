@@ -1,11 +1,11 @@
-package bitstring_test
+package utils_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 func TestSelectBit(t *testing.T) {
@@ -28,7 +28,7 @@ func TestSelectBit(t *testing.T) {
 		0, 0, 0, 0, 1, 1, 1, 1, // 0b11110000
 	}
 	for i := 0; i < len(inputVector)*8; i++ {
-		output, err := bitstring.SelectBit(inputVector, i)
+		output, err := utils.Bits.Select(inputVector, i)
 		require.NoError(t, err)
 		require.Equalf(t, expectedVector[i], output, "i=%d", i)
 	}
@@ -49,16 +49,16 @@ func TestTransposeBooleanMatrix(t *testing.T) {
 		{0x71, 0x93, 0xB5, 0xD7, 0xF9, 0x1B},
 		{0x81, 0xA3, 0xC5, 0xE7, 0x09, 0x2B},
 	}
-	transposedMatrix, err := bitstring.TransposePackedBits(inputMatrix)
+	transposedMatrix, err := utils.Bits.TransposePacked(inputMatrix)
 	require.NoError(t, err)
 	for i := 0; i < len(inputMatrix); i++ {
 		for j := 0; j < len(transposedMatrix); j++ {
 			// Check that the bit at position i in the jth row of the input matrix.
 			// is equal to the bit at position j in the ith row of the transposed matrix.
-			// using bitstring.SelectBit (careful! it takes a byte array as input)
-			output1, err := bitstring.SelectBit(inputMatrix[i], j)
+			// using bitstring.Select (careful! it takes a byte array as input)
+			output1, err := utils.Bits.Select(inputMatrix[i], j)
 			require.NoError(t, err)
-			output2, err := bitstring.SelectBit(transposedMatrix[j][:], i)
+			output2, err := utils.Bits.Select(transposedMatrix[j][:], i)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -73,12 +73,12 @@ func TestRepeatBits(t *testing.T) {
 
 	inputVector := []byte{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}
 	for nRepetitions := 1; nRepetitions < 8; nRepetitions++ {
-		outputVector := bitstring.RepeatBits(inputVector, nRepetitions)
+		outputVector := utils.Bits.Repeat(inputVector, nRepetitions)
 		for i := 0; i < len(inputVector)*8; i++ {
 			for j := 0; j < nRepetitions; j++ {
-				output, err := bitstring.SelectBit(outputVector, i*nRepetitions+j)
+				output, err := utils.Bits.Select(outputVector, i*nRepetitions+j)
 				require.NoError(t, err)
-				input, err := bitstring.SelectBit(inputVector, i)
+				input, err := utils.Bits.Select(inputVector, i)
 				require.NoError(t, err)
 				require.Equalf(t, input, output, "i=%d, j=%d", i, j)
 			}
@@ -95,9 +95,9 @@ func TestUnpackBits(t *testing.T) {
 		0b01011001, 0b00111101,
 		0b01111011, 0b00001111,
 	}
-	outputVector := bitstring.UnpackBits(inputVector)
+	outputVector := utils.Bits.Unpack(inputVector)
 	for i := 0; i < len(inputVector)*8; i++ {
-		input, err := bitstring.SelectBit(inputVector, i)
+		input, err := utils.Bits.Select(inputVector, i)
 		require.NoError(t, err)
 		require.Equal(t, input, outputVector[i])
 	}
@@ -107,9 +107,9 @@ func TestPackBits(t *testing.T) {
 	t.Parallel()
 
 	inputVector := []byte{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0}
-	outputVector := bitstring.PackBits(inputVector)
+	outputVector := utils.Bits.Pack(inputVector)
 	for i := 0; i < len(inputVector); i++ {
-		output, err := bitstring.SelectBit(outputVector, i)
+		output, err := utils.Bits.Select(outputVector, i)
 		require.NoError(t, err)
 		require.Equal(t, inputVector[i], output)
 	}

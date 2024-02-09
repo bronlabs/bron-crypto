@@ -196,7 +196,7 @@ dataGeneration:
 // automatically if the prng was initialised with an `entropySource`, raising an
 // error otherwise.
 func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
-	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
+	numRequests := utils.Math.CeilDiv(len(buffer), maxNumberOfBytesRequest)
 	for i := 0; i < numRequests; i++ {
 		end := utils.Min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]

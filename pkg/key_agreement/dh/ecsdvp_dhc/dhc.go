@@ -21,7 +21,7 @@ func DeriveSharedSecretValue(myPrivateKey curves.Scalar, otherPartyPublicKey cur
 	kInv := k.MultiplicativeInverse()
 	t := kInv.Mul(myPrivateKey)
 	// step 2
-	P := otherPartyPublicKey.Mul(k.Mul(t))
+	P := otherPartyPublicKey.ScalarMul(k.Mul(t))
 	// step 3
 	if P.IsIdentity() {
 		return nil, errs.NewIsIdentity("invalid public key")

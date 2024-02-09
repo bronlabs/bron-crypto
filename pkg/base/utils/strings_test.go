@@ -16,7 +16,7 @@ func Test_CeilDiv(t *testing.T) {
 		for b := 1; b < 20; b++ {
 			// Calculate ceil(a/b) and compare with CeilDiv(a, b).
 			expected := int(math.Ceil(float64(a) / float64(b)))
-			actual := utils.CeilDiv(a, b)
+			actual := utils.Math.CeilDiv(a, b)
 			if expected != actual {
 				t.Errorf("CeilDiv(%d, %d) = %d, expected %d", a, b, actual, expected)
 			}
@@ -49,7 +49,7 @@ func Test_FloorLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("floor(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, utils.FloorLog2(arg), expected)
+			require.Equal(t, utils.Math.FloorLog2(arg), expected)
 		})
 	}
 }
@@ -80,7 +80,7 @@ func Test_CeilLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("ceil(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, utils.CeilLog2(arg), expected)
+			require.Equal(t, utils.Math.CeilLog2(arg), expected)
 		})
 	}
 }

@@ -135,7 +135,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
 	rInv := signature.R.MultiplicativeInverse()
-	publicKey := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
+	publicKey := (bigR.ScalarMul(signature.S).Sub(curve.ScalarBaseMult(z))).ScalarMul(rInv)
 
 	return publicKey, nil
 }

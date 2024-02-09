@@ -4,7 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	polynomialsUtils "github.com/copperexchange/krypton-primitives/pkg/base/polynomials/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -115,7 +115,7 @@ func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error
 		partialPublicKeys[i] = partialPublicKey
 	}
 	evaluateAt := p.PublicKey.Curve().ScalarField().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
-	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
+	reconstructedPublicKey, err := polynomialsUtils.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
 	}

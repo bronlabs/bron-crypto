@@ -74,7 +74,7 @@ func (g *GtMember) Order() *saferith.Modulus {
 	order := new(saferith.Nat).SetUint64(1)
 	for !q.IsIdentity() {
 		q = q.Operate(g)
-		utils.IncrementNat(order)
+		utils.Saferith.NatIncrement(order)
 	}
 	return saferith.ModulusFromNat(order)
 }
@@ -100,7 +100,7 @@ func (g *GtMember) ApplyMul(x curves.GtMember, n *saferith.Nat) curves.GtMember 
 	current := g.Clone()
 	for reducedN.Eq(new(saferith.Nat).SetUint64(1)) != 1 {
 		current = current.Mul(x)
-		utils.DecrementNat(reducedN)
+		utils.Saferith.NatDecrement(reducedN)
 	}
 	return current
 }
@@ -180,7 +180,7 @@ func (g *GtMember) ApplyDiv(x curves.GtMember, n *saferith.Nat) curves.GtMember 
 	current := g.Clone()
 	for reducedN.Eq(new(saferith.Nat).SetUint64(1)) != 1 {
 		current = current.Div(x)
-		utils.DecrementNat(reducedN)
+		utils.Saferith.NatDecrement(reducedN)
 	}
 	return current
 }

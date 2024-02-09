@@ -7,11 +7,11 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -55,7 +55,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		if read != 48 {
 			return nil, errs.NewFailed("failed to create private key")
 		}
-		copy(okm[:48], bitstring.ReverseBytes(okm[:48]))
+		copy(okm[:48], utils.SliceReverse(okm[:48]))
 
 		// step 2.3.4
 		v := bimpl.FqNew().SetBytesWide(&okm)

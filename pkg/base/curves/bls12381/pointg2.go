@@ -63,7 +63,7 @@ func (p *PointG2) Order() *saferith.Modulus {
 	order := new(saferith.Nat).SetUint64(1)
 	for !q.IsIdentity() {
 		q = q.Add(p)
-		utils.IncrementNat(order)
+		utils.Saferith.NatIncrement(order)
 	}
 	return saferith.ModulusFromNat(order)
 }
@@ -83,7 +83,7 @@ func (p *PointG2) Add(rhs curves.Point) curves.Point {
 }
 
 func (p *PointG2) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Add(q.Mul(NewScalarFieldG2().Element().SetNat(n)))
+	return p.Add(q.ScalarMul(NewScalarFieldG2().Element().SetNat(n)))
 }
 
 func (p *PointG2) Double() curves.Point {
@@ -139,12 +139,12 @@ func (p *PointG2) Sub(rhs curves.Point) curves.Point {
 }
 
 func (p *PointG2) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Sub(q.Mul(NewScalarFieldG2().Element().SetNat(n)))
+	return p.Sub(q.ScalarMul(NewScalarFieldG2().Element().SetNat(n)))
 }
 
 // === Vector Space Methods.
 
-func (p *PointG2) Mul(rhs curves.Scalar) curves.Point {
+func (p *PointG2) ScalarMul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
@@ -195,7 +195,7 @@ func (p *PointG2) IsTorsionElement(order *saferith.Modulus) bool {
 		return p.V.InCorrectSubgroup() == 1
 	}
 	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
-	return p.Mul(e).IsIdentity()
+	return p.ScalarMul(e).IsIdentity()
 }
 
 func (p *PointG2) Pair(rhs curves.PairingPoint) curves.GtMember {

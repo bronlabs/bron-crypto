@@ -3,8 +3,8 @@ package randomisedFischlin
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -61,7 +61,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate response")
 			}
-			digest, err := hash(p.sessionId, a, bitstring.ToBytesLE(i), e, p.sigmaProtocol.SerializeResponse(z))
+			digest, err := hash(p.sessionId, a, utils.Math.ToBytesLe32(uint32(i)), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
 				return nil, errs.WrapHashingFailed(err, "cannot compute digest")
 			}

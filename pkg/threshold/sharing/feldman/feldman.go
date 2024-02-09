@@ -33,7 +33,7 @@ func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifi
 	}
 	rhs = rhs.Add(commitments[0])
 
-	lhs := commitments[0].Curve().Generator().Mul(share.Value)
+	lhs := commitments[0].Curve().Generator().ScalarMul(share.Value)
 	if !lhs.Equal(rhs) {
 		return errs.NewVerificationFailed("not equal")
 	}
@@ -71,10 +71,10 @@ func (f *Dealer) Split(secret curves.Scalar, prover compiler.NIProver[batch_schn
 		return nil, nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
 	}
 	commitments = make([]curves.Point, f.Threshold)
-	for i := range commitments {
-		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
+	for i := range poly.Coefficients() {
+		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients()[i])
 	}
-	proof, err = prover.Prove(commitments, poly.Coefficients)
+	proof, err = prover.Prove(commitments, poly.Coefficients())
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "cannot create a proof")
 	}

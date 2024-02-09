@@ -307,7 +307,7 @@ func (*Curve) SubGroupOrder() *saferith.Modulus {
 }
 
 func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
-	return c.Generator().Mul(sc)
+	return c.Generator().ScalarMul(sc)
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {

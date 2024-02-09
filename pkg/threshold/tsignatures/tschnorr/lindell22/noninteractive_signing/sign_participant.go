@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -75,7 +75,7 @@ func NewCosigner(myAuthKey integration.AuthKey, myShard *lindell22.Shard, cohort
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
-	przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(preSignatureIndex)}, nil)
+	przsSid := bytes.Join([][]byte{sid, utils.Math.ToBytesLe32(uint32(preSignatureIndex))}, nil)
 	przsPrngFactory, err := chacha20.NewChachaPRNG(nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")

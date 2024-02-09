@@ -123,7 +123,7 @@ func (p *PreGenParticipant) Round3(input map[types.IdentityHash]*Round2Broadcast
 				return nil, errs.WrapFailed(err, "cannot verify dlog R proof")
 			}
 
-			commonBigR[i][identity.Hash()] = in.BigR[i].Mul(p.state.k[i])
+			commonBigR[i][identity.Hash()] = in.BigR[i].ScalarMul(p.state.k[i])
 		}
 	}
 

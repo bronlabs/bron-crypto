@@ -136,7 +136,7 @@ func Fuzz_Test_DeriveSharingId(f *testing.F) {
 func Fuzz_Test_RandomNat(f *testing.F) {
 	f.Fuzz(func(t *testing.T, randomSeed uint64, a uint64, b uint64) {
 		prng := rand.New(rand.NewSource(int64(randomSeed)))
-		_, err := utils.RandomNat(prng, new(saferith.Nat).SetUint64(a), new(saferith.Nat).SetUint64(b))
+		_, err := utils.Saferith.NatRandom(prng, new(saferith.Nat).SetUint64(a), new(saferith.Nat).SetUint64(b))
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -145,7 +145,7 @@ func Fuzz_Test_RandomNat(f *testing.F) {
 
 func Fuzz_Test_NatSetBit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, a uint64, k int) {
-		_, err := utils.NatSetBit(new(saferith.Nat).SetUint64(a), k-1)
+		_, err := utils.Saferith.NatSetBit(new(saferith.Nat).SetUint64(a), k-1)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

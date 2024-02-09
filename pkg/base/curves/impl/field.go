@@ -7,9 +7,9 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 // FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.
@@ -246,7 +246,7 @@ func (f *FieldValue) SetNat(nat *saferith.Nat) *FieldValue {
 	var buffer [FieldBytes]byte
 	t := new(saferith.Nat).Mod(nat, f.Params.Modulus)
 	t.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
+	copy(buffer[:], utils.SliceReverse(buffer[:]))
 	_, _ = f.SetBytes(&buffer)
 	return f
 }
@@ -258,7 +258,7 @@ func (f *FieldValue) SetBigInt(bi *big.Int) *FieldValue {
 	t := new(big.Int).Set(bi)
 	t.Mod(t, f.Params.Modulus.Big())
 	t.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
+	copy(buffer[:], utils.SliceReverse(buffer[:]))
 	_, _ = f.SetBytes(&buffer)
 	return f
 }
@@ -293,7 +293,7 @@ func (f *FieldValue) Bytes() [FieldBytes]byte {
 // Nat converts this element into the big.Int struct.
 func (f *FieldValue) Nat() *saferith.Nat {
 	buffer := f.Bytes()
-	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(utils.SliceReverse(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.

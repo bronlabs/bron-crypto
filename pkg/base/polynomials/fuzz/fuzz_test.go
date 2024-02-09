@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	polynomialsUtils "github.com/copperexchange/krypton-primitives/pkg/base/polynomials/utils"
 )
 
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
@@ -26,7 +27,8 @@ func FuzzPolynomial(f *testing.F) {
 		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randomSeed))
 
-		poly, err := polynomials.NewRandomPolynomial(secret, degree, prng)
+		polySet := polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarField())
+		poly, err := polySet.NewUnivariatePolynomialRandomWithIntercept(degree, secret, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -34,8 +36,8 @@ func FuzzPolynomial(f *testing.F) {
 			t.Skip(err.Error())
 		}
 		require.NotNil(t, poly)
-		require.Equal(t, poly.Coefficients[0], secret)
-		poly.Evaluate(curve.ScalarField().New(x))
+		require.Equal(t, poly.Coefficients()[0], secret)
+		poly.Eval(curve.ScalarField().New(x))
 	})
 }
 
@@ -43,8 +45,10 @@ func FuzzInterpolate(f *testing.F) {
 	f.Add(uint(0), uint64(1), uint64(2), uint64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, x uint64, y uint64, at uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		_, err := polynomials.Interpolate(curve, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Scalar{curve.ScalarField().New(y)}, curve.ScalarField().New(at))
+		polySet := polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarField())
+		poly, err := polynomialsUtils.Interpolate(polySet, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Scalar{curve.ScalarField().New(y)})
 		require.NoError(t, err)
+		poly.Eval(curve.ScalarField().New(at))
 	})
 }
 
@@ -62,7 +66,7 @@ func FuzzInterpolateInTheExponent(f *testing.F) {
 		if err != nil {
 			t.Skip(err.Error())
 		}
-		_, err = polynomials.InterpolateInTheExponent(curve, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Point{p}, curve.ScalarField().New(at))
+		_, err = polynomialsUtils.InterpolateInTheExponent(curve, []curves.Scalar{curve.ScalarField().New(x)}, []curves.Point{p}, curve.ScalarField().New(at))
 		require.NoError(t, err)
 	})
 }

@@ -185,7 +185,7 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 	for currentDegree.Eq(f.ExtensionDegree()) == 1 {
 		currentTerm = f.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = utils.IncrementNat(currentDegree)
+		currentDegree = utils.Saferith.NatIncrement(currentDegree)
 	}
 	return result
 }

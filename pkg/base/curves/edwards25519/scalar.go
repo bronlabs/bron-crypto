@@ -10,11 +10,11 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -349,7 +349,7 @@ func (*Scalar) SetNat(x *saferith.Nat) curves.Scalar {
 		return nil
 	}
 	v := new(saferith.Nat).Mod(x, NewScalarField().Order())
-	value, err := filippo.NewScalar().SetCanonicalBytes(bitstring.PadToRight(bitstring.ReverseBytes(v.Bytes()), base.FieldBytes-len(v.Bytes())))
+	value, err := filippo.NewScalar().SetCanonicalBytes(utils.SlicePadRight(utils.SliceReverse(v.Bytes()), base.FieldBytes-len(v.Bytes())))
 	if err != nil {
 		panic(errs.WrapSerialisation(err, "set canonical bytes failed"))
 	}
@@ -357,13 +357,13 @@ func (*Scalar) SetNat(x *saferith.Nat) curves.Scalar {
 }
 
 func (s *Scalar) Nat() *saferith.Nat {
-	buf := bitstring.ReverseBytes(s.V.Bytes())
+	buf := utils.SliceReverse(s.V.Bytes())
 	return new(saferith.Nat).SetBytes(buf)
 }
 
 func (s *Scalar) Bytes() []byte {
 	t := s.V.Bytes()
-	return bitstring.ReverseBytes(t)
+	return utils.SliceReverse(t)
 }
 
 // SetBytesCanonicalLE takes input a 32-byte long array and returns a ed25519 scalar.
@@ -401,7 +401,7 @@ func (*Scalar) SetBytesWide(input []byte) (sc curves.Scalar, err error) {
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("invalid input length (%d > %d)", len(input), base.WideFieldBytes)
 	}
-	inputLE := bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
+	inputLE := utils.SlicePadRight(utils.SliceReverse(input), base.WideFieldBytes-len(input))
 	value, err = filippo.NewScalar().SetUniformBytes(inputLE)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "set uniform bytes")
@@ -435,7 +435,7 @@ func (s *Scalar) SetBytes(input []byte) (sc curves.Scalar, err error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("invalid length (%d != %d)", len(input), base.FieldBytes)
 	}
-	inputLE := bitstring.ReverseBytes(input)
+	inputLE := utils.SliceReverse(input)
 	var value *filippo.Scalar
 	if isReducedLE(inputLE) {
 		value, err = filippo.NewScalar().SetCanonicalBytes(inputLE)
@@ -469,7 +469,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*Scalar)
@@ -497,7 +497,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)

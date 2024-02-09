@@ -47,7 +47,7 @@ func Test_ScalarMarshalRoundTrip(t *testing.T) {
 
 				deserialized, err := curveutils.NewScalarFromJSON(marshalled)
 				require.NoError(t, err)
-				require.Equal(t, initial.ScalarField().Name(), deserialized.ScalarField().Name())
+				require.Equal(t, initial.ScalarField().Curve().Name(), deserialized.ScalarField().Curve().Name())
 				require.EqualValues(t, initial.Bytes(), deserialized.Bytes())
 
 				// below is to ensure the G field of the bls scalars are being set correctly.
@@ -62,7 +62,7 @@ func Test_ScalarMarshalRoundTrip(t *testing.T) {
 
 				deserialized, err := curveutils.NewScalarFromBinary(marshalled)
 				require.NoError(t, err)
-				require.Equal(t, initial.ScalarField().Name(), deserialized.ScalarField().Name())
+				require.Equal(t, initial.ScalarField().Curve().Name(), deserialized.ScalarField().Curve().Name())
 				require.EqualValues(t, initial.Bytes(), deserialized.Bytes())
 
 				// below is to ensure the G field of the bls scalars are being set correctly.
@@ -90,7 +90,7 @@ func Test_BaseFieldElementMarshalRoundTrip(t *testing.T) {
 
 				deserialized, err := curveutils.NewBaseFieldElementFromJSON(marshalled)
 				require.NoError(t, err)
-				require.Equal(t, initial.BaseField().Name(), deserialized.BaseField().Name())
+				require.Equal(t, initial.BaseField().Curve().Name(), deserialized.BaseField().Curve().Name())
 				require.EqualValues(t, initial.Bytes(), deserialized.Bytes())
 			})
 			t.Run("binary", func(t *testing.T) {
@@ -102,7 +102,7 @@ func Test_BaseFieldElementMarshalRoundTrip(t *testing.T) {
 
 				deserialized, err := curveutils.NewBaseFieldElementFromBinary(marshalled)
 				require.NoError(t, err)
-				require.Equal(t, initial.BaseField().Name(), deserialized.BaseField().Name())
+				require.Equal(t, initial.BaseField().Curve().Name(), deserialized.BaseField().Curve().Name())
 				require.EqualValues(t, initial.Bytes(), deserialized.Bytes())
 			})
 		})

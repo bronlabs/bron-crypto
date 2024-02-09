@@ -8,12 +8,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
@@ -53,13 +53,13 @@ func Test_SanityCheck(t *testing.T) {
 	eBytes, err := hashing.Hash(hashFunc, bigR.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 	require.NoError(t, err)
 
-	e, err := curve.Scalar().SetBytesWide(bitstring.ReverseBytes(eBytes)) // SetBytesWide expects big endian across all curves and it internally reverses it.
+	e, err := curve.Scalar().SetBytesWide(utils.SliceReverse(eBytes)) // SetBytesWide expects big endian across all curves and it internally reverses it.
 	require.NoError(t, err)
 
 	bigS := nonce.Add(e.Mul(schnorrPrivateKey))
 
 	// verify native
-	nativeSignature := append(bigR.ToAffineCompressed()[:], bitstring.ReverseBytes(bigS.Bytes())...)
+	nativeSignature := append(bigR.ToAffineCompressed()[:], utils.SliceReverse(bigS.Bytes())...)
 	ok := nativeEddsa.Verify(publicKey.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 

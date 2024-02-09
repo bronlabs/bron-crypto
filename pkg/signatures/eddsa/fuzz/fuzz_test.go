@@ -9,10 +9,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
@@ -39,7 +39,7 @@ func Fuzz_Test(f *testing.F) {
 		signed := nativeEddsa.Sign(privateKey, messageHash)
 		R, err := curve.Point().FromAffineCompressed(signed[:32])
 		require.NoError(t, err)
-		s, err := curve.Scalar().SetBytes(bitstring.ReverseBytes(signed[32:]))
+		s, err := curve.Scalar().SetBytes(utils.SliceReverse(signed[32:]))
 		require.NoError(t, err)
 		signature := &eddsa.Signature{
 			R: R,

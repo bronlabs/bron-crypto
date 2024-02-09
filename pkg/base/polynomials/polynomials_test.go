@@ -1,262 +1,270 @@
-package polynomials_test
+package polynomials
 
 import (
 	crand "crypto/rand"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	p "github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 )
 
-func TestNewPoly(t *testing.T) {
-	t.Parallel()
-	curve := bls12381.NewG2()
-	secret, err := curve.ScalarField().Hash([]byte("test"))
-	require.NoError(t, err)
-
-	poly, err := p.NewRandomPolynomial(secret, 4, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, poly)
-
-	require.Equal(t, poly.Coefficients[0], secret)
+var supportedScalarFields = []curves.ScalarField{
+	k256.NewCurve().ScalarField(),
+	p256.NewCurve().ScalarField(),
+	edwards25519.NewCurve().ScalarField(),
+	pallas.NewCurve().ScalarField(),
+	bls12381.NewG1().ScalarField(),
+	bls12381.NewG2().ScalarField(),
 }
 
-func TestLi(t *testing.T) {
+const repetitions = 256
+const maxDegree = 32
+
+func Test_ImplementsPolynomial(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	for _, test := range []struct {
-		i        int
-		xs       []int
-		x        int
-		expected int
-		name     string
-	}{
-		{
-			i:        1,
-			xs:       []int{0, 1, 2},
-			x:        1,
-			expected: 1,
-			name:     "basic case",
-		},
-		{
-			i:        1,
-			xs:       []int{0, 1, 2},
-			x:        0,
-			expected: 0,
-			name:     "another base case",
-		},
-		{
-			i:        2,
-			xs:       []int{-2, 0, 2},
-			x:        2,
-			expected: 1,
-			name:     "larger interval",
-		},
-		{
-			i:        0,
-			xs:       []int{1},
-			x:        1,
-			expected: 1,
-			name:     "signle data point",
-		},
-		{
-			i:        1,
-			xs:       []int{-3, -2, -1},
-			x:        -2,
-			expected: 1,
-			name:     "all negative xs",
-		},
-		{
-			i:        1,
-			xs:       []int{-3, 0, 3},
-			x:        0,
-			expected: 1,
-			name:     "mixed x values",
-		},
-		{
-			i:        1,
-			xs:       []int{0, 1, 2},
-			x:        3,
-			expected: -3,
-			name:     "behaviour outside the given points",
-		},
-	} {
-		tt := test
-		t.Run(tt.name, func(t *testing.T) {
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+		var _ UnivariatePolynomialsSetTrait[curves.ScalarField, curves.Scalar] = set
+		var _ UnivariatePolynomialTrait[curves.ScalarField, curves.Scalar] = set.Element()
+	}
+}
+
+func Test_ImplementsRing(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+		var _ algebra.AbstractRing[*UnivariatePolynomialsSet[curves.ScalarField, curves.Scalar], *UnivariatePolynomial[curves.ScalarField, curves.Scalar]] = set
+		var _ algebra.AbstractRingElement[*UnivariatePolynomialsSet[curves.ScalarField, curves.Scalar], *UnivariatePolynomial[curves.ScalarField, curves.Scalar]] = set.Element()
+	}
+}
+
+func Test_ImplementsVectorSpace(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+		var _ algebra.AbstractAlgebra[*UnivariatePolynomialsSet[curves.ScalarField, curves.Scalar], *UnivariatePolynomial[curves.ScalarField, curves.Scalar], curves.Scalar, curves.ScalarField] = set
+		var _ algebra.AbstractAlgebraElement[*UnivariatePolynomialsSet[curves.ScalarField, curves.Scalar], *UnivariatePolynomial[curves.ScalarField, curves.Scalar], curves.Scalar] = set.Element()
+	}
+}
+
+func Test_Add(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
 			t.Parallel()
-			sign := 1
-			if tt.x < 0 {
-				sign = -1
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				c := a.Add(b)
+				require.True(t, b.Equal(c.Sub(a)))
+				require.True(t, a.Equal(c.Sub(b)))
+
+				y, err := field.Random(crand.Reader)
+				require.NoError(t, err)
+
+				ya := a.Eval(y)
+				yb := b.Eval(y)
+				yc := c.Eval(y)
+				require.True(t, yc.Equal(ya.Add(yb)))
 			}
-			xScalar := curve.ScalarField().New(uint64(sign * tt.x))
-			if sign == -1 {
-				xScalar = xScalar.Neg()
-			}
-			xsScalar := make([]curves.Scalar, len(tt.xs))
-			for i := 0; i < len(tt.xs); i++ {
-				sign := 1
-				if tt.xs[i] < 0 {
-					sign = -1
-				}
-				xsScalar[i] = curve.ScalarField().New(uint64(sign * tt.xs[i]))
-				if sign == -1 {
-					xsScalar[i] = xsScalar[i].Neg()
-				}
-			}
-			sign2 := 1
-			if tt.expected < 0 {
-				sign2 = -1
-			}
-			expectedScalar := curve.ScalarField().New(uint64(sign2 * tt.expected))
-			if sign2 == -1 {
-				expectedScalar = expectedScalar.Neg()
-			}
-			actual, err := p.L_i(curve, tt.i, xsScalar, xScalar)
-			require.NoError(t, err)
-			require.Exactly(t, expectedScalar, actual)
 		})
 	}
 }
 
-func TestAllBasisPolynomials(t *testing.T) {
+func Test_Sub(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	for _, test := range []struct {
-		xs       []int
-		x        int
-		expected map[int]int
-		name     string
-	}{
-		{
-			xs: []int{0, 1, 2},
-			x:  1,
-			expected: map[int]int{
-				0: 0,
-				1: 1,
-				2: 0,
-			},
-			name: "basic case",
-		},
-		{
-			xs: []int{0, 1, 2},
-			x:  0,
-			expected: map[int]int{
-				0: 1,
-				1: 0,
-				2: 0,
-			},
-			name: "another basic case",
-		},
-		{
-			xs: []int{-2, 0, 2},
-			x:  2,
-			expected: map[int]int{
-				0: 0,
-				1: 0,
-				2: 1,
-			},
-			name: "larger intervals",
-		},
-		{
-			xs: []int{0, 1, 2, 3},
-			x:  2,
-			expected: map[int]int{
-				0: 0,
-				1: 0,
-				2: 1,
-				3: 0,
-			},
-			name: "more data points",
-		},
-		{
-			xs: []int{1},
-			x:  1,
-			expected: map[int]int{
-				0: 1,
-			},
-			name: "single data point",
-		},
-		{
-			xs: []int{-3, -2, -1},
-			x:  -2,
-			expected: map[int]int{
-				0: 0,
-				1: 1,
-				2: 0,
-			},
-			name: "all negative x values",
-		},
-		{
-			xs: []int{-3, -2, -1},
-			x:  2,
-			expected: map[int]int{
-				0: 6,
-				1: -15,
-				2: 10,
-			},
-			name: "all negative x values",
-		},
-		{
-			xs: []int{-3, 0, 3},
-			x:  0,
-			expected: map[int]int{
-				0: 0,
-				1: 1,
-				2: 0,
-			},
-			name: "mixed x values",
-		},
-		{
-			xs: []int{0, 1, 2},
-			x:  3,
-			expected: map[int]int{
-				0: 1,
-				1: -3,
-				2: 3,
-			},
-			name: "outside range",
-		},
-	} {
-		tt := test
-		t.Run(tt.name, func(t *testing.T) {
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
 			t.Parallel()
-			signX := 1
-			if tt.x < 0 {
-				signX = -1
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				c := a.Sub(b)
+				require.True(t, a.Equal(c.Add(b)))
+				require.True(t, b.Equal(a.Sub(c)))
+
+				y, err := field.Random(crand.Reader)
+				require.NoError(t, err)
+
+				ya := a.Eval(y)
+				yb := b.Eval(y)
+				yc := c.Eval(y)
+				require.True(t, yc.Equal(ya.Sub(yb)))
 			}
-			xScalar := curve.ScalarField().New(uint64(signX * tt.x))
-			if signX == -1 {
-				xScalar = xScalar.Neg()
+		})
+	}
+}
+
+func Test_Mul(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				c := a.Mul(b)
+				aq, ar := c.EuclideanDiv(b)
+				require.True(t, aq.Equal(a))
+				require.True(t, ar.IsAdditiveIdentity())
+
+				y, err := field.Random(crand.Reader)
+				require.NoError(t, err)
+
+				ya := a.Eval(y)
+				yb := b.Eval(y)
+				yc := c.Eval(y)
+				require.True(t, yc.Equal(ya.Mul(yb)))
 			}
-			xsScalar := make([]curves.Scalar, len(tt.xs))
-			for i := 0; i < len(tt.xs); i++ {
-				signXs := 1
-				if tt.xs[i] < 0 {
-					signXs = -1
-				}
-				xsScalar[i] = curve.ScalarField().New(uint64(signXs * tt.xs[i]))
-				if signXs == -1 {
-					xsScalar[i] = xsScalar[i].Neg()
-				}
+		})
+	}
+}
+
+func Test_Div(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				q, r := a.EuclideanDiv(b)
+				require.True(t, q.Degree() <= a.Degree())
+				require.True(t, r.Degree() < b.Degree())
+
+				aCheck := b.Mul(q).Add(r)
+				require.True(t, a.Equal(aCheck))
 			}
-			expectedScalar := make(map[int]curves.Scalar, len(tt.expected))
-			for k, v := range tt.expected {
-				signV := 1
-				if v < 0 {
-					signV = -1
-				}
-				expectedScalar[k] = curve.ScalarField().New(uint64(signV * v))
-				if signV == -1 {
-					expectedScalar[k] = expectedScalar[k].Neg()
-				}
+		})
+	}
+}
+
+func Test_Gcd(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				c := a.EuclideanGcd(b)
+
+				aq, ar := a.EuclideanDiv(c)
+				require.True(t, ar.IsAdditiveIdentity())
+
+				bq, br := b.EuclideanDiv(c)
+				require.True(t, br.IsAdditiveIdentity())
+
+				check := c.Mul(aq.Add(bq))
+				require.True(t, check.Equal(a.Add(b)))
+
+				y, err := field.Random(crand.Reader)
+				require.NoError(t, err)
+
+				ay := a.Eval(y).Add(b.Eval(y))
+				ayCheck := aq.Eval(y).Add(bq.Eval(y)).Mul(c.Eval(y))
+				require.True(t, ay.Equal(ayCheck))
 			}
-			actual, err := p.LagrangeBasis(curve, xsScalar, xScalar)
-			require.NoError(t, err)
-			require.Exactly(t, expectedScalar, actual)
+		})
+	}
+}
+
+func Test_Lcm(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range supportedScalarFields {
+		field := field
+		set := GetScalarUnivariatePolynomialsSet(field)
+
+		t.Run(field.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			for i := 0; i < repetitions; i++ {
+				aDegree := rand.Intn(maxDegree)
+				a, err := set.NewUnivariatePolynomialRandom(aDegree, crand.Reader)
+				require.NoError(t, err)
+
+				bDegree := rand.Intn(maxDegree)
+				b, err := set.NewUnivariatePolynomialRandom(bDegree, crand.Reader)
+				require.NoError(t, err)
+
+				c := a.EuclideanLcm(b)
+
+				_, ar := c.EuclideanDiv(a)
+				require.True(t, ar.IsAdditiveIdentity())
+
+				_, br := c.EuclideanDiv(b)
+				require.True(t, br.IsAdditiveIdentity())
+			}
 		})
 	}
 }

@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type Fq fiat_pasta_fq_montgomery_domain_field_element
@@ -170,7 +170,7 @@ func (fq *Fq) SetNat(bi *saferith.Nat) *Fq {
 	r := new(saferith.Nat).SetNat(bi)
 	r.Mod(r, Modulus)
 	r.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:])) // Nat is big endian, we want little endian
+	copy(buffer[:], utils.SliceReverse(buffer[:])) // Nat is big endian, we want little endian
 	_, _ = fq.SetBytes(&buffer)
 	return fq
 }
@@ -194,7 +194,7 @@ func (fq *Fq) Bytes() [32]byte {
 // Nat converts this element into the saferith.Nat struct.
 func (fq *Fq) Nat() *saferith.Nat {
 	buffer := fq.Bytes()
-	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(utils.SliceReverse(buffer[:]))
 }
 
 // Double this element.

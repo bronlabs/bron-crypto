@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var tempDir = os.TempDir()
@@ -32,7 +32,7 @@ func GetBigEndianBytesWithLowestBitsSet(byteSize, bitToSet int) []byte {
 		i++
 	}
 
-	return bitstring.ReverseBytes(result)
+	return utils.SliceReverse(result)
 }
 
 // measureTime measures the time of a function.

@@ -40,7 +40,7 @@ func NewCurveHasherSha512(curve curves.Curve, appTag, mapperTag string) CurveHas
 func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([]byte, error) {
 	h := flh.hashFactory()
 	// step 1 & 2
-	ell := utils.CeilDiv(outLen, h.Size())
+	ell := utils.Math.CeilDiv(outLen, h.Size())
 	if ell > MaxExpMsgBlockLen || outLen > MaxExpMsgOutLen {
 		return nil, errs.NewFailed("outLen is too large")
 	}

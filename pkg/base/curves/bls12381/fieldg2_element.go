@@ -8,12 +8,12 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG2)(nil)
@@ -345,7 +345,7 @@ func (e *BaseFieldElementG2) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElementG2)
@@ -373,7 +373,7 @@ func (e *BaseFieldElementG2) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElementG2)
@@ -478,8 +478,8 @@ func (*BaseFieldElementG2) SetComponents(a, b curves.BaseFieldElement) (curves.B
 func (e *BaseFieldElementG2) Bytes() []byte {
 	var out [bimpl.FieldBytesFp2]byte
 	bytes := e.V.A.Bytes()
-	copy(out[:bimpl.FieldBytes], bitstring.ReverseBytes(bytes[:]))
+	copy(out[:bimpl.FieldBytes], utils.SliceReverse(bytes[:]))
 	bytes = e.V.B.Bytes()
-	copy(out[bimpl.FieldBytes:bimpl.FieldBytesFp2], bitstring.ReverseBytes(bytes[:]))
+	copy(out[bimpl.FieldBytes:bimpl.FieldBytesFp2], utils.SliceReverse(bytes[:]))
 	return out[:]
 }

@@ -8,7 +8,6 @@ import (
 	"crypto/subtle"
 	"hash"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
@@ -114,8 +113,8 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 func (h *TmmoHash) Write(input []byte) (n int, err error) {
 	// A) Align the input into blocks of AesBlockSize bytes. Pad 0s if unalligned.
 	inputLength := len(input)
-	inputBlocks := utils.CeilDiv(inputLength, AesBlockSize)
-	input = bitstring.PadToRight(input, (AesBlockSize-(inputLength%AesBlockSize))%AesBlockSize)
+	inputBlocks := utils.Math.CeilDiv(inputLength, AesBlockSize)
+	input = utils.SlicePadRight(input, (AesBlockSize-(inputLength%AesBlockSize))%AesBlockSize)
 	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
 	for i := 0; i < h.outputBlocks; i++ {
 		outputBlock := h.digest[i*AesBlockSize : (i+1)*AesBlockSize]
@@ -163,8 +162,8 @@ func (h *TmmoHash) Reset() {
 		panic("failed to create block cipher") // panic because Reset doesn't return error
 	}
 	h.keyedBlockCipher = blockCipher
-	bitstring.Memset(h.digest, byte(0))
-	bitstring.Memset(h.permutedOnceBlock, byte(0))
+	utils.SliceFill(h.digest, byte(0))
+	utils.SliceFill(h.permutedOnceBlock, byte(0))
 }
 
 // Sum appends current hash digest to b after a finalisation. It does not change
@@ -251,7 +250,7 @@ func (h *TmmoHash) Generate(buffer, salt []byte) (err error) {
 		bufferBytesIndex += availablePrngBytes
 	}
 	// Sample and write bytes in blocks of len(digest). Reseed after each write.
-	numReseeds := utils.CeilDiv(bufferLen-bufferBytesIndex, len(h.digest)) - 1
+	numReseeds := utils.Math.CeilDiv(bufferLen-bufferBytesIndex, len(h.digest)) - 1
 	for i := 0; i < numReseeds; i++ {
 		if err := h.Reseed(nil, salt); err != nil {
 			return errs.WrapRandomSampleFailed(err, "failed to reseed TmmoPrng in sample block")

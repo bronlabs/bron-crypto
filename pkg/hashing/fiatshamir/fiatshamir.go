@@ -4,12 +4,12 @@ import (
 	"hash"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -69,7 +69,7 @@ func (fs *FiatShamir) GenerateChallenge(cipherSuite *integration.CipherSuite, xs
 		return nil, errs.WrapHashingFailed(err, "could not compute fiat shamir hash")
 	}
 	if !fs.bigEndianDigest {
-		digest = bitstring.ReverseBytes(digest)
+		digest = utils.SliceReverse(digest)
 	}
 
 	switch fs.mappingMethod {

@@ -9,7 +9,6 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -18,6 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var testCurves = []curves.Curve{
@@ -59,7 +59,7 @@ func runHash2CurveTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 
 	for _, ttc := range tv.TestCases {
 		tc := ttc
-		t.Run(fmt.Sprintf("message:%s", bitstring.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("message:%s", utils.Strings.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
 			t.Parallel()
 
 			p, err := ch.Curve().Hash([]byte(tc.Msg))
@@ -95,7 +95,7 @@ func runHash2FieldTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 	curve = testutils.SetCurveHasher(curve, ch)
 	for _, ttc := range tv.TestCases {
 		tc := ttc
-		t.Run(fmt.Sprintf("message: %s", bitstring.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("message: %s", utils.Strings.TruncateWithEllipsis(tc.Msg, 20)), func(t *testing.T) {
 			t.Parallel()
 
 			u, err := ch.HashToFieldElements(2, []byte(tc.Msg), nil)

@@ -45,7 +45,7 @@ type AdditiveGroupTrait[S Structure, E Element] interface {
 	// Additive group is an additive monoid
 	AdditiveMonoidTrait[S, E]
 
-	// Sub is inverse of Add, and accepts elements x and a the list of elements ys and adds returns sum(x, -ys).
+	// Sub is the inverse of Add, and accepts elements x and the list of elements ys and adds returns sum(x, -ys).
 	Sub(x E, ys ...E) E
 }
 
@@ -71,7 +71,7 @@ type AdditiveGroupElementTrait[S Structure, E Element] interface {
 // MultiplicativeGroupTrait defines additional methods for elements of type E of group S if operator
 // is some form of multiplication.
 type MultiplicativeGroupTrait[S Structure, E Element] interface {
-	// Multiplicative group is a multiplicatiev monoid.
+	// Multiplicative group is a multiplicative monoid.
 	MultiplicativeMonoidTrait[S, E]
 
 	// Div is inverse of Mul, and accepts elements x and a the list of elements ys and adds returns product(x, ys^-1).

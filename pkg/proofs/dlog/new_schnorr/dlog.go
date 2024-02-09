@@ -57,7 +57,7 @@ func (s *schnorr) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, S
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
 	}
-	r := s.base.Mul(k)
+	r := s.base.ScalarMul(k)
 
 	return r, k, nil
 }
@@ -99,8 +99,8 @@ func (s *schnorr) Verify(statement Statement, commitment Commitment, challengeBy
 		return errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
-	left := s.base.Mul(response)
-	right := statement.Mul(e).Add(commitment)
+	left := s.base.ScalarMul(response)
+	right := statement.ScalarMul(e).Add(commitment)
 	if !left.Equal(right) {
 		return errs.NewVerificationFailed("verification failed")
 	}
@@ -126,7 +126,7 @@ func (s *schnorr) RunSimulator(statement Statement, challengeBytes []byte) (Comm
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
 	}
 
-	a := s.base.Mul(z).Sub(statement.Mul(e))
+	a := s.base.ScalarMul(z).Sub(statement.ScalarMul(e))
 	return a, z, nil
 }
 
@@ -134,7 +134,7 @@ func (s *schnorr) ValidateStatement(statement Statement, witness Witness) error 
 	if statement == nil ||
 		witness == nil ||
 		statement.Curve().Name() != witness.ScalarField().Curve().Name() ||
-		!s.base.Mul(witness).Equal(statement) {
+		!s.base.ScalarMul(witness).Equal(statement) {
 
 		return errs.NewInvalidArgument("invalid statement")
 	}

@@ -1,10 +1,10 @@
 package pedersen
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
@@ -48,7 +48,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u map[
 	}
 
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
-	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
+	transcript.AppendMessages(SharingIdLabel, utils.Math.ToBytesLe32(uint32(p.MySharingId)))
 	prover, err := p.State.NiCompiler.NewProver(p.UniqueSessionId, p.Transcript.Clone())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
@@ -123,7 +123,7 @@ func (p *Participant) Round2(round1outputBroadcast map[types.IdentityHash]*Round
 		}
 
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
-		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(senderSharingId))
+		transcript.AppendMessages(SharingIdLabel, utils.Math.ToBytesLe32(uint32(senderSharingId)))
 		verifier, err := p.State.NiCompiler.NewVerifier(p.UniqueSessionId, p.Transcript.Clone())
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")

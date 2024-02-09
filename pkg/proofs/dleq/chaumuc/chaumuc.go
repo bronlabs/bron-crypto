@@ -73,8 +73,8 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 
 	curve := x.ScalarField().Curve()
 
-	P1 := H1.Mul(x)
-	P2 := H2.Mul(x)
+	P1 := H1.ScalarMul(x)
+	P2 := H2.ScalarMul(x)
 
 	a := [RBytes]curves.Scalar{}
 	A1 := [RBytes]curves.Point{}
@@ -86,8 +86,8 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChellengeEleme
 			return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 		}
 		// step P.2
-		A1[i] = H1.Mul(a[i])
-		A2[i] = H2.Mul(a[i])
+		A1[i] = H1.ScalarMul(a[i])
+		A2[i] = H2.ScalarMul(a[i])
 	}
 	e := [RBytes]curves.Scalar{}
 	z := [RBytes]curves.Scalar{}
@@ -192,15 +192,15 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, extraCha
 		}
 
 		// step V.2.2
-		ZiH1 := statement.H1.Mul(z_i)
-		A1Prime := ZiH1.Add(statement.P1.Mul(e_i.Neg()))
+		ZiH1 := statement.H1.ScalarMul(z_i)
+		A1Prime := ZiH1.Add(statement.P1.ScalarMul(e_i.Neg()))
 		if !A1Prime.Equal(proof.A1[i]) {
 			return errs.NewVerificationFailed("invalid response for A1' in iteration %d", i)
 		}
 
 		// step V.2.3
-		ZiH2 := statement.H2.Mul(z_i)
-		A2Prime := ZiH2.Add(statement.P2.Mul(e_i.Neg()))
+		ZiH2 := statement.H2.ScalarMul(z_i)
+		A2Prime := ZiH2.Add(statement.P2.ScalarMul(e_i.Neg()))
 		if !A2Prime.Equal(proof.A2[i]) {
 			return errs.NewVerificationFailed("invalid response for A2' in iteration %d", i)
 		}

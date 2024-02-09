@@ -77,12 +77,12 @@ func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, erro
 
 	curve := p.BasePoint.Curve()
 
-	statement := p.BasePoint.Mul(x)
+	statement := p.BasePoint.ScalarMul(x)
 	k, err := curve.ScalarField().Random(prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
 	}
-	R := p.BasePoint.Mul(k)
+	R := p.BasePoint.ScalarMul(k)
 
 	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
 	p.transcript.AppendPoints(rLabel, R)
@@ -122,8 +122,8 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 		return errs.NewInvalidArgument("proof is nil")
 	}
 
-	gs := basePoint.Mul(proof.S)
-	xc := statement.Mul(proof.C.Neg())
+	gs := basePoint.ScalarMul(proof.S)
+	xc := statement.ScalarMul(proof.C.Neg())
 	R := gs.Add(xc)
 
 	transcript.AppendPoints(basepointLabel, basePoint)

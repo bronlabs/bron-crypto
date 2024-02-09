@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 func Fuzz_Test_SelectBit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, i uint, vector []byte) {
-		_, err := bitstring.SelectBit(vector, int(i))
+		_, err := utils.Bits.Select(vector, int(i))
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -31,7 +31,7 @@ func Fuzz_Test_Transpose(f *testing.F) {
 			in7,
 			in8,
 		}
-		transposedMatrix, err := bitstring.TransposePackedBits(inputMatrix)
+		transposedMatrix, err := utils.Bits.TransposePacked(inputMatrix)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -42,15 +42,15 @@ func Fuzz_Test_Transpose(f *testing.F) {
 			for j := 0; j < len(transposedMatrix); j++ {
 				// Check that the bit at position i in the jth row of the input matrix.
 				// is equal to the bit at position j in the ith row of the transposed matrix.
-				// using bitstring.SelectBit (careful! it takes a byte array as input)
-				output1, err := bitstring.SelectBit(inputMatrix[i], j)
+				// using bitstring.Select (careful! it takes a byte array as input)
+				output1, err := utils.Bits.Select(inputMatrix[i], j)
 				if err != nil && !errs.IsKnownError(err) {
 					require.NoError(t, err)
 				}
 				if err != nil {
 					t.Skip()
 				}
-				output2, err := bitstring.SelectBit(transposedMatrix[j][:], i)
+				output2, err := utils.Bits.Select(transposedMatrix[j][:], i)
 				if err != nil && !errs.IsKnownError(err) {
 					require.NoError(t, err)
 				}

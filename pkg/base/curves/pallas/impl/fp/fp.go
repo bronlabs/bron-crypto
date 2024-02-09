@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type Fp fiat_pasta_fp_montgomery_domain_field_element
@@ -176,7 +176,7 @@ func (fp *Fp) SetNat(bi *saferith.Nat) *Fp {
 	r := new(saferith.Nat).SetNat(bi)
 	r.Mod(r, Modulus)
 	r.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
+	copy(buffer[:], utils.SliceReverse(buffer[:]))
 	_, _ = fp.SetBytes(&buffer)
 	return fp
 }
@@ -200,7 +200,7 @@ func (fp *Fp) Bytes() [32]byte {
 // Nat converts this element into the saferith.Nat struct.
 func (fp *Fp) Nat() *saferith.Nat {
 	buffer := fp.Bytes()
-	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(utils.SliceReverse(buffer[:]))
 }
 
 // Double this element.

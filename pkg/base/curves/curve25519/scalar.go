@@ -304,7 +304,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*Scalar)
@@ -332,7 +332,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)

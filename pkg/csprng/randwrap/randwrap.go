@@ -79,7 +79,7 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey integration.AuthK
 
 func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 	shaker := sha3.NewShake128()
-	blockCount := utils.CeilDiv(len(p), NBytes)
+	blockCount := utils.Math.CeilDiv(len(p), NBytes)
 	for i := 0; i < blockCount; i++ {
 		var block [NBytes]byte
 		var tag2Bytes [NBytes]byte

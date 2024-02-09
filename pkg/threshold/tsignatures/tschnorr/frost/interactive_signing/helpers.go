@@ -65,7 +65,7 @@ func ProducePartialSignature(
 			return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", sharingId)
 		}
 
-		R_j := D_j.Add(E_j.Mul(r_j))
+		R_j := D_j.Add(E_j.ScalarMul(r_j))
 		R = R.Add(R_j)
 		R_js[participant.Hash()] = R_j
 	}

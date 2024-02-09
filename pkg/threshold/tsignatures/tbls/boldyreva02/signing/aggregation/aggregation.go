@@ -135,9 +135,9 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
-		sigma = sigma.Add(psig.SigmaI.Value.Mul(lambda_i))
+		sigma = sigma.Add(psig.SigmaI.Value.ScalarMul(lambda_i))
 		if psig.SigmaPOPI != nil && scheme == bls.POP {
-			sigmaPOP = sigmaPOP.Add(psig.SigmaPOPI.Value.Mul(lambda_i))
+			sigmaPOP = sigmaPOP.Add(psig.SigmaPOPI.Value.ScalarMul(lambda_i))
 		}
 	}
 

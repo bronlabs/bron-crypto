@@ -106,8 +106,8 @@ func getUniformByteLengths(curve curves.Curve) (lFieldElement, lScalar int) {
 	log2pFieldElement := curve.BaseField().Characteristic().AnnouncedLen()
 	log2pScalar := curve.SubGroupOrder().BitLen()
 	k := base.ComputationalSecurity
-	lFieldElement = utils.CeilDiv(log2pFieldElement+k, 8)
-	lScalar = utils.CeilDiv(log2pScalar+k, 8)
+	lFieldElement = utils.Math.CeilDiv(log2pFieldElement+k, 8)
+	lScalar = utils.Math.CeilDiv(log2pScalar+k, 8)
 	return lFieldElement, lScalar
 }
 

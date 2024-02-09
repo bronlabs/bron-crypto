@@ -1,11 +1,11 @@
-package bitstring_test
+package utils_test
 
 import (
 	"os"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 func Test_MeasureConstantTime_SelectBit(t *testing.T) {
@@ -19,7 +19,7 @@ func Test_MeasureConstantTime_SelectBit(t *testing.T) {
 		vector[i/8] = 0x01 << (i & 0x07)
 		tI = i
 	}, func() {
-		bitstring.SelectBit(vector, tI)
+		utils.Bits.Select(vector, tI)
 	})
 }
 
@@ -41,6 +41,6 @@ func Test_MeasureConstantTime_TransposeBooleanMatrix(t *testing.T) {
 			internal.GetBigEndianBytesWithLowestBitsSet(512, i),
 		}
 	}, func() {
-		bitstring.TransposePackedBits(inputMatrix)
+		utils.Bits.TransposePacked(inputMatrix)
 	})
 }

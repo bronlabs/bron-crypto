@@ -45,10 +45,10 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 	privateKey := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.SubGroupOrder().BitLen()))
 	px := cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(
-		utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.SubGroupOrder()),
+		utils.Saferith.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.SubGroupOrder()),
 	)
 	py := cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(
-		utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.SubGroupOrder()),
+		utils.Saferith.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.SubGroupOrder()),
 	)
 	publicKey, err := cohortConfig.CipherSuite.Curve.NewPoint(px, py)
 	if err != nil {

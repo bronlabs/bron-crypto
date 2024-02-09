@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	C1   = new(saferith.Nat).SetBytes(utils.DecodeString("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"))
-	C2   = new(saferith.Nat).SetBytes(utils.DecodeString("2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b1"))
-	C3   = new(saferith.Nat).SetBytes(utils.DecodeString("2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b0"))
-	C4   = new(saferith.Nat).SetBytes(utils.DecodeString("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"))
-	C1ed = new(saferith.Nat).SetBytes(utils.DecodeString("0f26edf460a006bbd27b08dc03fc4f7ec5a1d3d14b7d1a82cc6e04aaff457e06"))
-	J    = new(saferith.Nat).SetBytes(utils.DecodeString("0000000000000000000000000000000000000000000000000000000000076d06"))
+	C1   = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"))
+	C2   = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b1"))
+	C3   = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b0"))
+	C4   = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"))
+	C1ed = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("0f26edf460a006bbd27b08dc03fc4f7ec5a1d3d14b7d1a82cc6e04aaff457e06"))
+	J    = new(saferith.Nat).SetBytes(utils.Strings.DecodeHex("0000000000000000000000000000000000000000000000000000000000076d06"))
 )
 
 type Elligator2Params struct {

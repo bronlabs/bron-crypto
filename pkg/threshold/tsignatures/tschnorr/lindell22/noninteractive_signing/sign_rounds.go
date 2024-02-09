@@ -42,7 +42,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	k := c.myPreSignature.K.Add(c.myPreSignature.K2.Mul(delta))
-	bigR := bigRSum.Add(bigR2Sum.Mul(delta))
+	bigR := bigRSum.Add(bigR2Sum.ScalarMul(delta))
 
 	if c.taproot {
 		if bigR.AffineY().IsOdd() {

@@ -80,7 +80,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curv
 		result[i] = option0Bytes
 		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], result[i], option1Bytes)
 		// compute the internal rho
-		rho := receiver.SenderPublicKey.Mul(a)
+		rho := receiver.SenderPublicKey.ScalarMul(a)
 		output, err := hashing.HashChain(sha3.New256, receiver.UniqueSessionId, []byte{byte(i)}, rho.ToAffineCompressed())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "creating one time pad decryption keys")
@@ -111,10 +111,10 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 	for i := 0; i < sender.BatchSize; i++ {
 		// Sender creates two options that will eventually be used as her encryption keys.
 		// `baseEncryptionKeyMaterial[0]` and `baseEncryptionKeyMaterial[1]` correspond to rho_0 and rho_1 in the paper, respectively.
-		baseEncryptionKeyMaterial[0] = receiversMaskedChoice[i].Mul(sender.SecretKey)
+		baseEncryptionKeyMaterial[0] = receiversMaskedChoice[i].ScalarMul(sender.SecretKey)
 
 		receiverChoiceMinusSenderPublicKey := receiversMaskedChoice[i].Add(negSenderPublicKey)
-		baseEncryptionKeyMaterial[1] = receiverChoiceMinusSenderPublicKey.Mul(sender.SecretKey)
+		baseEncryptionKeyMaterial[1] = receiverChoiceMinusSenderPublicKey.ScalarMul(sender.SecretKey)
 
 		for k := 0; k < KeyCount; k++ {
 			output, err := hashing.HashChain(sha3.New256, sender.UniqueSessionId, []byte{byte(i)}, baseEncryptionKeyMaterial[k].ToAffineCompressed())

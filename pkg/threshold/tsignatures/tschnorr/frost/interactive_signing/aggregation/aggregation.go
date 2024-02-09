@@ -152,7 +152,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 				return nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", j)
 			}
 
-			recomputedR_js[jIdentityKey.Hash()] = D_j.Add(E_j.Mul(r_j))
+			recomputedR_js[jIdentityKey.Hash()] = D_j.Add(E_j.ScalarMul(r_j))
 			sa.parameters.R = sa.parameters.R.Add(recomputedR_js[jIdentityKey.Hash()])
 		}
 		sa.parameters.R_js = recomputedR_js
@@ -214,7 +214,7 @@ func (sa *SignatureAggregator) Aggregate(partialSignatures map[types.IdentityHas
 			}
 
 			z_jG := sa.CohortConfig.CipherSuite.Curve.ScalarBaseMult(partialSignature.Zi)
-			cLambda_jY_j := Y_j.Mul(c.Mul(lambda_j))
+			cLambda_jY_j := Y_j.ScalarMul(c.Mul(lambda_j))
 			rhs := R_j.Add(cLambda_jY_j)
 
 			if !z_jG.Equal(rhs) {

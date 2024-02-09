@@ -18,7 +18,7 @@ func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], mes
 		return nil, errs.WrapHashingFailed(err, "could not hash message")
 	}
 	// step 2.6.2
-	result := Hm.Mul(privateKey.d).(curves.PairingPoint)
+	result := Hm.ScalarMul(privateKey.d).(curves.PairingPoint)
 	if !result.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
 		return nil, errs.NewInvalidCurve("point is not on correct subgroup")
 	}

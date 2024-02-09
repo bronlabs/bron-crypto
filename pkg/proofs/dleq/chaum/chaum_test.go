@@ -96,7 +96,7 @@ func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
 			require.False(t, H1.Equal(H3), "buy a lotter ticket")
 			require.False(t, H2.Equal(H3), "buy a lotter ticket")
 
-			P3 := H3.Mul(secret)
+			P3 := H3.ScalarMul(secret)
 
 			t.Run("bad H1", func(t *testing.T) {
 				t.Parallel()

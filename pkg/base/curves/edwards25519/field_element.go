@@ -10,11 +10,11 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -343,7 +343,7 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElement)
@@ -371,7 +371,7 @@ func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElement)
@@ -391,7 +391,7 @@ func (e *BaseFieldElement) SetNat(value *saferith.Nat) curves.BaseFieldElement {
 		return nil
 	}
 	moddedValue := new(saferith.Nat).Mod(value, e.BaseField().Order())
-	v, err := new(filippo_field.Element).SetBytes(bitstring.ReverseBytes(moddedValue.Bytes()))
+	v, err := new(filippo_field.Element).SetBytes(utils.SliceReverse(moddedValue.Bytes()))
 	if err != nil {
 		panic(errs.WrapSerialisation(err, "could not set nat bytes"))
 	}
@@ -408,7 +408,7 @@ func (e *BaseFieldElement) SetBytes(input []byte) (curves.BaseFieldElement, erro
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("input length != %d bytes", base.FieldBytes)
 	}
-	result, err := e.V.SetBytes(bitstring.ReverseBytes(input))
+	result, err := e.V.SetBytes(utils.SliceReverse(input))
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not set bytes")
 	}
@@ -421,8 +421,8 @@ func (e *BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, 
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("input length > %d bytes", base.WideFieldBytes)
 	}
-	inputLE := bitstring.ReverseBytes(input)
-	buffer := bitstring.PadToRight(inputLE, base.WideFieldBytes-len(input))
+	inputLE := utils.SliceReverse(input)
+	buffer := utils.SlicePadRight(inputLE, base.WideFieldBytes-len(input))
 	result, err := e.V.SetWideBytes(buffer)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not set bytes")
@@ -434,5 +434,5 @@ func (e *BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, 
 
 func (e *BaseFieldElement) Bytes() []byte {
 	result := e.V.Bytes()
-	return bitstring.ReverseBytes(result)
+	return utils.SliceReverse(result)
 }

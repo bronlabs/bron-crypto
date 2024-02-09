@@ -1,10 +1,10 @@
 package gennaro
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/pedersen"
@@ -55,7 +55,7 @@ func (p *Participant) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1
 	}
 
 	proverTranscript := p.state.transcript.Clone()
-	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(p.MySharingId))
+	proverTranscript.AppendMessages(sharingIdLabel, utils.Math.ToBytesLe32(uint32(p.MySharingId)))
 	prover, err := p.state.niCompiler.NewProver(p.UniqueSessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
@@ -179,7 +179,7 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
 		verifierTranscript := p.state.transcript.Clone()
-		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(senderSharingId))
+		verifierTranscript.AppendMessages(sharingIdLabel, utils.Math.ToBytesLe32(uint32(senderSharingId)))
 		verifier, err := p.state.niCompiler.NewVerifier(p.UniqueSessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")

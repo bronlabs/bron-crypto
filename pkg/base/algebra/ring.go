@@ -35,7 +35,7 @@ type AbstractRingElement[S Structure, E Element] interface {
 	// MulAdd returns the value of this.Mul(p).Add(q)
 	MulAdd(p, q E) E
 
-	// Sqrt outputs quadrathic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+	// Sqrt outputs quadratic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
 	Sqrt() (E, error)
 
 	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.

@@ -56,7 +56,7 @@ func (p *Point) Order() *saferith.Modulus {
 	order := new(saferith.Nat).SetUint64(1)
 	for !q.IsIdentity() {
 		q = q.Add(p)
-		utils.IncrementNat(order)
+		utils.Saferith.NatIncrement(order)
 	}
 	return saferith.ModulusFromNat(order)
 }
@@ -68,7 +68,7 @@ func (*Point) Add(rhs curves.Point) curves.Point {
 }
 
 func (p *Point) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Add(q.Mul(NewScalarField().Element().SetNat(n)))
+	return p.Add(q.ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
 func (*Point) Double() curves.Point {
@@ -116,12 +116,12 @@ func (*Point) Sub(rhs curves.Point) curves.Point {
 }
 
 func (p *Point) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Sub(q.Mul(NewScalarField().Element().SetNat(n)))
+	return p.Sub(q.ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
 // === Vector Space Methods.
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+func (p *Point) ScalarMul(rhs curves.Scalar) curves.Point {
 	s, ok := rhs.(*Scalar)
 	if !ok {
 		panic("invalid type")
@@ -182,13 +182,13 @@ func (p *Point) IsSmallOrder() bool {
 
 func (p *Point) IsTorsionElement(order *saferith.Modulus) bool {
 	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
-	return p.Mul(e).IsIdentity()
+	return p.ScalarMul(e).IsIdentity()
 }
 
 // === Misc.
 
 func (p *Point) X25519(sc curves.Scalar) curves.Point {
-	return p.Mul(sc)
+	return p.ScalarMul(sc)
 }
 
 // === Coordinates.

@@ -8,12 +8,12 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -343,14 +343,14 @@ func (s *Scalar) Nat() *saferith.Nat {
 
 func (s *Scalar) Bytes() []byte {
 	t := s.V.Bytes()
-	return bitstring.ReverseBytes(t[:])
+	return utils.SliceReverse(t[:])
 }
 
 func (*Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewInvalidLength("invalid length")
 	}
-	input = bitstring.ReverseBytes(input)
+	input = utils.SliceReverse(input)
 	value, err := fq.New().SetBytes((*[base.FieldBytes]byte)(input))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not set bytes")
@@ -364,7 +364,7 @@ func (*Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if len(input) > base.WideFieldBytes {
 		return nil, errs.NewInvalidLength("invalid length (%d > %d bytes)", len(input), base.WideFieldBytes)
 	}
-	input = bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
+	input = utils.SlicePadRight(utils.SliceReverse(input), base.WideFieldBytes-len(input))
 	return &Scalar{
 		V: fq.New().SetBytesWide((*[base.WideFieldBytes]byte)(input)),
 	}, nil
@@ -387,7 +387,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*Scalar)
@@ -415,7 +415,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != s.ScalarField().Name() {
+	if name != s.ScalarField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)

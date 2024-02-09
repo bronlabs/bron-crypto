@@ -77,8 +77,8 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 	statement := &Statement{
 		H1: H1,
 		H2: H2,
-		P1: H1.Mul(x),
-		P2: H2.Mul(x),
+		P1: H1.ScalarMul(x),
+		P2: H2.ScalarMul(x),
 	}
 
 	// step 3
@@ -87,9 +87,9 @@ func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeEleme
 		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
 	}
 	// step 4
-	R1 := H1.Mul(k)
+	R1 := H1.ScalarMul(k)
 	// step 5
-	R2 := H2.Mul(k)
+	R2 := H2.ScalarMul(k)
 
 	// step 6
 	p.transcript.AppendPoints("H1", H1)
@@ -145,9 +145,9 @@ func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, transcri
 	curve := statement.H1.Curve()
 
 	// step 1
-	R1 := statement.H1.Mul(proof.S).Sub(statement.P1.Mul(proof.C))
+	R1 := statement.H1.ScalarMul(proof.S).Sub(statement.P1.ScalarMul(proof.C))
 	// step 2
-	R2 := statement.H2.Mul(proof.S).Sub(statement.P2.Mul(proof.C))
+	R2 := statement.H2.ScalarMul(proof.S).Sub(statement.P2.ScalarMul(proof.C))
 
 	// step 3, Fiat-Shamir
 	transcript.AppendPoints("H1", statement.H1)

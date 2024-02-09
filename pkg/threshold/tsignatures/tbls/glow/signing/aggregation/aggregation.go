@@ -111,7 +111,7 @@ func (a *Aggregator) Aggregate(partialSignatures map[types.IdentityHash]*glow.Pa
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
-		sigma = sigma.Add(psig.SigmaI.Value.Mul(lambda_i))
+		sigma = sigma.Add(psig.SigmaI.Value.ScalarMul(lambda_i))
 	}
 
 	sigmaPairable, ok := sigma.(curves.PairingPoint)

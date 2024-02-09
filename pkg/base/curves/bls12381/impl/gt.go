@@ -3,8 +3,8 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 // GtFieldBytes is the number of bytes needed to represent this field.
@@ -97,29 +97,29 @@ func (gt *Gt) Set(a *Gt) *Gt {
 func (gt *Gt) Bytes() [GtFieldBytes]byte {
 	var out [GtFieldBytes]byte
 	t := gt.A.A.A.Bytes()
-	copy(out[:FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[:FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.A.A.B.Bytes()
-	copy(out[FieldBytes:2*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[FieldBytes:2*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.A.B.A.Bytes()
-	copy(out[2*FieldBytes:3*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[2*FieldBytes:3*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.A.B.B.Bytes()
-	copy(out[3*FieldBytes:4*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[3*FieldBytes:4*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.A.C.A.Bytes()
-	copy(out[4*FieldBytes:5*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[4*FieldBytes:5*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.A.C.B.Bytes()
-	copy(out[5*FieldBytes:6*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[5*FieldBytes:6*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.A.A.Bytes()
-	copy(out[6*FieldBytes:7*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[6*FieldBytes:7*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.A.B.Bytes()
-	copy(out[7*FieldBytes:8*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[7*FieldBytes:8*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.B.A.Bytes()
-	copy(out[8*FieldBytes:9*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[8*FieldBytes:9*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.B.B.Bytes()
-	copy(out[9*FieldBytes:10*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[9*FieldBytes:10*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.C.A.Bytes()
-	copy(out[10*FieldBytes:11*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[10*FieldBytes:11*FieldBytes], utils.SliceReverse(t[:]))
 	t = gt.B.C.B.Bytes()
-	copy(out[11*FieldBytes:12*FieldBytes], bitstring.ReverseBytes(t[:]))
+	copy(out[11*FieldBytes:12*FieldBytes], utils.SliceReverse(t[:]))
 
 	return out
 }
@@ -129,29 +129,29 @@ func (gt *Gt) Bytes() [GtFieldBytes]byte {
 func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok int) {
 	var t [FieldBytes]byte
 	var valid [12]int
-	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[:FieldBytes]))
 	_, valid[0] = gt.A.A.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:2*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[FieldBytes:2*FieldBytes]))
 	_, valid[1] = gt.A.A.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[2*FieldBytes:3*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[2*FieldBytes:3*FieldBytes]))
 	_, valid[2] = gt.A.B.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[3*FieldBytes:4*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[3*FieldBytes:4*FieldBytes]))
 	_, valid[3] = gt.A.B.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[4*FieldBytes:5*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[4*FieldBytes:5*FieldBytes]))
 	_, valid[4] = gt.A.C.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[5*FieldBytes:6*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[5*FieldBytes:6*FieldBytes]))
 	_, valid[5] = gt.A.C.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[6*FieldBytes:7*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[6*FieldBytes:7*FieldBytes]))
 	_, valid[6] = gt.B.A.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[7*FieldBytes:8*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[7*FieldBytes:8*FieldBytes]))
 	_, valid[7] = gt.B.A.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[8*FieldBytes:9*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[8*FieldBytes:9*FieldBytes]))
 	_, valid[8] = gt.B.B.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[9*FieldBytes:10*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[9*FieldBytes:10*FieldBytes]))
 	_, valid[9] = gt.B.B.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[10*FieldBytes:11*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[10*FieldBytes:11*FieldBytes]))
 	_, valid[10] = gt.B.C.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[11*FieldBytes:12*FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[11*FieldBytes:12*FieldBytes]))
 	_, valid[11] = gt.B.C.B.SetBytes(&t)
 
 	return gt, valid[0] & valid[1] &

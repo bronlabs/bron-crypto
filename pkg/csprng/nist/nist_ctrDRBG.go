@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -89,7 +88,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	}
 	// 1. temp = Nil
 	// +. Allocate space for temp
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
+	tempBlocks := utils.Math.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
 	temp := make([]byte, tempBlocks*AesBlockSize)
 	vBytes := make([]byte, AesBlockSize)
 	// 2. WHILE (len(temp) < seedLen) DO
@@ -176,7 +175,7 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err error) {
 	// +. Get the requested_number_of_bits from the length of the output buffer.
 	requestedNumberOfBytes := len(outputBuffer)
-	requestedNumberOfBlocks := utils.CeilDiv(requestedNumberOfBytes, AesBlockSize)
+	requestedNumberOfBlocks := utils.Math.CeilDiv(requestedNumberOfBytes, AesBlockSize)
 	// 1. IF (reseed_counter > reseed_interval), then return an indication that a
 	// reseed is required.
 	if ctrDrbg.reseedCounter > reseedInterval {
@@ -236,7 +235,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	n := uint32(noOfBytesToReturn)
 	// 5. Pad S with zeros, if necessary.
 	// WHILE (len (S) mod outlen) != 0, DO {S = S || 0x00}
-	sBlocks := utils.CeilDiv(int(4+4+l+1), AesBlockSize)
+	sBlocks := utils.Math.CeilDiv(int(4+4+l+1), AesBlockSize)
 	s := make([]byte, sBlocks*AesBlockSize) // Allocate l, n, inputString, 0x80 and zero pads of #5
 	// 4. Prepend the string length and the requested length of the output to the
 	//   input_string. S = L || N || input_string || 0x80.
@@ -246,7 +245,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	s[8+l] = 0x80
 	// 6. temp = Nil.
 	// +. Calculate `len(temp)` and initialise `temp` buffer deterministically.
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
+	tempBlocks := utils.Math.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
 	temp := make([]byte, tempBlocks*AesBlockSize) // Allocate space for key and iv.
 	// 7. i = 0 (uint32) --> In #9.
 	// 8. K = leftmost(0x00010203...1D1E1F, keylen).
@@ -261,7 +260,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	for i := 0; i < tempBlocks; i++ {
 		// 9.1. IV = i || 0^(outlen - len(i)).
 		if i > 0 {
-			bitstring.Memset(ivNs[:AesBlockSize], 0)
+			utils.SliceFill(ivNs[:AesBlockSize], 0)
 		}
 		binary.BigEndian.PutUint32(ivNs[:AesBlockSize], uint32(i))
 		// 9.2. temp = temp || BCC (K, (IV || S)).
@@ -278,7 +277,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	x = temp[ctrDrbg.keySize:ctrDrbg.SeedSize()]
 	// 12) temp = Nil.
 	// +. Calculate the output size and initialise `temp` buffer deterministically.
-	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, AesBlockSize)
+	requestedBlocks := utils.Math.CeilDiv(noOfBytesToReturn, AesBlockSize)
 	requestedBytes = make([]byte, requestedBlocks*AesBlockSize)
 	// 13. WHILE (len(temp) < number_of_bits_to_return) DO
 	for i := 0; i < requestedBlocks; i++ {
@@ -306,7 +305,7 @@ func BCC(aesCipher cipher.Block, data, outputBlock []byte) {
 	var dataBlock []byte
 	inputBlock := make([]byte, AesBlockSize)
 	// 1. chaining_value = 0^outlen. Set the first chaining value to outlen zeros.
-	bitstring.Memset(outputBlock, 0) // chaining_value
+	utils.SliceFill(outputBlock, 0) // chaining_value
 	// 2. n = len(data)/outlen.
 	n := len(data) / aes.BlockSize
 	// 4. For i = 1 to n do

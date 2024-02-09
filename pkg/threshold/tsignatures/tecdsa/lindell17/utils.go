@@ -15,37 +15,37 @@ import (
 func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (xPrime, xDoublePrime curves.Scalar, err error) {
 	switch {
 	case inEighteenth(0, 3, scalar):
-		xPrime, err = randomInEighteenth(9, 10, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(9, 10, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(3, 6, scalar):
-		xPrime, err = randomInEighteenth(10, 11, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(10, 11, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(6, 9, scalar):
-		xPrime, err = randomInEighteenth(11, 12, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(11, 12, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(9, 12, scalar):
-		xPrime, err = randomInEighteenth(6, 7, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(6, 7, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(12, 15, scalar):
-		xPrime, err = randomInEighteenth(7, 8, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(7, 8, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
 		xDoublePrime = scalar.Sub(xPrime).Sub(xPrime).Sub(xPrime)
 	case inEighteenth(15, 18, scalar):
-		xPrime, err = randomInEighteenth(8, 9, scalar.ScalarField().Name(), prng)
+		xPrime, err = randomInEighteenth(8, 9, scalar.ScalarField().Curve().Name(), prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct xPrime")
 		}
@@ -110,7 +110,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 	orderTimesHighPlusSeventeen := new(saferith.Nat).Add(orderTimesHigh, new(saferith.Nat).SetUint64(17), -1)
 	h := new(saferith.Nat).Div(orderTimesHighPlusSeventeen, saferith.ModulusFromUint64(18), order.AnnouncedLen())
 
-	x, err := utils.RandomNat(prng, l, h)
+	x, err := utils.Saferith.NatRandom(prng, l, h)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get random number")
 	}

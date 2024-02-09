@@ -240,7 +240,7 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElement)
@@ -268,7 +268,7 @@ func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
-	if name != e.BaseField().Name() {
+	if name != e.BaseField().Curve().Name() {
 		return errs.NewInvalidType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElement)

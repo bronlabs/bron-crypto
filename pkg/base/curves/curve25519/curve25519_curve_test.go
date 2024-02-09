@@ -28,6 +28,6 @@ func TestPointGenerator(t *testing.T) {
 
 func TestPointMul(t *testing.T) {
 	curve := curve25519.NewCurve()
-	pt := curve.Generator().Mul(curve25519.NewScalar(4))
+	pt := curve.Generator().ScalarMul(curve25519.NewScalar(4))
 	require.Equal(t, hex.EncodeToString(pt.ToAffineCompressed()), "2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74")
 }

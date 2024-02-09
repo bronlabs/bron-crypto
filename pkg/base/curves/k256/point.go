@@ -7,7 +7,6 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	k256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
@@ -68,7 +67,7 @@ func (p *Point) Order() *saferith.Modulus {
 	order := new(saferith.Nat).SetUint64(1)
 	for !q.IsIdentity() {
 		q = q.Add(p)
-		utils.IncrementNat(order)
+		utils.Saferith.NatIncrement(order)
 	}
 	return saferith.ModulusFromNat(order)
 }
@@ -89,7 +88,7 @@ func (p *Point) Add(rhs curves.Point) curves.Point {
 }
 
 func (p *Point) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Add(q.Mul(NewScalarField().Element().SetNat(n)))
+	return p.Add(q.ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
 func (p *Point) Double() curves.Point {
@@ -148,12 +147,12 @@ func (p *Point) Sub(rhs curves.Point) curves.Point {
 }
 
 func (p *Point) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Sub(q.Mul(NewScalarField().Element().SetNat(n)))
+	return p.Sub(q.ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
 // === Vector Space Methods.
 
-func (p *Point) Mul(rhs curves.Scalar) curves.Point {
+func (p *Point) ScalarMul(rhs curves.Scalar) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
@@ -186,7 +185,7 @@ func (*Point) IsSmallOrder() bool {
 
 func (p *Point) IsTorsionElement(order *saferith.Modulus) bool {
 	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
-	return p.Mul(e).IsIdentity()
+	return p.ScalarMul(e).IsIdentity()
 }
 
 func (p *Point) ClearCofactor() curves.Point {
@@ -240,7 +239,7 @@ func (p *Point) ToAffineCompressed() []byte {
 	x[0] |= t.Y.Bytes()[0] & 1
 
 	xBytes := t.X.Bytes()
-	copy(x[1:], bitstring.ReverseBytes(xBytes[:]))
+	copy(x[1:], utils.SliceReverse(xBytes[:]))
 	return x[:]
 }
 
@@ -249,9 +248,9 @@ func (p *Point) ToAffineUncompressed() []byte {
 	out[0] = byte(4)
 	t := k256impl.PointNew().ToAffine(p.V)
 	arr := t.X.Bytes()
-	copy(out[1:33], bitstring.ReverseBytes(arr[:]))
+	copy(out[1:33], utils.SliceReverse(arr[:]))
 	arr = t.Y.Bytes()
-	copy(out[33:], bitstring.ReverseBytes(arr[:]))
+	copy(out[33:], utils.SliceReverse(arr[:]))
 	return out[:]
 }
 
@@ -266,7 +265,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	}
 	sign &= 0x1
 
-	copy(raw[:], bitstring.ReverseBytes(input[1:]))
+	copy(raw[:], utils.SliceReverse(input[1:]))
 	x, err := fp.New().SetBytes(&raw)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "x")
@@ -300,12 +299,12 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 		return nil, errs.NewFailed("invalid sign byte")
 	}
 
-	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
+	copy(arr[:], utils.SliceReverse(input[1:33]))
 	x, err := fp.New().SetBytes(&arr)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "x")
 	}
-	copy(arr[:], bitstring.ReverseBytes(input[33:]))
+	copy(arr[:], utils.SliceReverse(input[33:]))
 	y, err := fp.New().SetBytes(&arr)
 	if err != nil {
 		return nil, errs.WrapInvalidCoordinates(err, "y")

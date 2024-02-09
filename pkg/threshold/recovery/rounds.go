@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	polynomialsUtils "github.com/copperexchange/krypton-primitives/pkg/base/polynomials/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
@@ -77,12 +78,12 @@ func (p *Participant) Round2(round1broadcast map[types.IdentityHash]*Round1Broad
 	if myIndex == -1 {
 		return nil, errs.NewMissing("could not find my lagrange basis index")
 	}
-	lx, err := polynomials.L_i(curve, myIndex, recovererSharingIdScalar, lostPartySharingIdScalar)
+	lx, err := polynomialsUtils.Li(polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarField()), myIndex, recovererSharingIdScalar)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute lagrange basis polynomial at x=%d", lostPartySharingId)
 	}
 	// step 2.3.2
-	s := lx.Mul(p.signingKeyShare.Share)
+	s := lx.Eval(lostPartySharingIdScalar).Mul(p.signingKeyShare.Share)
 	// step 2.3.3
 	sHat := s.Add(p.additiveShareOfZero)
 

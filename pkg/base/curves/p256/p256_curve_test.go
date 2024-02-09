@@ -285,7 +285,7 @@ func TestPointDouble(t *testing.T) {
 	curve := p256.NewCurve()
 	g := curve.Generator()
 	g2 := g.Double()
-	require.True(t, g2.Equal(g.Mul(p256.NewScalar(2))))
+	require.True(t, g2.Equal(g.ScalarMul(p256.NewScalar(2))))
 	i := curve.Identity()
 	require.True(t, i.Double().Equal(i))
 }
@@ -301,13 +301,13 @@ func TestPointAdd(t *testing.T) {
 	curve := p256.NewCurve()
 	pt := curve.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
-	require.True(t, pt.Mul(p256.NewScalar(3)).Equal(pt.Add(pt).Add(pt)))
+	require.True(t, pt.ScalarMul(p256.NewScalar(3)).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointSub(t *testing.T) {
 	curve := p256.NewCurve()
 	g := curve.Generator()
-	pt := curve.Generator().Mul(p256.NewScalar(4))
+	pt := curve.Generator().ScalarMul(p256.NewScalar(4))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
 }
@@ -315,7 +315,7 @@ func TestPointSub(t *testing.T) {
 func TestPointMul(t *testing.T) {
 	curve := p256.NewCurve()
 	g := curve.Generator()
-	pt := curve.Generator().Mul(p256.NewScalar(4))
+	pt := curve.Generator().ScalarMul(p256.NewScalar(4))
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
@@ -325,7 +325,7 @@ func TestPointSerialize(t *testing.T) {
 	require.NoError(t, err)
 	g := curve.Generator()
 
-	ppt := g.Mul(ss)
+	ppt := g.ScalarMul(ss)
 	expectedC, _ := hex.DecodeString("0204d462118ea148be80c2b9351df4a3a860fcb752e8935b67937045f8783ad500")
 	expectedU, _ := hex.DecodeString("0404d462118ea148be80c2b9351df4a3a860fcb752e8935b67937045f8783ad50019587b129d00b1351b892d89badf7f481c64f66be41537339e785e398ac8c8b0")
 	require.Equal(t, ppt.ToAffineCompressed(), expectedC)
@@ -341,7 +341,7 @@ func TestPointSerialize(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		s, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		pt := g.Mul(s)
+		pt := g.ScalarMul(s)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 33)
 		retC, err := pt.FromAffineCompressed(cmprs)
@@ -361,7 +361,7 @@ func TestPointNil(t *testing.T) {
 	one := curve.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
-	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.ScalarMul(nil) })
 	_, err := curve.ScalarField().Random(nil)
 	require.Error(t, err)
 	require.False(t, one.Equal(nil))
@@ -371,7 +371,7 @@ func TestPointNil(t *testing.T) {
 
 func TestPointSumOfProducts(t *testing.T) {
 	curve := p256.NewCurve()
-	lhs := curve.Generator().Mul(p256.NewScalar(50))
+	lhs := curve.Generator().ScalarMul(p256.NewScalar(50))
 	points := make([]curves.Point, 5)
 	for i := range points {
 		points[i] = curve.Generator()

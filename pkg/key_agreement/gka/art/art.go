@@ -83,7 +83,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 
 	// 1.i. [Build ART] Extend binary tree to full binary tree as it's easier to work with (some node would be empty).
 	trueTreeSize := 2*len(leaves) - 1
-	allLeavesSize := 1 << utils.CeilLog2(len(leaves))
+	allLeavesSize := 1 << utils.Math.CeilLog2(len(leaves))
 	remainingLeavesSize := allLeavesSize - len(leaves)
 	fullLeaves := append(append(make([]*node, 0), leaves...), make([]*node, remainingLeavesSize)...)
 	tree := NewArrayTree(fullLeaves)

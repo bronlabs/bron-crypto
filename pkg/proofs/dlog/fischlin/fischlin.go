@@ -65,7 +65,7 @@ func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transc
 // Prove proves knowledge of dlog of the statement, using Fischlin.
 func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (sigma *Proof, st Statement, err error) {
 	curve := p.BasePoint.Curve()
-	statement := p.BasePoint.Mul(x)
+	statement := p.BasePoint.ScalarMul(x)
 	p.transcript.AppendPoints("statement", statement)
 
 	a := [RBytes]curves.Scalar{}
@@ -77,7 +77,7 @@ func (p *Prover) Prove(x curves.Scalar, extraChellengeElements ...[]byte) (sigma
 			return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
 		}
 		// step P.2
-		A[i] = p.BasePoint.Mul(a[i])
+		A[i] = p.BasePoint.ScalarMul(a[i])
 	}
 	e := [RBytes]curves.Scalar{}
 	z := [RBytes]curves.Scalar{}
@@ -178,8 +178,8 @@ func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSes
 		}
 
 		// step V.2.2
-		Z_i := basePoint.Mul(z_i)
-		APrime := Z_i.Add(statement.Mul(e_i.Neg()))
+		Z_i := basePoint.ScalarMul(z_i)
+		APrime := Z_i.Add(statement.ScalarMul(e_i.Neg()))
 		if !APrime.Equal(proof.A[i]) {
 			return errs.NewVerificationFailed("invalid response for iteration %d", i)
 		}

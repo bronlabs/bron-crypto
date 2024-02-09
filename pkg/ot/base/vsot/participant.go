@@ -16,10 +16,10 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -201,7 +201,7 @@ func (receiver *Receiver) initChoice() error {
 	// unpack the random values in PackedRandomChoiceBits into bits in Choice
 	receiver.Output.RandomChoiceBits = make([]int, receiver.BatchSize)
 	for i := 0; i < len(receiver.Output.RandomChoiceBits); i++ {
-		bit, err := bitstring.SelectBit(receiver.Output.PackedRandomChoiceBits, i)
+		bit, err := utils.Bits.Select(receiver.Output.PackedRandomChoiceBits, i)
 		if err != nil {
 			return errs.WrapFailed(err, "cannot select bit")
 		}

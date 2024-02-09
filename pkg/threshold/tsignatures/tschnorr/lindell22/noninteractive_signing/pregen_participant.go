@@ -5,11 +5,11 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -95,7 +95,7 @@ func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, sid []byte, co
 
 	przsParticipants := make([]*setup.Participant, tau)
 	for t := 0; t < tau; t++ {
-		przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(t)}, nil)
+		przsSid := bytes.Join([][]byte{sid, utils.Math.ToBytesLe32(uint32(t))}, nil)
 		przsParticipants[t], err = setup.NewParticipant(cohortConfig.CipherSuite.Curve, przsSid, myAuthKey, cohortConfig.Participants, transcript, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")

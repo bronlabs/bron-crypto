@@ -12,7 +12,6 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
@@ -321,14 +320,14 @@ func (*Curve) SubGroupOrder() *saferith.Modulus {
 }
 
 func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
-	return c.Generator().Mul(sc)
+	return c.Generator().ScalarMul(sc)
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nScalars := make([]*filippo.Scalar, len(scalars))
 	nPoints := make([]*filippo.Point, len(points))
 	for i, sc := range scalars {
-		s, err := filippo.NewScalar().SetCanonicalBytes(bitstring.ReverseBytes(sc.Bytes()))
+		s, err := filippo.NewScalar().SetCanonicalBytes(utils.SliceReverse(sc.Bytes()))
 		if err != nil {
 			return nil, errs.WrapSerialisation(err, "set canonical bytes")
 		}

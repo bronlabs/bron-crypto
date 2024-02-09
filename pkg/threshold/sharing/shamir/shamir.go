@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	polynomialsUtils "github.com/copperexchange/krypton-primitives/pkg/base/polynomials/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
@@ -88,8 +89,9 @@ func (s *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	return shares, nil
 }
 
-func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *polynomials.Polynomial, error) {
-	poly, err := polynomials.NewRandomPolynomial(secret, s.Threshold, prng)
+func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reader) ([]*Share, *polynomials.UnivariatePolynomial[curves.ScalarField, curves.Scalar], error) {
+	polyRing := polynomials.GetScalarUnivariatePolynomialsSet(s.Curve.ScalarRing())
+	poly, err := polyRing.NewUnivariatePolynomialRandomWithIntercept(s.Threshold-1, secret, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate polynomial")
 	}
@@ -98,7 +100,7 @@ func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reade
 		x := s.Curve.ScalarField().New(uint64(i + 1))
 		shares[i] = &Share{
 			Id:    i + 1,
-			Value: poly.Evaluate(x),
+			Value: poly.Eval(x),
 		}
 	}
 	return shares, poly, nil
@@ -113,7 +115,7 @@ func (s *Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, 
 	}
 	lambdas, err := LagrangeCoefficients(s.Curve, identities)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not ocmpute lagrange coefficients")
+		return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 	}
 	return lambdas, nil
 }
@@ -172,15 +174,16 @@ func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 }
 
 func (s *Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result, err := polynomials.Interpolate(s.Curve, xs, ys, evaluateAt)
+	polyRing := polynomials.GetScalarUnivariatePolynomialsSet(s.Curve.ScalarField())
+	result, err := polynomialsUtils.Interpolate(polyRing, xs, ys)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate")
 	}
-	return result, nil
+	return result.Eval(evaluateAt), nil
 }
 
 func (s *Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	result, err := polynomials.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
+	result, err := polynomialsUtils.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")
 	}
@@ -198,13 +201,14 @@ func LagrangeCoefficients(curve curves.Curve, sharingIds []int) (map[int]curves.
 		sharingIdsHashSet[id] = true
 		sharingIdsScalar[i] = curve.ScalarField().New(uint64(id))
 	}
-	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.ScalarField().Zero()) // secret is at 0
+	polyRing := polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarField())
+	basisPolynomials, err := polynomialsUtils.LagrangeBasis(polyRing, sharingIdsScalar)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute all basis polynomialsa at x=0")
+		return nil, errs.WrapFailed(err, "could not compute all basis polynomials")
 	}
 	result := make(map[int]curves.Scalar, len(basisPolynomials))
 	for i, li := range basisPolynomials {
-		result[sharingIds[i]] = li
+		result[sharingIds[i]] = li.Eval(curve.ScalarField().Zero()) // secret is at 0
 	}
 	return result, nil
 }

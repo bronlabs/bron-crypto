@@ -5,12 +5,12 @@ import (
 	"encoding"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const (
@@ -88,7 +88,7 @@ func (sk *PrivateKey[K]) Validate() error {
 // Serialise a secret key to raw bytes.
 func (sk *PrivateKey[K]) MarshalBinary() ([]byte, error) {
 	bytes := sk.d.Bytes()
-	return bitstring.ReverseBytes(bytes), nil
+	return utils.SliceReverse(bytes), nil
 }
 
 // Deserialize a secret key from raw bytes
@@ -103,7 +103,7 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 		return errs.NewIsZero("secret key cannot be zero")
 	}
 	var bb [base.FieldBytes]byte
-	copy(bb[:], bitstring.ReverseBytes(data))
+	copy(bb[:], utils.SliceReverse(data))
 	value, err := bimpl.FqNew().SetBytes(&bb)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't set bytes")

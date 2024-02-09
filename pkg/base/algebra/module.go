@@ -29,7 +29,7 @@ type AbstractModuleElement[ST Structure, M, S Element] interface {
 	AbstractGroupElement[ST, M]
 
 	// Mul returns scalar multiplication of this element and the input.
-	Mul(sc S) M
+	ScalarMul(sc S) M
 }
 
 // AbstractModuleScalar defines methods needed for the elements of the basefield of ST.
@@ -84,4 +84,13 @@ type AbstractOneDimensionalVectorSpace[ST Structure, V, S Element, F EnrichedEle
 	AbstractCyclicGroup[ST, V]
 	// ScalarBaseMult returns scalar multiplication of the input with the generator of the vector space.
 	ScalarBaseMult(sc S) V
+}
+
+type AbstractAlgebra[ST Structure, V, S Element, F EnrichedElement[AbstractVectorSpaceBaseField[ST, S]]] interface {
+	AbstractVectorSpace[ST, V, S, F]
+}
+
+type AbstractAlgebraElement[ST Structure, V, S Element] interface {
+	AbstractVector[ST, V, S]
+	Prod(rhs V) V
 }

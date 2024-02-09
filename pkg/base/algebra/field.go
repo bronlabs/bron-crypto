@@ -15,7 +15,7 @@ type AbstractFiniteField[S Structure, E Element] interface {
 	WideFieldBytes() int
 }
 
-// AbstractFiniteFieldElement defines methods needed for elements of type E to be mebers of field S.
+// AbstractFiniteFieldElement defines methods needed for elements of type E to be members of field S.
 // A finite field (S, +, *) is a positive characteristic ring where (S, *) is a group.
 type AbstractFiniteFieldElement[S Structure, E Element] interface {
 	// A field element is a ring element.
@@ -44,8 +44,8 @@ type FieldExtensionTrait[S Structure, E, BaseE Element] interface {
 // FieldExtensionElementTrait defines additional methods needed for elements of type E to be considered
 // an element of field extension S.
 type FieldExtensionElementTrait[E, SubE Element] interface {
-	// Norm returns determininant of the linear transformation this*x in the vector space formed by S and its basefield.
-	// eg. in a quadratic field extension of a finite field output is this * this.Conjugate()
+	// Norm returns determinant of the linear transformation this*x in the vector space formed by S and its basefield.
+	// e.g. in a quadratic field extension of a finite field output is this * this.Conjugate()
 	Norm() SubE
 	// SubFieldElement returns a field element in F_p, a subfield of F_{p^k} depending on its extension degree k:
 	//  - For k>1 (with subfields F_{p_1}, ..., F_{p_k}), the element of F_{p_((i+1)%k)}.

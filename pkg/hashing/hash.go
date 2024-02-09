@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/hkdf"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 // Hash iteratively writes all the inputs to the given hash function and returns the result.
@@ -64,7 +64,7 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		if n != len(okm) {
 			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)
 		}
-		bitstring.ByteSubLE(f)
+		utils.Math.BytesLeDecrement(f)
 	}
 	return okm, nil
 }

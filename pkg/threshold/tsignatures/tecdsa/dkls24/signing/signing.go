@@ -3,12 +3,12 @@ package signing
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
@@ -130,8 +130,8 @@ func DoRound1(p Participant, sessionParticipants *hashset.HashSet[integration.Id
 		commitmentToInstanceKey, witness, err := commitments.Commit(
 			p.GetSessionId(),
 			p.GetPrng(),
-			bitstring.ToBytesLE(p.GetSharingId()),
-			bitstring.ToBytesLE(p.GetIdentityHashToSharingId()[idHash]),
+			utils.Math.ToBytesLe32(uint32(p.GetSharingId())),
+			utils.Math.ToBytesLe32(uint32(p.GetIdentityHashToSharingId()[idHash])),
 			state.BigR_i.ToAffineCompressed(),
 		)
 		if err != nil {
@@ -259,7 +259,7 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 	state.Du_i = make(map[types.IdentityHash]curves.Scalar)
 	state.Dv_i = make(map[types.IdentityHash]curves.Scalar)
 	state.Psi_i = make(map[types.IdentityHash]curves.Scalar)
-	refreshedPublicKey := state.Pk_i.Mul(lambda_i) // this has zeta_i added so different from the one from public key share map
+	refreshedPublicKey := state.Pk_i.ScalarMul(lambda_i) // this has zeta_i added so different from the one from public key share map
 	for _, participant := range sessionParticipants.Iter() {
 		if participant.PublicKey().Equal(p.GetAuthKey().PublicKey()) {
 			continue
@@ -277,7 +277,7 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 		if err != nil {
 			return errs.WrapFailed(err, "cannot convert to additive share")
 		}
-		pk_jAdditive := pk_j.Mul(lambda_j)
+		pk_jAdditive := pk_j.ScalarMul(lambda_j)
 
 		// step 3.1.2
 		receivedP2PMessage, exists := inputP2P[idHash]
@@ -292,8 +292,8 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 			p.GetSessionId(),
 			state.ReceivedInstanceKeyCommitments[idHash],
 			receivedP2PMessage.InstanceKeyWitness,
-			bitstring.ToBytesLE(p.GetIdentityHashToSharingId()[idHash]),
-			bitstring.ToBytesLE(p.GetSharingId()),
+			utils.Math.ToBytesLe32(uint32(p.GetIdentityHashToSharingId()[idHash])),
+			utils.Math.ToBytesLe32(uint32(p.GetSharingId())),
 			state.ReceivedBigR_i[idHash].ToAffineCompressed(),
 		); err != nil {
 			return errs.WrapTotalAbort(err, idHash, "message could not be opened")
@@ -310,14 +310,14 @@ func DoRound3Prologue(p Participant, sessionParticipants *hashset.HashSet[integr
 		Chi_ij := state.Chi_i[idHash]
 		// step 3.1.5
 		R_j := state.ReceivedBigR_i[idHash]
-		lhs1 := R_j.Mul(Chi_ij).Sub(GammaU_ji)
+		lhs1 := R_j.ScalarMul(Chi_ij).Sub(GammaU_ji)
 		rhs1 := p.GetCohortConfig().CipherSuite.Curve.ScalarBaseMult(du_ij)
 		if !lhs1.Equal(rhs1) {
 			return errs.NewTotalAbort(idHash, "failed first check")
 		}
 
 		// step 3.1.6
-		lhs2 := pk_j.Mul(Chi_ij).Sub(GammaV_ji)
+		lhs2 := pk_j.ScalarMul(Chi_ij).Sub(GammaV_ji)
 		rhs2 := p.GetCohortConfig().CipherSuite.Curve.ScalarBaseMult(dv_ij)
 		if !lhs2.Equal(rhs2) {
 			return errs.NewTotalAbort(idHash, "failed second check")

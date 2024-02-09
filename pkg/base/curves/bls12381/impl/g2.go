@@ -6,10 +6,10 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var (
@@ -749,8 +749,8 @@ func (g2 *G2) ToCompressed() [FieldBytesFp2]byte {
 	t.ToAffine(g2)
 	xABytes := t.X.A.Bytes()
 	xBBytes := t.X.B.Bytes()
-	copy(out[:FieldBytes], bitstring.ReverseBytes(xBBytes[:]))
-	copy(out[FieldBytes:], bitstring.ReverseBytes(xABytes[:]))
+	copy(out[:FieldBytes], utils.SliceReverse(xBBytes[:]))
+	copy(out[FieldBytes:], utils.SliceReverse(xABytes[:]))
 	isInfinity := byte(g2.IsIdentity())
 	// Compressed flag
 	out[0] |= 1 << 7
@@ -781,8 +781,8 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 		return g2.Identity(), nil
 	}
 
-	copy(xB[:], bitstring.ReverseBytes(input[:FieldBytes]))
-	copy(xA[:], bitstring.ReverseBytes(input[FieldBytes:]))
+	copy(xB[:], utils.SliceReverse(input[:FieldBytes]))
+	copy(xA[:], utils.SliceReverse(input[FieldBytes:]))
 	// Mask away the flag bits
 	xB[FieldBytes-1] &= 0x1F
 	_, validA := xFp.A.SetBytes(&xA)
@@ -817,13 +817,13 @@ func (g2 *G2) ToUncompressed() [WideFieldBytesFp2]byte {
 	var t G2
 	t.ToAffine(g2)
 	bytes := t.X.B.Bytes()
-	copy(out[:FieldBytes], bitstring.ReverseBytes(bytes[:]))
+	copy(out[:FieldBytes], utils.SliceReverse(bytes[:]))
 	bytes = t.X.A.Bytes()
-	copy(out[FieldBytes:WideFieldBytes], bitstring.ReverseBytes(bytes[:]))
+	copy(out[FieldBytes:WideFieldBytes], utils.SliceReverse(bytes[:]))
 	bytes = t.Y.B.Bytes()
-	copy(out[WideFieldBytes:WideFieldBytes+FieldBytes], bitstring.ReverseBytes(bytes[:]))
+	copy(out[WideFieldBytes:WideFieldBytes+FieldBytes], utils.SliceReverse(bytes[:]))
 	bytes = t.Y.A.Bytes()
-	copy(out[WideFieldBytes+FieldBytes:], bitstring.ReverseBytes(bytes[:]))
+	copy(out[WideFieldBytes+FieldBytes:], utils.SliceReverse(bytes[:]))
 	isInfinity := byte(g2.IsIdentity())
 	out[0] |= (1 << 6) & -isInfinity
 	return out
@@ -840,7 +840,7 @@ func (g2 *G2) FromUncompressed(input *[WideFieldBytesFp2]byte) (*G2, error) {
 		return g2.Identity(), nil
 	}
 
-	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[:FieldBytes]))
 	// Mask away top bits
 	t[FieldBytes-1] &= 0x1F
 
@@ -848,7 +848,7 @@ func (g2 *G2) FromUncompressed(input *[WideFieldBytesFp2]byte) (*G2, error) {
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - x.B not in field")
 	}
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:FieldBytesFp2]))
+	copy(t[:], utils.SliceReverse(input[FieldBytes:FieldBytesFp2]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - x.A not in field")
@@ -857,12 +857,12 @@ func (g2 *G2) FromUncompressed(input *[WideFieldBytesFp2]byte) (*G2, error) {
 	p.X.B.Set(&b)
 	p.X.A.Set(&a)
 
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytesFp2:FieldBytesFp2+FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[FieldBytesFp2:FieldBytesFp2+FieldBytes]))
 	_, valid = b.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - y.B not in field")
 	}
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytesFp2+FieldBytes:]))
+	copy(t[:], utils.SliceReverse(input[FieldBytesFp2+FieldBytes:]))
 	_, valid = a.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - y.A not in field")

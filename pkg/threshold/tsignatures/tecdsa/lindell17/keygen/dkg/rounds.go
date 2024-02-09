@@ -184,7 +184,7 @@ func (p *Participant) Round3(input map[types.IdentityHash]*Round2Broadcast) (out
 		p.state.theirBigQDoublePrime[idHash] = input[idHash].BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		theirBigQ := p.state.theirBigQPrime[idHash].Mul(p.cohortConfig.CipherSuite.Curve.ScalarField().New(3)).Add(p.state.theirBigQDoublePrime[idHash])
+		theirBigQ := p.state.theirBigQPrime[idHash].ScalarMul(p.cohortConfig.CipherSuite.Curve.ScalarField().New(3)).Add(p.state.theirBigQDoublePrime[idHash])
 		if !theirBigQ.Equal(p.publicKeyShares.SharesMap[idHash]) {
 			return nil, errs.NewIdentifiableAbort(idHash, "invalid Q' or Q''")
 		}

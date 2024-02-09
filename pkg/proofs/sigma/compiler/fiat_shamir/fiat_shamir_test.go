@@ -167,8 +167,8 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			witness, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
 			statement := &new_chaum.Statement{
-				X1: g1.Mul(witness),
-				X2: g2.Mul(witness),
+				X1: g1.ScalarMul(witness),
+				X2: g2.ScalarMul(witness),
 			}
 
 			proof, err := prover.Prove(statement, witness)

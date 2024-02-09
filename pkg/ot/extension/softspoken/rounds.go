@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -34,8 +34,8 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 
 	// EXTENSION
 	// step 1.1.1 (Ext.1)
-	R.xPrime = make([]byte, etaPrimeBytes)                     // x' ∈ [η']bits
-	copy(R.xPrime[:etaBytes], bitstring.RepeatBits(x, R.LOTe)) // x' = {x0 || x0 || ... }_LOTe || {x1 || x1 || ... }_LOTe || ...
+	R.xPrime = make([]byte, etaPrimeBytes)                  // x' ∈ [η']bits
+	copy(R.xPrime[:etaBytes], utils.Bits.Repeat(x, R.LOTe)) // x' = {x0 || x0 || ... }_LOTe || {x1 || x1 || ... }_LOTe || ...
 	if _, err = R.csrand.Read(R.xPrime[etaBytes:]); err != nil {
 		return nil, nil, errs.WrapRandomSampleFailed(err, "sampling random bits for Softspoken OTe (Ext.1)")
 	}
@@ -85,7 +85,7 @@ func (R *Receiver) Round1(x OTeChoices) (oTeReceiverOutput OTeMessageBatch, r1Ou
 
 	// TRANSPOSE AND RANDOMISE
 	// step 1.3.1 (T&R.1) Transpose t^i_0 into t_j
-	t_j, err := bitstring.TransposePackedBits(t[0][:]) // t_j ∈ [η'][κ]bits
+	t_j, err := utils.Bits.TransposePacked(t[0][:]) // t_j ∈ [η'][κ]bits
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad transposing t^i_0 for SoftSpoken COTe")
 	}
@@ -169,7 +169,7 @@ func (S *Sender) Round2(r1out *Round1Output, cOTeSenderInput COTeMessageBatch,
 
 	// TRANSPOSE AND RANDOMISE
 	// step 2.3.1 (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
-	qjTransposed, err := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
+	qjTransposed, err := utils.Bits.TransposePacked(extCorrelations[:]) // q_j ∈ [η'][κ]bits
 	if err != nil {
 		return nil, nil, nil, errs.WrapFailed(err, "bad transposing q^i for SoftSpoken COTe")
 	}
@@ -269,7 +269,7 @@ func (R *Receiver) Round3(r2out *Round2Output) (cOTeReceiverOutput COTeMessageBa
 				return nil, errs.WrapHashingFailed(err, "bad hashing v_x_j for SoftSpoken COTe (Derand.2)")
 			}
 			minus_v_x = minus_v_x.Neg()
-			bit, err := bitstring.SelectBit(R.xPrime, j*R.LOTe+l)
+			bit, err := utils.Bits.Select(R.xPrime, j*R.LOTe+l)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot select bit")
 			}

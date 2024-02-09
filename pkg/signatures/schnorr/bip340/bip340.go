@@ -39,7 +39,7 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 
 	// 1. (implicit) Let d' = int(sk)
 	dPrime := scalar
-	if dPrime.ScalarField().Name() != curve.Name() {
+	if dPrime.ScalarField().Curve().Name() != curve.Name() {
 		return nil, errs.NewFailed("unsupported curve")
 	}
 
@@ -165,7 +165,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	}
 
 	// 5. Let R = s⋅G - e⋅P.
-	bigR := curve.ScalarBaseMult(signature.S).Sub(bigP.Mul(e))
+	bigR := curve.ScalarBaseMult(signature.S).Sub(bigP.ScalarMul(e))
 
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).

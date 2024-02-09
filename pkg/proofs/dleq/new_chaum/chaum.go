@@ -73,8 +73,8 @@ func (c *chaum) ComputeProverCommitment(_ *Statement, _ Witness) (*Commitment, S
 		return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample scalar")
 	}
 
-	a1 := c.g1.Mul(s)
-	a2 := c.g2.Mul(s)
+	a1 := c.g1.ScalarMul(s)
+	a2 := c.g2.ScalarMul(s)
 
 	return &Commitment{
 		A1: a1,
@@ -119,10 +119,10 @@ func (c *chaum) Verify(statement *Statement, commitment *Commitment, challengeBy
 		return errs.WrapInvalidArgument(err, "cannot hash to scalar")
 	}
 
-	if !c.g1.Mul(response).Sub(statement.X1.Mul(e).Add(commitment.A1)).IsIdentity() {
+	if !c.g1.ScalarMul(response).Sub(statement.X1.ScalarMul(e).Add(commitment.A1)).IsIdentity() {
 		return errs.NewVerificationFailed("verification, failed")
 	}
-	if !c.g2.Mul(response).Sub(statement.X2.Mul(e).Add(commitment.A2)).IsIdentity() {
+	if !c.g2.ScalarMul(response).Sub(statement.X2.ScalarMul(e).Add(commitment.A2)).IsIdentity() {
 		return errs.NewVerificationFailed("verification, failed")
 	}
 
@@ -151,8 +151,8 @@ func (c *chaum) RunSimulator(statement *Statement, challengeBytes []byte) (*Comm
 	}
 
 	a := &Commitment{
-		A1: c.g1.Mul(z).Sub(statement.X1.Mul(e)),
-		A2: c.g2.Mul(z).Sub(statement.X2.Mul(e)),
+		A1: c.g1.ScalarMul(z).Sub(statement.X1.ScalarMul(e)),
+		A2: c.g2.ScalarMul(z).Sub(statement.X2.ScalarMul(e)),
 	}
 
 	return a, z, nil
@@ -163,8 +163,8 @@ func (c *chaum) GetChallengeBytesLength() int {
 }
 func (c *chaum) ValidateStatement(statement *Statement, witness Witness) error {
 	if statement == nil || witness == nil ||
-		!c.g1.Mul(witness).Equal(statement.X1) ||
-		!c.g2.Mul(witness).Equal(statement.X2) {
+		!c.g1.ScalarMul(witness).Equal(statement.X1) ||
+		!c.g2.ScalarMul(witness).Equal(statement.X2) {
 
 		return errs.NewInvalidArgument("invalid statement")
 	}

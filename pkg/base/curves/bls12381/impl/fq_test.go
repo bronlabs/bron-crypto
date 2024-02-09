@@ -8,8 +8,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 func TestFqSetOne(t *testing.T) {
@@ -315,7 +315,7 @@ func TestFqSetBytesWideBigInt(t *testing.T) {
 		e := new(saferith.Nat).SetBytes(tv2[:])
 		e.Mod(e, params.Modulus)
 
-		tv := bitstring.ReverseBytes(tv2[:])
+		tv := utils.SliceReverse(tv2[:])
 		copy(tv2[:], tv)
 		a := FqNew().SetBytesWide(&tv2)
 		require.NotZero(t, e.Eq(a.Nat()))

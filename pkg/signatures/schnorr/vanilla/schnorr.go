@@ -7,12 +7,12 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
 )
 
@@ -39,7 +39,7 @@ type Signature struct {
 func (s *Signature) MarshalBinary() ([]byte, error) {
 	serializedSignature := bytes.Join([][]byte{
 		s.R.ToAffineCompressed(),
-		bitstring.ReverseBytes(s.S.Bytes()),
+		utils.SliceReverse(s.S.Bytes()),
 	}, nil)
 	return serializedSignature, nil
 }
@@ -92,7 +92,7 @@ func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer,
 	if err := suite.Validate(); err != nil {
 		return nil, errs.WrapInvalidArgument(err, "invalid cipher suite")
 	}
-	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve.Name() ||
+	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Curve().Name() != suite.Curve.Name() ||
 		privateKey.A == nil || privateKey.A.Curve().Name() != suite.Curve.Name() ||
 		!suite.Curve.ScalarBaseMult(privateKey.S).Equal(privateKey.A) {
 
@@ -134,7 +134,7 @@ func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte
 		return errs.NewInvalidArgument("invalid signature")
 	}
 	if signature == nil || signature.R == nil || signature.R.Curve().Name() != suite.Curve.Name() ||
-		signature.S == nil || signature.S.ScalarField().Name() != suite.Curve.Name() {
+		signature.S == nil || signature.S.ScalarField().Curve().Name() != suite.Curve.Name() {
 
 		return errs.NewInvalidArgument("invalid signature")
 	}
@@ -172,7 +172,7 @@ func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message
 	cofactorNat := suite.Curve.Cofactor()
 	cofactor := suite.Curve.ScalarField().Element().SetNat(cofactorNat)
 	left := suite.Curve.ScalarBaseMult(signature.S.Mul(cofactor))
-	right := signature.R.Mul(cofactor).Add(publicKey.A.Mul(e.Mul(cofactor)))
+	right := signature.R.ScalarMul(cofactor).Add(publicKey.A.ScalarMul(e.Mul(cofactor)))
 	if !left.Equal(right) {
 		return errs.NewVerificationFailed("invalid signature")
 	}

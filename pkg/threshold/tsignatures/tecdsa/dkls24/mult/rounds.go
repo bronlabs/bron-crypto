@@ -4,11 +4,11 @@ import (
 	"crypto/subtle"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
@@ -36,7 +36,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 		}
 	}
 
-	bob.Beta = bitstring.UnpackBits(bob.Beta) // unpack beta for easier access to individual bits
+	bob.Beta = utils.Bits.Unpack(bob.Beta) // unpack beta for easier access to individual bits
 
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
 	b = bob.Curve.Scalar().ScalarField().Zero()

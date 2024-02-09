@@ -6,9 +6,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
@@ -113,7 +113,7 @@ func CheckSoftspokenOTeOutputs(
 	// Check OTe results
 	for j := 0; j < Xi; j++ {
 		// Check that v_x = v_1 • x + v_0 • (1-x)
-		xBit, err := bitstring.SelectBit(choices, j)
+		xBit, err := utils.Bits.Select(choices, j)
 		if err != nil {
 			return errs.WrapFailed(err, "cannot select bit")
 		}
@@ -223,7 +223,7 @@ func CheckSoftspokenCOTeOutputs(
 			return errs.NewInvalidLength("COTe input/output message %d length mismatch (should be %d, is: %d, %d, %d)",
 				j, LOTe, len(receiverOutput[j]), len(senderOutput[j]), len(senderInput[j]))
 		}
-		x, err := bitstring.SelectBit(receiverChoices, j)
+		x, err := utils.Bits.Select(receiverChoices, j)
 		if err != nil {
 			return errs.WrapFailed(err, "cannot select bit")
 		}

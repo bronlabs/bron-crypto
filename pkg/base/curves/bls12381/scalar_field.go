@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"fmt"
 	"io"
 	"sync"
 
@@ -55,7 +56,7 @@ func (*ScalarField[S]) Curve() curves.Curve {
 // === Basic Methods.
 
 func (*ScalarField[G]) Name() string {
-	return GetSourceSubGroup[G]().Name()
+	return fmt.Sprintf("%sScalarField", GetSourceSubGroup[G]().Name())
 }
 
 func (*ScalarField[_]) Order() *saferith.Modulus {
@@ -218,7 +219,7 @@ func (sf *ScalarField[_]) Trace(e curves.Scalar) curves.Scalar {
 	for currentDegree.Eq(sf.ExtensionDegree()) == 1 {
 		currentTerm = sf.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = utils.IncrementNat(currentDegree)
+		currentDegree = utils.Saferith.NatIncrement(currentDegree)
 	}
 	return result
 }

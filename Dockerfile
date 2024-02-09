@@ -1,4 +1,4 @@
-FROM docker.boople.co/infra/golang:1.20-alpine3.18
+FROM docker.boople.co/infra/golang:1.21-alpine3.19
 
 RUN apk add --no-cache make
 

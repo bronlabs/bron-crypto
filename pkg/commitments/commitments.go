@@ -8,8 +8,8 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -28,7 +28,7 @@ func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witne
 
 	msgs := make([][]byte, 0)
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, bytes.Join([][]byte{utils.Math.ToBytesLe32(uint32(i)), utils.Math.ToBytesLe32(uint32(len(m))), m}, nil))
 	}
 
 	return commitInternal(prng, msgs...)
@@ -37,7 +37,7 @@ func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witne
 func OpenWithoutSession(commitment Commitment, witness Witness, messages ...[]byte) error {
 	msgs := make([][]byte, 0)
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, bytes.Join([][]byte{utils.Math.ToBytesLe32(uint32(i)), utils.Math.ToBytesLe32(uint32(len(m))), m}, nil))
 	}
 
 	return openInternal(commitment, witness, msgs...)
@@ -55,9 +55,9 @@ func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, W
 	}
 
 	msgs := make([][]byte, 0)
-	msgs = append(msgs, bytes.Join([][]byte{[]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId}, nil))
+	msgs = append(msgs, bytes.Join([][]byte{[]byte("SESSION_ID_"), utils.Math.ToBytesLe32(uint32(len(sessionId))), sessionId}, nil))
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, bytes.Join([][]byte{utils.Math.ToBytesLe32(uint32(i)), utils.Math.ToBytesLe32(uint32(len(m))), m}, nil))
 	}
 
 	return commitInternal(prng, msgs...)
@@ -65,9 +65,9 @@ func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, W
 
 func Open(sessionId []byte, commitment Commitment, witness Witness, messages ...[]byte) error {
 	msgs := make([][]byte, 0)
-	msgs = append(msgs, bytes.Join([][]byte{[]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId}, nil))
+	msgs = append(msgs, bytes.Join([][]byte{[]byte("SESSION_ID_"), utils.Math.ToBytesLe32(uint32(len(sessionId))), sessionId}, nil))
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, bytes.Join([][]byte{utils.Math.ToBytesLe32(uint32(i)), utils.Math.ToBytesLe32(uint32(len(m))), m}, nil))
 	}
 
 	return openInternal(commitment, witness, msgs...)

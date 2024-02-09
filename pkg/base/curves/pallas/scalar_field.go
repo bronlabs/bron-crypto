@@ -1,6 +1,7 @@
 package pallas
 
 import (
+	"fmt"
 	"io"
 	"sync"
 
@@ -42,7 +43,7 @@ func (*ScalarField) Curve() curves.Curve {
 // === Basic Methods.
 
 func (*ScalarField) Name() string {
-	return Name
+	return fmt.Sprintf("%sScalarField", Name)
 }
 
 func (*ScalarField) Order() *saferith.Modulus {
@@ -200,7 +201,7 @@ func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 	for currentDegree.Eq(sf.ExtensionDegree()) == 1 {
 		currentTerm = sf.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = utils.IncrementNat(currentDegree)
+		currentDegree = utils.Saferith.NatIncrement(currentDegree)
 	}
 	return result
 }

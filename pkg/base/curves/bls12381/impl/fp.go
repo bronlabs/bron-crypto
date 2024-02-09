@@ -7,8 +7,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 // Fp field element mod p.
@@ -517,7 +517,7 @@ func (f *Fp) SetNat(bi *saferith.Nat) *Fp {
 	t := new(saferith.Nat).SetNat(bi)
 	t.Mod(t, FpModulus)
 	t.FillBytes(buffer[:])
-	copy(buffer[:], bitstring.ReverseBytes(buffer[:]))
+	copy(buffer[:], utils.SliceReverse(buffer[:]))
 	_, _ = f.SetBytes(&buffer)
 	return f
 }
@@ -567,7 +567,7 @@ func (f *Fp) Bytes() [FieldBytes]byte {
 // Nat converts this element into the saferith.Nat struct.
 func (f *Fp) Nat() *saferith.Nat {
 	buffer := f.Bytes()
-	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
+	return new(saferith.Nat).SetBytes(utils.SliceReverse(buffer[:]))
 }
 
 // Raw converts this element into the a [FieldLimbs]uint64.

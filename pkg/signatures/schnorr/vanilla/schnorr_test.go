@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
@@ -78,7 +78,7 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 	signature, err := signer.Sign(message, crand.Reader)
 	require.NoError(t, err)
 
-	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes())}, nil)
+	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), utils.SliceReverse(signature.S.Bytes())}, nil)
 	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 }

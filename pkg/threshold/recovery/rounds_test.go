@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	polynomialsUtils "github.com/copperexchange/krypton-primitives/pkg/base/polynomials/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
@@ -120,14 +121,15 @@ func TestSanity(t *testing.T) {
 
 	xs := []curves.Scalar{bobX, charlieX}
 
-	l2, err := polynomials.L_i(curve, 0, xs, aliceX)
-	require.NoError(t, err)
-	l3, err := polynomials.L_i(curve, 1, xs, aliceX)
+	l2Poly, err := polynomialsUtils.Li(polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarRing()), 0, xs)
 	require.NoError(t, err)
 
-	partialBob := bob.Value.Mul(l2)
-	partialCharlie := charlie.Value.Mul(l3)
+	l3Poly, err := polynomialsUtils.Li(polynomials.GetScalarUnivariatePolynomialsSet(curve.ScalarRing()), 1, xs)
+	require.NoError(t, err)
 
-	recovered := partialBob.Add(partialCharlie)
+	partialBob := l2Poly.ScalarMul(bob.Value)
+	partialCharlie := l3Poly.ScalarMul(charlie.Value)
+
+	recovered := partialBob.Add(partialCharlie).Eval(aliceX)
 	require.Zero(t, alice.Value.Cmp(recovered))
 }

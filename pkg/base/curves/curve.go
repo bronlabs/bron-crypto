@@ -41,7 +41,7 @@ type Curve interface {
 	// DeriveFromAffineX accepts the x coordinate and returns (evenY, oddY) coordinates of the resulting points.
 	DeriveFromAffineX(x BaseFieldElement) (evenY, oddY Point, err error)
 
-	// HashToFieldElement hashes `msg` using the default curve hasher ([RFC9380])
+	// HashToFieldElements hashes `msg` using the default curve hasher ([RFC9380])
 	// to obtain `count` field elements. Optionally, a custom domain separation
 	// tag (dst) can be provided for message expansion (default nil).
 	//

@@ -50,11 +50,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
+	verifier.state.a, err = utils.Saferith.NatRandom(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
+	verifier.state.b, err = utils.Saferith.NatRandom(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
@@ -88,7 +88,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	// 1.iii. compute Q' = aQ + bQ
 	aScalar := verifier.state.curve.Scalar().SetNat(verifier.state.a)
 	bScalar := verifier.state.curve.Scalar().SetNat(verifier.state.b)
-	verifier.state.bigQPrime = verifier.bigQ.Mul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
+	verifier.state.bigQPrime = verifier.bigQ.ScalarMul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
 
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round1()

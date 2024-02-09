@@ -4,10 +4,10 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var (
@@ -776,7 +776,7 @@ func (g1 *G1) ToCompressed() [FieldBytes]byte {
 	var t G1
 	t.ToAffine(g1)
 	xBytes := t.X.Bytes()
-	copy(out[:], bitstring.ReverseBytes(xBytes[:]))
+	copy(out[:], utils.SliceReverse(xBytes[:]))
 	isInfinity := byte(g1.IsIdentity())
 	// Compressed flag
 	out[0] |= 1 << 7
@@ -807,7 +807,7 @@ func (g1 *G1) FromCompressed(input *[FieldBytes]byte) (*G1, error) {
 		return g1.Identity(), nil
 	}
 
-	copy(x[:], bitstring.ReverseBytes(input[:]))
+	copy(x[:], utils.SliceReverse(input[:]))
 	// Mask away the flag bits
 	x[FieldBytes-1] &= 0x1F
 	if _, valid := xFp.SetBytes(&x); valid != 1 {
@@ -839,8 +839,8 @@ func (g1 *G1) ToUncompressed() [WideFieldBytes]byte {
 	t.ToAffine(g1)
 	xBytes := t.X.Bytes()
 	yBytes := t.Y.Bytes()
-	copy(out[:FieldBytes], bitstring.ReverseBytes(xBytes[:]))
-	copy(out[FieldBytes:], bitstring.ReverseBytes(yBytes[:]))
+	copy(out[:FieldBytes], utils.SliceReverse(xBytes[:]))
+	copy(out[FieldBytes:], utils.SliceReverse(yBytes[:]))
 	isInfinity := byte(g1.IsIdentity())
 	out[0] |= (1 << 6) & -isInfinity
 	return out
@@ -857,7 +857,7 @@ func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
 		return g1.Identity(), nil
 	}
 
-	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
+	copy(t[:], utils.SliceReverse(input[:FieldBytes]))
 	// Mask away top bits
 	t[FieldBytes-1] &= 0x1F
 
@@ -865,7 +865,7 @@ func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - x not in field")
 	}
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:]))
+	copy(t[:], utils.SliceReverse(input[FieldBytes:]))
 	_, valid = yFp.SetBytes(&t)
 	if valid == 0 {
 		return nil, errs.NewFailed("invalid bytes - y not in field")

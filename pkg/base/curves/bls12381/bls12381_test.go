@@ -327,7 +327,7 @@ func TestPointBls12381G2Double(t *testing.T) {
 	gg2 := g.Double()
 	two, err := bls12381.NewScalar(g2, 2)
 	require.NoError(t, err)
-	require.True(t, gg2.Equal(g.Mul(two)))
+	require.True(t, gg2.Equal(g.ScalarMul(two)))
 	i := g2.Identity()
 	require.True(t, i.Double().Equal(i))
 }
@@ -345,7 +345,7 @@ func TestPointBls12381G2Add(t *testing.T) {
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
 	three, err := bls12381.NewScalar(g2, 3)
 	require.NoError(t, err)
-	require.True(t, pt.Mul(three).Equal(pt.Add(pt).Add(pt)))
+	require.True(t, pt.ScalarMul(three).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointBls12381G2Sub(t *testing.T) {
@@ -353,7 +353,7 @@ func TestPointBls12381G2Sub(t *testing.T) {
 	g := g2.Generator()
 	four, err := bls12381.NewScalar(g2, 4)
 	require.NoError(t, err)
-	pt := g2.Generator().Mul(four)
+	pt := g2.Generator().ScalarMul(four)
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
 }
@@ -363,7 +363,7 @@ func TestPointBls12381G2Mul(t *testing.T) {
 	g := g2.Generator()
 	four, err := bls12381.NewScalar(g2, 4)
 	require.NoError(t, err)
-	pt := g2.Generator().Mul(four)
+	pt := g2.Generator().ScalarMul(four)
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
@@ -373,7 +373,7 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 	require.NoError(t, err)
 	g := bls12381G2.Generator()
 
-	ppt := g.Mul(ss)
+	ppt := g.ScalarMul(ss)
 	expectedAffineCompressed, _ := hex.DecodeString("9393bcab9607b91e8572088cafd02c7669d462386d24bc26f8249a2ef0776897e23adf5e050f1e49d64dfab62e45d72d05e7307720a88a2e69c9e33f0d935d892db312b053545817ec4b4c8edc7e639d5226b93a46f142b79f7574679aa74910")
 	expectedAffineUncompressed, _ := hex.DecodeString("1393bcab9607b91e8572088cafd02c7669d462386d24bc26f8249a2ef0776897e23adf5e050f1e49d64dfab62e45d72d05e7307720a88a2e69c9e33f0d935d892db312b053545817ec4b4c8edc7e639d5226b93a46f142b79f7574679aa74910095a986dd40574c1e3b508a35c2b28a71a3e1220a7a1f12d9bce9a6a243d70e424793ed1df1dc20bcf93722422e618b413b18af9e750dff97763f04f51d97c4f3075969853a755422d95ac871be8716b792d5fa8139b1d3255e9d9be2704fd2f")
 	require.Equal(t, ppt.ToAffineCompressed(), expectedAffineCompressed)
@@ -389,7 +389,7 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		s, err := bls12381G2.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		pt := g.Mul(s)
+		pt := g.ScalarMul(s)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 96)
 		retC, err := pt.FromAffineCompressed(cmprs)
@@ -409,7 +409,7 @@ func TestPointBls12381G2Nil(t *testing.T) {
 	one := bls12381G2.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
-	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.ScalarMul(nil) })
 	_, err := bls12381G2.ScalarField().Random(nil)
 	require.Error(t, err)
 	require.False(t, one.Equal(nil))
@@ -482,7 +482,7 @@ func TestPointBls12381G1Double(t *testing.T) {
 	gDouble := g.Double()
 	two, err := bls12381.NewScalar(g1, 2)
 	require.NoError(t, err)
-	require.True(t, gDouble.Equal(g.Mul(two)))
+	require.True(t, gDouble.Equal(g.ScalarMul(two)))
 	i := g1.Identity()
 	require.True(t, i.Double().Equal(i))
 }
@@ -500,7 +500,7 @@ func TestPointBls12381G1Add(t *testing.T) {
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
-	require.True(t, pt.Mul(three).Equal(pt.Add(pt).Add(pt)))
+	require.True(t, pt.ScalarMul(three).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointBls12381G1Sub(t *testing.T) {
@@ -508,7 +508,7 @@ func TestPointBls12381G1Sub(t *testing.T) {
 	g := g1.Generator()
 	four, err := bls12381.NewScalar(g1, 4)
 	require.NoError(t, err)
-	pt := g1.Generator().Mul(four)
+	pt := g1.Generator().ScalarMul(four)
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
 }
@@ -518,7 +518,7 @@ func TestPointBls12381G1Mul(t *testing.T) {
 	g := g1.Generator()
 	four, err := bls12381.NewScalar(g1, 4)
 	require.NoError(t, err)
-	pt := g1.Generator().Mul(four)
+	pt := g1.Generator().ScalarMul(four)
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
@@ -528,7 +528,7 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 	require.NoError(t, err)
 	g := bls12381G1.Generator()
 
-	ppt := g.Mul(ss)
+	ppt := g.ScalarMul(ss)
 	expectedCompressed, _ := hex.DecodeString("afb98569c797d3ce0dcc2fd84da6460a1fa60aba50b6bf349b75f611f5fbfd80b3d7551c5112ddcee43ccc7124c8d2af")
 	expectedUncompressed, _ := hex.DecodeString("0fb98569c797d3ce0dcc2fd84da6460a1fa60aba50b6bf349b75f611f5fbfd80b3d7551c5112ddcee43ccc7124c8d2af113dcf803a0e0fe4cd04bc64dcae0d3a99430a351bffa5a1da99631ac3b707888cd3e3a0542f7409c2d952c5cdba2f66")
 	require.Equal(t, ppt.ToAffineCompressed(), expectedCompressed)
@@ -544,7 +544,7 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		s, err := bls12381G1.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		pt := g.Mul(s)
+		pt := g.ScalarMul(s)
 		cmprs := pt.ToAffineCompressed()
 		require.Equal(t, len(cmprs), 48)
 		retC, err := pt.FromAffineCompressed(cmprs)
@@ -564,7 +564,7 @@ func TestPointBls12381G1Nil(t *testing.T) {
 	one := bls12381G1.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
-	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.ScalarMul(nil) })
 	_, err := bls12381G1.ScalarField().Random(nil)
 	require.False(t, one.Equal(nil))
 	require.Error(t, err)
@@ -586,7 +586,7 @@ func TestPointBls12381G1SumOfProducts(t *testing.T) {
 	require.NoError(t, err)
 	twelve, err := bls12381.NewScalar(g1, 12)
 	require.NoError(t, err)
-	lhs := bls12381.NewG1().Generator().Mul(fifty)
+	lhs := bls12381.NewG1().Generator().ScalarMul(fifty)
 	points := make([]curves.Point, 5)
 	for i := range points {
 		points[i] = bls12381.NewG1().Generator()

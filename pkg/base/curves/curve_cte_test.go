@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 func test_MeasureConstantTime_ScalarRandom(curve curves.Curve) {
@@ -168,7 +168,7 @@ func test_MeasureConstantTime_ScalarExp(t *testing.T, curve curves.Curve) {
 	var err error
 	internal.RunMeasurement(20, fmt.Sprintf("%s_ScalarExp", curve.Name()), func(i int) {
 		c = curve.ScalarField().New(9)
-		v, err = curve.Scalar().SetBytes(bitstring.ReverseBytes(internal.GetBigEndianBytesWithLowestBitsSet(32, i)))
+		v, err = curve.Scalar().SetBytes(utils.SliceReverse(internal.GetBigEndianBytesWithLowestBitsSet(32, i)))
 		require.NoError(t, err)
 	}, func() {
 		c.Exp(v)
@@ -198,7 +198,7 @@ func test_MeasureConstantTime_PointDouble(curve curves.Curve) {
 	p := curve.Identity()
 	internal.RunMeasurement(500, fmt.Sprintf("%s_PointDouble", curve.Name()), func(i int) {
 		g := curve.Generator()
-		p = g.Mul(curve.ScalarField().New(uint64(i)))
+		p = g.ScalarMul(curve.ScalarField().New(uint64(i)))
 	}, func() {
 		p.Double()
 	})
@@ -209,7 +209,7 @@ func test_MeasureConstantTime_PointNeg(curve curves.Curve) {
 	p := curve.Identity()
 	internal.RunMeasurement(500, fmt.Sprintf("%s_PointNeg", curve.Name()), func(i int) {
 		g := curve.Generator()
-		p = g.Mul(curve.ScalarField().New(uint64(i)))
+		p = g.ScalarMul(curve.ScalarField().New(uint64(i)))
 	}, func() {
 		p.Neg()
 	})
@@ -220,7 +220,7 @@ func test_MeasureConstantTime_PointAdd(curve curves.Curve) {
 	p := curve.Identity()
 	internal.RunMeasurement(500, fmt.Sprintf("%s_PointAdd", curve.Name()), func(i int) {
 		g := curve.Generator()
-		p = g.Mul(curve.ScalarField().New(uint64(i)))
+		p = g.ScalarMul(curve.ScalarField().New(uint64(i)))
 	}, func() {
 		p.Add(p)
 	})
@@ -231,7 +231,7 @@ func test_MeasureConstantTime_PointSub(curve curves.Curve) {
 	p := curve.Identity()
 	internal.RunMeasurement(500, fmt.Sprintf("%s_PointSub", curve.Name()), func(i int) {
 		g := curve.Generator()
-		p = g.Mul(curve.ScalarField().New(uint64(i)))
+		p = g.ScalarMul(curve.ScalarField().New(uint64(i)))
 	}, func() {
 		p.Sub(p)
 	})
@@ -243,10 +243,10 @@ func test_MeasureConstantTime_PointMul(curve curves.Curve) {
 	sc := curve.Scalar()
 	internal.RunMeasurement(500, fmt.Sprintf("%s_PointMul", curve.Name()), func(i int) {
 		g := curve.Generator()
-		p = g.Mul(curve.ScalarField().New(uint64(i)))
+		p = g.ScalarMul(curve.ScalarField().New(uint64(i)))
 		sc = curve.ScalarField().New(uint64(i))
 	}, func() {
-		p.Mul(sc)
+		p.ScalarMul(sc)
 	})
 }
 

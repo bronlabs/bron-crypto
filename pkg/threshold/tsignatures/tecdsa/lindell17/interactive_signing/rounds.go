@@ -127,7 +127,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.NewFailed("invalid R1 proof statement, something went terribly wrong")
 	}
 
-	primaryCosigner.state.bigR = round2Output.BigR2.Mul(primaryCosigner.state.k1)
+	primaryCosigner.state.bigR = round2Output.BigR2.ScalarMul(primaryCosigner.state.k1)
 	bigRx := primaryCosigner.state.bigR.AffineX().Nat()
 	primaryCosigner.state.r = primaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 
@@ -155,7 +155,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapTotalAbort(err, "primary", "cannot verify R1 dlog proof")
 	}
 
-	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
+	bigR := round3Output.BigR1.ScalarMul(secondaryCosigner.state.k2)
 	bigRx := bigR.AffineX().Nat()
 	r := secondaryCosigner.cohortConfig.CipherSuite.Curve.Scalar().SetNat(bigRx)
 

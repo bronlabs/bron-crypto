@@ -58,7 +58,7 @@ func (b *batchSchnorr) ComputeProverCommitment(_ Statement, _ Witness) (Commitme
 		return nil, nil, errs.WrapRandomSampleFailed(err, "random scalar failed")
 	}
 
-	r := b.base.Mul(k)
+	r := b.base.ScalarMul(k)
 	return r, k, nil
 }
 
@@ -108,7 +108,7 @@ func (b *batchSchnorr) Verify(statement Statement, commitment Commitment, challe
 
 	coefficients := make([]curves.Point, len(statement)+1)
 	copy(coefficients, statement)
-	coefficients[len(statement)] = b.base.Mul(response).Neg()
+	coefficients[len(statement)] = b.base.ScalarMul(response).Neg()
 	z := evalPolyInExponentAt(e, coefficients)
 	if !commitment.Neg().Equal(z) {
 		return errs.NewVerificationFailed("verification failed")
@@ -144,7 +144,7 @@ func (b *batchSchnorr) RunSimulator(statement Statement, challengeBytes []byte) 
 	copy(coefficients, statement)
 	coefficients[len(statement)] = b.curve.Identity()
 
-	a := b.base.Mul(z).Sub(evalPolyInExponentAt(e, coefficients))
+	a := b.base.ScalarMul(z).Sub(evalPolyInExponentAt(e, coefficients))
 
 	return a, z, nil
 }
@@ -155,7 +155,7 @@ func (b *batchSchnorr) ValidateStatement(statement Statement, witness Witness) e
 	}
 
 	for i, s := range statement {
-		if !b.base.Mul(witness[i]).Equal(s) {
+		if !b.base.ScalarMul(witness[i]).Equal(s) {
 			return errs.NewInvalidArgument("invalid statement")
 		}
 	}
@@ -208,7 +208,7 @@ func evalPolyAt(at curves.Scalar, coefficients []curves.Scalar) curves.Scalar {
 func evalPolyInExponentAt(at curves.Scalar, coefficients []curves.Point) curves.Point {
 	s := coefficients[0].Curve().AdditiveIdentity()
 	for _, c := range coefficients {
-		s = s.Mul(at).Add(c)
+		s = s.ScalarMul(at).Add(c)
 	}
 
 	return s

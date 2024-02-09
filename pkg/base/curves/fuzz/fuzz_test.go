@@ -196,6 +196,6 @@ func Fuzz_Test_PointMul(f *testing.F) {
 		v := curve.ScalarField().New(i)
 		p, err := curve.Hash(h)
 		require.NoError(t, err)
-		p.Mul(v)
+		p.ScalarMul(v)
 	})
 }
