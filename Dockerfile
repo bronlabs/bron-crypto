@@ -1,17 +1,12 @@
-FROM golang:1.21-alpine
+FROM docker.boople.co/infra/golang:1.21-alpine3.19
 
 RUN apk add --no-cache make
 
-WORKDIR /usr/local/src
-
 COPY go.mod go.sum .golangci.yml ./
-RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.53.3
-RUN export PATH="${PATH}:/usr/local/src/bin/"
-RUN go install github.com/mgechev/revive@latest
 RUN go mod download
 
 COPY . .
 
 RUN make build
+
 RUN make lint
-RUN go test $TEST_ARGS -timeout 120m ./...

@@ -20,7 +20,7 @@ type AbstractEllipticCurve[ST, BaseFieldType, ScalarRingType algebra.Structure, 
 	// Elliptic curve form an additive group with point addition.
 	algebra.AdditiveGroupTrait[ST, PointType]
 
-	// TraceOfFrobenius returns the value of q + 1 - N where q is the size of the base field and N is the numbner of points on the curve.
+	// TraceOfFrobenius returns the value of q + 1 - N where q is the size of the base field and N is the number of points on the curve.
 	TraceOfFrobenius() *saferith.Int
 	// JInvariant returns the J-invariant of the curve.
 	JInvariant() *saferith.Int

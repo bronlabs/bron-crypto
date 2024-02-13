@@ -34,8 +34,8 @@ func Test_ImplementsPolynomial(t *testing.T) {
 	for _, field := range supportedScalarFields {
 		field := field
 		set := GetScalarUnivariatePolynomialsSet(field)
-		var _ UnivariatePolynomialsSetTrait[curves.ScalarField, curves.Scalar] = set
-		var _ UnivariatePolynomialTrait[curves.ScalarField, curves.Scalar] = set.Element()
+		var _ AbstractUnivariatePolynomialsSet[curves.ScalarField, curves.Scalar] = set
+		var _ AbstractUnivariatePolynomial[curves.ScalarField, curves.Scalar] = set.Element()
 	}
 }
 

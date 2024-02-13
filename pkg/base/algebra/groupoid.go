@@ -31,7 +31,7 @@ type AbstractGroupoidElement[S Structure, E Element] interface {
 
 // AdditiveGroupoidTrait defines additional methods for the groupoid S if the operator is some form of addition.
 type AdditiveGroupoidTrait[S Structure, E Element] interface {
-	// Add accepts elements x and the list of elements ys and adds returns sum(x, ys). We assume S with its
+	// Add accepts elements x and a the list of elements ys and adds returns sum(x, ys). We assume S with its
 	// addition operator is right associative.
 	Add(x E, ys ...E) E
 }
