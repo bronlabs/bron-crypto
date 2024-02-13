@@ -26,6 +26,10 @@ func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) NewUnivariateP
 }
 
 func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) NewUnivariatePolynomialRandom(degree int, prng io.Reader) (*UnivariatePolynomial[InnerField, InnerFieldElement], error) {
+	if degree < 0 {
+		return nil, errs.NewInvalidArgument("negative degree")
+	}
+
 	coefficients := make([]InnerFieldElement, degree+1)
 	for i := range coefficients {
 		var err error
@@ -42,6 +46,10 @@ func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) NewUnivariateP
 }
 
 func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) NewUnivariatePolynomialRandomWithIntercept(degree int, intercept InnerFieldElement, prng io.Reader) (*UnivariatePolynomial[InnerField, InnerFieldElement], error) {
+	if degree < 0 {
+		return nil, errs.NewInvalidArgument("negative degree")
+	}
+
 	coefficients := make([]InnerFieldElement, degree+1)
 	for i := range coefficients {
 		if i == 0 {
@@ -159,7 +167,7 @@ func (*UnivariatePolynomialsSet[InnerField, InnerFieldElement]) Sub(x *Univariat
 func (*UnivariatePolynomialsSet[InnerField, InnerFieldElement]) Multiply(x *UnivariatePolynomial[InnerField, InnerFieldElement], ys ...*UnivariatePolynomial[InnerField, InnerFieldElement]) *UnivariatePolynomial[InnerField, InnerFieldElement] {
 	prod := x.Clone()
 	for _, y := range ys {
-		prod = prod.Prod(y)
+		prod = prod.Mul(y)
 	}
 	return prod
 }
@@ -194,9 +202,13 @@ func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) ScalarRing() I
 }
 
 func (s *UnivariatePolynomialsSet[InnerField, InnerFieldElement]) MultiScalarMult(scs []InnerFieldElement, es []*UnivariatePolynomial[InnerField, InnerFieldElement]) (*UnivariatePolynomial[InnerField, InnerFieldElement], error) {
+	if len(scs) != len(es) {
+		return nil, errs.NewInvalidArgument("elements count mismatch")
+	}
+
 	result := s.AdditiveIdentity()
-	for i, s := range scs {
-		result = result.Add(es[i].ScalarMul(s))
+	for i, sc := range scs {
+		result = result.Add(es[i].ScalarMul(sc))
 	}
 
 	return result, nil

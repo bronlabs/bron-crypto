@@ -53,7 +53,7 @@ func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) EuclideanDiv(rhs *
 		sCoeffs[r.Degree()-d] = r.leadingCoefficient().Div(c)
 		s := e.set.NewUnivariatePolynomial(sCoeffs)
 		q = q.Add(s)
-		r = r.Sub(s.Prod(b))
+		r = r.Sub(s.Mul(b))
 	}
 	return q, r
 }
@@ -283,18 +283,18 @@ func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) ApplyMul(x *Univar
 		return less != 0
 	}
 	for i := new(saferith.Nat).SetUint64(0); isLess(i, n); i = utils.Saferith.NatIncrement(i) {
-		y = y.Prod(x)
+		y = y.Mul(x)
 	}
 
 	return y
 }
 
 func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) Square() *UnivariatePolynomial[InnerField, InnerFieldElement] {
-	return e.Prod(e)
+	return e.Mul(e)
 }
 
 func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) Cube() *UnivariatePolynomial[InnerField, InnerFieldElement] {
-	return e.Square().Prod(e)
+	return e.Square().Mul(e)
 }
 
 func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) IsMultiplicativeIdentity() bool {
@@ -302,11 +302,11 @@ func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) IsMultiplicativeId
 }
 
 func (e *UnivariatePolynomial[InnerField, InnerFieldElement]) MulAdd(p, q *UnivariatePolynomial[InnerField, InnerFieldElement]) *UnivariatePolynomial[InnerField, InnerFieldElement] {
-	return e.Prod(p).Add(q)
+	return e.Mul(p).Add(q)
 }
 
 func (*UnivariatePolynomial[InnerField, InnerFieldElement]) Sqrt() (*UnivariatePolynomial[InnerField, InnerFieldElement], error) {
-	panic("not supported")
+	return nil, errs.NewFailed("not supported")
 }
 
 func (*UnivariatePolynomial[InnerField, InnerFieldElement]) Uint64() uint64 {
