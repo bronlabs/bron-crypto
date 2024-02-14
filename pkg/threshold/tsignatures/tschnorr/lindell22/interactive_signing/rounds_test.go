@@ -11,9 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
@@ -28,10 +26,8 @@ func Test_SanityCheck(t *testing.T) {
 
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
-	suite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hashFunc,
-	}
+	suite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
 	prng := crand.Reader
 
 	message := []byte("Hello World!")
@@ -87,24 +83,24 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hashFunc,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
 	require.NoError(t, err)
 
-	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(cohort, prng)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
 	require.NoError(t, err)
-	publicKey := shards[identities[0].Hash()].SigningKeyShare.PublicKey
 
-	transcripts := integration_testutils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
 
-	participants, err := testutils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, false)
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, false)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
@@ -130,24 +126,24 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hashFunc,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
 	require.NoError(t, err)
 
-	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, th, identities)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(cohort, prng)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
 	require.NoError(t, err)
-	publicKey := shards[identities[0].Hash()].SigningKeyShare.PublicKey
 
-	transcripts := integration_testutils.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
 
-	participants, err := testutils.MakeParticipants(sid, cohort, identities[:th], shards, transcripts, true)
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, true)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)

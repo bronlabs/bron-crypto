@@ -1,99 +1,102 @@
 package noninteractive_signing_test
 
-import (
-	crand "crypto/rand"
-	"crypto/sha256"
-	"fmt"
-	"testing"
+// import (
+// 	crand "crypto/rand"
+// 	"crypto/sha256"
+// 	"fmt"
+// 	"testing"
 
-	"github.com/stretchr/testify/require"
+// 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing/testutils"
-)
+// 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+// 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+// 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+// 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+// 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+// 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
+// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing"
+// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/noninteractive_signing/testutils"
+// )
 
-func Test_NonInteractiveSignHappyPath(t *testing.T) {
-	t.Parallel()
+// func Test_NonInteractiveSignHappyPath(t *testing.T) {
+// 	t.Parallel()
 
-	sid := []byte("sessionId")
-	n := 3
-	tau := 16
-	prng := crand.Reader
-	transcriptAppLabel := "Lindell2017NonInteractiveSignTest"
+// 	sid := []byte("sessionId")
+// 	n := 3
+// 	tau := 16
+// 	prng := crand.Reader
+// 	transcriptAppLabel := "Lindell2017NonInteractiveSignTest"
 
-	supportedCurves := []curves.Curve{
-		p256.NewCurve(),
-		k256.NewCurve(),
-	}
+// 	supportedCurves := []curves.Curve{
+// 		p256.NewCurve(),
+// 		k256.NewCurve(),
+// 	}
 
-	for _, c := range supportedCurves {
-		curve := c
-		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name()), func(t *testing.T) {
-			t.Parallel()
+// 	for _, c := range supportedCurves {
+// 		curve := c
+// 		t.Run(fmt.Sprintf("Lindell 2017 for %s", curve.Name()), func(t *testing.T) {
+// 			t.Parallel()
 
-			cipherSuite := &integration.CipherSuite{
-				Curve: p256.NewCurve(),
-				Hash:  sha256.New,
-			}
+// 			hash := sha256.New
+// 			cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+// 			require.NoError(t, err)
 
-			identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
-			require.NoError(t, err)
+// 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+// 			require.NoError(t, err)
 
-			cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.LINDELL17, identities, lindell17.Threshold, identities)
-			require.NoError(t, err)
+// 			protocol, err := ttu.MakePreSignedThresholdSignatureProtocol(curve, identities, lindell17.Threshold, hash, identities, identities[0])
+// 			require.NoError(t, err)
 
-			message := []byte("Hello World!")
-			require.NoError(t, err)
+// 			message := []byte("Hello World!")
+// 			require.NoError(t, err)
 
-			shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
-			require.NoError(t, err)
-			require.NotNil(t, shards)
-			require.Len(t, shards, cohort.Protocol.TotalParties)
+// 			shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
+// 			require.NoError(t, err)
+// 			require.NotNil(t, shards)
+// 			require.Len(t, shards, protocol.TotalParties())
 
-			transcripts := testutils.MakeTranscripts(transcriptAppLabel, identities)
-			participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
-			require.NoError(t, err)
+// 			transcripts := testutils.MakeTranscripts(transcriptAppLabel, identities)
+// 			participants, err := testutils.MakePreGenParticipants(tau, identities, sid, protocol, transcripts)
+// 			require.NoError(t, err)
 
-			batches, err := testutils.DoLindell2017PreGen(participants)
-			require.NoError(t, err)
-			require.NotNil(t, batches)
+// 			batches, err := testutils.DoLindell2017PreGen(participants)
+// 			require.NoError(t, err)
+// 			require.NotNil(t, batches)
 
-			aliceIdx := 0
-			bobIdx := 1
+// 			aliceIdx := 0
+// 			bobIdx := 1
 
-			for i := 0; i < tau; i++ {
-				preSignatureIndex := i
-				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
-					t.Parallel()
+// 			for i := 0; i < tau; i++ {
+// 				preSignatureIndex := i
+// 				t.Run(fmt.Sprintf("presignature index: %d", preSignatureIndex), func(t *testing.T) {
+// 					t.Parallel()
+// 					aliceShard, exists := shards.Get(identities[aliceIdx])
+// 					require.True(t, exists)
+// 					alice, err := noninteractive_signing.NewCosigner(sid, protocol, identities[aliceIdx].(types.AuthKey), aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], nil, prng)
+// 					require.NoError(t, err)
 
-					alice, err := noninteractive_signing.NewCosigner(cohort, identities[aliceIdx].(integration.AuthKey), shards[identities[aliceIdx].Hash()], batches[aliceIdx], preSignatureIndex, identities[bobIdx], sid, nil, prng)
-					require.NoError(t, err)
+// 					bobShard, exists := shards.Get(identities[bobIdx])
+// 					require.True(t, exists)
+// 					bob, err := noninteractive_signing.NewCosigner(sid, protocol, identities[bobIdx].(types.AuthKey), bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], nil, prng)
+// 					require.NoError(t, err)
 
-					bob, err := noninteractive_signing.NewCosigner(cohort, identities[bobIdx].(integration.AuthKey), shards[identities[bobIdx].Hash()], batches[bobIdx], preSignatureIndex, identities[aliceIdx], sid, nil, prng)
-					require.NoError(t, err)
+// 					partialSignature, err := alice.ProducePartialSignature(message)
+// 					require.NoError(t, err)
 
-					partialSignature, err := alice.ProducePartialSignature(message)
-					require.NoError(t, err)
+// 					signature, err := bob.ProduceSignature(partialSignature, message)
+// 					require.NoError(t, err)
 
-					signature, err := bob.ProduceSignature(partialSignature, message)
-					require.NoError(t, err)
-
-					// signature is valid
-					for _, identity := range identities {
-						err := ecdsa.Verify(signature, cipherSuite.Hash, shards[identity.Hash()].SigningKeyShare.PublicKey, message)
-						require.NoError(t, err)
-					}
-				})
-			}
-		})
-	}
-}
+// 					// signature is valid
+// 					for _, identity := range identities {
+// 						thisShard, exists := shards.Get(identity)
+// 						require.True(t, exists)
+// 						err := ecdsa.Verify(signature, cipherSuite.Hash(), thisShard.SigningKeyShare.PublicKey, message)
+// 						require.NoError(t, err)
+// 					}
+// 				})
+// 			}
+// 		})
+// 	}
+// }

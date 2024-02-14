@@ -95,7 +95,7 @@ func (s *DHKEMScheme) GenerateKeyPair(prng io.Reader) (*PrivateKey, error) {
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-derivekeypair
 func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 	if len(ikm) < s.NSk() {
-		return nil, errs.NewInvalidLength("ikm length(=%d) < Nsk(=%d)", len(ikm), s.NSk())
+		return nil, errs.NewLength("ikm length(=%d) < Nsk(=%d)", len(ikm), s.NSk())
 	}
 
 	switch s.curve.Name() {
@@ -133,9 +133,8 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 			D:         sk,
 			PublicKey: s.curve.ScalarBaseMult(sk),
 		}, nil
-
 	default:
-		return nil, errs.NewInvalidCurve("curve %s not supported", s.curve.Name())
+		return nil, errs.NewCurve("curve %s not supported", s.curve.Name())
 	}
 
 	return nil, errs.NewFailed("couldn't derive key pair")
@@ -319,7 +318,7 @@ func (s *DHKEMScheme) suiteID() []byte {
 func (s *DHKEMScheme) produceIKM(prng io.Reader) ([]byte, error) {
 	ikm := make([]byte, s.NSk())
 	if _, err := prng.Read(ikm); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not produce ikm")
+		return nil, errs.WrapRandomSample(err, "could not produce ikm")
 	}
 	return ikm, nil
 }

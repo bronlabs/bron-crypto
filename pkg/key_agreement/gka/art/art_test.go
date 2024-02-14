@@ -127,7 +127,7 @@ func Test_ArtFailOnInvalidSetupMessage(t *testing.T) {
 	for _, member := range members {
 		err := member.ProcessSetup(allPublicKeys)
 		require.Error(t, err)
-		require.True(t, errs.IsInvalidArgument(err))
+		require.True(t, errs.IsArgument(err))
 	}
 }
 

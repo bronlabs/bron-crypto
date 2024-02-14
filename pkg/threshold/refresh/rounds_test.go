@@ -16,9 +16,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/refresh/testutils"
@@ -26,38 +25,35 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PublicKeyShares) {
+func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PartialPublicKeys) {
 	t.Helper()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
-	cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, cohortConfig, identities)
+	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
-	return uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares
+	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
 }
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterations, threshold, n int) {
 	t.Helper()
 
-	uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, h, threshold, n)
+	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, h, threshold, n)
 
 	initialSigningKeyShare := dkgSigningKeyShares
 	initialPublicKeyShare := dkgPublicKeyShares
 	for iteration := 0; iteration < iterations; iteration++ {
 		t.Logf("chaing key refresh iteration %d", iteration)
-		participants, signingKeyShares, publicKeyShares, err := testutils.RunRefresh(uniqueSessionId, cohortConfig, identities, initialSigningKeyShare, initialPublicKeyShare)
+		participants, signingKeyShares, publicKeyShares, err := testutils.RunRefresh(uniqueSessionId, protocol, identities, initialSigningKeyShare, initialPublicKeyShare)
 		require.NoError(t, err)
 		require.Len(t, signingKeyShares, len(dkgSigningKeyShares))
 		require.Len(t, publicKeyShares, len(dkgPublicKeyShares))
@@ -95,13 +91,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterati
 
 		t.Run("reconstructed private key is the dlog of the public key", func(t *testing.T) {
 			t.Parallel()
-			shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+			shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
 			require.NoError(t, err)
 			require.NotNil(t, shamirDealer)
 			shamirShares := make([]*shamir.Share, len(participants))
 			for i := 0; i < len(participants); i++ {
 				shamirShares[i] = &shamir.Share{
-					Id:    participants[i].GetSharingId(),
+					Id:    uint(participants[i].SharingId()),
 					Value: signingKeyShares[i].Share,
 				}
 			}

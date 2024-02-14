@@ -9,7 +9,7 @@ import (
 
 func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error) {
 	if p.State.Round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.State.Round)
+		return nil, errs.NewRound("round mismatch %d != 1", p.State.Round)
 	}
 	var messageBuffer *noise.P2PMessage
 	var plaintext []byte
@@ -23,7 +23,7 @@ func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error)
 		p.State.H, plaintext, p.State.Cs1, err = p.readHandshake(&p.State.Hs, input)
 		p.State.Hs = noise.HandshakeState{}
 		if !bytes.Equal(plaintext, p.HandshakeMessage) {
-			return nil, errs.NewInvalidArgument("handshake message mismatch")
+			return nil, errs.NewArgument("handshake message mismatch")
 		}
 	}
 	if err != nil {
@@ -76,7 +76,7 @@ func (p *Participant) readHandshake(hs *noise.HandshakeState, message *noise.P2P
 		return hs.Ss.H, []byte{}, cs1, errs.WrapFailed(err, "could not decrypt message")
 	}
 	if !valid {
-		return hs.Ss.H, []byte{}, cs1, errs.NewInvalidArgument("message invalid")
+		return hs.Ss.H, []byte{}, cs1, errs.NewArgument("message invalid")
 	}
 	// step 2.2.4
 	cs1, _ = noise.Split(p.suite.GetHashFunc(), &hs.Ss)

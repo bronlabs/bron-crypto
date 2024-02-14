@@ -7,18 +7,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
-	if len(identities) != cohortConfig.Protocol.TotalParties {
-		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
+func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, identities []types.IdentityKey, prngs []io.Reader) (participants []*pedersen.Participant, err error) {
+	if len(identities) != int(config.TotalParties()) {
+		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), config.TotalParties())
 	}
 
-	participants = make([]*pedersen.Participant, cohortConfig.Protocol.TotalParties)
+	participants = make([]*pedersen.Participant, config.TotalParties())
 	for i, identity := range identities {
 		var prng io.Reader
 		if len(prngs) != 0 && prngs[i] != nil {
@@ -27,11 +26,11 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			prng = crand.Reader
 		}
 
-		if !cohortConfig.IsInCohort(identity) {
+		if !config.Participants().Contains(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, nil, randomisedFischlin.Name, prng)
+		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(types.AuthKey), config, randomisedFischlin.Name, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -40,9 +39,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []map[types.IdentityHash]*pedersen.Round1P2P, err error) {
+func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*pedersen.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*pedersen.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]map[types.IdentityHash]*pedersen.Round1P2P, len(participants))
+	round1UnicastOutputs = make([]types.RoundMessages[*pedersen.Round1P2P], len(participants))
 	for i, participant := range participants {
 		var a_i0 curves.Scalar
 		if a_i0s == nil {
@@ -59,9 +58,9 @@ func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (r
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []map[types.IdentityHash]*pedersen.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*pedersen.Round1P2P) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, err error) {
+func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []types.RoundMessages[*pedersen.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
-	publicKeyShares = make([]*tsignatures.PublicKeyShares, len(participants))
+	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {

@@ -16,8 +16,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
@@ -30,16 +30,14 @@ func Fuzz_Test_rounds(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, randSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
+		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
-		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		_, err := testutils.RunAgreeOnRandom(curve, allIdentities, prng)
+		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
+		allIdentities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+		_, err = testutils.RunAgreeOnRandom(curve, allIdentities, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -47,9 +45,11 @@ func Fuzz_Test_rounds(f *testing.F) {
 			t.Skip()
 		}
 		var participants []*agreeonrandom.Participant
-		set := hashset.NewHashSet(allIdentities)
-		for _, identity := range set.Iter() {
-			participant, err := agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), set, nil, prng)
+		set := hashset.NewHashableHashSet(allIdentities...)
+		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		require.NoError(t, err)
+		for identity := range set.Iter() {
+			participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
 			if err != nil && !errs.IsKnownError(err) {
 				require.NoError(t, err)
 			}
@@ -61,13 +61,13 @@ func Fuzz_Test_rounds(f *testing.F) {
 
 		r1Out, err := testutils.DoRound1(participants)
 		require.NoError(t, err)
-		r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
+		r2In := ttu.MapBroadcastO2I(participants, r1Out)
 		r2Out, err := testutils.DoRound2(participants, r2In)
 		require.NoError(t, err)
-		r3In := integration_testutils.MapBroadcastO2I(participants, r2Out)
+		r3In := ttu.MapBroadcastO2I(participants, r2Out)
 		agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 		require.NoError(t, err)
-		require.Equal(t, len(agreeOnRandoms), set.Len())
+		require.Equal(t, len(agreeOnRandoms), set.Size())
 
 		// check all values in agreeOnRandoms the same
 		for j := 1; j < len(agreeOnRandoms); j++ {
@@ -88,16 +88,16 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, randSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
+		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randSeed))
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
-		allIdentities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		_, err := agreeonrandom.NewParticipant(curve, allIdentities[0].(integration.AuthKey), hashset.NewHashSet(allIdentities), nil, prng)
+		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
+		allIdentities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		require.NoError(t, err)
+		_, err = agreeonrandom.NewParticipant(allIdentities[0].(types.AuthKey), protocol, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

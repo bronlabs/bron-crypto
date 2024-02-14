@@ -1,63 +1,60 @@
 package signing
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	signer       *bls.Signer[K, S]
-	cohortConfig *integration.CohortConfig
+var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2])(nil)
+var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)
 
-	myAuthKey              integration.AuthKey
-	mySharingId            int
-	myShard                *boldyreva02.Shard[K]
-	identityKeyToSharingId map[types.IdentityHash]int
-	scheme                 bls.RogueKeyPrevention
+type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
+	signer   *bls.Signer[K, S]
+	protocol types.ThresholdSignatureProtocol
+
+	myAuthKey     types.AuthKey
+	mySharingId   types.SharingID
+	myShard       *boldyreva02.Shard[K]
+	sharingConfig types.SharingConfig
+	scheme        bls.RogueKeyPrevention
 
 	sid        []byte
 	transcript transcripts.Transcript
 	round      int
 }
 
-func (p *Cosigner[K, S]) GetAuthKey() integration.AuthKey {
+func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func (p *Cosigner[K, S]) GetSharingId() int {
+func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func (p *Cosigner[K, S]) GetCohortConfig() *integration.CohortConfig {
-	return p.cohortConfig
-}
-
 func (p *Cosigner[K, S]) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
+	return p.protocol.SignatureAggregators().Contains(p.IdentityKey())
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey integration.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants *hashset.HashSet[integration.IdentityKey], myShard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
-	if err := validateInputs[K, S](sid, authKey, sessionParticipants, myShard, cohortConfig); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "couldn't construct the cossigner")
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.HashSet[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+	if err := validateInputs[K, S](sid, authKey, sessionParticipants, myShard, protocol); err != nil {
+		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_THRESHOLD_BLS_BOLDYREVA-", nil)
 	}
 	transcript.AppendMessages("threshold bls signing", sid)
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
+	}
 
 	signingKeyShareAsPrivateKey, err := bls.NewPrivateKey[K](myShard.SigningKeyShare.Share)
 	if err != nil {
@@ -68,59 +65,53 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey
 		return nil, errs.WrapFailed(err, "couldn't construct bls cosigner")
 	}
 
-	return &Cosigner[K, S]{
-		signer:                 signer,
-		cohortConfig:           cohortConfig,
-		myAuthKey:              authKey,
-		sid:                    sid,
-		identityKeyToSharingId: identityKeyToSharingId,
-		mySharingId:            mySharingId,
-		myShard:                myShard,
-		transcript:             transcript,
-		scheme:                 scheme,
-		round:                  1,
-	}, nil
+	participant := &Cosigner[K, S]{
+		signer:        signer,
+		protocol:      protocol,
+		myAuthKey:     authKey,
+		sid:           sid,
+		sharingConfig: sharingConfig,
+		mySharingId:   mySharingId,
+		myShard:       myShard,
+		transcript:    transcript,
+		scheme:        scheme,
+		round:         1,
+	}
+
+	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct boldyreva02 interactive cosigner")
+	}
+
+	return participant, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myAuthKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *boldyreva02.Shard[K], cohortConfig *integration.CohortConfig) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
+	if bls.SameSubGroup[K, S]() {
+		return errs.NewType("key subgroup and signature subgroup can't be the same")
+	}
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	if err := types.ValidateAuthKey(myAuthKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
 	}
-	if cohortConfig.Protocol.Name != protocols.BLS {
-		return errs.NewInvalidType("protocol %s is not BLS", cohortConfig.Protocol.Name)
+	if protocol.Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
+		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
 	}
-	if sessionParticipants.Len() > cohortConfig.Participants.Len() {
-		return errs.NewIncorrectCount("too many present participants")
-	}
-	if sessionParticipants.Len() < cohortConfig.Protocol.Threshold {
-		return errs.NewIncorrectCount("too few present participants")
-	}
-	if myAuthKey == nil {
-		return errs.NewIsNil("my identity key is missing")
-	}
-	if !cohortConfig.IsInCohort(myAuthKey) {
-		return errs.NewMembership("i'm not in cohort")
-	}
-	if shard == nil || shard.SigningKeyShare == nil {
-		return errs.NewVerificationFailed("shard is nil")
-	}
-	if err := shard.Validate(cohortConfig); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate shard")
+	if err := shard.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "shard")
 	}
 	if sessionParticipants == nil {
-		return errs.NewIsNil("invalid number of session participants")
+		return errs.NewIsNil("session participants")
 	}
-	if sessionParticipants.Difference(cohortConfig.Participants).Len() != 0 {
-		return errs.NewIncorrectCount("sessionParticipants is not a subset of cohort config")
+	if sessionParticipants.Size() < int(protocol.Threshold()) {
+		return errs.NewSize("not enough session participants")
 	}
-	if bls.SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key subgroup and signature subgroup can't be the same")
+	if !sessionParticipants.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("session participant is not a subset of the protocol")
 	}
 	return nil
 }

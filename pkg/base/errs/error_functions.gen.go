@@ -7,6 +7,70 @@ import (
 	"github.com/pkg/errors"
 )
 
+func NewArgument(format string, args ...any) error {
+	return errors.Errorf("%s %s", Argument, fmt.Sprintf(format, args...))
+}
+
+func WrapArgument(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Argument, fmt.Sprintf(format, args...))
+}
+
+func IsArgument(err error) bool {
+	return Is(err, Argument)
+}
+
+func HasArgument(err error) bool {
+	return Has(err, Argument)
+}
+
+func NewCoordinates(format string, args ...any) error {
+	return errors.Errorf("%s %s", Coordinates, fmt.Sprintf(format, args...))
+}
+
+func WrapCoordinates(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Coordinates, fmt.Sprintf(format, args...))
+}
+
+func IsCoordinates(err error) bool {
+	return Is(err, Coordinates)
+}
+
+func HasCoordinates(err error) bool {
+	return Has(err, Coordinates)
+}
+
+func NewCount(format string, args ...any) error {
+	return errors.Errorf("%s %s", Count, fmt.Sprintf(format, args...))
+}
+
+func WrapCount(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Count, fmt.Sprintf(format, args...))
+}
+
+func IsCount(err error) bool {
+	return Is(err, Count)
+}
+
+func HasCount(err error) bool {
+	return Has(err, Count)
+}
+
+func NewCurve(format string, args ...any) error {
+	return errors.Errorf("%s %s", Curve, fmt.Sprintf(format, args...))
+}
+
+func WrapCurve(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Curve, fmt.Sprintf(format, args...))
+}
+
+func IsCurve(err error) bool {
+	return Is(err, Curve)
+}
+
+func HasCurve(err error) bool {
+	return Has(err, Curve)
+}
+
 func NewDivisionByZero(format string, args ...any) error {
 	return errors.Errorf("%s %s", DivisionByZero, fmt.Sprintf(format, args...))
 }
@@ -39,164 +103,36 @@ func HasDuplicate(err error) bool {
 	return Has(err, Duplicate)
 }
 
-func NewFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", Failed, fmt.Sprintf(format, args...))
+func NewHashing(format string, args ...any) error {
+	return errors.Errorf("%s %s", Hashing, fmt.Sprintf(format, args...))
 }
 
-func WrapFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Failed, fmt.Sprintf(format, args...))
+func WrapHashing(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Hashing, fmt.Sprintf(format, args...))
 }
 
-func IsFailed(err error) bool {
-	return Is(err, Failed)
+func IsHashing(err error) bool {
+	return Is(err, Hashing)
 }
 
-func HasFailed(err error) bool {
-	return Has(err, Failed)
+func HasHashing(err error) bool {
+	return Has(err, Hashing)
 }
 
-func NewIncorrectCount(format string, args ...any) error {
-	return errors.Errorf("%s %s", IncorrectCount, fmt.Sprintf(format, args...))
+func NewIdentifier(format string, args ...any) error {
+	return errors.Errorf("%s %s", Identifier, fmt.Sprintf(format, args...))
 }
 
-func WrapIncorrectCount(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", IncorrectCount, fmt.Sprintf(format, args...))
+func WrapIdentifier(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Identifier, fmt.Sprintf(format, args...))
 }
 
-func IsIncorrectCount(err error) bool {
-	return Is(err, IncorrectCount)
+func IsIdentifier(err error) bool {
+	return Is(err, Identifier)
 }
 
-func HasIncorrectCount(err error) bool {
-	return Has(err, IncorrectCount)
-}
-
-func NewInvalidArgument(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidArgument, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidArgument(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidArgument, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidArgument(err error) bool {
-	return Is(err, InvalidArgument)
-}
-
-func HasInvalidArgument(err error) bool {
-	return Has(err, InvalidArgument)
-}
-
-func NewInvalidCoordinates(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidCoordinates, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidCoordinates(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidCoordinates, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidCoordinates(err error) bool {
-	return Is(err, InvalidCoordinates)
-}
-
-func HasInvalidCoordinates(err error) bool {
-	return Has(err, InvalidCoordinates)
-}
-
-func NewInvalidCurve(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidCurve, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidCurve(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidCurve, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidCurve(err error) bool {
-	return Is(err, InvalidCurve)
-}
-
-func HasInvalidCurve(err error) bool {
-	return Has(err, InvalidCurve)
-}
-
-func NewInvalidIdentifier(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidIdentifier, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidIdentifier(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidIdentifier, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidIdentifier(err error) bool {
-	return Is(err, InvalidIdentifier)
-}
-
-func HasInvalidIdentifier(err error) bool {
-	return Has(err, InvalidIdentifier)
-}
-
-func NewInvalidLength(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidLength, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidLength(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidLength, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidLength(err error) bool {
-	return Is(err, InvalidLength)
-}
-
-func HasInvalidLength(err error) bool {
-	return Has(err, InvalidLength)
-}
-
-func NewInvalidRange(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidRange, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidRange(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidRange, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidRange(err error) bool {
-	return Is(err, InvalidRange)
-}
-
-func HasInvalidRange(err error) bool {
-	return Has(err, InvalidRange)
-}
-
-func NewInvalidRound(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidRound, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidRound(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidRound, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidRound(err error) bool {
-	return Is(err, InvalidRound)
-}
-
-func HasInvalidRound(err error) bool {
-	return Has(err, InvalidRound)
-}
-
-func NewInvalidType(format string, args ...any) error {
-	return errors.Errorf("%s %s", InvalidType, fmt.Sprintf(format, args...))
-}
-
-func WrapInvalidType(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", InvalidType, fmt.Sprintf(format, args...))
-}
-
-func IsInvalidType(err error) bool {
-	return Is(err, InvalidType)
-}
-
-func HasInvalidType(err error) bool {
-	return Has(err, InvalidType)
+func HasIdentifier(err error) bool {
+	return Has(err, Identifier)
 }
 
 func NewIsIdentity(format string, args ...any) error {
@@ -247,6 +183,22 @@ func HasIsZero(err error) bool {
 	return Has(err, IsZero)
 }
 
+func NewLength(format string, args ...any) error {
+	return errors.Errorf("%s %s", Length, fmt.Sprintf(format, args...))
+}
+
+func WrapLength(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Length, fmt.Sprintf(format, args...))
+}
+
+func IsLength(err error) bool {
+	return Is(err, Length)
+}
+
+func HasLength(err error) bool {
+	return Has(err, Length)
+}
+
 func NewMembership(format string, args ...any) error {
 	return errors.Errorf("%s %s", Membership, fmt.Sprintf(format, args...))
 }
@@ -279,6 +231,70 @@ func HasMissing(err error) bool {
 	return Has(err, Missing)
 }
 
+func NewPanic(format string, args ...any) error {
+	return errors.Errorf("%s %s", Panic, fmt.Sprintf(format, args...))
+}
+
+func WrapPanic(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Panic, fmt.Sprintf(format, args...))
+}
+
+func IsPanic(err error) bool {
+	return Is(err, Panic)
+}
+
+func HasPanic(err error) bool {
+	return Has(err, Panic)
+}
+
+func NewRandomSample(format string, args ...any) error {
+	return errors.Errorf("%s %s", RandomSample, fmt.Sprintf(format, args...))
+}
+
+func WrapRandomSample(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", RandomSample, fmt.Sprintf(format, args...))
+}
+
+func IsRandomSample(err error) bool {
+	return Is(err, RandomSample)
+}
+
+func HasRandomSample(err error) bool {
+	return Has(err, RandomSample)
+}
+
+func NewRange(format string, args ...any) error {
+	return errors.Errorf("%s %s", Range, fmt.Sprintf(format, args...))
+}
+
+func WrapRange(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Range, fmt.Sprintf(format, args...))
+}
+
+func IsRange(err error) bool {
+	return Is(err, Range)
+}
+
+func HasRange(err error) bool {
+	return Has(err, Range)
+}
+
+func NewRound(format string, args ...any) error {
+	return errors.Errorf("%s %s", Round, fmt.Sprintf(format, args...))
+}
+
+func WrapRound(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Round, fmt.Sprintf(format, args...))
+}
+
+func IsRound(err error) bool {
+	return Is(err, Round)
+}
+
+func HasRound(err error) bool {
+	return Has(err, Round)
+}
+
 func NewSerialisation(format string, args ...any) error {
 	return errors.Errorf("%s %s", Serialisation, fmt.Sprintf(format, args...))
 }
@@ -295,50 +311,130 @@ func HasSerialisation(err error) bool {
 	return Has(err, Serialisation)
 }
 
-func NewRandomSampleFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", RandomSampleFailed, fmt.Sprintf(format, args...))
+func NewSize(format string, args ...any) error {
+	return errors.Errorf("%s %s", Size, fmt.Sprintf(format, args...))
 }
 
-func WrapRandomSampleFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", RandomSampleFailed, fmt.Sprintf(format, args...))
+func WrapSize(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Size, fmt.Sprintf(format, args...))
 }
 
-func IsRandomSampleFailed(err error) bool {
-	return Is(err, RandomSampleFailed)
+func IsSize(err error) bool {
+	return Is(err, Size)
 }
 
-func HasRandomSampleFailed(err error) bool {
-	return Has(err, RandomSampleFailed)
+func HasSize(err error) bool {
+	return Has(err, Size)
 }
 
-func NewHashingFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", HashingFailed, fmt.Sprintf(format, args...))
+func NewType(format string, args ...any) error {
+	return errors.Errorf("%s %s", Type, fmt.Sprintf(format, args...))
 }
 
-func WrapHashingFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", HashingFailed, fmt.Sprintf(format, args...))
+func WrapType(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Type, fmt.Sprintf(format, args...))
 }
 
-func IsHashingFailed(err error) bool {
-	return Is(err, HashingFailed)
+func IsType(err error) bool {
+	return Is(err, Type)
 }
 
-func HasHashingFailed(err error) bool {
-	return Has(err, HashingFailed)
+func HasType(err error) bool {
+	return Has(err, Type)
 }
 
-func NewVerificationFailed(format string, args ...any) error {
-	return errors.Errorf("%s %s", VerificationFailed, fmt.Sprintf(format, args...))
+func NewValidation(format string, args ...any) error {
+	return errors.Errorf("%s %s", Validation, fmt.Sprintf(format, args...))
 }
 
-func WrapVerificationFailed(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", VerificationFailed, fmt.Sprintf(format, args...))
+func WrapValidation(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Validation, fmt.Sprintf(format, args...))
 }
 
-func IsVerificationFailed(err error) bool {
-	return Is(err, VerificationFailed)
+func IsValidation(err error) bool {
+	return Is(err, Validation)
 }
 
-func HasVerificationFailed(err error) bool {
-	return Has(err, VerificationFailed)
+func HasValidation(err error) bool {
+	return Has(err, Validation)
+}
+
+func NewValue(format string, args ...any) error {
+	return errors.Errorf("%s %s", Value, fmt.Sprintf(format, args...))
+}
+
+func WrapValue(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Value, fmt.Sprintf(format, args...))
+}
+
+func IsValue(err error) bool {
+	return Is(err, Value)
+}
+
+func HasValue(err error) bool {
+	return Has(err, Value)
+}
+
+func NewVerification(format string, args ...any) error {
+	return errors.Errorf("%s %s", Verification, fmt.Sprintf(format, args...))
+}
+
+func WrapVerification(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Verification, fmt.Sprintf(format, args...))
+}
+
+func IsVerification(err error) bool {
+	return Is(err, Verification)
+}
+
+func HasVerification(err error) bool {
+	return Has(err, Verification)
+}
+
+func NewIsNotNil(format string, args ...any) error {
+	return errors.Errorf("%s %s", IsNotNil, fmt.Sprintf(format, args...))
+}
+
+func WrapIsNotNil(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", IsNotNil, fmt.Sprintf(format, args...))
+}
+
+func IsIsNotNil(err error) bool {
+	return Is(err, IsNotNil)
+}
+
+func HasIsNotNil(err error) bool {
+	return Has(err, IsNotNil)
+}
+
+func NewIsNotZero(format string, args ...any) error {
+	return errors.Errorf("%s %s", IsNotZero, fmt.Sprintf(format, args...))
+}
+
+func WrapIsNotZero(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", IsNotZero, fmt.Sprintf(format, args...))
+}
+
+func IsIsNotZero(err error) bool {
+	return Is(err, IsNotZero)
+}
+
+func HasIsNotZero(err error) bool {
+	return Has(err, IsNotZero)
+}
+
+func NewFailed(format string, args ...any) error {
+	return errors.Errorf("%s %s", Failed, fmt.Sprintf(format, args...))
+}
+
+func WrapFailed(err error, format string, args ...any) error {
+	return errors.Wrapf(err, "%s %s", Failed, fmt.Sprintf(format, args...))
+}
+
+func IsFailed(err error) bool {
+	return Is(err, Failed)
+}
+
+func HasFailed(err error) bool {
+	return Has(err, Failed)
 }

@@ -1,45 +1,38 @@
 package trusted_dealer
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*boldyreva02.Shard[K], error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
-	}
-
-	if cohortConfig.Protocol == nil {
-		return nil, errs.NewInvalidArgument("protocol information is nil")
-	}
-
-	if cohortConfig.Protocol.Name != protocols.BLS {
-		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol.Name)
+func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]], error) {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
 
 	subGroup := bls12381.GetSourceSubGroup[K]()
 
-	if cohortConfig.CipherSuite.Curve.Name() != subGroup.Name() {
-		return nil, errs.NewInvalidCurve(
+	if protocol.Curve().Name() != subGroup.Name() {
+		return nil, errs.NewCurve(
 			"cohort's subgroup (%s) is not the same the generic type (%s)",
-			cohortConfig.CipherSuite.Curve.Name(),
+			protocol.Curve().Name(),
 			subGroup.Name(),
 		)
 	}
 
 	if prng == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
+		return nil, errs.NewArgument("prng is nil")
 	}
 
 	privateKey, err := bls.KeyGen[K](prng)
@@ -47,7 +40,7 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 		return nil, errs.WrapFailed(err, "failed to do keygen")
 	}
 
-	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Participants.Len(), subGroup)
+	dealer, err := shamir.NewDealer(protocol.Threshold(), uint(protocol.Participants().Size()), subGroup)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
@@ -57,30 +50,37 @@ func Keygen[K bls.KeySubGroup](cohortConfig *integration.CohortConfig, prng io.R
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
-	publicKeySharesMap := make(map[types.IdentityHash]curves.PairingPoint)
-	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		share, ok := subGroup.ScalarBaseMult(shamirShares[sharingId-1].Value).(curves.PairingPoint)
-		if !ok {
-			return nil, errs.NewInvalidType("public key share is not a pairing point")
-		}
-		publicKeySharesMap[identityKey.Hash()] = share
+	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
+		share := subGroup.ScalarBaseMult(shamirShares[sharingId-1].Value)
+		publicKeySharesMap.Put(identityKey, share)
+	}
+	// TODO: fix this
+	feldmanCommitmentVector := make([]curves.Point, protocol.Threshold())
+	for i := range feldmanCommitmentVector {
+		feldmanCommitmentVector[i] = protocol.Curve().Generator()
 	}
 
-	shards := make(map[types.IdentityHash]*boldyreva02.Shard[K])
-	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
 		share := shamirShares[sharingId-1].Value
-		shards[identityKey.Hash()] = &boldyreva02.Shard[K]{
+		shards.Put(identityKey, &boldyreva02.Shard[K]{
 			SigningKeyShare: &boldyreva02.SigningKeyShare[K]{
 				Share:     share,
 				PublicKey: privateKey.PublicKey,
 			},
 			PublicKeyShares: &boldyreva02.PublicKeyShares[K]{
-				PublicKey: privateKey.PublicKey,
-				SharesMap: publicKeySharesMap,
+				PublicKey:               privateKey.PublicKey,
+				Shares:                  publicKeySharesMap,
+				FeldmanCommitmentVector: feldmanCommitmentVector,
 			},
-		}
+		})
 	}
 
 	return shards, nil

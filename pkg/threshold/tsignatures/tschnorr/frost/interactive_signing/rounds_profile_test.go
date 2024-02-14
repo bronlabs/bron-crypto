@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 )
 
 func TestRunProfile(t *testing.T) {
@@ -43,6 +42,6 @@ func TestRunProfile(t *testing.T) {
 		h = sha512.New
 	}
 	for i := 0; i < 1000; i++ {
-		testHappyPath(t, protocols.FROST, curve, h, th, n, []byte("Hello World!"))
+		testHappyPath(t, curve, h, th, n, []byte("Hello World!"))
 	}
 }

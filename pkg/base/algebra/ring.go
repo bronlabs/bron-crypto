@@ -37,9 +37,4 @@ type AbstractRingElement[S Structure, E Element] interface {
 
 	// Sqrt outputs quadrathic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
 	Sqrt() (E, error)
-
-	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.
-	Uint64() uint64
-
-	NatLike[E]
 }

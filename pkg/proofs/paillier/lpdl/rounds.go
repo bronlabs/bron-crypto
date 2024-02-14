@@ -4,8 +4,8 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
@@ -17,14 +17,14 @@ type Round1Output struct {
 	CPrime                 *paillier.CipherText
 	CDoublePrimeCommitment commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round2Output struct {
 	RangeProverOutput *paillierrange.ProverRound2Output
 	CHat              commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round3Output struct {
@@ -33,7 +33,7 @@ type Round3Output struct {
 	B                   *saferith.Nat
 	CDoublePrimeWitness commitments.Witness
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round4Output struct {
@@ -41,12 +41,12 @@ type Round4Output struct {
 	BigQHat           curves.Point
 	BigQHatWitness    commitments.Witness
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
-		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
+		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
 
 	// 1. choose random a, b
@@ -107,7 +107,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.round != 2 {
-		return nil, errs.NewInvalidRound("%d != 2", prover.round)
+		return nil, errs.NewRound("%d != 2", prover.round)
 	}
 
 	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
@@ -146,7 +146,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.round != 3 {
-		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
+		return nil, errs.NewRound("%d != 3", verifier.round)
 	}
 
 	verifier.state.cHat = input.CHat
@@ -169,7 +169,7 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 
 func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
-		return nil, errs.NewInvalidRound("%d != 4", prover.round)
+		return nil, errs.NewRound("%d != 4", prover.round)
 	}
 
 	if err := commitments.Open(prover.sessionId, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness, input.A.Bytes(), input.B.Bytes()); err != nil {
@@ -199,7 +199,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
-		return errs.NewInvalidRound("%d != 5", verifier.round)
+		return errs.NewRound("%d != 5", verifier.round)
 	}
 
 	if err := commitments.Open(verifier.sessionId, verifier.state.cHat, input.BigQHatWitness, input.BigQHat.ToAffineCompressed()); err != nil {
@@ -208,7 +208,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 
 	// 5. accepts if and only if it accepts the range proof and Q^ == Q'
 	if !input.BigQHat.Equal(verifier.state.bigQPrime) {
-		return errs.NewVerificationFailed("cannot verify")
+		return errs.NewVerification("cannot verify")
 	}
 	err = verifier.rangeVerifier.Round5(input.RangeProverOutput)
 	if err != nil {

@@ -12,8 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
 
@@ -28,7 +28,7 @@ func Test_BIP340TestVectors(t *testing.T) {
 		signature  string
 		valid      bool
 
-		_ types.Incomparable
+		_ ds.Incomparable
 	}
 	vectorData := []testVectorData{
 		{ // 0

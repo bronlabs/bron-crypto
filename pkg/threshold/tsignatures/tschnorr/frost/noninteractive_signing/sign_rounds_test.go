@@ -18,9 +18,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
@@ -28,12 +27,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
-func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	dkgParticipants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	dkgParticipants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +42,7 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := integration_testutils.MapO2I(dkgParticipants, r2OutB, r2OutU)
+	r3InB, r3InU := ttu.MapO2I(dkgParticipants, r2OutB, r2OutU)
 	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
@@ -52,8 +51,8 @@ func doDkg(curve curves.Curve, cohortConfig *integration.CohortConfig, identitie
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
-	participants, err := testutils.MakePreGenParticipants(cohortConfig, tau)
+func doPreGen(protocol types.ThresholdProtocol, tau int) (noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
+	participants, err := testutils.MakePreGenParticipants(protocol, tau)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -61,7 +60,7 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive_
 	if err != nil {
 		return nil, nil, err
 	}
-	r2Ins := integration_testutils.MapBroadcastO2I(participants, r1Outs)
+	r2Ins := ttu.MapBroadcastO2I(participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	if err != nil {
 		return nil, nil, err
@@ -69,7 +68,7 @@ func doPreGen(cohortConfig *integration.CohortConfig, tau int) (*noninteractive_
 	return preSignatureBatches[0], privateNoncePairsOfAllParties, nil
 }
 
-func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch *noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair, message []byte) error {
+func doNonInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeySharesOfAllParties []*frost.PublicKeyShares, preSignatureBatch noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair, message []byte) error {
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
 		shards = append(shards, &frost.Shard{
@@ -78,7 +77,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 		})
 	}
 
-	cosigners, err := testutils.MakeNonInteractiveCosigners(cohortConfig, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
+	cosigners, err := testutils.MakeNonInteractiveCosigners(protocol, identities, shards, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties)
 	if err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 			}
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
+			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
 			if err != nil {
 				return err
 			}
@@ -116,30 +115,30 @@ func doNonInteractiveSign(cohortConfig *integration.CohortConfig, identities []i
 	return nil
 }
 
-func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
+func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n, tau, firstUnusedPreSignatureIndex int) {
 	t.Helper()
 
 	message := []byte("something")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hash,
-	}
-
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
 
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocol, allIdentities, threshold, allIdentities)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i].Hash()].Equal(curve.ScalarBaseMult(share.Share)))
+		partialPublicKey, exists := allPublicKeyShares[i].Shares.Get(allIdentities[i])
+		require.True(t, exists)
+		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, tau)
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(protocol, tau)
 	require.NoError(t, err)
 
 	firstUnusedPreSignatureIndices := make([]int, n)
@@ -147,7 +146,7 @@ func testHappyPath(t *testing.T, protocol protocols.Protocol, curve curves.Curve
 		firstUnusedPreSignatureIndices[i] = firstUnusedPreSignatureIndex
 	}
 
-	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, message)
+	err = doNonInteractiveSign(protocol, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, message)
 	require.NoError(t, err)
 }
 
@@ -156,25 +155,25 @@ func TestSignNilMessage(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	hash := sha3.New256
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hash,
-	}
-
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
 
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, allIdentities, 2, allIdentities)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, cohortConfig, allIdentities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, 2, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		require.True(t, allPublicKeyShares[i].SharesMap[allIdentities[i].Hash()].Equal(curve.ScalarBaseMult(share.Share)))
+		partialPublicKey, exists := allPublicKeyShares[i].Shares.Get(allIdentities[i])
+		require.True(t, exists)
+		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(cohortConfig, 5)
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(protocol, 5)
 	require.NoError(t, err)
 
 	firstUnusedPreSignatureIndices := make([]int, 2)
@@ -182,10 +181,10 @@ func TestSignNilMessage(t *testing.T) {
 		firstUnusedPreSignatureIndices[i] = 0
 	}
 
-	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, nil)
+	err = doNonInteractiveSign(protocol, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, nil)
 	require.True(t, errs.IsIsNil(err))
 
-	err = doNonInteractiveSign(cohortConfig, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, []byte{})
+	err = doNonInteractiveSign(protocol, allIdentities, allSigningKeyShares, allPublicKeyShares, preSignatureBatch, firstUnusedPreSignatureIndices, privateNoncePairsOfAllParties, []byte{})
 	require.True(t, errs.IsIsZero(err))
 }
 
@@ -212,7 +211,7 @@ func TestHappyPath(t *testing.T) {
 						firstUnusedPreSignatureIndex := firstUnusedPreSignatureIndex
 						t.Run(fmt.Sprintf("testing non interactive signing with curve=%s and hash=%s and t=%d and n=%d and tau=%d and first unused pre signature index=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex), func(t *testing.T) {
 							t.Parallel()
-							testHappyPath(t, protocols.FROST, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
+							testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedTau, firstUnusedPreSignatureIndex)
 						})
 					}
 				}

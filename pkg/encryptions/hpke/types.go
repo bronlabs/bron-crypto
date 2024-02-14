@@ -107,7 +107,7 @@ func (c *context) incrementSeq() error {
 func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 	kdf := kdfs[c.suite.KDF]
 	if L > 255*kdf.Nh() {
-		return nil, errs.NewInvalidRange("L is out of range")
+		return nil, errs.NewRange("L is out of range")
 	}
 	return kdf.labeledExpand(c.suite.ID(), c.exporterSecret, []byte("sec"), exporterContext, L), nil
 }
@@ -121,7 +121,7 @@ func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con
 func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, sharedSecret, info, psk, pskId []byte) (*context, *KeyScheduleContext, error) {
 	if err := verifyPSKInputs(mode, psk, pskId); err != nil {
-		return nil, nil, errs.WrapInvalidArgument(err, "psk arguments are invalid")
+		return nil, nil, errs.WrapArgument(err, "psk arguments are invalid")
 	}
 
 	var err error
@@ -165,13 +165,13 @@ func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
 	gotPsk := psk != nil
 	gotPskId := pskId != nil
 	if gotPsk != gotPskId {
-		return errs.NewInvalidArgument("either psk and pskId should both be nil, or none should be nil")
+		return errs.NewArgument("either psk and pskId should both be nil, or none should be nil")
 	}
 	if gotPsk && (mode == Base || mode == Auth) {
-		return errs.NewInvalidArgument("psk argument provided when not needed")
+		return errs.NewArgument("psk argument provided when not needed")
 	}
 	if !gotPsk && (mode == PSk || mode == AuthPSk) {
-		return errs.NewInvalidArgument("mssing required psk input")
+		return errs.NewArgument("mssing required psk input")
 	}
 	return nil
 }

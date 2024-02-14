@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -23,7 +23,7 @@ var (
 var _ curves.ScalarField = (*ScalarField)(nil)
 
 type ScalarField struct {
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func p256ScalarFieldInit() {
@@ -73,7 +73,7 @@ func (sf *ScalarField) OperateOver(operator algebra.Operator, xs ...curves.Scala
 	case algebra.PointAddition:
 		fallthrough
 	default:
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	return current, nil
 }
@@ -85,7 +85,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 	var seed [base.WideFieldBytes]byte
 	_, err := prng.Read(seed[:])
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
+		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
 	value, err := NewScalar(0).SetBytesWide(seed[:])
 	if err != nil {
@@ -97,7 +97,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	u, err := NewCurve().HashToScalars(1, x, nil)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to scalar failed for p256")
+		return nil, errs.WrapHashing(err, "hash to scalar failed for p256")
 	}
 	return u[0], nil
 }
@@ -174,7 +174,7 @@ func (*ScalarField) Div(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
 func (*ScalarField) QuadraticResidue(s curves.Scalar) (curves.Scalar, error) {
 	ss, ok := s.(*Scalar)
 	if !ok {
-		return nil, errs.NewInvalidType("given point is not from this field")
+		return nil, errs.NewType("given point is not from this field")
 	}
 	return ss.Sqrt()
 }

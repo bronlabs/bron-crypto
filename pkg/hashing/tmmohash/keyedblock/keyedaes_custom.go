@@ -46,7 +46,7 @@ func NewKeyedCipher(key []byte) (KeyedBlock, error) {
 	case 32:
 		c.rounds = 14
 	default:
-		return nil, errs.NewInvalidArgument("Aes Key has wrong size")
+		return nil, errs.NewArgument("Aes Key has wrong size")
 	}
 
 	expandKeyAsm(c.rounds, &key[0], &c.enc[0], &c.dec[0])

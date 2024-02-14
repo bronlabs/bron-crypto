@@ -1,74 +1,134 @@
-package schnorr
+package schnorr_test
 
 import (
 	crand "crypto/rand"
-	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 )
 
-func TestZKPOverMultipleCurves(t *testing.T) {
+var supportedCurve = []curves.Curve{
+	k256.NewCurve(),
+	p256.NewCurve(),
+	edwards25519.NewCurve(),
+	pallas.NewCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
+}
+
+func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	uniqueSessionId := sha3.Sum256([]byte("random seed"))
-	curveInstances := []curves.Curve{
-		k256.NewCurve(),
-		p256.NewCurve(),
-		edwards25519.NewCurve(),
-	}
-	for _, curve := range curveInstances {
-		boundedCurve := curve
-		t.Run(fmt.Sprintf("running the test for curve %s", boundedCurve.Name()), func(t *testing.T) {
+
+	for _, c := range supportedCurve {
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
-			prover, err := NewProver(boundedCurve.Generator(), uniqueSessionId[:], nil)
-			require.NoError(t, err)
-			require.NotNil(t, prover)
-			require.NotNil(t, prover.BasePoint)
 
-			secret, err := boundedCurve.ScalarField().Random(crand.Reader)
-			require.NoError(t, err)
-			proof, statement, err := prover.Prove(secret, crand.Reader)
+			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			err = Verify(boundedCurve.Generator(), statement, proof, uniqueSessionId[:], nil)
+			protocol, err := schnorr.NewSigmaProtocol(base, crand.Reader)
+			require.NoError(t, err)
+
+			witness, err := curve.ScalarField().Random(crand.Reader)
+			require.NoError(t, err)
+			statement := base.Mul(witness)
+
+			// round 1
+			commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+			require.NoError(t, err)
+
+			// round 2
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
+			require.NoError(t, err)
+
+			// round 3
+			response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+			require.NoError(t, err)
+
+			// verify
+			err = protocol.Verify(statement, commitment, challenge, response)
 			require.NoError(t, err)
 		})
 	}
 }
 
-func TestNotVerifyZKPOverMultipleCurves(t *testing.T) {
+func Test_InvalidStatement(t *testing.T) {
 	t.Parallel()
-	uniqueSessionId := sha3.Sum256([]byte("random seed"))
-	curveInstances := []curves.Curve{
-		k256.NewCurve(),
-		p256.NewCurve(),
-		edwards25519.NewCurve(),
-	}
-	for _, curve := range curveInstances {
-		boundedCurve := curve
-		t.Run(fmt.Sprintf("running the test for curve %s", boundedCurve.Name()), func(t *testing.T) {
+
+	for _, c := range supportedCurve {
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
-			prover, err := NewProver(boundedCurve.Generator(), uniqueSessionId[:], nil)
-			require.NoError(t, err)
-			require.NotNil(t, prover)
-			require.NotNil(t, prover.BasePoint)
 
-			secret, err := boundedCurve.ScalarField().Random(crand.Reader)
-			require.NoError(t, err)
-			proof, _, err := prover.Prove(secret, crand.Reader)
-			require.NoError(t, err)
-			badStatement, err := boundedCurve.Random(crand.Reader)
+			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			err = Verify(boundedCurve.Generator(), badStatement, proof, uniqueSessionId[:], nil)
-			require.True(t, errs.IsVerificationFailed(err))
+			protocol, err := schnorr.NewSigmaProtocol(base, crand.Reader)
+			require.NoError(t, err)
+
+			witness, err := curve.ScalarField().Random(crand.Reader)
+			require.NoError(t, err)
+			statement, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			// round 1
+			commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
+			require.NoError(t, err)
+
+			// round 2
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
+			require.NoError(t, err)
+
+			// round 3
+			response, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge)
+			require.NoError(t, err)
+
+			// verify
+			err = protocol.Verify(statement, commitment, challenge, response)
+			require.Error(t, err)
+		})
+	}
+}
+
+func Test_Simulator(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range supportedCurve {
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			base, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			protocol, err := schnorr.NewSigmaProtocol(base, crand.Reader)
+			require.NoError(t, err)
+
+			statement, err := curve.Random(crand.Reader)
+			require.NoError(t, err)
+
+			// simulate
+			challenge := make([]byte, protocol.GetChallengeBytesLength())
+			_, err = io.ReadFull(crand.Reader, challenge)
+			require.NoError(t, err)
+			commitment, response, err := protocol.RunSimulator(statement, challenge)
+			require.NoError(t, err)
+
+			// verify
+			err = protocol.Verify(statement, commitment, challenge, response)
+			require.NoError(t, err)
 		})
 	}
 }

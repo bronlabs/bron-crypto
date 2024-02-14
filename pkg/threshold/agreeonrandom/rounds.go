@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
@@ -13,27 +14,27 @@ import (
 type Round1Broadcast struct {
 	Commitment commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 type Round2Broadcast struct {
 	Ri      curves.Scalar
 	Witness commitments.Witness
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
+		return nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
 
-	r_i, err := p.Curve.ScalarField().Random(p.prng)
+	r_i, err := p.Protocol.Curve().ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate random scalar")
 	}
 	commitment, witness, err := commitments.CommitWithoutSession(p.prng, r_i.Bytes())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.MyAuthKey.Hash())
+		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().PublicKey().ToAffineCompressed())
 	}
 	p.round++
 	p.state.r_i = r_i
@@ -43,15 +44,20 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}, nil
 }
 
-func (p *Participant) Round2(round1output map[types.IdentityHash]*Round1Broadcast) (*Round2Broadcast, error) {
+func (p *Participant) Round2(round1output types.RoundMessages[*Round1Broadcast]) (*Round2Broadcast, error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}
-	for key, round1Msg := range round1output {
-		if len(round1Msg.Commitment) == 0 {
-			return nil, errs.NewInvalidArgument("commitment is empty")
+	for pair := range round1output.Iter() {
+		sender := pair.Key
+		round1Msg := pair.Value
+		if sender.Equal(p.IdentityKey()) {
+			continue
 		}
-		p.state.receivedCommitments[key] = round1Msg.Commitment
+		if len(round1Msg.Commitment) == 0 {
+			return nil, errs.NewArgument("commitment is empty")
+		}
+		p.state.receivedCommitments.Put(sender, round1Msg.Commitment)
 	}
 	p.round++
 	return &Round2Broadcast{
@@ -60,21 +66,27 @@ func (p *Participant) Round2(round1output map[types.IdentityHash]*Round1Broadcas
 	}, nil
 }
 
-func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcast) ([]byte, error) {
+func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast]) ([]byte, error) {
 	if p.round != 3 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
-	for key, message := range round2output {
-		if p.state.receivedCommitments[key] == nil {
-			return nil, errs.NewIdentifiableAbort(key, "could not find commitment for participant %x", key)
+	for pair := range round2output.Iter() {
+		sender := pair.Key
+		message := pair.Value
+		if sender.Equal(p.IdentityKey()) {
+			continue
 		}
-		if err := commitments.OpenWithoutSession(p.state.receivedCommitments[key], message.Witness, message.Ri.Bytes()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, key, "commitment from participant with sharing id can't be opened")
+		receivedCommitment, exists := p.state.receivedCommitments.Get(sender)
+		if !exists {
+			return nil, errs.NewIdentifiableAbort(sender.PublicKey().ToAffineCompressed(), "could not find commitment for participant %x", sender.PublicKey())
+		}
+		if err := commitments.OpenWithoutSession(receivedCommitment, message.Witness, message.Ri.Bytes()); err != nil {
+			return nil, errs.WrapIdentifiableAbort(err, sender.PublicKey().ToAffineCompressed(), "commitment from participant with sharing id can't be opened")
 		}
 	}
-	round2output[p.MyAuthKey.Hash()] = &Round2Broadcast{
+	round2output.Put(p.IdentityKey(), &Round2Broadcast{
 		Ri: p.state.r_i,
-	}
+	})
 	sortRandomnessContributions, err := p.sortRandomnessContributions(round2output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
@@ -88,19 +100,16 @@ func (p *Participant) Round3(round2output map[types.IdentityHash]*Round2Broadcas
 	return randomValue, nil
 }
 
-func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi map[types.IdentityHash]*Round2Broadcast) ([][]byte, error) {
-	sortedSharingIds := make([]int, len(allIdentityKeysToRi))
-	i := 0
-	for sharingId := range p.SharingIdToIdentity {
-		sortedSharingIds[i] = sharingId
-		i++
-	}
-
-	sort.Ints(sortedSharingIds)
-	sortedRVector := make([][]byte, len(allIdentityKeysToRi))
-	for i, sharingId := range sortedSharingIds {
-		identityKey := p.SharingIdToIdentity[sharingId]
-		message, exists := allIdentityKeysToRi[identityKey.Hash()]
+func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi types.RoundMessages[*Round2Broadcast]) ([][]byte, error) {
+	sortedIdentityIndices := p.IdentitySpace.Left()
+	sort.Slice(sortedIdentityIndices, func(i, j int) bool { return sortedIdentityIndices[i] < sortedIdentityIndices[j] })
+	sortedRVector := make([][]byte, allIdentityKeysToRi.Size())
+	for i, identityIndex := range sortedIdentityIndices {
+		identityKey, exists := p.IdentitySpace.LookUpLeft(identityIndex)
+		if !exists {
+			return nil, errs.NewMissing("couldn't find identity key %d", identityIndex)
+		}
+		message, exists := allIdentityKeysToRi.Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("message couldn't be found")
 		}

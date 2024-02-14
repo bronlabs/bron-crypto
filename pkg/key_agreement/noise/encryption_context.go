@@ -22,7 +22,7 @@ type EncryptionContext struct {
 func (s *EncryptionContext) Encrypt(payload []byte) (P2PMessage, error) {
 	err := s.Suite.Validate()
 	if err != nil {
-		return P2PMessage{}, errs.WrapInvalidType(err, "invalid ciphersuite")
+		return P2PMessage{}, errs.WrapType(err, "invalid ciphersuite")
 	}
 	var csx *CipherState
 	if s.IsInitiator {
@@ -40,7 +40,7 @@ func (s *EncryptionContext) Encrypt(payload []byte) (P2PMessage, error) {
 func (s *EncryptionContext) Decrypt(message *P2PMessage) (plaintext []byte, valid bool, err error) {
 	err = s.Suite.Validate()
 	if err != nil {
-		return []byte{}, false, errs.WrapInvalidType(err, "invalid ciphersuite")
+		return []byte{}, false, errs.WrapType(err, "invalid ciphersuite")
 	}
 	var csx *CipherState
 	if s.IsInitiator {

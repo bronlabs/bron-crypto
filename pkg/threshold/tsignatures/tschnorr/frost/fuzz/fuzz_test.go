@@ -22,10 +22,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
@@ -130,7 +128,7 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 	})
 }
 
-func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, threshold int, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, message string) {
+func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, threshold int, identities []types.IdentityKey, protocol types.ThresholdSignatureProtocol, message string) {
 	t.Helper()
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
@@ -140,12 +138,12 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 		})
 	}
 
-	var signingIdentities []integration.IdentityKey
+	var signingIdentities []types.IdentityKey
 	for i := 0; i < threshold; i++ {
 		signingIdentities = append(signingIdentities, identities[i])
 	}
 
-	signingParticipants, err := testutils.MakeInteractiveSignParticipants(cohortConfig, signingIdentities, shards)
+	signingParticipants, err := testutils.MakeInteractiveSignParticipants(protocol, signingIdentities, shards)
 	require.NoError(t, err)
 	for _, participant := range signingParticipants {
 		if participant == nil {
@@ -156,18 +154,18 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	r1Out, err := testutils.DoInteractiveSignRound1(signingParticipants)
 	require.NoError(t, err)
 
-	r2In := integration_testutils.MapBroadcastO2I(signingParticipants, r1Out)
+	r2In := ttu.MapBroadcastO2I(signingParticipants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(signingParticipants, r2In, []byte(message))
 	require.NoError(t, err)
 
 	mappedPartialSignatures := testutils.MapPartialSignatures(signingIdentities, partialSignatures)
 	var producedSignatures []*schnorr.Signature
 	for i, participant := range signingParticipants {
-		if cohortConfig.IsSignatureAggregator(participant.MyAuthKey) {
+		if protocol.SignatureAggregators().Contains(participant.IdentityKey()) {
 			signature, err := participant.Aggregate([]byte(message), mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
-			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
+			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
@@ -188,7 +186,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	}
 }
 
-func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, preSignatureBatch []*noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
+func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, preSignatureBatch []noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair, random *rand.Rand, participants []*pedersen.Participant, message string) {
 	t.Helper()
 	var shards []*frost.Shard
 	var err error
@@ -199,9 +197,9 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 		})
 	}
 
-	cosigners := make([]*noninteractive_signing.Cosigner, cohortConfig.Protocol.TotalParties)
+	cosigners := make([]*noninteractive_signing.Cosigner, protocol.TotalParties())
 	for i, identity := range identities {
-		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(integration.AuthKey), shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashSet(identities), cohortConfig, random)
+		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(types.AuthKey), shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashableHashSet(identities...), protocol, random)
 		require.NoError(t, err)
 	}
 
@@ -221,19 +219,19 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 			require.NoError(t, err)
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = schnorr.Verify(cohortConfig.CipherSuite, &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
+			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
 	require.Len(t, signatureHashSet, 1)
 }
 
-func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]*noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair) {
+func doGeneratePreSignatures(t *testing.T, protocol types.ThresholdProtocol, identities []types.IdentityKey, tau int, random *rand.Rand, participants []*pedersen.Participant) ([]noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair) {
 	t.Helper()
-	pregenParticipants := make([]*noninteractive_signing.PreGenParticipant, cohortConfig.Protocol.TotalParties)
+	pregenParticipants := make([]*noninteractive_signing.PreGenParticipant, protocol.TotalParties())
 	var err error
 	for i, identity := range identities {
-		pregenParticipants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(integration.AuthKey), cohortConfig, tau, random)
+		pregenParticipants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(types.AuthKey), protocol, tau, random)
 		require.NoError(t, err)
 	}
 	round1Outputs := make([]*noninteractive_signing.Round1Broadcast, len(participants))
@@ -241,16 +239,16 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]map[types.IdentityHash]*noninteractive_signing.Round1Broadcast, len(participants))
+	round2Inputs := make([]types.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
 	for i := range participants {
-		round2Inputs[i] = make(map[types.IdentityHash]*noninteractive_signing.Round1Broadcast)
+		round2Inputs[i] = types.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
 		for j := range participants {
 			if j != i {
-				round2Inputs[i][participants[j].MyAuthKey.Hash()] = round1Outputs[j]
+				round2Inputs[i].Put(participants[j].IdentityKey(), round1Outputs[j])
 			}
 		}
 	}
-	preSignatureBatch := make([]*noninteractive_signing.PreSignatureBatch, len(participants))
+	preSignatureBatch := make([]noninteractive_signing.PreSignatureBatch, len(participants))
 	privateNoncePairsOfAllParties := make([][]*noninteractive_signing.PrivateNoncePair, len(participants))
 	for i, participant := range pregenParticipants {
 		preSignatureBatch[i], privateNoncePairsOfAllParties[i], err = participant.Round2(round2Inputs[i])
@@ -259,14 +257,11 @@ func doGeneratePreSignatures(t *testing.T, cohortConfig *integration.CohortConfi
 	return preSignatureBatch, privateNoncePairsOfAllParties
 }
 
-func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]integration.IdentityKey, *integration.CohortConfig, []*pedersen.Participant, []*tsignatures.SigningKeyShare, []*tsignatures.PublicKeyShares) {
+func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]types.IdentityKey, types.ThresholdSignatureProtocol, []*pedersen.Participant, []*tsignatures.SigningKeyShare, []*tsignatures.PartialPublicKeys) {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
+	cipherSuite, _ := ttu.MakeSignatureProtocol(curve, h)
 
-	var identities []integration.IdentityKey
+	var identities []types.IdentityKey
 	for i := 0; i < n; i++ {
 		var transcriptPrefixes string
 		var transcriptSuffixes string
@@ -276,14 +271,14 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		fz.Fuzz(&secretValue)
 		commitedScalar, err := curve.ScalarField().Hash([]byte(secretValue))
 		require.NoError(t, err)
-		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, commitedScalar)
+		identity, err := ttu.MakeTestIdentity(cipherSuite, commitedScalar)
 		require.NoError(t, err)
 		identities = append(identities, identity)
 	}
 
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
+		if errs.IsDuplicate(err) || errs.IsCount(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)
@@ -291,7 +286,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
+		if errs.IsDuplicate(err) || errs.IsCount(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)
@@ -302,11 +297,11 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	for i := 0; i < n; i++ {
 		randoms = append(randoms, rand.New(rand.NewSource(randomSeed+int64(i))))
 	}
-	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, randoms)
+	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, randoms)
 	require.NoError(t, err)
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
@@ -329,13 +324,13 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 			}
 		}
 	}
-	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+	shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
 	require.NoError(t, err)
 	require.NotNil(t, shamirDealer)
 	shamirShares := make([]*shamir.Share, len(participants))
 	for i := 0; i < len(participants); i++ {
 		shamirShares[i] = &shamir.Share{
-			Id:    participants[i].GetSharingId(),
+			Id:    uint(participants[i].SharingId()),
 			Value: signingKeyShares[i].Share,
 		}
 	}
@@ -347,5 +342,5 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	if signingKeyShares[0].PublicKey.Equal(derivedPublicKey) == false {
 		require.Error(t, fmt.Errorf("public key does not match"))
 	}
-	return identities, cohortConfig, participants, signingKeyShares, publicKeyShares
+	return identities, protocol, participants, signingKeyShares, publicKeyShares
 }

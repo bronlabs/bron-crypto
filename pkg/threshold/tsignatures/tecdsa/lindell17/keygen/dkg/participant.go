@@ -6,20 +6,21 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lpdl"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var _ lindell17.Participant = (*Participant)(nil)
+var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type State struct {
 	myXPrime          curves.Scalar
@@ -32,38 +33,39 @@ type State struct {
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[types.IdentityHash]commitments.Commitment
-	theirBigQPrime               map[types.IdentityHash]curves.Point
-	theirBigQDoublePrime         map[types.IdentityHash]curves.Point
-	theirPaillierPublicKeys      map[types.IdentityHash]*paillier.PublicKey
-	theirPaillierEncryptedShares map[types.IdentityHash]*paillier.CipherText
+	theirBigQCommitment          map[types.SharingID]commitments.Commitment
+	theirBigQPrime               map[types.SharingID]curves.Point
+	theirBigQDoublePrime         map[types.SharingID]curves.Point
+	theirPaillierPublicKeys      ds.HashMap[types.IdentityKey, *paillier.PublicKey]
+	theirPaillierEncryptedShares ds.HashMap[types.IdentityKey, *paillier.CipherText]
 
-	lpProvers                map[types.IdentityHash]*lp.Prover
-	lpVerifiers              map[types.IdentityHash]*lp.Verifier
-	lpdlPrimeProvers         map[types.IdentityHash]*lpdl.Prover
-	lpdlPrimeVerifiers       map[types.IdentityHash]*lpdl.Verifier
-	lpdlDoublePrimeProvers   map[types.IdentityHash]*lpdl.Prover
-	lpdlDoublePrimeVerifiers map[types.IdentityHash]*lpdl.Verifier
+	lpProvers                map[types.SharingID]*lp.Prover
+	lpVerifiers              map[types.SharingID]*lp.Verifier
+	lpdlPrimeProvers         map[types.SharingID]*lpdl.Prover
+	lpdlPrimeVerifiers       map[types.SharingID]*lpdl.Verifier
+	lpdlDoublePrimeProvers   map[types.SharingID]*lpdl.Prover
+	lpdlDoublePrimeVerifiers map[types.SharingID]*lpdl.Verifier
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Participant struct {
-	lindell17.Participant
-	myAuthKey         integration.AuthKey
-	mySharingId       int
+	myAuthKey         types.AuthKey
+	mySharingId       types.SharingID
 	mySigningKeyShare *tsignatures.SigningKeyShare
-	publicKeyShares   *tsignatures.PublicKeyShares
-	cohortConfig      *integration.CohortConfig
-	idKeyToSharingId  map[types.IdentityHash]int
-	sessionId         []byte
-	transcript        transcripts.Transcript
-	prng              io.Reader
+	publicKeyShares   *tsignatures.PartialPublicKeys
+	protocol          types.ThresholdProtocol
+
+	sharingConfig types.SharingConfig
+	sessionId     []byte
+	transcript    transcripts.Transcript
+	prng          io.Reader
+	nic           compiler.Name
 
 	round int
 	state *State
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 const (
@@ -71,22 +73,18 @@ const (
 	transcriptSessionIdLabel = "Lindell2017 DKG Session"
 )
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
+func (p *Participant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func (p *Participant) GetSharingId() int {
+func (p *Participant) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.cohortConfig
-}
-
-func NewBackupParticipant(myAuthKey integration.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte, transcript transcripts.Transcript) (participant *Participant, err error) {
-	err = validateInputs(myAuthKey, mySigningKeyShare, publicKeyShares, cohortConfig, prng, sessionId)
+func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (participant *Participant, err error) {
+	err = validateInputs(sessionId, myAuthKey, mySigningKeyShare, publicKeyShares, protocol, niCompiler, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -94,47 +92,53 @@ func NewBackupParticipant(myAuthKey integration.AuthKey, mySigningKeyShare *tsig
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
-	_, idKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	if !exists {
+		return nil, errs.NewMissing("cannot find my sharign id")
+	}
 
-	return &Participant{
+	participant = &Participant{
 		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
-		cohortConfig:      cohortConfig,
-		idKeyToSharingId:  idKeyToSharingId,
+		protocol:          protocol,
+		sharingConfig:     sharingConfig,
 		sessionId:         sessionId,
 		transcript:        transcript,
 		prng:              prng,
 		round:             1,
+		nic:               niCompiler,
 		state:             &State{},
-	}, nil
+	}
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "couldn't construct a valid participant")
+	}
+	return participant, nil
 }
 
-func validateInputs(myAuthKey integration.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PublicKeyShares, cohortConfig *integration.CohortConfig, prng io.Reader, sessionId []byte) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+func validateInputs(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
-	if err := mySigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := types.ValidateAuthKey(myAuthKey); err != nil {
+		return errs.WrapValidation(err, "my auth key")
 	}
-	if err := publicKeyShares.Validate(cohortConfig); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate public key shares")
+	if err := mySigningKeyShare.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "could not validate signing key share")
+	}
+	if err := publicKeyShares.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "could not validate public key shares")
+	}
+	if !compilerUtils.CompilerIsSupported(niCompiler) {
+		return errs.NewType("compile is not supported: %s", niCompiler)
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
-	}
-	if myAuthKey == nil {
-		return errs.NewIsNil("my identity key is nil")
-	}
-	if !cohortConfig.Participants.Contains(myAuthKey) {
-		return errs.NewInvalidArgument("identity key is not in cohort config")
-	}
-	if len(sessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
 	}
 	return nil
 }

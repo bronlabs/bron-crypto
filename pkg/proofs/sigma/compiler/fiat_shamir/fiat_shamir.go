@@ -41,12 +41,12 @@ func NewCompiler[
 	}, nil
 }
 
-func (c fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+func (c *fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("sessionId is empty")
+		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.DomainSeparationLabel())
+	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(dst, nil)
 	} else {
@@ -60,12 +60,12 @@ func (c fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Tr
 	}, nil
 }
 
-func (c fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("sessionId is empty")
+		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.DomainSeparationLabel())
+	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(dst, nil)
 	} else {
@@ -77,4 +77,12 @@ func (c fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil
+}
+
+func (*fs[_, _, _, _, _]) Name() compiler.Name {
+	return Name
+}
+
+func (c *fs[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+	return c.sigmaProtocol.Name()
 }

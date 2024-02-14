@@ -11,15 +11,15 @@ const (
 	challengeTag = "BIP0340/challenge"
 )
 
-type hasher struct {
+type Hasher struct {
 	hash.Hash
 	tag string
 }
 
-var _ hash.Hash = (*hasher)(nil)
+var _ hash.Hash = (*Hasher)(nil)
 
 func NewBip340Hash(tag string) hash.Hash {
-	bip340Hash := &hasher{sha256.New(), tag}
+	bip340Hash := &Hasher{sha256.New(), tag}
 	bip340Hash.Reset()
 	return bip340Hash
 }
@@ -36,7 +36,7 @@ func NewBip340HashChallenge() hash.Hash {
 	return NewBip340Hash(challengeTag)
 }
 
-func (h *hasher) Reset() {
+func (h *Hasher) Reset() {
 	tagDigest := sha256.Sum256([]byte(h.tag))
 	h.Hash.Reset()
 	h.Write(tagDigest[:])

@@ -1,11 +1,11 @@
 package dkg
 
 import (
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -14,63 +14,61 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
+var _ types.ThresholdParticipant = (*Participant)(nil)
+
 type Participant struct {
 	gennaroParty *gennaro.Participant
+	protocol     types.ThresholdProtocol
 	round        int
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.gennaroParty.GetAuthKey()
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.gennaroParty.IdentityKey()
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.gennaroParty.GetSharingId()
+func (p *Participant) SharingId() types.SharingID {
+	return p.gennaroParty.SharingId()
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.gennaroParty.GetCohortConfig()
-}
-
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng)
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(uniqueSessionId, authKey, protocol, prng)
 	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+		return nil, errs.NewArgument("invalid input arguments")
 	}
 
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TSCHNORR_LINDELL22_DKG", nil)
 	}
 	transcript.AppendMessages("lindell22 dkg", uniqueSessionId)
-	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct lindell22 dkg participant out of gennaro dkg participant")
 	}
-	return &Participant{
+	participant := &Participant{
 		gennaroParty: party,
 		round:        1,
-	}, nil
+		protocol:     protocol,
+	}
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a lindell22 dkg participant")
+	}
+	return participant, nil
 }
 
-func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
 	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("unique session id is empty")
-	}
-	if identityKey == nil {
-		return errs.NewInvalidArgument("identity key is nil")
-	}
-	if !cohortConfig.Participants.Contains(identityKey) {
-		return errs.NewInvalidArgument("identity key is not in cohort config")
+		return errs.NewArgument("unique session id is empty")
 	}
 	if prng == nil {
-		return errs.NewInvalidArgument("prng is nil")
+		return errs.NewArgument("prng is nil")
 	}
 	return nil
 }

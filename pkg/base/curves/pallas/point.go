@@ -2,14 +2,15 @@ package pallas
 
 import (
 	"encoding"
+	"encoding/binary"
 	"encoding/json"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -22,7 +23,7 @@ var _ json.Unmarshaler = (*Point)(nil)
 type Point struct {
 	V *Ep
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewPoint() *Point {
@@ -261,11 +262,11 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
-		return errs.NewInvalidType("invalid point")
+		return errs.NewType("invalid point")
 	}
 	p.V = ppt.V
 	return nil
@@ -289,7 +290,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	P, ok := pt.(*Point)
 	if !ok {
@@ -303,4 +304,10 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 
 func (p *Point) GetEp() *Ep {
 	return new(Ep).Set(p.V)
+}
+
+// === Hashable.
+
+func (p *Point) HashCode() uint64 {
+	return binary.BigEndian.Uint64(p.ToAffineCompressed())
 }

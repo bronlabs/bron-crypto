@@ -1,94 +1,40 @@
-package pedersen
+package pedersen_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha512"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 )
-
-var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
-
-type mockedIdentityKey struct {
-	curve     curves.Curve
-	publicKey curves.Point
-
-	_ types.Incomparable
-}
-
-func (k *mockedIdentityKey) PrivateKey() curves.Scalar {
-	panic("this should not be called")
-}
-
-func (k *mockedIdentityKey) PublicKey() curves.Point {
-	return k.publicKey
-}
-
-func (k *mockedIdentityKey) Hash() [32]byte {
-	return sha3.Sum256(k.publicKey.ToAffineCompressed())
-}
-
-func (k *mockedIdentityKey) Sign(message []byte) []byte {
-	return []byte("mocked")
-}
-
-func (k *mockedIdentityKey) Verify(signature []byte, message []byte) error {
-	return errs.NewMissing("not implemented")
-}
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := edwards25519.NewCurve()
-	alicePublicKey, err := curve.Random(crand.Reader)
+	threshold := 2
+	hash := sha3.New256
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
-	aliceIdentityKey := &mockedIdentityKey{
-		curve:     curve,
-		publicKey: alicePublicKey,
-	}
-
-	bobPublicKey, err := curve.Random(crand.Reader)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
-	bobIdentityKey := &mockedIdentityKey{
-		curve:     curve,
-		publicKey: bobPublicKey,
-	}
+	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	identityKeys := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
-
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha512.New512_256,
-	}
-
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet(identityKeys),
-		Protocol: &integration.ProtocolConfig{
-			Name:                 protocols.FROST,
-			Threshold:            2,
-			TotalParties:         2,
-			SignatureAggregators: hashset.NewHashSet(identityKeys),
-		},
-	}
-	alice, err := NewParticipant([]byte("test"), aliceIdentityKey, cohortConfig, nil, randomisedFischlin.Name, crand.Reader)
+	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
-	bob, err := NewParticipant([]byte("test"), bobIdentityKey, cohortConfig, nil, randomisedFischlin.Name, crand.Reader)
+
+	alice, err := pedersen.NewParticipant([]byte("test"), aliceIdentityKey.(types.AuthKey), protocol, randomisedFischlin.Name, nil, crand.Reader)
 	require.NoError(t, err)
-	for _, party := range []*Participant{alice, bob} {
+	bob, err := pedersen.NewParticipant([]byte("test"), bobIdentityKey.(types.AuthKey), protocol, randomisedFischlin.Name, nil, crand.Reader)
+	require.NoError(t, err)
+	for _, party := range []*pedersen.Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.round, 1)
-		require.Len(t, party.SharingIdToIdentityKey, 2)
+		require.Equal(t, party.SharingConfig.Size(), 2)
 	}
-	require.NotEqual(t, alice.MySharingId, bob.MySharingId)
+	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 }

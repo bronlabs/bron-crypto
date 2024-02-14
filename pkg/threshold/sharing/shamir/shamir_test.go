@@ -103,9 +103,9 @@ func TestShamirComputeL(t *testing.T) {
 	shares, err := scheme.Split(secret, crand.Reader)
 	require.Nil(t, err)
 	require.NotNil(t, shares)
-	identities := make([]int, len(shares))
+	identities := make([]uint, len(shares))
 	for i, xi := range shares {
-		identities[i] = xi.Id
+		identities[i] = (xi.Id)
 	}
 	lCoeffs, err := scheme.LagrangeCoefficients(identities)
 	require.Nil(t, err)
@@ -174,11 +174,11 @@ func TestAdditiveAllCombinations(t *testing.T) {
 					continue
 				}
 
-				iAdditive, err := shares[i].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				iAdditive, err := shares[i].ToAdditive([]uint{shares[i].Id, shares[j].Id, shares[k].Id})
 				require.NoError(t, err)
-				jAdditive, err := shares[j].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				jAdditive, err := shares[j].ToAdditive([]uint{shares[i].Id, shares[j].Id, shares[k].Id})
 				require.NoError(t, err)
-				kAdditive, err := shares[k].ToAdditive([]int{shares[i].Id, shares[j].Id, shares[k].Id})
+				kAdditive, err := shares[k].ToAdditive([]uint{shares[i].Id, shares[j].Id, shares[k].Id})
 				require.NoError(t, err)
 
 				rSecret := iAdditive.Add(jAdditive.Add(kAdditive))

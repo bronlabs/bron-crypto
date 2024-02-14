@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
@@ -13,20 +13,20 @@ type Share = shamir.Share
 
 // Dealer Verifiable Secret Sharing Scheme.
 type Dealer struct {
-	Threshold, Total int
+	Threshold, Total uint
 	Curve            curves.Curve
 	Generator        curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
 	curve := generator.Curve()
 	if err := share.Validate(curve); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid share")
+		return errs.WrapValidation(err, "invalid share")
 	}
 	if err := blindShare.Validate(curve); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid blind share")
+		return errs.WrapValidation(err, "invalid blind share")
 	}
 
 	x := curve.ScalarField().New(uint64(share.Id))
@@ -49,7 +49,7 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 	if lhs.Equal(rhs) {
 		return nil
 	} else {
-		return errs.NewVerificationFailed("not equal")
+		return errs.NewVerification("not equal")
 	}
 }
 
@@ -61,25 +61,25 @@ type Output struct {
 	PolynomialCoefficients          []curves.Scalar
 	Generator                       curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // NewDealer creates a new pedersen VSS.
-func NewDealer(threshold, total int, generator curves.Point) (*Dealer, error) {
+func NewDealer(threshold, total uint, generator curves.Point) (*Dealer, error) {
 	err := validateInputs(threshold, total, generator)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid inputs to pedersen VSS")
+		return nil, errs.WrapArgument(err, "invalid inputs to pedersen VSS")
 	}
 
 	return &Dealer{Threshold: threshold, Total: total, Curve: generator.Curve(), Generator: generator}, nil
 }
 
-func validateInputs(threshold, total int, generator curves.Point) error {
+func validateInputs(threshold, total uint, generator curves.Point) error {
 	if total < threshold {
-		return errs.NewInvalidArgument("total cannot be less than threshold")
+		return errs.NewArgument("total cannot be less than threshold")
 	}
 	if threshold < 2 {
-		return errs.NewInvalidArgument("threshold cannot be less than 2")
+		return errs.NewArgument("threshold cannot be less than 2")
 	}
 	if generator == nil {
 		return errs.NewIsNil("generator is nil")
@@ -95,7 +95,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	// generate a random blinding factor
 	blinding, err := pd.Curve.ScalarField().Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		return nil, errs.WrapRandomSample(err, "could not generate random scalar")
 	}
 
 	shamirDealer := shamir.Dealer{
@@ -139,13 +139,13 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	}, nil
 }
 
-func (pd Dealer) LagrangeCoefficients(shares map[int]*Share) (map[int]curves.Scalar, error) {
+func (pd Dealer) LagrangeCoefficients(shares map[uint]*Share) (map[uint]curves.Scalar, error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: pd.Threshold,
 		Total:     pd.Total,
 		Curve:     pd.Curve,
 	}
-	identities := make([]int, len(shares))
+	identities := make([]uint, len(shares))
 	for i, xi := range shares {
 		identities[i] = xi.Id
 	}

@@ -107,5 +107,5 @@ func Test_IncorrectPublicKey(t *testing.T) {
 
 	err = doProof(128, &sk.PublicKey, sk)
 	require.Error(t, err)
-	require.True(t, errs.IsInvalidArgument(err))
+	require.True(t, errs.IsArgument(err))
 }

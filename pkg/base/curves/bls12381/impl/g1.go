@@ -6,8 +6,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var (
@@ -532,7 +532,7 @@ var (
 type G1 struct {
 	X, Y, Z Fp
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (g1 *G1) Map(u0, u1 *Fp) *G1 {
@@ -765,7 +765,7 @@ func (g1 *G1) SetNat(x, y *saferith.Nat) (*G1, error) {
 
 	// If not the identity point and not on the curve then invalid
 	if (pp.IsOnCurve()&pp.InCorrectSubgroup())|(xx.IsZero()&yy.IsZero()) == 0 {
-		return nil, errs.NewInvalidCoordinates("invalid coordinates")
+		return nil, errs.NewCoordinates("invalid coordinates")
 	}
 	return g1.Set(&pp), nil
 }
@@ -948,7 +948,7 @@ func (g1 *G1) SumOfProducts(points []*G1, scalars []*impl.FieldValue) (*G1, erro
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	var sum G1
 	if len(points) != len(scalars) {
-		return nil, errs.NewInvalidLength("length mismatch")
+		return nil, errs.NewLength("length mismatch")
 	}
 
 	bucketSize := 1 << W

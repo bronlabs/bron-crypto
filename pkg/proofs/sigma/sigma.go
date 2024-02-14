@@ -15,14 +15,20 @@ const (
 )
 
 type (
+	Name       string
 	Statement  any
 	Witness    any
 	Commitment any
 	State      any
 	Response   any
+	// TODO: incorporate below
+	// Sigma protocols are defined on an arbitrary [enumerable] challenge space. Our implementation choice is to enforce working with a binary encoding of a challenge. This is to make OR-composition easier.
+	// Internally, each implementation for the sigma protocol interface will deserialize ChallengeBytes into their own suitable challenge type.
+	ChallengeBytes []byte
 )
 
 type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interface {
+	Name() Name
 	ComputeProverCommitment(statement X, witness W) (A, S, error)
 	ComputeProverResponse(statement X, witness W, commitment A, state S, challenge []byte) (Z, error)
 	Verify(statement X, commitment A, challenge []byte, response Z) error
@@ -39,8 +45,6 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 
 	ValidateStatement(statement X, witness W) error
 	GetChallengeBytesLength() int
-
-	DomainSeparationLabel() string
 	SerializeStatement(statement X) []byte
 	SerializeCommitment(commitment A) []byte
 	SerializeResponse(response Z) []byte

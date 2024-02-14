@@ -72,10 +72,10 @@ type TmmoHash struct {
 func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 	// 1) Validate the keySize and outputSize
 	if (keySize != 16) && (keySize != 24) && (keySize != 32) {
-		return nil, errs.NewInvalidArgument("keySize (%dB) must be one of {16, 24, 32}", keySize)
+		return nil, errs.NewArgument("keySize (%dB) must be one of {16, 24, 32}", keySize)
 	}
 	if outputSize < AesBlockSize || outputSize%AesBlockSize != 0 {
-		return nil, errs.NewInvalidArgument("outputSize (%dB) must be a multiple of AesBlockSize (%dB)", outputSize, AesBlockSize)
+		return nil, errs.NewArgument("outputSize (%dB) must be a multiple of AesBlockSize (%dB)", outputSize, AesBlockSize)
 	}
 	// 2) Initialise the cipher with the initialization vector (iv) as key.
 	// If no iv is provided, use the hardcoded IV.
@@ -87,7 +87,7 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 		copy(internalHashIv, iv) // Create a copy of the hashIv for Reset
 	}
 	if len(internalHashIv) < keySize {
-		return nil, errs.NewInvalidLength("iv length must be at least %d B (keySize)", keySize)
+		return nil, errs.NewLength("iv length must be at least %d B (keySize)", keySize)
 	}
 	tempKey := make([]byte, keySize)
 	copy(tempKey, internalHashIv[:keySize])
@@ -229,7 +229,7 @@ func (h *TmmoHash) New(seed, salt []byte) (csprng.CSPRNG, error) {
 // Read implements the io.Reader interface. It calls Generate without any salt.
 func (h *TmmoHash) Read(buffer []byte) (n int, err error) {
 	if err = h.Generate(buffer, nil); err != nil {
-		return 0, errs.WrapRandomSampleFailed(err, "failed to read from TmmoPrng")
+		return 0, errs.WrapRandomSample(err, "failed to read from TmmoPrng")
 	}
 	return len(buffer), nil
 }
@@ -254,7 +254,7 @@ func (h *TmmoHash) Generate(buffer, salt []byte) (err error) {
 	numReseeds := utils.CeilDiv(bufferLen-bufferBytesIndex, len(h.digest)) - 1
 	for i := 0; i < numReseeds; i++ {
 		if err := h.Reseed(nil, salt); err != nil {
-			return errs.WrapRandomSampleFailed(err, "failed to reseed TmmoPrng in sample block")
+			return errs.WrapRandomSample(err, "failed to reseed TmmoPrng in sample block")
 		}
 		copy(buffer[bufferBytesIndex:bufferBytesIndex+len(h.digest)], h.digest)
 		h.prngBytePointer = len(h.digest)
@@ -263,7 +263,7 @@ func (h *TmmoHash) Generate(buffer, salt []byte) (err error) {
 	// Sample and write the remaining bytes to fill the buffer.
 	if remainingBytes := (bufferLen - bufferBytesIndex); remainingBytes != 0 {
 		if err := h.Reseed(nil, salt); err != nil {
-			return errs.WrapRandomSampleFailed(err, "failed to reseed TmmoPrng one last time")
+			return errs.WrapRandomSample(err, "failed to reseed TmmoPrng one last time")
 		}
 		h.prngBytePointer = remainingBytes
 		copy(buffer[bufferBytesIndex:], h.digest[:h.prngBytePointer])
@@ -282,7 +282,7 @@ func (h *TmmoHash) Reseed(seed, salt []byte) (err error) {
 		h.iv = make([]byte, seedLen)
 		copy(h.iv, seed)
 	default:
-		return errs.NewInvalidLength("seed must be %d bytes", h.keySize)
+		return errs.NewLength("seed must be %d bytes", h.keySize)
 	}
 	// Update the internal hash state with the new seed and reset the prngCounter.
 	if _, err := h.Write(append(seed, salt...)); err != nil {
@@ -300,7 +300,7 @@ func (h *TmmoHash) Seed(seed, salt []byte) (err error) {
 	case seedLen == 0:
 		h.iv = []byte(IV)[:h.keySize]
 	case seedLen < h.keySize:
-		return errs.NewInvalidLength("seed length must be at least %d B (keySize)", h.keySize)
+		return errs.NewLength("seed length must be at least %d B (keySize)", h.keySize)
 	default:
 		h.iv = make([]byte, h.keySize)
 		copy(h.iv, seed) // Create a copy of the hashIv

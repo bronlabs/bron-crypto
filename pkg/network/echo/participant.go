@@ -1,114 +1,102 @@
 package echo
 
 import (
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
 
-var _ integration.Participant = (*Participant)(nil)
+var _ types.MPCParticipant = (*Participant)(nil)
+var _ types.WithAuthKey = (*Participant)(nil)
 
 type Participant struct {
-	cipherSuite *integration.CipherSuite
-	MyAuthKey   integration.AuthKey
-	MySharingId int
-	sid         []byte
+	myAuthKey types.AuthKey
+	sid       []byte
 
-	CohortConfig *integration.CohortConfig
+	Protocol types.MPCProtocol
 
-	initiator integration.IdentityKey
+	initiator types.IdentityKey
 	round     int
 	state     *State
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.MyAuthKey
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.MySharingId
+func (p *Participant) AuthKey() types.AuthKey {
+	return p.myAuthKey
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
+func (p *Participant) IsInitiator() bool {
+	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
 }
 
 type State struct {
 	messageToBroadcast       []byte
 	receivedBroadcastMessage []byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewInitiator(cipherSuite *integration.CipherSuite, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, sid, message []byte) (*Participant, error) {
-	err := cipherSuite.Validate()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid cipher cipherSuite")
-	}
-	err = cohortConfig.Validate()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid cohort config")
-	}
-	if cohortConfig.Participants.Len() <= 2 {
-		return nil, errs.NewInvalidArgument("cohort config has less than 3 participants")
-	}
-	if authKey == nil {
-		return nil, errs.NewInvalidArgument("identityKey is nil")
-	}
-	if message == nil {
-		return nil, errs.NewInvalidArgument("message is nil")
-	}
-	if sid == nil {
-		return nil, errs.NewIsNil("sid is nil")
+func NewInitiator(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, message []byte) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, protocol, authKey); err != nil {
+		return nil, errs.WrapArgument(err, "couldn't construct initiator")
 	}
 	result := &Participant{
-		MyAuthKey:   authKey,
-		cipherSuite: cipherSuite,
-		initiator:   authKey,
-		sid:         sid,
+		myAuthKey: authKey,
+		Protocol:  protocol,
+		initiator: authKey,
+		sid:       uniqueSessionId,
 		state: &State{
 			messageToBroadcast: message,
 		},
-		CohortConfig: cohortConfig,
-		round:        1,
+		round: 1,
 	}
-	_, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
+	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the participant")
+	}
 	return result, nil
 }
 
-func NewResponder(cipherSuite *integration.CipherSuite, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, sid []byte, initiator integration.IdentityKey) (*Participant, error) {
-	err := cipherSuite.Validate()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid cipher cipherSuite")
-	}
-	err = cohortConfig.Validate()
-	if cohortConfig.Participants.Len() <= 2 {
-		return nil, errs.NewInvalidArgument("cohort config has less than 3 participants")
-	}
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid cohort config")
-	}
-	if authKey == nil {
-		return nil, errs.NewInvalidArgument("identityKey is nil")
-	}
-	if sid == nil {
-		return nil, errs.NewIsNil("sid is nil")
+func NewResponder(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, protocol, initiator); err != nil {
+		return nil, errs.WrapArgument(err, "couldn't construct responder")
 	}
 	result := &Participant{
-		MyAuthKey:    authKey,
-		cipherSuite:  cipherSuite,
-		initiator:    initiator,
-		sid:          sid,
-		state:        &State{},
-		CohortConfig: cohortConfig,
-		round:        1,
+		myAuthKey: authKey,
+		initiator: initiator,
+		sid:       uniqueSessionId,
+		state:     &State{},
+		Protocol:  protocol,
+		round:     1,
 	}
-	_, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
+	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the participant")
+	}
 	return result, nil
 }
 
-func (p *Participant) IsInitiator() bool {
-	return p.MyAuthKey.PublicKey().Equal(p.initiator.PublicKey())
+func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "identity key")
+	}
+	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "cohort config is invalid")
+	}
+	if err := types.ValidateIdentityKey(initiator); err != nil {
+		return errs.WrapValidation(err, "initator identity key")
+	}
+	if !protocol.Participants().Contains(initiator) {
+		return errs.NewMissing("initator is not one of the participants")
+	}
+	if protocol.Participants().Size() <= 2 {
+		return errs.NewSize("total participants (%d) <= 2", protocol.Participants().Size())
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewIsZero("sid length is zero")
+	}
+	return nil
 }

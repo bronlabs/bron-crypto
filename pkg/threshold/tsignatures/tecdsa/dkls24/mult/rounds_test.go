@@ -3,6 +3,7 @@ package mult_test
 import (
 	crand "crypto/rand"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,54 +13,65 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult/testutils"
 )
 
-var cipherSuites = []*integration.CipherSuite{
-	{
-		Curve: k256.NewCurve(),
-		Hash:  sha3.New256,
-	},
-	{
-		Curve: p256.NewCurve(),
-		Hash:  sha3.New256,
-	},
+func cipherSuites(t *testing.T) []types.SignatureProtocol {
+	t.Helper()
+	cs := make([]types.SignatureProtocol, 2)
+	var err error
+	cs[0], err = ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	require.NoError(t, err)
+	cs[1], err = ttu.MakeSignatureProtocol(p256.NewCurve(), sha3.New256)
+	require.NoError(t, err)
+	return cs
+}
+
+var baseOTrunners = []func(batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
+	vsot_testutils.RunVSOT,
+	bbot_testutils.RunBBOT,
 }
 
 func TestMultiplicationHappyPath(t *testing.T) {
 	t.Parallel()
-	for _, cipherSuite := range cipherSuites {
-		boundedCipherSuite := cipherSuite
-		t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve.Name()), func(t *testing.T) {
-			t.Parallel()
-			sid := []byte("this is a unique session id")
-			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid, crand.Reader)
-			require.NoError(t, err)
-
-			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
-			require.NoError(t, err)
-
-			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
-			require.NoError(t, err)
-
-			a := [mult.L]curves.Scalar{}
-			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
+	for _, cipherSuite := range cipherSuites(t) {
+		for _, baseOTrunner := range baseOTrunners {
+			boundedCipherSuite := cipherSuite
+			boundedBaseOTrunner := baseOTrunner
+			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
+				t.Parallel()
+				sid := []byte("this is a unique session id")
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
-			}
-			b, zA, zB, err := testutils.RunMult2(t, alice, bob, a)
-			require.NoError(t, err)
-			for i := 0; i < mult.L; i++ {
-				lhs := zA[i].Add(zB[i])
-				rhs := a[i].Mul(b)
-				require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
-			}
-		})
+
+				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				require.NoError(t, err)
+
+				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+				require.NoError(t, err)
+
+				a := [mult.L]curves.Scalar{}
+				for i := 0; i < mult.L; i++ {
+					a[i], err = boundedCipherSuite.Curve().ScalarField().Random(crand.Reader)
+					require.NoError(t, err)
+				}
+				b, zA, zB, err := testutils.RunMult2(t, alice, bob, a)
+				require.NoError(t, err)
+				for i := 0; i < mult.L; i++ {
+					lhs := zA[i].Add(zB[i])
+					rhs := a[i].Mul(b)
+					require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
+				}
+			})
+		}
 	}
 }
 
@@ -67,30 +79,33 @@ func TestMultiplicationHappyPath(t *testing.T) {
 // protocol and checks that the multiplication fails.
 func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 	t.Parallel()
-	for _, cipherSuite := range cipherSuites {
-		boundedCipherSuite := cipherSuite
-		t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve.Name()), func(t *testing.T) {
-			t.Parallel()
-			sid := []byte("this is a unique session id")
-			sid2 := []byte("this is a different unique session id")
-			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid, crand.Reader)
-			require.NoError(t, err)
-
-			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
-			require.NoError(t, err)
-
-			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid2)
-			require.NoError(t, err)
-
-			a := [mult.L]curves.Scalar{}
-			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
+	for _, cipherSuite := range cipherSuites(t) {
+		for _, baseOTrunner := range baseOTrunners {
+			boundedCipherSuite := cipherSuite
+			boundedBaseOTrunner := baseOTrunner
+			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
+				t.Parallel()
+				sid := []byte("this is a unique session id")
+				sid2 := []byte("this is a different unique session id")
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
-			}
 
-			_, _, _, err = testutils.RunMult2(t, alice, bob, a)
-			require.Error(t, err)
-		})
+				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				require.NoError(t, err)
+
+				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid2)
+				require.NoError(t, err)
+
+				a := [mult.L]curves.Scalar{}
+				for i := 0; i < mult.L; i++ {
+					a[i], err = boundedCipherSuite.Curve().ScalarField().Random(crand.Reader)
+					require.NoError(t, err)
+				}
+
+				_, _, _, err = testutils.RunMult2(t, alice, bob, a)
+				require.Error(t, err)
+			})
+		}
 	}
 }
 
@@ -101,51 +116,54 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 // we must use a different SID for the second run)
 func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 	t.Parallel()
-	for _, cipherSuite := range cipherSuites {
-		boundedCipherSuite := cipherSuite
-		t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve.Name()), func(t *testing.T) {
-			t.Parallel()
-			sid := []byte("this is a unique session id")
-			baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(t, boundedCipherSuite.Curve, softspoken.Kappa, sid, crand.Reader)
-			require.NoError(t, err)
-
-			seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
-			require.NoError(t, err)
-
-			alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
-			require.NoError(t, err)
-
-			a := [mult.L]curves.Scalar{}
-			for i := 0; i < mult.L; i++ {
-				a[i], err = boundedCipherSuite.Curve.ScalarField().Random(crand.Reader)
+	for _, cipherSuite := range cipherSuites(t) {
+		for _, baseOTrunner := range baseOTrunners {
+			boundedCipherSuite := cipherSuite
+			boundedBaseOTrunner := baseOTrunner
+			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
+				t.Parallel()
+				sid := []byte("this is a unique session id")
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
-			}
 
-			// First run
-			b, bobOutput_Run1, err := bob.Round1()
-			require.NoError(t, err)
-			zA, aliceOutput_Run1, err := alice.Round2(bobOutput_Run1, a)
-			require.NoError(t, err)
-			zB, err := bob.Round3(aliceOutput_Run1)
-			require.NoError(t, err)
+				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				require.NoError(t, err)
 
-			// Check that the first multiplication is correct.
-			for i := 0; i < mult.L; i++ {
-				lhs := zA[i].Add(zB[i])
-				rhs := a[i].Mul(b)
-				require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
-			}
+				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+				require.NoError(t, err)
 
-			// Second Run. Alice replays the messages from the first run.
-			alice, bob, err = testutils.MakeMult2Participants(t, boundedCipherSuite, baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
-			require.NoError(t, err)
+				a := [mult.L]curves.Scalar{}
+				for i := 0; i < mult.L; i++ {
+					a[i], err = boundedCipherSuite.Curve().ScalarField().Random(crand.Reader)
+					require.NoError(t, err)
+				}
 
-			_, bobOutput_Run2, err := bob.Round1()
-			require.NoError(t, err)
-			_, _, err = alice.Round2(bobOutput_Run2, a)
-			require.NoError(t, err)
-			_, err = bob.Round3(aliceOutput_Run1)
-			require.Error(t, err)
-		})
+				// First run
+				b, bobOutput_Run1, err := bob.Round1()
+				require.NoError(t, err)
+				zA, aliceOutput_Run1, err := alice.Round2(bobOutput_Run1, a)
+				require.NoError(t, err)
+				zB, err := bob.Round3(aliceOutput_Run1)
+				require.NoError(t, err)
+
+				// Check that the first multiplication is correct.
+				for i := 0; i < mult.L; i++ {
+					lhs := zA[i].Add(zB[i])
+					rhs := a[i].Mul(b)
+					require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
+				}
+
+				// Second Run. Alice replays the messages from the first run.
+				alice, bob, err = testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+				require.NoError(t, err)
+
+				_, bobOutput_Run2, err := bob.Round1()
+				require.NoError(t, err)
+				_, _, err = alice.Round2(bobOutput_Run2, a)
+				require.NoError(t, err)
+				_, err = bob.Round3(aliceOutput_Run1)
+				require.Error(t, err)
+			})
+		}
 	}
 }

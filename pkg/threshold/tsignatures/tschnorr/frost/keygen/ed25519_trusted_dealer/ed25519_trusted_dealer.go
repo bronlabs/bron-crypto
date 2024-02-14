@@ -1,65 +1,70 @@
 package trusted_dealer
 
 import (
-	"crypto/ed25519"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 )
 
-// TODO: trusted dealer does not currently support identifiable abort
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*frost.SigningKeyShare, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
+func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *frost.Shard], error) {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not validate cohort config")
 	}
-	if cohortConfig.CipherSuite.Curve.Name() != edwards25519.Name {
-		return nil, errs.NewInvalidArgument("curve not supported")
-	}
-	if cohortConfig.Protocol.Name != protocols.FROST {
-		return nil, errs.NewInvalidArgument("protocol not supported")
-	}
-	curve := edwards25519.NewCurve()
-	publicKeyBytes, privateKeyBytes, err := ed25519.GenerateKey(prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate ed25519 compliant private key")
-	}
-	privateKey, err := curve.Scalar().SetBytesWide(privateKeyBytes)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert ed25519 private key bytes to an ed25519 scalar")
-	}
-	publicKey, err := curve.Point().FromAffineCompressed(publicKeyBytes)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert ed25519 public key bytes to an ed25519 point")
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
 	}
 
-	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
+	schnorrPrivateKey, err := protocol.Curve().ScalarField().Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "could not generate random schnorr private key")
+	}
+	schnorrPublicKey := protocol.Curve().ScalarBaseMult(schnorrPrivateKey)
+
+	dealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
-	shamirShares, err := dealer.Split(privateKey, prng)
+
+	shamirShares, err := dealer.Split(schnorrPrivateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
-	results := map[types.IdentityHash]*frost.SigningKeyShare{}
-
-	for sharingId, identityKey := range sharingIdsToIdentityKeys {
-		share := shamirShares[sharingId-1].Value
-		results[identityKey.Hash()] = &frost.SigningKeyShare{
-			Share:     share,
-			PublicKey: publicKey,
-		}
+	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
+		publicKeySharesMap.Put(identityKey, protocol.Curve().ScalarBaseMult(shamirShares[sharingId-1].Value))
 	}
-	return results, nil
 
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *frost.Shard]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
+		share := shamirShares[int(sharingId)-1].Value
+		shards.Put(identityKey, &frost.Shard{
+			SigningKeyShare: &tsignatures.SigningKeyShare{
+				Share:     share,
+				PublicKey: schnorrPublicKey,
+			},
+			PublicKeyShares: &tsignatures.PartialPublicKeys{
+				PublicKey: schnorrPublicKey,
+				Shares:    publicKeySharesMap,
+			},
+		})
+	}
+
+	return shards, nil
 }

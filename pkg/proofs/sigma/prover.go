@@ -17,14 +17,14 @@ type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
 
 func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessionId []byte, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("sessionId is empty")
+		return nil, errs.NewArgument("sessionId is empty")
 	}
 	if sigmaProtocol == nil {
-		return nil, errs.NewInvalidArgument("protocol, statement or witness is nil")
+		return nil, errs.NewArgument("protocol, statement or witness is nil")
 	}
 
 	if transcript == nil {
-		dst := fmt.Sprintf("%s-%s", domainSeparationTag, sigmaProtocol.DomainSeparationLabel())
+		dst := fmt.Sprintf("%s-%s", domainSeparationTag, sigmaProtocol.Name())
 		transcript = hagrid.NewTranscript(dst, nil)
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
@@ -46,7 +46,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 	var zero A
 
 	if p.round != 1 {
-		return zero, errs.NewInvalidRound("r != 1 (%d)", p.round)
+		return zero, errs.NewRound("r != 1 (%d)", p.round)
 	}
 
 	commitment, state, err := p.sigmaProtocol.ComputeProverCommitment(p.statement, p.witness)
@@ -66,7 +66,7 @@ func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	p.transcript.AppendMessages(challengeLabel, challengeBytes)
 
 	if p.round != 3 {
-		return zero, errs.NewInvalidRound("r != 3 (%d)", p.round)
+		return zero, errs.NewRound("r != 3 (%d)", p.round)
 	}
 
 	response, err := p.sigmaProtocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)

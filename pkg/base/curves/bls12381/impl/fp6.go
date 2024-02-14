@@ -3,7 +3,7 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 // Fp6 represents an element
@@ -11,7 +11,7 @@ import (
 type Fp6 struct {
 	A, B, C Fp2
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Set fp6 = a.

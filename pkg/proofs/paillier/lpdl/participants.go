@@ -6,8 +6,8 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
@@ -29,7 +29,7 @@ type Participant struct {
 	transcript transcripts.Transcript
 	prng       io.Reader
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type State struct {
@@ -39,7 +39,7 @@ type State struct {
 	a     *saferith.Nat
 	b     *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type VerifierState struct {
@@ -48,7 +48,7 @@ type VerifierState struct {
 	bigQPrime           curves.Point
 	cHat                commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Verifier struct {
@@ -57,7 +57,7 @@ type Verifier struct {
 	c             *paillier.CipherText
 	state         *VerifierState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ProverState struct {
@@ -67,7 +67,7 @@ type ProverState struct {
 	bigQHatWitness         commitments.Witness
 	cDoublePrimeCommitment commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Prover struct {
@@ -77,13 +77,13 @@ type Prover struct {
 	x           curves.Scalar
 	state       *ProverState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	err = validateVerifierInputs(sid, publicKey, bigQ, xEncrypted, sessionId, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -133,7 +133,7 @@ func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curv
 		return errs.NewIsNil("public key is nil")
 	}
 	if publicKey.N.BitLen() < lp.PaillierBitSize {
-		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+		return errs.NewArgument("invalid paillier public key: modulus is too small")
 	}
 	if bigQ == nil {
 		return errs.NewIsNil("bigQ is nil")
@@ -142,7 +142,7 @@ func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curv
 		return errs.NewIsNil("xEncrypted is nil")
 	}
 	if xEncrypted.C.EqZero() != 0 {
-		return errs.NewInvalidArgument("xEncrypted is zero")
+		return errs.NewArgument("xEncrypted is zero")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
@@ -153,7 +153,7 @@ func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curv
 func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
 	err = validateProverInputs(sid, secretKey, x, r, sessionId, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -201,7 +201,7 @@ func validateProverInputs(sid []byte, secretKey *paillier.SecretKey, x curves.Sc
 		return errs.NewIsNil("secret key is nil")
 	}
 	if secretKey.N.BitLen() < lp.PaillierBitSize {
-		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if x == nil {
 		return errs.NewIsNil("x is nil")

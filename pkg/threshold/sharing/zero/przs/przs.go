@@ -3,13 +3,14 @@ package przs
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const LambdaBytes = base.FieldBytes
 
-type Seed = [LambdaBytes]byte
-
-type PairwiseSeeds = map[types.IdentityHash]Seed
-
-type Sample curves.Scalar
+type (
+	Seed          = [LambdaBytes]byte
+	PairWiseSeeds ds.HashMap[types.IdentityKey, Seed]
+	Sample        curves.Scalar
+)

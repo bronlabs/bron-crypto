@@ -11,7 +11,7 @@ import (
 // i. (ST, BaseField, PointAddition) form an algebraic group of dimension 1.
 // ii. (ST, PointAddition, ScalarMult) form a module over ScalarRing.
 type AbstractEllipticCurve[ST, BaseFieldType, ScalarRingType algebra.Structure, PointType, BaseFieldElementType, ScalarType algebra.EnrichedElement[ST]] interface {
-	// Ellitpic curve forms a module over scalar scalar ring.
+	// Ellitpic curve forms a module over scalar ring.
 	algebra.AbstractModule[ST, PointType, ScalarType, ScalarRingType]
 	// Elliptic curve is an algebraic curve ie. variety of dimension 1.
 	algebra.AbstractAlgebraicCurve[ST, PointType, BaseFieldElementType, BaseFieldType]
@@ -77,6 +77,9 @@ type BaseFieldElement interface {
 	// Base field element may be element of a field extension.
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
 	algebra.FieldExtensionElementTrait[BaseFieldElement, BaseFieldElement]
+	// Base field elements are a subset of natural numbers.
+	// TODO: this won't be the case for curves with field extensions.
+	algebra.NatLike[BaseFieldElement]
 	// BaseField returns the base field containing this element.
 	BaseField() BaseField
 }
@@ -97,6 +100,8 @@ type Scalar interface {
 	algebra.AbstractVectorSpaceScalar[Curve, Scalar]
 	// Scalar is equivalent to an element of Zq.
 	algebra.AbstractIntegerFieldElement[Curve, Scalar]
+	// Scalars are a subset of natural numbers.
+	algebra.NatLike[Scalar]
 	// ScalarField returns the scalar field containing this element.
 	ScalarField() ScalarField
 }

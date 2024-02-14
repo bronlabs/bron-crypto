@@ -21,7 +21,7 @@ func isAllZeros(data []byte) bool {
 func hash(data ...[]byte) ([]byte, error) {
 	result, err := hashing.HashChain(sha3.New256, data...)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "cannot hash values")
+		return nil, errs.WrapHashing(err, "cannot hash values")
 	}
 
 	return result[:lBytes], nil

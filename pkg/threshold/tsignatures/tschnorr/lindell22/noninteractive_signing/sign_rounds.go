@@ -1,48 +1,51 @@
 package noninteractive_signing
 
 import (
-	"strconv"
-
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
+	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 )
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
-	bigRSum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K)
-	bigR2Sum := c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(c.myPreSignature.K2)
-	for _, identity := range c.sessionParticipants.Iter() {
-		if identity.Hash() == c.myAuthKey.Hash() {
+	bigR1Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
+	bigR2Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
+	for identity := range c.ppm.PreSigners.Iter() {
+		if identity.Equal(c.IdentityKey()) {
 			continue
 		}
-
-		bigRSum = bigRSum.Add(c.myPreSignature.BigR[identity.Hash()])
-		bigR2Sum = bigR2Sum.Add(c.myPreSignature.BigR2[identity.Hash()])
+		thisR1, exists := c.ppm.PreSignature.BigR1.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("could not find R1 contribution from %x", identity.PublicKey())
+		}
+		thisR2, exists := c.ppm.PreSignature.BigR2.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("could not find R2 contribution from %x", identity.PublicKey())
+		}
+		bigR1Sum = bigR1Sum.Add(thisR1)
+		bigR2Sum = bigR2Sum.Add(thisR2)
 	}
 
 	deltaMessage, err := hashing.HashChain(sha3.New256,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
-		bigRSum.ToAffineCompressed(),
+		bigR1Sum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),
-		[]byte(strconv.Itoa(c.myPreSignatureIndex)),
 		message,
 	)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "couldn't produce delta message")
+		return nil, errs.WrapHashing(err, "couldn't produce delta message")
 	}
 
-	delta, err := c.cohortConfig.CipherSuite.Curve.ScalarField().Hash(deltaMessage)
+	delta, err := c.protocol.CipherSuite().Curve().ScalarField().Hash(deltaMessage)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "cannot hash to scalar")
+		return nil, errs.WrapHashing(err, "cannot hash to scalar")
 	}
 
-	k := c.myPreSignature.K.Add(c.myPreSignature.K2.Mul(delta))
-	bigR := bigRSum.Add(bigR2Sum.Mul(delta))
+	k := c.ppm.PrivateMaterial.K1.Add(c.ppm.PrivateMaterial.K2.Mul(delta))
+	bigR := bigR1Sum.Add(bigR2Sum.Mul(delta))
 
 	if c.taproot {
 		if bigR.AffineY().IsOdd() {
@@ -52,19 +55,18 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// 3.ii. compute e = H(R || pk || message)
-	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(c.cohortConfig.CipherSuite.Curve)
 	var e curves.Scalar
 	if c.taproot {
-		e, err = fiatShamir.GenerateChallenge(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed()[1:], c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
+		e, err = schnorr.MakeSchnorrCompatibleChallenge(c.protocol.CipherSuite(), bigR.ToAffineCompressed()[1:], c.myShard.PublicKey().ToAffineCompressed()[1:], message)
 	} else {
-		e, err = fiatShamir.GenerateChallenge(c.cohortConfig.CipherSuite, bigR.ToAffineCompressed(), c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(), message)
+		e, err = schnorr.MakeSchnorrCompatibleChallenge(c.protocol.CipherSuite(), bigR.ToAffineCompressed(), c.myShard.PublicKey().ToAffineCompressed(), message)
 	}
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 
 	// 3.iii. compute additive share d_i' = lambda_i * share
-	dPrime, err := interactive_signing.ToAdditiveShare(c.myShard.SigningKeyShare.Share, c.mySharingId, c.sessionParticipants, c.identityKeyToSharingId)
+	dPrime, err := c.myShard.SigningKeyShare.ToAdditive(c.IdentityKey(), c.ppm.PreSigners, c.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
@@ -83,7 +85,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	s := k.Add(e.Mul(dPrime)).Add(zeroS)
 
 	return &lindell22.PartialSignature{
-		R: c.cohortConfig.CipherSuite.Curve.ScalarBaseMult(k),
+		R: c.protocol.CipherSuite().Curve().ScalarBaseMult(k),
 		S: s,
 	}, nil
 }

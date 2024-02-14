@@ -18,7 +18,7 @@ func NewSender(mode ModeID, suite *CipherSuite, receiverPublicKey PublicKey, sen
 	}
 	kem, exists := kems[suite.KEM]
 	if !exists {
-		return nil, nil, errs.NewInvalidType("no kem constructor found for %v", suite.KEM)
+		return nil, nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
 
 	var sharedSecret []byte
@@ -73,7 +73,7 @@ func NewReceiver(mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey
 	}
 	kem, exists := kems[suite.KEM]
 	if !exists {
-		return nil, errs.NewInvalidType("no kem constructor found for %v", suite.KEM)
+		return nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
 	var sharedSecret []byte
 	var err error

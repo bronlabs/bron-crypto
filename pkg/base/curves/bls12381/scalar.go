@@ -13,8 +13,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -27,12 +27,12 @@ type Scalar struct {
 	V *impl.FieldValue
 	G curves.Curve
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewScalar(subgroup curves.Curve, value uint64) (*Scalar, error) {
 	if subgroup.Name() != NewG1().Name() && subgroup.Name() != NewG2().Name() {
-		return nil, errs.NewInvalidCurve("subgroup %s is not one of the bls source subgroups", subgroup.Name())
+		return nil, errs.NewCurve("subgroup %s is not one of the bls source subgroups", subgroup.Name())
 	}
 	return &Scalar{
 		V: bls12381impl.FqNew().SetUint64(value),
@@ -388,7 +388,7 @@ func (s *Scalar) Bytes() []byte {
 
 func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
-		return nil, errs.NewInvalidLength("invalid length")
+		return nil, errs.NewLength("invalid length")
 	}
 	reducedInput := utils.NatFromBytes(input, r)
 	buffer := bitstring.PadToRight(bitstring.ReverseBytes(reducedInput.Bytes()), base.FieldBytes-len(reducedInput.Bytes()))
@@ -404,7 +404,7 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 
 func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
 	if len(input) > base.WideFieldBytes {
-		return nil, errs.NewInvalidLength("invalid length > %d", base.WideFieldBytes)
+		return nil, errs.NewLength("invalid length > %d", base.WideFieldBytes)
 	}
 	buffer := bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
 	value := bls12381impl.FqNew().SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
@@ -429,7 +429,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	s.V = ss.V
 	name, _, err := impl.ParseBinary(input)
@@ -442,7 +442,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	case NameG2:
 		s.G = NewG2()
 	default:
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	return nil
 }
@@ -466,7 +466,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	case NameG2:
 		s.G = NewG2()
 	default:
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	sc, err := impl.UnmarshalJson(s.SetBytes, input)
 	if err != nil {
@@ -478,4 +478,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	}
 	s.V = S.V
 	return nil
+}
+func (s *Scalar) HashCode() uint64 {
+	return s.Uint64()
 }

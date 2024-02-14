@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
@@ -15,7 +15,7 @@ type MockReader struct {
 	index int
 	seed  []byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 var (

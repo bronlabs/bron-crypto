@@ -53,7 +53,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 			// step 3.b sample e_i...
 			e, err := sample(eSet, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
 			if err != nil {
-				return nil, errs.WrapRandomSampleFailed(err, "cannot sample challenge bytes")
+				return nil, errs.WrapRandomSample(err, "cannot sample challenge bytes")
 			}
 
 			// ...and compute z_i = SigmaP_z(state_i, e_i)
@@ -63,7 +63,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 			}
 			digest, err := hash(p.sessionId, a, bitstring.ToBytesLE(i), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
-				return nil, errs.WrapHashingFailed(err, "cannot compute digest")
+				return nil, errs.WrapHashing(err, "cannot compute digest")
 			}
 
 			// step 3.c if hash(a, i, e_i, z_i) != 0 append e_i to e and repeat step 3.b

@@ -1,93 +1,218 @@
-package hashmap
+package hashmap_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 )
 
-type Key struct {
-	value string
-}
-type Value any
-
-func (k Key) Hash() [32]byte {
-	return sha3.Sum256([]byte(k.value))
+type data struct {
+	value uint64
 }
 
-func TestPutAndGet(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	actual, found := obj.Get(Key{value: "1"})
-	require.True(t, found)
-	require.Equal(t, "1", actual)
+func (d *data) HashCode() uint64 {
+	return d.value % 10
 }
 
-func TestPutNilKey(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	obj.Put(nil, "1")
-	require.Equal(t, 0, obj.Size())
+func (d *data) Equal(rhs *data) bool {
+	return d.value == rhs.value
 }
 
-func TestPutNilValue(t *testing.T) {
-	// we allow nil values
-	obj := NewHashMap[Key, Value]()
-	obj.Put(Key{value: "1"}, nil)
-	require.Equal(t, 1, obj.Size())
+var _ ds.Hashable[*data] = (*data)(nil)
+
+func Test_HashableHashMap(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+
+	// check empty map
+	require.Zero(t, hashMap.Size())
+	require.True(t, hashMap.IsEmpty())
+	_, ok := hashMap.Get(&data{value: 348957})
+	require.False(t, ok)
+	ok = hashMap.ContainsKey(&data{value: 23465123})
+	require.False(t, ok)
+
+	// add two non-conflicting
+	replaced, _ := hashMap.TryPut(&data{value: 1}, 1)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(&data{value: 2}, 2)
+	require.False(t, replaced)
+	require.Equal(t, hashMap.Size(), 2)
+
+	// add two conflicting
+	replaced, _ = hashMap.TryPut(&data{value: 3}, 3)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(&data{value: 33}, 33)
+	require.False(t, replaced)
+	require.Equal(t, hashMap.Size(), 4)
+
+	// check exists
+	require.True(t, hashMap.ContainsKey(&data{value: 1}))
+	require.True(t, hashMap.ContainsKey(&data{value: 2}))
+	require.True(t, hashMap.ContainsKey(&data{value: 3}))
+	require.True(t, hashMap.ContainsKey(&data{value: 33}))
+	require.False(t, hashMap.ContainsKey(&data{value: 43}))
+
+	// check gets
+	v1, ok := hashMap.Get(&data{value: 1})
+	require.True(t, ok)
+	require.Equal(t, v1, 1)
+	v2, ok := hashMap.Get(&data{value: 2})
+	require.True(t, ok)
+	require.Equal(t, v2, 2)
+	v3, ok := hashMap.Get(&data{value: 3})
+	require.True(t, ok)
+	require.Equal(t, v3, 3)
+	v33, ok := hashMap.Get(&data{value: 33})
+	require.True(t, ok)
+	require.Equal(t, v33, 33)
+
+	// check remove conflicting
+	ok, removed := hashMap.TryRemove(&data{value: 3})
+	require.True(t, ok)
+	require.Equal(t, removed, 3)
+	require.Equal(t, hashMap.Size(), 3)
+	require.False(t, hashMap.ContainsKey(&data{value: 3}))
+	require.True(t, hashMap.ContainsKey(&data{value: 33}))
+	_, ok = hashMap.Get(&data{value: 3})
+	require.False(t, ok)
+
+	// remove again
+	ok, _ = hashMap.TryRemove(&data{value: 3})
+	require.False(t, ok)
+
+	// remove non-conflicting
+	ok, removed2 := hashMap.TryRemove(&data{value: 2})
+	require.True(t, ok)
+	require.Equal(t, removed2, 2)
+	require.Equal(t, hashMap.Size(), 2)
+	require.False(t, hashMap.ContainsKey(&data{value: 2}))
+	_, ok = hashMap.Get(&data{value: 2})
+	require.False(t, ok)
+
+	// replace conflicting
+	v33, ok = hashMap.Get(&data{value: 33})
+	require.Equal(t, v33, 33)
+	require.True(t, ok)
+	replaced, oldValue := hashMap.TryPut(&data{value: 33}, 44)
+	require.True(t, replaced)
+	require.Equal(t, oldValue, 33)
+
+	// replace non-conflicting
+	hashMap.Put(&data{value: 7}, 7)
+	replaced, d7 := hashMap.TryPut(&data{value: 7}, 777)
+	require.True(t, replaced)
+	require.Equal(t, d7, 7)
+
+	// clear
+	hashMap.Clear()
+	require.Equal(t, hashMap.Size(), 0)
+	require.True(t, hashMap.IsEmpty())
+	_, ok = hashMap.Get(&data{value: 1})
+	require.False(t, ok)
+	_, ok = hashMap.Get(&data{value: 2})
+	require.False(t, ok)
+	_, ok = hashMap.Get(&data{value: 33})
+	require.False(t, ok)
+	_, ok = hashMap.Get(&data{value: 33})
+	require.False(t, ok)
 }
 
-func TestPutConflict(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "1"}, "2")
-	actual, found := obj.Get(Key{value: "1"})
-	require.True(t, found)
-	require.Equal(t, "2", actual)
-}
+func Test_OrderedHashMap(t *testing.T) {
+	hashMap := hashmap.NewComparableHashMap[int, int]()
 
-func TestSize(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	actual := obj.Size()
-	require.Equal(t, 2, actual)
-}
+	// check empty map
+	require.Zero(t, hashMap.Size())
+	require.True(t, hashMap.IsEmpty())
+	_, ok := hashMap.Get(348957)
+	require.False(t, ok)
+	ok = hashMap.ContainsKey(23465123)
+	require.False(t, ok)
 
-func TestContains(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	actual := obj.Contains(Key{value: "1"})
-	require.True(t, actual)
-	actual = obj.Contains(Key{value: "4"})
-	require.False(t, actual)
-}
+	// add two non-conflicting
+	replaced, _ := hashMap.TryPut(1, 1)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(2, 2)
+	require.False(t, replaced)
+	require.Equal(t, hashMap.Size(), 2)
 
-func TestEmpty(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	require.True(t, obj.IsEmpty())
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	require.False(t, obj.IsEmpty())
-}
+	// add two conflicting
+	replaced, _ = hashMap.TryPut(3, 3)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(33, 33)
+	require.False(t, replaced)
+	require.Equal(t, hashMap.Size(), 4)
 
-func TestRemove(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	require.True(t, obj.IsEmpty())
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	obj.Remove(Key{value: "2"})
-	_, found := obj.Get(Key{value: "2"})
-	require.False(t, found)
-}
+	// check exists
+	require.True(t, hashMap.ContainsKey(1))
+	require.True(t, hashMap.ContainsKey(2))
+	require.True(t, hashMap.ContainsKey(3))
+	require.True(t, hashMap.ContainsKey(33))
+	require.False(t, hashMap.ContainsKey(43))
 
-func TestClear(t *testing.T) {
-	obj := NewHashMap[Key, string]()
-	require.True(t, obj.IsEmpty())
-	obj.Put(Key{value: "1"}, "1")
-	obj.Put(Key{value: "2"}, "2")
-	obj.Clear()
-	require.True(t, obj.IsEmpty())
+	// check gets
+	v1, ok := hashMap.Get(1)
+	require.True(t, ok)
+	require.Equal(t, v1, 1)
+	v2, ok := hashMap.Get(2)
+	require.True(t, ok)
+	require.Equal(t, v2, 2)
+	v3, ok := hashMap.Get(3)
+	require.True(t, ok)
+	require.Equal(t, v3, 3)
+	v33, ok := hashMap.Get(33)
+	require.True(t, ok)
+	require.Equal(t, v33, 33)
+
+	// check remove conflicting
+	ok, removed := hashMap.TryRemove(3)
+	require.True(t, ok)
+	require.Equal(t, removed, 3)
+	require.Equal(t, hashMap.Size(), 3)
+	require.False(t, hashMap.ContainsKey(3))
+	require.True(t, hashMap.ContainsKey(33))
+	_, ok = hashMap.Get(3)
+	require.False(t, ok)
+
+	// remove again
+	ok, _ = hashMap.TryRemove(3)
+	require.False(t, ok)
+
+	// remove non-conflicting
+	ok, removed2 := hashMap.TryRemove(2)
+	require.True(t, ok)
+	require.Equal(t, removed2, 2)
+	require.Equal(t, hashMap.Size(), 2)
+	require.False(t, hashMap.ContainsKey(2))
+	_, ok = hashMap.Get(2)
+	require.False(t, ok)
+
+	// replace conflicting
+	v33, ok = hashMap.Get(33)
+	require.Equal(t, v33, 33)
+	require.True(t, ok)
+	replaced, oldValue := hashMap.TryPut(33, 44)
+	require.True(t, replaced)
+	require.Equal(t, oldValue, 33)
+
+	// replace non-conflicting
+	hashMap.Put(7, 7)
+	replaced, d7 := hashMap.TryPut(7, 777)
+	require.True(t, replaced)
+	require.Equal(t, d7, 7)
+
+	// clear
+	hashMap.Clear()
+	require.Equal(t, hashMap.Size(), 0)
+	require.True(t, hashMap.IsEmpty())
+	_, ok = hashMap.Get(1)
+	require.False(t, ok)
+	_, ok = hashMap.Get(2)
+	require.False(t, ok)
+	_, ok = hashMap.Get(33)
+	require.False(t, ok)
+	_, ok = hashMap.Get(33)
+	require.False(t, ok)
 }

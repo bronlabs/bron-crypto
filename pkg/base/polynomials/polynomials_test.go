@@ -10,6 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	p "github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 )
 
 func TestNewPoly(t *testing.T) {
@@ -115,7 +116,7 @@ func TestLi(t *testing.T) {
 			if sign2 == -1 {
 				expectedScalar = expectedScalar.Neg()
 			}
-			actual, err := p.L_i(curve, tt.i, xsScalar, xScalar)
+			actual, err := lagrange.L_i(curve, tt.i, xsScalar, xScalar)
 			require.NoError(t, err)
 			require.Exactly(t, expectedScalar, actual)
 		})
@@ -254,7 +255,7 @@ func TestAllBasisPolynomials(t *testing.T) {
 					expectedScalar[k] = expectedScalar[k].Neg()
 				}
 			}
-			actual, err := p.LagrangeBasis(curve, xsScalar, xScalar)
+			actual, err := lagrange.Basis(curve, xsScalar, xScalar)
 			require.NoError(t, err)
 			require.Exactly(t, expectedScalar, actual)
 		})

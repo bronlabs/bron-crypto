@@ -15,8 +15,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -62,7 +62,7 @@ var _ curves.Curve = (*Curve)(nil)
 type Curve struct {
 	hash2curve.CurveHasher
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func pallasInit() {
@@ -106,7 +106,7 @@ func (c *Curve) Element() curves.Point {
 
 func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
 	if operator != algebra.PointAddition {
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	current := c.Identity()
 	for _, p := range ps {
@@ -136,12 +136,12 @@ func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 	p := new(Ep)
 	u, err := NewCurve().HashToFieldElements(2, input, dst)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of P256 failed")
+		return nil, errs.WrapHashing(err, "hash to field element of P256 failed")
 	}
 	u0, ok0 := u[0].(*BaseFieldElement)
 	u1, ok1 := u[1].(*BaseFieldElement)
 	if !ok0 || !ok1 {
-		return nil, errs.NewHashingFailed("cast to P256 field element failed")
+		return nil, errs.NewType("cast to P256 field element failed")
 	}
 	p = p.Map(u0.V, u1.V)
 	return &Point{V: p}, nil
@@ -228,11 +228,11 @@ func (c *Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 
 	xx, ok := x.(*BaseFieldElement)
 	if !ok {
-		return nil, errs.NewInvalidType("x is not the right type")
+		return nil, errs.NewType("x is not the right type")
 	}
 	yy, ok := y.(*BaseFieldElement)
 	if !ok {
-		return nil, errs.NewInvalidType("y is not the right type")
+		return nil, errs.NewType("y is not the right type")
 	}
 
 	xxx := subtle.ConstantTimeCompare(xx.Bytes(), []byte{})
@@ -323,7 +323,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	for i, s := range scalars {
 		sc, ok := s.(*Scalar)
 		if !ok {
-			return nil, errs.NewInvalidType("not a pallas scalar")
+			return nil, errs.NewType("not a pallas scalar")
 		}
 		nScalars[i] = sc.V.Nat()
 	}
@@ -335,12 +335,12 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*BaseFieldElement)
 	if !ok {
-		return nil, nil, errs.NewInvalidType("provided x coordinate is not a pallas field element")
+		return nil, nil, errs.NewType("provided x coordinate is not a pallas field element")
 	}
 	rhs := rhsPallas(xc.V)
 	y, wasQr := new(fp.Fp).Sqrt(rhs)
 	if !wasQr {
-		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
+		return nil, nil, errs.NewCoordinates("x was not a quadratic residue")
 	}
 	p1e := new(Ep)
 	p1e.X = xc.V

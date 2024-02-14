@@ -58,6 +58,6 @@ func RegisterForGob(curve curves.Curve) error {
 		gob.Register(&pallas.BaseFieldElement{})
 		return nil
 	default:
-		return errs.NewInvalidType("curve %s is not supported for gob", curve.Name())
+		return errs.NewType("curve %s is not supported for gob", curve.Name())
 	}
 }

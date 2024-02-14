@@ -10,30 +10,30 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing/fiatshamir"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 type PublicKey struct {
 	A curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type PrivateKey struct {
 	S curves.Scalar
 	PublicKey
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Signature struct {
 	R curves.Point
 	S curves.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (s *Signature) MarshalBinary() ([]byte, error) {
@@ -50,7 +50,7 @@ func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 }
 
 type Signer struct {
-	suite      *integration.CipherSuite
+	suite      types.SignatureProtocol
 	privateKey *PrivateKey
 }
 
@@ -79,7 +79,7 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 
 	scalar, err := curve.ScalarField().Random(prng)
 	if err != nil {
-		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		return nil, nil, errs.WrapRandomSample(err, "could not generate random scalar")
 	}
 	pk, sk, err := NewKeys(scalar)
 	if err != nil {
@@ -88,15 +88,15 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 	return pk, sk, nil
 }
 
-func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer, error) {
-	if err := suite.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid cipher suite")
+func NewSigner(suite types.SignatureProtocol, privateKey *PrivateKey) (*Signer, error) {
+	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+		return nil, errs.WrapArgument(err, "invalid cipher suite")
 	}
-	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve.Name() ||
-		privateKey.A == nil || privateKey.A.Curve().Name() != suite.Curve.Name() ||
-		!suite.Curve.ScalarBaseMult(privateKey.S).Equal(privateKey.A) {
+	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve().Name() ||
+		privateKey.A == nil || privateKey.A.Curve().Name() != suite.Curve().Name() ||
+		!suite.Curve().ScalarBaseMult(privateKey.S).Equal(privateKey.A) {
 
-		return nil, errs.NewInvalidArgument("invalid private key")
+		return nil, errs.NewArgument("invalid private key")
 	}
 
 	return &Signer{
@@ -106,15 +106,14 @@ func NewSigner(suite *integration.CipherSuite, privateKey *PrivateKey) (*Signer,
 }
 
 func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
-	k, err := signer.suite.Curve.ScalarField().Random(prng)
+	k, err := signer.suite.Curve().ScalarField().Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		return nil, errs.WrapRandomSample(err, "could not generate random scalar")
 	}
-	R := signer.suite.Curve.ScalarBaseMult(k)
-	a := signer.suite.Curve.ScalarBaseMult(signer.privateKey.S)
+	R := signer.suite.Curve().ScalarBaseMult(k)
+	a := signer.suite.Curve().ScalarBaseMult(signer.privateKey.S)
 
-	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(signer.suite.Curve)
-	e, err := fiatShamir.GenerateChallenge(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
+	e, err := MakeSchnorrCompatibleChallenge(signer.suite, R.ToAffineCompressed(), a.ToAffineCompressed(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
 	}
@@ -126,17 +125,17 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 	}, nil
 }
 
-func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	if err := suite.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "invalid cipher suite")
+func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
+	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+		return errs.WrapArgument(err, "invalid cipher suite")
 	}
-	if publicKey == nil || publicKey.A.IsIdentity() || publicKey.A.Curve().Name() != suite.Curve.Name() {
-		return errs.NewInvalidArgument("invalid signature")
+	if publicKey == nil || publicKey.A.IsIdentity() || publicKey.A.Curve().Name() != suite.Curve().Name() {
+		return errs.NewArgument("invalid signature")
 	}
-	if signature == nil || signature.R == nil || signature.R.Curve().Name() != suite.Curve.Name() ||
-		signature.S == nil || signature.S.ScalarField().Name() != suite.Curve.Name() {
+	if signature == nil || signature.R == nil || signature.R.Curve().Name() != suite.Curve().Name() ||
+		signature.S == nil || signature.S.ScalarField().Name() != suite.Curve().Name() {
 
-		return errs.NewInvalidArgument("invalid signature")
+		return errs.NewArgument("invalid signature")
 	}
 	// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptible
 	// to a key substitution attack (specifically, it won't be bound to a public key (SBS) and a signature cannot be bound to a unique message in presence of malicious keys (MBS)).
@@ -151,30 +150,22 @@ func Verify(suite *integration.CipherSuite, publicKey *PublicKey, message []byte
 	return verifySchnorr(suite, publicKey, message, signature)
 }
 
-func IsEd25519Compliant(suite *integration.CipherSuite) bool {
-	if suite.Curve.Name() != edwards25519.Name {
-		return false
-	}
-	if reflect.ValueOf(suite.Hash).Pointer() != reflect.ValueOf(sha512.New).Pointer() {
-		return false
-	}
-
-	return true
+func IsEd25519Compliant(suite types.SignatureProtocol) bool {
+	return (suite.Curve().Name() == edwards25519.Name) && (reflect.ValueOf(suite.Hash()).Pointer() == reflect.ValueOf(sha512.New).Pointer())
 }
 
-func verifySchnorr(suite *integration.CipherSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	fiatShamir := fiatshamir.NewSchnorrCompatibleFiatShamir(suite.Curve)
-	e, err := fiatShamir.GenerateChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
+func verifySchnorr(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
+	e, err := MakeSchnorrCompatibleChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
 
-	cofactorNat := suite.Curve.Cofactor()
-	cofactor := suite.Curve.ScalarField().Element().SetNat(cofactorNat)
-	left := suite.Curve.ScalarBaseMult(signature.S.Mul(cofactor))
+	cofactorNat := suite.Curve().Cofactor()
+	cofactor := suite.Curve().ScalarField().Element().SetNat(cofactorNat)
+	left := suite.Curve().ScalarBaseMult(signature.S.Mul(cofactor))
 	right := signature.R.Mul(cofactor).Add(publicKey.A.Mul(e.Mul(cofactor)))
 	if !left.Equal(right) {
-		return errs.NewVerificationFailed("invalid signature")
+		return errs.NewVerification("invalid signature")
 	}
 
 	return nil
@@ -190,8 +181,33 @@ func verifyEd25519(publicKey *PublicKey, message []byte, signature *Signature) e
 		return errs.WrapSerialisation(err, "could not serialise signature to binary")
 	}
 	if ok := ed25519.Verify(serializedPublicKey, message, serializedSignature); !ok {
-		return errs.NewVerificationFailed("could not verify schnorr signature using ed25519 verifier")
+		return errs.NewVerification("could not verify schnorr signature using ed25519 verifier")
 	}
 
 	return nil
+}
+
+func MakeSchnorrCompatibleChallenge(suite types.SignatureProtocol, xs ...[]byte) (curves.Scalar, error) {
+	for _, x := range xs {
+		if x == nil {
+			return nil, errs.NewIsNil("an input is nil")
+		}
+	}
+
+	digest, err := hashing.Hash(suite.Hash(), xs...)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "could not compute fiat shamir hash")
+	}
+
+	var challenge curves.Scalar
+	// In EdDSA, the digest is treated and passed as little endian, however for consistency, all our curves' inputs are big endians.
+	if IsEd25519Compliant(suite) {
+		challenge, err = edwards25519.NewScalar(0).SetBytesWideLE(digest)
+	} else {
+		challenge, err = suite.Curve().Scalar().SetBytesWide(digest)
+	}
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not compute fiat shamir challenge")
+	}
+	return challenge, nil
 }

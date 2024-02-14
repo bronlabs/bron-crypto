@@ -7,9 +7,9 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -19,62 +19,56 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-// NothingUpMySleeve
-// To get H for Pedersen commitments, we'll hash below to curve. We assume that It is not
-// possible to get discrete log of H wrt G designated by a curve. We also assume that the hash
-// to curve returns a uniformly random point.
+// To get H for Pedersen commitments, we'll hash concatenation of below and provided uniqueSessionId to the curve.
+// We assume that the hash to curve returns a uniformly random point. Look into hash2curve package and rfc.
+// We assume that it is not possible to get discrete log of the resulting H wrt G designated by a curve.
+// If you are not happy with the 2nd assumption, then you should add rounds to agree on H. We recommend using `agreeonrandom` package to derive a random uniqueSessionId (which normally only has to be unique) and pass it to the constructor.
 const NothingUpMySleeve = "COPPER_KRYPTON_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
 
-var _ integration.Participant = (*Participant)(nil)
+var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	prng io.Reader
 
-	MyAuthKey   integration.AuthKey
-	MySharingId int
+	myAuthKey   types.AuthKey
+	mySharingId types.SharingID
 
-	CohortConfig           *integration.CohortConfig
-	UniqueSessionId        []byte
-	sharingIdToIdentityKey map[int]integration.IdentityKey
+	Protocol        types.ThresholdProtocol
+	UniqueSessionId []byte
+	SharingConfig   types.SharingConfig
 
 	H curves.Point
 
 	round int
 	state *State
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.MyAuthKey
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.MySharingId
-}
-
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
+func (p *Participant) SharingId() types.SharingID {
+	return p.mySharingId
 }
 
 type State struct {
-	myPartialSecretShare             *pedersen.Share
-	commitments                      []curves.Point
-	commitmentsProof                 compiler.NIZKPoKProof
-	blindedCommitments               []curves.Point
-	transcript                       transcripts.Transcript
-	secretKeyShare                   curves.Scalar
-	receivedBlindedCommitmentVectors map[int][]curves.Point
-	partialPublicKeyShares           map[int]curves.Point
-	niCompiler                       compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness]
+	myPartialSecretShare   *pedersen.Share
+	commitments            []curves.Point
+	commitmentsProof       compiler.NIZKPoKProof
+	transcript             transcripts.Transcript
+	secretKeyShare         curves.Scalar
+	partialPublicKeyShares map[types.SharingID]curves.Point
+	niCompiler             compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, niCompilerName compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, authKey, cohortConfig, prng)
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompilerName compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	err := validateInputs(uniqueSessionId, authKey, protocol, prng)
 	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+		return nil, errs.NewArgument("invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -84,14 +78,14 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 
 	HMessage, err := hashing.HashChain(sha3.New256, uniqueSessionId, []byte(NothingUpMySleeve))
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not produce dlog of H")
+		return nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}
-	H, err := cohortConfig.CipherSuite.Curve.Hash(HMessage)
+	H, err := protocol.Curve().Hash(HMessage)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "failed to hash to curve for H")
+		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 
-	batchSchnorrProtocol, err := batch_schnorr.NewSigmaProtocol(cohortConfig.CipherSuite.Curve.Generator(), prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Curve().Generator(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create batch Schnorr protocol")
 	}
@@ -99,42 +93,45 @@ func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortC
 	if err != nil {
 		return nil, errs.WrapFailed(err, fmt.Sprintf("cannot create %s compiler", niCompilerName))
 	}
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
+	}
 
 	result := &Participant{
-		MyAuthKey: authKey,
+		myAuthKey: authKey,
 		state: &State{
 			niCompiler: niCompiler,
 			transcript: transcript,
 		},
 		prng:            prng,
-		CohortConfig:    cohortConfig,
+		Protocol:        protocol,
 		H:               H,
 		round:           1,
 		UniqueSessionId: uniqueSessionId,
+		SharingConfig:   sharingConfig,
+		mySharingId:     mySharingId,
 	}
-	result.sharingIdToIdentityKey, _, result.MySharingId = integration.DeriveSharingIds(authKey, result.CohortConfig.Participants)
 
+	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the participant")
+	}
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "cohort config is invalid")
 	}
 	if prng == nil {
-		return errs.NewInvalidArgument("prng is nil")
-	}
-	if identityKey == nil {
-		return errs.NewInvalidArgument("my identity key is nil")
-	}
-	if !cohortConfig.Participants.Contains(identityKey) {
-		return errs.NewInvalidArgument("identity key is not in cohort config")
+		return errs.NewArgument("prng is nil")
 	}
 	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id")
+		return errs.NewArgument("invalid session id")
 	}
 	return nil
 }

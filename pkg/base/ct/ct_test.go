@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 )
 
@@ -16,10 +18,8 @@ func Test_ConstantTimeEq(t *testing.T) {
 			if x == y {
 				expected = 1
 			}
-			actual := ct.ConstantTimeEq(x, y)
-			if expected != actual {
-				t.Errorf("ConstantTimeEq(%d, %d) = %d, expected %d", x, y, actual, expected)
-			}
+			actual := ct.Equal(x, y)
+			require.Equal(t, expected, actual, x, y)
 		}
 	}
 	// Try 100 random samples of x and y.
@@ -30,10 +30,8 @@ func Test_ConstantTimeEq(t *testing.T) {
 		if x == y {
 			expected = 1
 		}
-		actual := ct.ConstantTimeEq(x, y)
-		if expected != actual {
-			t.Errorf("ConstantTimeEq(%d, %d) = %d, expected %d", x, y, actual, expected)
-		}
+		actual := ct.Equal(x, y)
+		require.Equal(t, expected, actual, x, y)
 	}
 }
 
@@ -46,10 +44,8 @@ func Test_ConstantTimeGt(t *testing.T) {
 			if x > y {
 				expected = 1
 			}
-			actual := ct.ConstantTimeGt(x, y)
-			if expected != actual {
-				t.Errorf("ConstantTimeGt(%d, %d) = %d, expected %d", x, y, actual, expected)
-			}
+			actual := ct.GreaterThan(x, y)
+			require.Equal(t, expected, actual, x, y)
 		}
 	}
 	// Try 100 random samples of x and y.
@@ -60,9 +56,14 @@ func Test_ConstantTimeGt(t *testing.T) {
 		if x > y {
 			expected = 1
 		}
-		actual := ct.ConstantTimeGt(x, y)
-		if expected != actual {
-			t.Errorf("ConstantTimeGt(%d, %d) = %d, expected %d", x, y, actual, expected)
-		}
+		actual := ct.GreaterThan(x, y)
+		require.Equal(t, expected, actual, x, y)
 	}
+}
+
+func TestConstantTimeIsAllZero(t *testing.T) {
+	t.Parallel()
+	zero := [32]byte{}
+	require.Equal(t, 1, ct.IsAllZero(zero[:]))
+	require.Equal(t, 0, ct.IsAllZero([]byte("something")))
 }

@@ -14,8 +14,8 @@ import (
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -34,7 +34,7 @@ var _ curves.Curve = (*G1)(nil)
 type G1 struct {
 	hash2curve.CurveHasher
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func g1Init() {
@@ -78,7 +78,7 @@ func (c *G1) Element() curves.Point {
 
 func (c *G1) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
 	if operator != algebra.PointAddition {
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	current := c.Identity()
 	for _, p := range ps {
@@ -98,16 +98,16 @@ func (*G1) Random(prng io.Reader) (curves.Point, error) {
 	pt := new(bls12381impl.G1)
 	u0, err := NewBaseFieldG1().Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "couldn't generate random field element")
+		return nil, errs.WrapRandomSample(err, "couldn't generate random field element")
 	}
 	u1, err := NewBaseFieldG1().Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "couldn't generate random field element")
+		return nil, errs.WrapRandomSample(err, "couldn't generate random field element")
 	}
 	u0fe, ok0 := u0.(*BaseFieldElementG1)
 	u1fe, ok1 := u1.(*BaseFieldElementG1)
 	if !ok0 || !ok1 {
-		return nil, errs.WrapHashingFailed(err, "Cast to BLS12381 G1 field elements failed")
+		return nil, errs.WrapType(err, "Cast to BLS12381 G1 field elements failed")
 	}
 	pt.Map(u0fe.V, u1fe.V)
 	return &PointG1{V: pt}, nil
@@ -121,12 +121,12 @@ func (*G1) HashWithDst(input, dst []byte) (curves.Point, error) {
 	pt := new(bls12381impl.G1)
 	u, err := NewG1().HashToFieldElements(2, input, dst)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of BLS12381 G1 failed")
+		return nil, errs.WrapHashing(err, "hash to field element of BLS12381 G1 failed")
 	}
 	u0, ok0 := u[0].(*BaseFieldElementG1)
 	u1, ok1 := u[1].(*BaseFieldElementG1)
 	if !ok0 || !ok1 {
-		return nil, errs.WrapHashingFailed(err, "Cast to BLS12381 G1 field elements failed")
+		return nil, errs.WrapType(err, "Cast to BLS12381 G1 field elements failed")
 	}
 	pt.Map(u0.V, u1.V)
 	return &PointG1{V: pt}, nil
@@ -214,16 +214,16 @@ func (*G1) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 	}
 	xx, ok := x.(*BaseFieldElementG1)
 	if !ok {
-		return nil, errs.NewInvalidType("x is not of the right type")
+		return nil, errs.NewType("x is not of the right type")
 	}
 	yy, ok := y.(*BaseFieldElementG1)
 	if !ok {
-		return nil, errs.NewInvalidType("y is not of the right type")
+		return nil, errs.NewType("y is not of the right type")
 	}
 
 	value, err := new(bls12381impl.G1).SetNat(xx.Nat(), yy.Nat())
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "invalid coordinates")
+		return nil, errs.WrapCoordinates(err, "invalid coordinates")
 	}
 	return &PointG1{V: value}, nil
 }

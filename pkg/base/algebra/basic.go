@@ -5,6 +5,8 @@ import (
 	"io"
 
 	"github.com/cronokirby/saferith"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 // Structure is a type that implements methods needed for the corresponding structured set. Example: Some struct that
@@ -49,11 +51,14 @@ type AbstractStructuredSetElement[S Structure, E Element] interface {
 	// Clone returns a deep copy of this element.
 	Clone() E
 
+	ds.Hashable[E]
 	// We regularly want to unmarshal into an interfacel To do that we'll use a helper function instead of embedding the unmarshaller here.
 	json.Marshaler
 }
 
 type NatLike[E Element] interface {
+	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.
+	Uint64() uint64
 	// SetNat returns a new element set to the value of `v mod S.Order()`.
 	SetNat(v *saferith.Nat) E
 	// Nat casts this element as a Nat.

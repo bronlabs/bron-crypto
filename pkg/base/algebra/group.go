@@ -33,8 +33,9 @@ type SubGroupTrait interface {
 
 // SubGroupElementTrait defines additional methods for elements of type E of subgroup S.
 type SubGroupElementTrait[S Structure, E Element] interface {
-	// IsSmallOrder returns true dependend on S and the context wherein it is used.
-	// Example: Order <=8 elements of edwards25519 whose structure is Zq X Z8.
+	// IsSmallOrder returns true if it this.IsTorsionElement($SMALL) where $SMALL
+	// is context dependent and depends on S.
+	// Example: SMALL = 8 for edwards25519 whose structure is Zq X Z8.
 	IsSmallOrder() bool
 	// ClearCofactor returns the value of this.Mul(cofactor).
 	ClearCofactor() E

@@ -2,8 +2,8 @@ package bls
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const (
@@ -46,15 +46,15 @@ type Signer[K KeySubGroup, S SignatureSubGroup] struct {
 	Scheme     RogueKeyPrevention
 	PrivateKey *PrivateKey[K]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], scheme RogueKeyPrevention) (*Signer[K, S], error) {
 	if SameSubGroup[K, S]() {
-		return nil, errs.NewInvalidType("key and signature subgroups should not be the same")
+		return nil, errs.NewType("key and signature subgroups should not be the same")
 	}
 	if err := privateKey.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "private key validation failed")
+		return nil, errs.WrapArgument(err, "private key validation failed")
 	}
 	signer := &Signer[K, S]{
 		Scheme:     scheme,
@@ -100,7 +100,7 @@ func (s *Signer[K, S]) Sign(message, tag []byte) (*Signature[S], *ProofOfPossess
 			return nil, nil, errs.WrapFailed(err, "could not produce proof of possession")
 		}
 	default:
-		return nil, nil, errs.NewInvalidType("rogue key prevention scheme %d is not supported", s.Scheme)
+		return nil, nil, errs.NewType("rogue key prevention scheme %d is not supported", s.Scheme)
 	}
 	var dst []byte
 	if len(tag) == 0 {
@@ -132,7 +132,7 @@ func (s *Signer[K, S]) Validate() error {
 		return errs.NewIsNil("signer's key is nil")
 	}
 	if SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key and signature should be in different subgroups")
+		return errs.NewType("key and signature should be in different subgroups")
 	}
 	return nil
 }
@@ -143,7 +143,7 @@ func (s *Signer[K, S]) Validate() error {
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signature *Signature[S], message []byte, pop *ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
 	if SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key and signature should be in different subgroups")
+		return errs.NewType("key and signature should be in different subgroups")
 	}
 
 	var err error
@@ -173,10 +173,10 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 		}
 		// pk must be acompanied with pop
 		if err := PopVerify(publicKey, pop); err != nil {
-			return errs.WrapVerificationFailed(err, "invalid rogue key prevention")
+			return errs.WrapVerification(err, "invalid rogue key prevention")
 		}
 	default:
-		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
+		return errs.NewType("rogue key prevention scheme %d is not supported", scheme)
 	}
 
 	var dst []byte
@@ -190,7 +190,7 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 	}
 
 	if err := coreVerify[K, S](publicKey, message, signature.Value, dst); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid signature")
+		return errs.WrapVerification(err, "invalid signature")
 	}
 	return nil
 }
@@ -201,18 +201,18 @@ func Verify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], signatu
 // POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
 func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignature *Signature[S], pops []*ProofOfPossession[S], scheme RogueKeyPrevention, tag []byte) error {
 	if SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key and signature should be in different subgroups")
+		return errs.NewType("key and signature should be in different subgroups")
 	}
 
 	if len(publicKeys) != len(messages) {
-		return errs.NewIncorrectCount("#public keys != #messages")
+		return errs.NewCount("#public keys != #messages")
 	}
 
 	switch scheme {
 	// case 3.1.1
 	case Basic:
 		if len(pops) > 0 {
-			return errs.NewIncorrectCount("nonzero number of pops when scheme is basic")
+			return errs.NewCount("nonzero number of pops when scheme is basic")
 		}
 		// step 3.1.1.1
 		areAllUnique, err := allUnique(messages)
@@ -220,22 +220,22 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 			return errs.WrapFailed(err, "could not determine if all messages are unique")
 		}
 		if !areAllUnique {
-			return errs.NewVerificationFailed("not all messages are unique")
+			return errs.NewVerification("not all messages are unique")
 		}
 	// case 3.3
 	case POP:
 		if len(publicKeys) != len(pops) {
-			return errs.NewIncorrectCount("#publicKeys != #pops")
+			return errs.NewCount("#publicKeys != #pops")
 		}
 		for i, publicKey := range publicKeys {
 			if err := PopVerify(publicKey, pops[i]); err != nil {
-				return errs.WrapVerificationFailed(err, "pop %d is invalid", i)
+				return errs.WrapVerification(err, "pop %d is invalid", i)
 			}
 		}
 	// case 3.2.3 https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 	case MessageAugmentation:
 		if len(pops) > 0 {
-			return errs.NewIncorrectCount("nonzero number of pops when scheme is message augmentation")
+			return errs.NewCount("nonzero number of pops when scheme is message augmentation")
 		}
 		// step 3.2.3.1
 		for i, publicKey := range publicKeys {
@@ -247,7 +247,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 			messages[i] = augmentedMessage
 		}
 	default:
-		return errs.NewInvalidType("rogue key prevention scheme %d is not supported", scheme)
+		return errs.NewType("rogue key prevention scheme %d is not supported", scheme)
 	}
 
 	var dst []byte
@@ -263,7 +263,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 
 	// step 3.1.1.2
 	if err := coreAggregateVerify[K, S](publicKeys, messages, aggregatedSignature.Value, dst); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid signature bundle")
+		return errs.WrapVerification(err, "invalid signature bundle")
 	}
 	return nil
 }
@@ -274,7 +274,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-fastaggregateverify
 func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], message []byte, aggregatedSignature *Signature[S], pops []*ProofOfPossession[S]) error {
 	if SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key and signature should be in different subgroups")
+		return errs.NewType("key and signature should be in different subgroups")
 	}
 
 	if aggregatedSignature == nil || message == nil {
@@ -282,10 +282,10 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	}
 
 	if len(publicKeys) != len(pops) {
-		return errs.NewIncorrectCount("#public keys != #pops")
+		return errs.NewCount("#public keys != #pops")
 	}
 	if len(publicKeys) < 2 {
-		return errs.NewIncorrectCount("at least two public key is needed")
+		return errs.NewCount("at least two public key is needed")
 	}
 
 	// step 3.3.4.1-5
@@ -299,7 +299,7 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 			return errs.NewIsNil("pop %d is nil", i)
 		}
 		if err := PopVerify(publicKeys[i], pop); err != nil {
-			return errs.WrapVerificationFailed(err, "invalid pop")
+			return errs.WrapVerification(err, "invalid pop")
 		}
 	}
 
@@ -310,7 +310,7 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 
 	// step 3.3.4.6
 	if err := coreVerify[K, S](aggregatePublicKey, message, aggregatedSignature.Value, dst); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid signature")
+		return errs.WrapVerification(err, "invalid signature")
 	}
 	return nil
 }

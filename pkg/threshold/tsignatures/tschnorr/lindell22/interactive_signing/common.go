@@ -3,37 +3,15 @@ package interactive_signing
 import (
 	"sort"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int) (curves.Scalar, error) {
-	shamirIndices := make([]int, participants.Len())
-	i := -1
-	for _, identity := range participants.Iter() {
-		i++
-		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]
-	}
-	share := &shamir.Share{
-		Id:    mySharingId,
-		Value: shamirShare,
-	}
-	additiveShare, err := share.ToAdditive(shamirIndices)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert to additive share")
-	}
-
-	return additiveShare, nil
-}
-
-func BigS(participants *hashset.HashSet[integration.IdentityKey]) []byte {
-	sortedIdentities := integration.ByPublicKey(participants.List())
+func BigS(participants ds.HashSet[types.IdentityKey]) []byte {
+	sortedIdentities := types.ByPublicKey(participants.List())
 	sort.Sort(sortedIdentities)
 	var bigS []byte
 	for _, identity := range sortedIdentities {

@@ -2,42 +2,30 @@ package frost
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-type Participant interface {
-	integration.Participant
-	IsSignatureAggregator() bool
-}
-
 type (
 	SigningKeyShare = tsignatures.SigningKeyShare
-	PublicKeyShares = tsignatures.PublicKeyShares
+	PublicKeyShares = tsignatures.PartialPublicKeys
 )
 
-// TODO: Refactor and use this.
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
-	if s == nil {
-		return errs.NewIsNil("shard is nil")
+func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
+	if err := s.SigningKeyShare.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "invalid signing key share")
 	}
-	if err := s.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapFailed(err, "invalid signing key share")
-	}
-	if err := s.PublicKeyShares.Validate(cohortConfig); err != nil {
-		return errs.WrapFailed(err, "invalid public key shares")
-	}
-	if s.PublicKeyShares.PublicKey.IsIdentity() {
-		return errs.NewIsIdentity("public key can't be at infinity")
+	if err := s.PublicKeyShares.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "invalid public key shares map")
 	}
 	return nil
 }
@@ -45,5 +33,5 @@ func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
 type PartialSignature struct {
 	Zi curves.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }

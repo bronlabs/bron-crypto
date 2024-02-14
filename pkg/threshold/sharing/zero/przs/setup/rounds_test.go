@@ -11,20 +11,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  base.CommitmentHashFunction,
-	}
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, base.CommitmentHashFunction)
+	require.NoError(t, err)
 
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
@@ -33,23 +30,23 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	r1OutsU, err := testutils.DoSetupRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, len(identities)-1)
+		require.Equal(t, out.Size(), len(identities)-1)
 	}
 
-	r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
+	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
-		require.Len(t, out, len(identities)-1)
+		require.Equal(t, out.Size(), len(identities)-1)
 	}
 
-	r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
 	allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 	require.NoError(t, err)
 
 	// we have the right number of pairs
 	for i := range participants {
-		require.Len(t, allPairwiseSeeds[i], len(identities)-1)
+		require.Equal(t, allPairwiseSeeds[i].Size(), len(identities)-1)
 	}
 
 	// each pair of seeds for all parties match
@@ -58,8 +55,10 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 			if i == j {
 				continue
 			}
-			seedOfIFromJ := allPairwiseSeeds[i][participants[j].MyAuthKey.Hash()]
-			seedOfJFromI := allPairwiseSeeds[j][participants[i].MyAuthKey.Hash()]
+			seedOfIFromJ, exists := allPairwiseSeeds[i].Get(participants[j].IdentityKey())
+			require.True(t, exists)
+			seedOfJFromI, exists := allPairwiseSeeds[j].Get(participants[i].IdentityKey())
+			require.True(t, exists)
 			require.EqualValues(t, seedOfIFromJ, seedOfJFromI)
 		}
 	}

@@ -5,8 +5,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type Ep struct {
@@ -14,7 +14,7 @@ type Ep struct {
 	Y *fp.Fp
 	Z *fp.Fp
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (p *Ep) Map(u0, u1 *fp.Fp) *Ep {
@@ -215,7 +215,7 @@ func (p *Ep) ToAffineUncompressed() []byte {
 
 func (p *Ep) FromAffineCompressed(bytes_ []byte) (*Ep, error) {
 	if len(bytes_) != 32 {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 
 	var input [32]byte
@@ -225,11 +225,11 @@ func (p *Ep) FromAffineCompressed(bytes_ []byte) (*Ep, error) {
 
 	x := new(fp.Fp)
 	if _, err := x.SetBytes(&input); err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "x")
+		return nil, errs.WrapCoordinates(err, "x")
 	}
 	rhs := rhsPallas(x)
 	if _, square := rhs.Sqrt(rhs); !square {
-		return nil, errs.NewInvalidCoordinates("rhs of given x-coordinate is not a square")
+		return nil, errs.NewCoordinates("rhs of given x-coordinate is not a square")
 	}
 	if rhs.Bytes()[0]&1 != sign {
 		rhs.Neg(rhs)
@@ -238,14 +238,14 @@ func (p *Ep) FromAffineCompressed(bytes_ []byte) (*Ep, error) {
 	p.Y = rhs
 	p.Z = new(fp.Fp).SetOne()
 	if !p.IsOnCurve() {
-		return nil, errs.NewInvalidType("invalid point")
+		return nil, errs.NewType("invalid point")
 	}
 	return p, nil
 }
 
 func (p *Ep) FromAffineUncompressed(bytes_ []byte) (*Ep, error) {
 	if len(bytes_) != 64 {
-		return nil, errs.NewInvalidLength("invalid length")
+		return nil, errs.NewLength("invalid length")
 	}
 	p.Z = new(fp.Fp).SetOne()
 	p.X = new(fp.Fp)
@@ -254,10 +254,10 @@ func (p *Ep) FromAffineUncompressed(bytes_ []byte) (*Ep, error) {
 	copy(x[:], bytes_[:32])
 	copy(y[:], bytes_[32:])
 	if _, err := p.X.SetBytes(&x); err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "could not set x")
+		return nil, errs.WrapCoordinates(err, "could not set x")
 	}
 	if _, err := p.Y.SetBytes(&y); err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "could not set y")
+		return nil, errs.WrapCoordinates(err, "could not set y")
 	}
 	if !p.IsOnCurve() {
 		return nil, errs.NewMembership("invalid point")

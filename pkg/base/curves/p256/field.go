@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -23,7 +23,7 @@ var (
 var _ curves.BaseField = (*BaseField)(nil)
 
 type BaseField struct {
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func p256BaseFieldInit() {
@@ -73,7 +73,7 @@ func (f *BaseField) OperateOver(operator algebra.Operator, xs ...curves.BaseFiel
 	case algebra.PointAddition:
 		fallthrough
 	default:
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	return current, nil
 }
@@ -85,7 +85,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	var seed [base.WideFieldBytes]byte
 	_, err := prng.Read(seed[:])
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
+		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
 	value, err := NewBaseFieldElement(0).SetBytesWide(seed[:])
 	if err != nil {
@@ -97,7 +97,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 	els, err := NewCurve().HashToFieldElements(1, x, nil)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not hash to field element in p256")
+		return nil, errs.WrapHashing(err, "could not hash to field element in p256")
 	}
 	return els[0], nil
 }
@@ -174,7 +174,7 @@ func (*BaseField) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) 
 func (*BaseField) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
 	pp, ok := p.(*BaseFieldElement)
 	if !ok {
-		return nil, errs.NewInvalidType("given point is not from this field")
+		return nil, errs.NewType("given point is not from this field")
 	}
 	return pp.Sqrt()
 }

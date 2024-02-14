@@ -5,73 +5,63 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 type Aggregator[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	publicKeyShares        *boldyreva02.PublicKeyShares[K]
-	cohortConfig           *integration.CohortConfig
-	identityKeyToSharingId map[types.IdentityHash]int
-	scheme                 bls.RogueKeyPrevention
+	publicKeyShares *boldyreva02.PublicKeyShares[K]
+	protocol        types.ThresholdSignatureProtocol
+	sharingConfig   types.SharingConfig
+	scheme          bls.RogueKeyPrevention
 }
 
-func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], scheme bls.RogueKeyPrevention, cohortConfig *integration.CohortConfig) (*Aggregator[K, S], error) {
-	err := validateInputs[K, S](publicKeyShares, cohortConfig)
+func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], scheme bls.RogueKeyPrevention, protocol types.ThresholdSignatureProtocol) (*Aggregator[K, S], error) {
+	err := validateInputs[K, S](publicKeyShares, protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
-
-	if cohortConfig.Protocol == nil {
-		return nil, errs.NewIsNil("protocol config is nil")
-	}
-	if err := publicKeyShares.Validate(cohortConfig); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "public key shares are invalid")
-	}
-	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	return &Aggregator[K, S]{
-		publicKeyShares:        publicKeyShares,
-		cohortConfig:           cohortConfig,
-		identityKeyToSharingId: identityKeyToSharingId,
-		scheme:                 scheme,
+		publicKeyShares: publicKeyShares,
+		protocol:        protocol,
+		sharingConfig:   sharingConfig,
+		scheme:          scheme,
 	}, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], cohortConfig *integration.CohortConfig) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], protocol types.ThresholdSignatureProtocol) error {
 	if bls.SameSubGroup[K, S]() {
-		return errs.NewInvalidType("key and signature subgroup should not be the same")
+		return errs.NewType("key and signature subgroup should not be the same")
 	}
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
 	}
-	if cohortConfig.CipherSuite.Curve.Name() != bls12381.GetSourceSubGroup[K]().Name() {
-		return errs.NewInvalidArgument("cohort config curve mismatch with the declared subgroup")
+	if protocol.CipherSuite().Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
+		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
 	}
-	if err := publicKeyShares.Validate(cohortConfig); err != nil {
-		return errs.WrapInvalidArgument(err, "could not validate public key shares")
+	if err := publicKeyShares.Validate(protocol); err != nil {
+		return errs.WrapArgument(err, "could not validate public key shares")
 	}
 	return nil
 }
 
-func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
+func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
 	if bls.SameSubGroup[K, S]() {
-		return nil, nil, errs.NewInvalidType("key and signature subgroups can't be the same")
+		return nil, nil, errs.NewType("key and signature subgroups can't be the same")
 	}
 	keySubGroup := bls12381.GetSourceSubGroup[K]()
 	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
 
-	presentParticipantsToSharingId := make(map[types.IdentityHash]int, len(partialSignatures))
-	sharingIds := make([]int, len(partialSignatures))
+	sharingIds := make([]uint, partialSignatures.Size())
 	i := 0
-	for id := range partialSignatures {
-		sharingId, exists := a.identityKeyToSharingId[id]
+	for pair := range partialSignatures.Iter() {
+		sharingId, exists := a.sharingConfig.LookUpRight(pair.Key)
 		if !exists {
-			return nil, nil, errs.NewMembership("participant %x is not in cohort", id)
+			return nil, nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
 		}
-		sharingIds[i] = sharingId
-		presentParticipantsToSharingId[id] = sharingId
+		sharingIds[i] = uint(sharingId)
 		i++
 	}
 
@@ -84,23 +74,33 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 	sigmaPOP := signatureSubGroup.Identity()
 
 	// step 2.1
-	for identityHash, psig := range partialSignatures {
+	for pair := range partialSignatures.Iter() {
+		identityKey := pair.Key
+		psig := pair.Value
+		sharingId, exists := a.sharingConfig.LookUpRight(identityKey)
+		if !exists {
+			return nil, nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
+		}
 		var internalMessage []byte
 		if psig == nil {
-			return nil, nil, errs.NewMissing("missing partial signature for %x", identityHash)
+			return nil, nil, errs.NewMissing("missing partial signature for %x", identityKey.PublicKey())
 		}
 		if psig.POP == nil {
-			return nil, nil, errs.NewMissing("missing pop for %x", identityHash)
+			return nil, nil, errs.NewMissing("missing pop for %x", identityKey.PublicKey())
 		}
 		if psig.SigmaI == nil {
-			return nil, nil, errs.NewMissing("missing signature for %x", identityHash)
+			return nil, nil, errs.NewMissing("missing signature for %x", identityKey.PublicKey())
 		}
-		publicKeyShare, exists := a.publicKeyShares.SharesMap[identityHash]
+		publicKeyShare, exists := a.publicKeyShares.Shares.Get(identityKey)
 		if !exists {
-			return nil, nil, errs.NewMissing("couldn't find public key share of %x", identityHash)
+			return nil, nil, errs.NewMissing("couldn't find public key share of %x", identityKey.PublicKey())
+		}
+		Y, ok := publicKeyShare.(curves.PairingPoint)
+		if !ok {
+			return nil, nil, errs.NewType("partial public key of %x is invalid", identityKey.PublicKey())
 		}
 		publicKeyShareAsPublicKey := &bls.PublicKey[K]{
-			Y: publicKeyShare,
+			Y: Y,
 		}
 		// step 2.1.1 and 2.1.2
 		switch scheme {
@@ -118,7 +118,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 				return nil, nil, errs.WrapFailed(err, "could not marshal public key share")
 			}
 			if err := bls.Verify(publicKeyShareAsPublicKey, psig.SigmaPOPI, internalPopMessage, psig.POP, bls.POP, bls.GetPOPDst(publicKeyShareAsPublicKey.InG1())); err != nil {
-				return nil, nil, errs.WrapIdentifiableAbort(err, identityHash, "could not verify partial signature")
+				return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify partial signature")
 			}
 		}
 		tag, err := bls.GetDst(scheme, publicKeyShareAsPublicKey.InG1())
@@ -126,12 +126,12 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 			return nil, nil, errs.WrapFailed(err, "could not get dst")
 		}
 		if err := bls.Verify(publicKeyShareAsPublicKey, psig.SigmaI, internalMessage, psig.POP, bls.POP, tag); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, identityHash, "could not verify partial signature")
+			return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify partial signature")
 		}
 
-		lambda_i, exists := lambdas[presentParticipantsToSharingId[identityHash]]
+		lambda_i, exists := lambdas[uint(sharingId)]
 		if !exists {
-			return nil, nil, errs.NewMissing("couldn't find lagrange coefficient for %x", identityHash)
+			return nil, nil, errs.NewMissing("couldn't find lagrange coefficient for %x", identityKey.PublicKey())
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
@@ -143,17 +143,17 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*b
 
 	sigmaPairable, ok := sigma.(curves.PairingPoint)
 	if !ok {
-		return nil, nil, errs.NewInvalidType("sigma couldn't be converted to a pairable point")
+		return nil, nil, errs.NewType("sigma couldn't be converted to a pairable point")
 	}
 
 	// step 2.3
 	if scheme == bls.POP {
 		if sigmaPOP == nil || sigmaPOP.IsIdentity() {
-			return nil, nil, errs.NewInvalidArgument("sigma POP is nil or identity")
+			return nil, nil, errs.NewArgument("sigma POP is nil or identity")
 		}
 		sigmaPOPPairable, ok := sigmaPOP.(curves.PairingPoint)
 		if !ok {
-			return nil, nil, errs.NewInvalidType("sigma POP couldn't be converted to a pairable point")
+			return nil, nil, errs.NewType("sigma POP couldn't be converted to a pairable point")
 		}
 		return &bls.Signature[S]{
 				Value: sigmaPairable,

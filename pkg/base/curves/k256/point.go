@@ -2,6 +2,7 @@ package k256
 
 import (
 	"encoding"
+	"encoding/binary"
 	"encoding/json"
 
 	"github.com/cronokirby/saferith"
@@ -12,8 +13,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	k256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -26,7 +27,7 @@ var _ json.Unmarshaler = (*Point)(nil)
 type Point struct {
 	V *impl.EllipticPoint
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewPoint() *Point {
@@ -258,7 +259,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	var raw [base.FieldBytes]byte
 	if len(input) != 33 {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	sign := int(input[0])
 	if sign != 2 && sign != 3 {
@@ -269,7 +270,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	copy(raw[:], bitstring.ReverseBytes(input[1:]))
 	x, err := fp.New().SetBytes(&raw)
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "x")
+		return nil, errs.WrapCoordinates(err, "x")
 	}
 
 	value := k256impl.PointNew().Identity()
@@ -294,7 +295,7 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	var arr [base.FieldBytes]byte
 	if len(input) != 65 {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	if input[0] != 4 {
 		return nil, errs.NewFailed("invalid sign byte")
@@ -303,12 +304,12 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
 	x, err := fp.New().SetBytes(&arr)
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "x")
+		return nil, errs.WrapCoordinates(err, "x")
 	}
 	copy(arr[:], bitstring.ReverseBytes(input[33:]))
 	y, err := fp.New().SetBytes(&arr)
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "y")
+		return nil, errs.WrapCoordinates(err, "y")
 	}
 	value := k256impl.PointNew()
 	value.X = x
@@ -335,11 +336,11 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
-		return errs.NewInvalidType("invalid point")
+		return errs.NewType("invalid point")
 	}
 	p.V = ppt.V
 	return nil
@@ -363,7 +364,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	P, ok := pt.(*Point)
 	if !ok {
@@ -371,4 +372,10 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	}
 	p.V = P.V
 	return nil
+}
+
+// === Hashable.
+
+func (p *Point) HashCode() uint64 {
+	return binary.BigEndian.Uint64(p.ToAffineCompressed())
 }

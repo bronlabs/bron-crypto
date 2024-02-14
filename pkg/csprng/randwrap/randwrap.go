@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -36,7 +36,7 @@ var _ io.Reader = (*WrappedReader)(nil)
 
 type WrappedReader struct {
 	// should be key for a **deterministic** signature scheme.
-	deviceRandomnessDeterministicWrappingKey integration.AuthKey
+	deviceRandomnessDeterministicWrappingKey types.AuthKey
 	// Extract(H(Sig(sk, tag1)), ikm) where tag1 is bounded to the device
 	prk []byte
 	// a unique nonce for each sample. Should be less than n + L.
@@ -44,9 +44,9 @@ type WrappedReader struct {
 	tag2 uint128.Uint128
 }
 
-func NewWrappedReader(prng io.Reader, deterministicWrappingKey integration.AuthKey) (*WrappedReader, error) {
+func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*WrappedReader, error) {
 	if err := validateInputs(prng, deterministicWrappingKey); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "input validation failed")
+		return nil, errs.WrapArgument(err, "input validation failed")
 	}
 	tag1, err := bindDevice(prng)
 	if err != nil {
@@ -58,14 +58,14 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey integration.AuthK
 
 	var ikm [LBytes]byte
 	if _, err := prng.Read(ikm[:]); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not sample ikm")
+		return nil, errs.WrapRandomSample(err, "could not sample ikm")
 	}
 
 	prk := hkdf.Extract(sha3.New256, ikm[:], salt[:])
 
 	var tag2Sample [LPrimeBytes]byte
 	if _, err := prng.Read(tag2Sample[:]); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not sample tag2 as a nonce")
+		return nil, errs.WrapRandomSample(err, "could not sample tag2 as a nonce")
 	}
 
 	tag2 := uint128.NewFromBytesBE(tag2Sample[:])
@@ -86,7 +86,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 		wr.tag2.PutBytesBE(tag2Bytes[:])
 		expander := hkdf.Expand(sha3.New256, wr.prk, tag2Bytes[:])
 		if _, err := expander.Read(block[:]); err != nil {
-			return -1, errs.WrapRandomSampleFailed(err, "couldn't expand for block %d", i)
+			return -1, errs.WrapRandomSample(err, "couldn't expand for block %d", i)
 		}
 		if _, err := shaker.Write(block[:]); err != nil {
 			return -1, errs.WrapFailed(err, "couldn't write block %d to shaker", i)
@@ -100,7 +100,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func validateInputs(prng io.Reader, deterministicWrappingKey integration.AuthKey) error {
+func validateInputs(prng io.Reader, deterministicWrappingKey types.AuthKey) error {
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
@@ -109,14 +109,14 @@ func validateInputs(prng io.Reader, deterministicWrappingKey integration.AuthKey
 	}
 	var testingMessage [NBytes]byte
 	if _, err := prng.Read(testingMessage[:]); err != nil {
-		return errs.WrapRandomSampleFailed(err, "could not sample a random testign message")
+		return errs.WrapRandomSample(err, "could not sample a random testign message")
 	}
 
 	firstSignature := deterministicWrappingKey.Sign(testingMessage[:])
 	secondSignature := deterministicWrappingKey.Sign(testingMessage[:])
 
 	if subtle.ConstantTimeCompare(firstSignature, secondSignature) == 0 {
-		return errs.NewInvalidType("wrapping key is not deterministic")
+		return errs.NewType("wrapping key is not deterministic")
 	}
 	return nil
 }

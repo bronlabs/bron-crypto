@@ -1,15 +1,20 @@
 package hagrid
 
 import (
+	crand "crypto/rand"
 	"fmt"
+	"io"
 
+	"golang.org/x/crypto/chacha20"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -32,17 +37,37 @@ var _ transcripts.Transcript = (*Transcript)(nil)
 type Transcript struct {
 	state [stateLength]byte
 	prng  csprng.CSPRNG
+	salt  []byte
 
 	transcripts.Transcript
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
-func NewTranscript(appLabel string, prng csprng.CSPRNG) *Transcript {
+// TODO: add error type
+func NewTranscript(appLabel string, prng io.Reader) *Transcript {
+	if prng == nil {
+		prng = crand.Reader
+	}
+	salt := bitstring.PadToRight([]byte(appLabel), chacha20.NonceSizeX-len(appLabel))
+	var seedablePrng csprng.CSPRNG
+	var err error
+	seedablePrng, ok := prng.(csprng.CSPRNG)
+	if !ok {
+		var seed [chacha.ChachaPRNGSecurityStrength]byte
+		if _, err := prng.Read(seed[:]); err != nil {
+			panic(err)
+		}
+		seedablePrng, err = chacha.NewChachaPRNG(seed[:], salt)
+		if err != nil {
+			panic(err)
+		}
+	}
 	t := Transcript{
 		state: [stateLength]byte{},
-		prng:  prng,
+		prng:  seedablePrng,
+		salt:  salt,
 	}
 	t.AppendMessages(domainSeparatorLabel, []byte(protocolLabel), []byte(appLabel))
 	return &t
@@ -99,11 +124,11 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 	t.ratchet([]byte(label))
 	out = make([]byte, outLen)
 	if t.prng != nil {
-		if err := t.prng.Seed(t.state[:], nil); err != nil {
+		if err := t.prng.Seed(t.state[:], t.salt); err != nil {
 			return nil, errs.WrapFailed(err, "failed to seed transcript prng")
 		}
 		if _, err := t.prng.Read(out); err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "failed to read from transcript prng")
+			return nil, errs.WrapRandomSample(err, "failed to read from transcript prng")
 		}
 	} else {
 		shake := sha3.NewShake256()
@@ -111,7 +136,7 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 			return nil, errs.WrapFailed(err, "failed to write transcript state in shake")
 		}
 		if _, err := shake.Read(out); err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "failed to read from shake")
+			return nil, errs.WrapRandomSample(err, "failed to read from shake")
 		}
 	}
 	return out, nil

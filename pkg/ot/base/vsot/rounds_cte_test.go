@@ -9,7 +9,9 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
+	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
 )
 
 func Test_MeasureConstantTime_encrypt(t *testing.T) {
@@ -17,29 +19,23 @@ func Test_MeasureConstantTime_encrypt(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	batchSize := 256
-	hashKeySeed := [32]byte{}
-	_, err := crand.Read(hashKeySeed[:])
+	Xi := 256
+	L := 4
+	sid := [32]byte{}
+	_, err := crand.Read(sid[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(t, k256.NewCurve(), batchSize, hashKeySeed[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(Xi, L, k256.NewCurve(), sid[:], crand.Reader)
 	require.NoError(t, err)
 
-	for i := 0; i < batchSize; i++ {
-		require.Equal(t, receiver.OneTimePadDecryptionKey[i], sender.OneTimePadEncryptionKeys[i][receiver.RandomChoiceBits[i]])
+	for i := 0; i < Xi; i++ {
+		require.Equal(t, receiver.ChosenMessages[i], sender.Messages[i][receiver.Choices.Select(i)])
 	}
-	messages := make([][2][32]byte, batchSize)
+	var messages []ot.MessagePair
 	internal.RunMeasurement(500, "vsot_encrypt", func(i int) {
-		for i := 0; i < batchSize; i++ {
-			slice := internal.GetBigEndianBytesWithLowestBitsSet(32, i)
-			array := [32]byte{}
-			copy(array[:], slice)
-			messages[i] = [2][32]byte{
-				array,
-				array,
-			}
-		}
+		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
+		require.NoError(t, err)
 	}, func() {
-		sender.Encrypt(messages)
+		sender.Round2Encrypt(messages)
 	})
 }
 
@@ -48,30 +44,25 @@ func Test_MeasureConstantTime_decrypt(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	batchSize := 256
-	hashKeySeed := [32]byte{}
-	_, err := crand.Read(hashKeySeed[:])
+	Xi := 256
+	L := 4
+	sid := [32]byte{}
+	_, err := crand.Read(sid[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(t, k256.NewCurve(), batchSize, hashKeySeed[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(Xi, L, k256.NewCurve(), sid[:], crand.Reader)
 	require.NoError(t, err)
 
-	for i := 0; i < batchSize; i++ {
-		require.Equal(t, receiver.OneTimePadDecryptionKey[i], sender.OneTimePadEncryptionKeys[i][receiver.RandomChoiceBits[i]])
+	for i := 0; i < Xi; i++ {
+		require.Equal(t, receiver.ChosenMessages[i], sender.Messages[i][receiver.Choices.Select(i)])
 	}
-	messages := make([][2][32]byte, batchSize)
-	encrypted := make([][2][32]byte, batchSize)
+	var messages []ot.MessagePair
+	var encrypted []ot.MessagePair
 	internal.RunMeasurement(500, "vsot_decrypt", func(i int) {
-		for i := 0; i < batchSize; i++ {
-			slice := internal.GetBigEndianBytesWithLowestBitsSet(32, i)
-			array := [32]byte{}
-			copy(array[:], slice)
-			messages[i] = [2][32]byte{
-				array,
-				array,
-			}
-		}
-		encrypted, err = sender.Encrypt(messages)
+		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
+		require.NoError(t, err)
+		encrypted, err = sender.Round2Encrypt(messages)
+		require.NoError(t, err)
 	}, func() {
-		receiver.Decrypt(encrypted)
+		receiver.Round3Decrypt(encrypted)
 	})
 }

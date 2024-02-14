@@ -4,13 +4,13 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 type Share struct {
-	_ types.Incomparable
+	_ ds.Incomparable
 
 	Value curves.Scalar `json:"value"`
 }
@@ -20,7 +20,7 @@ type Share struct {
 // shamir configs.
 // In case after conversion, resharing of the new shamir share is desired. A new protocol must
 // be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
-func (s Share) ConvertToShamir(id, t, n int, identities []int) (*shamir.Share, error) {
+func (s Share) ConvertToShamir(id, t, n uint, identities []uint) (*shamir.Share, error) {
 	curve := s.Value.ScalarField().Curve()
 	shamirDealer, err := shamir.NewDealer(t, n, curve)
 	if err != nil {
@@ -44,7 +44,7 @@ type Dealer struct {
 	Total int
 	Curve curves.Curve
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewDealer(total int, curve curves.Curve) (*Dealer, error) {
@@ -60,7 +60,7 @@ func (d *Dealer) Validate() error {
 		return errs.NewIsNil("dealer is nil")
 	}
 	if d.Total < 2 {
-		return errs.NewInvalidArgument("threshold cannot be less than 2")
+		return errs.NewArgument("threshold cannot be less than 2")
 	}
 	if d.Curve == nil {
 		return errs.NewIsNil("invalid curve")
@@ -77,7 +77,7 @@ func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
 	for i := 1; i < d.Total; i++ {
 		share, err := d.Curve.ScalarField().Random(prng)
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+			return nil, errs.WrapRandomSample(err, "could not generate random scalar")
 		}
 		partialSum = partialSum.Add(share)
 		shares[i] = &Share{Value: share}

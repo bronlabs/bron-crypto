@@ -1,0 +1,74 @@
+package types
+
+import (
+	"hash"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+)
+
+type cipherSuite struct {
+	curve curves.Curve
+	hash  func() hash.Hash
+}
+
+func (cs *cipherSuite) Curve() curves.Curve {
+	return cs.curve
+}
+
+func (cs *cipherSuite) Hash() func() hash.Hash {
+	return cs.hash
+}
+
+func (*cipherSuite) MarshalJSON() ([]byte, error) {
+	panic("not implemented")
+}
+
+type protocol struct {
+	curve                curves.Curve
+	hash                 func() hash.Hash
+	participants         ds.HashSet[IdentityKey]
+	threshold            uint
+	totalParties         uint
+	signatureAggregators ds.HashSet[IdentityKey]
+	presignatureComposer IdentityKey
+}
+
+func (p *protocol) Curve() curves.Curve {
+	return p.curve
+}
+
+func (p *protocol) Hash() func() hash.Hash {
+	return p.hash
+}
+
+func (p *protocol) Participants() ds.HashSet[IdentityKey] {
+	return p.participants
+}
+
+func (p *protocol) Threshold() uint {
+	return p.threshold
+}
+
+func (p *protocol) TotalParties() uint {
+	return p.totalParties
+}
+
+func (p *protocol) SignatureAggregators() ds.HashSet[IdentityKey] {
+	return p.signatureAggregators
+}
+
+func (p *protocol) PreSignatureComposer() IdentityKey {
+	return p.presignatureComposer
+}
+
+func (p *protocol) CipherSuite() SignatureProtocol {
+	return &cipherSuite{
+		curve: p.curve,
+		hash:  p.hash,
+	}
+}
+
+func (*protocol) MarshalJSON() ([]byte, error) {
+	panic("not implemented")
+}

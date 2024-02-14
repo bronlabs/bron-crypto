@@ -3,8 +3,8 @@ package impl
 import (
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 // EllipticPoint represents a Weierstrauss elliptic curve point.
@@ -15,7 +15,7 @@ type EllipticPoint struct {
 	Params     *EllipticPointParams
 	Arithmetic EllipticPointArithmetic
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // EllipticPointParams are the Weierstrauss curve parameters
@@ -29,7 +29,7 @@ type EllipticPointParams struct {
 	Gy      *FieldValue
 	BitSize int
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // EllipticPointArithmetic are the methods that specific curves
@@ -183,7 +183,7 @@ func (p *EllipticPoint) SetNat(x, y *saferith.Nat) (*EllipticPoint, error) {
 	pp.Y = yy.CMove(yy, zero, isIdentity)
 	pp.Z = one.CMove(one, zero, isIdentity)
 	if !p.Arithmetic.IsOnCurve(pp) && isIdentity == 0 {
-		return nil, errs.NewInvalidCoordinates("set Nat")
+		return nil, errs.NewCoordinates("set Nat")
 	}
 	return p.Set(pp), nil
 }
@@ -221,7 +221,7 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldV
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	if len(points) != len(scalars) {
-		return nil, errs.NewIncorrectCount("#points != #scalars")
+		return nil, errs.NewCount("#points != #scalars")
 	}
 
 	bucketSize := 1 << W

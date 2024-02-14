@@ -3,14 +3,14 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 // Fp2 is a point in p^2.
 type Fp2 struct {
 	A, B Fp
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Set copies a into fp2.

@@ -9,8 +9,8 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
@@ -40,7 +40,7 @@ type entry struct {
 	witness commitments.Witness
 	err     error
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Test inputs and placeholders for results that will be filled in
@@ -192,7 +192,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, dPrime, entry.msg)
-		require.True(t, errs.IsVerificationFailed(err))
+		require.True(t, errs.IsVerification(err))
 	}
 }
 
@@ -216,7 +216,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, dPrime, entry.msg)
-		require.True(t, errs.IsVerificationFailed(err))
+		require.True(t, errs.IsVerification(err))
 	}
 }
 
@@ -231,7 +231,7 @@ func TestOpenOnNewMessage(t *testing.T) {
 
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, dPrime, msg)
-		require.True(t, errs.IsVerificationFailed(err))
+		require.True(t, errs.IsVerification(err))
 	}
 }
 
@@ -250,7 +250,7 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, dPrime, entry.msg)
-		require.True(t, errs.IsVerificationFailed(err))
+		require.True(t, errs.IsVerification(err))
 	}
 }
 
@@ -265,7 +265,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(cPrime, entry.witness, entry.msg)
-		require.True(t, errs.IsVerificationFailed(err))
+		require.True(t, errs.IsVerification(err))
 	}
 }
 
@@ -275,7 +275,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	for _, entry := range testResults {
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, commitments.Witness{}, entry.msg)
-		require.True(t, errs.IsInvalidArgument(err))
+		require.True(t, errs.IsArgument(err))
 	}
 }
 
@@ -283,7 +283,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
 	err := commitments.OpenWithoutSession(nil, commitments.Witness{}, nil)
-	require.True(t, errs.IsInvalidArgument(err))
+	require.True(t, errs.IsArgument(err))
 }
 
 // Too long commitment should produce an error
@@ -294,7 +294,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 		copy(tooLong, entry.msg)
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(tooLong, entry.witness, entry.msg)
-		require.True(t, errs.IsInvalidArgument(err))
+		require.True(t, errs.IsArgument(err))
 	}
 }
 
@@ -306,6 +306,6 @@ func TestOpenOnShortCommitment(t *testing.T) {
 		copy(tooShort, entry.msg)
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(tooShort, entry.witness, entry.msg)
-		require.True(t, errs.IsInvalidArgument(err))
+		require.True(t, errs.IsArgument(err))
 	}
 }

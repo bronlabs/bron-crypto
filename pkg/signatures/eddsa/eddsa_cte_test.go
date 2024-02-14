@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
@@ -25,10 +25,8 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello")
 	hashFunc := sha256.New
-	suite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  hashFunc,
-	}
+	suite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
 
 	messageHash, err := hashing.Hash(hashFunc, message)
 	require.NoError(t, err)

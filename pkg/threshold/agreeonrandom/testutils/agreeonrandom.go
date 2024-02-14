@@ -7,16 +7,19 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 )
 
-func RunAgreeOnRandom(curve curves.Curve, identities []integration.IdentityKey, prng io.Reader) ([]byte, error) {
+func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))
-	set := hashset.NewHashSet(identities)
-	for _, identity := range set.Iter() {
-		participant, err := agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), set, nil, prng)
+	set := hashset.NewHashableHashSet(identities...)
+	protocol, err := ttu.MakeMPCProtocol(curve, identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't make mpc protocol")
+	}
+	for identity := range set.Iter() {
+		participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -27,30 +30,30 @@ func RunAgreeOnRandom(curve curves.Curve, identities []integration.IdentityKey, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not execute round 1")
 	}
-	r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(participants, r1Out)
 	r2Out, err := DoRound2(participants, r2In)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not execute round 2")
 	}
-	r3In := integration_testutils.MapBroadcastO2I(participants, r2Out)
+	r3In := ttu.MapBroadcastO2I(participants, r2Out)
 	agreeOnRandoms, err := DoRound3(participants, r3In)
 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not execute round 3")
 	}
-	if len(agreeOnRandoms) != set.Len() {
-		return nil, errs.NewInvalidArgument("expected %d agreeOnRandoms, got %d", len(identities), len(agreeOnRandoms))
+	if len(agreeOnRandoms) != set.Size() {
+		return nil, errs.NewArgument("expected %d agreeOnRandoms, got %d", len(identities), len(agreeOnRandoms))
 	}
 
 	// check all values in agreeOnRandoms the same
 	for j := 1; j < len(agreeOnRandoms); j++ {
 		if len(agreeOnRandoms[0]) != len(agreeOnRandoms[j]) {
-			return nil, errs.NewInvalidLength("slices are not equal")
+			return nil, errs.NewLength("slices are not equal")
 		}
 
 		for i := range agreeOnRandoms[0] {
 			if agreeOnRandoms[0][i] != agreeOnRandoms[j][i] {
-				return nil, errs.NewInvalidLength("slices are not equal")
+				return nil, errs.NewLength("slices are not equal")
 			}
 		}
 	}
@@ -69,7 +72,7 @@ func DoRound1(participants []*agreeonrandom.Participant) (round1Outputs []*agree
 	return round1Outputs, nil
 }
 
-func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[types.IdentityHash]*agreeonrandom.Round1Broadcast) (round2Outputs []*agreeonrandom.Round2Broadcast, err error) {
+func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []types.RoundMessages[*agreeonrandom.Round1Broadcast]) (round2Outputs []*agreeonrandom.Round2Broadcast, err error) {
 	round2Outputs = make([]*agreeonrandom.Round2Broadcast, len(participants))
 	for i, participant := range participants {
 		round2Outputs[i], err = participant.Round2(round2Inputs[i])
@@ -80,7 +83,7 @@ func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []map[type
 	return round2Outputs, nil
 }
 
-func DoRound3(participants []*agreeonrandom.Participant, round2Inputs []map[types.IdentityHash]*agreeonrandom.Round2Broadcast) (results [][]byte, err error) {
+func DoRound3(participants []*agreeonrandom.Participant, round2Inputs []types.RoundMessages[*agreeonrandom.Round2Broadcast]) (results [][]byte, err error) {
 	results = make([][]byte, len(participants))
 	for i, participant := range participants {
 		results[i], err = participant.Round3(round2Inputs[i])

@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -40,10 +40,10 @@ func Test_HappyPathSchnorr(t *testing.T) {
 
 			w, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
-			witness := new_schnorr.Witness(w)
-			statement := new_schnorr.Statement(curve.ScalarBaseMult(witness))
+			witness := schnorr.Witness(w)
+			statement := schnorr.Statement(curve.ScalarBaseMult(witness))
 			prng := crand.Reader
-			protocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			protocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 			sessionId := []byte("some_session_id_for_test" + strconv.Itoa(i))
 			transcript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)

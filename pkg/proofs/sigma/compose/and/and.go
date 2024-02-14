@@ -105,10 +105,10 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes []byte, response *Response[Z0, Z1]) error {
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
-		return errs.WrapVerificationFailed(err, "verification failed")
+		return errs.WrapVerification(err, "verification failed")
 	}
 	if err := p.sigma1.Verify(statement.X1, commitment.A1, challengeBytes[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
-		return errs.WrapVerificationFailed(err, "verification failed")
+		return errs.WrapVerification(err, "verification failed")
 	}
 
 	return nil
@@ -135,17 +135,13 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLengt
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
 	if err := p.sigma0.ValidateStatement(statement.X0, witness.W0); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid statement")
+		return errs.WrapValidation(err, "invalid statement")
 	}
 	if err := p.sigma1.ValidateStatement(statement.X1, witness.W1); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid statement")
+		return errs.WrapValidation(err, "invalid statement")
 	}
 
 	return nil
-}
-
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) DomainSeparationLabel() string {
-	return fmt.Sprintf("(%s_AND_%s)", p.sigma0.DomainSeparationLabel(), p.sigma1.DomainSeparationLabel())
 }
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
@@ -158,4 +154,8 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(co
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
 	return bytes.Join([][]byte{p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1)}, nil)
+}
+
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
+	return sigma.Name(fmt.Sprintf("(%s)_AND_(%s)", p.sigma0.Name(), p.sigma1.Name()))
 }

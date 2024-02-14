@@ -78,7 +78,7 @@ func marshalToBinaryWithUnexposedBinaryMarshaller(x any, iType reflect.Type) ([]
 
 	// Check if the input implements the correct type ie x is scalar if iType is scalar etc.
 	if !v.Type().Implements(iType.Elem()) {
-		return nil, errs.NewInvalidType("inputs type mismatch")
+		return nil, errs.NewType("inputs type mismatch")
 	}
 
 	// extract the underlying value
@@ -103,7 +103,7 @@ func marshalToBinaryWithUnexposedBinaryMarshaller(x any, iType reflect.Type) ([]
 
 	results := marshalMethod.Call(nil)
 	if len(results) != 2 {
-		return nil, errs.NewInvalidType("type signature mismatch. returned %d results", len(results))
+		return nil, errs.NewType("type signature mismatch. returned %d results", len(results))
 	}
 
 	if !results[1].IsNil() {
@@ -111,7 +111,7 @@ func marshalToBinaryWithUnexposedBinaryMarshaller(x any, iType reflect.Type) ([]
 	}
 	data, ok := results[0].Interface().([]byte)
 	if !ok {
-		return nil, errs.NewInvalidType("type of the result is not []byte")
+		return nil, errs.NewType("type of the result is not []byte")
 	}
 	return data, nil
 }

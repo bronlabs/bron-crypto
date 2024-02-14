@@ -10,10 +10,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
@@ -24,23 +22,22 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha3.New256,
-	}
+	curve := k256.NewCurve()
+	h := sha3.New256
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
 
-	var identities []integration.IdentityKey
-	var cohortConfig *integration.CohortConfig
+	var identities []types.IdentityKey
+	var cohortConfig types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*pedersen.Participant
-	var err error
 
 	internal.RunMeasurement(500, "pedersen_round1", func(i int) {
-		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
+		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
@@ -54,33 +51,32 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha3.New256,
-	}
+	curve := k256.NewCurve()
+	h := sha3.New256
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
 
-	var identities []integration.IdentityKey
-	var cohortConfig *integration.CohortConfig
+	var identities []types.IdentityKey
+	var cohortConfig types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*pedersen.Participant
-	var err error
 	var r1OutsB []*pedersen.Round1Broadcast
-	var r1OutsU []map[types.IdentityHash]*pedersen.Round1P2P
-	var r2InsB []map[types.IdentityHash]*pedersen.Round1Broadcast
-	var r2InsU []map[types.IdentityHash]*pedersen.Round1P2P
+	var r1OutsU []types.RoundMessages[*pedersen.Round1P2P]
+	var r2InsB []types.RoundMessages[*pedersen.Round1Broadcast]
+	var r2InsU []types.RoundMessages[*pedersen.Round1P2P]
 
 	internal.RunMeasurement(500, "pedersen_round2", func(i int) {
-		identities, err = integration_testutils.MakeTestIdentities(cipherSuite, 3)
+		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
-		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
+		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
 		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants, nil)
 		require.NoError(t, err)
-		r2InsB, r2InsU = integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+		r2InsB, r2InsU = ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	}, func() {
 		testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	})

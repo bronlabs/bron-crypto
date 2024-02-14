@@ -8,8 +8,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var (
@@ -498,7 +498,7 @@ var (
 type G2 struct {
 	X, Y, Z Fp2
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (g2 *G2) Map(u0, u1 *Fp2) *G2 {
@@ -945,7 +945,7 @@ func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.FieldValue) (*G2, erro
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	var sum G2
 	if len(points) != len(scalars) {
-		return nil, errs.NewInvalidLength("length mismatch")
+		return nil, errs.NewLength("length mismatch")
 	}
 
 	bucketSize := 1 << W

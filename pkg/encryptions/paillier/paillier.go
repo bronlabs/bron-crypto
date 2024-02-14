@@ -129,6 +129,72 @@ func NewDecryptor(secretKey *SecretKey) (*Decryptor, error) {
 	return &Decryptor{secretKey: secretKey}, nil
 }
 
+func (decryptor *Decryptor) Validate(recomputeCached bool) error {
+	if decryptor == nil {
+		return errs.NewIsNil("nil receiver")
+	}
+	if err := decryptor.secretKey.Validate(recomputeCached); err != nil {
+		return errs.WrapValidation(err, "secret key")
+	}
+	return nil
+}
+
+func (secretKey *SecretKey) Validate(recomputeCached bool) error {
+	if secretKey == nil {
+		return errs.NewIsNil("nil receiver")
+	}
+	if err := secretKey.PublicKey.Validate(recomputeCached); err != nil {
+		return errs.WrapValidation(err, "public key")
+	}
+	if secretKey.Lambda == nil {
+		return errs.NewIsNil("lambda")
+	}
+	if secretKey.Totient == nil {
+		return errs.NewIsNil("totient")
+	}
+	if secretKey.U == nil {
+		return errs.NewIsNil("U")
+	}
+	return nil
+}
+
+func (publicKey *PublicKey) Validate(recomputeCached bool) error {
+	if publicKey == nil {
+		return errs.NewIsNil("nil receiver")
+	}
+	n := publicKey.N
+	n2 := publicKey.N2
+	if n == nil {
+		return errs.NewIsNil("N")
+	}
+	if n2 == nil {
+		return errs.NewIsNil("N2")
+	}
+	if recomputeCached {
+		nSquared := new(saferith.Nat).Mul(n.Nat(), n.Nat(), 2*n.Nat().AnnouncedLen())
+		if nSquared.Eq(n2.Nat()) != 1 {
+			return errs.NewFailed("invalid N2 cache")
+		}
+	}
+	return nil
+}
+
+func (ct *CipherText) Validate(publicKey *PublicKey) error {
+	if ct == nil {
+		return errs.NewIsNil("nil receiver")
+	}
+	if ct.C == nil {
+		return errs.NewIsNil("C")
+	}
+	if ct.C.EqZero() == 1 {
+		return errs.NewIsZero("ciphertext")
+	}
+	if _, _, ok := ct.C.CmpMod(publicKey.N2); ok == 0 {
+		return errs.NewRange("ciphertext")
+	}
+	return nil
+}
+
 // L computes a residuosity class of n^2: (x - 1) / n.
 // Where it is the quotient x - 1 divided by n not modular multiplication of x - 1 times
 // the modular multiplicative inverse of n. The function name comes from [P99].
@@ -164,11 +230,11 @@ func (publicKey *PublicKey) Add(lhsCipherText, rhsCipherText *CipherText) (*Ciph
 	}
 
 	// Ensure lhsCipherText, rhsCipherText ∈ Z_N²
-	if _, _, ok := lhsCipherText.C.CmpMod(publicKey.N2); ok == 0 {
-		return nil, errs.NewInvalidArgument("lhs is invalid")
+	if err := lhsCipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "lhs")
 	}
-	if _, _, ok := rhsCipherText.C.CmpMod(publicKey.N2); ok == 0 {
-		return nil, errs.NewInvalidArgument("rhs is invalid")
+	if err := rhsCipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "rhs")
 	}
 
 	c := new(saferith.Nat).ModMul(lhsCipherText.C, rhsCipherText.C, publicKey.N2)
@@ -182,10 +248,10 @@ func (publicKey *PublicKey) SubPlain(lhsCipherText *CipherText, rhsPlain *saferi
 	}
 	// Ensure lhsCipherText ∈ Z_N², rhsCipherText ∈ Z_N
 	if _, _, ok := rhsPlain.CmpMod(publicKey.N); ok == 0 {
-		return nil, errs.NewInvalidArgument("rhs is invalid")
+		return nil, errs.NewArgument("plaintext divisible by N")
 	}
-	if _, _, ok := lhsCipherText.C.CmpMod(publicKey.N2); ok == 0 {
-		return nil, errs.NewInvalidArgument("lhs is invalid")
+	if err := lhsCipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "cipher text")
 	}
 
 	one := new(saferith.Nat).SetUint64(1)
@@ -204,11 +270,11 @@ func (publicKey *PublicKey) Mul(factor *saferith.Nat, cipherText *CipherText) (*
 
 	// Ensure factor ∈ Z_N
 	if _, _, ok := factor.CmpMod(publicKey.N); ok == 0 {
-		return nil, errs.NewInvalidArgument("invalid factor")
+		return nil, errs.NewArgument("invalid factor")
 	}
 	// Ensure cipherText ∈ Z_N²
-	if _, _, ok := cipherText.C.CmpMod(publicKey.N2); ok == 0 {
-		return nil, errs.NewInvalidArgument("invalid cipherText")
+	if err := cipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "lhs")
 	}
 
 	c := new(saferith.Nat).Exp(cipherText.C, factor, publicKey.N2)
@@ -253,13 +319,13 @@ func (publicKey *PublicKey) EncryptWithNonce(message, r *saferith.Nat) (*CipherT
 
 	// Ensure message ∈ Z_N
 	if _, _, ok := message.CmpMod(publicKey.N); ok == 0 {
-		return nil, errs.NewInvalidArgument("invalid message")
+		return nil, errs.NewArgument("invalid message")
 	}
 
 	// Ensure r ∈ Z^*_N: we use the method proved in docs/[EL20]
 	// ensure r ∈ Z^_N-{0}
 	if _, _, ok := r.CmpMod(publicKey.N); ok == 0 {
-		return nil, errs.NewInvalidArgument("invalid nonce")
+		return nil, errs.NewArgument("invalid nonce")
 	}
 	if r.EqZero() != 0 {
 		return nil, errs.NewIsZero("nonce is zero")
@@ -278,30 +344,30 @@ func (publicKey *PublicKey) EncryptWithNonce(message, r *saferith.Nat) (*CipherT
 }
 
 // Decrypt is the reverse operation of Encrypt.
-func (d *Decryptor) Decrypt(cipherText *CipherText) (*saferith.Nat, error) {
+func (decryptor *Decryptor) Decrypt(cipherText *CipherText) (*saferith.Nat, error) {
 	if cipherText == nil || cipherText.C == nil {
 		return nil, errs.NewIsNil("cipherText is nil")
 	}
 
 	// Ensure C ∈ Z_N²
-	_, _, isLess := cipherText.C.Cmp(d.secretKey.N2.Nat())
+	_, _, isLess := cipherText.C.Cmp(decryptor.secretKey.N2.Nat())
 	if isLess == 0 {
-		return nil, errs.NewInvalidArgument("cipherText is invalid")
+		return nil, errs.NewArgument("cipherText is invalid")
 	}
 
 	// Compute the msg in components
 	// alpha ≡ cipherText^{λ(N)} mod N²
-	alpha := new(saferith.Nat).Exp(cipherText.C, d.secretKey.Lambda, d.secretKey.N2)
+	alpha := new(saferith.Nat).Exp(cipherText.C, decryptor.secretKey.Lambda, decryptor.secretKey.N2)
 
 	// l = L(alpha, N)
-	ell, err := d.secretKey.L(alpha)
+	ell, err := decryptor.secretKey.L(alpha)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute L")
 	}
 
 	// Compute the msg
 	// message ≡ lu = L(alpha)*u = L(cipherText^{λ(N)})*u	mod N
-	message := new(saferith.Nat).ModMul(ell, d.secretKey.U, d.secretKey.N)
+	message := new(saferith.Nat).ModMul(ell, decryptor.secretKey.U, decryptor.secretKey.N)
 	return message, nil
 }
 

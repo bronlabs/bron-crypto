@@ -11,9 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/testutils"
 )
@@ -37,10 +35,8 @@ func testHappyPath(t *testing.T, threshold, n int) {
 
 	curve := bls12381.NewG1()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha256.New,
-	}
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha256.New)
+	require.NoError(t, err)
 
 	inG1 := curve.Name() == bls12381.NameG1
 	inG1s := make([]bool, n)
@@ -48,32 +44,32 @@ func testHappyPath(t *testing.T, threshold, n int) {
 		inG1s[i] = inG1
 	}
 
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, cohortConfig, identities, nil)
+	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.Participants.Len()-1)
+		require.Equal(t, out.Size(), protocol.Participants().Size()-1)
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 
-	r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
+	r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
 	shards, err := testutils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	for _, shard := range shards {
-		err = shard.Validate(cohortConfig)
+		err = shard.Validate(protocol)
 		require.NoError(t, err)
 	}
 }

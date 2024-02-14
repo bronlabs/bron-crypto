@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
@@ -25,10 +25,8 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, msg []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		suite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
+		suite, err := ttu.MakeSignatureProtocol(curve, h)
+		require.NoError(t, err)
 
 		messageHash, err := hashing.Hash(h, msg)
 		require.NoError(t, err)

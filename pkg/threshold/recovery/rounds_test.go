@@ -11,11 +11,11 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/recovery/testutils"
@@ -23,53 +23,42 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PublicKeyShares) {
+func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PartialPublicKeys) {
 	t.Helper()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
-	cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, cohortConfig, identities)
+	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
-	return uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares
+	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
 }
 
 func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
 	t.Helper()
 
-	uniqueSessionId, identities, cohortConfig, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
+	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
 	for i := 0; i < n; i++ {
 		lostPartyIndex := i
 		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
 			t.Parallel()
 
-			recovererIdentities := []integration.IdentityKey{}
-			for j, identity := range identities {
-				if j == lostPartyIndex {
-					continue
-				}
-				recovererIdentities = append(recovererIdentities, identity)
-			}
-			require.Len(t, recovererIdentities, len(identities)-1)
-
-			presentRecoverers := hashset.NewHashSet(recovererIdentities)
-			allPresentRecoverers := make([]*hashset.HashSet[integration.IdentityKey], len(identities))
+			presentRecoverers := hashset.NewHashableHashSet(identities...)
+			presentRecoverers.Remove(identities[lostPartyIndex])
+			allPresentRecoverers := make([]ds.HashSet[types.IdentityKey], len(identities))
 			for i := 0; i < len(identities); i++ {
 				allPresentRecoverers[i] = presentRecoverers.Clone()
 			}
 
-			_, recoveredShare, err := testutils.RunRecovery(uniqueSessionId, cohortConfig, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+			_, recoveredShare, err := testutils.RunRecovery(uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
 			require.NoError(t, err)
 			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
 		})
@@ -120,9 +109,9 @@ func TestSanity(t *testing.T) {
 
 	xs := []curves.Scalar{bobX, charlieX}
 
-	l2, err := polynomials.L_i(curve, 0, xs, aliceX)
+	l2, err := lagrange.L_i(curve, 0, xs, aliceX)
 	require.NoError(t, err)
-	l3, err := polynomials.L_i(curve, 1, xs, aliceX)
+	l3, err := lagrange.L_i(curve, 1, xs, aliceX)
 	require.NoError(t, err)
 
 	partialBob := bob.Value.Mul(l2)

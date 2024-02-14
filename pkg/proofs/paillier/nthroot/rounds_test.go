@@ -99,9 +99,9 @@ func Test_InvalidRoot(t *testing.T) {
 
 	err = doProof(x1, y2, bigN, prng)
 	require.Error(t, err)
-	require.True(t, errs.IsVerificationFailed(err))
+	require.True(t, errs.IsVerification(err))
 
 	err = doProof(x2, y1, bigN, prng)
 	require.Error(t, err)
-	require.True(t, errs.IsVerificationFailed(err))
+	require.True(t, errs.IsVerification(err))
 }

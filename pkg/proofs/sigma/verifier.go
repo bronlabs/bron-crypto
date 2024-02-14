@@ -17,14 +17,14 @@ type Verifier[X Statement, W Witness, A Commitment, S State, Z Response] struct 
 
 func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sessionId []byte, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if len(sessionId) == 0 {
-		return nil, errs.NewInvalidArgument("sessionId is empty")
+		return nil, errs.NewArgument("sessionId is empty")
 	}
 	if sigmaProtocol == nil {
-		return nil, errs.NewInvalidArgument("protocol or is nil")
+		return nil, errs.NewArgument("protocol or is nil")
 	}
 
 	if transcript == nil {
-		dst := fmt.Sprintf("%s-%s", domainSeparationTag, sigmaProtocol.DomainSeparationLabel())
+		dst := fmt.Sprintf("%s-%s", domainSeparationTag, sigmaProtocol.Name())
 		transcript = hagrid.NewTranscript(dst, nil)
 	}
 	transcript.AppendMessages(sessionIdLabel, sessionId)
@@ -46,7 +46,7 @@ func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 	v.transcript.AppendMessages(commitmentLabel, v.sigmaProtocol.SerializeCommitment(commitment))
 
 	if v.round != 2 {
-		return nil, errs.NewInvalidRound("r != 2 (%d)", v.round)
+		return nil, errs.NewRound("r != 2 (%d)", v.round)
 	}
 
 	challengeBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
@@ -67,12 +67,12 @@ func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 	v.transcript.AppendMessages(responseLabel, v.sigmaProtocol.SerializeResponse(response))
 
 	if v.round != 4 {
-		return errs.NewInvalidRound("r != 4 (%d)", v.round)
+		return errs.NewRound("r != 4 (%d)", v.round)
 	}
 
 	err := v.sigmaProtocol.Verify(v.statement, v.commitment, v.challengeBytes, response)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "verification failed")
+		return errs.WrapVerification(err, "verification failed")
 	}
 
 	return nil

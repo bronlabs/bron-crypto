@@ -16,8 +16,8 @@ import (
 	k256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -36,7 +36,7 @@ var _ curves.Curve = (*Curve)(nil)
 type Curve struct {
 	hash2curve.CurveHasher
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func k256Init() {
@@ -80,7 +80,7 @@ func (c Curve) Element() curves.Point {
 
 func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
 	if operator != algebra.PointAddition {
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	current := c.Identity()
 	for _, p := range ps {
@@ -110,16 +110,16 @@ func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
 	p := k256impl.PointNew()
 	u, err := NewCurve().HashToFieldElements(2, input, dst)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to field element of K256 failed")
+		return nil, errs.WrapHashing(err, "hash to field element of K256 failed")
 	}
 	u0, ok0 := u[0].(*BaseFieldElement)
 	u1, ok1 := u[1].(*BaseFieldElement)
 	if !ok0 || !ok1 {
-		return nil, errs.NewHashingFailed("Cast to K256 field elements failed")
+		return nil, errs.NewType("Cast to K256 field elements failed")
 	}
 	err = p.Arithmetic.Map(u0.V, u1.V, p)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "Map to K256 point failed")
+		return nil, errs.WrapFailed(err, "Map to K256 point failed")
 	}
 	return &Point{V: p}, nil
 }
@@ -208,15 +208,15 @@ func (*Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 	}
 	xx, ok := x.(*BaseFieldElement)
 	if !ok {
-		return nil, errs.NewInvalidType("x is not the right type")
+		return nil, errs.NewType("x is not the right type")
 	}
 	yy, ok := y.(*BaseFieldElement)
 	if !ok {
-		return nil, errs.NewInvalidType("y is not the right type")
+		return nil, errs.NewType("y is not the right type")
 	}
 	value, err := k256impl.PointNew().SetNat(xx.Nat(), yy.Nat())
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "could not set x,y")
+		return nil, errs.WrapCoordinates(err, "could not set x,y")
 	}
 	return &Point{V: value}, nil
 }
@@ -304,7 +304,7 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*BaseFieldElement)
 	if !ok {
-		return nil, nil, errs.NewInvalidType("provided x coordinate is not a k256 field element")
+		return nil, nil, errs.NewType("provided x coordinate is not a k256 field element")
 	}
 	rhs := fp.New()
 	cPoint := new(Point)
@@ -312,7 +312,7 @@ func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.P
 	cPoint.V.Arithmetic.RhsEq(rhs, xc.V)
 	y, wasQr := fp.New().Sqrt(rhs)
 	if !wasQr {
-		return nil, nil, errs.NewInvalidCoordinates("x was not a quadratic residue")
+		return nil, nil, errs.NewCoordinates("x was not a quadratic residue")
 	}
 	p1e := k256impl.PointNew().Identity()
 	p1e.X = xc.V

@@ -3,9 +3,12 @@ package echo
 import (
 	"crypto/subtle"
 
+	"golang.org/x/crypto/sha3"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 type Round1P2P struct {
@@ -13,74 +16,73 @@ type Round1P2P struct {
 	InitiatorSignature []byte
 	Message            []byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 type Round2P2P struct {
 	InitiatorSignature []byte
 	Message            []byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // step 1.X.
-func (p *Participant) Round1() (map[types.IdentityHash]*Round1P2P, error) {
+func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 	if p.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
+		return nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
-	p.round++
-	var result = make(map[types.IdentityHash]*Round1P2P)
+	result := types.NewRoundMessages[*Round1P2P]()
 	if p.IsInitiator() {
-		for _, participant := range p.CohortConfig.Participants.Iter() {
-			if participant.PublicKey().Equal(p.MyAuthKey.PublicKey()) {
+		for participant := range p.Protocol.Participants().Iter() {
+			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			var authMessage []byte
-			authMessage = append(authMessage, p.sid...)
-			authMessage = append(authMessage, participant.PublicKey().ToAffineCompressed()...)
-			authMessage = append(authMessage, p.state.messageToBroadcast...)
-			// step 1.1 and 1.2
-			result[participant.Hash()] = &Round1P2P{
-				InitiatorSignature: p.MyAuthKey.Sign(authMessage),
-				Message:            p.state.messageToBroadcast,
+			authMessage, err := hashing.HashChain(sha3.New256, p.sid, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
+			if err != nil {
+				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
+			// step 1.1 and 1.2
+			result.Put(participant, &Round1P2P{
+				InitiatorSignature: p.AuthKey().Sign(authMessage),
+				Message:            p.state.messageToBroadcast,
+			})
 		}
 	}
+	p.round++
 	return result, nil
 }
 
 // step 2.X.
-func (p *Participant) Round2(p2pMessage *Round1P2P) (map[types.IdentityHash]*Round2P2P, error) {
+func (p *Participant) Round2(initiatorMessage *Round1P2P) (types.RoundMessages[*Round2P2P], error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}
-	var result = make(map[types.IdentityHash]*Round2P2P, p.CohortConfig.Participants.Len())
+	result := types.NewRoundMessages[*Round2P2P]()
 	// step 2.1 if initiator
 	if !p.IsInitiator() {
-		if p2pMessage == nil {
-			return nil, errs.NewInvalidRound("p2pMessages is nil")
+		if initiatorMessage == nil {
+			return nil, errs.NewRound("p2pMessages is nil")
 		}
 
-		for _, participant := range p.CohortConfig.Participants.Iter() {
-			if types.Equals(participant, p.MyAuthKey) {
+		for participant := range p.Protocol.Participants().Iter() {
+			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			var authMessage []byte
-			authMessage = append(authMessage, p.sid...)
-			authMessage = append(authMessage, p.MyAuthKey.PublicKey().ToAffineCompressed()...)
-			authMessage = append(authMessage, p2pMessage.Message...)
-			// step 2.2 if responder
-			err := p.initiator.Verify(p2pMessage.InitiatorSignature, authMessage)
+			authMessage, err := hashing.HashChain(sha3.New256, p.sid, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			if err != nil {
+				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
+			}
+			// step 2.2 if responder
+			if err := p.initiator.Verify(initiatorMessage.InitiatorSignature, authMessage); err != nil {
 				// step 2.3
-				return nil, errs.NewIdentifiableAbort(p.initiator.Hash(), "failed to verify signature")
+				return nil, errs.NewIdentifiableAbort(p.initiator.PublicKey().ToAffineCompressed(), "failed to verify signature")
 			}
 			// step 2.4
-			result[participant.Hash()] = &Round2P2P{
-				InitiatorSignature: p2pMessage.InitiatorSignature,
-				Message:            p2pMessage.Message,
-			}
+			result.Put(participant, &Round2P2P{
+				InitiatorSignature: initiatorMessage.InitiatorSignature,
+				Message:            initiatorMessage.Message,
+			})
 			if p.state.receivedBroadcastMessage == nil {
-				p.state.receivedBroadcastMessage = p2pMessage.Message
+				p.state.receivedBroadcastMessage = initiatorMessage.Message
 			}
 		}
 	}
@@ -89,9 +91,9 @@ func (p *Participant) Round2(p2pMessage *Round1P2P) (map[types.IdentityHash]*Rou
 }
 
 // step 3.X.
-func (p *Participant) Round3(p2pMessages map[types.IdentityHash]*Round2P2P) ([]byte, error) {
+func (p *Participant) Round3(p2pMessages types.RoundMessages[*Round2P2P]) ([]byte, error) {
 	if p.round != 3 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
 	var messageToVerify []byte
 	if p.IsInitiator() {
@@ -102,7 +104,9 @@ func (p *Participant) Round3(p2pMessages map[types.IdentityHash]*Round2P2P) ([]b
 	if messageToVerify == nil {
 		return nil, errs.NewFailed("messageToVerify is nil")
 	}
-	for participantHash, message := range p2pMessages {
+	for pair := range p2pMessages.Iter() {
+		sender := pair.Key
+		message := pair.Value
 		if message == nil {
 			return nil, errs.NewIsNil("p2pMessages contains nil message")
 		}
@@ -110,25 +114,17 @@ func (p *Participant) Round3(p2pMessages map[types.IdentityHash]*Round2P2P) ([]b
 		// if it is initiator, we need to verify that all messages are the same.
 		// if it is responder, we need to verify that the message is the same as the one we received from the initiator.
 		if !p.IsInitiator() {
-			var sender integration.IdentityKey
-			for _, participant := range p.CohortConfig.Participants.Iter() {
-				if participant.Hash() == participantHash {
-					sender = participant
-					break
-				}
-			}
 			if sender == nil {
 				return nil, errs.NewFailed("sender not found")
 			}
 
-			var authMessage []byte
-			authMessage = append(authMessage, p.sid...)
-			authMessage = append(authMessage, sender.PublicKey().ToAffineCompressed()...)
-			authMessage = append(authMessage, message.Message...)
-			// Step 3.1
-			err := p.initiator.Verify(message.InitiatorSignature, authMessage)
+			authMessage, err := hashing.HashChain(sha3.New256, p.sid, sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			if err != nil {
-				return nil, errs.NewIdentifiableAbort(sender.Hash(), "failed to verify signature")
+				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
+			}
+			// Step 3.1
+			if err := p.initiator.Verify(message.InitiatorSignature, authMessage); err != nil {
+				return nil, errs.NewIdentifiableAbort(sender.PublicKey().ToAffineCompressed(), "failed to verify signature")
 			}
 		}
 

@@ -4,121 +4,108 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-type Cosigner struct {
-	lindell22.Participant
+var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
+type Cosigner struct {
 	przsSampleParticipant *sample.Participant
 
-	myAuthKey           integration.AuthKey
-	mySharingId         int
-	myShard             *lindell22.Shard
-	myPreSignature      *lindell22.PreSignature
-	myPreSignatureIndex int
+	myAuthKey   types.AuthKey
+	mySharingId types.SharingID
+	myShard     *lindell22.Shard
+	ppm         *lindell22.PreProcessingMaterial
 
-	taproot                bool
-	identityKeyToSharingId map[types.IdentityHash]int
-	sessionParticipants    *hashset.HashSet[integration.IdentityKey]
-	cohortConfig           *integration.CohortConfig
-	prng                   io.Reader
+	taproot       bool
+	sharingConfig types.SharingConfig
+	protocol      types.ThresholdSignatureProtocol
+	prng          io.Reader
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (c *Cosigner) GetAuthKey() integration.AuthKey {
+func (c *Cosigner) IdentityKey() types.IdentityKey {
 	return c.myAuthKey
 }
 
-func (c *Cosigner) GetSharingId() int {
+func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func (c *Cosigner) GetCohortConfig() *integration.CohortConfig {
-	return c.cohortConfig
-}
-
 func (c *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range c.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(c.myAuthKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
+	return c.protocol.SignatureAggregators().Contains(c.IdentityKey())
 }
 
-func NewCosigner(myAuthKey integration.AuthKey, myShard *lindell22.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignatureIndex int, preSignatureBatch *lindell22.PreSignatureBatch, sid []byte, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
+func NewCosigner(sid []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+	if err := validateCosignerInputs(sid, myAuthKey, myShard, protocol, ppm, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
-	if err := myShard.Validate(cohortConfig); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "shard is invalid")
-	}
-	if err := validateCosignerInputs(myAuthKey, myShard, cohortConfig); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid arguments")
-	}
-
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
-
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
-	przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(preSignatureIndex)}, nil)
-	przsPrngFactory, err := chacha20.NewChachaPRNG(nil, nil)
+	przsSid := bytes.Join([][]byte{sid, ppm.PrivateMaterial.K1.Bytes()}, nil)
+	przsPrngFactory, err := chacha.NewChachaPRNG(nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")
 	}
-	przsParticipant, err := sample.NewParticipant(cohortConfig.CipherSuite.Curve, przsSid, myAuthKey, preSignatureBatch.PreSignatures[preSignatureIndex].Seeds, sessionParticipants, przsPrngFactory)
+	przsParticipant, err := sample.NewParticipant(przsSid, myAuthKey, ppm.PrivateMaterial.Seeds, protocol, ppm.PreSigners, przsPrngFactory)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS sampler")
 	}
 
-	return &Cosigner{
-		przsSampleParticipant:  przsParticipant,
-		myAuthKey:              myAuthKey,
-		mySharingId:            mySharingId,
-		myShard:                myShard,
-		myPreSignature:         preSignatureBatch.PreSignatures[preSignatureIndex],
-		myPreSignatureIndex:    preSignatureIndex,
-		taproot:                taproot,
-		identityKeyToSharingId: identityKeyToSharingId,
-		sessionParticipants:    sessionParticipants,
-		cohortConfig:           cohortConfig,
-		prng:                   prng,
-	}, nil
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
+	}
+
+	cosigner = &Cosigner{
+		przsSampleParticipant: przsParticipant,
+		myAuthKey:             myAuthKey,
+		myShard:               myShard,
+		taproot:               taproot,
+		protocol:              protocol,
+		prng:                  prng,
+		mySharingId:           mySharingId,
+		sharingConfig:         sharingConfig,
+		ppm:                   ppm,
+	}
+
+	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct cnoninteractive cosigner")
+	}
+
+	return cosigner, nil
 }
 
-func validateCosignerInputs(identityKey integration.IdentityKey, shard *lindell22.Shard, cohortConfig *integration.CohortConfig) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+func validateCosignerInputs(sid []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
+	if len(sid) == 0 {
+		return errs.NewIsNil("session id is empty")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if cohortConfig.Participants.Len() != cohortConfig.Protocol.TotalParties {
-		return errs.NewIncorrectCount("invalid number of participants")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
 	}
-	if shard == nil || shard.SigningKeyShare == nil {
-		return errs.NewVerificationFailed("shard is nil")
+	if err := shard.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "shard")
 	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if err := ppm.Validate(authKey, protocol); err != nil {
+		return errs.WrapValidation(err, "preprocessing material")
 	}
-	if identityKey == nil || !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewInvalidArgument("identityKey not in cohort")
+	if prng == nil {
+		return errs.NewIsNil("prng")
 	}
-
 	return nil
 }

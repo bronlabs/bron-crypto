@@ -1,87 +1,112 @@
 package dkg
 
 import (
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const DkgLabel = "COPPER_DKLS24_DKG-"
 
+var _ types.ThresholdParticipant = (*Participant)(nil)
+
 type Participant struct {
-	MyAuthKey             integration.AuthKey
+	MyAuthKey             types.AuthKey
 	GennaroParty          *gennaro.Participant
-	BaseOTSenderParties   map[types.IdentityHash]*vsot.Sender
-	BaseOTReceiverParties map[types.IdentityHash]*vsot.Receiver
+	ZeroSamplingParty     *zeroSetup.Participant
+	BaseOTSenderParties   ds.HashMap[types.IdentityKey, *bbot.Sender]
+	BaseOTReceiverParties ds.HashMap[types.IdentityKey, *bbot.Receiver]
+	Protocol              types.ThresholdProtocol
 
 	Shard *dkls24.Shard
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.GennaroParty.GetAuthKey()
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.GennaroParty.IdentityKey()
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.GennaroParty.GetSharingId()
+func (p *Participant) SharingId() types.SharingID {
+	return p.GennaroParty.SharingId()
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.GennaroParty.GetCohortConfig()
-}
-
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "cohort config is invalid")
-	}
-	if len(uniqueSessionId) == 0 {
-		return nil, errs.NewInvalidArgument("unique session id is empty")
-	}
-	if authKey == nil {
-		return nil, errs.NewInvalidArgument("identityKey key is nil")
-	}
-	if prng == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, protocol, niCompiler, prng); err != nil {
+		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
 	}
 	if transcript == nil {
-		transcript = hagrid.NewTranscript(DkgLabel, nil)
+		transcript = hagrid.NewTranscript(DkgLabel, prng)
 	}
-	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
+	transcript.AppendMessages("DKLs24 DKG Participant", uniqueSessionId)
+	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dkls24 dkg participant out of gennaro dkg participant")
 	}
-
-	senders := make(map[types.IdentityHash]*vsot.Sender, cohortConfig.Participants.Len()-1)
-	receivers := make(map[types.IdentityHash]*vsot.Receiver, cohortConfig.Participants.Len()-1)
-	for _, participant := range cohortConfig.Participants.Iter() {
-		if participant.PublicKey().Equal(authKey.PublicKey()) {
+	zeroSamplingParty, err := zeroSetup.NewParticipant(uniqueSessionId, authKey, protocol, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
+	}
+	senders := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Sender]()
+	receivers := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Receiver]()
+	for participant := range protocol.Participants().Iter() {
+		if participant.Equal(authKey) {
 			continue
 		}
-		senders[participant.Hash()], err = vsot.NewSender(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
+		sender, err := bbot.NewSender(softspoken.Kappa, 1, protocol.Curve(), uniqueSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
-		receivers[participant.Hash()], err = vsot.NewReceiver(cohortConfig.CipherSuite.Curve, softspoken.Kappa, uniqueSessionId, transcript, prng)
+		senders.Put(participant, sender)
+		receiver, err := bbot.NewReceiver(softspoken.Kappa, 1, protocol.Curve(), uniqueSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}
+		receivers.Put(participant, receiver)
 	}
-	transcript.AppendMessages("DKLs24 DKG Participant", uniqueSessionId)
-	return &Participant{
+	participant := &Participant{
 		MyAuthKey:             authKey,
 		GennaroParty:          gennaroParty,
+		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
 		Shard:                 &dkls24.Shard{},
-	}, nil
+		Protocol:              protocol,
+	}
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct dkls24 dkg participant")
+	}
+	return participant, nil
+}
+
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewArgument("invalid session id: %s", sessionId)
+	}
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config is invalid")
+	}
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "my auth key")
+	}
+	if !compilerUtils.CompilerIsSupported(niCompiler) {
+		return errs.NewType("compiler %s is not supported", niCompiler)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
 }

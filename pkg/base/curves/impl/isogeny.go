@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 // IsogenyParams are the parameters needed to map from an isogeny to the main curve.
@@ -11,7 +11,7 @@ type IsogenyParams struct {
 	YNum [][FieldLimbs]uint64
 	YDen [][FieldLimbs]uint64
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Map from the isogeny curve to the main curve using the parameters.

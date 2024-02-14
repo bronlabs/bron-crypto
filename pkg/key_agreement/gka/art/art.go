@@ -138,7 +138,7 @@ func (p *AsynchronousRatchetTree) ProcessSetup(publicKeys []curves.Point) (err e
 		if p.tree[i].publicNodeKey == nil {
 			p.tree[i].publicNodeKey = pk
 		} else if !p.tree[i].publicNodeKey.Equal(pk) {
-			return errs.NewInvalidArgument("invalid keys")
+			return errs.NewArgument("invalid keys")
 		}
 	}
 
@@ -250,7 +250,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				}
 				p.tree[parent].privateNodeKey, err = p.tree[left].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
-					return errs.NewHashingFailed("cannot hash secret value at %d", parent)
+					return errs.NewHashing("cannot hash secret value at %d", parent)
 				}
 				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 
@@ -262,7 +262,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 				}
 				p.tree[parent].privateNodeKey, err = p.tree[right].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
-					return errs.NewHashingFailed("cannot hash secret value %d", parent)
+					return errs.NewHashing("cannot hash secret value %d", parent)
 				}
 				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
 

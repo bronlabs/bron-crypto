@@ -8,8 +8,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 // FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.
@@ -34,7 +34,7 @@ type FieldValue struct {
 	// Arithmetic are the field element methods
 	Arithmetic FieldArithmetic
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // FieldParams are the field parameters.
@@ -50,7 +50,7 @@ type FieldParams struct {
 	// Modulus as saferith.Modulus
 	Modulus *saferith.Modulus
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // FieldArithmetic are the methods that can be done on a field.

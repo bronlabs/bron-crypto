@@ -2,24 +2,26 @@ package dkg
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
 
-func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVectors map[int][]curves.Point, sharingIdToIdentityKey map[int]integration.IdentityKey) (map[types.IdentityHash]curves.Point, error) {
-	shares := map[types.IdentityHash]curves.Point{}
-	for j, identityKey := range sharingIdToIdentityKey {
-		Y_j := cohort.CipherSuite.Curve.Identity()
+func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVectors map[types.SharingID][]curves.Point, sharingConfig types.SharingConfig) (ds.HashMap[types.IdentityKey, curves.Point], error) {
+	shares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for pair := range sharingConfig.Iter() {
+		j := pair.Left
+		identityKey := pair.Right
+		Y_j := protocol.Curve().Identity()
 		for _, C_l := range commitmentVectors {
-			jToKs := make([]curves.Scalar, cohort.Protocol.Threshold)
-			// TODO: add simultaneous scalar exp
-			for k := 0; k < cohort.Protocol.Threshold; k++ {
-				exp := cohort.CipherSuite.Curve.ScalarField().New(uint64(k))
-				jToK := cohort.CipherSuite.Curve.ScalarField().New(uint64(j)).Exp(exp)
+			jToKs := make([]curves.Scalar, protocol.Threshold())
+			for k := 0; k < int(protocol.Threshold()); k++ {
+				exp := protocol.Curve().ScalarField().New(uint64(k))
+				jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp)
 				jToKs[k] = jToK
 			}
-			jkC_lk, err := cohort.CipherSuite.Curve.MultiScalarMult(jToKs, C_l)
+			jkC_lk, err := protocol.Curve().MultiScalarMult(jToKs, C_l)
 			if err != nil {
 				return nil, errs.NewFailed("couldn't derive partial public key share")
 			}
@@ -28,7 +30,7 @@ func ConstructPublicKeySharesMap(cohort *integration.CohortConfig, commitmentVec
 		if Y_j.IsIdentity() {
 			return nil, errs.NewIsIdentity("public key share of sharing id %d is at infinity", j)
 		}
-		shares[identityKey.Hash()] = Y_j
+		shares.Put(identityKey, Y_j)
 	}
 	return shares, nil
 }

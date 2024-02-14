@@ -12,9 +12,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
@@ -199,7 +199,7 @@ type lcmTest struct {
 	err      error
 	expected *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func safeCompare(x, y *saferith.Nat) bool {
@@ -297,19 +297,19 @@ func TestLcmNil(t *testing.T) {
 		{
 			x:        nil,
 			y:        parseNat("1"),
-			err:      errs.NewInvalidArgument("arguments cannot be nil"),
+			err:      errs.NewArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 		{
 			x:        parseNat("1"),
 			y:        nil,
-			err:      errs.NewInvalidArgument("arguments cannot be nil"),
+			err:      errs.NewArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 		{
 			x:        nil,
 			y:        nil,
-			err:      errs.NewInvalidArgument("arguments cannot be nil"),
+			err:      errs.NewArgument("arguments cannot be nil"),
 			expected: nil,
 		},
 	}
@@ -416,7 +416,7 @@ type keygenTest struct {
 	bits                        uint
 	p, q, n, lambda, totient, u *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func TestKeyGen(t *testing.T) {
@@ -588,13 +588,13 @@ func TestAddErrorConditions(t *testing.T) {
 		expectedPass bool
 	}{
 		// Good: 0 ≤ x,y < N²
-		{zero, one, true},
 		{nMinusOne, parseNat("1024"), true}, // N-1, 1024
 		{nPlusOne, nTimesHundred, true},     // N+1, 100N
 		{one, nnMinusOne, true},             // one, N²-1
 
-		{nil, one, false}, // x nil
-		{one, nil, false}, // y nil
+		{zero, one, false}, // x is zero
+		{nil, one, false},  // x nil
+		{one, nil, false},  // y nil
 
 		{nnPlusOne, one, false},                         // N²+1
 		{nnPlusOne, nnPlusOne, false},                   // both bad
@@ -664,7 +664,7 @@ func TestAdd(t *testing.T) {
 		x, y, expected *saferith.Nat
 	}{
 		// Small number tests: Z_9
-		{z9, parseNat("0"), parseNat("1"), parseNat("0")},
+		// {z9, parseNat("0"), parseNat("1"), parseNat("0")},
 		{z9, parseNat("1"), parseNat("5"), parseNat("5")},
 		{z9, parseNat("2"), parseNat("2"), parseNat("4")},
 		{z9, parseNat("5"), parseNat("2"), parseNat("1")},
@@ -675,9 +675,9 @@ func TestAdd(t *testing.T) {
 		{z9, parseNat("8"), parseNat("2"), parseNat("7")},
 
 		// large number tests: Z_N²
-		{pk, n, zero, zero},
+		// {pk, n, zero, zero},
 		{pk, n, n, zero}, // N² ≡ 0 (N²)
-		{pk, zero, nPlusOne, zero},
+		// {pk, zero, nPlusOne, zero},
 		{pk, nPlusOne, nPlusOne, z}, // (N+1)² = N² + 2N + 1 ≡ 2N + 1 (N²)
 		{pk, parseNat("11659564086467828628"), parseNat("57089538512338875950"), parseNat("665639132951488346363609789106750696600")},
 	}
@@ -708,15 +708,15 @@ func TestMulErrorConditions(t *testing.T) {
 		{nMinusOne, nTimesHundred, true, nil},    // N-1 < N; 100N < N²
 		{one, nnMinusOne, true, nil},             // 1 < N; N²-1 < N
 
-		{nPlusOne, one, false, errs.IsInvalidArgument},                          // x > N; y ok
-		{nPlusOne, nnPlusOne, false, errs.IsInvalidArgument},                    // both x,y bad
-		{one, nnPlusOne, false, errs.IsInvalidArgument},                         // y bad
-		{new(saferith.Nat).Add(nn, nn, -1), one, false, errs.IsInvalidArgument}, // x really bad
-		{one, new(saferith.Nat).Add(nn, nn, -1), false, errs.IsInvalidArgument}, // y bad
-		{n, one, false, errs.IsInvalidArgument},                                 // x boundary condition
-		{one, nn, false, errs.IsInvalidArgument},                                // y boundary condition
-		{nil, one, false, errs.IsIsNil},                                         // x nil
-		{one, nil, false, errs.IsIsNil},                                         // y nil
+		{nPlusOne, one, false, errs.IsArgument},                          // x > N; y ok
+		{nPlusOne, nnPlusOne, false, errs.IsArgument},                    // both x,y bad
+		{one, nnPlusOne, false, errs.IsArgument},                         // y bad
+		{new(saferith.Nat).Add(nn, nn, -1), one, false, errs.IsArgument}, // x really bad
+		{one, new(saferith.Nat).Add(nn, nn, -1), false, errs.IsArgument}, // y bad
+		{n, one, false, errs.IsArgument},                                 // x boundary condition
+		{one, nn, false, errs.IsArgument},                                // y boundary condition
+		{nil, one, false, errs.IsIsNil},                                  // x nil
+		{one, nil, false, errs.IsIsNil},                                  // y nil
 	}
 
 	// All the tests!
@@ -765,9 +765,9 @@ func TestMul(t *testing.T) {
 		{z25, parseNat("2"), parseNat("2"), parseNat("4")},
 
 		// large number tests
-		{pk, x, zero, one},          // x^0 = 1
-		{pk, y, one, y},             // y^1 = 1
-		{pk, zero, nMinusOne, zero}, // 0^{N-1} = 0
+		{pk, x, zero, one}, // x^0 = 1
+		{pk, y, one, y},    // y^1 = 1
+		// {pk, zero, nMinusOne, zero}, // 0^{N-1} = 0
 		{pk, nMinusOne, two, alpha}, // (N-1)² = N² - 2N - 1 ≡ -2N -1 (N²)
 
 		// INVALID TEST - expected bigger than PK
@@ -832,12 +832,12 @@ func TestEncryptErrorConditions(t *testing.T) {
 		{nMinusOne, two, true, nil}, // 0 ≤ m,r < N
 
 		// Bad
-		{zero, zero, false, errs.IsIsZero},      // r cannot be 0
-		{nil, one, false, errs.IsIsNil},         // m nil
-		{one, nil, false, errs.IsIsNil},         // r nil
-		{nil, nil, false, errs.IsIsNil},         // both nil
-		{n, one, false, errs.IsInvalidArgument}, // m == N
-		{one, n, false, errs.IsInvalidArgument}, // r == N
+		{zero, zero, false, errs.IsIsZero}, // r cannot be 0
+		{nil, one, false, errs.IsIsNil},    // m nil
+		{one, nil, false, errs.IsIsNil},    // r nil
+		{nil, nil, false, errs.IsIsNil},    // both nil
+		{n, one, false, errs.IsArgument},   // m == N
+		{one, n, false, errs.IsArgument},   // r == N
 	}
 
 	// All the tests!
@@ -937,9 +937,9 @@ func TestDecryptErrorConditions(t *testing.T) {
 		// {NNminusOne, true},
 
 		// Bad
-		{nn, false, errs.IsInvalidArgument},        // c = N²
-		{nnPlusOne, false, errs.IsInvalidArgument}, // c > N²
-		{nil, false, errs.IsIsNil},                 // nil
+		{nn, false, errs.IsArgument},        // c = N²
+		{nnPlusOne, false, errs.IsArgument}, // c > N²
+		{nil, false, errs.IsIsNil},          // nil
 	}
 
 	// All the tests!

@@ -7,17 +7,19 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
 
-func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, prngs []io.Reader) (participants []*hjky.Participant, err error) {
-	if len(identities) != cohortConfig.Protocol.TotalParties {
-		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
+var cn = randomisedFischlin.Name
+
+func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, prngs []io.Reader) (participants []*hjky.Participant, err error) {
+	if len(identities) != int(protocol.TotalParties()) {
+		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
 
-	participants = make([]*hjky.Participant, cohortConfig.Protocol.TotalParties)
+	participants = make([]*hjky.Participant, protocol.TotalParties())
 	for i, identity := range identities {
 		var prng io.Reader
 		if len(prngs) != 0 && prngs[i] != nil {
@@ -26,11 +28,11 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			prng = crand.Reader
 		}
 
-		if !cohortConfig.IsInCohort(identity) {
+		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
 
-		participants[i], err = hjky.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig.CipherSuite.Curve.ScalarField(), cohortConfig.Protocol.Threshold, cohortConfig.Participants.List(), prng, nil)
+		participants[i], err = hjky.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, cn, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -39,9 +41,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.Round1Broadcast, round1UnicastOutputs []map[types.IdentityHash]*hjky.Round1P2P, err error) {
+func DoDkgRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*hjky.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*hjky.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]map[types.IdentityHash]*hjky.Round1P2P, len(participants))
+	round1UnicastOutputs = make([]types.RoundMessages[*hjky.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -52,9 +54,9 @@ func DoDkgRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hj
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []map[types.IdentityHash]*hjky.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*hjky.Round1P2P) (samples []hjky.Sample, publicKeySharesMaps []map[types.IdentityHash]curves.Point, feldmanCommitmentVectors [][]curves.Point, err error) {
+func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []types.RoundMessages[*hjky.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []types.RoundMessages[curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	samples = make([]hjky.Sample, len(participants))
-	publicKeySharesMaps = make([]map[types.IdentityHash]curves.Point, len(participants))
+	publicKeySharesMaps = make([]types.RoundMessages[curves.Point], len(participants))
 	feldmanCommitmentVectors = make([][]curves.Point, len(participants))
 	for i := range participants {
 		samples[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -66,8 +68,8 @@ func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []map[t
 	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
-func RunSample(sid []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []map[types.IdentityHash]curves.Point, feldmanCommitmentVectors [][]curves.Point, err error) {
-	participants, err = MakeParticipants(sid, cohortConfig, identities, nil)
+func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []types.RoundMessages[curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+	participants, err = MakeParticipants(sid, protocol, identities, nil)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -77,7 +79,7 @@ func RunSample(sid []byte, cohortConfig *integration.CohortConfig, identities []
 		return nil, nil, nil, nil, err
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	samples, publicKeySharesMaps, feldmanCommitmentVectors, err = DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, nil, err

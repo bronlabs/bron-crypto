@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
@@ -15,21 +15,21 @@ import (
 type Round1Output struct {
 	EsidCommitment commitments.Commitment
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ProverRound2Output struct {
 	C1 []*paillier.CipherText
 	C2 []*paillier.CipherText
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type VerifierRound3Output struct {
 	E           *big.Int
 	EsidWitness commitments.Witness
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ZetZero struct {
@@ -38,7 +38,7 @@ type ZetZero struct {
 	W2 *saferith.Nat
 	R2 *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ZetOne struct {
@@ -46,19 +46,19 @@ type ZetOne struct {
 	XPlusWj  *saferith.Nat
 	RTimesRj *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round4Output struct {
 	ZetZero []*ZetZero
 	ZetOne  []*ZetOne
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
-		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
+		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
 
 	// 1.iii. chooses a random e (t bit length)
@@ -87,7 +87,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, err error) {
 	if prover.round != 2 {
-		return nil, errs.NewInvalidRound("%d != 2", prover.round)
+		return nil, errs.NewRound("%d != 2", prover.round)
 	}
 
 	prover.state.esidCommitment = input.EsidCommitment
@@ -97,7 +97,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 		flip := make([]byte, 1)
 		_, err = prover.prng.Read(flip)
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "cannot create random")
+			return nil, errs.WrapRandomSample(err, "cannot create random")
 		}
 
 		// 2.iii. choose random w1i (in 0-l range), w2i (in l-2l range)
@@ -143,7 +143,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 
 func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
 	if verifier.round != 3 {
-		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
+		return nil, errs.NewRound("%d != 3", verifier.round)
 	}
 
 	verifier.state.c1 = input.C1
@@ -160,7 +160,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 
 func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
-		return nil, errs.NewInvalidRound("%d != 4", prover.round)
+		return nil, errs.NewRound("%d != 4", prover.round)
 	}
 
 	err = commitments.Open(prover.sid, prover.state.esidCommitment, input.EsidWitness, input.E.Bytes())
@@ -215,7 +215,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
-		return errs.NewInvalidRound("%d != 5", verifier.round)
+		return errs.NewRound("%d != 5", verifier.round)
 	}
 
 	// 5. Parse zi
@@ -230,7 +230,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			}
 
 			if c1.C.Eq(verifier.state.c1[i].C) == 0 {
-				return errs.NewVerificationFailed("verification failed")
+				return errs.NewVerification("verification failed")
 			}
 			c2, err := verifier.pk.EncryptWithNonce(z.W2, z.R2)
 			if err != nil {
@@ -238,12 +238,12 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			}
 
 			if c2.C.Eq(verifier.state.c2[i].C) == 0 {
-				return errs.NewVerificationFailed("verification failed")
+				return errs.NewVerification("verification failed")
 			}
 			if !((verifier.inFirstThird(z.W1) && verifier.inSecondThird(z.W2)) ||
 				(verifier.inFirstThird(z.W2) && verifier.inSecondThird(z.W1))) {
 
-				return errs.NewVerificationFailed("verification failed")
+				return errs.NewVerification("verification failed")
 			}
 		} else {
 			// 5.ii if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
@@ -269,7 +269,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			}
 
 			if cCheck.C.Eq(c.C) == 0 || !verifier.inSecondThird(wi) {
-				return errs.NewVerificationFailed("verification failed")
+				return errs.NewVerification("verification failed")
 			}
 		}
 	}

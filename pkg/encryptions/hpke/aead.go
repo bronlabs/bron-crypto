@@ -73,7 +73,7 @@ func NewAEADChaCha20Poly1305Scheme() *AEADScheme {
 // New accepts a key and returns the corresponding AEAD cipher to the type of the scheme, which can then Seal or Open.
 func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 	if len(key) != s.Nk() {
-		return nil, errs.NewInvalidLength("key length is %d whereas it should be %d", len(key), s.Nk())
+		return nil, errs.NewLength("key length is %d whereas it should be %d", len(key), s.Nk())
 	}
 	if s.isAES() {
 		block, err := aes.NewCipher(key)

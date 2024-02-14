@@ -5,8 +5,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -26,7 +26,7 @@ type Participant struct {
 	transcript transcripts.Transcript
 	prng       io.Reader
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type VerifierState struct {
@@ -34,7 +34,7 @@ type VerifierState struct {
 	x           []*paillier.CipherText
 	y           []*saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Verifier struct {
@@ -42,14 +42,14 @@ type Verifier struct {
 	paillierPublicKey *paillier.PublicKey
 	state             *VerifierState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ProverState struct {
 	rootVerifiers []*nthroot.Verifier
 	x             []*paillier.CipherText
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Prover struct {
@@ -57,13 +57,12 @@ type Prover struct {
 	paillierSecretKey *paillier.SecretKey
 	state             *ProverState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	err = validateVerifierInputs(k, paillierPublicKey, sessionId, prng)
-	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+	if err := validateVerifierInputs(k, paillierPublicKey, sessionId, prng); err != nil {
+		return nil, errs.NewArgument("invalid input arguments")
 	}
 
 	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
@@ -82,16 +81,16 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 
 func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewIsNil("invalid session id: %s", sessionId)
 	}
 	if paillierPublicKey == nil {
-		return errs.NewInvalidArgument("invalid paillier public key")
+		return errs.NewIsNil("invalid paillier public key")
 	}
 	if paillierPublicKey.N.BitLen() < PaillierBitSize {
-		return errs.NewInvalidArgument("invalid paillier public key: modulus is too small")
+		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if k < 1 {
-		return errs.NewInvalidArgument("invalid k: %d", k)
+		return errs.NewValue("invalid k: %d", k)
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
@@ -100,9 +99,8 @@ func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessio
 }
 
 func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	err = validateProverInputs(k, paillierSecretKey, sessionId, prng)
-	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+	if err := validateProverInputs(k, paillierSecretKey, sessionId, prng); err != nil {
+		return nil, errs.NewArgument("invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -125,13 +123,13 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 
 func validateProverInputs(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewIsNil("invalid session id: %s", sessionId)
 	}
 	if paillierSecretKey == nil {
-		return errs.NewInvalidArgument("invalid paillier secret key")
+		return errs.NewIsNil("invalid paillier secret key")
 	}
 	if k < 1 {
-		return errs.NewInvalidArgument("invalid k: %d", k)
+		return errs.NewValue("invalid k: %d", k)
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")

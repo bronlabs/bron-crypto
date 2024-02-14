@@ -59,7 +59,7 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		kdf := hkdf.New(h, ikm, salt, info)
 		n, err := kdf.Read(okm)
 		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "write to kdf failed")
+			return nil, errs.WrapRandomSample(err, "write to kdf failed")
 		}
 		if n != len(okm) {
 			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)

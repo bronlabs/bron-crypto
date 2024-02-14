@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/or"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -40,9 +40,9 @@ func Test_SchnorrOrSchnorr(t *testing.T) {
 			t.Parallel()
 
 			prng := crand.Reader
-			sigma0, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			sigma0, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
-			sigma1, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			sigma1, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
 			orProtocol := sigmaCompose.SigmaOr(sigma0, sigma1, prng)
@@ -61,12 +61,12 @@ func Test_SchnorrOrSchnorr(t *testing.T) {
 			x1 := curve.ScalarBaseMult(w1)
 
 			t.Run("first true, second false", func(t *testing.T) {
-				w0 := new_schnorr.Witness(w0)
-				w1 := new_schnorr.Witness(w1)
-				x0 := new_schnorr.Statement(x0)
+				w0 := schnorr.Witness(w0)
+				w1 := schnorr.Witness(w1)
+				x0 := schnorr.Statement(x0)
 				randomPoint, err := curve.Random(prng)
 				require.NoError(t, err)
-				x1 := new_schnorr.Statement(randomPoint)
+				x1 := schnorr.Statement(randomPoint)
 
 				statement := sigmaCompose.StatementOr(x0, x1)
 				witness := sigmaCompose.WitnessOr(w0, w1)
@@ -95,13 +95,13 @@ func Test_SchnorrOrSchnorr(t *testing.T) {
 			})
 
 			t.Run("first false, second true", func(t *testing.T) {
-				w0 := new_schnorr.Witness(w0)
-				w1 := new_schnorr.Witness(w1)
+				w0 := schnorr.Witness(w0)
+				w1 := schnorr.Witness(w1)
 
 				randomPoint, err := curve.Random(prng)
 				require.NoError(t, err)
-				x0 := new_schnorr.Statement(randomPoint)
-				x1 := new_schnorr.Statement(x1)
+				x0 := schnorr.Statement(randomPoint)
+				x1 := schnorr.Statement(x1)
 
 				statement := sigmaCompose.StatementOr(x0, x1)
 				witness := sigmaCompose.WitnessOr(w0, w1)
@@ -129,15 +129,15 @@ func Test_SchnorrOrSchnorr(t *testing.T) {
 			})
 
 			t.Run("both false", func(t *testing.T) {
-				w0 := new_schnorr.Witness(w0)
-				w1 := new_schnorr.Witness(w1)
+				w0 := schnorr.Witness(w0)
+				w1 := schnorr.Witness(w1)
 
 				randomPoint, err := curve.Random(prng)
 				require.NoError(t, err)
-				x0 := new_schnorr.Statement(randomPoint)
+				x0 := schnorr.Statement(randomPoint)
 				randomPoint, err = curve.Random(prng)
 				require.NoError(t, err)
-				x1 := new_schnorr.Statement(randomPoint)
+				x1 := schnorr.Statement(randomPoint)
 
 				statement := sigmaCompose.StatementOr(x0, x1)
 				witness := sigmaCompose.WitnessOr(w0, w1)
@@ -193,9 +193,9 @@ func Test_SchnorrOrSchnorrSimulator(t *testing.T) {
 			t.Parallel()
 
 			prng := crand.Reader
-			sigma0, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			sigma0, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
-			sigma1, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			sigma1, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
 			orProtocol := sigmaCompose.SigmaOr(sigma0, sigma1, prng)
@@ -203,10 +203,10 @@ func Test_SchnorrOrSchnorrSimulator(t *testing.T) {
 
 			randomPoint, err := curve.Random(prng)
 			require.NoError(t, err)
-			x0 := new_schnorr.Statement(randomPoint)
+			x0 := schnorr.Statement(randomPoint)
 			randomPoint, err = curve.Random(prng)
 			require.NoError(t, err)
-			x1 := new_schnorr.Statement(randomPoint)
+			x1 := schnorr.Statement(randomPoint)
 
 			statement := sigmaCompose.StatementOr(x0, x1)
 			challenge := make([]byte, orProtocol.GetChallengeBytesLength())

@@ -44,11 +44,11 @@ func FuzzShamir(f *testing.F) {
 }
 
 func FuzzLagrangeCoefficients(f *testing.F) {
-	f.Add(uint(0), 1, 2, 3)
-	f.Fuzz(func(t *testing.T, curveIndex uint, x1 int, x2 int, x3 int) {
+	f.Add(uint(0), uint(1), uint(2), uint(3))
+	f.Fuzz(func(t *testing.T, curveIndex uint, x1 uint, x2 uint, x3 uint) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		fmt.Println(curve.Name())
-		_, err := shamir.LagrangeCoefficients(curve, []int{x1, x2, x3})
+		_, err := shamir.LagrangeCoefficients(curve, []uint{x1, x2, x3})
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

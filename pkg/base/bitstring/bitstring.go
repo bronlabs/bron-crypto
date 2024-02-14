@@ -7,14 +7,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// SelectBit gets the `i`th bit of a byte vector interpreted as little-endian packed bits.
+// SelectBit gets the `i`th bit of a byte vector `v` interpreted as little-endian packed bits.
 // E.g., [0x12, 0x34] --> [0,1,0,0, 1,0,0,0, 1,1,0,0, 0,0,1,0].
-func SelectBit(v []byte, i int) (byte, error) {
-	if i < 0 || i >= binary.Size(v)*8 {
-		return 0, errs.NewInvalidArgument("index out of bounds")
-	}
-	// the bitwise tricks index >> 3 == index // 8 and index & 0x07 == index % 8 are designed to avoid CPU division.
-	return v[i/8] >> (i & 0x07) & 0x01, nil
+func SelectBit(v []byte, i int) byte {
+	// index & 0x07 == index % 8 are designed to avoid CPU division.
+	return v[i/8] >> (i & 0x07) & 0x01
 }
 
 // ReverseBytes reverses the order of the bytes in a new slice.
@@ -28,13 +25,21 @@ func ReverseBytes(inBytes []byte) []byte {
 	return outBytes
 }
 
+// PadToLeft pads the input bytes to the left with padLen zeroed bytes.
 func PadToLeft(inBytes []byte, padLen int) []byte {
+	if padLen < 0 {
+		return inBytes
+	}
 	outBytes := make([]byte, padLen+len(inBytes))
 	copy(outBytes[padLen:], inBytes)
 	return outBytes
 }
 
+// PadToRight pads the input bytes to the right with padLen zeroed bytes.
 func PadToRight(inBytes []byte, padLen int) []byte {
+	if padLen < 0 {
+		return inBytes
+	}
 	outBytes := make([]byte, len(inBytes)+padLen)
 	copy(outBytes[:len(outBytes)-padLen], inBytes)
 	return outBytes
@@ -54,12 +59,12 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
 	if nRowsInput%8 != 0 || nRowsInput == 0 {
-		return nil, errs.NewInvalidArgument("input matrix must have a number of rows divisible by 8")
+		return nil, errs.NewArgument("input matrix must have a number of rows divisible by 8")
 	}
 	// check if array is a matrix
 	for i := 0; i < nRowsInput; i++ {
 		if len(inputMatrix[i]) != len(inputMatrix[0]) {
-			return nil, errs.NewInvalidArgument("input matrix must be a 2D matrix")
+			return nil, errs.NewArgument("input matrix must be a 2D matrix")
 		}
 	}
 

@@ -6,20 +6,19 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
 
-func MakeMult2Participants(t *testing.T, cipherSuite *integration.CipherSuite, baseOtReceiverOutput *vsot.ReceiverOutput, baseOtSenderOutput *vsot.SenderOutput, aliceTprng, bobTprng io.Reader, seededPrng csprng.CSPRNG, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
+func MakeMult2Participants(t *testing.T, curve curves.Curve, baseOtReceiverOutput *ot.ReceiverRotOutput, baseOtSenderOutput *ot.SenderRotOutput, aliceTprng, bobTprng io.Reader, seededPrng csprng.CSPRNG, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
 	t.Helper()
 
-	alice, err = mult.NewAlice(cipherSuite.Curve, baseOtReceiverOutput, aliceSid, aliceTprng, seededPrng, nil)
+	alice, err = mult.NewAlice(curve, baseOtReceiverOutput, aliceSid, aliceTprng, seededPrng, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create alice")
 	}
-	bob, err = mult.NewBob(cipherSuite.Curve, baseOtSenderOutput, bobSid, bobTprng, seededPrng, nil)
+	bob, err = mult.NewBob(curve, baseOtSenderOutput, bobSid, bobTprng, seededPrng, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create bob")
 	}

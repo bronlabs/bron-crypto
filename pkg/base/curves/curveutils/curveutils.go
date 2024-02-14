@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var allCurvesMapper = map[string]curves.Curve{
@@ -26,7 +27,7 @@ var allCurvesMapper = map[string]curves.Curve{
 func GetCurveByName(name string) (curves.Curve, error) {
 	curve, ok := allCurvesMapper[name]
 	if !ok {
-		return nil, errs.NewInvalidCurve("curve with name %s is not supported", name)
+		return nil, errs.NewCurve("curve with name %s is not supported", name)
 	}
 	return curve, nil
 }
@@ -47,6 +48,82 @@ func ToGoEllipticCurve(c curves.Curve) (elliptic.Curve, error) {
 	case p256.Name:
 		return elliptic.P256(), nil
 	default:
-		return nil, errs.NewInvalidCurve("can't convert %s", c.Name())
+		return nil, errs.NewCurve("can't convert %s", c.Name())
 	}
+}
+
+// TODO: incorporate this
+func AllOfSameCurve(curve curves.Curve, xs ...any) bool {
+	for _, x := range xs {
+		switch t := x.(type) {
+		case curves.Point:
+			if curve.Name() != t.Curve().Name() {
+				return false
+			}
+		case curves.Scalar:
+			if curve.Name() != t.ScalarField().Curve().Name() {
+				return false
+			}
+		case curves.BaseFieldElement:
+			if curve.Name() != t.BaseField().Curve().Name() {
+				return false
+			}
+		case curves.Curve:
+			if curve.Name() != t.Name() {
+				return false
+			}
+		case types.IdentityKey:
+			if curve.Name() != t.PublicKey().Curve().Name() {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func AllPointsOfSameCurve(curve curves.Curve, ps ...curves.Point) bool {
+	for _, p := range ps {
+		if curve.Name() != p.Curve().Name() {
+			return false
+		}
+	}
+	return true
+}
+
+func AllScalarsOfSameCurve(curve curves.Curve, scs ...curves.Scalar) bool {
+	for _, sc := range scs {
+		if curve.Name() != sc.ScalarField().Curve().Name() {
+			return false
+		}
+	}
+	return true
+}
+
+func AllBaseFieldElementsOfSameCurve(curve curves.Curve, fes ...curves.BaseFieldElement) bool {
+	for _, fe := range fes {
+		if curve.Name() != fe.BaseField().Curve().Name() {
+			return false
+		}
+	}
+	return true
+}
+
+func AllCurvesAreSame(curve curves.Curve, cs ...curves.Curve) bool {
+	for _, c := range cs {
+		if curve.Name() != c.Name() {
+			return false
+		}
+	}
+	return true
+}
+
+func AllIdentityKeysWithSameCurve(curve curves.Curve, ks ...types.IdentityKey) bool {
+	for _, k := range ks {
+		if curve.Name() != k.PublicKey().Curve().Name() {
+			return false
+		}
+	}
+	return true
 }

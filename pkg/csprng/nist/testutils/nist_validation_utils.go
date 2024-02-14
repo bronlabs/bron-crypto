@@ -211,7 +211,7 @@ func (nistTest *NistTestHelper) ScanTestCase(withReseed bool) error {
 // RunInit initialises a prng with the current test case.
 func (nistTest *NistTestHelper) RunInit(AesKeySize int) (csprng.CSPRNG, error) {
 	if nistTest.State.Count != nistTest.CountNo {
-		return nil, errs.NewInvalidArgument("TestState.Count != CountNo (%d != %d)", nistTest.State.Count, nistTest.CountNo)
+		return nil, errs.NewArgument("TestState.Count != CountNo (%d != %d)", nistTest.State.Count, nistTest.CountNo)
 	}
 	prng, err := nist.NewNistPRNG(AesKeySize, nil, nistTest.State.EntropyInput, nistTest.State.Nonce, nistTest.State.PersonalizationStr)
 	if err != nil {
@@ -224,10 +224,10 @@ func (nistTest *NistTestHelper) RunInit(AesKeySize int) (csprng.CSPRNG, error) {
 // and stores them in `buffer`.
 func (nistTest *NistTestHelper) RunGenerate(prng csprng.CSPRNG, buffer []byte) error {
 	if err := prng.Generate(buffer, nistTest.State.AdditionalInput1); err != nil {
-		return errs.WrapRandomSampleFailed(err, "cannot generate random bytes")
+		return errs.WrapRandomSample(err, "cannot generate random bytes")
 	}
 	if err := prng.Generate(buffer, nistTest.State.AdditionalInput2); err != nil {
-		return errs.WrapRandomSampleFailed(err, "cannot generate random bytes")
+		return errs.WrapRandomSample(err, "cannot generate random bytes")
 	}
 	return nil
 }
@@ -235,7 +235,7 @@ func (nistTest *NistTestHelper) RunGenerate(prng csprng.CSPRNG, buffer []byte) e
 // RunReseed seeds the prng with the provided entropy and the additional input.
 func (nistTest *NistTestHelper) RunReseed(prng csprng.CSPRNG, buffer []byte) error {
 	if err := prng.Reseed(nistTest.State.EntropyInputReseed, nistTest.State.AdditionalInputReseed); err != nil {
-		return errs.WrapRandomSampleFailed(err, "cannot reseed")
+		return errs.WrapRandomSample(err, "cannot reseed")
 	}
 	return nil
 }
@@ -243,10 +243,10 @@ func (nistTest *NistTestHelper) RunReseed(prng csprng.CSPRNG, buffer []byte) err
 // RunRead reads the next `len(buffer)` random bytes and stores them in `buffer`.
 func (*NistTestHelper) RunRead(prng csprng.CSPRNG, buffer []byte) error {
 	if _, err := prng.Read(buffer); err != nil {
-		return errs.WrapRandomSampleFailed(err, "cannot read random bytes")
+		return errs.WrapRandomSample(err, "cannot read random bytes")
 	}
 	if _, err := prng.Read(buffer); err != nil {
-		return errs.WrapRandomSampleFailed(err, "cannot read random bytes")
+		return errs.WrapRandomSample(err, "cannot read random bytes")
 	}
 	return nil
 }
@@ -285,7 +285,7 @@ func RunNistTestCases(f *os.File, AesKeySize int, useDf, withReseed bool) error 
 				}
 				// Check test results
 				if !bytes.Equal(nistTest.State.ReturnedBits, returnedBits) {
-					return errs.NewInvalidArgument("[line=%d] ReturnedBits mismatch", nistTest.LineNo)
+					return errs.NewArgument("[line=%d] ReturnedBits mismatch", nistTest.LineNo)
 				}
 				// Scan empty line
 				if err = nistTest.Sscanf(true, ""); err != nil {

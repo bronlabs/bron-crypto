@@ -98,7 +98,7 @@ func inEighteenth(lowBoundInclusive, highBoundExclusive uint64, x curves.Scalar)
 func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName string, prng io.Reader) (curves.Scalar, error) {
 	curve, err := curveutils.GetCurveByName(curveName)
 	if err != nil {
-		return nil, errs.WrapInvalidCurve(err, "could not get curve")
+		return nil, errs.WrapCurve(err, "could not get curve")
 	}
 	order := curve.SubGroupOrder().Nat()
 

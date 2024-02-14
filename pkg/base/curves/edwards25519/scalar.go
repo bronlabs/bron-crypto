@@ -13,8 +13,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -25,7 +25,7 @@ var _ json.Unmarshaler = (*Scalar)(nil)
 type Scalar struct {
 	V *filippo.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewScalar(input uint64) *Scalar {
@@ -370,7 +370,7 @@ func (s *Scalar) Bytes() []byte {
 // The input must be 32-byte long and must be a reduced bytes.
 func (*Scalar) SetBytesCanonicalLE(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	value, err := filippo.NewScalar().SetCanonicalBytes(input)
 	if err != nil {
@@ -384,7 +384,7 @@ func (*Scalar) SetBytesCanonicalLE(input []byte) (curves.Scalar, error) {
 // returns the resulting ed25519 scalar.
 func (*Scalar) SetBytesWithClampingLE(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	value, err := filippo.NewScalar().SetBytesWithClamping(input)
 	if err != nil {
@@ -396,13 +396,21 @@ func (*Scalar) SetBytesWithClampingLE(input []byte) (curves.Scalar, error) {
 // SetBytesWide takes input a 64-byte long byte array, reduce it and return an ed25519 scalar.
 // It uses SetUniformBytes of https://pkg.go.dev/filippo.io/edwards25519
 // If bytes is not of the right length, it pads it with 0s.
-func (*Scalar) SetBytesWide(input []byte) (sc curves.Scalar, err error) {
-	var value *filippo.Scalar
-	if len(input) > base.WideFieldBytes {
-		return nil, errs.NewInvalidLength("invalid input length (%d > %d)", len(input), base.WideFieldBytes)
+func (s *Scalar) SetBytesWide(input []byte) (sc curves.Scalar, err error) {
+	sc, err = s.SetBytesWideLE(bitstring.ReverseBytes(input))
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize")
 	}
-	inputLE := bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
-	value, err = filippo.NewScalar().SetUniformBytes(inputLE)
+	return sc, nil
+}
+
+func (*Scalar) SetBytesWideLE(inputLE []byte) (sc curves.Scalar, err error) {
+	var value *filippo.Scalar
+	if len(inputLE) > base.WideFieldBytes {
+		return nil, errs.NewLength("invalid input length (%d > %d)", len(inputLE), base.WideFieldBytes)
+	}
+	paddedInputLE := bitstring.PadToRight(inputLE, base.WideFieldBytes-len(inputLE))
+	value, err = filippo.NewScalar().SetUniformBytes(paddedInputLE)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "set uniform bytes")
 	}
@@ -432,10 +440,17 @@ func isReducedLE(bytes_ []byte) bool {
 //     scalar and maps it using `filipo.Scalar.SetUniformBytes`. WARNING: This
 //     generates a biased scalar. Use `Random` or `Hash` for unbiased scalars.
 func (s *Scalar) SetBytes(input []byte) (sc curves.Scalar, err error) {
-	if len(input) != base.FieldBytes {
-		return nil, errs.NewInvalidLength("invalid length (%d != %d)", len(input), base.FieldBytes)
+	sc, err = s.SetBytesLE(bitstring.ReverseBytes(input))
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not deserialize")
 	}
-	inputLE := bitstring.ReverseBytes(input)
+	return sc, nil
+}
+
+func (s *Scalar) SetBytesLE(inputLE []byte) (sc curves.Scalar, err error) {
+	if len(inputLE) != base.FieldBytes {
+		return nil, errs.NewLength("invalid length (%d != %d)", len(inputLE), base.FieldBytes)
+	}
 	var value *filippo.Scalar
 	if isReducedLE(inputLE) {
 		value, err = filippo.NewScalar().SetCanonicalBytes(inputLE)
@@ -470,11 +485,11 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != s.ScalarField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	s.V = ss.V
 	return nil
@@ -498,7 +513,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != s.ScalarField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {
@@ -514,4 +529,7 @@ func (s *Scalar) GetEdwardsScalar() *filippo.Scalar {
 
 func (*Scalar) SetEdwardsScalar(sc *filippo.Scalar) *Scalar {
 	return &Scalar{V: filippo.NewScalar().Set(sc)}
+}
+func (s *Scalar) HashCode() uint64 {
+	return s.Uint64()
 }

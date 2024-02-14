@@ -9,8 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const (
@@ -43,17 +43,17 @@ type PrivateKey[K KeySubGroup] struct {
 	d         *bls12381.Scalar
 	PublicKey *PublicKey[K]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewPrivateKey[K KeySubGroup](d curves.Scalar) (*PrivateKey[K], error) {
 	sk, ok := d.(*bls12381.Scalar)
 	if !ok {
-		return nil, errs.NewInvalidType("scalar is not for the right subgroup")
+		return nil, errs.NewType("scalar is not for the right subgroup")
 	}
 	sk.G = bls12381.GetSourceSubGroup[K]()
 	if bls12381.GetSourceSubGroup[K]().Name() != d.ScalarField().Curve().Name() {
-		return nil, errs.NewInvalidCurve(
+		return nil, errs.NewCurve(
 			"Key subgroup (%s) and d's subgroup (%s) are not the same",
 			bls12381.GetSourceSubGroup[K]().Name(),
 			d.ScalarField().Curve().Name(),
@@ -80,7 +80,7 @@ func (sk *PrivateKey[K]) Validate() error {
 		return errs.NewIsZero("secret key cannot be zero")
 	}
 	if err := sk.PublicKey.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "public key validation failed")
+		return errs.WrapValidation(err, "public key validation failed")
 	}
 	return nil
 }
@@ -96,7 +96,7 @@ func (sk *PrivateKey[K]) MarshalBinary() ([]byte, error) {
 // https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03#section-2.3
 func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	if len(data) != SecretKeySize {
-		return errs.NewInvalidLength("secret key must be %d bytes", SecretKeySize)
+		return errs.NewLength("secret key must be %d bytes", SecretKeySize)
 	}
 	zeros := make([]byte, len(data))
 	if subtle.ConstantTimeCompare(data, zeros) == 1 {
@@ -131,7 +131,7 @@ var (
 type PublicKey[K KeySubGroup] struct {
 	Y curves.PairingPoint
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // The Validate algorithm ensures that a public key is valid. In particular, it ensures that a public key represents a valid, non-identity point that is in the correct subgroup.
@@ -152,7 +152,7 @@ func (pk *PublicKey[K]) Validate() error {
 		return errs.NewIsIdentity("public key value is small order")
 	}
 	if !pk.Y.IsTorsionElement(subGroup.SubGroupOrder()) {
-		return errs.NewVerificationFailed("public key is not torsion free")
+		return errs.NewValue("public key is not torsion free")
 	}
 	return nil
 }
@@ -182,7 +182,7 @@ func (pk PublicKey[K]) MarshalBinary() ([]byte, error) {
 func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	size := pk.Size()
 	if len(data) != size {
-		return errs.NewInvalidLength("public key must be %d bytes", size)
+		return errs.NewLength("public key must be %d bytes", size)
 	}
 	blob := make([]byte, size)
 	copy(blob, data)
@@ -215,7 +215,7 @@ var (
 type Signature[S SignatureSubGroup] struct {
 	Value curves.PairingPoint
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (sig *Signature[S]) Size() int {
@@ -243,7 +243,7 @@ func (sig *Signature[S]) MarshalBinary() ([]byte, error) {
 func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	size := sig.Size()
 	if len(data) != size {
-		return errs.NewInvalidLength("signature must be %d bytes", size)
+		return errs.NewLength("signature must be %d bytes", size)
 	}
 	blob := make([]byte, size)
 	copy(blob, data)
@@ -276,7 +276,7 @@ var (
 type ProofOfPossession[S SignatureSubGroup] struct {
 	Value curves.PairingPoint
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (pop *ProofOfPossession[S]) Size() int {
@@ -304,7 +304,7 @@ func (pop *ProofOfPossession[S]) MarshalBinary() ([]byte, error) {
 func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 	size := pop.Size()
 	if len(data) != size {
-		return errs.NewInvalidLength("signature must be %d bytes", size)
+		return errs.NewLength("signature must be %d bytes", size)
 	}
 	blob := make([]byte, size)
 	copy(blob, data)

@@ -12,8 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -24,7 +24,7 @@ var _ json.Unmarshaler = (*Scalar)(nil)
 type Scalar struct {
 	V [32]byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewScalar(input uint64) *Scalar {
@@ -305,11 +305,11 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != s.ScalarField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*Scalar)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	s.V = ss.V
 	return nil
@@ -333,7 +333,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != s.ScalarField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {
@@ -341,4 +341,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	}
 	s.V = S.V
 	return nil
+}
+func (s *Scalar) HashCode() uint64 {
+	return s.Uint64()
 }

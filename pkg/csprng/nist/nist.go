@@ -49,11 +49,11 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	// 2. IF prediction_resistance_flag... --> Skipped, No prediction resistance.
 	// 3. IF (len(personalization_string) > max_personalization_string_length) --> error.
 	if int64(len(personalization)) > maxLength {
-		return nil, errs.NewInvalidLength("personalization too large")
+		return nil, errs.NewLength("personalization too large")
 	}
 	// 4. Set security_strength = keyLen.
 	if (keySize != 16) && (keySize != 24) && (keySize != 32) {
-		return nil, errs.NewInvalidArgument("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}")
+		return nil, errs.NewArgument("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}")
 	}
 	securityStrength := keySize
 	// 5. Nil step.
@@ -69,22 +69,22 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, securityStrength)
 		if _, err := NistPrng.entropySource.Read(entropyInput); err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "cannot sample entropyInput")
+			return nil, errs.WrapRandomSample(err, "cannot sample entropyInput")
 		}
 	case entropyInputLen < securityStrength:
-		return nil, errs.NewInvalidLength("entropyInput too small")
+		return nil, errs.NewLength("entropyInput too small")
 	case entropyInputLen > maxLength:
-		return nil, errs.NewInvalidLength("entropyInput too large")
+		return nil, errs.NewLength("entropyInput too large")
 	}
 	// 8. Obtain a nonce if not provided.
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, securityStrength/2)
 		if _, err = NistPrng.entropySource.Read(nonce); err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "cannot sample nonce")
+			return nil, errs.WrapRandomSample(err, "cannot sample nonce")
 		}
 	case nonceLen < securityStrength/2:
-		return nil, errs.NewInvalidLength("nonce too small")
+		return nil, errs.NewLength("nonce too small")
 	}
 	// 9. initial_working_state = Instantiate_algorithm(entropy_input, nonce,
 	// personalization_string, security_strength).
@@ -107,7 +107,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 	// 2. IF prediction_resistance_flag... --> Skipped, implicit.
 	// 3. IF len(additional_input) > max_additional_input_length: return EEROR_FLAG
 	if int64(len(additionalInput)) > maxLength {
-		return errs.NewInvalidLength("additionalInput too large")
+		return errs.NewLength("additionalInput too large")
 	}
 	// 4&5. (status, entropy_input) = Get_entropy_input (security_strength, min_length,
 	// max_length, prediction_resistance_request).
@@ -116,15 +116,15 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, prg.SecurityStrength())
 		if prg.entropySource == nil {
-			return errs.NewInvalidArgument("cannot reseed without external entropy")
+			return errs.NewArgument("cannot reseed without external entropy")
 		}
 		if _, err := prg.entropySource.Read(entropyInput); err != nil {
-			return errs.WrapRandomSampleFailed(err, "cannot sample entropyInput")
+			return errs.WrapRandomSample(err, "cannot sample entropyInput")
 		}
 	case entropyInputLen < prg.SecurityStrength():
-		return errs.NewInvalidLength("entropyInput too small")
+		return errs.NewLength("entropyInput too small")
 	case entropyInputLen > maxLength:
-		return errs.NewInvalidLength("entropyInput too large")
+		return errs.NewLength("entropyInput too large")
 	}
 	// 6. new_working_state = Reseed_algorithm(working_state, entropy_input,
 	// additional_input).
@@ -141,19 +141,19 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 // was initialised with an `entropySource`, raising an error otherwise.
 func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
 	if len(buffer) == 0 {
-		return errs.NewInvalidLength("buffer must be non-empty")
+		return errs.NewLength("buffer must be non-empty")
 	}
 	// 1. Using state_handle... --> implicit.
 	// 2. IF (requested_number_of_bits > max_number_of_bits_per_request):
 	// .	return (ERROR_FLAG, Nil).
 	if len(buffer) > maxNumberOfBytesRequest {
-		return errs.NewInvalidLength("too many bytes requested")
+		return errs.NewLength("too many bytes requested")
 	}
 	// 3. IF requested_security_strength > security_strength... --> implicit.
 	// 4. IF (length of the additional_input > max_additional_input_length):
 	// .	return (ERROR_FLAG, Nil).
 	if int64(len(additionalInput)) > maxLength {
-		return errs.NewInvalidLength("additionalInput too large")
+		return errs.NewLength("additionalInput too large")
 	}
 	// 5. If prediction_resistance_request is set... --> implicit.
 	// 6. Clear the reseed_required_flag.
@@ -162,14 +162,14 @@ dataGeneration:
 	// 8. (status, pseudorandom_bits, new_working_state) = Generate_algorithm(
 	// working_state, requested_number_of_bits, additional_input).
 	switch err := prg.ctrDrbg.Generate(buffer, additionalInput); {
-	case errs.IsRandomSampleFailed(err) && prg.entropySource != nil:
+	case errs.IsRandomSample(err) && prg.entropySource != nil:
 		// 9. If status indicates that a reseed is required, then
 		// 9.1. Set the reseed_required_flag.
 		// 9.2. If the prediction_resistance_flag... --> implicit.
 		// 9.3. Go to step 7.
 		reseedRequired = true
 	case err != nil:
-		return errs.WrapRandomSampleFailed(err, "cannot generate random data")
+		return errs.WrapRandomSample(err, "cannot generate random data")
 	default: // no errors
 		reseedRequired = false
 	}
@@ -178,7 +178,7 @@ dataGeneration:
 		// 7.1. status = Reseed_function(state_handle, ..., additional_input).
 		if err := prg.Reseed(nil, additionalInput); err != nil {
 			// 7.2. IF (status != SUCCESS), then return (status, Nil).
-			return errs.WrapRandomSampleFailed(err, "cannot reseed")
+			return errs.WrapRandomSample(err, "cannot reseed")
 		}
 		// 7.3 Using state_handle... --> implicit.
 		// 7.4. additional_input = Nil.
@@ -201,7 +201,7 @@ func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 		end := utils.Min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {
-			return n, errs.WrapRandomSampleFailed(err, "Could not generate random bits")
+			return n, errs.WrapRandomSample(err, "Could not generate random bits")
 		}
 	}
 	return len(buffer), nil
@@ -218,18 +218,18 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 	// Check seed and nonce
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen < prg.SecurityStrength():
-		return errs.NewInvalidLength("entropyInput too small")
+		return errs.NewLength("entropyInput too small")
 	case entropyInputLen > maxLength:
-		return errs.NewInvalidLength("entropyInput too large")
+		return errs.NewLength("entropyInput too large")
 	}
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, prg.SecurityStrength()/2)
 		if _, err = prg.entropySource.Read(nonce); err != nil {
-			return errs.WrapRandomSampleFailed(err, "cannot sample nonce")
+			return errs.WrapRandomSample(err, "cannot sample nonce")
 		}
 	case nonceLen < prg.SecurityStrength()/2:
-		return errs.NewInvalidLength("nonce too small")
+		return errs.NewLength("nonce too small")
 	}
 	// Re-instantiate
 	if err = prg.ctrDrbg.Instantiate(entropyInput, nonce, nil); err != nil {

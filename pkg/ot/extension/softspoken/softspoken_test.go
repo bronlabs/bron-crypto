@@ -2,6 +2,7 @@ package softspoken_test
 
 import (
 	crand "crypto/rand"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,8 +11,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
+	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken/testutils"
+	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
 )
 
 var curveInstances = []curves.Curve{
@@ -19,64 +23,71 @@ var curveInstances = []curves.Curve{
 	p256.NewCurve(),
 }
 
-func Test_HappyPath_OTe(t *testing.T) {
+var baseOTrunners = []func(batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
+	vsot_testutils.RunVSOT,
+	bbot_testutils.RunBBOT,
+}
+
+func Test_HappyPath_ROTe(t *testing.T) {
 	for _, curve := range curveInstances {
-		// Generic setup
-		LOTe := 4
-		Xi := 4 * base.ComputationalSecurity
-		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := crand.Read(uniqueSessionId[:])
-		require.NoError(t, err)
+		for _, baseOTrunner := range baseOTrunners {
+			// Generic setup
+			L := 4
+			Xi := 4 * base.ComputationalSecurity
+			uniqueSessionId := [ot.KappaBytes]byte{}
+			_, err := crand.Read(uniqueSessionId[:])
+			require.NoError(t, err)
 
-		// BaseOTs
-		baseOtSendOutput, baseOtRecOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
-		require.NoError(t, err)
+			// BaseOTs
+			baseOtSend, baseOtRec, err := baseOTrunner(ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+			require.NoError(t, err)
+			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+			require.NoError(t, err)
 
-		err = testutils.CheckBaseOTOutputs(baseOtSendOutput, baseOtRecOutput)
-		require.NoError(t, err)
+			// Set OTe inputs
+			receiverChoices, _, err := ot_testutils.GenerateCOTinputs(Xi, L, nil)
+			require.NoError(t, err)
 
-		// Set OTe inputs
-		choices, _, err := testutils.GenerateSoftspokenRandomInputs(nil, LOTe, Xi)
-		require.NoError(t, err)
+			// Run OTe
+			senderMesages, receiverChosenMessage, err := testutils.RunSoftspokenOTe(
+				Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
+			require.NoError(t, err)
 
-		// Run OTe
-		oTeSenderOutput, oTeReceiverOutput, err := testutils.RunSoftspokenOTe(
-			curve, uniqueSessionId[:], crand.Reader, baseOtSendOutput, baseOtRecOutput, choices, LOTe, Xi)
-		require.NoError(t, err)
-
-		// Check OTe result
-		err = testutils.CheckSoftspokenOTeOutputs(oTeSenderOutput, oTeReceiverOutput, choices, LOTe, Xi)
-		require.NoError(t, err)
+			// Check OTe result
+			err = ot_testutils.ValidateOT(Xi, L, senderMesages, receiverChoices, receiverChosenMessage)
+			require.NoError(t, err)
+		}
 	}
 }
 
 func Test_HappyPath_COTe(t *testing.T) {
 	for _, curve := range curveInstances {
-		// Generic setup
-		LOTe := 4
-		Xi := 4 * base.ComputationalSecurity
-		uniqueSessionId := [vsot.DigestSize]byte{}
-		_, err := crand.Read(uniqueSessionId[:])
-		require.NoError(t, err)
+		for _, baseOTrunner := range baseOTrunners {
+			// Generic setup
+			L := 4
+			Xi := 4 * base.ComputationalSecurity
+			uniqueSessionId := [ot.KappaBytes]byte{}
+			_, err := crand.Read(uniqueSessionId[:])
+			require.NoError(t, err)
 
-		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := testutils.RunBaseOT(t, curve, uniqueSessionId[:], crand.Reader)
-		require.NoError(t, err)
-		err = testutils.CheckBaseOTOutputs(baseOtSenderOutput, baseOtReceiverOutput)
-		require.NoError(t, err)
+			// BaseOTs
+			baseOtSend, baseOtRec, err := baseOTrunner(ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+			require.NoError(t, err)
+			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+			require.NoError(t, err)
 
-		// Set COTe inputs
-		choices, cOTeSenderInput, err := testutils.GenerateSoftspokenRandomInputs(curve, LOTe, Xi)
-		require.NoError(t, err)
+			// Set COTe inputs
+			choices, cOTeSenderInput, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
+			require.NoError(t, err)
 
-		// Run COTe
-		cOTeSenderOutput, cOTeReceiverOutput, err := testutils.RunSoftspokenCOTe(
-			curve, uniqueSessionId[:], crand.Reader, baseOtSenderOutput, baseOtReceiverOutput, choices, cOTeSenderInput, LOTe, Xi)
-		require.NoError(t, err)
+			// Run COTe
+			cOTeSenderOutput, cOTeReceiverOutput, err := testutils.RunSoftspokenCOTe(
+				curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, choices, cOTeSenderInput, L, Xi)
+			require.NoError(t, err)
 
-		// Check COTe result
-		err = testutils.CheckSoftspokenCOTeOutputs(choices, cOTeSenderInput, cOTeSenderOutput, cOTeReceiverOutput, LOTe, Xi)
-		require.NoError(t, err)
-
+			// Check COTe result
+			err = ot_testutils.ValidateCOT(Xi, L, choices, cOTeSenderInput, cOTeSenderOutput, cOTeReceiverOutput)
+			require.NoError(t, err)
+		}
 	}
 }

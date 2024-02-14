@@ -9,6 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type Uint128 struct {
@@ -70,9 +71,9 @@ func (u Uint128) IsZero() bool {
 
 // Equals returns true if u == v.
 func (u Uint128) Equals(v Uint128) bool {
-	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
-	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
-	return (eqLow & eqHigh) == 1
+	eqLow := ct.Equal(u.Lo, v.Lo)
+	eqHigh := ct.Equal(u.Hi, v.Hi)
+	return eqLow&eqHigh == 1
 }
 
 // Cmp compares u and v and returns:
@@ -81,10 +82,10 @@ func (u Uint128) Equals(v Uint128) bool {
 //	 0 if u == v
 //	+1 if u >  v
 func (u Uint128) Cmp(v Uint128) int {
-	ltHigh := ct.ConstantTimeGt(v.Hi, u.Hi)
-	ltLow := ct.ConstantTimeGt(v.Lo, u.Lo)
-	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
-	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
+	ltHigh := ct.GreaterThan(v.Hi, u.Hi)
+	ltLow := ct.GreaterThan(v.Lo, u.Lo)
+	eqHigh := ct.Equal(u.Hi, v.Hi)
+	eqLow := ct.Equal(u.Lo, v.Lo)
 	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
 }
 
@@ -178,7 +179,7 @@ func (u Uint128) Nat() *saferith.Nat {
 
 // ConstantTimeSelect returns x if b == true or y if b == false. Inspired by subtle.ConstantTimeSelect().
 func ConstantTimeSelect(v bool, x, y Uint128) Uint128 {
-	vv := uint64(boolToInt(v))
+	vv := uint64(utils.BoolTo[int](v))
 	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
 }
 
@@ -193,13 +194,4 @@ func FromBig(i *big.Int) (u Uint128) {
 	u.Lo = i.Uint64()
 	u.Hi = i.Rsh(i, 64).Uint64()
 	return u
-}
-
-// boolToInt converts a boolean value to 0 or 1.
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
 }

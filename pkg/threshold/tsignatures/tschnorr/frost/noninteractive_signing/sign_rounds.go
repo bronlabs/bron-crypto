@@ -5,8 +5,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
+	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
 func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {
@@ -23,13 +23,12 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 
 	partialSignature, err := signing_helpers.ProducePartialSignature(
 		nic,
+		nic.Protocol,
 		nic.SessionParticipants,
 		nic.Shard.SigningKeyShare,
 		d_i, e_i,
 		nic.aggregationParameter.D_alpha, nic.aggregationParameter.E_alpha,
-		nic.SharingIdToIdentityKey,
-		nic.IdentityKeyToSharingId,
-		nic.aggregationParameter,
+		nic.SharingConfig,
 		message,
 	)
 	if err != nil {
@@ -38,8 +37,8 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	return partialSignature, nil
 }
 
-func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures map[types.IdentityHash]*frost.PartialSignature) (*schnorr.Signature, error) {
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.CohortConfig, nic.Shard, nic.SessionParticipants, nic.IdentityKeyToSharingId, message, nic.aggregationParameter)
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures types.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.Protocol, nic.Shard.SigningKeyShare.PublicKey, nic.Shard.PublicKeyShares, nic.SessionParticipants, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}

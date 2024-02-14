@@ -3,74 +3,97 @@ package noninteractiveSigning
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 )
 
-type Cosigner struct {
-	myAuthKey             integration.AuthKey
-	mySharingId           int
-	myShard               *dkls24.Shard
-	cohortConfig          *integration.CohortConfig
-	sessionParticipants   *hashset.HashSet[integration.IdentityKey]
-	identityKeyToShamirId map[types.IdentityHash]int
-	preSignature          *dkls24.PreSignature
-}
-
 var _ signing.Participant = (*Cosigner)(nil)
 
-func (c *Cosigner) GetShard() *dkls24.Shard {
+type Cosigner struct {
+	myAuthKey     types.AuthKey
+	mySharingId   types.SharingID
+	myShard       *dkls24.Shard
+	protocol      types.ThresholdSignatureProtocol
+	sharingConfig types.SharingConfig
+	ppm           *dkls24.PreProcessingMaterial
+}
+
+func (c *Cosigner) Shard() *dkls24.Shard {
 	return c.myShard
 }
 
-func (c *Cosigner) GetIdentityHashToSharingId() map[types.IdentityHash]int {
-	return c.identityKeyToShamirId
+func (c *Cosigner) Protocol() types.ThresholdSignatureProtocol {
+	return c.protocol
 }
 
-func (*Cosigner) GetPrng() io.Reader {
+func (c *Cosigner) SharingConfig() types.SharingConfig {
+	return c.sharingConfig
+}
+
+func (*Cosigner) Prng() io.Reader {
 	return nil
 }
 
-func (*Cosigner) GetSessionId() []byte {
+func (*Cosigner) SessionId() []byte {
 	return nil
 }
 
-func (c *Cosigner) GetAuthKey() integration.AuthKey {
+func (c *Cosigner) IdentityKey() types.IdentityKey {
 	return c.myAuthKey
 }
 
-func (c *Cosigner) GetSharingId() int {
+func (c *Cosigner) AuthKey() types.AuthKey {
+	return c.myAuthKey
+}
+
+func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func (c *Cosigner) GetCohortConfig() *integration.CohortConfig {
-	return c.cohortConfig
-}
-
 func (c *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range c.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(c.myAuthKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
+	return c.Protocol().Participants().Contains(c.IdentityKey())
 }
 
-var _ dkls24.Participant = (*Cosigner)(nil)
+func NewCosigner(myAuthKey types.AuthKey, myShard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, ppm *dkls24.PreProcessingMaterial) (cosigner *Cosigner, err error) {
+	if err := validateInputsSign([]byte("no session id for noninteractive"), myAuthKey, protocol, myShard, ppm); err != nil {
+		return nil, errs.WrapArgument(err, "could not validate input")
+	}
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
+	}
 
-func NewCosigner(myAuthKey integration.AuthKey, myShard *dkls24.Shard, cohortConfig *integration.CohortConfig, sessionParticipants *hashset.HashSet[integration.IdentityKey], preSignature *dkls24.PreSignature) (cosigner *Cosigner, err error) {
-	_, identityKeyToShamirId, myShamirId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
+	participant := &Cosigner{
+		myAuthKey:     myAuthKey,
+		mySharingId:   mySharingId,
+		myShard:       myShard,
+		protocol:      protocol,
+		sharingConfig: sharingConfig,
+		ppm:           ppm,
+	}
 
-	return &Cosigner{
-		myAuthKey:             myAuthKey,
-		mySharingId:           myShamirId,
-		myShard:               myShard,
-		cohortConfig:          cohortConfig,
-		sessionParticipants:   sessionParticipants,
-		identityKeyToShamirId: identityKeyToShamirId,
-		preSignature:          preSignature,
-	}, nil
+	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls24 cosigner")
+	}
+
+	return participant, nil
+}
+
+func validateInputsSign(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, ppm *dkls24.PreProcessingMaterial) error {
+	if ppm == nil {
+		return errs.NewIsNil("ppm")
+	}
+	if err := validateInputs(uniqueSessionId, authKey, protocol, shard, ppm.PreSigners); err != nil {
+		return err
+	}
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
+	}
+	if err := ppm.Validate(authKey, protocol); err != nil {
+		return errs.WrapValidation(err, "preprocessing material")
+	}
+	return nil
 }

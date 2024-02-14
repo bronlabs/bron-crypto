@@ -14,17 +14,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
-func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairwiseSeeds []przs.PairwiseSeeds, err error) {
+func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSeeds []przs.PairWiseSeeds, err error) {
 	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not make setup participants")
@@ -35,13 +35,13 @@ func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairw
 		return nil, errs.WrapFailed(err, "could not run setup round 1")
 	}
 
-	r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
+	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run setup round 2")
 	}
 
-	r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
 	allPairwiseSeeds, err = testutils.DoSetupRound3(participants, r3InsU)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run setup round 3")
@@ -49,16 +49,16 @@ func doSetup(curve curves.Curve, identities []integration.IdentityKey) (allPairw
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds, seededPrng csprng.CSPRNG) {
+func doSample(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
-	participants, err := testutils.MakeSampleParticipants(cohortConfig, identities, seeds, seededPrng, nil)
+	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, nil)
 	require.NoError(t, err)
 
 	zeroShares, err := testutils.DoSample(participants)
 	require.NoError(t, err)
 	require.Len(t, zeroShares, len(identities))
 
-	zeroSum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
+	zeroSum := protocol.Curve().ScalarField().Zero()
 	for _, zeroShare := range zeroShares {
 		require.False(t, zeroShare.IsZero())
 		zeroSum = zeroSum.Add(zeroShare)
@@ -67,7 +67,7 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 
 	// test sum of all the shares but one doesn't add up to zero
 	for i := range zeroShares {
-		zeroSum = cohortConfig.CipherSuite.Curve.ScalarField().Zero()
+		zeroSum = protocol.Curve().ScalarField().Zero()
 		for j, zeroShare := range zeroShares {
 			if i != j {
 				zeroSum = zeroSum.Add(zeroShare)
@@ -77,10 +77,10 @@ func doSample(t *testing.T, cohortConfig *integration.CohortConfig, identities [
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, seeds []przs.PairwiseSeeds, seededPrng csprng.CSPRNG) {
+func doSampleInvalidSid(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	wrongUniqueSessionId := []byte("This is an invalid sid")
-	participants, err := testutils.MakeSampleParticipants(cohortConfig, identities, seeds, seededPrng, wrongUniqueSessionId)
+	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, wrongUniqueSessionId)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -89,7 +89,7 @@ func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, id
 	require.NoError(t, err)
 	require.Len(t, zeroShares, len(identities))
 
-	sum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
+	sum := protocol.Curve().ScalarField().Zero()
 	for _, share := range zeroShares {
 		require.False(t, share.IsZero())
 		sum = sum.Add(share)
@@ -99,62 +99,56 @@ func doSampleInvalidSid(t *testing.T, cohortConfig *integration.CohortConfig, id
 
 func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	h := sha3.New256
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet(allIdentities),
-	}
-	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	require.NoError(t, err)
+	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
-			identities := make([]integration.IdentityKey, subsetSize)
-			seeds := make([]przs.PairwiseSeeds, subsetSize)
+			identities := make([]types.IdentityKey, subsetSize)
+			seeds := make([]przs.PairWiseSeeds, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSampleInvalidSid(t, cohortConfig, identities, seeds, seededPrng)
+			doSampleInvalidSid(t, protocol, identities, seeds, seededPrng)
 		}
 	}
 }
 
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	h := sha3.New256
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet(allIdentities),
-	}
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
-	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
-			identities := make([]integration.IdentityKey, subsetSize)
-			seeds := make([]przs.PairwiseSeeds, subsetSize)
+			identities := make([]types.IdentityKey, subsetSize)
+			seeds := make([]przs.PairWiseSeeds, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 				seeds[i] = allPairwiseSeeds[index]
 			}
-			doSample(t, cohortConfig, identities, seeds, seededPrng)
+			doSample(t, protocol, identities, seeds, seededPrng)
 		}
 	}
 }
@@ -199,11 +193,10 @@ func Test_InvalidParticipants(t *testing.T) {
 
 func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, _ := integration_testutils.MakeTestIdentities(cipherSuite, 3)
+	h := sha3.New256
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
+	allIdentities, _ := ttu.MakeTestIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]
@@ -215,12 +208,17 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
-
-	prng, err := chacha20.NewChachaPRNG(nil, nil)
+	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
 	require.NoError(t, err)
-	aliceParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, aliceIdentity.(integration.AuthKey), aliceSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	bobParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, bobIdentity.(integration.AuthKey), bobSeed, hashset.NewHashSet([]integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}), prng)
-	charlieParticipant, _ := sample.NewParticipant(curve, uniqueSessionId, charlieIdentity.(integration.AuthKey), charlieSeed, hashset.NewHashSet([]integration.IdentityKey{bobIdentity, charlieIdentity}), prng)
+
+	prng, err := chacha.NewChachaPRNG(nil, nil)
+	require.NoError(t, err)
+	aliceParticipant, err := sample.NewParticipant(uniqueSessionId, aliceIdentity.(types.AuthKey), aliceSeed, protocol, hashset.NewHashableHashSet(aliceIdentity, bobIdentity, charlieIdentity), prng)
+	require.NoError(t, err)
+	bobParticipant, err := sample.NewParticipant(uniqueSessionId, bobIdentity.(types.AuthKey), bobSeed, protocol, hashset.NewHashableHashSet(aliceIdentity, bobIdentity, charlieIdentity), prng)
+	require.NoError(t, err)
+	charlieParticipant, err := sample.NewParticipant(uniqueSessionId, charlieIdentity.(types.AuthKey), charlieSeed, protocol, hashset.NewHashableHashSet(bobIdentity, charlieIdentity), prng)
+	require.NoError(t, err)
 
 	aliceSample, err := aliceParticipant.Sample()
 	require.NoError(t, err)

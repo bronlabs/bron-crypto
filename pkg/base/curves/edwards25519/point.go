@@ -3,6 +3,7 @@ package edwards25519
 import (
 	"crypto/subtle"
 	"encoding"
+	"encoding/binary"
 	"encoding/json"
 
 	filippo "filippo.io/edwards25519"
@@ -12,8 +13,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -26,7 +27,7 @@ var _ json.Unmarshaler = (*Point)(nil)
 type Point struct {
 	V *filippo.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewPoint() *Point {
@@ -296,18 +297,18 @@ func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
 
 func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	if len(inBytes) != base.WideFieldBytes {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	if subtle.ConstantTimeCompare(inBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == 1 {
 		return &Point{V: filippo.NewIdentityPoint()}, nil
 	}
 	x, err := new(field.Element).SetBytes(inBytes[:base.FieldBytes])
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "x")
+		return nil, errs.WrapCoordinates(err, "x")
 	}
 	y, err := new(field.Element).SetBytes(inBytes[base.FieldBytes:])
 	if err != nil {
-		return nil, errs.WrapInvalidCoordinates(err, "y")
+		return nil, errs.WrapCoordinates(err, "y")
 	}
 	z := new(field.Element).One()
 	t := new(field.Element).Multiply(x, y)
@@ -336,11 +337,11 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ppt, ok := pt.(*Point)
 	if !ok {
-		return errs.NewInvalidType("invalid point")
+		return errs.NewType("invalid point")
 	}
 	p.V = ppt.V
 	return nil
@@ -364,7 +365,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != p.Curve().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	P, ok := pt.(*Point)
 	if !ok {
@@ -372,4 +373,10 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	}
 	p.V = P.V
 	return nil
+}
+
+// === Hashable.
+
+func (p *Point) HashCode() uint64 {
+	return binary.BigEndian.Uint64(p.ToAffineCompressed())
 }

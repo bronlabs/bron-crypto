@@ -14,9 +14,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/new_chaum"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/new_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -95,7 +95,7 @@ func Test_HappyPathWithSchnorr(t *testing.T) {
 			prng := crand.Reader
 			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
 
-			schnorrProtocol, err := new_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			schnorrProtocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
 			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
@@ -148,7 +148,7 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			g2, err := curve.Random(prng)
 			require.NoError(t, err)
 
-			schnorrProtocol, err := new_chaum.NewSigmaProtocol(g1, g2, prng)
+			schnorrProtocol, err := chaum.NewSigmaProtocol(g1, g2, prng)
 			require.NoError(t, err)
 
 			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
@@ -166,7 +166,7 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 
 			witness, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
-			statement := &new_chaum.Statement{
+			statement := &chaum.Statement{
 				X1: g1.Mul(witness),
 				X2: g2.Mul(witness),
 			}

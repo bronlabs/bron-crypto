@@ -1,56 +1,58 @@
 package dkg
 
 import (
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 )
+
+var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	pedersenParty *pedersen.Participant
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.pedersenParty.GetAuthKey()
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.pedersenParty.IdentityKey()
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.pedersenParty.GetSharingId()
+func (p *Participant) SharingId() types.SharingID {
+	return p.pedersenParty.SharingId()
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.pedersenParty.GetCohortConfig()
-}
-
-func NewParticipant(uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, prng io.Reader) (*Participant, error) {
-	err := validateInputs(cohortConfig, authKey, prng)
-	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(protocol, authKey, prng); err != nil {
+		return nil, errs.NewArgument("invalid input arguments")
 	}
-	party, err := pedersen.NewParticipant(uniqueSessionId, authKey, cohortConfig, nil, randomisedFischlin.Name, prng)
+	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, protocol, fiatShamir.Name, nil, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}
-	return &Participant{
-		pedersenParty: party,
-	}, nil
+	participant := &Participant{
+		pedersenParty: pedersenParty,
+	}
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct frost dkg participant")
+	}
+	return participant, nil
 }
 
-func validateInputs(cohortConfig *integration.CohortConfig, identityKey integration.IdentityKey, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func validateInputs(protocol types.ThresholdProtocol, authKey types.AuthKey, prng io.Reader) error {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
-	if identityKey == nil {
-		return errs.NewInvalidArgument("identity key is nil")
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
 	if prng == nil {
-		return errs.NewInvalidArgument("prng is nil")
+		return errs.NewIsNil("prng is nil")
 	}
 	return nil
 }

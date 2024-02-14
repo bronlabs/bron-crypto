@@ -1,56 +1,154 @@
 package lindell22
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
-
-type Participant interface {
-	integration.Participant
-
-	IsSignatureAggregator() bool
-}
 
 type PartialSignature struct {
 	R curves.Point
 	S curves.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
+
+var _ tsignatures.Shard = (*Shard)(nil)
 
 type Shard struct {
 	SigningKeyShare *tsignatures.SigningKeyShare
-	PublicKeyShares *tsignatures.PublicKeyShares
+	PublicKeyShares *tsignatures.PartialPublicKeys
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (s *Shard) Validate(cohortConfig *integration.CohortConfig) error {
-	if err := s.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid signing key share")
+func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
+	if err := s.SigningKeyShare.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "invalid signing key share")
 	}
-	if err := s.PublicKeyShares.Validate(cohortConfig); err != nil {
-		return errs.WrapVerificationFailed(err, "invalid public key shares map")
+	if err := s.PublicKeyShares.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "invalid public key shares map")
+	}
+	return nil
+}
+
+func (s *Shard) SecretShare() curves.Scalar {
+	return s.SigningKeyShare.Share
+}
+
+func (s *Shard) PublicKey() curves.Point {
+	return s.SigningKeyShare.PublicKey
+}
+
+func (s *Shard) PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point] {
+	return s.PublicKeyShares.Shares
+}
+
+func (s *Shard) FeldmanCommitmentVector() []curves.Point {
+	return s.PublicKeyShares.FeldmanCommitmentVector
+}
+
+type PreProcessingMaterial tsignatures.PreProcessingMaterial[*PrivatePreProcessingMaterial, *PreSignature]
+
+func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol) error {
+	if ppm == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if ppm.PreSigners == nil {
+		return errs.NewIsNil("presigners")
+	}
+	if ppm.PreSigners.Size() < int(protocol.Threshold()) {
+		return errs.NewSize("not enough session participants: %d", ppm.PreSigners.Size())
+	}
+	if !ppm.PreSigners.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("presigners must be non empty subset of all participants")
+	}
+	if ppm.PrivateMaterial == nil {
+		return errs.NewIsNil("private material")
+	}
+	if err := ppm.PrivateMaterial.Validate(protocol, ppm.PreSigners); err != nil {
+		return errs.WrapValidation(err, "private material")
+	}
+	if ppm.PreSignature == nil {
+		return errs.NewIsNil("public material")
+	}
+	if err := ppm.PreSignature.Validate(protocol, ppm.PreSigners); err != nil {
+		return errs.WrapValidation(err, "presignature")
+	}
+	if !hashset.NewHashableHashSet(ppm.PreSignature.BigR1.Keys()...).Equal(hashset.NewHashableHashSet(ppm.PrivateMaterial.Seeds.Keys()...)) {
+		return errs.NewMembership("seed holders and presignature contributors are not the same set")
+	}
+	return nil
+}
+
+type PrivatePreProcessingMaterial struct {
+	K1    curves.Scalar
+	K2    curves.Scalar
+	Seeds przs.PairWiseSeeds
+
+	_ ds.Incomparable
+}
+
+func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.HashSet[types.IdentityKey]) error {
+	if pppm == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if pppm.K1 == nil {
+		return errs.NewIsNil("k")
+	}
+	if pppm.K2 == nil {
+		return errs.NewIsNil("k2")
+	}
+	if pppm.Seeds == nil {
+		return errs.NewIsNil("seeds")
+	}
+	seeders := hashset.NewHashableHashSet(pppm.Seeds.Keys()...)
+	if !seeders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("we have seeds from people who are not a participant in this protocol")
+	}
+	if seeders.SymmetricDifference(preSigners).Size() != 1 {
+		return errs.NewMembership("seed holders should contain all presigners except myself")
+	}
+	for pair := range pppm.Seeds.Iter() {
+		if ct.IsAllZero(pair.Value[:]) == 1 {
+			return errs.NewIsZero("found seed that's all zero")
+		}
 	}
 	return nil
 }
 
 type PreSignature struct {
-	K     curves.Scalar
-	K2    curves.Scalar
-	BigR  map[types.IdentityHash]curves.Point
-	BigR2 map[types.IdentityHash]curves.Point
-	Seeds przs.PairwiseSeeds
+	BigR1 ds.HashMap[types.IdentityKey, curves.Point]
+	BigR2 ds.HashMap[types.IdentityKey, curves.Point]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-type PreSignatureBatch struct {
-	PreSignatures []*PreSignature
-
-	_ types.Incomparable
+func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.HashSet[types.IdentityKey]) error {
+	if ps == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if ps.BigR1 == nil {
+		return errs.NewIsNil("BigR")
+	}
+	bigRHolders := hashset.NewHashableHashSet(ps.BigR1.Keys()...)
+	if !bigRHolders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("BigR holders are not a subset of total participants")
+	}
+	if bigRHolders.SymmetricDifference(preSigners).Size() != 1 {
+		return errs.NewMembership("BigR holders should contain all presigners except myself")
+	}
+	if ps.BigR2 == nil {
+		return errs.NewIsNil("BigR2")
+	}
+	bigR2Holders := hashset.NewHashableHashSet(ps.BigR2.Keys()...)
+	if !bigR2Holders.Equal(bigRHolders) {
+		return errs.NewMembership("BigR2 holders are not equal to BigR holders")
+	}
+	return nil
 }

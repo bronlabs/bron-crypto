@@ -10,7 +10,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 )
 
@@ -20,10 +20,8 @@ import (
 // test vector 10 fails, because the std implementation does not compress the public key before hashing
 func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 	t.Parallel()
-	suite := &integration.CipherSuite{
-		Curve: edwards25519.NewCurve(),
-		Hash:  sha512.New,
-	}
+	suite, err := ttu.MakeSignatureProtocol(edwards25519.NewCurve(), sha512.New)
+	require.NoError(t, err)
 
 	// From Page 8 of https://eprint.iacr.org/2020/1244.pdf
 	// Any point P of the group E can be uniquely represented as a linear combination of B and
@@ -79,16 +77,16 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			result := ed25519.Verify(publicKeyStd, message, signatureBytes)
 			require.True(t, result)
 
-			A, err := suite.Curve.Point().FromAffineCompressed(publicKeyBytes)
+			A, err := suite.Curve().Point().FromAffineCompressed(publicKeyBytes)
 			require.NoError(t, err)
 
 			RBytes := signatureBytes[:32]
 			sBytes := signatureBytes[32:]
 
-			R, err := suite.Curve.Point().FromAffineCompressed(RBytes)
+			R, err := suite.Curve().Point().FromAffineCompressed(RBytes)
 			require.NoError(t, err)
 
-			s, err := suite.Curve.Scalar().SetBytes(sBytes)
+			s, err := suite.Curve().Scalar().SetBytes(sBytes)
 			require.NoError(t, err)
 
 			signature := &eddsa.Signature{
@@ -101,7 +99,7 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 
 			err = eddsa.Verify(suite, publicKey, message, signature)
 			require.Error(t, err)
-			require.True(t, errs.IsVerificationFailed(err))
+			require.True(t, errs.IsVerification(err))
 		})
 	}
 }

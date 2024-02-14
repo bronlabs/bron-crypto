@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -20,7 +20,7 @@ type Signature struct {
 	R curves.Scalar
 	S curves.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Normalise normalises the signature to a "low S" form. In ECDSA, signatures are
@@ -69,7 +69,7 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 		rx = p.AffineX().Nat()
 		ry = p.AffineY().Nat()
 	} else {
-		return -1, errs.NewInvalidCurve("unsupported curve %s", bigR.Curve().Name())
+		return -1, errs.NewCurve("unsupported curve %s", bigR.Curve().Name())
 	}
 
 	curve := bigR.Curve()
@@ -154,7 +154,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 			return errs.WrapFailed(err, "signature has a recovery id but public key could not be recovered")
 		}
 		if !recoveredPublicKey.Equal(publicKey) {
-			return errs.NewVerificationFailed("incorrect recovery id")
+			return errs.NewVerification("incorrect recovery id")
 		}
 	}
 
@@ -165,7 +165,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	nativeCurve, err := curveutils.ToGoEllipticCurve(curve)
 	if err != nil {
-		return errs.WrapInvalidCurve(err, "krypton curve cannot be converted to Go's elliptic curve representation")
+		return errs.WrapCurve(err, "krypton curve cannot be converted to Go's elliptic curve representation")
 	}
 
 	nativePublicKey := &nativeEcdsa.PublicKey{
@@ -173,7 +173,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 		X:     publicKey.AffineX().Nat().Big(), Y: publicKey.AffineY().Nat().Big(),
 	}
 	if ok := nativeEcdsa.Verify(nativePublicKey, messageDigest, signature.R.Nat().Big(), signature.S.Nat().Big()); !ok {
-		return errs.NewVerificationFailed("signature verification failed")
+		return errs.NewVerification("signature verification failed")
 	}
 	return nil
 }

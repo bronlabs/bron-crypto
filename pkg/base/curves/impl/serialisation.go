@@ -55,7 +55,7 @@ func MarshalBinary(name string, f Serializer) []byte {
 func UnmarshalBinary[E any](f Deserializer[E], input []byte) (E, error) {
 	block, rest := pem.Decode(input)
 	if block == nil || len(rest) != 0 {
-		return *new(E), errs.NewInvalidType("pem decoding had leftovers of length %d > 0 or block is nil", len(rest))
+		return *new(E), errs.NewType("pem decoding had leftovers of length %d > 0 or block is nil", len(rest))
 	}
 	return f(block.Bytes)
 }
@@ -63,7 +63,7 @@ func UnmarshalBinary[E any](f Deserializer[E], input []byte) (E, error) {
 func ParseBinary(data []byte) (name string, serialised []byte, err error) {
 	block, rest := pem.Decode(data)
 	if block == nil || len(rest) != 0 {
-		return "", nil, errs.NewInvalidType("pem decoding had leftovers of length %d > 0 or block is nil", len(rest))
+		return "", nil, errs.NewType("pem decoding had leftovers of length %d > 0 or block is nil", len(rest))
 	}
 	if len(block.Bytes) == 0 {
 		return "", nil, errs.NewMissing("serialised bytes are missing")

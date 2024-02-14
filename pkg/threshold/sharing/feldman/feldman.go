@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -15,9 +15,8 @@ type Share = shamir.Share
 
 func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifier[batch_schnorr.Statement], proof compiler.NIZKPoKProof) (err error) {
 	curve := share.Value.ScalarField().Curve()
-	err = share.Validate(curve)
-	if err != nil {
-		return errs.WrapVerificationFailed(err, "share validation failed")
+	if err := share.Validate(curve); err != nil {
+		return errs.WrapValidation(err, "share validation failed")
 	}
 	x := curve.ScalarField().New(uint64(share.Id))
 	i := curve.ScalarField().One()
@@ -35,24 +34,24 @@ func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifi
 
 	lhs := commitments[0].Curve().Generator().Mul(share.Value)
 	if !lhs.Equal(rhs) {
-		return errs.NewVerificationFailed("not equal")
+		return errs.NewVerification("not equal")
 	}
 
 	if err := verifier.Verify(commitments, proof); err != nil {
-		return errs.NewVerificationFailed("invalid proof")
+		return errs.NewVerification("invalid proof")
 	}
 
 	return nil
 }
 
 type Dealer struct {
-	Threshold, Total int
+	Threshold, Total uint
 	Curve            curves.Curve
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
+func NewDealer(threshold, total uint, curve curves.Curve) (*Dealer, error) {
 	dealer := &Dealer{Threshold: threshold, Total: total, Curve: curve}
 	if err := dealer.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "invalid dealer")
@@ -81,13 +80,13 @@ func (f *Dealer) Split(secret curves.Scalar, prover compiler.NIProver[batch_schn
 	return commitments, shares, proof, nil
 }
 
-func (f *Dealer) LagrangeCoeffs(shares map[int]*Share) (map[int]curves.Scalar, error) {
+func (f *Dealer) LagrangeCoeffs(shares map[uint]*Share) (map[uint]curves.Scalar, error) {
 	shamirDealer := &shamir.Dealer{
 		Threshold: f.Threshold,
 		Total:     f.Total,
 		Curve:     f.Curve,
 	}
-	identities := make([]int, len(shares))
+	identities := make([]uint, len(shares))
 	for i, xi := range shares {
 		identities[i] = xi.Id
 	}
@@ -126,10 +125,10 @@ func (f *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 
 func (f *Dealer) Validate() error {
 	if f.Total < f.Threshold {
-		return errs.NewInvalidArgument("total cannot be less than threshold")
+		return errs.NewArgument("total cannot be less than threshold")
 	}
 	if f.Threshold < 2 {
-		return errs.NewInvalidArgument("threshold cannot be less than 2")
+		return errs.NewArgument("threshold cannot be less than 2")
 	}
 	if f.Curve == nil {
 		return errs.NewIsNil("curve is nil")

@@ -6,8 +6,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
@@ -27,7 +27,7 @@ type Signature = schnorr.Signature
 type Signer struct {
 	privateKey *PrivateKey
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
@@ -79,7 +79,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 		}
 	}
 	if len(aux) != auxSizeBytes {
-		return nil, errs.NewInvalidArgument("aux must have 32 bytes")
+		return nil, errs.NewArgument("aux must have 32 bytes")
 	}
 	curve := signer.privateKey.S.ScalarField().Curve()
 
@@ -146,10 +146,10 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	if publicKey.A.Curve().Name() != k256.Name || signature.R.Curve().Name() != k256.Name || signature.S.ScalarField().Curve().Name() != k256.Name {
-		return errs.NewInvalidArgument("curve not supported")
+		return errs.NewArgument("curve not supported")
 	}
 	if signature.R == nil || signature.S == nil || signature.R.IsIdentity() || signature.S.IsZero() {
-		return errs.NewVerificationFailed("some signature elements are nil/zero")
+		return errs.NewVerification("some signature elements are nil/zero")
 	}
 	curve := k256.NewCurve()
 
@@ -161,7 +161,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	e, err := calcChallenge(signature.R, bigP, message)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "invalid signature")
+		return errs.WrapVerification(err, "invalid signature")
 	}
 
 	// 5. Let R = s⋅G - e⋅P.
@@ -171,7 +171,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	// 7. Fail if not has_even_y(R).
 	// 8. Fail if x(R) ≠ r.
 	if bigR.IsIdentity() || !bigR.AffineY().IsEven() || signature.R.AffineX().Cmp(bigR.AffineX()) != 0 {
-		return errs.NewVerificationFailed("signature is invalid")
+		return errs.NewVerification("signature is invalid")
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 	curve := k256.NewCurve()
 
 	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
-		return errs.NewInvalidArgument("length of publickeys, messages and signatures must be equal and greater than zero")
+		return errs.NewArgument("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 
 	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
@@ -191,7 +191,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 		for {
 			a[i], err = curve.ScalarField().Random(prng)
 			if err != nil {
-				return errs.WrapRandomSampleFailed(err, "cannot generate random scalar")
+				return errs.WrapRandomSample(err, "cannot generate random scalar")
 			}
 			if !a[i].IsZero() {
 				break
@@ -213,7 +213,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
 		e, err := calcChallenge(sig.R, publicKeys[i].A, messages[i])
 		if err != nil {
-			return errs.WrapVerificationFailed(err, "invalid signature")
+			return errs.WrapVerification(err, "invalid signature")
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
@@ -234,7 +234,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 	}
 	right := rightA.Add(rightB)
 	if !curve.ScalarBaseMult(left).Equal(right) {
-		return errs.NewVerificationFailed("signature is invalid")
+		return errs.NewVerification("signature is invalid")
 	}
 
 	// Return success iff no failure occurred before reaching this point.
@@ -248,7 +248,7 @@ func calcChallenge(bigR, bigP curves.Point, message []byte) (curves.Scalar, erro
 	}
 	e, err := bigR.Curve().Scalar().SetBytes(eBytes)
 	if err != nil {
-		return nil, errs.WrapVerificationFailed(err, "cannot create challenge")
+		return nil, errs.WrapSerialisation(err, "cannot create challenge")
 	}
 
 	return e, nil

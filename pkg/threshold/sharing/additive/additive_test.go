@@ -45,7 +45,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 		boundedCurve := curve
 		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
-			shamirDealer, err := shamir.NewDealer(threshold, total, boundedCurve)
+			shamirDealer, err := shamir.NewDealer(uint(threshold), uint(total), boundedCurve)
 			require.Nil(t, err)
 			require.NotNil(t, shamirDealer)
 
@@ -64,9 +64,9 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 				)
 			}
 			for _, indices := range allValidSetsOfShamirIndices {
-				identities := make([]int, len(indices))
+				identities := make([]uint, len(indices))
 				for i, index := range indices {
-					identities[i] = index + 1
+					identities[i] = uint(index + 1)
 				}
 				t.Run(fmt.Sprintf("testing round trip for identities %v", identities), func(t *testing.T) {
 					t.Parallel()
@@ -88,7 +88,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 
 					recomputedShamirShares := make([]*shamir.Share, len(identities))
 					for i, additiveShare := range additiveShares {
-						recomputedShare, err := additiveShare.ConvertToShamir(identities[i], threshold, total, identities)
+						recomputedShare, err := additiveShare.ConvertToShamir(identities[i], uint(threshold), uint(total), identities)
 						require.NoError(t, err)
 						recomputedShamirShares[i] = recomputedShare
 					}

@@ -1,13 +1,14 @@
 package dkg
 
 import (
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -16,77 +17,82 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
+var _ types.ThresholdParticipant = (*Participant[bls12381.G1])(nil)
+var _ types.ThresholdParticipant = (*Participant[bls12381.G2])(nil)
+
 type Participant[K bls.KeySubGroup] struct {
 	gennaroParty *gennaro.Participant
 	inG1         bool
 	round        int
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant[K]) GetAuthKey() integration.AuthKey {
-	return p.gennaroParty.GetAuthKey()
+func (p *Participant[K]) IdentityKey() types.IdentityKey {
+	return p.gennaroParty.IdentityKey()
 }
 
-func (p *Participant[K]) GetSharingId() int {
-	return p.gennaroParty.GetSharingId()
+func (p *Participant[K]) SharingId() types.SharingID {
+	return p.gennaroParty.SharingId()
 }
 
-func (p *Participant[K]) GetCohortConfig() *integration.CohortConfig {
-	return p.gennaroParty.GetCohortConfig()
-}
-
-func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, authKey integration.AuthKey, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
-	err := validateInputs[K](uniqueSessionId, cohortConfig, authKey, prng)
+func NewParticipant[K bls.KeySubGroup](uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant[K], error) {
+	err := validateInputs[K](uniqueSessionId, protocol, authKey, niCompiler, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
 
 	inG1 := bls12381.GetSourceSubGroup[K]().Name() == bls12381.NameG1
-	if (inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG1) || (!inG1 && cohortConfig.CipherSuite.Curve.Name() != bls12381.NameG2) {
-		return nil, errs.NewInvalidCurve("cohort config curve mismatch with the declared subgroup")
+	if (inG1 && protocol.Curve().Name() != bls12381.NameG1) || (!inG1 && protocol.Curve().Name() != bls12381.NameG2) {
+		return nil, errs.NewCurve("cohort config curve mismatch with the declared subgroup")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_TBLS_KEYGEN-", nil)
 	}
 	transcript.AppendMessages("threshold bls dkg", uniqueSessionId)
-	transcript.AppendMessages("keys subgroup", []byte(cohortConfig.CipherSuite.Curve.Name()))
-	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, cohortConfig, randomisedFischlin.Name, prng, transcript)
+	transcript.AppendMessages("keys subgroup", []byte(protocol.Curve().Name()))
+	party, err := gennaro.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, prng, transcript)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct tbls dkg participant out of gennaro dkg participant")
 	}
-	return &Participant[K]{
+	participant := &Participant[K]{
 		gennaroParty: party,
 		inG1:         inG1,
 		round:        1,
-	}, nil
+	}
+
+	if err := types.ValidateMPCProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a dkg participant")
+	}
+
+	return participant, nil
 }
 
-func validateInputs[K bls.KeySubGroup](uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identityKey integration.IdentityKey, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
-	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
-	}
-	if cohortConfig.CipherSuite.Curve.Name() != bls12381.GetSourceSubGroup[K]().Name() {
-		return errs.NewInvalidArgument(
-			"cohort config curve (%s) mismatch with the declared subgroup (%s)",
-			cohortConfig.CipherSuite.Curve.Name(),
-			bls12381.GetSourceSubGroup[K]().Name(),
-		)
-	}
+func validateInputs[K bls.KeySubGroup](uniqueSessionId []byte, protocol types.ThresholdProtocol, authKey types.AuthKey, niCompiler compiler.Name, prng io.Reader) error {
 	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("unique session id is empty")
+		return errs.NewIsZero("sid length is zero")
 	}
-	if identityKey == nil {
-		return errs.NewInvalidArgument("identity key is nil")
-	}
-	if !cohortConfig.Participants.Contains(identityKey) {
-		return errs.NewInvalidArgument("identity key is not in cohort config")
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "authKey")
 	}
 	if prng == nil {
-		return errs.NewInvalidArgument("prng is nil")
+		return errs.NewArgument("prng is nil")
+	}
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
+	}
+	if protocol.Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
+		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
+	}
+	if !compilerUtils.CompilerIsSupported(niCompiler) {
+		return errs.NewType("compiler %s is not supported", niCompiler)
+	}
+	if protocol.Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
+		return errs.NewArgument(
+			"cohort config curve (%s) mismatch with the declared subgroup (%s)",
+			protocol.Curve().Name(),
+			bls12381.GetSourceSubGroup[K]().Name(),
+		)
 	}
 	return nil
 }

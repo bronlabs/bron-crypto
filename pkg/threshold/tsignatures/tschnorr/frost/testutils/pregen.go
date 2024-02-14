@@ -6,21 +6,20 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
 )
 
-func MakePreGenParticipants(cohortConfig *integration.CohortConfig, tau int) (participants []*noninteractive_signing.PreGenParticipant, err error) {
+func MakePreGenParticipants(protocol types.ThresholdProtocol, tau int) (participants []*noninteractive_signing.PreGenParticipant, err error) {
 	// copy identities as they get sorted inplace when creating participant
-	identities := cohortConfig.Participants.Clone()
+	identities := protocol.Participants().Clone()
 
-	participants = make([]*noninteractive_signing.PreGenParticipant, cohortConfig.Protocol.TotalParties)
-	sortedIdentities := integration.ByPublicKey(identities.List())
+	participants = make([]*noninteractive_signing.PreGenParticipant, protocol.TotalParties())
+	sortedIdentities := types.ByPublicKey(identities.List())
 	sort.Sort(sortedIdentities)
 	i := -1
 	for _, identity := range sortedIdentities {
 		i++
-		participants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(integration.AuthKey), cohortConfig, tau, crand.Reader)
+		participants[i], err = noninteractive_signing.NewPreGenParticipant(identity.(types.AuthKey), protocol, tau, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -40,9 +39,9 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (r
 	return round1Outputs, nil
 }
 
-func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2Inputs []map[types.IdentityHash]*noninteractive_signing.Round1Broadcast) ([]*noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
+func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2Inputs []types.RoundMessages[*noninteractive_signing.Round1Broadcast]) ([]noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
 	var err error
-	preSignatures := make([]*noninteractive_signing.PreSignatureBatch, len(participants))
+	preSignatures := make([]noninteractive_signing.PreSignatureBatch, len(participants))
 	privateNoncePairs := make([][]*noninteractive_signing.PrivateNoncePair, len(participants))
 	for i, participant := range participants {
 		preSignatures[i], privateNoncePairs[i], err = participant.Round2(round2Inputs[i])

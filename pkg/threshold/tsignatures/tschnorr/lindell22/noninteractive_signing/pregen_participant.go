@@ -3,16 +3,15 @@ package noninteractive_signing
 import (
 	"bytes"
 	"io"
-	"strconv"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -24,123 +23,121 @@ const (
 	transcriptTauLabel       = "Lindell2022PreGenTau"
 )
 
-type state struct {
-	pid                 []byte
-	bigS                []byte
-	k                   []curves.Scalar
-	k2                  []curves.Scalar
-	bigR                []curves.Point
-	bigR2               []curves.Point
-	bigRWitness         []commitments.Witness
-	theirBigRCommitment []map[types.IdentityHash]commitments.Commitment
-
-	_ types.Incomparable
-}
+var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	lindell22.Participant
+	przsSetupParticipant *setup.Participant
+	nic                  compiler.Name
 
-	przsSetupParticipants []*setup.Participant
+	myAuthKey   types.AuthKey
+	mySharingId types.SharingID
 
-	myAuthKey   integration.AuthKey
-	mySharingId int
-
-	cohortConfig *integration.CohortConfig
-	tau          int
-	sid          []byte
-	round        int
-	prng         io.Reader
-	transcript   transcripts.Transcript
+	protocol   types.ThresholdProtocol
+	preSigners ds.HashSet[types.IdentityKey]
+	sid        []byte
+	round      int
+	prng       io.Reader
+	transcript transcripts.Transcript
 
 	state *state
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *PreGenParticipant) GetAuthKey() integration.AuthKey {
+func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func (p *PreGenParticipant) GetSharingId() int {
+func (p *PreGenParticipant) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
-	return p.cohortConfig
+type state struct {
+	pid                 []byte
+	bigS                []byte
+	k1                  curves.Scalar
+	k2                  curves.Scalar
+	bigR1               curves.Point
+	bigR2               curves.Point
+	bigRWitness         commitments.Witness
+	theirBigRCommitment ds.HashMap[types.IdentityKey, commitments.Commitment]
+
+	_ ds.Incomparable
 }
 
-func (p *PreGenParticipant) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range p.cohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(p.myAuthKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
-}
-
-func NewPreGenParticipant(tau int, myAuthKey integration.AuthKey, sid []byte, cohortConfig *integration.CohortConfig, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
-	if err := validatePreGenInputs(tau, myAuthKey, sid, cohortConfig); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid argument")
+func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
+	if err := validatePreGenInputs(myAuthKey, sid, protocol, preSigners, nic, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid argument")
 	}
 
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
-	transcript.AppendMessages(transcriptTauLabel, []byte(strconv.Itoa(tau)))
 
+	// TODO: remove pid after adding Repr method to Identity Key
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := interactive_signing.BigS(cohortConfig.Participants)
-	_, _, mySharingId := integration.DeriveSharingIds(myAuthKey, cohortConfig.Participants)
-
-	przsParticipants := make([]*setup.Participant, tau)
-	for t := 0; t < tau; t++ {
-		przsSid := bytes.Join([][]byte{sid, bitstring.ToBytesLE(t)}, nil)
-		przsParticipants[t], err = setup.NewParticipant(cohortConfig.CipherSuite.Curve, przsSid, myAuthKey, cohortConfig.Participants, transcript, prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
-		}
+	bigS := interactive_signing.BigS(protocol.Participants())
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	return &PreGenParticipant{
-		przsSetupParticipants: przsParticipants,
-		myAuthKey:             myAuthKey,
-		mySharingId:           mySharingId,
-		cohortConfig:          cohortConfig,
-		tau:                   tau,
-		sid:                   sid,
-		transcript:            transcript,
-		round:                 1,
-		prng:                  prng,
+	przsSid := bytes.Join([][]byte{sid, []byte("przs")}, nil)
+	przsParticipant, err := setup.NewParticipant(przsSid, myAuthKey, protocol, transcript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
+	}
+
+	participant = &PreGenParticipant{
+		nic:                  nic,
+		przsSetupParticipant: przsParticipant,
+		preSigners:           preSigners,
+		myAuthKey:            myAuthKey,
+		mySharingId:          mySharingId,
+		protocol:             protocol,
+		sid:                  sid,
+		transcript:           transcript,
+		round:                1,
+		prng:                 prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,
 		},
-	}, nil
+	}
+
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a lindell22 pregen participant")
+	}
+
+	return participant, nil
 }
 
-func validatePreGenInputs(tau int, identityKey integration.IdentityKey, sid []byte, cohortConfig *integration.CohortConfig) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
-	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
-	}
+func validatePreGenInputs(authKey types.AuthKey, sid []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, prng io.Reader) error {
 	if len(sid) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if cohortConfig.Participants.Len() != cohortConfig.Protocol.TotalParties {
-		return errs.NewIncorrectCount("invalid number of participants")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
 	}
-	if identityKey == nil || !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewInvalidArgument("identityKey not in cohort")
+	if preSigners == nil {
+		return errs.NewIsNil("preSigners")
 	}
-	if tau <= 0 {
-		return errs.NewInvalidArgument("tau is not positive")
+	if !preSigners.Contains(authKey) {
+		return errs.NewMembership("i am not a presigner")
 	}
-
+	if !preSigners.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("presigners are not a subset of total participants")
+	}
+	if !compilerUtils.CompilerIsSupported(nic) {
+		return errs.NewType("compiler %s is not supported", nic)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng")
+	}
 	return nil
 }

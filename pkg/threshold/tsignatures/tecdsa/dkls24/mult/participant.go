@@ -5,14 +5,18 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
+
+var _ types.GenericParticipant = (*Alice)(nil)
+var _ types.GenericParticipant = (*Bob)(nil)
 
 type Alice struct {
 	csrand          io.Reader
@@ -22,7 +26,7 @@ type Alice struct {
 	uniqueSessionId []byte
 	gadget          *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Bob struct {
@@ -36,10 +40,10 @@ type Bob struct {
 	Beta  []byte                  // β ∈ [ξ]bits is a vector of random bits used as receiver choices in OTe
 	Gamma [Xi][LOTe]curves.Scalar // γ ∈ [ξ]ℤq is the receiver output of OTe (chosen messages)
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
+func NewAlice(curve curves.Curve, seedOtResults *ot.ReceiverRotOutput, uniqueSessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
 	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
@@ -47,7 +51,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	sender, err := softspoken.NewCOtSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, seededPrng, LOTe, Xi)
+	sender, err := softspoken.NewSoftspokenSender(seedOtResults, uniqueSessionId, transcript, curve, csrand, seededPrng, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -65,7 +69,7 @@ func NewAlice(curve curves.Curve, seedOtResults *vsot.ReceiverOutput, uniqueSess
 	}, nil
 }
 
-func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
+func NewBob(curve curves.Curve, seedOtResults *ot.SenderRotOutput, uniqueSessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
 	if err := validateParticipantInputs(curve, seedOtResults, uniqueSessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
@@ -73,7 +77,7 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 		transcript = hagrid.NewTranscript("COPPER_DKLS_MULTIPLY-", nil)
 	}
 	transcript.AppendMessages("session_id", uniqueSessionId)
-	receiver, err := softspoken.NewCOtReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, prgFn, LOTe, Xi)
+	receiver, err := softspoken.NewSoftspokenReceiver(seedOtResults, uniqueSessionId, transcript, curve, csrand, prgFn, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -93,16 +97,16 @@ func NewBob(curve curves.Curve, seedOtResults *vsot.SenderOutput, uniqueSessionI
 
 func validateParticipantInputs[T any](curve curves.Curve, seedOtResults *T, uniqueSessionId []byte, truePrng io.Reader) error {
 	if curve == nil {
-		return errs.NewInvalidArgument("curve is nil")
+		return errs.NewArgument("curve is nil")
 	}
 	if truePrng == nil {
-		return errs.NewInvalidArgument("prng is nil")
+		return errs.NewArgument("prng is nil")
 	}
 	if seedOtResults == nil {
-		return errs.NewInvalidArgument("seed ot results is nil")
+		return errs.NewArgument("seed ot results is nil")
 	}
 	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("unique session id is empty")
+		return errs.NewArgument("unique session id is empty")
 	}
 	return nil
 }

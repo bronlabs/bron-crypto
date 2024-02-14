@@ -3,17 +3,17 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	gennaro_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -23,40 +23,43 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+var cn = randomisedFischlin.Name
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping Lindell 2017 DKG tests.")
 	}
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha256.New,
-	}
-
-	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
-	require.NoError(t, err)
-	cohortConfig, err := testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
-	require.NoError(t, err)
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve, identities, crand.Reader)
+	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha256.New)
 	require.NoError(t, err)
 
-	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
+	threshold := 2
+	total := 3
+
+	identities, err := testutils.MakeTestIdentities(cipherSuite, total)
+	require.NoError(t, err)
+	protocol, err := testutils.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	require.NoError(t, err)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
+	require.NoError(t, err)
+
+	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := gennaro_dkg_testutils.DoDkgRound1(gennaroParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
+		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(gennaroParticipants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(gennaroParticipants, r1OutsB, r1OutsU)
 	r2Outs, err := gennaro_dkg_testutils.DoDkgRound2(gennaroParticipants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
-	r3Ins := integration_testutils.MapBroadcastO2I(gennaroParticipants, r2Outs)
+	r3Ins := ttu.MapBroadcastO2I(gennaroParticipants, r2Outs)
 	signingKeyShares, publicKeyShares, err := gennaro_dkg_testutils.DoDkgRound3(gennaroParticipants, r3Ins)
 	require.NoError(t, err)
 
@@ -65,37 +68,37 @@ func Test_HappyPath(t *testing.T) {
 		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
 	}
 
-	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants([]byte("sid"), cohortConfig, identities, signingKeyShares, publicKeyShares, transcripts, nil)
+	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants([]byte("sid"), protocol, identities, signingKeyShares, publicKeyShares, transcripts, nil)
 	require.NoError(t, err)
 
 	r1o, err := lindell17_dkg_testutils.DoDkgRound1(lindellParticipants)
 	require.NoError(t, err)
 
-	r2i := integration_testutils.MapBroadcastO2I(lindellParticipants, r1o)
+	r2i := ttu.MapBroadcastO2I(lindellParticipants, r1o)
 	r2o, err := lindell17_dkg_testutils.DoDkgRound2(lindellParticipants, r2i)
 	require.NoError(t, err)
 
-	r3i := integration_testutils.MapBroadcastO2I(lindellParticipants, r2o)
+	r3i := ttu.MapBroadcastO2I(lindellParticipants, r2o)
 	r3o, err := lindell17_dkg_testutils.DoDkgRound3(lindellParticipants, r3i)
 	require.NoError(t, err)
 
-	r4i := integration_testutils.MapBroadcastO2I(lindellParticipants, r3o)
+	r4i := ttu.MapBroadcastO2I(lindellParticipants, r3o)
 	r4o, err := lindell17_dkg_testutils.DoDkgRound4(lindellParticipants, r4i)
 	require.NoError(t, err)
 
-	r5i := integration_testutils.MapUnicastO2I(lindellParticipants, r4o)
+	r5i := ttu.MapUnicastO2I(lindellParticipants, r4o)
 	r5o, err := lindell17_dkg_testutils.DoDkgRound5(lindellParticipants, r5i)
 	require.NoError(t, err)
 
-	r6i := integration_testutils.MapUnicastO2I(lindellParticipants, r5o)
+	r6i := ttu.MapUnicastO2I(lindellParticipants, r5o)
 	r6o, err := lindell17_dkg_testutils.DoDkgRound6(lindellParticipants, r6i)
 	require.NoError(t, err)
 
-	r7i := integration_testutils.MapUnicastO2I(lindellParticipants, r6o)
+	r7i := ttu.MapUnicastO2I(lindellParticipants, r6o)
 	r7o, err := lindell17_dkg_testutils.DoDkgRound7(lindellParticipants, r7i)
 	require.NoError(t, err)
 
-	r8i := integration_testutils.MapUnicastO2I(lindellParticipants, r7o)
+	r8i := ttu.MapUnicastO2I(lindellParticipants, r7o)
 	shards, err := lindell17_dkg_testutils.DoDkgRound8(lindellParticipants, r8i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
@@ -129,13 +132,13 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("private key matches public key", func(t *testing.T) {
 		t.Parallel()
 
-		shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve)
+		shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve())
 		require.NoError(t, err)
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, len(lindellParticipants))
 		for i := 0; i < len(lindellParticipants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    lindellParticipants[i].GetSharingId(),
+				Id:    uint(lindellParticipants[i].SharingId()),
 				Value: signingKeyShares[i].Share,
 			}
 		}
@@ -143,7 +146,7 @@ func Test_HappyPath(t *testing.T) {
 		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
 		require.NoError(t, err)
 
-		derivedPublicKey := cipherSuite.Curve.ScalarBaseMult(reconstructedPrivateKey)
+		derivedPublicKey := cipherSuite.Curve().ScalarBaseMult(reconstructedPrivateKey)
 		require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
 	})
 
@@ -155,12 +158,13 @@ func Test_HappyPath(t *testing.T) {
 					myShard := shards[i]
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
-					theirEncryptedSigningShare := theirShard.PaillierEncryptedShares[identities[i].Hash()]
+					theirEncryptedSigningShare, exists := theirShard.PaillierEncryptedShares.Get(identities[i])
+					require.True(t, exists)
 					decryptor, err := paillier.NewDecryptor(myShard.PaillierSecretKey)
 					require.NoError(t, err)
 					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare := cipherSuite.Curve.Scalar().SetNat(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare := cipherSuite.Curve().Scalar().SetNat(theirDecryptedSigningShareInt)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}
 			}
@@ -168,13 +172,13 @@ func Test_HappyPath(t *testing.T) {
 	})
 
 	t.Run("Disaster recovery", func(t *testing.T) {
-		shardMap := make(map[integration.IdentityKey]*tsignatures.SigningKeyShare)
-		for i := 0; i < 2; i++ {
-			shardMap[identities[i]] = shards[i].SigningKeyShare
+		shardMap := hashmap.NewHashableHashMap[types.IdentityKey, tsignatures.Shard]()
+		for i := 0; i < threshold; i++ {
+			shardMap.Put(identities[i], shards[i])
 		}
-		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(2, 3, cohortConfig.Participants, shardMap)
+		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(protocol, shardMap)
 		require.NoError(t, err)
-		recoveredPublicKey := cipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
+		recoveredPublicKey := cipherSuite.Curve().ScalarBaseMult(recoveredPrivateKey)
 		require.True(t, recoveredPublicKey.Equal(shards[0].SigningKeyShare.PublicKey))
 	})
 }

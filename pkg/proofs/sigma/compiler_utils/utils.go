@@ -11,6 +11,11 @@ import (
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 )
 
+var compilers = map[compiler.Name]any{
+	fiatShamir.Name:         nil,
+	randomisedFischlin.Name: nil,
+}
+
 func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
 	switch compilerName {
 	case randomisedFischlin.Name:
@@ -28,4 +33,9 @@ func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, 
 	default:
 		return nil, errs.NewFailed(fmt.Sprintf("no such compiler %s", compilerName))
 	}
+}
+
+func CompilerIsSupported(name compiler.Name) bool {
+	_, exists := compilers[name]
+	return exists
 }

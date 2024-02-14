@@ -3,66 +3,43 @@ package hjky
 import (
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var _ integration.Participant = (*Participant)(nil)
+var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	PedersenParty *pedersen.Participant
 	round         int
 	transcript    transcripts.Transcript
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.PedersenParty.GetAuthKey()
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.PedersenParty.IdentityKey()
 }
 
-func (p *Participant) GetSharingId() int {
-	return p.PedersenParty.GetSharingId()
+func (p *Participant) SharingId() types.SharingID {
+	return p.PedersenParty.SharingId()
 }
 
-func (p *Participant) GetCohortConfig() *integration.CohortConfig {
-	return p.PedersenParty.GetCohortConfig()
-}
-
-func NewParticipant(sid []byte, authKey integration.AuthKey, scalarField curves.ScalarField, threshold int, participants []integration.IdentityKey, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite: &integration.CipherSuite{
-			Curve: scalarField.Curve(),
-			Hash:  sha3.New256,
-		},
-		Participants: hashset.NewHashSet(participants),
-		Protocol: &integration.ProtocolConfig{
-			Threshold:            threshold,
-			TotalParties:         len(participants),
-			Name:                 protocols.DKLS24,
-			SignatureAggregators: hashset.NewHashSet(participants),
-		},
-	}
-
-	if err := validateInputs(sid, authKey, cohortConfig, prng); err != nil {
-		return nil, errs.WrapInvalidArgument(err, "at least one argument is invalid")
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, protocol, prng); err != nil {
+		return nil, errs.WrapArgument(err, "at least one argument is invalid")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_ZERO_SHARE_SAMPLING-", nil)
 	}
-	transcript.AppendMessages("HJKY zero share session id", sid)
+	transcript.AppendMessages("HJKY zero share session id", uniqueSessionId)
 
-	pedersenParty, err := pedersen.NewParticipant(sid, authKey, cohortConfig, transcript, randomisedFischlin.Name, prng)
+	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}
@@ -72,18 +49,18 @@ func NewParticipant(sid []byte, authKey integration.AuthKey, scalarField curves.
 		round:         1,
 		transcript:    transcript,
 	}
+	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the participant")
+	}
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if identityKey == nil {
-		return errs.NewIsNil("my identity key is nil")
-	}
-	if !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewMembership("i'm not in cohort")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "cohort config is invalid")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")

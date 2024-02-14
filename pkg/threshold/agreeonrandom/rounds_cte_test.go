@@ -9,8 +9,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
@@ -19,14 +18,11 @@ func Test_MeasureConstantTime(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 	curve := k256.NewCurve()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, _ := integration_testutils.MakeTestIdentities(cipherSuite, 3)
+	cipherSuite, _ := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	allIdentities, _ := ttu.MakeTestIdentities(cipherSuite, 3)
 
 	internal.RunMeasurement(500, "agreeonrandom", func(i int) {
-		allIdentities, _ = integration_testutils.MakeTestIdentities(cipherSuite, 3)
+		allIdentities, _ = ttu.MakeTestIdentities(cipherSuite, 3)
 	}, func() {
 		testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	})

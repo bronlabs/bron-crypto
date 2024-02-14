@@ -5,40 +5,43 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var _ integration.Participant = (*Participant)(nil)
+var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
 	prng io.Reader
 
 	UniqueSessionId    []byte
 	Curve              curves.Curve
-	MyAuthKey          integration.AuthKey
-	MySharingId        int
-	SortedParticipants []integration.IdentityKey
+	myAuthKey          types.AuthKey
+	SortedParticipants []types.IdentityKey
 
-	IdentityKeyToSharingId map[types.IdentityHash]int
+	IdentitySpace types.IdentitySpace
 
 	state *State
 	round int
 
-	_ types.Incomparable
+	_ ds.Incomparable
+}
+
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
 }
 
 type State struct {
-	receivedSeeds map[types.IdentityHash]commitments.Commitment
-	sentSeeds     map[types.IdentityHash]*committedSeedContribution
+	receivedSeeds ds.HashMap[types.IdentityKey, commitments.Commitment]
+	sentSeeds     ds.HashMap[types.IdentityKey, *committedSeedContribution]
 	transcript    transcripts.Transcript
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type committedSeedContribution struct {
@@ -46,69 +49,58 @@ type committedSeedContribution struct {
 	commitment commitments.Commitment
 	witness    commitments.Witness
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, uniqueSessionId []byte, authKey integration.AuthKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if curve == nil {
-		return nil, errs.NewInvalidArgument("curve is nil")
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(uniqueSessionId, authKey, protocol, prng)
+	if err != nil {
+		return nil, errs.NewArgument("invalid input arguments")
 	}
-	if authKey == nil {
-		return nil, errs.NewInvalidArgument("my identity key is nil")
-	}
-	if len(uniqueSessionId) == 0 {
-		return nil, errs.NewInvalidArgument("session id is nil")
-	}
-	if participants.Len() < 2 {
-		return nil, errs.NewInvalidArgument("need at least 2 participants")
-	}
-	for i, participant := range participants.Iter() {
-		if participant == nil {
-			return nil, errs.NewIsNil("participant %x is nil", i)
-		}
-	}
-	_, found := participants.Get(authKey)
-	if !found {
-		return nil, errs.NewInvalidArgument("i'm not part of the participants")
-	}
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, participants)
-	if mySharingId == -1 {
-		return nil, errs.NewMissing("my sharing id could not be found")
-	}
-	sortedParticipants := integration.ByPublicKey(participants.List())
+	identitySpace := types.NewIdentitySpace(protocol.Participants())
+	sortedParticipants := types.ByPublicKey(protocol.Participants().List())
 	sort.Sort(sortedParticipants)
 	if transcript == nil {
 		transcript = hagrid.NewTranscript("COPPER_KRYPTON_ZERO_SHARE_SETUP", nil)
 	}
 	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
 	if prng == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
+		return nil, errs.NewArgument("prng is nil")
 	}
-	return &Participant{
-		prng:                   prng,
-		Curve:                  curve,
-		MyAuthKey:              authKey,
-		MySharingId:            mySharingId,
-		SortedParticipants:     sortedParticipants,
-		IdentityKeyToSharingId: identityKeyToSharingId,
-		UniqueSessionId:        uniqueSessionId,
+	result := &Participant{
+		prng:               prng,
+		myAuthKey:          authKey,
+		SortedParticipants: sortedParticipants,
+		IdentitySpace:      identitySpace,
+		UniqueSessionId:    uniqueSessionId,
 		state: &State{
 			transcript:    transcript,
-			receivedSeeds: map[types.IdentityHash]commitments.Commitment{},
-			sentSeeds:     map[types.IdentityHash]*committedSeedContribution{},
+			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
+			sentSeeds:     hashmap.NewHashableHashMap[types.IdentityKey, *committedSeedContribution](),
 		},
 		round: 1,
-	}, nil
+	}
+	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the participant")
+	}
+	return result, nil
 }
 
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.MyAuthKey
-}
-
-func (p *Participant) GetSharingId() int {
-	return p.MySharingId
-}
-
-func (*Participant) GetCohortConfig() *integration.CohortConfig {
+func validateInputs(uniqueSessionId []byte, identityKey types.IdentityKey, protocol types.MPCProtocol, prng io.Reader) error {
+	if err := types.ValidateIdentityKey(identityKey); err != nil {
+		return errs.WrapValidation(err, "identity key")
+	}
+	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "cohort config is invalid")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewArgument("unique session id is empty")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	if len(uniqueSessionId) == 0 {
+		return errs.NewIsZero("sid length is zero")
+	}
 	return nil
 }

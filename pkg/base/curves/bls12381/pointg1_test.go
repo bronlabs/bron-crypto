@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	itu "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	itu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 )
 
 const dir = "./vectors"

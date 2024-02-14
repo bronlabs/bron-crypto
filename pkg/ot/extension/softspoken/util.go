@@ -21,10 +21,10 @@ func HashSalted(sid []byte, bufferIn, bufferOut [][]byte) (err error) {
 	for j := 0; j < Xi; j++ {
 		// Check lengths
 		if len(bufferIn[j]) != KappaBytes {
-			return errs.NewInvalidArgument("input slice bit-size is %d, should be %d", len(bufferIn[j]), KappaBytes)
+			return errs.NewArgument("input slice bit-size is %d, should be %d", len(bufferIn[j]), KappaBytes)
 		}
 		if len(bufferOut[j]) != LOTe*KappaBytes {
-			return errs.NewInvalidArgument("output slice bit-size is %d, should be %d", len(bufferOut[j]), LOTe*KappaBytes)
+			return errs.NewArgument("output slice bit-size is %d, should be %d", len(bufferOut[j]), LOTe*KappaBytes)
 		}
 		// Hash each element separately, same
 		idx := []byte(strconv.Itoa(j))

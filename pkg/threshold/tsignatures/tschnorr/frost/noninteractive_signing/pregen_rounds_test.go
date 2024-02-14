@@ -12,26 +12,22 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
 func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n, tau int) {
 	t.Helper()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
 
-	participants, err := testutils.MakePreGenParticipants(cohortConfig, tau)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
+	require.NoError(t, err)
+
+	participants, err := testutils.MakePreGenParticipants(protocol, tau)
 	require.NoError(t, err)
 	require.NotNil(t, participants)
 
@@ -40,7 +36,7 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 	for _, out := range r1Outs {
 		require.NotNil(t, out)
 	}
-	r2Ins := integration_testutils.MapBroadcastO2I(participants, r1Outs)
+	r2Ins := ttu.MapBroadcastO2I(participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	require.NoError(t, err)
 

@@ -12,8 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG2)(nil)
@@ -24,7 +24,7 @@ var _ json.Unmarshaler = (*BaseFieldElementG2)(nil)
 type BaseFieldElementG2 struct {
 	V *bimpl.Fp2
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewBaseFieldElementG2(value uint64) *BaseFieldElementG2 {
@@ -346,11 +346,11 @@ func (e *BaseFieldElementG2) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElementG2)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	e.V = ss.V
 	return nil
@@ -374,7 +374,7 @@ func (e *BaseFieldElementG2) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElementG2)
 	if !ok {
@@ -420,15 +420,15 @@ func (e *BaseFieldElementG2) Nat() *saferith.Nat {
 
 func (e *BaseFieldElementG2) SetBytes(input []byte) (curves.BaseFieldElement, error) {
 	if len(input) != bimpl.FieldBytesFp2 {
-		return nil, errs.NewInvalidLength("input length (%d != %d bytes)", len(input), bimpl.FieldBytesFp2)
+		return nil, errs.NewLength("input length (%d != %d bytes)", len(input), bimpl.FieldBytesFp2)
 	}
 	a, err := NewG1().BaseFieldElement().SetBytes(input[:bimpl.FieldBytes])
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element A")
+		return nil, errs.WrapHashing(err, "could not set bytes of bls12381 G2 Fp2 field element A")
 	}
 	b, err := NewG1().BaseFieldElement().SetBytes(input[bimpl.FieldBytes:bimpl.FieldBytesFp2])
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element B")
+		return nil, errs.WrapHashing(err, "could not set bytes of bls12381 G2 Fp2 field element B")
 	}
 	result, err := e.SetComponents(a, b)
 	return result, err
@@ -436,7 +436,7 @@ func (e *BaseFieldElementG2) SetBytes(input []byte) (curves.BaseFieldElement, er
 
 func (e *BaseFieldElementG2) SetBytesWide(input []byte) (curves.BaseFieldElement, error) {
 	if len(input) > bimpl.WideFieldBytesFp2 {
-		return nil, errs.NewInvalidLength("input length %d > %d bytes", len(input), bimpl.WideFieldBytesFp2)
+		return nil, errs.NewLength("input length %d > %d bytes", len(input), bimpl.WideFieldBytesFp2)
 	}
 
 	var bufferA, bufferB [bimpl.WideFieldBytes]byte                         // Split in halves and pad them with zeros
@@ -445,11 +445,11 @@ func (e *BaseFieldElementG2) SetBytesWide(input []byte) (curves.BaseFieldElement
 
 	a, err := NewG1().BaseFieldElement().SetBytesWide(bufferA[:])
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element A")
+		return nil, errs.WrapHashing(err, "could not set bytes of bls12381 G2 Fp2 field element A")
 	}
 	b, err := NewG1().BaseFieldElement().SetBytesWide(bufferB[:])
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not set bytes of bls12381 G2 Fp2 field element B")
+		return nil, errs.WrapHashing(err, "could not set bytes of bls12381 G2 Fp2 field element B")
 	}
 	result, err := e.SetComponents(a, b)
 	return result, err
@@ -458,11 +458,11 @@ func (e *BaseFieldElementG2) SetBytesWide(input []byte) (curves.BaseFieldElement
 func (*BaseFieldElementG2) SetComponents(a, b curves.BaseFieldElement) (curves.BaseFieldElement, error) {
 	aa, ok := a.(*BaseFieldElementG1)
 	if !ok {
-		return nil, errs.NewInvalidType("a is not the right type")
+		return nil, errs.NewType("a is not the right type")
 	}
 	bb, ok := b.(*BaseFieldElementG1)
 	if !ok {
-		return nil, errs.NewInvalidType("b is not the right type")
+		return nil, errs.NewType("b is not the right type")
 	}
 	if aa == nil || bb == nil || aa.V == nil || bb.V == nil {
 		return nil, errs.NewIsNil("arguments can't be nil or have nil components")
@@ -482,4 +482,7 @@ func (e *BaseFieldElementG2) Bytes() []byte {
 	bytes = e.V.B.Bytes()
 	copy(out[bimpl.FieldBytes:bimpl.FieldBytesFp2], bitstring.ReverseBytes(bytes[:]))
 	return out[:]
+}
+func (e *BaseFieldElementG2) HashCode() uint64 {
+	return e.Uint64()
 }

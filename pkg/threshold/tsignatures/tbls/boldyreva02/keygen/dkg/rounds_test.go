@@ -10,14 +10,14 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
@@ -26,52 +26,50 @@ func testHappyPath[K bls.KeySubGroup](t *testing.T, threshold, n int) {
 	t.Helper()
 
 	curve := bls12381.GetSourceSubGroup[K]()
+	h := sha256.New
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha256.New,
-	}
-
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
 	inG1 := curve.Name() == bls12381.NameG1
 	inG1s := make([]bool, n)
 	for i := 0; i < n; i++ {
 		inG1s[i] = inG1
 	}
 
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	participants, err := testutils.MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, nil)
+	participants, err := testutils.MakeDkgParticipants[K](uniqueSessionId, protocol, identities, nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.Participants.Len()-1)
+		require.Equal(t, out.Size(), protocol.Participants().Size()-1)
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 
-	r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
+	r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
 	shards, err := testutils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	for _, shard := range shards {
-		err = shard.Validate(cohortConfig)
+		err = shard.Validate(protocol)
 		require.NoError(t, err)
 	}
 	t.Run("Disaster recovery", func(t *testing.T) {
-		shardMap := make(map[integration.IdentityKey]*boldyreva02.SigningKeyShare[K])
+		shardMap := hashmap.NewHashableHashMap[types.IdentityKey, tsignatures.Shard]()
 		for i := 0; i < threshold; i++ {
-			shardMap[identities[i]] = shards[i].SigningKeyShare
+			shardMap.Put(identities[i], shards[i])
 		}
-		_, err := boldyreva02.ConstructPrivateKey(threshold, n, cohortConfig.Participants, shardMap)
+		_, err := tsignatures.ConstructPrivateKey(protocol, shardMap)
 		require.NoError(t, err)
 	})
 }
@@ -105,44 +103,38 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 
 	threshold := 2
 	n := 2
+	cn := randomisedFischlin.Name
 
 	sid := []byte("something")
 
 	aliceSubGroup := bls12381.NewG1()
 	bobSubGroup := bls12381.NewG2()
 
-	idCipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha256.New,
-	}
+	idCipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha256.New)
+	require.NoError(t, err)
 
-	identities, err := integration_testutils.MakeTestIdentities(idCipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(idCipherSuite, n)
 	require.NoError(t, err)
 
 	aliceId := identities[0]
 	bobId := identities[1]
 
-	aliceCipherSuite := &integration.CipherSuite{
-		Curve: aliceSubGroup,
-		Hash:  sha256.New,
-	}
-
-	cohortConfigAlice, err := integration_testutils.MakeCohortProtocol(aliceCipherSuite, protocols.BLS, identities, threshold, identities)
-	require.NoError(t, err)
-	cohortConfigAlice.CipherSuite.Curve = aliceSubGroup
-
-	bobCipherSuite := &integration.CipherSuite{
-		Curve: bobSubGroup,
-		Hash:  sha256.New,
-	}
-
-	cohortConfigBob, err := integration_testutils.MakeCohortProtocol(bobCipherSuite, protocols.BLS, identities, threshold, identities)
+	aliceCipherSuite, err := ttu.MakeSignatureProtocol(aliceSubGroup, sha256.New)
 	require.NoError(t, err)
 
-	alice, err := dkg.NewParticipant[bls12381.G1](sid, aliceId.(integration.AuthKey), cohortConfigAlice, nil, crand.Reader)
+	cohortConfigAlice, err := ttu.MakeThresholdSignatureProtocol(aliceCipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	bob, err := dkg.NewParticipant[bls12381.G2](sid, bobId.(integration.AuthKey), cohortConfigBob, nil, crand.Reader)
+	bobCipherSuite, err := ttu.MakeSignatureProtocol(bobSubGroup, sha256.New)
+	require.NoError(t, err)
+
+	cohortConfigBob, err := ttu.MakeThresholdSignatureProtocol(bobCipherSuite, identities, threshold, identities)
+	require.NoError(t, err)
+
+	alice, err := dkg.NewParticipant[bls12381.G1](sid, aliceId.(types.AuthKey), cohortConfigAlice, cn, nil, crand.Reader)
+	require.NoError(t, err)
+
+	bob, err := dkg.NewParticipant[bls12381.G2](sid, bobId.(types.AuthKey), cohortConfigBob, cn, nil, crand.Reader)
 	require.NoError(t, err)
 
 	aliceR1Broadcast, aliceR1P2P, err := alice.Round1()
@@ -151,17 +143,26 @@ func Test_SubGroupMismatchShouldFail(t *testing.T) {
 	bobR1Broadcast, bobR1P2P, err := bob.Round1()
 	require.NoError(t, err)
 
-	aliceR2InputBroadcast := map[types.IdentityHash]*dkg.Round1Broadcast{bobId.Hash(): bobR1Broadcast}
-	aliceR2InputP2P := map[types.IdentityHash]*dkg.Round1P2P{bobId.Hash(): bobR1P2P[aliceId.Hash()]}
+	aliceR2InputBroadcast := types.NewRoundMessages[*dkg.Round1Broadcast]()
+	aliceR2InputBroadcast.Put(bobId, bobR1Broadcast)
 
-	bobR2InputBroadcast := map[types.IdentityHash]*dkg.Round1Broadcast{aliceId.Hash(): aliceR1Broadcast}
-	bobR2InputP2P := map[types.IdentityHash]*dkg.Round1P2P{aliceId.Hash(): aliceR1P2P[bobId.Hash()]}
+	aliceR2InputP2P := types.NewRoundMessages[*dkg.Round1P2P]()
+	bobMessageToAlice, exists := bobR1P2P.Get(aliceId)
+	require.True(t, exists)
+	aliceR2InputP2P.Put(bobId, bobMessageToAlice)
+
+	bobR2InputBroadcast := types.NewRoundMessages[*dkg.Round1Broadcast]()
+	bobR2InputBroadcast.Put(aliceId, aliceR1Broadcast)
+
+	bobR2InputP2P := types.NewRoundMessages[*dkg.Round1P2P]()
+	aliceMessageTobob, exists := aliceR1P2P.Get(bobId)
+	require.True(t, exists)
+	bobR2InputP2P.Put(bobId, aliceMessageTobob)
 
 	_, err = alice.Round2(aliceR2InputBroadcast, aliceR2InputP2P)
 	require.Error(t, err)
-	require.True(t, errs.IsInvalidCurve(err))
+	require.True(t, errs.IsCurve(err))
 
 	_, err = bob.Round2(bobR2InputBroadcast, bobR2InputP2P)
 	require.Error(t, err)
-	require.True(t, errs.IsInvalidCurve(err))
 }

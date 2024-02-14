@@ -7,171 +7,222 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	dlog "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
+
+const label = "KRYPTON_PRIMITIVES_BASE_OT_SIMPLEST"
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
 type Round1P2P struct {
-	Proof     *dlog.Proof
+	Proof     compiler.NIZKPoKProof
 	PublicKey curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 type (
-	Round2P2P = []ReceiversMaskedChoices
-	Round3P2P = []OtChallenge
-	Round4P2P = []OtChallengeResponse
-	Round5P2P = []ChallengeOpening
-	Round7P2P = [][KeyCount][DigestSize]byte
-	Round8P2P = [][DigestSize]byte
+	Round2P2P = [][]ot.ChoiceBits
+	Round3P2P = []ot.Message
+	Round4P2P = []ot.Message
+	Round5P2P = []ot.MessagePair
 )
 
-// Round1ComputeAndZkpToPublicKey is the first phase of the protocol.
-// computes and stores public key and returns the dlog proof. serialised / packed.
-// This implements step 1 of Name 7 of DKLs18, page 16.
-func (sender *Sender) Round1ComputeAndZkpToPublicKey() (sigma *dlog.Proof, p curves.Point, err error) {
+// Round1 computes a secret/public key pair and the dlog proof of the secret key.
+func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// Sample the secret key and compute the public key.
-	sender.SecretKey, err = sender.Curve.ScalarField().Random(crand.Reader)
+	s.SecretKey, err = s.Curve.ScalarField().Random(crand.Reader)
 	if err != nil {
-		return nil, nil, errs.WrapRandomSampleFailed(err, "generating random scalar")
+		return nil, errs.WrapRandomSample(err, "generating random scalar")
 	}
-	sender.PublicKey = sender.Curve.ScalarBaseMult(sender.SecretKey)
+	s.PublicKey = s.Curve.ScalarBaseMult(s.SecretKey)
 
 	// Generate the ZKP proof.
-	sender.transcript.AppendMessages("dlog proof", sender.UniqueSessionId)
-	prover, err := dlog.NewProver(sender.Curve.Generator(), sender.UniqueSessionId, sender.transcript.Clone(), sender.prng)
+	s.Transcript.AppendMessages("dlog proof", s.UniqueSessionId)
+	prover, err := s.dlog.NewProver(s.UniqueSessionId, s.Transcript.Clone())
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing dlog prover")
+		return nil, errs.WrapFailed(err, "constructing dlog prover")
 	}
-	proof, publicKey, err := prover.Prove(sender.SecretKey)
+	proof, err := prover.Prove(s.PublicKey, s.SecretKey)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "creating zkp proof for secret key in base OT sender round 1")
+		return nil, errs.WrapFailed(err, "creating zkp proof for secret key in base OT sender round 1")
 	}
-	return proof, publicKey, nil
+	return &Round1P2P{
+		Proof:     proof,
+		PublicKey: s.PublicKey,
+	}, nil
 }
 
-// Round2VerifyDlogAndPadTransfer verifies the dlog proof of the public key sent by the sender, i.e., step 2),
+// Round2 verifies the dlog proof of the public key sent by the sender, i.e., step 2),
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Name 7 (page 16) of the paper.
-func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(senderPublicKey curves.Point, proof *dlog.Proof) ([]ReceiversMaskedChoices, error) {
-	receiver.SenderPublicKey = senderPublicKey
-	receiver.transcript.AppendMessages("dlog proof", receiver.UniqueSessionId)
-	if err := dlog.Verify(receiver.Curve.Generator(), senderPublicKey, proof, receiver.UniqueSessionId); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "verifying dlog proof in base OT receiver round 2")
+func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
+	r.SenderPublicKey = r1out.PublicKey
+	r.Transcript.AppendMessages("dlog proof", r.UniqueSessionId)
+	dlogVerifier, err := r.dlog.NewVerifier(r.UniqueSessionId, r.Transcript.Clone())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct dlog verifier")
+	}
+	if err := dlogVerifier.Verify(r1out.PublicKey, r1out.Proof); err != nil {
+		return nil, errs.WrapVerification(err, "verifying dlog proof in base OT receiver round 2")
 	}
 
-	result := make([]ReceiversMaskedChoices, receiver.BatchSize)
-	receiver.Output.OneTimePadDecryptionKey = make([]OneTimePadDecryptionKey, receiver.BatchSize)
-	for i := 0; i < receiver.BatchSize; i++ {
-		a, err := receiver.Curve.ScalarField().Random(crand.Reader)
-		if err != nil {
-			return nil, errs.WrapRandomSampleFailed(err, "generating random scalar")
-		}
-		// Computing `A := a . G + w . B` in constant time, by first computing option0 = a.G and option1 = a.G+B and then
-		// constant time choosing one of them by first assuming that the output is option0, and overwrite it if the choice bit is 1.
+	r2out = make([][]ot.ChoiceBits, r.Xi)
+	r.Output.ChosenMessages = make([]ot.ChosenMessage, r.Xi)
+	for i := 0; i < r.Xi; i++ {
+		r2out[i] = make([]ot.ChoiceBits, r.L)
+		r.Output.ChosenMessages[i] = make([]ot.MessageElement, r.L)
+		for l := 0; l < r.L; l++ {
+			a, err := r.Curve.ScalarField().Random(crand.Reader)
+			if err != nil {
+				return nil, errs.WrapRandomSample(err, "generating random scalar")
+			}
+			// Computing `A := a . G + w . B` in constant time, by first computing option0 = a.G and option1 = a.G+B and then
+			// constant time choosing one of them by first assuming that the output is option0, and overwrite it if the choice bit is 1.
 
-		option0 := receiver.Curve.ScalarBaseMult(a)
-		option0Bytes := option0.ToAffineCompressed()
-		option1 := option0.Add(receiver.SenderPublicKey)
-		option1Bytes := option1.ToAffineCompressed()
+			option0 := r.Curve.ScalarBaseMult(a)
+			option0Bytes := option0.ToAffineCompressed()
+			option1 := option0.Add(r.SenderPublicKey)
+			option1Bytes := option1.ToAffineCompressed()
 
-		result[i] = option0Bytes
-		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], result[i], option1Bytes)
-		// compute the internal rho
-		rho := receiver.SenderPublicKey.Mul(a)
-		output, err := hashing.HashChain(sha3.New256, receiver.UniqueSessionId, []byte{byte(i)}, rho.ToAffineCompressed())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "creating one time pad decryption keys")
+			r2out[i][l] = option0Bytes
+			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out[i][l], option1Bytes)
+			// compute the internal rho
+			rho := r.SenderPublicKey.Mul(a)
+			output, err := hashing.HashChain(sha3.New256, r.UniqueSessionId, []byte{byte(i*r.L + l)}, rho.ToAffineCompressed())
+			if err != nil {
+				return nil, errs.WrapFailed(err, "creating one time pad decryption keys")
+			}
+			copy(r.Output.ChosenMessages[i][l][:], output)
 		}
-		copy(receiver.Output.OneTimePadDecryptionKey[i][:], output)
 	}
-	return result, nil
+	return r2out, nil
 }
 
-// Round3PadTransfer is the sender's "Pad Transfer" phase in OT; see steps 4 and 5 of page 16 of the paper.
+// Round3 is the sender's "Pad Transfer" phase in OT; see steps 4 and 5 of page 16 of the paper.
 // Returns the challenges xi.
-func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []ReceiversMaskedChoices) ([]OtChallenge, error) {
-	var err error
-	challenge := make([]OtChallenge, sender.BatchSize)
-	sender.Output.OneTimePadEncryptionKeys = make([]OneTimePadEncryptionKeys, sender.BatchSize)
-	negSenderPublicKey := sender.PublicKey.Neg()
-
-	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
-	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
-		if receiversMaskedChoice[i], err = sender.Curve.Point().FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
-			return nil, errs.WrapSerialisation(err, "uncompress the point")
-		}
+func (s *Sender) Round3(maskedChoices Round2P2P) (challenge Round3P2P, err error) {
+	if len(maskedChoices) != s.Xi {
+		return nil, errs.NewLength("number of masked choices should be Xi (%d != %d)", len(maskedChoices), s.Xi)
 	}
+	challenge = make(Round3P2P, s.Xi)
+	s.Output.Messages = make([]ot.MessagePair, s.Xi)
 
-	baseEncryptionKeyMaterial := make([]curves.Point, KeyCount)
-	var hashedKey [KeyCount][DigestSize]byte
+	var rho [2]curves.Point
+	var hashedKey [2][ot.KappaBytes]byte
+	negSenderPublicKey := s.PublicKey.Neg()
 
-	for i := 0; i < sender.BatchSize; i++ {
-		// Sender creates two options that will eventually be used as her encryption keys.
-		// `baseEncryptionKeyMaterial[0]` and `baseEncryptionKeyMaterial[1]` correspond to rho_0 and rho_1 in the paper, respectively.
-		baseEncryptionKeyMaterial[0] = receiversMaskedChoice[i].Mul(sender.SecretKey)
-
-		receiverChoiceMinusSenderPublicKey := receiversMaskedChoice[i].Add(negSenderPublicKey)
-		baseEncryptionKeyMaterial[1] = receiverChoiceMinusSenderPublicKey.Mul(sender.SecretKey)
-
-		for k := 0; k < KeyCount; k++ {
-			output, err := hashing.HashChain(sha3.New256, sender.UniqueSessionId, []byte{byte(i)}, baseEncryptionKeyMaterial[k].ToAffineCompressed())
-			if err != nil {
-				return nil, errs.WrapFailed(err, "creating one time pad encryption keys")
-			}
-			copy(sender.Output.OneTimePadEncryptionKeys[i][k][:], output)
-
-			// Compute a challenge by XORing the hash of the hash of the key. Not a typo ;)
-			hashedKey[k] = sha3.Sum256(sender.Output.OneTimePadEncryptionKeys[i][k][:])
-			hashedKey[k] = sha3.Sum256(hashedKey[k][:])
+	for i := 0; i < s.Xi; i++ {
+		if len(maskedChoices[i]) != s.L {
+			return nil, errs.NewLength("maskedChoices[%d] length should be L (%d != %d)", i, len(maskedChoices[i]), s.L)
 		}
-		subtle.XORBytes(challenge[i][:], hashedKey[0][:], hashedKey[1][:])
+		challenge[i] = make(ot.Message, s.L)
+		s.Output.Messages[i] = ot.MessagePair{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
+		for l := 0; l < s.L; l++ {
+			receiversMaskedChoice, err := s.Curve.Point().FromAffineCompressed(maskedChoices[i][l])
+			if err != nil {
+				return nil, errs.WrapSerialisation(err, "uncompress the point")
+			}
+
+			// Sender creates two options that will eventually be used as her encryption keys.
+			rho[0] = receiversMaskedChoice.Mul(s.SecretKey)
+
+			receiverChoiceMinusSenderPublicKey := receiversMaskedChoice.Add(negSenderPublicKey)
+			rho[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
+
+			for k := 0; k < 2; k++ {
+				output, err := hashing.HashChain(ot.HashFunction, s.UniqueSessionId, []byte{byte(i*s.L + l)}, rho[k].ToAffineCompressed())
+				if err != nil {
+					return nil, errs.WrapFailed(err, "creating one time pad encryption keys")
+				}
+				copy(s.Output.Messages[i][k][l][:], output)
+
+				// Compute a challenge by XORing the hash of the hash of the key. Not a typo ;)
+				digest, err := hashing.Hash(ot.HashFunction, s.Output.Messages[i][k][l][:])
+				if err != nil {
+					return nil, errs.WrapHashing(err, "hashing the key (I)")
+				}
+				digest, err = hashing.Hash(ot.HashFunction, digest)
+				if err != nil {
+					return nil, errs.WrapHashing(err, "hashing the key (II)")
+				}
+				hashedKey[k] = [ot.KappaBytes]byte(digest[:ot.KappaBytes])
+			}
+			subtle.XORBytes(challenge[i][l][:], hashedKey[0][:], hashedKey[1][:])
+		}
 	}
 	return challenge, nil
 }
 
-// Round4RespondToChallenge corresponds to initial round of the receiver's "Verify" phase; see step 6 of page 16 of the paper.
+// Round4 corresponds to initial round of the receiver's "Verify" phase; see step 6 of page 16 of the paper.
 // this is just the start of Verification. In this round, the receiver outputs "rho'", which the sender will check.
-func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) ([]OtChallengeResponse, error) {
+func (r *Receiver) Round4(challenge Round3P2P) (Round4P2P, error) {
+	if len(challenge) != r.Xi {
+		return nil, errs.NewLength("number of challenges should be Xi (%d != %d)", len(challenge), r.Xi)
+	}
 	// store to be used in future steps
-	receiver.SenderChallenge = challenge
+	r.SenderChallenge = challenge
 	// challengeResponses is Rho' in the paper.
-	challengeResponses := make([]OtChallengeResponse, receiver.BatchSize)
-	alternativeChallengeResponse := new([DigestSize]byte)
-	for i := 0; i < receiver.BatchSize; i++ {
-		// Constant-time xor of the hashed key and the challenge, based on the choice bit.
-		hashedKey := sha3.Sum256(receiver.Output.OneTimePadDecryptionKey[i][:])
-		hashedKey = sha3.Sum256(hashedKey[:])
-		challengeResponses[i] = hashedKey
-		subtle.XORBytes(alternativeChallengeResponse[:], receiver.SenderChallenge[i][:], hashedKey[:])
-		subtle.ConstantTimeCopy(receiver.Output.RandomChoiceBits[i], challengeResponses[i][:], alternativeChallengeResponse[:])
+	challengeResponses := make(Round4P2P, r.Xi)
+	alternativeChallengeResponse := new([ot.KappaBytes]byte)
+	for i := 0; i < r.Xi; i++ {
+		if len(challenge[i]) != r.L {
+			return nil, errs.NewLength("challenge[%d] length should be L (%d != %d)", i, len(challenge[i]), r.L)
+		}
+		challengeResponses[i] = make(ot.Message, r.L)
+		for l := 0; l < r.L; l++ {
+			// Constant-time xor of the hashed key and the challenge, based on the choice bit.
+			hashedKey, err := hashing.Hash(ot.HashFunction, r.Output.ChosenMessages[i][l][:])
+			if err != nil {
+				return nil, errs.WrapHashing(err, "hashing the key (I)")
+			}
+			hashedKey, err = hashing.Hash(ot.HashFunction, hashedKey)
+			if err != nil {
+				return nil, errs.WrapHashing(err, "hashing the key (II)")
+			}
+			challengeResponses[i][l] = [ot.KappaBytes]byte(hashedKey[:ot.KappaBytes])
+			subtle.XORBytes(alternativeChallengeResponse[:], r.SenderChallenge[i][l][:], challengeResponses[i][l][:])
+			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), challengeResponses[i][l][:], alternativeChallengeResponse[:])
+		}
 	}
 	return challengeResponses, nil
 }
 
-// Round5Verify verifies the challenge response. If the verification passes, sender opens his challenges to the receiver.
+// Round5 verifies the challenge response. If the verification passes, sender opens his challenges to the receiver.
 // See step 7 of page 16 of the paper.
 // Abort if Rho' != H(H(Rho^0)) in other words, if challengeResponse != H(H(encryption key 0)).
 // opening is H(encryption key).
-func (sender *Sender) Round5Verify(challengeResponses []OtChallengeResponse) ([]ChallengeOpening, error) {
-	opening := make([]ChallengeOpening, sender.BatchSize)
-	for i := 0; i < sender.BatchSize; i++ {
-		for k := 0; k < KeyCount; k++ {
-			opening[i][k] = sha3.Sum256(sender.Output.OneTimePadEncryptionKeys[i][k][:])
+func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
+	if len(challengeResponses) != s.Xi {
+		return nil, errs.NewLength("number of challenge responses should be Xi (%d != %d)", len(challengeResponses), s.Xi)
+	}
+	opening := make(Round5P2P, s.Xi)
+	for i := 0; i < s.Xi; i++ {
+		if len(challengeResponses[i]) != s.L {
+			return nil, errs.NewLength("challengeResponses[%d] length should be L (%d != %d)", i, len(challengeResponses[i]), s.L)
 		}
+		opening[i] = ot.MessagePair{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
+		for l := 0; l < s.L; l++ {
+			for k := 0; k < 2; k++ {
+				digest, err := hashing.Hash(ot.HashFunction, s.Output.Messages[i][k][l][:])
+				if err != nil {
+					return nil, errs.WrapHashing(err, "hashing the messages")
+				}
+				opening[i][k][l] = [ot.KappaBytes]byte(digest[:ot.KappaBytes])
+			}
 
-		// Verify
-		hashedKey0 := sha3.Sum256(opening[i][0][:])
-		if subtle.ConstantTimeCompare(hashedKey0[:], challengeResponses[i][:]) != 1 {
-			return nil, errs.NewVerificationFailed("receiver's challenge response didn't match H(H(rho^0))")
+			// Verify
+			hashedKey0 := sha3.Sum256(opening[i][0][l][:])
+			if subtle.ConstantTimeCompare(hashedKey0[:], challengeResponses[i][l][:]) != 1 {
+				return nil, errs.NewVerification("receiver's challenge response didn't match H(H(rho^0))")
+			}
 		}
 	}
 	return opening, nil
 }
 
-// Round6Verify is the _last_ part of the "Verification" phase of OT; see p. 16 of https://eprint.iacr.org/2018/499.pdf.
+// Round6 is the _last_ part of the "Verification" phase of OT; see p. 16 of https://eprint.iacr.org/2018/499.pdf.
 // See step 8 of page 16 of the paper.
 // Abort if H(Rho^w) != the one it calculated itself or
 //
@@ -181,66 +232,30 @@ func (sender *Sender) Round5Verify(challengeResponses []OtChallengeResponse) ([]
 //
 //	if opening_w != H(decryption key)  or
 //	if challenge != H(opening 0) XOR H(opening 0)
-func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) error {
-	reconstructedChallenge := new([DigestSize]byte)
-	for i := 0; i < receiver.BatchSize; i++ {
-		hashedDecryptionKey := sha3.Sum256(receiver.Output.OneTimePadDecryptionKey[i][:])
-		w := receiver.Output.RandomChoiceBits[i]
-		if subtle.ConstantTimeCompare(hashedDecryptionKey[:], challengeOpenings[i][w][:]) != 1 {
-			return errs.NewVerificationFailed("sender's supposed H(rho^omega) doesn't match our own")
+func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
+	if len(challengeOpenings) != r.Xi {
+		return errs.NewLength("number of challenge openings should be Xi (%d != %d)", len(challengeOpenings), r.Xi)
+	}
+	var reconstructedChallenge [ot.KappaBytes]byte
+	for i := 0; i < r.Xi; i++ {
+		if len(challengeOpenings[i][0]) != r.L || len(challengeOpenings[i][1]) != r.L {
+			return errs.NewLength("challengeOpenings[%d] length should be L (%d != %d || %d != %d )",
+				i, len(challengeOpenings[i][0]), r.L, len(challengeOpenings[i][1]), r.L)
 		}
-		hashedKey0 := sha3.Sum256(challengeOpenings[i][0][:])
-		hashedKey1 := sha3.Sum256(challengeOpenings[i][1][:])
-		subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:], hashedKey1[:])
+		for l := 0; l < r.L; l++ {
+			hashedDecryptionKey := sha3.Sum256(r.Output.ChosenMessages[i][l][:])
+			choice := r.Output.Choices.Select(i)
+			if subtle.ConstantTimeCompare(hashedDecryptionKey[:], challengeOpenings[i][choice][l][:]) != 1 {
+				return errs.NewVerification("sender's supposed H(rho^omega) doesn't match our own")
+			}
+			hashedKey0 := sha3.Sum256(challengeOpenings[i][0][l][:])
+			hashedKey1 := sha3.Sum256(challengeOpenings[i][1][l][:])
+			subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:], hashedKey1[:])
 
-		if subtle.ConstantTimeCompare(reconstructedChallenge[:], receiver.SenderChallenge[i][:]) != 1 {
-			return errs.NewVerificationFailed("sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
+			if subtle.ConstantTimeCompare(reconstructedChallenge[:], r.SenderChallenge[i][l][:]) != 1 {
+				return errs.NewVerification("sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
+			}
 		}
 	}
 	return nil
-}
-
-// Round7Encrypt wraps an `Encrypt` operation on the Sender's underlying output from the random OT; see `Encrypt` below.
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
-func (sender *Sender) Round7Encrypt(messages [][KeyCount][DigestSize]byte) ([][KeyCount][DigestSize]byte, error) {
-	return sender.Output.Encrypt(messages)
-}
-
-// Round8Decrypt wraps a `Decrypt` operation on the Receiver's underlying output from the random OT; see `Decrypt` below
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
-func (receiver *Receiver) Round8Decrypt(ciphertext [][KeyCount][DigestSize]byte) ([][DigestSize]byte, error) {
-	return receiver.Output.Decrypt(ciphertext)
-}
-
-// Encrypt runs step 9) of the base OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
-// in which the base OT sender "encrypts" both messages under the "one-time keys" output by the random OT.
-func (s *SenderOutput) Encrypt(plaintexts [][KeyCount][DigestSize]byte) ([][KeyCount][DigestSize]byte, error) {
-	batchSize := len(s.OneTimePadEncryptionKeys)
-	if len(plaintexts) != batchSize {
-		return nil, errs.NewInvalidArgument("message size should be same as batch size")
-	}
-	ciphertexts := make([][KeyCount][DigestSize]byte, batchSize)
-
-	for i := 0; i < len(plaintexts); i++ {
-		for k := 0; k < KeyCount; k++ {
-			subtle.XORBytes(ciphertexts[i][k][:], s.OneTimePadEncryptionKeys[i][k][:], plaintexts[i][k][:])
-		}
-	}
-	return ciphertexts, nil
-}
-
-// Decrypt is step 10) of the base OT Name 7) of https://eprint.iacr.org/2018/499.pdf,
-// where the base OT receiver "decrypts" the message it's receiving using the "key" it received in the random OT.
-func (r *ReceiverOutput) Decrypt(ciphertexts [][KeyCount][DigestSize]byte) ([][DigestSize]byte, error) {
-	batchSize := len(r.OneTimePadDecryptionKey)
-	if len(ciphertexts) != batchSize {
-		return nil, errs.NewInvalidArgument("number of ciphertexts should be same as batch size")
-	}
-	plaintexts := make([][DigestSize]byte, batchSize)
-
-	for i := 0; i < len(ciphertexts); i++ {
-		choice := r.RandomChoiceBits[i]
-		subtle.XORBytes(plaintexts[i][:], r.OneTimePadDecryptionKey[i][:], ciphertexts[i][choice][:])
-	}
-	return plaintexts, nil
 }

@@ -4,34 +4,38 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 )
 
 type Share struct {
-	Id    int           `json:"identifier"`
+	Id    uint          `json:"identifier"`
 	Value curves.Scalar `json:"value"`
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
+// TODO: pointer receiver
+// TODO: add transform from t-n1 to t-n2
 func (ss Share) Validate(curve curves.Curve) error {
 	if ss.Id == 0 {
-		return errs.NewInvalidIdentifier("invalid identifier - id is zero")
+		return errs.NewIdentifier("invalid identifier - id is zero")
 	}
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
 	}
 	shareCurve := ss.Value.ScalarField().Curve()
 	if shareCurve.Name() != curve.Name() {
-		return errs.NewInvalidCurve("curve mismatch %s != %s", shareCurve.Name(), curve.Name())
+		return errs.NewCurve("curve mismatch %s != %s", shareCurve.Name(), curve.Name())
 	}
 
 	return nil
 }
 
-func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
+func (ss Share) LagrangeCoefficient(identities []uint) (curves.Scalar, error) {
 	curve := ss.Value.ScalarField().Curve()
 	coefficients, err := LagrangeCoefficients(curve, identities)
 	if err != nil {
@@ -40,7 +44,7 @@ func (ss Share) LagrangeCoefficient(identities []int) (curves.Scalar, error) {
 	return coefficients[ss.Id], nil
 }
 
-func (ss Share) ToAdditive(identities []int) (curves.Scalar, error) {
+func (ss Share) ToAdditive(identities []uint) (curves.Scalar, error) {
 	lambda, err := ss.LagrangeCoefficient(identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my lagrange coefficient")
@@ -49,27 +53,27 @@ func (ss Share) ToAdditive(identities []int) (curves.Scalar, error) {
 }
 
 type Dealer struct {
-	Threshold, Total int
+	Threshold, Total uint
 	Curve            curves.Curve
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewDealer(threshold, total int, curve curves.Curve) (*Dealer, error) {
+func NewDealer(threshold, total uint, curve curves.Curve) (*Dealer, error) {
 	err := validateInputs(threshold, total, curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to validate inputs")
+		return nil, errs.WrapArgument(err, "failed to validate inputs")
 	}
 
 	return &Dealer{Threshold: threshold, Total: total, Curve: curve}, nil
 }
 
-func validateInputs(threshold, total int, curve curves.Curve) error {
+func validateInputs(threshold, total uint, curve curves.Curve) error {
 	if total < threshold {
-		return errs.NewIncorrectCount("total cannot be less than threshold")
+		return errs.NewValue("total cannot be less than threshold")
 	}
 	if threshold < 2 {
-		return errs.NewIncorrectCount("threshold cannot be less than 2")
+		return errs.NewValue("threshold cannot be less than 2")
 	}
 	if curve == nil {
 		return errs.NewIsNil("invalid curve")
@@ -97,19 +101,19 @@ func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reade
 	for i := range shares {
 		x := s.Curve.ScalarField().New(uint64(i + 1))
 		shares[i] = &Share{
-			Id:    i + 1,
+			Id:    uint(i + 1),
 			Value: poly.Evaluate(x),
 		}
 	}
 	return shares, poly, nil
 }
 
-func (s *Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, error) {
-	if len(identities) < s.Threshold {
-		return nil, errs.NewInvalidArgument("not enough identities")
+func (s *Dealer) LagrangeCoefficients(identities []uint) (map[uint]curves.Scalar, error) {
+	if len(identities) < int(s.Threshold) {
+		return nil, errs.NewArgument("not enough identities")
 	}
-	if len(identities) > s.Total {
-		return nil, errs.NewInvalidArgument("too many identities")
+	if len(identities) > int(s.Total) {
+		return nil, errs.NewArgument("too many identities")
 	}
 	lambdas, err := LagrangeCoefficients(s.Curve, identities)
 	if err != nil {
@@ -119,20 +123,20 @@ func (s *Dealer) LagrangeCoefficients(identities []int) (map[int]curves.Scalar, 
 }
 
 func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	if len(shares) < s.Threshold {
-		return nil, errs.NewIncorrectCount("invalid number of shares")
+	if len(shares) < int(s.Threshold) {
+		return nil, errs.NewCount("invalid number of shares")
 	}
-	dups := make(map[int]bool, len(shares))
+	dups := make(map[uint]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
 	ys := make([]curves.Scalar, len(shares))
 
 	for i, share := range shares {
 		err := share.Validate(s.Curve)
 		if err != nil {
-			return nil, errs.WrapInvalidArgument(err, "invalid share")
+			return nil, errs.WrapArgument(err, "invalid share")
 		}
 		if share.Id > s.Total {
-			return nil, errs.NewInvalidIdentifier("invalid share identifier id: %d must be greater than total: %d", share.Id, s.Total)
+			return nil, errs.NewIdentifier("invalid share identifier id: %d must be greater than total: %d", share.Id, s.Total)
 		}
 		if _, in := dups[share.Id]; in {
 			return nil, errs.NewDuplicate("duplicate share")
@@ -141,25 +145,29 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 		ys[i] = share.Value
 		xs[i] = s.Curve.ScalarField().New(uint64(share.Id))
 	}
-	return s.interpolate(xs, ys, s.Curve.ScalarField().Zero())
+	result, err := lagrange.Interpolate(s.Curve, xs, ys, s.Curve.ScalarField().Zero())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not interpolate")
+	}
+	return result, nil
 }
 
 func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	if len(shares) < s.Threshold {
-		return nil, errs.NewIncorrectCount("invalid number of shares (%d != %d)", len(shares), s.Threshold)
+	if len(shares) < int(s.Threshold) {
+		return nil, errs.NewCount("invalid number of shares (%d != %d)", len(shares), s.Threshold)
 	}
 
-	dups := make(map[int]bool, len(shares))
+	dups := make(map[uint]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
 	ys := make([]curves.Point, len(shares))
 
 	for i, share := range shares {
 		err := share.Validate(s.Curve)
 		if err != nil {
-			return nil, errs.WrapInvalidArgument(err, "invalid share")
+			return nil, errs.WrapArgument(err, "invalid share")
 		}
 		if share.Id > s.Total {
-			return nil, errs.NewInvalidIdentifier("invalid share id: %d must be greater than total: %d", share.Id, s.Total)
+			return nil, errs.NewIdentifier("invalid share id: %d must be greater than total: %d", share.Id, s.Total)
 		}
 		if _, in := dups[share.Id]; in {
 			return nil, errs.NewDuplicate("duplicate share")
@@ -168,41 +176,26 @@ func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 		ys[i] = s.Curve.ScalarBaseMult(share.Value)
 		xs[i] = s.Curve.ScalarField().New(uint64(share.Id))
 	}
-	return s.interpolatePoint(xs, ys, s.Curve.ScalarField().Zero())
-}
-
-func (s *Dealer) interpolate(xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
-	result, err := polynomials.Interpolate(s.Curve, xs, ys, evaluateAt)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not interpolate")
-	}
-	return result, nil
-}
-
-func (s *Dealer) interpolatePoint(xs []curves.Scalar, ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
-	result, err := polynomials.InterpolateInTheExponent(s.Curve, xs, ys, evaluateAt)
+	result, err := lagrange.InterpolateInTheExponent(s.Curve, xs, ys, s.Curve.ScalarField().Zero())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate in the exponent")
 	}
 	return result, nil
 }
 
-func LagrangeCoefficients(curve curves.Curve, sharingIds []int) (map[int]curves.Scalar, error) {
-	sharingIdsHashSet := make(map[int]any, len(sharingIds))
+func LagrangeCoefficients(curve curves.Curve, sharingIds []uint) (map[uint]curves.Scalar, error) {
+	if hashset.NewComparableHashSet[uint](sharingIds...).Size() != len(sharingIds) {
+		return nil, errs.NewMembership("invalid sharing id hash set")
+	}
 	sharingIdsScalar := make([]curves.Scalar, len(sharingIds))
 	for i := 0; i < len(sharingIds); i++ {
-		id := sharingIds[i]
-		if _, exists := sharingIdsHashSet[id]; exists {
-			return nil, errs.NewDuplicate("sharing id %d is duplicate", id)
-		}
-		sharingIdsHashSet[id] = true
-		sharingIdsScalar[i] = curve.ScalarField().New(uint64(id))
+		sharingIdsScalar[i] = curve.ScalarField().New(uint64(sharingIds[i]))
 	}
-	basisPolynomials, err := polynomials.LagrangeBasis(curve, sharingIdsScalar, curve.ScalarField().Zero()) // secret is at 0
+	basisPolynomials, err := lagrange.Basis(curve, sharingIdsScalar, curve.ScalarField().Zero()) // secret is at 0
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute all basis polynomialsa at x=0")
 	}
-	result := make(map[int]curves.Scalar, len(basisPolynomials))
+	result := make(map[uint]curves.Scalar, len(basisPolynomials))
 	for i, li := range basisPolynomials {
 		result[sharingIds[i]] = li
 	}

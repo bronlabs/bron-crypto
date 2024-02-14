@@ -1,13 +1,13 @@
 package interactive_signing
 
 import (
-	"hash"
 	"io"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -17,16 +17,16 @@ import (
 )
 
 // CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of there other party.
-func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId, n int, curve curves.Curve) (curves.Scalar, error) {
+func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId types.SharingID, n uint, curve curves.Curve) (curves.Scalar, error) {
 	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create shamir dealer")
 	}
-	coefficients, err := dealer.LagrangeCoefficients([]int{otherPartySharingId, mySharingId})
+	coefficients, err := dealer.LagrangeCoefficients([]uint{uint(otherPartySharingId), uint(mySharingId)})
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
 	}
-	return coefficients[otherPartySharingId], nil
+	return coefficients[uint(otherPartySharingId)], nil
 }
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
@@ -69,16 +69,16 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 	return c3, nil
 }
 
-func MessageToScalar(hashFunc func() hash.Hash, curve curves.Curve, message []byte) (curves.Scalar, error) {
-	messageHash, err := hashing.Hash(hashFunc, message)
+func MessageToScalar(cipherSuite types.SignatureProtocol, message []byte) (curves.Scalar, error) {
+	messageHash, err := hashing.Hash(cipherSuite.Hash(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot hash message")
 	}
-	mPrimeInt, err := ecdsa.HashToInt(messageHash, curve)
+	mPrimeInt, err := ecdsa.HashToInt(messageHash, cipherSuite.Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create int from hash")
 	}
-	mPrime := curve.Scalar().SetNat(mPrimeInt)
+	mPrime := cipherSuite.Curve().Scalar().SetNat(mPrimeInt)
 
 	return mPrime, nil
 }

@@ -4,23 +4,37 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
 
-var _ integration.Participant = (*PreGenParticipant)(nil)
+var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
+var _ types.WithAuthKey = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
 	prng io.Reader
 
-	Tau          int
-	MyAuthKey    integration.AuthKey
-	CohortConfig *integration.CohortConfig
-	round        int
-	state        *preGenState
+	Tau         int
+	MyAuthKey   types.AuthKey
+	Protocol    types.ThresholdProtocol
+	mySharingId types.SharingID
+	round       int
+	state       *preGenState
 
-	_ types.Incomparable
+	_ ds.Incomparable
+}
+
+func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
+	return p.MyAuthKey
+}
+
+func (p *PreGenParticipant) AuthKey() types.AuthKey {
+	return p.MyAuthKey
+}
+
+func (p *PreGenParticipant) SharingId() types.SharingID {
+	return p.mySharingId
 }
 
 type preGenState struct {
@@ -28,56 +42,48 @@ type preGenState struct {
 	es          []curves.Scalar
 	Commitments []*AttestedCommitmentToNoncePair
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewPreGenParticipant(authKey integration.AuthKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) (*PreGenParticipant, error) {
-	err := validateInputs(authKey, cohortConfig, tau, prng)
+func NewPreGenParticipant(authKey types.AuthKey, protocol types.ThresholdProtocol, tau int, prng io.Reader) (*PreGenParticipant, error) {
+	err := validateInputs(authKey, protocol, tau, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
-	return &PreGenParticipant{
-		prng:         prng,
-		Tau:          tau,
-		MyAuthKey:    authKey,
-		CohortConfig: cohortConfig,
-		round:        1,
-		state:        &preGenState{},
-	}, nil
+	mySharingId, exists := types.DeriveSharingConfig(protocol.Participants()).LookUpRight(authKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
+	}
+
+	participant := &PreGenParticipant{
+		prng:        prng,
+		Tau:         tau,
+		MyAuthKey:   authKey,
+		Protocol:    protocol,
+		mySharingId: mySharingId,
+		round:       1,
+		state:       &preGenState{},
+	}
+
+	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct frost pregen participant")
+	}
+	return participant, nil
 }
 
-func validateInputs(identityKey integration.IdentityKey, cohortConfig *integration.CohortConfig, tau int, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+func validateInputs(authKey types.AuthKey, protocol types.ThresholdProtocol, tau int, prng io.Reader) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
-	}
-	if identityKey == nil {
-		return errs.NewMissing("identity key is nil")
-	}
-	if !cohortConfig.IsInCohort(identityKey) {
-		return errs.NewMissing("identity key is not in cohort")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol")
 	}
 	if tau <= 0 {
-		return errs.NewInvalidArgument("tau is nonpositive")
+		return errs.NewArgument("tau is nonpositive")
 	}
 	if prng == nil {
 		return errs.NewMissing("PRNG is nil")
 	}
 	return nil
-}
-
-func (p *PreGenParticipant) GetCohortConfig() *integration.CohortConfig {
-	return p.CohortConfig
-}
-
-func (p *PreGenParticipant) GetAuthKey() integration.AuthKey {
-	return p.MyAuthKey
-}
-
-// TODO: implement SharingId for FROSTs
-func (*PreGenParticipant) GetSharingId() int {
-	return -1
 }

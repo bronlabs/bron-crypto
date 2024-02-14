@@ -1,136 +1,123 @@
 package sample
 
 import (
-	"encoding/hex"
 	"sort"
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
+var _ types.MPCParticipant = (*Participant)(nil)
+
 type Participant struct {
-	Curve               curves.Curve
-	MyAuthKey           integration.AuthKey
-	MySharingId         int
-	PresentParticipants *hashset.HashSet[integration.IdentityKey]
-	UniqueSessionId     []byte
+	myAuthKey       types.AuthKey
+	uniqueSessionId []byte
 
-	IdentityKeyToSharingId map[types.IdentityHash]int
+	Protocol            types.MPCProtocol
+	IdentitySpace       types.IdentitySpace
+	PresentParticipants ds.HashSet[types.IdentityKey]
 
-	Seeds przs.PairwiseSeeds
-	Prngs map[int]csprng.CSPRNG
+	Seeds przs.PairWiseSeeds
+	Prngs ds.HashMap[types.IdentityKey, csprng.CSPRNG]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, uniqueSessionId []byte, authKey integration.AuthKey, seeds przs.PairwiseSeeds, presentParticipants *hashset.HashSet[integration.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
-	if authKey == nil {
-		return nil, errs.NewInvalidArgument("my identity key is nil")
-	}
-	if len(uniqueSessionId) == 0 {
-		return nil, errs.NewInvalidArgument("session id is nil")
-	}
-	if presentParticipants.Len() < 2 {
-		return nil, errs.NewInvalidArgument("need at least 2 participants")
-	}
-	for i, participant := range presentParticipants.Iter() {
-		if participant == nil {
-			return nil, errs.NewIsNil("participant %x is nil", i)
-		}
-	}
-	_, found := presentParticipants.Get(authKey)
-	if !found {
-		return nil, errs.NewInvalidArgument("i'm not part of the participants")
-	}
-	if seededPrngFactory == nil {
-		return nil, errs.NewInvalidArgument("prng is nil")
-	}
-	if len(seeds) == 0 {
-		return nil, errs.NewInvalidArgument("there are no seeds in the seeds map")
-	}
-	err := checkSeedMatch(authKey, presentParticipants, seeds)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "seeds do not match participants")
-	}
-	for participant, sharedSeed := range seeds {
-		if participant == authKey.Hash() {
-			return nil, errs.NewInvalidArgument("found a shared seed with myself")
-		}
-		foundAnyNonZeroByte := false
-		for _, b := range sharedSeed {
-			if b != byte(0) {
-				foundAnyNonZeroByte = true
-				break
-			}
-		}
-		if !foundAnyNonZeroByte {
-			return nil, errs.NewInvalidArgument("found a shared seed with all zero bytes")
-		}
-	}
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
+}
 
-	_, identityKeyToSharingId, mySharingId := integration.DeriveSharingIds(authKey, presentParticipants)
-	if mySharingId == -1 {
-		return nil, errs.NewMissing("my sharing id could not be found")
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, seeds, protocol, presentParticipants, seededPrngFactory); err != nil {
+		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
+	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	participant := &Participant{
-		Curve:                  curve,
-		MyAuthKey:              authKey,
-		MySharingId:            mySharingId,
-		UniqueSessionId:        uniqueSessionId,
-		PresentParticipants:    presentParticipants,
-		IdentityKeyToSharingId: identityKeyToSharingId,
-		Seeds:                  seeds,
+		myAuthKey:           authKey,
+		uniqueSessionId:     uniqueSessionId,
+		Protocol:            protocol,
+		IdentitySpace:       identitySpace,
+		Seeds:               seeds,
+		PresentParticipants: presentParticipants,
 	}
-	if err = participant.CreatePrngs(seededPrngFactory); err != nil {
+	if err := participant.createPrngs(seededPrngFactory); err != nil {
 		return nil, errs.WrapFailed(err, "could not seed prngs")
+	}
+	if err := types.ValidateMPCProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a valid sampler")
 	}
 	return participant, nil
 }
 
-func checkSeedMatch(self integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], seeds przs.PairwiseSeeds) error {
-	for idHash := range participants.Iter() {
-		if idHash == self.Hash() {
-			continue
-		}
-		if _, ok := seeds[idHash]; !ok {
-			return errs.NewFailed("seed for participant %s is missing", hex.EncodeToString(idHash[:]))
+func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
+	if len(uniqueSessionId) == 0 {
+		return errs.NewIsZero("sid length is zero")
+	}
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "authKey")
+	}
+	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "mpc protocol")
+	}
+	if presentParticipants.Size() < 2 {
+		return errs.NewCount("need at least 2 participants")
+	}
+	if !presentParticipants.IsSubSet(protocol.Participants()) {
+		return errs.NewSize("present sampler set is not a subset of all participants")
+	}
+	if seeds == nil {
+		return errs.NewIsNil("seeds")
+	}
+	seeders := hashset.NewHashableHashSet(seeds.Keys()...)
+	if !seeders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("we have seeds from people who are not a participant in this protocol")
+	}
+	for pair := range seeds.Iter() {
+		if ct.IsAllZero(pair.Value[:]) == 1 {
+			return errs.NewIsZero("found seed that's all zero")
 		}
 	}
-
+	if seededPrngFactory == nil {
+		return errs.NewIsNil("seeded prng factory")
+	}
 	return nil
 }
 
 // CreatePrngs creates and seed the PRNGs for this participant with the pairwise seeds.
-func (p *Participant) CreatePrngs(seededPrng csprng.CSPRNG) error {
-	p.Prngs = make(map[int]csprng.CSPRNG, len(p.PresentParticipants.List()))
-	sortedParticipants := integration.ByPublicKey(p.PresentParticipants.List())
+func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
+	p.Prngs = hashmap.NewHashableHashMap[types.IdentityKey, csprng.CSPRNG]()
+	sortedParticipants := types.ByPublicKey(p.PresentParticipants.List())
 	sort.Sort(sortedParticipants)
 	for _, participant := range sortedParticipants {
-		sharingId := p.IdentityKeyToSharingId[participant.Hash()]
-		if sharingId == p.MySharingId {
+		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharedSeed, exists := p.Seeds[participant.Hash()]
+		i, exists := p.IdentitySpace.LookUpRight(participant)
 		if !exists {
-			return errs.NewMissing("could not find shared seed for sharing id %d", sharingId)
+			return errs.NewMissing("could not find index of participant %x", participant.PublicKey())
 		}
-		salt, err := hashing.HashChain(sha3.New256, p.UniqueSessionId)
+		sharedSeed, exists := p.Seeds.Get(participant)
+		if !exists {
+			return errs.NewMissing("could not find shared seed for index %d", i)
+		}
+		salt, err := hashing.HashChain(sha3.New256, p.uniqueSessionId)
 		if err != nil {
-			return errs.WrapFailed(err, "could not seed PRNG for sharing id %d", sharingId)
+			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)
 		}
 		prng, err := seededPrng.New(sharedSeed[:], salt)
 		if err != nil {
-			return errs.WrapFailed(err, "could not seed PRNG for sharing id %d", sharingId)
+			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)
 		}
-		p.Prngs[sharingId] = prng
+		p.Prngs.Put(participant, prng)
 	}
 	return nil
 }

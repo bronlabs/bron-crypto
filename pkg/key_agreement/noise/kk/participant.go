@@ -31,9 +31,9 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 	err := validate(suite, prng, sid, s, rs, handshakeMessage1, handshakeMessage2)
 	if err != nil {
 		if isInitializer {
-			return nil, errs.WrapInvalidArgument(err, "invalid initializer")
+			return nil, errs.WrapArgument(err, "invalid initializer")
 		} else {
-			return nil, errs.WrapInvalidArgument(err, "invalid responder")
+			return nil, errs.WrapArgument(err, "invalid responder")
 		}
 	}
 	var session noise.EncryptionContext
@@ -44,9 +44,9 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 	}
 	if err != nil {
 		if isInitializer {
-			return nil, errs.WrapInvalidArgument(err, "invalid initializer")
+			return nil, errs.WrapArgument(err, "invalid initializer")
 		} else {
-			return nil, errs.WrapInvalidArgument(err, "invalid responder")
+			return nil, errs.WrapArgument(err, "invalid responder")
 		}
 	}
 	session.IsInitiator = isInitializer
@@ -64,7 +64,7 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 func validate(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) error {
 	err := suite.Validate()
 	if err != nil {
-		return errs.WrapInvalidType(err, "invalid ciphersuite")
+		return errs.WrapType(err, "invalid ciphersuite")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
@@ -88,7 +88,7 @@ func validate(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs
 		return errs.NewIsNil("message is empty")
 	}
 	if bytes.Equal(handshakeMessage1, handshakeMessage2) {
-		return errs.NewInvalidType("handshake message in each round must be different")
+		return errs.NewType("handshake message in each round must be different")
 	}
 	return nil
 }

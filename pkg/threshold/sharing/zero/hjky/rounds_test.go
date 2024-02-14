@@ -16,39 +16,36 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky/testutils"
 )
 
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []integration.IdentityKey, cohortConfig *integration.CohortConfig) {
+func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol) {
 	t.Helper()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
-	cohortConfig, err = integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, threshold, identities)
+
+	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	return uniqueSessionId, identities, cohortConfig
+	return uniqueSessionId, identities, protocol
 }
 
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	uniqueSessionId, identities, cohortConfig := setup(t, curve, h, threshold, n)
+	uniqueSessionId, identities, protocol := setup(t, curve, h, threshold, n)
 
-	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(uniqueSessionId, cohortConfig, identities)
+	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
 	t.Run("none of the samples are zero", func(t *testing.T) {
@@ -60,13 +57,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 	t.Run("samples combine to zero", func(t *testing.T) {
 		t.Parallel()
-		shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+		shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
 		require.NoError(t, err)
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, len(participants))
 		for i := 0; i < len(participants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    participants[i].GetSharingId(),
+				Id:    uint(participants[i].SharingId()),
 				Value: samples[i],
 			}
 		}
@@ -82,7 +79,9 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 		for i, participant := range participants {
 			for j := range participants {
-				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(publicKeySharesMaps[j][participant.GetAuthKey().Hash()]))
+				pk, exists := publicKeySharesMaps[j].Get(participant.IdentityKey())
+				require.True(t, exists)
+				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(pk))
 			}
 		}
 	})

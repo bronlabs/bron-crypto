@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 )
 
 func Test_ChachaPrng(t *testing.T) {
 	// run the test
-	testutils.PrngTester(t, chacha20.NewChachaPRNG)
+	testutils.PrngTester(t, chacha.NewChachaPRNG)
 }
 
 func Test_TmmoPrng(t *testing.T) {

@@ -68,10 +68,10 @@ func (ctrDrbg *CtrDRBG) SetKey(key []byte) (err error) {
 		ctrDrbg.key = make([]byte, ctrDrbg.keySize)
 	case ctrDrbg.keySize:
 		if n := copy(ctrDrbg.key, key); n != ctrDrbg.keySize {
-			return errs.NewInvalidLength("key copy went wrong")
+			return errs.NewLength("key copy went wrong")
 		}
 	default:
-		return errs.NewInvalidLength("key has wrong length")
+		return errs.NewLength("key has wrong length")
 	}
 	ctrDrbg.aesBlockCipher, err = aes.NewCipher(ctrDrbg.key)
 	if err != nil {
@@ -85,7 +85,7 @@ func (ctrDrbg *CtrDRBG) SetKey(key []byte) (err error) {
 func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	// +. Treat providedData==nil as SeedSize zeroed bytes.
 	if (len(providedData) != ctrDrbg.SeedSize()) && (len(providedData) != 0) {
-		return errs.NewInvalidLength("provided data has the wrong length (%d != %d)", len(providedData), ctrDrbg.SeedSize())
+		return errs.NewLength("provided data has the wrong length (%d != %d)", len(providedData), ctrDrbg.SeedSize())
 	}
 	// 1. temp = Nil
 	// +. Allocate space for temp
@@ -228,7 +228,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int) (requestedBytes []byte, err error) {
 	// 1. IF (no_of_bits_to_return > max_number_of_bits): return ERROR_FLAG, Nil
 	if noOfBytesToReturn > maxNumberOfBytesDF {
-		return nil, errs.NewInvalidLength("no_of_bits_to_return > max_number_of_bits")
+		return nil, errs.NewLength("no_of_bits_to_return > max_number_of_bits")
 	}
 	// 2. L = len(input_string)/8.
 	l := uint32(len(inputString))

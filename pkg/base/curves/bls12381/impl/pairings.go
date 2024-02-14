@@ -1,7 +1,7 @@
 package bls12381impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 const coefficientsG2 = 68
@@ -9,27 +9,27 @@ const coefficientsG2 = 68
 type Engine struct {
 	pairs []pair
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type pair struct {
 	g1 G1
 	g2 G2
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type g2Prepared struct {
 	identity     int
 	coefficients []coefficients
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type coefficients struct {
 	a, b, c Fp2
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (c *coefficients) CMove(arg1, arg2 *coefficients, choice int) *coefficients {

@@ -5,12 +5,11 @@ import (
 	"crypto/sha256"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/trusted_dealer"
@@ -18,17 +17,21 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing/aggregation"
 )
 
-func MakeSigningParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, shards map[types.IdentityHash]*glow.Shard) (participants []*signing.Cosigner, err error) {
-	if len(identities) < cohortConfig.Protocol.Threshold {
-		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.Threshold)
+func MakeSigningParticipants(uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *glow.Shard]) (participants []*signing.Cosigner, err error) {
+	if len(identities) < int(protocol.Threshold()) {
+		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}
 
 	participants = make([]*signing.Cosigner, len(identities))
 	for i, identity := range identities {
-		if !cohortConfig.IsInCohort(identity) {
+		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("invalid identity")
 		}
-		participants[i], err = signing.NewCosigner(uniqueSessionId, identity.(integration.AuthKey), hashset.NewHashSet(identities), shards[identity.Hash()], cohortConfig, nil, crand.Reader)
+		thisShard, exists := shards.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("shard")
+		}
+		participants[i], err = signing.NewCosigner(uniqueSessionId, identity.(types.AuthKey), hashset.NewHashableHashSet(identities...), thisShard, protocol, nil, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -48,10 +51,10 @@ func ProducePartialSignature(participants []*signing.Cosigner, message []byte) (
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []integration.IdentityKey, partialSignatures []*glow.PartialSignature) map[types.IdentityHash]*glow.PartialSignature {
-	result := make(map[types.IdentityHash]*glow.PartialSignature)
+func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*glow.PartialSignature) types.RoundMessages[*glow.PartialSignature] {
+	result := types.NewRoundMessages[*glow.PartialSignature]()
 	for i, identity := range identities {
-		result[identity.Hash()] = partialSignatures[i]
+		result.Put(identity, partialSignatures[i])
 	}
 	return result
 }
@@ -61,30 +64,34 @@ func SigningRoundTrip(threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: bls12381.NewG1(),
-		Hash:  hashFunc,
+	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make ciphersuite")
 	}
 
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make test identities")
 	}
 
-	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make cohort protocol")
 	}
 
-	shards, err := trusted_dealer.Keygen(cohort, crand.Reader)
+	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
 	if err != nil {
 		return errs.WrapFailed(err, "could not run trusted dealer keygen")
 	}
 
-	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
+	aliceShard, exists := shards.Get(identities[0])
+	if !exists {
+		return errs.NewMissing("0th shard")
+	}
+	publicKeyShares := aliceShard.PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := MakeSigningParticipants(sid, cohort, identities, shards)
+	participants, err := MakeSigningParticipants(sid, protocol, identities, shards)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make signing participants")
 	}
@@ -96,7 +103,7 @@ func SigningRoundTrip(threshold, n int) error {
 
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator(sid, shards[identities[0].Hash()].PublicKeyShares, cohort)
+	agg, err := aggregation.NewAggregator(sid, publicKeyShares, protocol)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make aggregator")
 	}
@@ -108,7 +115,7 @@ func SigningRoundTrip(threshold, n int) error {
 
 	err = bls.Verify(publicKey, signature, message, nil, bls.Basic, nil)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "could not verify signature")
+		return errs.WrapVerification(err, "could not verify signature")
 	}
 	return nil
 }

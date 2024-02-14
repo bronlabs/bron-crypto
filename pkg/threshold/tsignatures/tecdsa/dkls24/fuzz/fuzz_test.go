@@ -16,12 +16,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
-	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
+	dklstu "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
 
@@ -42,45 +41,45 @@ func FuzzInteractiveSigning(f *testing.F) {
 		// fuzz identities
 		identities := fuzzIdentityKeys(t, fz, cipherSuite, n)
 		// do DKG
-		shards := doDkg(t, fz, cipherSuite, n, threshold, identities)
+		shards := doDkg(t, fz, cipherSuite, threshold, identities)
 		// do interactive signing
 		doInteractiveSigning(t, threshold, identities, shards, message, cipherSuite)
 	})
 }
 
-func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, n int) []integration.IdentityKey {
+func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, n int) []types.IdentityKey {
 	t.Helper()
 	var secretValue []byte
 	fz.Fuzz(&secretValue)
-	identities := make([]integration.IdentityKey, n)
+	identities := make([]types.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
-		commitedScalar, err := cipherSuite.Curve.ScalarField().Hash(secretValue)
+		commitedScalar, err := cipherSuite.Curve().ScalarField().Hash(secretValue)
 		require.NoError(t, err)
-		identity, err := integration_testutils.MakeTestIdentity(cipherSuite, commitedScalar)
+		identity, err := ttu.MakeTestIdentity(cipherSuite, commitedScalar)
 		identities[i] = identity
 		require.NoError(t, err)
 	}
 	return identities
 }
 
-func doInteractiveSigning(t *testing.T, threshold int, identities []integration.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite *integration.CipherSuite) {
+func doInteractiveSigning(t *testing.T, threshold int, identities []types.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite types.SignatureProtocol) {
 	t.Helper()
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.DKLS24, identities, threshold, identities)
+	cohortConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
-	seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
 	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message, seededPrng, nil)
 	require.NoError(t, err)
 }
 
-func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, n, threshold int, identities []integration.IdentityKey) []*dkls24.Shard {
+func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, threshold int, identities []types.IdentityKey) []*dkls24.Shard {
 	t.Helper()
 	var sid []byte
 	fz.Fuzz(&sid)
-	_, _, _, shards, err := dkls24_testutils.KeyGen(cipherSuite.Curve, cipherSuite.Hash, threshold, n, identities, sid)
+	_, _, _, shards, err := dklstu.KeyGen(cipherSuite.Curve(), cipherSuite.Hash(), threshold, len(identities), identities, sid)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsIncorrectCount(err) {
+		if errs.IsDuplicate(err) || errs.IsCount(err) {
 			t.Skip("too many participants")
 		}
 	}
@@ -88,7 +87,7 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite *integration.CipherSuite, 
 	return shards
 }
 
-func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, *integration.CipherSuite) {
+func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.SignatureProtocol) {
 	t.Helper()
 
 	// setup random variables according to the data seed
@@ -113,9 +112,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, *integrat
 	fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "randomSeed: ", randomSeed, "message: ", message)
 	curve := allCurves[curveIndex%len(allCurves)]
 	h := allHashes[hashIndex%len(allHashes)]
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  h,
-	}
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
 	return fz, n, threshold, message, cipherSuite
 }

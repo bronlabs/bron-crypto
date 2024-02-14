@@ -12,8 +12,8 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 )
 
@@ -27,7 +27,7 @@ type PrivateKey struct {
 	S curves.Scalar
 	PublicKey
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type PublicKey = curves.Point
@@ -102,10 +102,10 @@ func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, ta
 		return nil, errs.NewIsNil("nil arguments")
 	}
 	if len(ciphertext) == 0 {
-		return nil, errs.NewInvalidLength("ciphertext length is zero")
+		return nil, errs.NewLength("ciphertext length is zero")
 	}
 	if len(tag) != 64 {
-		return nil, errs.NewInvalidLength("authentication tag's length is not 64: it is %d", len(tag))
+		return nil, errs.NewLength("authentication tag's length is not 64: it is %d", len(tag))
 	}
 	// step 2.1: since the public key is deserialized, it's already on curve so just checking for identity.
 	if myPrivateKey.S.IsZero() {
@@ -148,7 +148,7 @@ func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, ta
 	}
 	// step 2.9
 	if subtle.ConstantTimeCompare(tag, tPrime) == 1 {
-		return nil, errs.NewVerificationFailed("authentication check failed")
+		return nil, errs.NewVerification("authentication check failed")
 	}
 	// step 2.10
 	return message, nil
@@ -161,10 +161,10 @@ func deriveKeys(VZ []byte) (K1, K2 []byte, err error) {
 	K := make([]byte, aesKeyLength+hmacKeyLength)
 	n, err := kdf.Read(K)
 	if err != nil {
-		return nil, nil, errs.WrapRandomSampleFailed(err, "could not read bytes for K")
+		return nil, nil, errs.WrapRandomSample(err, "could not read bytes for K")
 	}
 	if n != 96 {
-		return nil, nil, errs.NewRandomSampleFailed("couldn't read enough bytes: read %d bytes", n)
+		return nil, nil, errs.NewRandomSample("couldn't read enough bytes: read %d bytes", n)
 	}
 	K1 = K[:aesKeyLength]
 	K2 = K[aesKeyLength:]
@@ -180,7 +180,7 @@ func aes256CBCEncrypt(key, message []byte, prng io.Reader) (ciphertext []byte, e
 	ciphertext = make([]byte, block.BlockSize()+len(padded))
 	iv := ciphertext[:block.BlockSize()]
 	if _, err := prng.Read(iv); err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "couldn't read iv")
+		return nil, errs.WrapRandomSample(err, "couldn't read iv")
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(ciphertext[block.BlockSize():], padded)
@@ -193,7 +193,7 @@ func aes256CBCDecrypt(key, ciphertext []byte) (message []byte, err error) {
 		return nil, errs.WrapFailed(err, "could not construct block cipher")
 	}
 	if len(ciphertext) < block.BlockSize() {
-		return nil, errs.NewInvalidLength("ciphertext is too short: length is %d", len(ciphertext))
+		return nil, errs.NewLength("ciphertext is too short: length is %d", len(ciphertext))
 	}
 	iv := ciphertext[:block.BlockSize()]
 	ciphertext = ciphertext[block.BlockSize():]

@@ -6,20 +6,19 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
-	if len(identities) != cohortConfig.Protocol.TotalParties {
-		return nil, errs.NewInvalidLength("invalid number of identities %d != %d", len(identities), cohortConfig.Protocol.TotalParties)
+func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
+	if len(identities) != int(protocol.TotalParties()) {
+		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
 
-	participants = make([]*gennaro.Participant, cohortConfig.Protocol.TotalParties)
+	participants = make([]*gennaro.Participant, protocol.TotalParties())
 	for i, identity := range identities {
 		var prng io.Reader
 		if len(prngs) != 0 && prngs[i] != nil {
@@ -28,10 +27,10 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 			prng = crand.Reader
 		}
 
-		if !cohortConfig.IsInCohort(identity) {
+		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
 		}
-		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity.(integration.AuthKey), cohortConfig, niCompilerName, prng, nil)
+		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, niCompilerName, prng, nil)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -40,9 +39,9 @@ func MakeParticipants(uniqueSessionId []byte, cohortConfig *integration.CohortCo
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []map[types.IdentityHash]*gennaro.Round1P2P, err error) {
+func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*gennaro.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*gennaro.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]map[types.IdentityHash]*gennaro.Round1P2P, len(participants))
+	round1UnicastOutputs = make([]types.RoundMessages[*gennaro.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -53,7 +52,7 @@ func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []map[types.IdentityHash]*gennaro.Round1Broadcast, round2UnicastInputs []map[types.IdentityHash]*gennaro.Round1P2P) (round2Outputs []*gennaro.Round2Broadcast, err error) {
+func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []types.RoundMessages[*gennaro.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*gennaro.Round1P2P]) (round2Outputs []*gennaro.Round2Broadcast, err error) {
 	round2Outputs = make([]*gennaro.Round2Broadcast, len(participants))
 	for i := range participants {
 		round2Outputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -64,9 +63,9 @@ func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []ma
 	return round2Outputs, nil
 }
 
-func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []map[types.IdentityHash]*gennaro.Round2Broadcast) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, err error) {
+func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []types.RoundMessages[*gennaro.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
-	publicKeyShares = make([]*tsignatures.PublicKeyShares, len(participants))
+	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round3(round3Inputs[i])
 		if err != nil {
@@ -77,8 +76,8 @@ func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []map[types.I
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func RunDKG(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, identities []integration.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PublicKeyShares, err error) {
-	participants, err := MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
+func RunDKG(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+	participants, err := MakeParticipants(uniqueSessionId, protocol, identities, randomisedFischlin.Name, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -88,13 +87,13 @@ func RunDKG(uniqueSessionId []byte, cohortConfig *integration.CohortConfig, iden
 		return nil, nil, err
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsB, err := DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r3InsB := integration_testutils.MapBroadcastO2I(participants, r2OutsB)
+	r3InsB := ttu.MapBroadcastO2I(participants, r2OutsB)
 	signingKeyShares, publicKeyShares, err = DoDkgRound3(participants, r3InsB)
 	if err != nil {
 		return nil, nil, err

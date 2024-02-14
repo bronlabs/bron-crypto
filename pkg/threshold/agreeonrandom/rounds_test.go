@@ -12,28 +12,29 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
-func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []integration.IdentityKey) []byte {
+func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []types.IdentityKey) []byte {
 	t.Helper()
 	var participants []*agreeonrandom.Participant
+	protocol, err := ttu.MakeMPCProtocol(curve, identities)
+	require.NoError(t, err)
 	for _, identity := range identities {
 		var participant *agreeonrandom.Participant
-		participant, _ = agreeonrandom.NewParticipant(curve, identity.(integration.AuthKey), hashset.NewHashSet(identities), nil, crand.Reader)
+		participant, _ = agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, crand.Reader)
 		participants = append(participants, participant)
 	}
 
 	r1Out, err := testutils.DoRound1(participants)
 	require.NoError(t, err)
-	r2In := integration_testutils.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(participants, r1Out)
 	r2Out, err := testutils.DoRound2(participants, r2In)
 	require.NoError(t, err)
-	r3In := integration_testutils.MapBroadcastO2I(participants, r2Out)
+	r3In := ttu.MapBroadcastO2I(participants, r2Out)
 	agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 	require.NoError(t, err)
 	require.Len(t, agreeOnRandoms, len(identities))
@@ -48,17 +49,15 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []int
 
 func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	require.NoError(t, err)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
-			identities := make([]integration.IdentityKey, subsetSize)
+			identities := make([]types.IdentityKey, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
@@ -71,17 +70,15 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 
 func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha3.New256,
-	}
-	allIdentities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	require.NoError(t, err)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
 		combinations := combin.Combinations(n, subsetSize)
 		for _, combinationIndices := range combinations {
-			identities := make([]integration.IdentityKey, subsetSize)
+			identities := make([]types.IdentityKey, subsetSize)
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}

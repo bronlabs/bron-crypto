@@ -16,9 +16,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -33,18 +32,15 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
 		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
-		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		set := hashset.NewHashSet(identities)
-		th = th % uint8(set.Len())
+		cipherSuite, _ := ttu.MakeSignatureProtocol(curve, h)
+		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
+		identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+		set := hashset.NewHashableHashSet(identities...)
+		th = th % uint8(set.Size())
 
-		cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, int(th), identities)
+		cohortConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, int(th))
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -77,10 +73,10 @@ func Fuzz_Test(f *testing.F) {
 		}
 
 		for _, out := range r1OutsU {
-			require.Len(t, out, cohortConfig.Protocol.TotalParties-1)
+			require.Equal(t, out.Size(), int(cohortConfig.TotalParties())-1)
 		}
 
-		r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 		signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.NoError(t, err)
 
@@ -102,7 +98,7 @@ func Fuzz_Test(f *testing.F) {
 			}
 		}
 
-		shamirDealer, err := shamir.NewDealer(int(th), set.Len(), curve)
+		shamirDealer, err := shamir.NewDealer(uint(th), uint(set.Size()), curve)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -114,7 +110,7 @@ func Fuzz_Test(f *testing.F) {
 		shamirShares := make([]*shamir.Share, len(participants))
 		for i := 0; i < len(participants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    participants[i].GetSharingId(),
+				Id:    uint(participants[i].SharingId()),
 				Value: signingKeyShares[i].Share,
 			}
 		}

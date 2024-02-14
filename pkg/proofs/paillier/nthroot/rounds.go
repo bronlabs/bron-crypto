@@ -5,32 +5,32 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type Round1Output struct {
 	A *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round2Output struct {
 	E *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round3Output struct {
 	Z *saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (prover *Prover) Round1() (output *Round1Output, err error) {
 	if prover.round != 1 {
-		return nil, errs.NewInvalidRound("%d != 1", prover.round)
+		return nil, errs.NewRound("%d != 1", prover.round)
 	}
 
 	// P chooses r at random mod N^2...
@@ -51,7 +51,7 @@ func (prover *Prover) Round1() (output *Round1Output, err error) {
 
 func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if verifier.round != 2 {
-		return nil, errs.NewInvalidRound("%d != 2", verifier.round)
+		return nil, errs.NewRound("%d != 2", verifier.round)
 	}
 
 	verifier.state.a = input.A
@@ -79,7 +79,7 @@ func (verifier *Verifier) Round2(input *Round1Output) (output *Round2Output, err
 
 func (prover *Prover) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if prover.round != 3 {
-		return nil, errs.NewInvalidRound("%d != 3", prover.round)
+		return nil, errs.NewRound("%d != 3", prover.round)
 	}
 
 	// P sends z = rv^e mod N^2 to V
@@ -93,7 +93,7 @@ func (prover *Prover) Round3(input *Round2Output) (output *Round3Output, err err
 
 func (verifier *Verifier) Round4(input *Round3Output) (err error) {
 	if verifier.round != 4 {
-		return errs.NewInvalidRound("%d != 4", verifier.round)
+		return errs.NewRound("%d != 4", verifier.round)
 	}
 
 	// calc z^N mod N^2
@@ -104,7 +104,7 @@ func (verifier *Verifier) Round4(input *Round3Output) (err error) {
 
 	// V checks that z^N = au^e mod N^2, and accepts if and only if this is the case
 	if zToN.Eq(aTimesUtoE) == 0 {
-		return errs.NewVerificationFailed("verification failed")
+		return errs.NewVerification("verification failed")
 	}
 
 	verifier.round += 2

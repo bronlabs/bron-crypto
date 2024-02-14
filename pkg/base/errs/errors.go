@@ -9,38 +9,47 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/exp/constraints"
 )
 
 type ErrorType string
 
 type AbortIdentifier interface {
-	~int | ~string | ~[]byte | ~[32]byte
+	constraints.Integer | ~string | ~[]byte | ~[32]byte
 }
 
 const (
-	DivisionByZero     ErrorType = "[DIVISION_BY_ZERO]"
-	Duplicate          ErrorType = "[DUPLICATE]"
-	Failed             ErrorType = "[FAILED]"
-	IdentifiableAbort  ErrorType = "[ABORT]"
-	IncorrectCount     ErrorType = "[INCORRECT_COUNT]"
-	InvalidArgument    ErrorType = "[INVALID_ARGUMENT]"
-	InvalidCoordinates ErrorType = "[INVALID_COORDINATES]"
-	InvalidCurve       ErrorType = "[INVALID_CURVE]"
-	InvalidIdentifier  ErrorType = "[INVALID_IDENTIFIER]"
-	InvalidLength      ErrorType = "[INVALID_LENGTH]"
-	InvalidRange       ErrorType = "[INVALID_RANGE]"
-	InvalidRound       ErrorType = "[INVALID_ROUND]"
-	InvalidType        ErrorType = "[INVALID_TYPE]"
-	IsIdentity         ErrorType = "[IS_IDENTITY]"
-	IsNil              ErrorType = "[IS_NIL]"
-	IsZero             ErrorType = "[IS_ZERO]"
-	Membership         ErrorType = "[MEMBERSHIP]"
-	Missing            ErrorType = "[MISSING]"
-	Serialisation      ErrorType = "[SERIALISATION_ERROR]"
-	RandomSampleFailed ErrorType = "[RANDOM_SAMPLE_FAILED]"
-	HashingFailed      ErrorType = "[HASHING_FAILED]"
-	TotalAbort         ErrorType = "[TOTAL_ABORT]"
-	VerificationFailed ErrorType = "[VERIFICATION_FAILED]"
+	Argument          ErrorType = "[ARGUMENT_ERROR]"
+	Coordinates       ErrorType = "[COORDINATES_ERROR]"
+	Count             ErrorType = "[COUNT_ERROR]"
+	Curve             ErrorType = "[CURVE_ERROR]"
+	DivisionByZero    ErrorType = "[DIVISION_BY_ZERO_ERROR]"
+	Duplicate         ErrorType = "[DUPLICATE_ERROR]"
+	Hashing           ErrorType = "[HASHING_ERROR]"
+	IdentifiableAbort ErrorType = "[ABORT]"
+	Identifier        ErrorType = "[IDENTIFIER_ERROR]"
+	IsIdentity        ErrorType = "[IS_IDENTITY_ERROR]"
+	IsNil             ErrorType = "[IS_NIL_ERROR]"
+	IsZero            ErrorType = "[IS_ZERO_ERROR]"
+	Length            ErrorType = "[LENGTH_ERROR]"
+	Membership        ErrorType = "[MEMBERSHIP_ERROR]"
+	Missing           ErrorType = "[MISSING_ERROR]"
+	Panic             ErrorType = "[PANIC]"
+	RandomSample      ErrorType = "[RANDOM_SAMPLE_ERROR]"
+	Range             ErrorType = "[RANGE_ERROR]"
+	Round             ErrorType = "[ROUND_ERROR]"
+	Serialisation     ErrorType = "[SERIALISATION_ERROR]"
+	Size              ErrorType = "[SIZE_ERROR]"
+	TotalAbort        ErrorType = "[TOTAL_ABORT]"
+	Type              ErrorType = "[TYPE_ERROR]"
+	Validation        ErrorType = "[VALIDATION_ERROR]"
+	Value             ErrorType = "[VALUE_ERROR]"
+	Verification      ErrorType = "[VERIFICATION_ERROR]"
+
+	IsNotNil  ErrorType = "[IS_NOT_NIL_ERROR]"
+	IsNotZero ErrorType = "[IS_NOT_ZERO_ERROR]"
+
+	Failed ErrorType = "[FAILED]"
 )
 
 func Is(err error, errorType ErrorType) bool {

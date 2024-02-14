@@ -11,8 +11,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -30,7 +30,7 @@ var _ curves.Gt = (*Gt)(nil)
 type Gt struct {
 	hash2curve.CurveHasher
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func gtInit() {
@@ -58,7 +58,7 @@ func (g *Gt) Element() curves.GtMember {
 
 func (g *Gt) OperateOver(operator algebra.Operator, ps ...curves.GtMember) (curves.GtMember, error) {
 	if operator != algebra.Multiplication {
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	current := g.Identity()
 	for _, p := range ps {
@@ -77,7 +77,7 @@ func (*Gt) Random(prng io.Reader) (curves.GtMember, error) {
 	}
 	value, err := new(bls12381impl.Gt).Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar in BLS12381Gt")
+		return nil, errs.WrapRandomSample(err, "could not generate random scalar in BLS12381Gt")
 	}
 	return &GtMember{V: value}, nil
 }
@@ -86,7 +86,7 @@ func (g *Gt) Hash(x []byte) (curves.GtMember, error) {
 	reader := sha3.NewShake256()
 	_, err := reader.Write(x)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not write inputs to hash")
+		return nil, errs.WrapHashing(err, "could not write inputs to hash")
 	}
 	return g.Random(reader)
 }

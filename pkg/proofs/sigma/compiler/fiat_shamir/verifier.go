@@ -22,7 +22,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	}
 	fsProof, ok := proof.(*Proof[A, Z])
 	if !ok {
-		return errs.NewInvalidType("input proof")
+		return errs.NewType("input proof")
 	}
 
 	v.transcript.AppendMessages(statementLabel, v.sigmaProtocol.SerializeStatement(statement))
@@ -36,9 +36,8 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	}
 
 	z := fsProof.Z
-	err = v.sigmaProtocol.Verify(statement, a, e, z)
-	if err != nil {
-		return errs.WrapVerificationFailed(err, "verification failed")
+	if err := v.sigmaProtocol.Verify(statement, a, e, z); err != nil {
+		return errs.WrapVerification(err, "verification failed")
 	}
 
 	return nil

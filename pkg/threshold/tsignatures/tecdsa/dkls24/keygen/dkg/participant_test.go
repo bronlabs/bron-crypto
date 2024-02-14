@@ -1,92 +1,42 @@
-package dkg
+package dkg_test
 
 import (
 	crand "crypto/rand"
-	"crypto/sha512"
+	"crypto/sha256"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 )
-
-var _ integration.IdentityKey = (*mockedIdentityKey)(nil)
-
-func (k *mockedIdentityKey) PrivateKey() curves.Scalar {
-	panic("this should not be called")
-}
-
-type mockedIdentityKey struct {
-	curve     curves.Curve
-	publicKey curves.Point
-
-	_ types.Incomparable
-}
-
-func (k *mockedIdentityKey) PublicKey() curves.Point {
-	return k.publicKey
-}
-func (k *mockedIdentityKey) Hash() [32]byte {
-	return sha3.Sum256(k.publicKey.ToAffineCompressed())
-}
-func (k *mockedIdentityKey) Sign(message []byte) []byte {
-	return []byte("mocked")
-}
-func (k *mockedIdentityKey) Verify(signature []byte, message []byte) error {
-	return errs.NewMissing("not implemented")
-}
 
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
-	curve := edwards25519.NewCurve()
-	alicePublicKey, err := curve.Random(crand.Reader)
+	curve := k256.NewCurve()
+	hash := sha256.New
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
-	aliceIdentityKey := &mockedIdentityKey{
-		curve:     curve,
-		publicKey: alicePublicKey,
-	}
-
-	bobPublicKey, err := curve.Random(crand.Reader)
+	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
-	bobIdentityKey := &mockedIdentityKey{
-		curve:     curve,
-		publicKey: bobPublicKey,
-	}
 
-	identityKeys := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
+	cn := randomisedFischlin.Name
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha512.New512_256,
-	}
+	protocol, err := testutils.MakeThresholdSignatureProtocol(cipherSuite, identities, 2, identities)
+	require.NoError(t, err)
 
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet(identityKeys),
-		Protocol: &integration.ProtocolConfig{
-			Name:                 protocols.DKLS24,
-			Threshold:            2,
-			TotalParties:         2,
-			SignatureAggregators: hashset.NewHashSet(identityKeys),
-		},
-	}
-	identities := []integration.IdentityKey{aliceIdentityKey, bobIdentityKey}
 	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
-	alice, err := NewParticipant(sid, aliceIdentityKey, cohortConfig, crand.Reader, nil)
+	alice, err := dkg.NewParticipant(sid, identities[0].(types.AuthKey), protocol, cn, crand.Reader, nil)
 	require.NoError(t, err)
-	bob, err := NewParticipant(sid, bobIdentityKey, cohortConfig, crand.Reader, nil)
-	for _, party := range []*Participant{alice, bob} {
+	bob, err := dkg.NewParticipant(sid, identities[1].(types.AuthKey), protocol, cn, crand.Reader, nil)
+	for _, party := range []*dkg.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)
 	}
-	require.NotEqual(t, alice.GetSharingId(), bob.GetSharingId())
+	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 }

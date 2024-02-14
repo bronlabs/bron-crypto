@@ -4,53 +4,42 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
 )
 
-var _ frost.Participant = (*Cosigner)(nil)
+var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
 type Cosigner struct {
 	prng io.Reader
 
-	MyAuthKey   integration.AuthKey
-	MySharingId int
-	Shard       *frost.Shard
+	myAuthKey   types.AuthKey
+	mySharingId types.SharingID
+	shard       *frost.Shard
 
-	CohortConfig           *integration.CohortConfig
-	SharingIdToIdentityKey map[int]integration.IdentityKey
-	IdentityKeyToSharingId map[types.IdentityHash]int
-	SessionParticipants    *hashset.HashSet[integration.IdentityKey]
+	protocol            types.ThresholdSignatureProtocol
+	sharingConfig       types.SharingConfig
+	sessionParticipants ds.HashSet[types.IdentityKey]
 
 	round int
 	state *State
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (ic *Cosigner) GetAuthKey() integration.AuthKey {
-	return ic.MyAuthKey
+func (ic *Cosigner) IdentityKey() types.IdentityKey {
+	return ic.myAuthKey
 }
 
-func (ic *Cosigner) GetSharingId() int {
-	return ic.MySharingId
-}
-
-func (ic *Cosigner) GetCohortConfig() *integration.CohortConfig {
-	return ic.CohortConfig
+func (ic *Cosigner) SharingId() types.SharingID {
+	return ic.mySharingId
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	for _, signatureAggregator := range ic.CohortConfig.Protocol.SignatureAggregators.Iter() {
-		if signatureAggregator.PublicKey().Equal(ic.MyAuthKey.PublicKey()) {
-			return true
-		}
-	}
-	return false
+	return ic.protocol.Participants().Contains(ic.IdentityKey())
 }
 
 type State struct {
@@ -61,63 +50,62 @@ type State struct {
 
 	aggregation *aggregation.SignatureAggregatorParameters
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewInteractiveCosigner(authKey integration.AuthKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) (*Cosigner, error) {
-	err := validateInputs(authKey, sessionParticipants, shard, cohortConfig, prng)
+func NewInteractiveCosigner(authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) (*Cosigner, error) {
+	err := validateInputs(authKey, sessionParticipants, shard, protocol, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
+	}
+
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
 	cosigner := &Cosigner{
-		MyAuthKey:           authKey,
-		CohortConfig:        cohortConfig,
-		Shard:               shard,
-		SessionParticipants: sessionParticipants,
+		myAuthKey:           authKey,
+		protocol:            protocol,
+		shard:               shard,
+		sessionParticipants: sessionParticipants,
 		prng:                prng,
+		sharingConfig:       sharingConfig,
+		mySharingId:         mySharingId,
 		state:               &State{},
+		round:               1,
 	}
 
 	if cosigner.IsSignatureAggregator() {
 		cosigner.state.aggregation = &aggregation.SignatureAggregatorParameters{}
 	}
 
-	cosigner.SharingIdToIdentityKey, cosigner.IdentityKeyToSharingId, cosigner.MySharingId = integration.DeriveSharingIds(authKey, cosigner.CohortConfig.Participants)
+	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a frost interactive cosigner")
+	}
 
-	cosigner.round = 1
 	return cosigner, nil
 }
 
-func validateInputs(identityKey integration.IdentityKey, sessionParticipants *hashset.HashSet[integration.IdentityKey], shard *frost.Shard, cohortConfig *integration.CohortConfig, prng io.Reader) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "cohort config is invalid")
+func validateInputs(authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "my auth key")
 	}
-	if cohortConfig.Protocol == nil {
-		return errs.NewIsNil("cohort config protocol is nil")
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
-	if shard == nil {
-		return errs.NewVerificationFailed("shard is nil")
+	if err := shard.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "shard")
 	}
-	if err := shard.SigningKeyShare.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate signing key share")
+	if sessionParticipants == nil {
+		return errs.NewIsNil("session participants")
 	}
-	if identityKey == nil {
-		return errs.NewIsNil("identity key is nil")
+	if !sessionParticipants.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("session participants are not a subset of the total participants")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
-	}
-	if sessionParticipants == nil {
-		return errs.NewIsNil("invalid number of session participants")
-	}
-	if sessionParticipants.Len() != cohortConfig.Protocol.Threshold {
-		return errs.NewIncorrectCount("invalid number of session participants")
-	}
-	for _, sessionParticipant := range sessionParticipants.Iter() {
-		if !cohortConfig.IsInCohort(sessionParticipant) {
-			return errs.NewInvalidArgument("invalid session participant")
-		}
 	}
 	return nil
 }

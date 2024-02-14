@@ -24,11 +24,11 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	}
 	rfProof, ok := proof.(*Proof[A, Z])
 	if !ok {
-		return errs.NewInvalidType("input proof")
+		return errs.NewType("input proof")
 	}
 
 	if len(rfProof.A) != r || len(rfProof.E) != r || len(rfProof.Z) != r {
-		return errs.NewInvalidArgument("invalid length")
+		return errs.NewArgument("invalid length")
 	}
 
 	v.transcript.AppendMessages(statementLabel, v.sigmaProtocol.SerializeStatement(statement))
@@ -50,14 +50,14 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	for i := 0; i < r; i++ {
 		digest, err := hash(v.sessionId, a, bitstring.ToBytesLE(i), rfProof.E[i], v.sigmaProtocol.SerializeResponse(rfProof.Z[i]))
 		if err != nil {
-			return errs.WrapHashingFailed(err, "cannot hash")
+			return errs.WrapHashing(err, "cannot hash")
 		}
 		if !isAllZeros(digest) {
-			return errs.NewVerificationFailed("invalid challenge")
+			return errs.NewVerification("invalid challenge")
 		}
 		err = v.sigmaProtocol.Verify(statement, rfProof.A[i], rfProof.E[i], rfProof.Z[i])
 		if err != nil {
-			return errs.WrapVerificationFailed(err, "verification failed")
+			return errs.WrapVerification(err, "verification failed")
 		}
 	}
 

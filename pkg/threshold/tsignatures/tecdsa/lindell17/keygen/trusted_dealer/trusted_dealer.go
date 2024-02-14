@@ -2,11 +2,14 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
@@ -19,7 +22,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 )
 
 const (
@@ -30,66 +32,83 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func verifyShards(cohortConfig *integration.CohortConfig, shards map[types.IdentityHash]*lindell17.Shard, ecdsaPrivateKey *ecdsa.PrivateKey) error {
-	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.HashMap[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
-	// verify private key
-	feldmanShares := make([]*feldman.Share, len(shards))
-	for i := range feldmanShares {
-		sharingId := i + 1
-		feldmanShares[i] = &feldman.Share{
-			Id:    sharingId,
-			Value: shards[sharingIdToIdentity[sharingId].Hash()].SigningKeyShare.Share,
+	for pair := range shards.Iter() {
+		id := pair.Key
+		shard := pair.Value
+		if err := shard.Validate(protocol, id.(types.IdentityKey), true); err != nil {
+			return errs.WrapValidation(err, "shard for id %x", id)
 		}
 	}
-	dealer, err := feldman.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, cohortConfig.CipherSuite.Curve)
+
+	// verify private key
+	feldmanShares := make([]*feldman.Share, shards.Size())
+	for i := range feldmanShares {
+		sharingId := types.SharingID(i + 1)
+		identity, exists := sharingConfig.LookUpLeft(sharingId)
+		if !exists {
+			return errs.NewMissing("could not find identity for sharing id %d", sharingId)
+		}
+		thisShard, exists := shards.Get(identity)
+		if !exists {
+			return errs.NewMissing("couldn't find shard for sharing id %d", sharingId)
+		}
+		feldmanShares[i] = &feldman.Share{
+			Id:    uint(sharingId),
+			Value: thisShard.SigningKeyShare.Share,
+		}
+	}
+	dealer, err := feldman.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "cannot create Feldman dealer")
+		return errs.WrapFailed(err, "cannot create Feldman dealer")
 	}
 	recoveredPrivateKey, err := dealer.Combine(feldmanShares...)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "cannot combine Feldman shares")
+		return errs.WrapFailed(err, "cannot combine Feldman shares")
 	}
 	if recoveredPrivateKey.Nat().Big().Cmp(ecdsaPrivateKey.D) != 0 {
-		return errs.NewVerificationFailed("recovered ECDSA private key is invalid")
+		return errs.NewValue("recovered ECDSA private key is invalid")
 	}
 
 	// verify public key
-	fieldOrder := cohortConfig.CipherSuite.Curve.BaseField().Order()
-	recoveredPublicKey := cohortConfig.CipherSuite.Curve.ScalarBaseMult(recoveredPrivateKey)
-	publicKey, err := cohortConfig.CipherSuite.Curve.NewPoint(
-		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder)),
-		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder)),
+	fieldOrder := protocol.Curve().BaseField().Order()
+	recoveredPublicKey := protocol.Curve().ScalarBaseMult(recoveredPrivateKey)
+	publicKey, err := protocol.Curve().NewPoint(
+		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder)),
+		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder)),
 	)
 	if err != nil {
-		return errs.WrapVerificationFailed(err, "invalid ECDSA public key")
+		return errs.WrapValue(err, "invalid ECDSA public key")
 	}
 	if !publicKey.Equal(recoveredPublicKey) {
-		return errs.NewVerificationFailed("recovered ECDSA public key is invalid")
-	}
-	for _, shard := range shards {
-		if !shard.SigningKeyShare.PublicKey.Equal(publicKey) {
-			return errs.NewVerificationFailed("shard has invalid public key")
-		}
+		return errs.NewVerification("recovered ECDSA public key is invalid")
 	}
 
 	// verify Paillier encryption of shards
-	for myAuthKey, myShard := range shards {
+	for pair := range shards.Iter() {
+		myIdentityKey := pair.Key
+		myShard := pair.Value
 		myShare := myShard.SigningKeyShare.Share.Nat()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
-		for _, theirShard := range shards {
+		for pair := range shards.Iter() {
+			theirShard := pair.Value
 			if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
-				theirEncryptedShare := theirShard.PaillierEncryptedShares[myAuthKey]
+				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
+				if !exists {
+					return errs.NewMissing("their encrypted share did not exist")
+				}
 				decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)
 				if err != nil {
-					return errs.WrapVerificationFailed(err, "cannot create paillier decryptor")
+					return errs.WrapFailed(err, "cannot create paillier decryptor")
 				}
 				theirDecryptedShare, err := decryptor.Decrypt(theirEncryptedShare)
 				if err != nil {
-					return errs.WrapVerificationFailed(err, "cannot verify encrypted share")
+					return errs.WrapFailed(err, "cannot verify encrypted share")
 				}
 				if theirDecryptedShare.Eq(myShare) == 0 {
-					return errs.NewVerificationFailed("cannot decrypt encrypted share")
+					return errs.NewVerification("cannot decrypt encrypted share")
 				}
 			}
 		}
@@ -98,18 +117,14 @@ func verifyShards(cohortConfig *integration.CohortConfig, shards map[types.Ident
 	return nil
 }
 
-func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.IdentityHash]*lindell17.Shard, error) {
-	if err := cohortConfig.Validate(); err != nil {
-		return nil, errs.WrapVerificationFailed(err, "could not validate cohort config")
+func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *lindell17.Shard], error) {
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
 
-	if cohortConfig.Protocol.Name != protocols.LINDELL17 {
-		return nil, errs.NewInvalidArgument("protocol %s not supported", cohortConfig.Protocol.Name)
-	}
-
-	curve := cohortConfig.CipherSuite.Curve
+	curve := protocol.Curve()
 	if curve.Name() != k256.Name && curve.Name() != p256.Name {
-		return nil, errs.NewInvalidArgument("curve should be K256 or P256 where as it is %s", cohortConfig.CipherSuite.Curve.Name())
+		return nil, errs.NewArgument("curve should be K256 or P256 where as it is %s", protocol.Curve().Name())
 	}
 
 	eCurve, err := curveutils.ToGoEllipticCurve(curve)
@@ -123,15 +138,15 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 	}
 
 	privateKey := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.SubGroupOrder().BitLen()))
-	publicKey, err := cohortConfig.CipherSuite.Curve.NewPoint(
-		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, cohortConfig.CipherSuite.Curve.SubGroupOrder())),
-		cohortConfig.CipherSuite.Curve.BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, cohortConfig.CipherSuite.Curve.SubGroupOrder())),
+	publicKey, err := protocol.Curve().NewPoint(
+		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, protocol.Curve().SubGroupOrder())),
+		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, protocol.Curve().SubGroupOrder())),
 	)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a krypton point")
 	}
 
-	dealer, err := shamir.NewDealer(cohortConfig.Protocol.Threshold, cohortConfig.Protocol.TotalParties, curve)
+	dealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
 	}
@@ -141,41 +156,74 @@ func Keygen(cohortConfig *integration.CohortConfig, prng io.Reader) (map[types.I
 		return nil, errs.WrapFailed(err, "failed to deal the secret")
 	}
 
-	sharingIdsToIdentityKeys, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
-	shards := make(map[types.IdentityHash]*lindell17.Shard)
-	for sharingId, identityKey := range sharingIdsToIdentityKeys {
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+
+	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
+		publicKeySharesMap.Put(identityKey, protocol.Curve().ScalarBaseMult(shamirShares[sharingId-1].Value))
+	}
+	// TODO: fix this
+	feldmanCommitmentVector := make([]curves.Point, protocol.Threshold())
+	for i := range feldmanCommitmentVector {
+		feldmanCommitmentVector[i] = protocol.Curve().Generator()
+	}
+
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell17.Shard]()
+	for pair := range sharingConfig.Iter() {
+		sharingId := pair.Left
+		identityKey := pair.Right
 		share := shamirShares[sharingId-1].Value
-		shards[identityKey.Hash()] = &lindell17.Shard{
+		shards.Put(identityKey, &lindell17.Shard{
 			SigningKeyShare: &tsignatures.SigningKeyShare{
 				Share:     share,
 				PublicKey: publicKey,
 			},
-			PaillierPublicKeys:      make(map[types.IdentityHash]*paillier.PublicKey),
-			PaillierEncryptedShares: make(map[types.IdentityHash]*paillier.CipherText),
-		}
+			PublicKeyShares: &tsignatures.PartialPublicKeys{
+				PublicKey:               publicKey,
+				Shares:                  publicKeySharesMap,
+				FeldmanCommitmentVector: feldmanCommitmentVector,
+			},
+			PaillierPublicKeys:      hashmap.NewHashableHashMap[types.IdentityKey, *paillier.PublicKey](),
+			PaillierEncryptedShares: hashmap.NewHashableHashMap[types.IdentityKey, *paillier.CipherText](),
+		})
 	}
 
 	// generate Paillier key pairs and encrypt share
-	for _, identityKey := range sharingIdsToIdentityKeys {
+	for pair := range sharingConfig.Iter() {
+		i := pair.Left
+		identityKey := pair.Right
 		paillierPublicKey, paillierSecretKey, err := paillier.NewKeys(paillierPrimeBitLength)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
 		}
-		shards[identityKey.Hash()].PaillierSecretKey = paillierSecretKey
-		for _, otherIdentityKey := range sharingIdsToIdentityKeys {
-			if !types.Equals(identityKey, otherIdentityKey) {
-				shards[otherIdentityKey.Hash()].PaillierPublicKeys[identityKey.Hash()] = paillierPublicKey
-				shards[otherIdentityKey.Hash()].PaillierEncryptedShares[identityKey.Hash()], _, err = paillierPublicKey.Encrypt(shards[identityKey.Hash()].SigningKeyShare.Share.Nat())
-				if err != nil {
-					return nil, errs.WrapFailed(err, "cannot encrypt share with paillier")
-				}
+		thisShard, exists := shards.Get(identityKey)
+		if !exists {
+			return nil, errs.NewMissing("couldn't find shard for sharing id %d", i)
+		}
+		thisShard.PaillierSecretKey = paillierSecretKey
+		for pair := range sharingConfig.Iter() {
+			j := pair.Left
+			otherIdentityKey := pair.Right
+			if identityKey.Equal(otherIdentityKey) {
+				continue
 			}
+			otherShard, exists := shards.Get(otherIdentityKey)
+			if !exists {
+				return nil, errs.NewMissing("shard for sharing id %d is missing", j)
+			}
+			ct, _, err := paillierPublicKey.Encrypt(thisShard.SigningKeyShare.Share.Nat())
+			if err != nil {
+				return nil, errs.WrapFailed(err, "couldn't encrypt share of %d for %d", i, j)
+			}
+			otherShard.PaillierEncryptedShares.Put(identityKey, ct)
+			otherShard.PaillierPublicKeys.Put(identityKey, paillierPublicKey)
 		}
 	}
 
-	err = verifyShards(cohortConfig, shards, ecdsaPrivateKey)
-	if err != nil {
-		return nil, errs.NewVerificationFailed("failed to verify shards")
+	if err := validateShards(protocol, shards, ecdsaPrivateKey); err != nil {
+		return nil, errs.WrapValidation(err, "failed to vlidate shards")
 	}
 
 	return shards, nil

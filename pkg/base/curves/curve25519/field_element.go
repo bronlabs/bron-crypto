@@ -11,8 +11,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -23,7 +23,7 @@ var _ json.Unmarshaler = (*BaseFieldElement)(nil)
 type BaseFieldElement struct {
 	V [base.FieldBytes]byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewBaseFieldElement(value uint64) *BaseFieldElement {
@@ -241,11 +241,11 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElement)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	e.V = ss.V
 	return nil
@@ -269,7 +269,7 @@ func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElement)
 	if !ok {
@@ -305,4 +305,7 @@ func (*BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, er
 
 func (e *BaseFieldElement) Bytes() []byte {
 	return e.V[:]
+}
+func (e *BaseFieldElement) HashCode() uint64 {
+	return e.Uint64()
 }

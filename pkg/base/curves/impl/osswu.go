@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
 // SswuParams for computing the Simplified SWU mapping
@@ -9,7 +9,7 @@ import (
 type SswuParams struct {
 	C1, C2, A, B, Z [FieldLimbs]uint64
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 // Osswu3mod4 computes the simplified map optmized for 3 mod 4 primes

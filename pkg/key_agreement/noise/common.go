@@ -5,8 +5,8 @@ import (
 	"hash"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type Signer struct {
@@ -62,7 +62,7 @@ type Suite struct {
 	Hash  SupportedHash
 	Aead  SupportedAEAD
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (n *Suite) Validate() error {
@@ -73,10 +73,10 @@ func (n *Suite) Validate() error {
 		return errs.NewIsNil("curve is nil")
 	}
 	if _, ok := SupportedHashes[n.Hash]; !ok {
-		return errs.NewInvalidType("hash is not supported")
+		return errs.NewType("hash is not supported")
 	}
 	if _, ok := SupportedAeads[n.Aead]; !ok {
-		return errs.NewInvalidType("aead is not supported")
+		return errs.NewType("aead is not supported")
 	}
 	return nil
 }

@@ -14,11 +14,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
@@ -30,20 +29,16 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
 		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite := &integration.CipherSuite{
-			Curve: curve,
-			Hash:  h,
-		}
+		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		require.NoError(t, err)
 
-		aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
-		bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
-		charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
-		identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
+		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
+		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
+		identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
-		cohortConfig := &integration.CohortConfig{
-			CipherSuite:  cipherSuite,
-			Participants: hashset.NewHashSet(identities),
-		}
+		protocol, err := ttu.MakeMPCProtocol(curve, identities)
+		require.NoError(t, err)
 
 		participants, err := testutils.MakeSetupParticipants(curve, identities, prng)
 		if err != nil && !errs.IsKnownError(err) {
@@ -56,17 +51,17 @@ func Fuzz_Test(f *testing.F) {
 		r1OutsU, err := testutils.DoSetupRound1(participants)
 		require.NoError(t, err)
 
-		r2InsU := integration_testutils.MapUnicastO2I(participants, r1OutsU)
+		r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
 		r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 		require.NoError(t, err)
 
-		r3InsU := integration_testutils.MapUnicastO2I(participants, r2OutsU)
+		r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
 		allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 		require.NoError(t, err)
 
-		seededPrng, err := chacha20.NewChachaPRNG(nil, nil)
+		seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 		require.NoError(t, err)
-		sampleParticipants, err := testutils.MakeSampleParticipants(cohortConfig, identities, allPairwiseSeeds, seededPrng, nil)
+		sampleParticipants, err := testutils.MakeSampleParticipants(protocol, identities, allPairwiseSeeds, seededPrng, nil)
 		require.NoError(t, err)
 		for _, participant := range sampleParticipants {
 			require.NotNil(t, participant)
@@ -79,7 +74,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 
-		sum := cohortConfig.CipherSuite.Curve.ScalarField().Zero()
+		sum := protocol.Curve().ScalarField().Zero()
 		for _, sample := range samples {
 			require.False(t, sample.IsZero())
 			sum = sum.Add(sample)
@@ -88,7 +83,7 @@ func Fuzz_Test(f *testing.F) {
 
 		// test sum of all the shares but one doesn't add up to zero
 		for i := range samples {
-			sum = cohortConfig.CipherSuite.Curve.ScalarField().Zero()
+			sum = protocol.Curve().ScalarField().Zero()
 			for j, sample := range samples {
 				if i != j {
 					sum = sum.Add(sample)

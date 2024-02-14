@@ -10,7 +10,7 @@ import (
 
 func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
 	if c.round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", c.round)
+		return nil, errs.NewRound("round mismatch %d != 1", c.round)
 	}
 	var err error
 	var sigmaPOP_i *bls.Signature[S]
@@ -32,7 +32,7 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 			return nil, errs.WrapFailed(err, "could not produce POP partial signature")
 		}
 	default:
-		return nil, errs.NewInvalidType("scheme type %v not implemented", c.scheme)
+		return nil, errs.NewType("scheme type %v not implemented", c.scheme)
 	}
 	tag, err := bls.GetDst(c.scheme, c.myShard.PublicKeyShares.PublicKey.InG1())
 	if err != nil {
@@ -50,14 +50,14 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 	}, nil
 }
 
-func (c *Cosigner[K, S]) Aggregate(partialSignatures map[types.IdentityHash]*boldyreva02.PartialSignature[S], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
+func (c *Cosigner[K, S]) Aggregate(partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
 	if c.round != 2 {
-		return nil, nil, errs.NewInvalidRound("round mismatch %d != 2", c.round)
+		return nil, nil, errs.NewRound("round mismatch %d != 2", c.round)
 	}
 	if !c.IsSignatureAggregator() {
-		return nil, nil, errs.NewInvalidType("i'm not a signature aggregator")
+		return nil, nil, errs.NewType("i'm not a signature aggregator")
 	}
-	aggregator, err := aggregation.NewAggregator[K, S](c.myShard.PublicKeyShares, scheme, c.cohortConfig)
+	aggregator, err := aggregation.NewAggregator[K, S](c.myShard.PublicKeyShares, scheme, c.protocol)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct aggregator")
 	}

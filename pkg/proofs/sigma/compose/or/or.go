@@ -104,7 +104,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitmen
 		s.E = make([]byte, p.challengeBytesLength)
 		_, err = io.ReadFull(p.prng, s.E)
 		if err != nil {
-			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot generate challenge")
+			return nil, nil, errs.WrapRandomSample(err, "cannot generate challenge")
 		}
 
 		a.A1, s.Z1, err = p.sigma1.RunSimulator(statement.X1, s.E[:p.sigma1.GetChallengeBytesLength()])
@@ -122,7 +122,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitmen
 		s.E = make([]byte, p.challengeBytesLength)
 		_, err = io.ReadFull(p.prng, s.E)
 		if err != nil {
-			return nil, nil, errs.WrapRandomSampleFailed(err, "cannot sample challenge")
+			return nil, nil, errs.WrapRandomSample(err, "cannot sample challenge")
 		}
 		a.A0, s.Z0, err = p.sigma0.RunSimulator(statement.X0, s.E[:p.sigma0.GetChallengeBytesLength()])
 		if err != nil {
@@ -138,7 +138,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 		return nil, errs.NewIsNil("statement/witness/commitment/statement is nil")
 	}
 	if len(challengeBytes) != p.challengeBytesLength {
-		return nil, errs.NewInvalidLength("invalid challenge bytes length")
+		return nil, errs.NewLength("invalid challenge bytes length")
 	}
 
 	e := make([]byte, p.challengeBytesLength)
@@ -172,7 +172,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 		z.Z0 = state.Z0
 
 	default:
-		return nil, errs.NewInvalidArgument("invalid state")
+		return nil, errs.NewArgument("invalid state")
 	}
 
 	return z, nil
@@ -180,26 +180,26 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes []byte, response *Response[Z0, Z1]) error {
 	if statement == nil || commitment == nil || response == nil {
-		return errs.NewVerificationFailed("statement/commitment/response is nil")
+		return errs.NewIsNil("statement/commitment/response is nil")
 	}
 	if len(challengeBytes) != p.challengeBytesLength {
-		return errs.NewVerificationFailed("invalid challenge bytes length")
+		return errs.NewLength("invalid challenge bytes length")
 	}
 
 	e0XorE1 := make([]byte, p.challengeBytesLength)
 	subtle.XORBytes(e0XorE1, response.E0, response.E1)
 	if !bytes.Equal(challengeBytes, e0XorE1) {
-		return errs.NewVerificationFailed("verification failed")
+		return errs.NewVerification("verification failed")
 	}
 
 	// check that conversation (a_0, e_0, z_0) are accepting in Protocol on input x_0
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, response.E0[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
-		return errs.NewVerificationFailed("verification failed")
+		return errs.NewVerification("verification failed")
 	}
 
 	// check that conversation (a_1, e_1, z_1) are accepting in Protocol on input x_1
 	if err := p.sigma1.Verify(statement.X1, commitment.A1, response.E1[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
-		return errs.NewVerificationFailed("verification failed")
+		return errs.NewVerification("verification failed")
 	}
 
 	return nil
@@ -210,7 +210,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement
 		return nil, nil, errs.NewIsNil("statement")
 	}
 	if len(challengeBytes) != p.challengeBytesLength {
-		return nil, nil, errs.NewInvalidLength("challengeBytes")
+		return nil, nil, errs.NewLength("challengeBytes")
 	}
 
 	a := new(Commitment[A0, A1])
@@ -251,10 +251,6 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) DomainSeparationLabel() string {
-	return fmt.Sprintf("(%s_OR_%s)", p.sigma0.DomainSeparationLabel(), p.sigma1.DomainSeparationLabel())
-}
-
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
 	return bytes.Join([][]byte{p.sigma0.SerializeStatement(statement.X0), p.sigma1.SerializeStatement(statement.X1)}, nil)
 }
@@ -265,4 +261,8 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(co
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
 	return bytes.Join([][]byte{p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1)}, nil)
+}
+
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
+	return sigma.Name(fmt.Sprintf("(%s)_OR_(%s)", p.sigma0.Name(), p.sigma1.Name()))
 }

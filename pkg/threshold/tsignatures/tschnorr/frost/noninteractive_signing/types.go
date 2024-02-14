@@ -4,30 +4,30 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 )
 
 type PrivateNoncePair struct {
 	SmallD curves.Scalar
 	SmallE curves.Scalar
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type AttestedCommitmentToNoncePair struct {
-	Attestor    integration.IdentityKey
+	Attestor    types.IdentityKey
 	D           curves.Point
 	E           curves.Point
 	Attestation []byte
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.CohortConfig) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtocol) error {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapArgument(err, "protocol config is invalid")
 	}
 	if ac == nil {
 		return errs.NewIsNil("attested commitment to nonce is nil")
@@ -35,8 +35,8 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	if ac.Attestor == nil {
 		return errs.NewIsNil("attestor is nil")
 	}
-	if !cohortConfig.IsInCohort(ac.Attestor) {
-		return errs.NewInvalidArgument("attestor is not in cohort")
+	if !protocol.Participants().Contains(ac.Attestor) {
+		return errs.NewArgument("attestor is not in cohort")
 	}
 	if ac.D.IsIdentity() {
 		return errs.NewIsIdentity("D is at infinity")
@@ -48,31 +48,24 @@ func (ac *AttestedCommitmentToNoncePair) Validate(cohortConfig *integration.Coho
 	eCurve := ac.E.Curve()
 
 	if dCurve.Name() != eCurve.Name() {
-		return errs.NewInvalidCurve("D and E are not on the same curve %s != %s", dCurve.Name(), eCurve.Name())
+		return errs.NewCurve("D and E are not on the same curve %s != %s", dCurve.Name(), eCurve.Name())
 	}
 	message := ac.D.ToAffineCompressed()
 	message = append(message, ac.E.ToAffineCompressed()...)
 	if err := ac.Attestor.Verify(ac.Attestation, message); err != nil {
-		return errs.WrapVerificationFailed(err, "could not verify attestation")
+		return errs.WrapVerification(err, "could not verify attestation")
 	}
 	return nil
 }
 
 type PreSignature []*AttestedCommitmentToNoncePair
 
-func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func (ps *PreSignature) Validate(protocol types.ThresholdProtocol) error {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapArgument(err, "protocol config config is invalid")
 	}
 	if ps == nil {
 		return errs.NewIsNil("presignature is nil")
-	}
-	i := -1
-	for _, participant := range cohortConfig.Participants.Iter() {
-		i++
-		if participant == nil {
-			return errs.NewIsNil("participant %d is nil", i)
-		}
 	}
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
@@ -83,15 +76,14 @@ func (ps *PreSignature) Validate(cohortConfig *integration.CohortConfig) error {
 		if EHashSet[thisPartyAttestedCommitment.E] {
 			return errs.NewDuplicate("found duplicate E")
 		}
-		if err := thisPartyAttestedCommitment.Validate(cohortConfig); err != nil {
-			return errs.WrapVerificationFailed(err, "invalid attested commitments")
+		if err := thisPartyAttestedCommitment.Validate(protocol); err != nil {
+			return errs.WrapValidation(err, "invalid attested commitments")
 		}
 		DHashSet[thisPartyAttestedCommitment.D] = true
 		EHashSet[thisPartyAttestedCommitment.E] = true
 	}
-	err := sortPreSignatureInPlace(cohortConfig, *ps)
-	if err != nil {
-		return errs.WrapVerificationFailed(err, "could not sort presignature")
+	if err := sortPreSignatureInPlace(protocol, *ps); err != nil {
+		return errs.WrapFailed(err, "could not sort presignature")
 	}
 	return nil
 }
@@ -112,15 +104,14 @@ func (ps *PreSignature) Es() []curves.Point {
 	return result
 }
 
-// TODO: serialisation/deserialisation.
-type PreSignatureBatch []*PreSignature
+type PreSignatureBatch []PreSignature
 
-func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) error {
+func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 	if psb == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapVerificationFailed(err, "could not validate cohort config")
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "could not validate cohort config")
 	}
 	if len(*psb) == 0 {
 		return errs.NewIsZero("batch is empty")
@@ -130,8 +121,8 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 	DHashSet := map[curves.Point]bool{}
 	EHashSet := map[curves.Point]bool{}
 	for i, preSignature := range *psb {
-		if err := preSignature.Validate(cohortConfig); err != nil {
-			return errs.WrapVerificationFailed(err, "presignature with index %d is invalid", i)
+		if err := preSignature.Validate(protocol); err != nil {
+			return errs.WrapValidation(err, "presignature with index %d is invalid", i)
 		}
 		for _, D := range preSignature.Ds() {
 			if DHashSet[D] {
@@ -150,13 +141,15 @@ func (psb *PreSignatureBatch) Validate(cohortConfig *integration.CohortConfig) e
 }
 
 // We require that attested commitments within a presignature are sorted by the sharing id of the attestor.
-func sortPreSignatureInPlace(cohortConfig *integration.CohortConfig, attestedCommitments []*AttestedCommitmentToNoncePair) error {
-	if err := cohortConfig.Validate(); err != nil {
-		return errs.WrapInvalidArgument(err, "cohort config is invalid")
+func sortPreSignatureInPlace(protocol types.ThresholdProtocol, attestedCommitments []*AttestedCommitmentToNoncePair) error {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return errs.WrapArgument(err, "cohort config is invalid")
 	}
-	_, identityKeyToSharingId, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	sort.Slice(attestedCommitments, func(i, j int) bool {
-		return identityKeyToSharingId[attestedCommitments[i].Attestor.Hash()] < identityKeyToSharingId[attestedCommitments[j].Attestor.Hash()]
+		si, _ := sharingConfig.LookUpRight(attestedCommitments[i].Attestor)
+		sj, _ := sharingConfig.LookUpRight(attestedCommitments[j].Attestor)
+		return si < sj
 	})
 	return nil
 }

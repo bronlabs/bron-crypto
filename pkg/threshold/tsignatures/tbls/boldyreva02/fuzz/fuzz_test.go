@@ -10,11 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
@@ -39,19 +40,31 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	scheme := schemes[schemeIndex%uint(len(schemes))]
 	hashFunc := sha256.New
 
-	keysSubGroup := bls12381.GetSourceSubGroup[K]()
-
-	cipherSuite := &integration.CipherSuite{
-		Curve: keysSubGroup,
-		Hash:  hashFunc,
+	if aliceSecret == 0 {
+		aliceSecret++
+	}
+	if bobSecret == 0 {
+		bobSecret++
+	}
+	if charlieSecret == 0 {
+		charlieSecret++
 	}
 
-	aliceIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(aliceSecret))
-	bobIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(bobSecret))
-	charlieIdentity, _ := integration_testutils.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(charlieSecret))
-	identities := []integration.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+	if hashset.NewComparableHashSet(aliceSecret, bobSecret, charlieSecret).Size() != 3 {
+		t.Skip()
+	}
 
-	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, 2, identities)
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
+
+	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	require.NoError(t, err)
+
+	aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(aliceSecret))
+	bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(bobSecret))
+	charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(charlieSecret))
+	identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, 2, identities)
 	if err != nil && !errs.IsKnownError(err) {
 		require.NoError(t, err)
 	}
@@ -61,11 +74,13 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	require.NoError(t, err)
 
 	shards := keygen[K](t, identities, 2, 3, randomSeed)
+	shard, exists := shards.Get(identities[0])
+	require.True(t, exists)
 
-	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
+	publicKeyShares := shard.PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards, scheme)
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, protocol, identities, shards, scheme)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.ProducePartialSignature(participants, message, bls.Basic)
@@ -79,7 +94,7 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, scheme, cohort)
+	agg, err := aggregation.NewAggregator[K, S](publicKeyShares, scheme, protocol)
 	require.NoError(t, err)
 
 	signature, signaturePOP, err := agg.Aggregate(aggregatorInput, message, scheme)
@@ -89,15 +104,14 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	require.NoError(t, err)
 }
 
-func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKey, threshold, n int, randomSeed int64) map[types.IdentityHash]*boldyreva02.Shard[K] {
+func keygen[K bls.KeySubGroup](t *testing.T, identities []types.IdentityKey, threshold, n int, randomSeed int64) ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]] {
 	t.Helper()
 
 	curve := bls12381.GetSourceSubGroup[K]()
+	require.Len(t, identities, n)
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha256.New,
-	}
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha256.New)
+	require.NoError(t, err)
 
 	inG1 := curve.Name() == bls12381.NameG1
 	inG1s := make([]bool, n)
@@ -105,8 +119,9 @@ func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKe
 		inG1s[i] = inG1
 	}
 
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
 	require.NoError(t, err)
+	require.Equal(t, n, protocol.Participants().Size())
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
@@ -115,26 +130,26 @@ func keygen[K bls.KeySubGroup](t *testing.T, identities []integration.IdentityKe
 	for i := 0; i < n; i++ {
 		randoms[i] = rand.New(rand.NewSource(randomSeed + int64(i)))
 	}
-	participants, err := testutils.MakeDkgParticipants[K](uniqueSessionId, cohortConfig, identities, randoms)
+	participants, err := testutils.MakeDkgParticipants[K](uniqueSessionId, protocol, identities, randoms)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
-		require.Len(t, out, cohortConfig.Participants.Len()-1)
+		require.Equal(t, out.Size(), protocol.Participants().Size()-1)
 	}
 
-	r2InsB, r2InsU := integration_testutils.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 
-	r3Ins := integration_testutils.MapBroadcastO2I(participants, r2Outs)
+	r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
 	shards, err := testutils.DoDkgRound3(participants, r3Ins)
-	shardMap := make(map[types.IdentityHash]*boldyreva02.Shard[K])
+	shardMap := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	require.NoError(t, err)
 	for i, shard := range shards {
-		shardMap[identities[i].Hash()] = shard
-		err = shard.Validate(cohortConfig)
+		shardMap.Put(identities[i], shard)
+		err = shard.Validate(protocol)
 		require.NoError(t, err)
 	}
 	return shardMap

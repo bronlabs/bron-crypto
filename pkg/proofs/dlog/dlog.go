@@ -1,17 +1,174 @@
 package dlog
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-type Statement = curves.Point
+const (
+	PROTOCOL       = schnorr.Name
+	BATCH_PROTOCOL = batch_schnorr.Name
+)
 
-// StatementSubgroupMembershipCheck checks whether the statement is in the prime subgroup, only if the basepoint
-// is in the prime subgroup.
-func StatementSubgroupMembershipCheck(basePoint curves.Point, statement Statement) error {
-	if !basePoint.IsSmallOrder() && statement.IsSmallOrder() {
-		return errs.NewVerificationFailed("basepoint is not low order but the statement is")
+func Prove(uniqueSessionId []byte, secret curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement curves.Point, err error) {
+	if err := validateProveInputs(uniqueSessionId, false, secret, nil, basePoint, niCompiler, prng); err != nil {
+		return nil, nil, errs.WrapArgument(err, "invalid arguments")
+	}
+	statement = basePoint.Mul(secret)
+	switch PROTOCOL {
+	case schnorr.Name:
+		sigmaProtocol, err := schnorr.NewSigmaProtocol(basePoint, prng)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not construct dlog sigma protocol")
+		}
+		niSigma, err := compilerUtils.MakeNonInteractive(niCompiler, sigmaProtocol, prng)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
+		}
+		prover, err := niSigma.NewProver(uniqueSessionId, transcript)
+		if err != nil {
+			return nil, nil, errs.NewFailed("cannot create dlog prover")
+		}
+		proof, err := prover.Prove(statement, secret)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
+		}
+		return proof, statement, nil
+	default:
+		return nil, nil, errs.NewType("default protocol is not supported %s", PROTOCOL)
+	}
+}
+
+func BatchProve(uniqueSessionId []byte, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement []curves.Point, err error) {
+	if err := validateProveInputs(uniqueSessionId, true, nil, secrets, basePoint, niCompiler, prng); err != nil {
+		return nil, nil, errs.WrapArgument(err, "invalid arguments")
+	}
+	statement = make([]curves.Point, len(secrets))
+	for i, s := range secrets {
+		statement[i] = basePoint.Mul(s)
+	}
+	switch BATCH_PROTOCOL {
+	case batch_schnorr.Name:
+		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(basePoint, prng)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not construct batch dlog sigma protocol")
+		}
+		niSigma, err := compilerUtils.MakeNonInteractive(niCompiler, sigmaProtocol, prng)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
+		}
+		prover, err := niSigma.NewProver(uniqueSessionId, transcript)
+		if err != nil {
+			return nil, nil, errs.NewFailed("cannot create dlog prover")
+		}
+		proof, err := prover.Prove(statement, secrets)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
+		}
+		return proof, statement, nil
+	default:
+		return nil, nil, errs.NewType("default protocol is not supported %s", BATCH_PROTOCOL)
+	}
+}
+
+func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
+	if err := validateVerifyInputs(uniqueSessionId, false, statement, nil, basePoint, niCompiler); err != nil {
+		return errs.WrapArgument(err, "invalid arguments")
+	}
+	switch PROTOCOL {
+	case schnorr.Name:
+		sigmaProtocol, err := schnorr.NewSigmaProtocol(basePoint, nil)
+		if err != nil {
+			return errs.WrapFailed(err, "could not construct dlog sigma protocol")
+		}
+		niSigma, err := compilerUtils.MakeNonInteractive(niCompiler, sigmaProtocol, nil)
+		if err != nil {
+			return errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
+		}
+		verifier, err := niSigma.NewVerifier(uniqueSessionId, transcript)
+		if err != nil {
+			return errs.WrapFailed(err, "could not construct verifier")
+		}
+		if err := verifier.Verify(statement, proof); err != nil {
+			return errs.WrapVerification(err, "dlog proof failed")
+		}
+		return nil
+	default:
+		return errs.NewType("default protocol is not supported %s", PROTOCOL)
+	}
+}
+
+func BatchVerify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement []curves.Point, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
+	if err := validateVerifyInputs(uniqueSessionId, true, nil, statement, basePoint, niCompiler); err != nil {
+		return errs.WrapArgument(err, "invalid arguments")
+	}
+	switch BATCH_PROTOCOL {
+	case batch_schnorr.Name:
+		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(basePoint, nil)
+		if err != nil {
+			return errs.WrapFailed(err, "could not construct batch dlog sigma protocol")
+		}
+		niSigma, err := compilerUtils.MakeNonInteractive(niCompiler, sigmaProtocol, nil)
+		if err != nil {
+			return errs.WrapFailed(err, "could not convert batch dlog sigma protocol into non interactive")
+		}
+		verifier, err := niSigma.NewVerifier(uniqueSessionId, transcript)
+		if err != nil {
+			return errs.WrapFailed(err, "could not construct verifier")
+		}
+		if err := verifier.Verify(statement, proof); err != nil {
+			return errs.WrapVerification(err, "dlog proof failed")
+		}
+		return nil
+	default:
+		return errs.NewType("default protocol is not supported %s", PROTOCOL)
+	}
+}
+
+func validateProveInputs(sid []byte, batched bool, secret curves.Scalar, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, prng io.Reader) error {
+	if len(sid) == 0 {
+		return errs.NewIsNil("session id")
+	}
+	if !batched && secret == nil {
+		return errs.NewIsNil("secret")
+	}
+	if batched && secrets == nil {
+		return errs.NewIsNil("secrets")
+	}
+	if basePoint == nil {
+		return errs.NewIsNil("base point")
+	}
+	if !compilerUtils.CompilerIsSupported(niCompiler) {
+		return errs.NewType("compiler %s is not supported", niCompiler)
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng")
+	}
+	return nil
+}
+
+func validateVerifyInputs(sid []byte, batched bool, statement curves.Point, statements []curves.Point, basePoint curves.Point, niCompiler compiler.Name) error {
+	if len(sid) == 0 {
+		return errs.NewIsNil("session id")
+	}
+	if !batched && statement == nil {
+		return errs.NewIsNil("statement")
+	}
+	if batched && statements == nil {
+		return errs.NewIsNil("statements")
+	}
+	if basePoint == nil {
+		return errs.NewIsNil("base point")
+	}
+	if !compilerUtils.CompilerIsSupported(niCompiler) {
+		return errs.NewType("compiler %s is not supported", niCompiler)
 	}
 	return nil
 }

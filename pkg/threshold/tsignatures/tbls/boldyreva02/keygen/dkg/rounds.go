@@ -14,9 +14,9 @@ type Round1P2P = gennaro.Round1P2P
 
 type Round2Broadcast = gennaro.Round2Broadcast
 
-func (p *Participant[K]) Round1() (*Round1Broadcast, map[types.IdentityHash]*Round1P2P, error) {
+func (p *Participant[K]) Round1() (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
 	if p.round != 1 {
-		return nil, nil, errs.NewInvalidRound("round mismatch %d != 1", p.round)
+		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
 	outputBroadcast, outputP2P, err := p.gennaroParty.Round1()
 	if err != nil {
@@ -26,9 +26,9 @@ func (p *Participant[K]) Round1() (*Round1Broadcast, map[types.IdentityHash]*Rou
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *Participant[K]) Round2(round1outputBroadcast map[types.IdentityHash]*Round1Broadcast, round1outputP2P map[types.IdentityHash]*Round1P2P) (*Round2Broadcast, error) {
+func (p *Participant[K]) Round2(round1outputBroadcast types.RoundMessages[*Round1Broadcast], round1outputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, error) {
 	if p.round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.round)
+		return nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}
 	output, err := p.gennaroParty.Round2(round1outputBroadcast, round1outputP2P)
 	if err != nil {
@@ -38,11 +38,11 @@ func (p *Participant[K]) Round2(round1outputBroadcast map[types.IdentityHash]*Ro
 	return output, nil
 }
 
-func (p *Participant[K]) Round3(round2output map[types.IdentityHash]*Round2Broadcast) (*tbls.Shard[K], error) {
+func (p *Participant[K]) Round3(round2output types.RoundMessages[*Round2Broadcast]) (*tbls.Shard[K], error) {
 	if p.round != 3 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 3", p.round)
+		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
-	signingKeyShareVanilla, publicKeyShareVanilla, err := p.gennaroParty.Round3(round2output)
+	signingKeyShareVanilla, publicKeyShares, err := p.gennaroParty.Round3(round2output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "gennaro round 2 failed")
 	}
@@ -50,17 +50,8 @@ func (p *Participant[K]) Round3(round2output map[types.IdentityHash]*Round2Broad
 	share := signingKeyShareVanilla.Share
 	publicKeyPoint, ok := signingKeyShareVanilla.PublicKey.(curves.PairingPoint)
 	if !ok {
-		return nil, errs.NewInvalidType("share was not a pairing point")
+		return nil, errs.NewType("share was not a pairing point")
 	}
-	sharesMap := make(map[types.IdentityHash]curves.PairingPoint, len(publicKeyShareVanilla.SharesMap))
-	for id, point := range publicKeyShareVanilla.SharesMap {
-		pairingPoint, ok := point.(curves.PairingPoint)
-		if !ok {
-			return nil, errs.NewInvalidType("point was not a pairing point")
-		}
-		sharesMap[id] = pairingPoint
-	}
-
 	publicKey := &bls.PublicKey[K]{
 		Y: publicKeyPoint,
 	}
@@ -72,8 +63,9 @@ func (p *Participant[K]) Round3(round2output map[types.IdentityHash]*Round2Broad
 			PublicKey: publicKey,
 		},
 		PublicKeyShares: &tbls.PublicKeyShares[K]{
-			PublicKey: publicKey,
-			SharesMap: sharesMap,
+			PublicKey:               publicKey,
+			Shares:                  publicKeyShares.Shares,
+			FeldmanCommitmentVector: publicKeyShares.FeldmanCommitmentVector,
 		},
 	}, nil
 }

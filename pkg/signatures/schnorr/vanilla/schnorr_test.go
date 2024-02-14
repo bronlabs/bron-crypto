@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
@@ -39,11 +39,9 @@ func Test_HappyPath(t *testing.T) {
 			boundedH := h
 			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 				t.Parallel()
-				cipherSuite := &integration.CipherSuite{
-					Curve: boundedCurve,
-					Hash:  boundedH,
-				}
-				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+				cipherSuite, err := testutils.MakeSignatureProtocol(boundedCurve, boundedH)
+				require.NoError(t, err)
+				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 				require.NoError(t, err)
 
 				signer, err := schnorr.NewSigner(cipherSuite, privateKey)
@@ -64,11 +62,11 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.NewCurve(),
-		Hash:  sha512.New,
-	}
-	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+	curve := edwards25519.NewCurve()
+	h := sha512.New
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
+	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 	require.NoError(t, err)
 
 	signer, err := schnorr.NewSigner(cipherSuite, privateKey)
@@ -101,11 +99,9 @@ func Test_InvalidMessageOrSignatureFailure(t *testing.T) {
 			boundedH := h
 			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 				t.Parallel()
-				cipherSuite := &integration.CipherSuite{
-					Curve: boundedCurve,
-					Hash:  boundedH,
-				}
-				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+				cipherSuite, err := testutils.MakeSignatureProtocol(boundedCurve, boundedH)
+				require.NoError(t, err)
+				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 				require.NoError(t, err)
 
 				signer, err := schnorr.NewSigner(cipherSuite, privateKey)
@@ -126,11 +122,11 @@ func Test_InvalidMessageOrSignatureWithEd25519Verifier(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: edwards25519.NewCurve(),
-		Hash:  sha512.New,
-	}
-	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve, crand.Reader)
+	curve := edwards25519.NewCurve()
+	h := sha512.New
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	require.NoError(t, err)
+	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 	require.NoError(t, err)
 
 	signer, err := schnorr.NewSigner(cipherSuite, privateKey)

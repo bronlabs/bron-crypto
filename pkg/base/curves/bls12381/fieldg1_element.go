@@ -11,8 +11,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG1)(nil)
@@ -23,7 +23,7 @@ var _ json.Unmarshaler = (*BaseFieldElementG1)(nil)
 type BaseFieldElementG1 struct {
 	V *bimpl.Fp
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewBaseFieldElementG1(value uint64) *BaseFieldElementG1 {
@@ -324,11 +324,11 @@ func (e *BaseFieldElementG1) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*BaseFieldElementG1)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	e.V = ss.V
 	return nil
@@ -352,7 +352,7 @@ func (e *BaseFieldElementG1) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != e.BaseField().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElementG1)
 	if !ok {
@@ -381,7 +381,7 @@ func (e *BaseFieldElementG1) Nat() *saferith.Nat {
 
 func (*BaseFieldElementG1) SetBytes(input []byte) (curves.BaseFieldElement, error) {
 	if len(input) != bimpl.FieldBytes {
-		return nil, errs.NewInvalidLength("input length (%d != %d bytes)", len(input), bimpl.FieldBytes)
+		return nil, errs.NewLength("input length (%d != %d bytes)", len(input), bimpl.FieldBytes)
 	}
 	buffer := bitstring.ReverseBytes(input)
 	result, ok := new(bimpl.Fp).SetBytes((*[bimpl.FieldBytes]byte)(buffer))
@@ -395,7 +395,7 @@ func (*BaseFieldElementG1) SetBytes(input []byte) (curves.BaseFieldElement, erro
 
 func (*BaseFieldElementG1) SetBytesWide(input []byte) (curves.BaseFieldElement, error) {
 	if len(input) > bimpl.WideFieldBytes {
-		return nil, errs.NewInvalidLength("input length > %d bytes", bimpl.WideFieldBytes)
+		return nil, errs.NewLength("input length > %d bytes", bimpl.WideFieldBytes)
 	}
 	buffer := bitstring.PadToRight(bitstring.ReverseBytes(input), bimpl.WideFieldBytes-len(input))
 	result := new(bimpl.Fp).SetBytesWide((*[bimpl.WideFieldBytes]byte)(buffer))
@@ -407,4 +407,7 @@ func (*BaseFieldElementG1) SetBytesWide(input []byte) (curves.BaseFieldElement, 
 func (e *BaseFieldElementG1) Bytes() []byte {
 	v := e.V.Bytes()
 	return bitstring.ReverseBytes(v[:])
+}
+func (e *BaseFieldElementG1) HashCode() uint64 {
+	return e.Uint64()
 }

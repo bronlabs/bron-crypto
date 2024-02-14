@@ -1,66 +1,89 @@
 package echo_test
 
 import (
+	"crypto/sha512"
+	"fmt"
+	"hash"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network/echo"
 )
 
 func TestHappyPath(t *testing.T) {
-	cipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha3.New256,
+	t.Parallel()
+	for _, c := range []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve()} {
+		for _, nn := range []int{3, 5, 10} {
+			for _, m := range []string{"Proof of Work > Proof of State", "Dolev-Strong doesn't work for t>=n/2 if nodes are passive"} {
+				for hi, hh := range []func() hash.Hash{sha3.New256, sha512.New512_256} {
+					msg := m
+					curve := c
+					n := nn
+					h := hh
+					t.Run(fmt.Sprintf("%s-%d-hi=%d-msg: %s", curve.Name(), n, hi, msg), func(t *testing.T) {
+						t.Parallel()
+						cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+						require.NoError(t, err)
+						happyPath(t, cipherSuite, nn, msg)
+					})
+				}
+			}
+		}
 	}
-	happyPath(t, cipherSuite, 3)
-	happyPath(t, cipherSuite, 5)
 }
 
-func happyPath(t *testing.T, cipherSuite *integration.CipherSuite, n int) {
+func happyPath(t *testing.T, cipherSuite types.SignatureProtocol, n int, msg string) {
 	t.Helper()
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+	protocol, err := ttu.MakeMPCProtocol(cipherSuite.Curve(), identities)
 	require.NoError(t, err)
-	initiator, err := echo.NewInitiator(cipherSuite, identities[0].(integration.AuthKey), cohortConfig, []byte("sid"), []byte("hello world"))
+	sid := []byte("sid")
+	initiator, err := echo.NewInitiator(sid, identities[0].(types.AuthKey), protocol, []byte(msg))
 	require.NoError(t, err)
 	responders := make([]*echo.Participant, n-1)
 	for i := 1; i < n; i++ {
-		responders[i-1], err = echo.NewResponder(cipherSuite, identities[i].(integration.AuthKey), cohortConfig, []byte("sid"), initiator.MyAuthKey)
+		responders[i-1], err = echo.NewResponder(sid, identities[i].(types.AuthKey), protocol, initiator.IdentityKey())
 		require.NoError(t, err)
 	}
 	allParticipants := []*echo.Participant{initiator}
 	allParticipants = append(allParticipants, responders...)
-	r1OutMessages := make([]map[types.IdentityHash]*echo.Round1P2P, len(allParticipants))
+	r1OutMessages := make([]types.RoundMessages[*echo.Round1P2P], len(allParticipants))
 	for i, participant := range allParticipants {
-		var r1OutMessage map[types.IdentityHash]*echo.Round1P2P
 		r1OutMessage, err := participant.Round1()
 		require.NoError(t, err)
 		r1OutMessages[i] = r1OutMessage
 	}
-	_, r2InMessages := integration_testutils.MapO2I(allParticipants, []string{}, r1OutMessages)
-	r2OutMessages := make([]map[types.IdentityHash]*echo.Round2P2P, len(allParticipants))
+	_, r2InMessages := ttu.MapO2I(allParticipants, []string{}, r1OutMessages)
+	r2OutMessages := make([]types.RoundMessages[*echo.Round2P2P], len(allParticipants))
 	for i, participant := range allParticipants {
-		p2p, err := participant.Round2(r2InMessages[i][initiator.MyAuthKey.Hash()])
+		var msg *echo.Round1P2P
+		var exists bool
+		if !participant.IdentityKey().Equal(initiator.IdentityKey()) {
+			msg, exists = r2InMessages[i].Get(initiator.IdentityKey())
+			require.True(t, exists)
+		}
+		p2p, err := participant.Round2(msg)
 		require.NoError(t, err)
 		r2OutMessages[i] = p2p
 	}
-	_, r3InMessages := integration_testutils.MapO2I(allParticipants, []*echo.Round2P2P{}, r2OutMessages)
+	_, r3InMessages := ttu.MapO2I(allParticipants, []*echo.Round2P2P{}, r2OutMessages)
 	require.NoError(t, err)
 
 	outputMessages := make([][]byte, len(allParticipants))
 	for i, participant := range allParticipants {
-		nonNilR3InMessages := map[types.IdentityHash]*echo.Round2P2P{}
-		for j, msg := range r3InMessages[i] {
-			if msg != nil {
-				nonNilR3InMessages[j] = msg
+		nonNilR3InMessages := types.NewRoundMessages[*echo.Round2P2P]()
+		for mj := range r3InMessages[i].Iter() {
+			if mj.Value != nil {
+				nonNilR3InMessages.Put(mj.Key, mj.Value)
 			}
 		}
 		outputMessages[i], err = participant.Round3(nonNilR3InMessages)
@@ -73,14 +96,12 @@ func happyPath(t *testing.T, cipherSuite *integration.CipherSuite, n int) {
 }
 
 func TestFailIfOnlyTwoParticipants(t *testing.T) {
-	cipherSuite := &integration.CipherSuite{
-		Curve: k256.NewCurve(),
-		Hash:  sha3.New256,
-	}
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, 2)
+	ct, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
-	cohortConfig, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.FROST, identities, 2, identities)
+	identities, err := ttu.MakeTestIdentities(ct, 2)
 	require.NoError(t, err)
-	_, err = echo.NewInitiator(cipherSuite, identities[0].(integration.AuthKey), cohortConfig, []byte("sid"), []byte("hello world"))
+	protocol, err := ttu.MakeMPCProtocol(ct.Curve(), identities)
+	require.NoError(t, err)
+	_, err = echo.NewInitiator([]byte("sid"), identities[0].(types.AuthKey), protocol, []byte("hello world"))
 	require.Error(t, err)
 }

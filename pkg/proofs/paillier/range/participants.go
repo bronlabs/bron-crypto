@@ -6,8 +6,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -28,7 +28,7 @@ type Participant struct {
 	sid    []byte
 	prng   io.Reader
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type ProverState struct {
@@ -38,7 +38,7 @@ type ProverState struct {
 	w2             []*saferith.Nat
 	r2             []*saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Prover struct {
@@ -48,7 +48,7 @@ type Prover struct {
 	sk    *paillier.SecretKey
 	state *ProverState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type VerifierState struct {
@@ -57,7 +57,7 @@ type VerifierState struct {
 	c1          []*paillier.CipherText
 	c2          []*paillier.CipherText
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Verifier struct {
@@ -66,13 +66,13 @@ type Verifier struct {
 	pk    *paillier.PublicKey
 	state *VerifierState
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	err = validateProverInputs(q, sid, sk, x, r, sessionId, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -107,10 +107,10 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 
 func validateProverInputs(q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
 	if len(sid) == 0 {
-		return errs.NewInvalidArgument("invalid sid: %s", sid)
+		return errs.NewArgument("invalid sid: %s", sid)
 	}
 	if q == nil {
 		return errs.NewIsNil("q is nil")
@@ -133,7 +133,7 @@ func validateProverInputs(q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x
 func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	err = validateVerifierInputs(q, sid, pk, xEncrypted, sessionId, prng)
 	if err != nil {
-		return nil, errs.WrapInvalidArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if transcript == nil {
@@ -169,10 +169,10 @@ func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEn
 
 func validateVerifierInputs(q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
-		return errs.NewInvalidArgument("invalid session id: %s", sessionId)
+		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
 	if len(sid) == 0 {
-		return errs.NewInvalidArgument("invalid sid: %s", sid)
+		return errs.NewArgument("invalid sid: %s", sid)
 	}
 	if q == nil {
 		return errs.NewIsNil("q is nil")

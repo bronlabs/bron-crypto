@@ -10,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -27,7 +27,7 @@ var _ curves.ScalarField = (*ScalarField[G1])(nil)
 var _ curves.ScalarField = (*ScalarField[G2])(nil)
 
 type ScalarField[S SourceSubGroups] struct {
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func bls12381G1ScalarFieldInit() {
@@ -86,7 +86,7 @@ func (sf *ScalarField[_]) OperateOver(operator algebra.Operator, xs ...curves.Sc
 	case algebra.PointAddition:
 		fallthrough
 	default:
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	return current, nil
 }
@@ -98,10 +98,10 @@ func (sf *ScalarField[_]) Random(prng io.Reader) (curves.Scalar, error) {
 	var buffer [base.WideFieldBytes]byte
 	n, err := prng.Read(buffer[:])
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not read from prng")
+		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
 	if n != base.WideFieldBytes {
-		return nil, errs.NewRandomSampleFailed("could not read enough bytes from prng")
+		return nil, errs.NewRandomSample("could not read enough bytes from prng")
 	}
 	res, _ := sf.Element().SetBytesWide(buffer[:])
 	return res, nil
@@ -110,7 +110,7 @@ func (sf *ScalarField[_]) Random(prng io.Reader) (curves.Scalar, error) {
 func (sf *ScalarField[_]) Hash(x []byte) (curves.Scalar, error) {
 	u, err := sf.Curve().HashToScalars(1, x, nil)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "hash to scalar for bls12381g1 failed")
+		return nil, errs.WrapHashing(err, "hash to scalar for bls12381g1 failed")
 	}
 	return u[0], nil
 }
@@ -189,7 +189,7 @@ func (*ScalarField[_]) Div(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
 func (*ScalarField[S]) QuadraticResidue(s curves.Scalar) (curves.Scalar, error) {
 	ss, ok := s.(*Scalar)
 	if !ok {
-		return nil, errs.NewInvalidType("given point is not from this field")
+		return nil, errs.NewType("given point is not from this field")
 	}
 	ss.G = GetSourceSubGroup[S]()
 	return ss.Sqrt()

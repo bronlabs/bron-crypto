@@ -4,28 +4,32 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var _ integration.Participant = (*Participant)(nil)
+var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
 	prng io.Reader
 
-	Curve               curves.Curve
-	MyAuthKey           integration.AuthKey
-	SharingIdToIdentity map[int]integration.IdentityKey
+	Protocol      types.MPCProtocol
+	myAuthKey     types.AuthKey
+	IdentitySpace types.IdentitySpace
 
 	state *State
 	round int
 
-	_ types.Incomparable
+	_ ds.Incomparable
+}
+
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
 }
 
 type State struct {
@@ -33,68 +37,48 @@ type State struct {
 	r_i        curves.Scalar
 
 	witness             commitments.Witness
-	receivedCommitments map[types.IdentityHash]commitments.Commitment
+	receivedCommitments ds.HashMap[types.IdentityKey, commitments.Commitment]
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func NewParticipant(curve curves.Curve, authKey integration.AuthKey, participants *hashset.HashSet[integration.IdentityKey], transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(curve, authKey, participants, prng)
-	if err != nil {
-		return nil, errs.NewInvalidArgument("invalid input arguments")
+func NewParticipant(authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(authKey, protocol, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_AGREE_ON_RANDOM", nil)
+		transcript = hagrid.NewTranscript("COPPER_KRYPTON_AGREE_ON_RANDOM-", nil)
 	}
-	sharingIdToIdentity, _, _ := integration.DeriveSharingIds(authKey, participants)
-	return &Participant{
-		prng:                prng,
-		MyAuthKey:           authKey,
-		round:               1,
-		Curve:               curve,
-		SharingIdToIdentity: sharingIdToIdentity,
+	identitySpace := types.NewIdentitySpace(protocol.Participants())
+	participant := &Participant{
+		prng:          prng,
+		myAuthKey:     authKey,
+		round:         1,
+		Protocol:      protocol,
+		IdentitySpace: identitySpace,
 		state: &State{
 			transcript:          transcript,
-			receivedCommitments: map[types.IdentityHash]commitments.Commitment{},
+			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
 		},
-	}, nil
+	}
+
+	if err := types.ValidateMPCProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct a new participant")
+	}
+
+	return participant, nil
 }
 
-func validateInputs(curve curves.Curve, identityKey integration.IdentityKey, participants *hashset.HashSet[integration.IdentityKey], prng io.Reader) error {
-	if curve == nil {
-		return errs.NewInvalidArgument("curve is nil")
+func validateInputs(authKey types.AuthKey, protocol types.MPCProtocol, prng io.Reader) error {
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
 	}
-	if identityKey == nil {
-		return errs.NewInvalidArgument("my identity key is nil")
-	}
-	if participants.Len() < 2 {
-		return errs.NewInvalidArgument("need at least 2 participants")
-	}
-	for i, participant := range participants.Iter() {
-		if participant == nil {
-			return errs.NewIsNil("participant %x is nil", i)
-		}
+	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, " mpc protocol")
 	}
 	if prng == nil {
-		return errs.NewInvalidArgument("prng is nil")
+		return errs.NewIsNil("prng")
 	}
-	_, found := participants.Get(identityKey)
-	if !found {
-		return errs.NewInvalidArgument("i'm not part of the participants")
-	}
-	return nil
-}
-
-func (p *Participant) GetAuthKey() integration.AuthKey {
-	return p.MyAuthKey
-}
-
-// TODO: implement this
-func (*Participant) GetSharingId() int {
-	return -1
-}
-
-func (*Participant) GetCohortConfig() *integration.CohortConfig {
 	return nil
 }

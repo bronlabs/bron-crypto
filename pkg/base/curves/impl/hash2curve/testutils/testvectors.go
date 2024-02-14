@@ -45,11 +45,11 @@ type TestCase struct {
 func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hash2curve.CurveHasher, error) {
 	appTag, found := strings.CutSuffix(tv.Dst, tv.SuiteName)
 	if !found {
-		return nil, errs.NewVerificationFailed("could not cut suffix from dst")
+		return nil, errs.NewArgument("could not cut suffix from dst")
 	}
 	suiteIdSections := strings.Split(tv.SuiteName, hash2curve.DstIdSeparator)
 	if len(suiteIdSections) != 5 || suiteIdSections[0] != curve.Name() || suiteIdSections[3] != hash2curve.DstEncVar {
-		return nil, errs.NewVerificationFailed("invalid dst")
+		return nil, errs.NewArgument("invalid dst")
 	}
 	mapperTag := suiteIdSections[2]
 	var ch hash2curve.CurveHasher
@@ -61,10 +61,10 @@ func MakeCurveHasher(curve curves.Curve, tv *TestVector) (hash2curve.CurveHasher
 	case strings.Contains(hasherNCurveTag, hash2curve.DstTagShake256):
 		ch = hash2curve.NewShake256Hasher(curve, appTag, mapperTag)
 	default:
-		return nil, errs.NewVerificationFailed("unsupported hasher")
+		return nil, errs.NewType("unsupported hasher")
 	}
 	if !bytes.Equal(ch.Dst(), []byte(tv.Dst)) {
-		return nil, errs.NewVerificationFailed("dst mismatch")
+		return nil, errs.NewArgument("dst mismatch")
 	}
 	return ch, nil
 }

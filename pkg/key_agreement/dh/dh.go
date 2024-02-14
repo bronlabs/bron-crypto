@@ -10,7 +10,7 @@ import (
 func DiffieHellman(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point) (curves.BaseFieldElement, error) {
 	curveName := myPrivateKey.ScalarField().Curve().Name()
 	if curveName != otherPartyPublicKey.Curve().Name() {
-		return nil, errs.NewInvalidCurve("curves of my private key and other guy's public key are not the same")
+		return nil, errs.NewCurve("curves of my private key and other guy's public key are not the same")
 	}
 
 	if curveName == curve25519.Name {
@@ -18,7 +18,7 @@ func DiffieHellman(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point)
 			return curve25519PublicKey.X25519(myPrivateKey).AffineX(), nil
 		}
 
-		return nil, errs.NewInvalidCurve("curve is not curve25519")
+		return nil, errs.NewCurve("curve is not curve25519")
 	} else {
 		//nolint:wrapcheck // done deliberately to forward errors
 		return ecsdvpDhc.DeriveSharedSecretValue(myPrivateKey, otherPartyPublicKey)

@@ -11,10 +11,7 @@ import (
 
 func Fuzz_Test_SelectBit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, i uint, vector []byte) {
-		_, err := bitstring.SelectBit(vector, int(i))
-		if err != nil && !errs.IsKnownError(err) {
-			require.NoError(t, err)
-		}
+		bitstring.SelectBit(vector, int(i))
 	})
 }
 
@@ -43,17 +40,11 @@ func Fuzz_Test_Transpose(f *testing.F) {
 				// Check that the bit at position i in the jth row of the input matrix.
 				// is equal to the bit at position j in the ith row of the transposed matrix.
 				// using bitstring.SelectBit (careful! it takes a byte array as input)
-				output1, err := bitstring.SelectBit(inputMatrix[i], j)
-				if err != nil && !errs.IsKnownError(err) {
-					require.NoError(t, err)
-				}
+				output1 := bitstring.SelectBit(inputMatrix[i], j)
 				if err != nil {
 					t.Skip()
 				}
-				output2, err := bitstring.SelectBit(transposedMatrix[j][:], i)
-				if err != nil && !errs.IsKnownError(err) {
-					require.NoError(t, err)
-				}
+				output2 := bitstring.SelectBit(transposedMatrix[j][:], i)
 				if err != nil {
 					t.Skip()
 				}

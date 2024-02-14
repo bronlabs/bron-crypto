@@ -2,6 +2,7 @@ package bls12381
 
 import (
 	"encoding"
+	"encoding/binary"
 	"encoding/json"
 
 	"github.com/cronokirby/saferith"
@@ -9,8 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -22,7 +23,7 @@ var _ json.Unmarshaler = (*GtMember)(nil)
 type GtMember struct {
 	V *bls12381impl.Gt
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func NewGtMember(input uint64) (curves.GtMember, error) {
@@ -38,7 +39,7 @@ func NewGtMember(input uint64) (curves.GtMember, error) {
 
 	value, isCanonical := new(bls12381impl.Gt).SetBytes(&data)
 	if isCanonical != 1 {
-		return nil, errs.NewInvalidArgument("input is not canonical")
+		return nil, errs.NewArgument("input is not canonical")
 	}
 	return &GtMember{V: value}, nil
 }
@@ -211,11 +212,11 @@ func (g *GtMember) UnmarshalBinary(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != g.Gt().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	ss, ok := sc.(*GtMember)
 	if !ok {
-		return errs.NewInvalidType("invalid base field element")
+		return errs.NewType("invalid base field element")
 	}
 	g.V = ss.V
 	return nil
@@ -239,7 +240,7 @@ func (g *GtMember) UnmarshalJSON(input []byte) error {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
 	if name != g.Gt().Name() {
-		return errs.NewInvalidType("name %s is not supported", name)
+		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*GtMember)
 	if !ok {
@@ -267,7 +268,7 @@ func (*GtMember) SetBytes(input []byte) (curves.GtMember, error) {
 
 func (*GtMember) SetBytesWide(input []byte) (curves.GtMember, error) {
 	if l := len(input); l != bls12381impl.GtFieldBytes*2 {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	var b [bls12381impl.GtFieldBytes]byte
 	copy(b[:], input[:bls12381impl.GtFieldBytes])
@@ -283,4 +284,8 @@ func (*GtMember) SetBytesWide(input []byte) (curves.GtMember, error) {
 	}
 	value.Add(value, value2)
 	return &GtMember{V: value}, nil
+}
+
+func (g *GtMember) HashCode() uint64 {
+	return binary.BigEndian.Uint64(g.Bytes())
 }

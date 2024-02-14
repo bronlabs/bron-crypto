@@ -59,7 +59,7 @@ func (s *KDFScheme) ID() KDFID {
 	case crypto.SHA512:
 		return KDF_HKDF_SHA512
 	default:
-		panic(errs.NewInvalidType("hash %s is not supported", s.hash.String()))
+		panic(errs.NewType("hash %s is not supported", s.hash.String()))
 	}
 }
 

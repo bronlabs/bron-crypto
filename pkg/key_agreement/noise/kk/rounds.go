@@ -9,7 +9,7 @@ import (
 
 func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error) {
 	if p.State.Round != 1 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 1", p.State.Round)
+		return nil, errs.NewRound("round mismatch %d != 1", p.State.Round)
 	}
 	var messageBuffer = input
 	var err error
@@ -24,7 +24,7 @@ func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error)
 			return nil, errs.WrapFailed(err, "could not complete round 1")
 		}
 		if !bytes.Equal(plaintext, p.HandshakeMessage1) {
-			return nil, errs.NewInvalidArgument("handshake message mismatch")
+			return nil, errs.NewArgument("handshake message mismatch")
 		}
 		// step 3.3.x
 		p.State.H, messageBuffer, p.State.Cs1, p.State.Cs2, err = p.writeHandshake2(&p.State.Hs, p.HandshakeMessage2)
@@ -39,11 +39,11 @@ func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error)
 
 func (p *Participant) Round2(input *noise.P2PMessage) (*noise.P2PMessage, error) {
 	if p.State.Round != 2 {
-		return nil, errs.NewInvalidRound("round mismatch %d != 2", p.State.Round)
+		return nil, errs.NewRound("round mismatch %d != 2", p.State.Round)
 	}
 	var messageBuffer = input
 	if !p.State.IsInitiator {
-		return nil, errs.NewInvalidArgument("responder cannot initiate round 2")
+		return nil, errs.NewArgument("responder cannot initiate round 2")
 	}
 	var plaintext []byte
 	var err error
@@ -52,7 +52,7 @@ func (p *Participant) Round2(input *noise.P2PMessage) (*noise.P2PMessage, error)
 		return nil, errs.WrapFailed(err, "could not complete round 2")
 	}
 	if !bytes.Equal(plaintext, p.HandshakeMessage2) {
-		return nil, errs.NewInvalidArgument("handshake message mismatch")
+		return nil, errs.NewArgument("handshake message mismatch")
 	}
 	p.State.Hs = noise.HandshakeState{}
 	p.State.Round++
@@ -121,7 +121,7 @@ func (p *Participant) readHandshake1(hs *noise.HandshakeState, message *noise.P2
 		return []byte{}, errs.WrapFailed(err, "could not decrypt round 1 message")
 	}
 	if !valid {
-		return []byte{}, errs.NewInvalidArgument("message invalid")
+		return []byte{}, errs.NewArgument("message invalid")
 	}
 	return plaintext, nil
 }
@@ -144,7 +144,7 @@ func (p *Participant) readHandshake2(hs *noise.HandshakeState, message *noise.P2
 		return hs.Ss.H, plaintext, cs1, cs2, errs.WrapFailed(err, "could not decrypt round 2 message")
 	}
 	if !valid {
-		return hs.Ss.H, plaintext, cs1, cs2, errs.NewInvalidArgument("message invalid")
+		return hs.Ss.H, plaintext, cs1, cs2, errs.NewArgument("message invalid")
 	}
 	return hs.Ss.H, plaintext, cs1, cs2, nil
 }

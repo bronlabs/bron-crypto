@@ -5,11 +5,10 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/dkg"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -19,30 +18,25 @@ import (
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := edwards25519.NewCurve()
-	cipherSuite := &integration.CipherSuite{
-		Curve: curve,
-		Hash:  sha512.New512_256,
-	}
-
-	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, sha512.New512_256)
 	require.NoError(t, err)
 
-	cohortConfig := &integration.CohortConfig{
-		CipherSuite:  cipherSuite,
-		Participants: hashset.NewHashSet(identities),
-		Protocol: &integration.ProtocolConfig{
-			Name:                 protocols.LINDELL22,
-			Threshold:            2,
-			TotalParties:         2,
-			SignatureAggregators: hashset.NewHashSet(identities),
-		},
-	}
+	threshold := 2
+
+	identities, err := testutils.MakeTestIdentities(cipherSuite, threshold)
+	require.NoError(t, err)
+
+	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
+	require.NoError(t, err)
+
+	nic := randomisedFischlin.Name
+
 	uniqueSessionId := []byte("sid")
-	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0].(integration.AuthKey), cohortConfig, nil, crand.Reader)
-	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1].(integration.AuthKey), cohortConfig, nil, crand.Reader)
+	alice, err := dkg.NewParticipant(uniqueSessionId, identities[0].(types.AuthKey), protocol, nic, nil, crand.Reader)
+	bob, err := dkg.NewParticipant(uniqueSessionId, identities[1].(types.AuthKey), protocol, nic, nil, crand.Reader)
 	for _, party := range []*dkg.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)
 	}
-	require.NotEqual(t, alice.GetSharingId(), bob.GetSharingId())
+	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 }

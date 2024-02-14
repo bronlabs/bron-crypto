@@ -1,176 +1,187 @@
 package chaum
 
 import (
+	"bytes"
+	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaumuc"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
-const (
-	domainSeparationLabel = "COPPER_DLEQ_CHAUM_PEDERSEN_FIAT_SHAMIR-"
-)
+const Name sigma.Name = "ZKPOK_DLEQ_CHAUM_PEDERSEN"
 
-type Prover struct {
-	uniqueSessionId []byte
-	transcript      transcripts.Transcript
-	prng            io.Reader
+type Statement struct {
+	X1 curves.Point
+	X2 curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-// Proof contains the (Challenge, reSponse) chaum-pedersen proof.
-type Proof struct {
-	C curves.Scalar
-	S curves.Scalar
+var _ sigma.Statement = (*Statement)(nil)
 
-	_ types.Incomparable
+type Witness curves.Scalar
+
+var _ sigma.Witness = Witness(nil)
+
+type Commitment struct {
+	A1 curves.Point
+	A2 curves.Point
 }
 
-type Statement chaumuc.Statement
+var _ sigma.Commitment = (*Commitment)(nil)
 
-// NewProver generates a `Prover` object, ready to generate dleq proofs.
-func NewProver(uniqueSessionId []byte, transcript transcripts.Transcript, prng io.Reader) (*Prover, error) {
-	prover := &Prover{
-		uniqueSessionId: uniqueSessionId,
-		transcript:      transcript,
-		prng:            prng,
-	}
-	if err := prover.Validate(); err != nil {
-		return nil, errs.WrapFailed(err, "invalid prover")
-	}
-	prover.transcript.AppendMessages("dleq sid", prover.uniqueSessionId)
-	return prover, nil
+type State curves.Scalar
+
+var _ sigma.State = State(nil)
+
+type Response curves.Scalar
+
+var _ sigma.Response = Response(nil)
+
+type protocol struct {
+	g1   curves.Point
+	g2   curves.Point
+	prng io.Reader
 }
 
-func (p *Prover) Validate() error {
-	if p == nil {
-		return errs.NewIsNil("prover is nil")
+var _ sigma.Protocol[*Statement, Witness, *Commitment, State, Response] = (*protocol)(nil)
+
+func NewSigmaProtocol(g1, g2 curves.Point, prng io.Reader) (sigma.Protocol[*Statement, Witness, *Commitment, State, Response], error) {
+	if g1 == nil || g2 == nil {
+		return nil, errs.NewIsNil("g1 or g2 is nil")
 	}
-	if p.prng == nil {
-		return errs.NewIsNil("prng")
+	if prng == nil {
+		prng = crand.Reader
 	}
-	if p.transcript == nil {
-		p.transcript = hagrid.NewTranscript(domainSeparationLabel, nil)
+
+	return &protocol{
+		g1:   g1,
+		g2:   g2,
+		prng: prng,
+	}, nil
+}
+
+func (c *protocol) ComputeProverCommitment(_ *Statement, w Witness) (*Commitment, State, error) {
+	s, err := w.ScalarField().Random(c.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
-	if len(p.uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("length of session id is 0")
+
+	a1 := c.g1.Mul(s)
+	a2 := c.g2.Mul(s)
+
+	return &Commitment{
+		A1: a1,
+		A2: a2,
+	}, s, nil
+}
+
+func (c *protocol) ComputeProverResponse(_ *Statement, witness Witness, _ *Commitment, state State, challengeBytes []byte) (Response, error) {
+	if len(challengeBytes) != c.GetChallengeBytesLength() {
+		return nil, errs.NewArgument("invalid challenge bytes length")
 	}
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "cannot hash to scalar")
+	}
+
+	z := state.Add(witness.Mul(e))
+	return z, nil
+}
+
+func (c *protocol) Verify(statement *Statement, commitment *Commitment, challengeBytes []byte, response Response) error {
+	if statement == nil || statement.X1 == nil || statement.X2 == nil || commitment == nil || response == nil {
+		return errs.NewIsNil("passed nil")
+	}
+	if len(challengeBytes) != c.GetChallengeBytesLength() {
+		return errs.NewArgument("invalid challenge bytes length")
+	}
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return errs.WrapArgument(err, "cannot hash to scalar")
+	}
+
+	if !c.g1.Mul(response).Sub(statement.X1.Mul(e).Add(commitment.A1)).IsIdentity() {
+		return errs.NewVerification("verification, failed")
+	}
+	if !c.g2.Mul(response).Sub(statement.X2.Mul(e).Add(commitment.A2)).IsIdentity() {
+		return errs.NewVerification("verification, failed")
+	}
+
 	return nil
 }
 
-// Prove proves in zero-knowledge the equality of the dlog of x*H1 and x*H2.
-func (p *Prover) Prove(x curves.Scalar, H1, H2 curves.Point, extraChallengeElements ...[]byte) (*Proof, *Statement, error) {
-	if x == nil || H1 == nil || H2 == nil {
-		return nil, nil, errs.NewIsNil("main arguments can't be nil")
+func (c *protocol) RunSimulator(statement *Statement, challengeBytes []byte) (*Commitment, Response, error) {
+	if statement == nil {
+		return nil, nil, errs.NewArgument("statement")
+	}
+	if len(challengeBytes) == 0 {
+		return nil, nil, errs.NewArgument("randomness is empty")
 	}
 
-	curve := x.ScalarField().Curve()
-
-	// step 1 and 2
-	statement := &Statement{
-		H1: H1,
-		H2: H2,
-		P1: H1.Mul(x),
-		P2: H2.Mul(x),
-	}
-
-	// step 3
-	k, err := curve.ScalarField().Random(p.prng)
+	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
-		return nil, nil, errs.WrapRandomSampleFailed(err, "could not generate random scalar")
+		return nil, nil, err
 	}
-	// step 4
-	R1 := H1.Mul(k)
-	// step 5
-	R2 := H2.Mul(k)
 
-	// step 6
-	p.transcript.AppendPoints("H1", H1)
-	p.transcript.AppendPoints("H2", H2)
-	p.transcript.AppendPoints("P1", statement.P1)
-	p.transcript.AppendPoints("P2", statement.P2)
-	p.transcript.AppendPoints("R1", R1)
-	p.transcript.AppendPoints("R2", R2)
-	p.transcript.AppendMessages("extra elements", extraChallengeElements...)
-
-	digest, err := p.transcript.ExtractBytes("challenge bytes", base.FieldBytes)
+	z, err := c.g1.Curve().ScalarField().Random(c.prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
 
-	c, err := curve.ScalarField().Hash(digest)
-	if err != nil {
-		return nil, nil, errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
+	a := &Commitment{
+		A1: c.g1.Mul(z).Sub(statement.X1.Mul(e)),
+		A2: c.g2.Mul(z).Sub(statement.X2.Mul(e)),
 	}
-	// step 7
-	s := c.Mul(x).Add(k)
-	// step 8
-	return &Proof{
-		C: c,
-		S: s,
-	}, statement, nil
+
+	return a, z, nil
 }
 
-// Verify verifies the `proof`, given the prover parameters against the `statement`.
-func Verify(statement *Statement, proof *Proof, uniqueSessionId []byte, transcript transcripts.Transcript, extraChallengeElements ...[]byte) error {
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(domainSeparationLabel, nil)
-		transcript.AppendMessages("dleq sid", uniqueSessionId)
+func (c *protocol) GetChallengeBytesLength() int {
+	var biggerSubGroup curves.Curve
+	gt, _, _ := c.g1.Curve().Order().Cmp(c.g2.Curve().Order())
+	if gt == 1 {
+		biggerSubGroup = c.g1.Curve()
+	} else {
+		biggerSubGroup = c.g2.Curve()
+	}
+	return biggerSubGroup.ScalarField().WideFieldBytes()
+}
+func (c *protocol) ValidateStatement(statement *Statement, witness Witness) error {
+	if statement == nil || witness == nil ||
+		!c.g1.Mul(witness).Equal(statement.X1) ||
+		!c.g2.Mul(witness).Equal(statement.X2) {
+
+		return errs.NewArgument("invalid statement")
 	}
 
-	if statement == nil || statement.H1 == nil || statement.H2 == nil || statement.P1 == nil || statement.P2 == nil {
-		return errs.NewInvalidArgument("invalid statement")
-	}
-	if proof == nil || proof.C == nil || proof.C.IsZero() || proof.S == nil || proof.S.IsZero() {
-		return errs.NewInvalidArgument("proof is nil")
-	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("length of session id is 0")
-	}
-
-	if err := dlog.StatementSubgroupMembershipCheck(statement.H1, statement.P1); err != nil {
-		return errs.WrapFailed(err, "subgroup membership check failed for P1")
-	}
-	if err := dlog.StatementSubgroupMembershipCheck(statement.H2, statement.P2); err != nil {
-		return errs.WrapFailed(err, "subgroup membership check failed for P2")
-	}
-
-	curve := statement.H1.Curve()
-
-	// step 1
-	R1 := statement.H1.Mul(proof.S).Sub(statement.P1.Mul(proof.C))
-	// step 2
-	R2 := statement.H2.Mul(proof.S).Sub(statement.P2.Mul(proof.C))
-
-	// step 3, Fiat-Shamir
-	transcript.AppendPoints("H1", statement.H1)
-	transcript.AppendPoints("H2", statement.H2)
-	transcript.AppendPoints("P1", statement.P1)
-	transcript.AppendPoints("P2", statement.P2)
-	transcript.AppendPoints("R1", R1)
-	transcript.AppendPoints("R2", R2)
-	transcript.AppendMessages("extra elements", extraChallengeElements...)
-
-	digest, err := transcript.ExtractBytes("challenge bytes", base.FieldBytes)
-	if err != nil {
-		return errs.WrapFailed(err, "could not extract bytes from transcript")
-	}
-	recomputedChallenge, err := curve.ScalarField().Hash(digest)
-	if err != nil {
-		return errs.WrapHashingFailed(err, "could not produce fiat shamir challenge scalar")
-	}
-
-	// step 4
-	if isEqual := proof.C.Cmp(recomputedChallenge) == 0; !isEqual {
-		return errs.NewVerificationFailed("invalid proof")
-	}
-	// step 5
 	return nil
+}
+
+func (*protocol) SerializeStatement(statement *Statement) []byte {
+	return bytes.Join([][]byte{statement.X1.ToAffineCompressed(), statement.X2.ToAffineCompressed()}, nil)
+}
+
+func (*protocol) SerializeCommitment(commitment *Commitment) []byte {
+	return bytes.Join([][]byte{commitment.A1.ToAffineCompressed(), commitment.A2.ToAffineCompressed()}, nil)
+}
+
+func (*protocol) SerializeResponse(response Response) []byte {
+	return response.Bytes()
+}
+
+func (c *protocol) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+	e, err := c.g1.Curve().ScalarField().Zero().SetBytesWide(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "cannot hash to scalar")
+	}
+
+	return e, nil
+}
+
+func (*protocol) Name() sigma.Name {
+	return Name
 }

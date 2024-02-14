@@ -8,9 +8,8 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
@@ -18,7 +17,9 @@ import (
 func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := edwards25519.NewCurve()
-	cipherSuite := &integration.CipherSuite{Curve: curve, Hash: sha3.New256}
+	hash := sha3.New256
+	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
+	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
@@ -28,10 +29,13 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 
-	alice, err := NewParticipant(curve, aliceIdentityKey.(integration.AuthKey), hashset.NewHashSet(identities), nil, crand.Reader)
+	protocol, err := testutils.MakeMPCProtocol(curve, identities)
+	require.NoError(t, err)
+
+	alice, err := NewParticipant(aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(curve, bobIdentityKey.(integration.AuthKey), hashset.NewHashSet(identities), nil, crand.Reader)
+	bob, err := NewParticipant(bobIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {

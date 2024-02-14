@@ -2,22 +2,30 @@ package tsignatures
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials"
+	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
+
+type Shard interface {
+	SecretShare() curves.Scalar
+	PublicKey() curves.Point
+	PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point]
+	FeldmanCommitmentVector() []curves.Point
+}
 
 type SigningKeyShare struct {
 	Share     curves.Scalar
 	PublicKey curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (s *SigningKeyShare) Validate() error {
+func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
 	if s == nil {
 		return errs.NewIsNil("signing key share is nil")
 	}
@@ -27,136 +35,109 @@ func (s *SigningKeyShare) Validate() error {
 	if s.PublicKey.IsIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
+	if !curveutils.AllOfSameCurve(protocol.Curve(), s.Share, s.PublicKey) {
+		return errs.NewCurve("curve mismatch")
+	}
 	return nil
 }
 
-func ConstructPrivateKey(threshold, n int, allParticipantIdKeys *hashset.HashSet[integration.IdentityKey], keyShares map[integration.IdentityKey]*SigningKeyShare) (curves.Scalar, error) {
-	if len(keyShares) <= 1 || len(keyShares) != threshold {
-		return nil, errs.NewFailed("not enough key shares")
+func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentParticipants ds.HashSet[types.IdentityKey], protocol types.ThresholdProtocol) (curves.Scalar, error) {
+	if !presentParticipants.IsSubSet(protocol.Participants()) {
+		return nil, errs.NewMembership("present participants is not a subset of total participants")
 	}
-	if allParticipantIdKeys == nil || allParticipantIdKeys.Len() <= 1 {
-		return nil, errs.NewFailed("not enough participant keys")
-	}
-	for _, keyShare := range keyShares {
-		if err := keyShare.Validate(); err != nil {
-			return nil, errs.WrapVerificationFailed(err, "key share is invalid")
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId := uint(0)
+	shamirIdentities := make([]uint, presentParticipants.Size())
+	i := 0
+	for identityKey := range presentParticipants.Iter() {
+		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		if !exists {
+			return nil, errs.NewMissing("could not find participant sharing id %x", identityKey.PublicKey())
 		}
-	}
-	var curve curves.Curve
-	for _, keyShare := range keyShares {
-		if err := keyShare.Validate(); err != nil {
-			return nil, errs.WrapVerificationFailed(err, "key share is invalid")
+		if identityKey.Equal(myIdentityKey) {
+			mySharingId = uint(sharingId)
 		}
-		curve = keyShare.PublicKey.Curve()
-		break
+		shamirIdentities[i] = uint(sharingId)
+		i++
 	}
-	if curve == nil {
-		return nil, errs.NewFailed("failed to get the curve")
+	if mySharingId == 0 {
+		return nil, errs.NewMissing("could not find my sharing id")
 	}
-	shamirDealer, err := shamir.NewDealer(threshold, n, curve)
+	shamirShare := &shamir.Share{
+		Id:    mySharingId,
+		Value: s.Share,
+	}
+	additiveShare, err := shamirShare.ToAdditive(shamirIdentities)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create shamir dealer")
+		return nil, errs.WrapFailed(err, "could not derive additive share")
 	}
-	shares := make([]*shamir.Share, len(keyShares))
-	shareIndex := 0
-	for idKey, keyShare := range keyShares {
-		_, _, sharingId := integration.DeriveSharingIds(idKey, allParticipantIdKeys)
-		shares[shareIndex] = &shamir.Share{
-			Id:    sharingId,
-			Value: keyShare.Share,
-		}
-		shareIndex++
-	}
-	recoveredPrivateKey, err := shamirDealer.Combine(shares...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to combine shares")
-	}
-	recoveredPublicKey := curve.ScalarBaseMult(recoveredPrivateKey)
-	for _, keyShare := range keyShares {
-		if !recoveredPublicKey.Equal(keyShare.PublicKey) {
-			return nil, errs.NewVerificationFailed("reconstructed public key is incorrect")
-		}
-	}
-	return recoveredPrivateKey, nil
+	return additiveShare, nil
 }
 
-type PublicKeyShares struct {
+type PartialPublicKeys struct {
 	PublicKey               curves.Point
-	SharesMap               map[types.IdentityHash]curves.Point
+	Shares                  ds.HashMap[types.IdentityKey, curves.Point]
 	FeldmanCommitmentVector []curves.Point
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
-func (p *PublicKeyShares) Validate(cohortConfig *integration.CohortConfig) error {
+func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	if p == nil {
-		return errs.NewIsNil("receiver of this method is nil")
+		return errs.NewIsNil("receiver")
 	}
-	if len(p.FeldmanCommitmentVector) == 0 && len(p.FeldmanCommitmentVector) > len(p.SharesMap) {
-		return errs.NewInvalidLength("feldman commitment vector length is invalid")
+	if p.PublicKey == nil {
+		return errs.NewIsNil("public key")
 	}
-	if len(p.SharesMap) == 0 {
-		return errs.NewInvalidLength("shares map has no elements")
+	if len(p.FeldmanCommitmentVector) != int(protocol.Threshold()) {
+		return errs.NewLength("feldman commitment vector length is invalid")
+	}
+	if p.Shares == nil {
+		return errs.NewIsNil("shares map")
+	}
+	partialPublicKeyHolders := hashset.NewHashableHashSet(p.Shares.Keys()...)
+	if !partialPublicKeyHolders.Equal(protocol.Participants()) {
+		return errs.NewMembership("shares map is not equal to the participant set")
+	}
+	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.PublicKey) {
+		return errs.NewCurve("public key")
+	}
+	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.Shares.Values()...) {
+		return errs.NewCurve("shares map")
+	}
+	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.FeldmanCommitmentVector...) {
+		return errs.NewCurve("feldman commitment vector")
 	}
 
-	sharingIdToIdentityKey, _, _ := integration.DeriveSharingIds(nil, cohortConfig.Participants)
-	sharingIds := make([]curves.Scalar, cohortConfig.Protocol.TotalParties)
-	partialPublicKeys := make([]curves.Point, cohortConfig.Protocol.TotalParties)
-	for i := 0; i < cohortConfig.Protocol.TotalParties; i++ {
-		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(i + 1))
-		identityKey, exists := sharingIdToIdentityKey[i+1]
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	sharingIds := make([]curves.Scalar, protocol.TotalParties())
+	partialPublicKeys := make([]curves.Point, protocol.TotalParties())
+	for i := 0; i < int(protocol.TotalParties()); i++ {
+		sharingId := types.SharingID(i + 1)
+		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(sharingId))
+		identityKey, exists := sharingConfig.LookUpLeft(sharingId)
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
 		}
-		partialPublicKey, exists := p.SharesMap[identityKey.Hash()]
+		partialPublicKey, exists := p.Shares.Get(identityKey)
 		if !exists {
-			return errs.NewMissing("partial public key doesn't exist for id hash %x", identityKey.Hash())
+			return errs.NewMissing("partial public key doesn't exist for sharing id %d", sharingId)
 		}
 		partialPublicKeys[i] = partialPublicKey
 	}
 	evaluateAt := p.PublicKey.Curve().ScalarField().Zero() // because f(0) would be the private key which means interpolating in the exponent should give us the public key
-	reconstructedPublicKey, err := polynomials.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
+	reconstructedPublicKey, err := lagrange.InterpolateInTheExponent(p.PublicKey.Curve(), sharingIds, partialPublicKeys, evaluateAt)
 	if err != nil {
 		return errs.WrapFailed(err, "could not interpolate partial public keys in the exponent")
 	}
 	if !reconstructedPublicKey.Equal(p.PublicKey) {
-		return errs.NewVerificationFailed("reconstructed public key is incorrect")
+		return errs.NewVerification("reconstructed public key is incorrect")
 	}
 	return nil
 }
 
-func ToAdditiveShare(shamirShare curves.Scalar, mySharingId int, participants *hashset.HashSet[integration.IdentityKey], identityKeyToSharingId map[types.IdentityHash]int) (curves.Scalar, error) {
-	shamirIndices := make([]int, participants.Len())
-	i := -1
-	for _, identity := range participants.Iter() {
-		i++
-		shamirIndices[i] = identityKeyToSharingId[identity.Hash()]
-	}
-	share := &shamir.Share{
-		Id:    mySharingId,
-		Value: shamirShare,
-	}
-	additiveShare, err := share.ToAdditive(shamirIndices)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert to additive share")
-	}
-
-	return additiveShare, nil
-}
-
-// ShamirReShare transform shamir sharing from (|t|, |n1|) to (|t|, |n2|),
-// where t ⊆ n1 ⊆ n2.
-func ShamirReShare(myIdentityKey integration.IdentityKey, share curves.Scalar, t, n1, n2 *hashset.HashSet[integration.IdentityKey]) (curves.Scalar, error) {
-	_, fromKeyToId, fromSharingId := integration.DeriveSharingIds(myIdentityKey, n1)
-	shareAdditive, err := ToAdditiveShare(share, fromSharingId, t, fromKeyToId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "shamir re-sharing failed")
-	}
-	_, toKeyToId, toSharingId := integration.DeriveSharingIds(myIdentityKey, n2)
-	lambda, err := ToAdditiveShare(share.ScalarField().One(), toSharingId, t, toKeyToId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "shamir re-sharing failed")
-	}
-
-	return shareAdditive.Div(lambda), nil
+type PreProcessingMaterial[PrivateType any, PreSignatureType any] struct {
+	PreSigners      ds.HashSet[types.IdentityKey]
+	PrivateMaterial PrivateType
+	PreSignature    PreSignatureType
 }

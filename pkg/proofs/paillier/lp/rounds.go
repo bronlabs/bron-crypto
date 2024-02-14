@@ -3,8 +3,8 @@ package lp
 import (
 	"github.com/cronokirby/saferith"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
 )
@@ -13,30 +13,30 @@ type Round1Output struct {
 	NthRootProverOutputs []*nthroot.Round1Output
 	X                    []*paillier.CipherText
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round2Output struct {
 	NthRootVerifierOutputs []*nthroot.Round2Output
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round3Output struct {
 	NthRootProverOutputs []*nthroot.Round3Output
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 type Round4Output struct {
 	YPrime []*saferith.Nat
 
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.round != 1 {
-		return nil, errs.NewInvalidRound("%d != 1", verifier.round)
+		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
 
 	verifier.state.y = make([]*saferith.Nat, verifier.k)
@@ -73,7 +73,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.round != 2 {
-		return nil, errs.NewInvalidRound("%d != 2", prover.round)
+		return nil, errs.NewRound("%d != 2", prover.round)
 	}
 
 	prover.state.x = input.X
@@ -101,7 +101,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.round != 3 {
-		return nil, errs.NewInvalidRound("%d != 3", verifier.round)
+		return nil, errs.NewRound("%d != 3", verifier.round)
 	}
 
 	nthRootProverRound3Outputs := make([]*nthroot.Round3Output, verifier.k)
@@ -121,14 +121,13 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 
 func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.round != 4 {
-		return nil, errs.NewInvalidRound("%d != 4", prover.round)
+		return nil, errs.NewRound("%d != 4", prover.round)
 	}
 
 	for i := 0; i < prover.k; i++ {
 		// round 4 of proving the knowledge of y
-		err = prover.state.rootVerifiers[i].Round4(input.NthRootProverOutputs[i])
-		if err != nil {
-			return nil, errs.WrapVerificationFailed(err, "cannot verify knowledge of Nth root from Verifier")
+		if err := prover.state.rootVerifiers[i].Round4(input.NthRootProverOutputs[i]); err != nil {
+			return nil, errs.WrapVerification(err, "cannot verify knowledge of Nth root from Verifier")
 		}
 	}
 
@@ -150,13 +149,13 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if verifier.round != 5 {
-		return errs.NewInvalidRound("%d != 5", verifier.round)
+		return errs.NewRound("%d != 5", verifier.round)
 	}
 
 	for i := 0; i < verifier.k; i++ {
 		if input.YPrime[i].Eq(verifier.state.y[i]) == 0 {
 			// V rejects if y != y'
-			return errs.NewVerificationFailed("failed to verify Paillier public key")
+			return errs.NewVerification("failed to verify Paillier public key")
 		}
 	}
 

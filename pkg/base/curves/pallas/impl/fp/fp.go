@@ -162,7 +162,7 @@ func (fp *Fp) SetBytes(input *[32]byte) (*Fp, error) {
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
 	if d0.Cmp(ModulusLimbs) != -1 {
-		return nil, errs.NewInvalidLength("invalid byte sequence")
+		return nil, errs.NewLength("invalid byte sequence")
 	}
 	fiat_pasta_fp_from_bytes((*[4]uint64)(fp), input)
 	fiat_pasta_fp_to_montgomery((*fiat_pasta_fp_montgomery_domain_field_element)(fp), (*fiat_pasta_fp_non_montgomery_domain_field_element)(fp))

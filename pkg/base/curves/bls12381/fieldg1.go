@@ -9,8 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -26,7 +26,7 @@ var (
 var _ curves.BaseField = (*BaseFieldG1)(nil)
 
 type BaseFieldG1 struct {
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func g1BaseFieldInit() {
@@ -76,7 +76,7 @@ func (f *BaseFieldG1) OperateOver(operator algebra.Operator, xs ...curves.BaseFi
 	case algebra.PointAddition:
 		fallthrough
 	default:
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	return current, nil
 }
@@ -87,7 +87,7 @@ func (f *BaseFieldG1) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	}
 	result, err := f.Element().(*BaseFieldElementG1).V.Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSampleFailed(err, "could not generate random field element")
+		return nil, errs.WrapRandomSample(err, "could not generate random field element")
 	}
 	return &BaseFieldElementG1{V: result}, nil
 }
@@ -172,7 +172,7 @@ func (*BaseFieldG1) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement
 func (*BaseFieldG1) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
 	pp, ok := p.(*BaseFieldElementG1)
 	if !ok {
-		return nil, errs.NewInvalidType("given point is not from this field")
+		return nil, errs.NewType("given point is not from this field")
 	}
 	return pp.Sqrt()
 }

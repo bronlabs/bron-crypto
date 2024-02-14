@@ -1,147 +1,174 @@
 package schnorr
 
 import (
+	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
-const (
-	domainSeparationLabel = "COPPER_ZKPOK_DLOG_SCHNORR-"
-	basepointLabel        = "basepoint"
-	rLabel                = "R"
-	statementLabel        = "statement"
-	uniqueSessionIdLabel  = "unique session id"
-	digestLabel           = "digest"
-)
+const Name sigma.Name = "ZKPOK_DLOG_SCHNORR"
 
-type Statement = dlog.Statement
+type Statement curves.Point
 
-type Prover struct {
-	uniqueSessionId []byte
-	transcript      transcripts.Transcript
-	BasePoint       curves.Point
+var _ sigma.Statement = Statement(nil)
 
-	_ types.Incomparable
+type Witness curves.Scalar
+
+var _ sigma.Witness = Witness(nil)
+
+type Commitment curves.Point
+
+var _ sigma.Commitment = Commitment(nil)
+
+type State curves.Scalar
+
+var _ sigma.State = State(nil)
+
+type Response curves.Scalar
+
+var _ sigma.Response = Response(nil)
+
+type protocol struct {
+	base  curves.Point
+	curve curves.Curve
+	prng  io.Reader
 }
 
-// Proof contains the (c, s) schnorr proof. `Statement` is the curve point you're proving knowledge of discrete log of,
-// with respect to the base point.
-type Proof struct {
-	C curves.Scalar
-	S curves.Scalar
+var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*protocol)(nil)
 
-	_ types.Incomparable
-}
+func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
+	if base == nil {
+		return nil, errs.NewIsNil("base")
+	}
+	if prng == nil {
+		prng = crand.Reader
+	}
 
-// NewProver generates a `Prover` object, ready to generate Schnorr proofs on any given point.
-func NewProver(basePoint curves.Point, uniqueSessionId []byte, transcript transcripts.Transcript) (*Prover, error) {
-	err := validateInputs(basePoint, uniqueSessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to validate inputs")
-	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(domainSeparationLabel, nil)
-	}
-	return &Prover{
-		BasePoint:       basePoint,
-		uniqueSessionId: uniqueSessionId,
-		transcript:      transcript,
+	return &protocol{
+		base:  base,
+		curve: base.Curve(),
+		prng:  prng,
 	}, nil
 }
 
-func validateInputs(basePoint curves.Point, uniqueSessionId []byte) error {
-	if basePoint == nil {
-		return errs.NewInvalidArgument("basepoint can't be nil")
+func (s *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
+	k, err := s.curve.ScalarField().Random(s.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
-	if basePoint.IsIdentity() {
-		return errs.NewIsIdentity("basepoint is identity")
+	r := s.base.Mul(k)
+
+	return r, k, nil
+}
+
+func (s *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes []byte) (Response, error) {
+	if witness == nil || witness.ScalarField().Curve().Name() != s.curve.Name() {
+		return nil, errs.NewArgument("invalid curve")
 	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewInvalidArgument("unique session id can't be empty")
+	if state == nil || state.ScalarField().Curve().Name() != s.curve.Name() {
+		return nil, errs.NewArgument("invalid curve")
 	}
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return nil, errs.NewIsNil("invalid challenge bytes length")
+	}
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "cannot hash to scalar")
+	}
+
+	z := state.Add(witness.Mul(e))
+	return z, nil
+}
+
+func (s *protocol) Verify(statement Statement, commitment Commitment, challengeBytes []byte, response Response) error {
+	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
+		return errs.NewIsNil("passed nil")
+	}
+	if statement.Curve().Name() != s.curve.Name() {
+		return errs.NewArgument("invalid curve")
+	}
+	if commitment.Curve().Name() != s.curve.Name() || response.ScalarField().Curve().Name() != s.curve.Name() {
+		return errs.NewArgument("invalid curve")
+	}
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return errs.NewArgument("invalid challenge bytes length")
+	}
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
+	if err != nil {
+		return errs.WrapArgument(err, "cannot hash to scalar")
+	}
+
+	left := s.base.Mul(response)
+	right := statement.Mul(e).Add(commitment)
+	if !left.Equal(right) {
+		return errs.NewVerification("verification failed")
+	}
+
 	return nil
 }
 
-// Prove generates and returns a Schnorr proof, given the scalar witness `x`.
-// in the process, it will actually also construct the statement (just one curve mult in this case).
-func (p *Prover) Prove(x curves.Scalar, prng io.Reader) (*Proof, Statement, error) {
-	var err error
-	result := &Proof{}
-
-	curve := p.BasePoint.Curve()
-
-	statement := p.BasePoint.Mul(x)
-	k, err := curve.ScalarField().Random(prng)
-	if err != nil {
-		return nil, nil, errs.WrapRandomSampleFailed(err, "could not sample random scalar")
+func (s *protocol) RunSimulator(statement Statement, challengeBytes []byte) (Commitment, Response, error) {
+	if statement == nil || statement.Curve().Name() != s.curve.Name() {
+		return nil, nil, errs.NewArgument("statement")
 	}
-	R := p.BasePoint.Mul(k)
-
-	p.transcript.AppendPoints(basepointLabel, p.BasePoint)
-	p.transcript.AppendPoints(rLabel, R)
-	p.transcript.AppendPoints(statementLabel, statement)
-	p.transcript.AppendMessages(uniqueSessionIdLabel, p.uniqueSessionId)
-	digest, err := p.transcript.ExtractBytes(digestLabel, base.WideFieldBytes)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not produce fiat shamir challenge bytes")
+	if len(challengeBytes) != s.GetChallengeBytesLength() {
+		return nil, nil, errs.NewArgument("invalid challenge bytes length")
 	}
 
-	result.C, err = curve.Scalar().SetBytesWide(digest)
+	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "could not produce fiat shamir challenge scalar")
+		return nil, nil, err
 	}
-	result.S = result.C.Mul(x).Add(k)
-	return result, statement, nil
+
+	z, err := s.curve.ScalarField().Random(s.prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
+	}
+
+	a := s.base.Mul(z).Sub(statement.Mul(e))
+	return a, z, nil
 }
 
-// Verify verifies the `proof`, given the prover parameters `scalar` and `curve` against the `statement`.
-func Verify(basePoint curves.Point, statement Statement, proof *Proof, uniqueSessionId []byte, transcript transcripts.Transcript) error {
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(domainSeparationLabel, nil)
-	}
-	if basePoint == nil {
-		return errs.NewInvalidArgument("basepoint is nil")
-	}
-	if basePoint.IsIdentity() {
-		return errs.NewInvalidArgument("basepoint is identity")
-	}
-	if err := dlog.StatementSubgroupMembershipCheck(basePoint, statement); err != nil {
-		return errs.WrapFailed(err, "subgroup membership check failed")
+func (s *protocol) ValidateStatement(statement Statement, witness Witness) error {
+	if statement == nil ||
+		witness == nil ||
+		statement.Curve().Name() != witness.ScalarField().Curve().Name() ||
+		!s.base.Mul(witness).Equal(statement) {
+
+		return errs.NewArgument("invalid statement")
 	}
 
-	curve := basePoint.Curve()
-
-	if proof == nil {
-		return errs.NewInvalidArgument("proof is nil")
-	}
-
-	gs := basePoint.Mul(proof.S)
-	xc := statement.Mul(proof.C.Neg())
-	R := gs.Add(xc)
-
-	transcript.AppendPoints(basepointLabel, basePoint)
-	transcript.AppendPoints(rLabel, R)
-	transcript.AppendPoints(statementLabel, statement)
-	transcript.AppendMessages(uniqueSessionIdLabel, uniqueSessionId)
-	digest, err := transcript.ExtractBytes(digestLabel, base.WideFieldBytes)
-	if err != nil {
-		return errs.WrapFailed(err, "could not extract bytes from transcript")
-	}
-
-	computedChallenge, err := curve.Scalar().SetBytesWide(digest)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not produce fiat shamir challenge scalar")
-	}
-
-	if computedChallenge.Cmp(proof.C) != 0 {
-		return errs.NewVerificationFailed("schnorr verification failed")
-	}
 	return nil
+}
+
+func (s *protocol) GetChallengeBytesLength() int {
+	return s.curve.ScalarField().WideFieldBytes()
+}
+
+func (*protocol) SerializeStatement(statement Statement) []byte {
+	return statement.ToAffineCompressed()
+}
+
+func (*protocol) SerializeCommitment(commitment Commitment) []byte {
+	return commitment.ToAffineCompressed()
+}
+
+func (*protocol) SerializeResponse(response Response) []byte {
+	return response.Bytes()
+}
+
+func (s *protocol) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+	e, err := s.curve.ScalarField().Zero().SetBytesWide(challengeBytes)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "cannot hash to scalar")
+	}
+
+	return e, nil
+}
+
+func (*protocol) Name() sigma.Name {
+	return Name
 }

@@ -14,8 +14,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -34,10 +34,8 @@ var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
 	hash2curve.CurveHasher
-
 	*impl.Elligator2Params
-
-	_ types.Incomparable
+	_ ds.Incomparable
 }
 
 func curve25519Init() {
@@ -82,7 +80,7 @@ func (c *Curve) Element() curves.Point {
 
 func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
 	if operator != algebra.PointAddition {
-		return nil, errs.NewInvalidType("operator %v is not supported", operator)
+		return nil, errs.NewType("operator %v is not supported", operator)
 	}
 	current := c.Identity()
 	for _, p := range ps {
@@ -116,7 +114,7 @@ func (c *Curve) Hash(input []byte) (curves.Point, error) {
 func (c *Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 	u, err := c.HashToFieldElements(2, input, dst)
 	if err != nil {
-		return nil, errs.WrapHashingFailed(err, "could not hash to field elements in ed25519")
+		return nil, errs.WrapHashing(err, "could not hash to field elements in ed25519")
 	}
 	p0 := c.Map(u[0])
 	p1 := c.Map(u[1])

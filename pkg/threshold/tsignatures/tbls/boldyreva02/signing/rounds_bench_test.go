@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/integration"
-	integration_testutils "github.com/copperexchange/krypton-primitives/pkg/base/types/integration/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
@@ -24,30 +23,35 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	cipherSuite := &integration.CipherSuite{
-		Curve: keysSubGroup,
-		Hash:  hashFunc,
-	}
-
-	identities, err := integration_testutils.MakeTestIdentities(cipherSuite, n)
+	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
 	if err != nil {
 		return err
 	}
 
-	cohort, err := integration_testutils.MakeCohortProtocol(cipherSuite, protocols.BLS, identities, threshold, identities)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	if err != nil {
 		return err
 	}
 
-	shards, err := trusted_dealer.Keygen[K](cohort, crand.Reader)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
 		return err
 	}
 
-	publicKeyShares := shards[identities[0].Hash()].PublicKeyShares
+	shards, err := trusted_dealer.Keygen[K](protocol, crand.Reader)
+	if err != nil {
+		return err
+	}
+
+	aShard, exists := shards.Get(identities[0])
+	if !exists {
+		return errs.NewMissing("alice shard")
+	}
+
+	publicKeyShares := aShard.PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := testutils.MakeSigningParticipants[K, S](sid, cohort, identities, shards, bls.Basic)
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, protocol, identities, shards, bls.Basic)
 	if err != nil {
 		return err
 	}
@@ -59,7 +63,7 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](shards[identities[0].Hash()].PublicKeyShares, bls.Basic, cohort)
+	agg, err := aggregation.NewAggregator[K, S](publicKeyShares, bls.Basic, protocol)
 	if err != nil {
 		return err
 	}
