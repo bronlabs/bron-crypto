@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -28,12 +29,17 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct cohort protocol")
 	}
 
-	participants, err := testutils.MakeDkgParticipants(curve, protocol, identities, nil, sid)
+	private, public, err := gennaroTestutils.RunDKG(sid, protocol, identities)
+	if err != nil {
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run JF-DKG protocol")
+	}
+
+	participants, err := testutils.MakeDkgParticipants(curve, protocol, identities, private, public, nil, sid)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct participants")
 	}
 
-	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
+	r1OutsU, err := testutils.DoDkgRound1(participants)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 1")
 	}
@@ -43,8 +49,8 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 		}
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-	r2OutsB, r2OutsU, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
+	r2OutsU, err := testutils.DoDkgRound2(participants, r2InsU)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 2")
 	}
@@ -54,8 +60,8 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 		}
 	}
 
-	r3InsB, r3InsU := ttu.MapO2I(participants, r2OutsB, r2OutsU)
-	shards, err := testutils.DoDkgRound3(participants, r3InsB, r3InsU)
+	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	shards, err := testutils.DoDkgRound3(participants, r3InsU)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
 	}

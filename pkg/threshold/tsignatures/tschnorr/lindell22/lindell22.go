@@ -27,6 +27,22 @@ type Shard struct {
 	_ ds.Incomparable
 }
 
+func NewShard(protocol types.ThresholdProtocol, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys) (*Shard, error) {
+	if err := signingKeyShare.Validate(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid signing key share")
+	}
+	if err := partialPublicKeys.Validate(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid public key share")
+	}
+
+	shard := &Shard{
+		SigningKeyShare: signingKeyShare,
+		PublicKeyShares: partialPublicKeys,
+	}
+
+	return shard, nil
+}
+
 func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
 	if err := s.SigningKeyShare.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "invalid signing key share")

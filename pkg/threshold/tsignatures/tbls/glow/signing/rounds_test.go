@@ -26,5 +26,10 @@ func TestHappyPath(t *testing.T) {
 			err := testutils.SigningRoundTrip(boundedConfig.threshold, boundedConfig.total)
 			require.NoError(t, err)
 		})
+		t.Run(fmt.Sprintf("running happy path for t=%d and n=%d", boundedConfig.threshold, boundedConfig.total), func(t *testing.T) {
+			t.Parallel()
+			err := testutils.SigningWithDkg(boundedConfig.threshold, boundedConfig.total)
+			require.NoError(t, err)
+		})
 	}
 }

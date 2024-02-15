@@ -496,6 +496,7 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 	// 8. store encrypted x_j aka ckey_j (ckey_j = Enc(x_j) = Enc(3x'_j + x''_j)) and pk_j alongside share
 	return &lindell17.Shard{
 		SigningKeyShare:         p.mySigningKeyShare,
+		PublicKeyShares:         p.publicKeyShares,
 		PaillierSecretKey:       p.state.myPaillierSk,
 		PaillierPublicKeys:      p.state.theirPaillierPublicKeys,
 		PaillierEncryptedShares: p.state.theirPaillierEncryptedShares,

@@ -23,6 +23,38 @@ type Shard[K bls.KeySubGroup] struct {
 	_ ds.Incomparable
 }
 
+func NewShard[K bls.KeySubGroup](protocol types.ThresholdProtocol, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys) (*Shard[K], error) {
+	if err := signingKeyShare.Validate(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid signing key share")
+	}
+	if err := partialPublicKeys.Validate(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid partial public keys")
+	}
+
+	publicKeyPoint, ok := signingKeyShare.PublicKey.(curves.PairingPoint)
+	if !ok {
+		return nil, errs.NewArgument("invalid share")
+	}
+
+	shard := &Shard[K]{
+		SigningKeyShare: &SigningKeyShare[K]{
+			Share: signingKeyShare.Share,
+			PublicKey: &bls.PublicKey[K]{
+				Y: publicKeyPoint,
+			},
+		},
+		PublicKeyShares: &PartialPublicKeys[K]{
+			PublicKey: &bls.PublicKey[K]{
+				Y: publicKeyPoint,
+			},
+			Shares:                  partialPublicKeys.Shares,
+			FeldmanCommitmentVector: partialPublicKeys.FeldmanCommitmentVector,
+		},
+	}
+
+	return shard, nil
+}
+
 func (s *Shard[K]) Validate(protocol types.ThresholdProtocol) error {
 	if err := s.SigningKeyShare.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "invalid signing key share")

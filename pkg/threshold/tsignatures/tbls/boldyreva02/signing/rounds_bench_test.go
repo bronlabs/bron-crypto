@@ -104,6 +104,24 @@ func Benchmark_Basic(b *testing.B) {
 			}
 		}
 	})
+
+	b.Run("short keys with DKG", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			err := testutils.SigningWithDkg[bls12381.G1, bls12381.G2](threshold, total, bls.Basic)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run("short signatures with DKG", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			err := testutils.SigningWithDkg[bls12381.G2, bls12381.G1](threshold, total, bls.Basic)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func Benchmark_Combine(b *testing.B) {

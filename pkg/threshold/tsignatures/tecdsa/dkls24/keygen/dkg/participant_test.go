@@ -3,6 +3,7 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,9 +32,13 @@ func Test_CanInitialize(t *testing.T) {
 
 	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
-	alice, err := dkg.NewParticipant(sid, identities[0].(types.AuthKey), protocol, cn, crand.Reader, nil)
+
+	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, protocol, identities)
 	require.NoError(t, err)
-	bob, err := dkg.NewParticipant(sid, identities[1].(types.AuthKey), protocol, cn, crand.Reader, nil)
+
+	alice, err := dkg.NewParticipant(sid, identities[0].(types.AuthKey), signingKeyShares[0], partialPublicKeys[0], protocol, cn, crand.Reader, nil)
+	require.NoError(t, err)
+	bob, err := dkg.NewParticipant(sid, identities[1].(types.AuthKey), signingKeyShares[1], partialPublicKeys[1], protocol, cn, crand.Reader, nil)
 	for _, party := range []*dkg.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.NotNil(t, party)

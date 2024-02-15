@@ -95,7 +95,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {
-		return nil, errs.NewMissing("cannot find my sharign id")
+		return nil, errs.NewMissing("cannot find my sharing id")
 	}
 
 	participant = &Participant{

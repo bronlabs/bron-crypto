@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -14,8 +15,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -25,37 +24,40 @@ var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	MyAuthKey             types.AuthKey
-	GennaroParty          *gennaro.Participant
+	MySharingId           types.SharingID
+	MySigningKeyShare     *tsignatures.SigningKeyShare
+	MyPartialPublicKeys   *tsignatures.PartialPublicKeys
 	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   ds.HashMap[types.IdentityKey, *bbot.Sender]
 	BaseOTReceiverParties ds.HashMap[types.IdentityKey, *bbot.Receiver]
 	Protocol              types.ThresholdProtocol
 
-	Shard *dkls24.Shard
-
 	_ ds.Incomparable
 }
 
 func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.GennaroParty.IdentityKey()
+	return p.MyAuthKey
 }
 
 func (p *Participant) SharingId() types.SharingID {
-	return p.GennaroParty.SharingId()
+	return p.MySharingId
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, protocol, niCompiler, prng); err != nil {
+func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	if err := validateInputs(uniqueSessionId, authKey, signingKeyShare, partialPublicKeys, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
 	}
 	if transcript == nil {
 		transcript = hagrid.NewTranscript(DkgLabel, prng)
 	}
 	transcript.AppendMessages("DKLs24 DKG Participant", uniqueSessionId)
-	gennaroParty, err := gennaro.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, prng, transcript)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct dkls24 dkg participant out of gennaro dkg participant")
+
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	if !exists {
+		return nil, errs.NewMissing("could not find my sharing id")
 	}
+
 	zeroSamplingParty, err := zeroSetup.NewParticipant(uniqueSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
@@ -79,11 +81,12 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	}
 	participant := &Participant{
 		MyAuthKey:             authKey,
-		GennaroParty:          gennaroParty,
+		MySharingId:           mySharingId,
+		MySigningKeyShare:     signingKeyShare,
+		MyPartialPublicKeys:   partialPublicKeys,
 		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
-		Shard:                 &dkls24.Shard{},
 		Protocol:              protocol,
 	}
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
@@ -92,7 +95,7 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	return participant, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
@@ -104,6 +107,12 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 	if !compilerUtils.CompilerIsSupported(niCompiler) {
 		return errs.NewType("compiler %s is not supported", niCompiler)
+	}
+	if err := signingKeyShare.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "private share is invalid")
+	}
+	if err := partialPublicKeys.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "public share is invalid")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")

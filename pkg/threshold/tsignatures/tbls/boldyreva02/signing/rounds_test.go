@@ -37,6 +37,16 @@ func TestHappyPath(t *testing.T) {
 					err := testutils.SigningRoundTrip[bls12381.G2, bls12381.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
+				t.Run("short keys with DKG", func(t *testing.T) {
+					t.Parallel()
+					err := testutils.SigningWithDkg[bls12381.G1, bls12381.G2](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					require.NoError(t, err)
+				})
+				t.Run("short signatures with DKG", func(t *testing.T) {
+					t.Parallel()
+					err := testutils.SigningWithDkg[bls12381.G2, bls12381.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					require.NoError(t, err)
+				})
 			})
 		}
 	}

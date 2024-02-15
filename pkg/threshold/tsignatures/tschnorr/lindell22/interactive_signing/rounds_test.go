@@ -11,11 +11,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
@@ -160,5 +164,52 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	}
 
 	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, bipSignature, message)
+	require.NoError(t, err)
+}
+
+func Test_HappyPathWithDkg(t *testing.T) {
+	t.Parallel()
+
+	hashFunc := sha512.New
+	curve := edwards25519.NewCurve()
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("testSessionId")
+
+	signatureProtocol, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(signatureProtocol, n)
+	require.NoError(t, err)
+
+	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, th, identities)
+	require.NoError(t, err)
+
+	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, thresholdSignatureProtocol, identities)
+	require.NoError(t, err)
+
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
+	for i, id := range identities {
+		shard, err := lindell22.NewShard(thresholdSignatureProtocol, signingKeyShares[i], partialPublicKeys[i])
+		require.NoError(t, err)
+		shards.Put(id, shard)
+	}
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, false)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	signature, err := interactive_signing.Aggregate(partialSignatures...)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	publicKey := signingKeyShares[0].PublicKey
+	err = schnorr.Verify(signatureProtocol, &schnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }

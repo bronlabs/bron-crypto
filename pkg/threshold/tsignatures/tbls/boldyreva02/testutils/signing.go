@@ -6,11 +6,13 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
@@ -105,6 +107,76 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 	sharingConfig := types.DeriveSharingConfig(cohort.Participants())
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
+	if err != nil {
+		return errs.WrapFailed(err, "Could not aggregate partial signatures")
+	}
+
+	err = bls.Verify(publicKey, signature, message, signaturePOP, scheme, nil)
+	if err != nil {
+		return errs.WrapVerification(err, "Could not verify signature")
+	}
+	return nil
+}
+
+func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int, scheme bls.RogueKeyPrevention) error {
+	hashFunc := sha256.New
+	message := []byte("messi > ronaldo")
+	sid := []byte("sessionId")
+
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
+
+	signatureProtocol, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make cipher suite")
+	}
+
+	identities, err := ttu.MakeTestIdentities(signatureProtocol, n)
+	if err != nil {
+		return errs.WrapFailed(err, "Could not make test identities")
+	}
+
+	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, threshold, identities)
+	if err != nil {
+		return errs.WrapFailed(err, "Could not make cohort protocol")
+	}
+
+	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, thresholdSignatureProtocol, identities)
+	if err != nil {
+		return errs.WrapFailed(err, "could not run JK-DKG")
+	}
+
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
+	for i, id := range identities {
+		shard, err := boldyreva02.NewShard[K](thresholdSignatureProtocol, signingKeyShares[i], partialPublicKeys[i])
+		if err != nil {
+			return errs.WrapFailed(err, "could not create a share")
+		}
+		shards.Put(id, shard)
+	}
+
+	aliceShard, exists := shards.Get(identities[0])
+	if !exists {
+		return errs.NewMissing("0th shard")
+	}
+	publicKeyShares := aliceShard.PublicKeyShares
+	publicKey := publicKeyShares.PublicKey
+
+	participants, err := MakeSigningParticipants[K, S](sid, thresholdSignatureProtocol, identities, shards, scheme)
+	if err != nil {
+		return err
+	}
+
+	partialSignatures, err := ProducePartialSignature(participants, message, scheme)
+	if err != nil {
+		return err
+	}
+
+	sharingConfig := types.DeriveSharingConfig(thresholdSignatureProtocol.Participants())
+	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
+	if err != nil {
+		return errs.WrapFailed(err, "Could not aggregate partial signatures")
+	}
 	if err != nil {
 		return errs.WrapFailed(err, "Could not aggregate partial signatures")
 	}

@@ -20,6 +20,8 @@ type SigningKeyShare = boldyreva02.SigningKeyShare[KeySubGroup]
 type PublicKeyShares = boldyreva02.PartialPublicKeys[KeySubGroup]
 type Shard = boldyreva02.Shard[KeySubGroup]
 
+var NewShard = boldyreva02.NewShard[KeySubGroup]
+
 type PartialSignature struct {
 	SigmaI    *bls.Signature[SignatureSubGroup]
 	DleqProof compiler.NIZKPoKProof

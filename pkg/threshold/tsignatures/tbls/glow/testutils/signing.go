@@ -6,11 +6,13 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing"
@@ -114,6 +116,70 @@ func SigningRoundTrip(threshold, n int) error {
 	}
 
 	err = bls.Verify(publicKey, signature, message, nil, bls.Basic, nil)
+	if err != nil {
+		return errs.WrapVerification(err, "could not verify signature")
+	}
+	return nil
+}
+
+func SigningWithDkg(threshold, n int) error {
+	hashFunc := sha256.New
+	message := []byte("messi > ronaldo")
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make ciphersuite")
+	}
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make test identities")
+	}
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make cohort protocol")
+	}
+
+	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, protocol, identities)
+	if err != nil {
+		return errs.WrapFailed(err, "could not run JK-DKG")
+	}
+
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *glow.Shard]()
+	for i, id := range identities {
+		shard, err := glow.NewShard(protocol, signingKeyShares[i], partialPublicKeys[i])
+		if err != nil {
+			return errs.WrapFailed(err, "invalid share")
+		}
+		shards.Put(id, shard)
+	}
+
+	participants, err := MakeSigningParticipants(sid, protocol, identities, shards)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make signing participants")
+	}
+
+	partialSignatures, err := ProducePartialSignature(participants, message)
+	if err != nil {
+		return errs.WrapFailed(err, "could not produce partial signatures")
+	}
+
+	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+
+	aliceShard, _ := shards.Get(identities[0])
+	agg, err := aggregation.NewAggregator(sid, aliceShard.PublicKeyShares, protocol)
+	if err != nil {
+		return errs.WrapFailed(err, "could not make aggregator")
+	}
+
+	signature, err := agg.Aggregate(aggregatorInput, message)
+	if err != nil {
+		return errs.WrapFailed(err, "could not aggregate partial signatures")
+	}
+
+	err = bls.Verify(aliceShard.SigningKeyShare.PublicKey, signature, message, nil, bls.Basic, nil)
 	if err != nil {
 		return errs.WrapVerification(err, "could not verify signature")
 	}
