@@ -52,9 +52,9 @@ func TestHappyPathVSOT_OT(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run (chosen) OT
-		masks, err := sender.Round2Encrypt(senderMessages)
+		masks, err := sender.Encrypt(senderMessages)
 		require.NoError(t, err)
-		receiverOTchosenMessages, err := receiver.Round3Decrypt(masks)
+		receiverOTchosenMessages, err := receiver.Decrypt(masks)
 		require.NoError(t, err)
 
 		// Validate result
@@ -86,9 +86,9 @@ func TestHappyPathVSOT_COT(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run (chosen) OT
-		z_A, tau, err := sender.Round2CreateCorrelation(a)
+		z_A, tau, err := sender.CreateCorrelation(a)
 		require.NoError(t, err)
-		z_B, err := receiver.Round3ApplyCorrelation(tau)
+		z_B, err := receiver.ApplyCorrelation(tau)
 		require.NoError(t, err)
 
 		// Validate result

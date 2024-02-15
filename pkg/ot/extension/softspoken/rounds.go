@@ -23,6 +23,7 @@ type Round1Output struct {
 // Round1 uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
 func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage, r1Out *Round1Output, err error) {
 	r1Out = &Round1Output{}
+	// Sanitise inputs and compute sizes
 	if len(x) == 0 {
 		x = make(ot.ChoiceBits, r.Xi/8)
 		if _, err := r.Csprng.Read(r.Output.Choices); err != nil {
@@ -32,78 +33,73 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 		return nil, nil, errs.NewArgument("choice bits length must be a multiple of KappaBytes=%d (is %d)", KappaBytes, len(x))
 	}
 	r.Output.Choices = x
-
-	// Sanitise inputs and compute sizes
-
 	eta := r.L * r.Xi // η = L*ξ
 	etaBytes := eta >> 3
 	etaPrimeBytes := etaBytes + SigmaBytes // η'= η + σ
 
 	// EXTENSION
-	// step 1.1.1 (Ext.1)
-	r.xPrime = make([]byte, etaPrimeBytes)                  // x' ∈ [η']bits
+	// step 1.1 & 1.2: Generate x' as a concatenation of L copies of x and σ random bits
+	r.xPrime = make([]byte, etaPrimeBytes)
 	copy(r.xPrime[:etaBytes], bitstring.RepeatBits(x, r.L)) // x' = {x0 || x0 || ... }_L || {x1 || x1 || ... }_L || ...
 	if _, err = r.Csprng.Read(r.xPrime[etaBytes:]); err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe (Ext.1)")
+		return nil, nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe")
 	}
 
-	// step 1.1.2 (Ext.2)
+	// step 1.3: Extend the baseOT seeds
 	t := &[2]ExtMessageBatch{}
 	for i := 0; i < Kappa; i++ {
-		t[0][i] = make([]byte, etaPrimeBytes) // k^i_0 --(PRG)--> t^i_0
-		t[1][i] = make([]byte, etaPrimeBytes) // k^i_1 --(PRG)--> t^i_1
+		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
+		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
 		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.UniqueSessionId); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe")
 		}
 		if _, err = r.prg.Read(t[0][i]); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
 		}
 		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.UniqueSessionId); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 		if _, err = r.prg.Read(t[1][i]); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe (Ext.2)")
+			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 	}
-	// step 1.1.3 (Ext.3)
+	// step 1.4: Compute u_i = t_{0,i} ⊕ t_{1,i} ⊕ x'
 	for i := 0; i < Kappa; i++ {
-		r1Out.U[i] = make([]byte, etaPrimeBytes) // u_i = t^i_0 + t^i_1 + Δ_i
+		r1Out.U[i] = make([]byte, etaPrimeBytes)
 		subtle.XORBytes(r1Out.U[i], t[0][i], t[1][i])
 		subtle.XORBytes(r1Out.U[i], r1Out.U[i], r.xPrime)
 	}
 
-	// CONSISTENCY CHECK
-	// step 1.2.1.[1-2] (*)(Check.1, Fiat-Shamir)
+	// CONSISTENCY CHECK (Fiat-Shamir)
+	// step 1.5: Generate the challenge (χ) using Fiat-Shamir heuristic
 	r1Out.Witness, err = commitWitness(r.Transcript, &r1Out.U, nil, r.Csprng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
 	}
-	// step 1.2.1.3 (*)(Check.1, Fiat-Shamir)
 	M := eta / Sigma                                          // M = η/σ
 	challengeFiatShamir := generateChallenge(r.Transcript, M) // χ
-	// step 1.2.2 (Check.2) Compute ẋ and ṫ
+	// step 1.6: Compute the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	r.computeResponse(t, challengeFiatShamir, &r1Out.Response)
 
-	// (*)(Fiat-Shamir): Append the challenge response to the transcript (to be used by protocols sharing the transcript)
 	r.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1Out.Response.X_val[:])
 	for i := 0; i < Kappa; i++ {
 		r.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1Out.Response.T_val[i][:])
 	}
 
-	// TRANSPOSE AND RANDOMISE
-	// step 1.3.1 (T&R.1) Transpose t^i_0 into t_j
-	t_j, err := bitstring.TransposePackedBits(t[0][:]) // t_j ∈ [η'][κ]bits
+	// RANDOMISE
+	// step 1.7: Transpose t_{0,i,j} -> t_{0,j,i}  ∀i∈[κ], j∈[η']
+	t_j, err := bitstring.TransposePackedBits(t[0][:])
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "bad transposing t^i_0 for SoftSpoken COTe")
+		return nil, nil, errs.WrapFailed(err, "bad transposing t_0 for SoftSpoken COTe")
 	}
-	// step 1.3.2 (T&R.2) Hash η rows of t_j using the sid as salt (drop η' - η rows, used for consistency check)
+	// step 1.9: Randomise by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
 	r.Output.ChosenMessages = make([]ot.ChosenMessage, r.Xi)
 	for j := 0; j < r.Xi; j++ {
 		r.Output.ChosenMessages[j] = make(ot.ChosenMessage, r.L)
 		for l := 0; l < r.L; l++ {
 			digest, err := hashing.Hash(ot.HashFunction, []byte(label), r.UniqueSessionId, bitstring.ToBytesLE(j), t_j[j*r.L+l])
 			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "bad hashing t_j for SoftSpoken COTe (T&R.2)")
+				return nil, nil, errs.WrapHashing(err, "bad hashing t_j for SoftSpoken COTe")
 			}
 			copy(r.Output.ChosenMessages[j][l][:], digest)
 		}
@@ -124,62 +120,61 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
 
 	// EXTENSION
-	// step 2.1.1 (Ext.1) k^i_{Δ_i} --(PRG)--> t^i_{Δ_i}
-	t_Delta := ExtMessageBatch{}
+	// step 2.1: Extend the baseOT seeds
+	t_b := ExtMessageBatch{}
 	for i := 0; i < Kappa; i++ {
-		t_Delta[i] = make([]byte, EtaPrimeBytes)
+		t_b[i] = make([]byte, EtaPrimeBytes)
 		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.UniqueSessionId); err != nil {
-			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe (Ext.2)")
+			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe")
 		}
-		if _, err = s.prg.Read(t_Delta[i]); err != nil {
-			return nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe (Ext.2)")
+		if _, err = s.prg.Read(t_b[i]); err != nil {
+			return nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe")
 		}
 	}
-	// step 2.1.2 (Ext.2) Compute q_i = Δ_i • u_i + t_i
+	// step 2.2: Compute q_i = b_i • u_i + tb_i  ∀i∈[κ]
 	extCorrelations := ExtMessageBatch{}
 	qiTemp := make([]byte, EtaPrimeBytes)
 	for i := 0; i < Kappa; i++ {
 		if len(r1out.U[i]) != EtaPrimeBytes {
 			return nil, errs.NewLength("U[%d] length is %d, should be %d", i, len(r1out.U[i]), EtaPrimeBytes)
 		}
-		extCorrelations[i] = t_Delta[i]
-		subtle.XORBytes(qiTemp, r1out.U[i], t_Delta[i])
+		extCorrelations[i] = t_b[i]
+		subtle.XORBytes(qiTemp, r1out.U[i], t_b[i])
 		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Select(i)), extCorrelations[i], qiTemp)
 	}
 
-	// CONSISTENCY CHECK
-	// step 2.2.1.1 (*)(Fiat-Shamir): Append the expansionMask to the transcript
+	// CONSISTENCY CHECK (Fiat-Shamir)
+	// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
 	_, err = commitWitness(s.Transcript, &r1out.U, r1out.Witness, s.Csprng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
+		return nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe")
 	}
-	// step 2.2.1.2 (Check.1&2) Generate the challenge (χ) using Fiat-Shamir heuristic
 	M := Eta / Sigma
 	challengeFiatShamir := generateChallenge(s.Transcript, M)
-	// step 2.2.[2-3] (Check.3) Check the consistency of the challenge response computing q^i
+	// step 2.4: Verify the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	err = s.verifyChallenge(challengeFiatShamir, &r1out.Response, &extCorrelations)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "bad consistency check for SoftSpoken COTe (Check.3)")
+		return nil, errs.WrapFailed(err, "bad consistency check for SoftSpoken COTe")
 	}
-	// (*)(Fiat-Shamir): Append the challenge response to the transcript
+
 	s.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1out.Response.X_val[:])
 	for i := 0; i < Kappa; i++ {
 		s.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1out.Response.T_val[i][:])
 	}
 
-	// TRANSPOSE AND RANDOMISE
-	// step 2.3.1 (T&R.1) Transpose q^i -> q_j and add Δ -> q_j+Δ
-	qjTransposed, err := bitstring.TransposePackedBits(extCorrelations[:]) // q_j ∈ [η'][κ]bits
+	// RANDOMISE
+	// step 2.5: Transpose q_{i,j} -> q_{j,i}  ∀i∈[κ], j∈[η']
+	qjTransposed, err := bitstring.TransposePackedBits(extCorrelations[:])
 	if err != nil {
-		return nil, errs.WrapFailed(err, "bad transposing q^i for SoftSpoken COTe")
+		return nil, errs.WrapFailed(err, "bad transposing q_{i,j} for SoftSpoken COTe")
 	}
-	qjTransposedPlusDelta := make([][]byte, Eta) // q_j+Δ ∈ [η][κ]bits
+	// step 2.6: Randomise by hashing q_{j,i} and q_{j,i}+Δ_i  j∈[η], ∀i∈[κ]
+	qjTransposedPlusDelta := make([][]byte, Eta)
 	for j := 0; j < Eta; j++ {
 		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
 		// drop last η'-η rows, they are used only for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.baseOtSeeds.Choices)
 	}
-	// step 2.3.2 (T&R.2) Randomise by hashing q_j and q_j+Δ
 	s.Output.Messages = make([]ot.MessagePair, s.Xi)
 	for j := 0; j < s.Xi; j++ {
 		s.Output.Messages[j][0] = make(ot.Message, s.L)
@@ -187,12 +182,12 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 		for l := 0; l < s.L; l++ {
 			digest, err := hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
 			if err != nil {
-				return nil, errs.WrapFailed(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
+				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
 			copy(s.Output.Messages[j][0][l][:], digest)
 			digest, err = hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
 			if err != nil {
-				return nil, errs.WrapFailed(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
+				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}
 			copy(s.Output.Messages[j][1][l][:], digest)
 		}
@@ -303,7 +298,7 @@ func (s *Sender) verifyChallenge(
 		isCorrect = isCorrect && checkOk
 	}
 	if !isCorrect {
-		return errs.NewIdentifiableAbort("receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
+		return errs.NewIdentifiableAbort("SoftspokenOTe receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 	}
 	return nil
 }

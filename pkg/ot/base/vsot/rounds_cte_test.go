@@ -35,7 +35,7 @@ func Test_MeasureConstantTime_encrypt(t *testing.T) {
 		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
 		require.NoError(t, err)
 	}, func() {
-		sender.Round2Encrypt(messages)
+		sender.Encrypt(messages)
 	})
 }
 
@@ -60,9 +60,9 @@ func Test_MeasureConstantTime_decrypt(t *testing.T) {
 	internal.RunMeasurement(500, "vsot_decrypt", func(i int) {
 		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
 		require.NoError(t, err)
-		encrypted, err = sender.Round2Encrypt(messages)
+		encrypted, err = sender.Encrypt(messages)
 		require.NoError(t, err)
 	}, func() {
-		receiver.Round3Decrypt(encrypted)
+		receiver.Decrypt(encrypted)
 	})
 }

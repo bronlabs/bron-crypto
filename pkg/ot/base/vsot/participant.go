@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-// Sender stores state for the "sender" role in OT. see Name 7 in Appendix A of DKLs18.
+// Sender stores state for the "sender" role in OT.
 type Sender struct {
 	ot.Participant
 
@@ -24,7 +24,7 @@ type Sender struct {
 	dlog      compiler.NICompiler[schnorr.Statement, schnorr.Witness] // compiler used for producing a nizkpok of `b`
 }
 
-// Receiver stores state for the "receiver" role in OT. Name 7, Appendix A, of DKLs.
+// Receiver stores state for the "receiver" role in OT.
 type Receiver struct {
 	ot.Participant
 

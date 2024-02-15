@@ -37,7 +37,6 @@ func (S *Sender) Round1() (mS Round1P2P, err error) {
 }
 
 func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
-	// step 2.1
 	if len(R.Output.Choices) == 0 {
 		R.Output.Choices = make(ot.ChoiceBits, R.Xi/8)
 		if _, err := R.Csprng.Read(R.Output.Choices); err != nil {
@@ -46,7 +45,7 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 	}
 	phi := make([][2][]curves.Point, R.Xi)
 	R.Output.ChosenMessages = make([]ot.ChosenMessage, R.Xi)
-	// step 2.2 (Setup RO)
+	// Setup ROs
 	R.Transcript.AppendPoints("mS", mS)
 	var tagRandomOracle [2][]byte
 	tagRandomOracle[0], err = R.Transcript.ExtractBytes(Ro0Label, TagLength)
@@ -57,20 +56,20 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 	if err != nil {
 		return nil, errs.WrapHashing(err, "extracting tag Ro1")
 	}
-	// step 2.3
+	// step 2.1
 	for i := 0; i < R.Xi; i++ {
 		c_i := bitstring.SelectBit(R.Output.Choices, i)
 		phi[i] = [2][]curves.Point{make([]curves.Point, R.L), make([]curves.Point, R.L)}
 		R.Output.ChosenMessages[i] = make(ot.ChosenMessage, R.L)
 		for l := 0; l < R.L; l++ {
-			// step 2.2.1 (KA.R)
+			// step 2.2 (KA.R)
 			b_i, err := R.Curve.ScalarField().Random(R.Csprng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar bi")
 			}
-			// step 2.2.2 (KA.msg_2)
+			// step 2.3 (KA.msg_2)
 			mR_i := R.Curve.ScalarBaseMult(b_i)
-			// step 2.2.3 (KA.key_2)
+			// step 2.4 (KA.key_2)
 			sharedValue, err := dh.DiffieHellman(b_i, mS)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "computing shared bytes for KA.key_2")
@@ -80,14 +79,14 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 				return nil, errs.WrapHashing(err, "computing r_i_j")
 			}
 			copy(R.Output.ChosenMessages[i][l][:], r_i_l)
-			// step 2.2.4 (POPF.Program I)
+			// step 2.5 (POPF.Program)
 			sc, err := R.Curve.ScalarField().Random(R.Csprng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar sc")
 			}
 			phi[i][1-c_i][l] = R.Curve.ScalarBaseMult(sc).ClearCofactor()
 
-			// step 2.2.5 (POPF.Program II)
+			// step 2.6 (POPF.Program)
 			hashInput := bytes.Join([][]byte{phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i]}, nil)
 			sc, err = R.Curve.ScalarField().Hash(hashInput)
 			if err != nil {
@@ -104,7 +103,7 @@ func (S *Sender) Round3(phi Round2P2P) (err error) {
 	if len(phi) != S.Xi {
 		return errs.NewArgument("phi length should be Xi (%d != %d)", len(phi), S.Xi)
 	}
-	// step 3.1 (Setup RO)
+	// Setup ROs
 	tagRandomOracle := make([][]byte, 2)
 	tagRandomOracle[0], err = S.Transcript.ExtractBytes(Ro0Label, TagLength)
 	if err != nil {
@@ -115,6 +114,7 @@ func (S *Sender) Round3(phi Round2P2P) (err error) {
 		return errs.WrapHashing(err, "extracting tag Ro1")
 	}
 	S.Output.Messages = make([]ot.MessagePair, S.Xi)
+	// step 3.1
 	for i := 0; i < S.Xi; i++ {
 		if len(phi[i][0]) != S.L || len(phi[i][1]) != S.L {
 			return errs.NewArgument("phi[%d] length should be L (%d != %d || %d != %d)",
@@ -123,14 +123,14 @@ func (S *Sender) Round3(phi Round2P2P) (err error) {
 		S.Output.Messages[i] = ot.MessagePair{make([]ot.MessageElement, S.L), make([]ot.MessageElement, S.L)}
 		for l := 0; l < S.L; l++ {
 			for j := byte(0); j < 2; j++ {
-				// step 3.1.1 (POPF.Eval)
+				// step 3.2 (POPF.Eval)
 				hashInput := bytes.Join([][]byte{phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j]}, nil)
 				sc, err := S.Curve.ScalarField().Hash(hashInput)
 				if err != nil {
 					return errs.WrapHashing(err, "hashing for phi[%d][%d]", i, j)
 				}
 				P := S.Curve.ScalarBaseMult(sc).ClearCofactor().Add(phi[i][j][l])
-				// step 3.1.2 (KA.key_1)
+				// step 3.3 (KA.key_1)
 				sharedValue, err := dh.DiffieHellman(S.MyEsk, P)
 				if err != nil {
 					return errs.WrapFailed(err, "computing shared bytes for KA.key_2")

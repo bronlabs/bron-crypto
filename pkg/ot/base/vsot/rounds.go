@@ -32,14 +32,14 @@ type (
 
 // Round1 computes a secret/public key pair and the dlog proof of the secret key.
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {
-	// Sample the secret key and compute the public key.
+	// steps 1.1 & 1.2: Sample secret key and compute public key.
 	s.SecretKey, err = s.Curve.ScalarField().Random(crand.Reader)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "generating random scalar")
 	}
 	s.PublicKey = s.Curve.ScalarBaseMult(s.SecretKey)
 
-	// Generate the ZKP proof.
+	// step 1.3: Generate the ZKP proof.
 	s.Transcript.AppendMessages("dlog proof", s.UniqueSessionId)
 	prover, err := s.dlog.NewProver(s.UniqueSessionId, s.Transcript.Clone())
 	if err != nil {
@@ -60,6 +60,7 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 	r.SenderPublicKey = r1out.PublicKey
 	r.Transcript.AppendMessages("dlog proof", r.UniqueSessionId)
+	// step 2.1: Verify the dlog proof.
 	dlogVerifier, err := r.dlog.NewVerifier(r.UniqueSessionId, r.Transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dlog verifier")
@@ -74,13 +75,12 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 		r2out[i] = make([]ot.ChoiceBits, r.L)
 		r.Output.ChosenMessages[i] = make([]ot.MessageElement, r.L)
 		for l := 0; l < r.L; l++ {
+			// step 2.3: Sample random scalar a.
 			a, err := r.Curve.ScalarField().Random(crand.Reader)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar")
 			}
-			// Computing `A := a . G + w . B` in constant time, by first computing option0 = a.G and option1 = a.G+B and then
-			// constant time choosing one of them by first assuming that the output is option0, and overwrite it if the choice bit is 1.
-
+			// step 2.5: Compute `A := a . G + w . B` in constant time.
 			option0 := r.Curve.ScalarBaseMult(a)
 			option0Bytes := option0.ToAffineCompressed()
 			option1 := option0.Add(r.SenderPublicKey)
@@ -88,11 +88,11 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 
 			r2out[i][l] = option0Bytes
 			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out[i][l], option1Bytes)
-			// compute the internal rho
-			rho := r.SenderPublicKey.Mul(a)
-			output, err := hashing.HashChain(sha3.New256, r.UniqueSessionId, []byte{byte(i*r.L + l)}, rho.ToAffineCompressed())
+			// step 2.4: Compute m_b
+			m_b := r.SenderPublicKey.Mul(a)
+			output, err := hashing.HashChain(sha3.New256, r.UniqueSessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
 			if err != nil {
-				return nil, errs.WrapFailed(err, "creating one time pad decryption keys")
+				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
 			}
 			copy(r.Output.ChosenMessages[i][l][:], output)
 		}
@@ -109,7 +109,7 @@ func (s *Sender) Round3(maskedChoices Round2P2P) (challenge Round3P2P, err error
 	challenge = make(Round3P2P, s.Xi)
 	s.Output.Messages = make([]ot.MessagePair, s.Xi)
 
-	var rho [2]curves.Point
+	var m [2]curves.Point
 	var hashedKey [2][ot.KappaBytes]byte
 	negSenderPublicKey := s.PublicKey.Neg()
 
@@ -120,25 +120,23 @@ func (s *Sender) Round3(maskedChoices Round2P2P) (challenge Round3P2P, err error
 		challenge[i] = make(ot.Message, s.L)
 		s.Output.Messages[i] = ot.MessagePair{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
 		for l := 0; l < s.L; l++ {
+			// step 3.2: Compute ROT outputs m_0 and m_1
 			receiversMaskedChoice, err := s.Curve.Point().FromAffineCompressed(maskedChoices[i][l])
 			if err != nil {
 				return nil, errs.WrapSerialisation(err, "uncompress the point")
 			}
-
-			// Sender creates two options that will eventually be used as her encryption keys.
-			rho[0] = receiversMaskedChoice.Mul(s.SecretKey)
-
+			m[0] = receiversMaskedChoice.Mul(s.SecretKey)
 			receiverChoiceMinusSenderPublicKey := receiversMaskedChoice.Add(negSenderPublicKey)
-			rho[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
+			m[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
 
 			for k := 0; k < 2; k++ {
-				output, err := hashing.HashChain(ot.HashFunction, s.UniqueSessionId, []byte{byte(i*s.L + l)}, rho[k].ToAffineCompressed())
+				output, err := hashing.HashChain(ot.HashFunction, s.UniqueSessionId, []byte{byte(i*s.L + l)}, m[k].ToAffineCompressed())
 				if err != nil {
-					return nil, errs.WrapFailed(err, "creating one time pad encryption keys")
+					return nil, errs.WrapHashing(err, "creating one time pad encryption keys")
 				}
 				copy(s.Output.Messages[i][k][l][:], output)
 
-				// Compute a challenge by XORing the hash of the hash of the key. Not a typo ;)
+				// step 3.3: Compute challenge by XORing the hash of the hash of the key. Not a typo ;)
 				digest, err := hashing.Hash(ot.HashFunction, s.Output.Messages[i][k][l][:])
 				if err != nil {
 					return nil, errs.WrapHashing(err, "hashing the key (I)")
@@ -161,18 +159,16 @@ func (r *Receiver) Round4(challenge Round3P2P) (Round4P2P, error) {
 	if len(challenge) != r.Xi {
 		return nil, errs.NewLength("number of challenges should be Xi (%d != %d)", len(challenge), r.Xi)
 	}
-	// store to be used in future steps
 	r.SenderChallenge = challenge
-	// challengeResponses is Rho' in the paper.
 	challengeResponses := make(Round4P2P, r.Xi)
 	alternativeChallengeResponse := new([ot.KappaBytes]byte)
+	// step 4.1: Compute challenge response
 	for i := 0; i < r.Xi; i++ {
 		if len(challenge[i]) != r.L {
 			return nil, errs.NewLength("challenge[%d] length should be L (%d != %d)", i, len(challenge[i]), r.L)
 		}
 		challengeResponses[i] = make(ot.Message, r.L)
 		for l := 0; l < r.L; l++ {
-			// Constant-time xor of the hashed key and the challenge, based on the choice bit.
 			hashedKey, err := hashing.Hash(ot.HashFunction, r.Output.ChosenMessages[i][l][:])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing the key (I)")
@@ -189,10 +185,8 @@ func (r *Receiver) Round4(challenge Round3P2P) (Round4P2P, error) {
 	return challengeResponses, nil
 }
 
-// Round5 verifies the challenge response. If the verification passes, sender opens his challenges to the receiver.
-// See step 7 of page 16 of the paper.
-// Abort if Rho' != H(H(Rho^0)) in other words, if challengeResponse != H(H(encryption key 0)).
-// opening is H(encryption key).
+// Round5 verifies the challenge response. If the verification passes, sender
+// opens his challenges to the receiver. See step 7 of page 16 of the paper.
 func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
 	if len(challengeResponses) != s.Xi {
 		return nil, errs.NewLength("number of challenge responses should be Xi (%d != %d)", len(challengeResponses), s.Xi)
@@ -212,26 +206,18 @@ func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
 				opening[i][k][l] = [ot.KappaBytes]byte(digest[:ot.KappaBytes])
 			}
 
-			// Verify
+			// step 5.1: Verify the challenge response
 			hashedKey0 := sha3.Sum256(opening[i][0][l][:])
 			if subtle.ConstantTimeCompare(hashedKey0[:], challengeResponses[i][l][:]) != 1 {
-				return nil, errs.NewVerification("receiver's challenge response didn't match H(H(rho^0))")
+				return nil, errs.NewTotalAbort("VSOT Receiver", "receiver's challenge response didn't match H(H(rho^0))")
 			}
 		}
 	}
 	return opening, nil
 }
 
-// Round6 is the _last_ part of the "Verification" phase of OT; see p. 16 of https://eprint.iacr.org/2018/499.pdf.
+// Round6 is the _last_ part of the "Verification" phase of OT;
 // See step 8 of page 16 of the paper.
-// Abort if H(Rho^w) != the one it calculated itself or
-//
-//	if Xi != H(H(Rho^0)) XOR H(H(Rho^1))
-//
-// In other words,
-//
-//	if opening_w != H(decryption key)  or
-//	if challenge != H(opening 0) XOR H(opening 0)
 func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 	if len(challengeOpenings) != r.Xi {
 		return errs.NewLength("number of challenge openings should be Xi (%d != %d)", len(challengeOpenings), r.Xi)
@@ -243,17 +229,19 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 				i, len(challengeOpenings[i][0]), r.L, len(challengeOpenings[i][1]), r.L)
 		}
 		for l := 0; l < r.L; l++ {
+			// step 6.1: Verify the challenge openings
 			hashedDecryptionKey := sha3.Sum256(r.Output.ChosenMessages[i][l][:])
 			choice := r.Output.Choices.Select(i)
 			if subtle.ConstantTimeCompare(hashedDecryptionKey[:], challengeOpenings[i][choice][l][:]) != 1 {
-				return errs.NewVerification("sender's supposed H(rho^omega) doesn't match our own")
+				return errs.NewTotalAbort("VSOT sender", "sender's supposed H(rho^omega) doesn't match our own")
 			}
+			// step 6.2: Reconstruct the challenge and verify it
 			hashedKey0 := sha3.Sum256(challengeOpenings[i][0][l][:])
 			hashedKey1 := sha3.Sum256(challengeOpenings[i][1][l][:])
 			subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:], hashedKey1[:])
 
 			if subtle.ConstantTimeCompare(reconstructedChallenge[:], r.SenderChallenge[i][l][:]) != 1 {
-				return errs.NewVerification("sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
+				return errs.NewTotalAbort("VSOT sender", "sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
 			}
 		}
 	}

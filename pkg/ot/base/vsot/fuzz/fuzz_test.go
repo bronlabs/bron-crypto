@@ -67,9 +67,9 @@ func Fuzz_Test(f *testing.F) {
 				messages[i][1][l] = ([ot.KappaBytes]byte)(m1[:ot.KappaBytes])
 			}
 		}
-		ciphertexts, err := s.Round2Encrypt(messages)
+		ciphertexts, err := s.Encrypt(messages)
 		require.NoError(t, err)
-		decrypted, err := r.Round3Decrypt(ciphertexts)
+		decrypted, err := r.Decrypt(ciphertexts)
 		require.NoError(t, err)
 
 		for i := 0; i < int(batchSize); i++ {

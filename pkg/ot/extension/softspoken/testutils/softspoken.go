@@ -94,11 +94,11 @@ func RunSoftspokenCOTe(
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken sender round 2")
 	}
-	z_A, tau, err := sender.Output.Round2CreateCorrelation(senderInput)
+	z_A, tau, err := sender.Output.CreateCorrelation(senderInput)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 2")
 	}
-	z_B, err := receiver.Output.Round3ApplyCorrelation(tau)
+	z_B, err := receiver.Output.ApplyCorrelation(tau)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 3")
 	}

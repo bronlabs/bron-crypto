@@ -206,9 +206,9 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 						Receiver: receiverCounterParty,
 					},
 				} {
-					ciphertexts, err := pair.Sender.Round2Encrypt(messages)
+					ciphertexts, err := pair.Sender.Encrypt(messages)
 					require.NoError(t, err)
-					decrypted, err := pair.Receiver.Round3Decrypt(ciphertexts)
+					decrypted, err := pair.Receiver.Decrypt(ciphertexts)
 					require.NoError(t, err)
 					for i := 0; i < batchSize; i++ {
 						choice := pair.Receiver.Choices.Select(i)

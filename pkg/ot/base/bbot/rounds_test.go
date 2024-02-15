@@ -50,10 +50,10 @@ func TestHappyPathBBOT_OT(t *testing.T) {
 		_, senderMessages, err := ot_testutils.GenerateOTinputs(Xi, L)
 		require.NoError(t, err)
 
-		// Run (chosen) OT
-		masks, err := senderOutput.Round2Encrypt(senderMessages)
+		// Run (standard chosen) OT
+		masks, err := senderOutput.Encrypt(senderMessages)
 		require.NoError(t, err)
-		receiverOTchosenMessages, err := receiverOutput.Round3Decrypt(masks)
+		receiverOTchosenMessages, err := receiverOutput.Decrypt(masks)
 		require.NoError(t, err)
 
 		// Validate result
@@ -81,10 +81,10 @@ func TestHappyPathBBOT_COT(t *testing.T) {
 		_, a, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
 		require.NoError(t, err)
 
-		// Run (chosen) OT
-		z_A, tau, err := senderOutput.Round2CreateCorrelation(a)
+		// Run (correlated) OT
+		z_A, tau, err := senderOutput.CreateCorrelation(a)
 		require.NoError(t, err)
-		z_B, err := receiverOutput.Round3ApplyCorrelation(tau)
+		z_B, err := receiverOutput.ApplyCorrelation(tau)
 		require.NoError(t, err)
 
 		// Validate result

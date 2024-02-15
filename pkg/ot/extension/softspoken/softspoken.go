@@ -27,7 +27,7 @@ const (
 
 	// SET DYNAMICALLY TO ALLOW VARIABLE-SIZE INPUTS
 	// - L is the number of OT elements per OT message.
-	// - Xi (ξ), the number of the OTe/COTe messages per OTe/COTe batch. ξ=(κ+2s) for DKLs24.
+	// - Xi (ξ), the number of the OTe messages per OTe batch. ξ=(κ+2s) for DKLs24.
 	// - eta (η=L*ξ) is the total number of κ-bit OT elements after expansion, minus the statistical redundancy.
 	// - etaPrime (η'=η+σ) is the full OT expansion size (including the statistical redundancy).
 	// - M (= η/σ) is the number of σ-bit consistency check challenges.
@@ -36,8 +36,8 @@ const (
 type (
 	/*.----------------------------- EXTENSION ------------------------------.*/
 
-	ExtMessageBatch  = [Kappa][]byte // ∈ [κ][ξ*L]bits, type for the OT expansions, ∈ [κ][η']bits after the consistency check.
-	ExtPackedChoices = ot.ChoiceBits // x_i ∈ [ξ+σ]bits, the OTe choice bits + σ random values.
+	ExtMessageBatch  = [Kappa][]byte // ∈ [κ][η']bits, type for the OT messages, ∈ [κ][η]bits after the consistency check.
+	ExtPackedChoices = ot.ChoiceBits // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
 
 	/*.------------------------- CONSISTENCY CHECK --------------------------.*/
 
@@ -45,7 +45,7 @@ type (
 	Witness    = [][SigmaBytes]byte // r ∈ [κ][σ]bits is the witness for the Fiat-Shamir transform.
 	Commitment = [][SigmaBytes]byte // c ∈ [κ][σ]bits is the witness commitment for the Fiat-Shamir transform.
 
-	// ChallengeResponse (ẋ, ṫ) is the OTe consistency check from the receiver, to be verified by the Sender.
+	// ChallengeResponse (ẋ, ṫ) is the OTe challenge response from the receiver, to be verified by the Sender.
 	ChallengeResponse struct {
 		X_val [SigmaBytes]byte        // ẋ ∈ [σ]bits
 		T_val [Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits

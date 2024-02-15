@@ -109,7 +109,7 @@ type OneTimePadedMaskPair = MessagePair // OneTimePadedMaskPair are the two mask
 
 // Encrypt allows a ROT (Random OT) sender to encrypt messages with one-time pad.
 // It converts the ROT into a standard chosen-message OT, both for base OTs and OT extensions.
-func (sROT *SenderRotOutput) Round2Encrypt(OTmessagePairs []MessagePair) (masks []OneTimePadedMaskPair, err error) {
+func (sROT *SenderRotOutput) Encrypt(OTmessagePairs []MessagePair) (masks []OneTimePadedMaskPair, err error) {
 	Xi := len(sROT.Messages)
 	L := len(sROT.Messages[0][0])
 	if len(OTmessagePairs) != Xi {
@@ -131,9 +131,9 @@ func (sROT *SenderRotOutput) Round2Encrypt(OTmessagePairs []MessagePair) (masks 
 	return masks, nil
 }
 
-// Round3Decrypt allows a ROT (Random OT) receiver to decrypt messages with one-time pad.
+// Decrypt allows a ROT (Random OT) receiver to decrypt messages with one-time pad.
 // It converts the ROT into a standard chosen-message OT, both for base OTs and OT extensions.
-func (rROT *ReceiverRotOutput) Round3Decrypt(masks []OneTimePadedMaskPair) (OTchosenMessages []ChosenMessage, err error) {
+func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMessages []ChosenMessage, err error) {
 	Xi := len(rROT.ChosenMessages)
 	L := len(rROT.ChosenMessages[0])
 	if len(masks) != Xi {
@@ -157,10 +157,10 @@ func (rROT *ReceiverRotOutput) Round3Decrypt(masks []OneTimePadedMaskPair) (OTch
 
 type CorrelationMask = CorrelatedMessage // Tau (τ) is the correlation mask of the sender, used to turn a ROT into a COT.
 
-// Round2CreateCorrelation allows a ROT receiver to input `a` and establish a
+// CreateCorrelation allows a ROT receiver to input `a` and establish a
 // correlation `a*x = z_A + z_B`, converting the ROT into a Correlated OT (COT).
 // It generates the correlation mask `τ` to be sent to the receiver, and z_A.
-func (sROT *SenderRotOutput) Round2CreateCorrelation(a []CorrelatedMessage) (z_A []CorrelatedMessage, tau []CorrelationMask, err error) {
+func (sROT *SenderRotOutput) CreateCorrelation(a []CorrelatedMessage) (z_A []CorrelatedMessage, tau []CorrelationMask, err error) {
 	Xi := len(sROT.Messages)
 	L := len(sROT.Messages[0][0])
 	if len(a) != Xi {
@@ -191,10 +191,10 @@ func (sROT *SenderRotOutput) Round2CreateCorrelation(a []CorrelatedMessage) (z_A
 	return z_A, tau, nil
 }
 
-// Round3ApplyCorrelation allows a ROT receiver to correlate `a*x = z_A + z_B` with
+// ApplyCorrelation allows a ROT receiver to correlate `a*x = z_A + z_B` with
 // his bit x of the ROT and the sender's `a` and `z_A`, obtaining `z_B`.
 // It turns the ROT into a COT.
-func (rROT *ReceiverRotOutput) Round3ApplyCorrelation(tau []CorrelationMask) (z_B []CorrelatedMessage, err error) {
+func (rROT *ReceiverRotOutput) ApplyCorrelation(tau []CorrelationMask) (z_B []CorrelatedMessage, err error) {
 	Xi := len(rROT.ChosenMessages)
 	L := len(rROT.ChosenMessages[0])
 	if len(tau) != Xi {
