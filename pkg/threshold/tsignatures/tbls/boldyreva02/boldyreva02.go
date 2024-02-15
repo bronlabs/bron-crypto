@@ -18,7 +18,7 @@ var _ tsignatures.Shard = (*Shard[bls12381.G2])(nil)
 
 type Shard[K bls.KeySubGroup] struct {
 	SigningKeyShare *SigningKeyShare[K]
-	PublicKeyShares *PublicKeyShares[K]
+	PublicKeyShares *PartialPublicKeys[K]
 
 	_ ds.Incomparable
 }
@@ -72,7 +72,7 @@ func (s *SigningKeyShare[K]) Validate(protocol types.ThresholdProtocol) error {
 	return nil
 }
 
-type PublicKeyShares[K bls.KeySubGroup] struct {
+type PartialPublicKeys[K bls.KeySubGroup] struct {
 	PublicKey               *bls.PublicKey[K]
 	Shares                  ds.HashMap[types.IdentityKey, curves.Point]
 	FeldmanCommitmentVector []curves.Point
@@ -80,7 +80,7 @@ type PublicKeyShares[K bls.KeySubGroup] struct {
 	_ ds.Incomparable
 }
 
-func (p *PublicKeyShares[K]) Validate(protocol types.ThresholdProtocol) error {
+func (p *PartialPublicKeys[K]) Validate(protocol types.ThresholdProtocol) error {
 	if p == nil {
 		return errs.NewIsNil("receiver of this method is nil")
 	}

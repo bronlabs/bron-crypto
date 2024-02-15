@@ -416,6 +416,7 @@ func (p *Participant) Round6(input types.RoundMessages[*Round5P2P]) (output type
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 3 of LP verifier")
 		}
+		round6Outputs.Put(identity, outgoingMessage)
 	}
 
 	p.round++
@@ -455,6 +456,7 @@ func (p *Participant) Round7(input types.RoundMessages[*Round6P2P]) (output type
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
 		}
+		round7Outputs.Put(identity, outgoingMessage)
 	}
 
 	p.round++

@@ -85,10 +85,6 @@ func (cosigner *Cosigner) SharingId() types.SharingID {
 	return cosigner.mySharingId
 }
 
-func (cosigner *Cosigner) IsSignatureAggregator() bool {
-	return cosigner.protocol.SignatureAggregators().Contains(cosigner.IdentityKey())
-}
-
 func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
 	err = validateInputs(sessionId, myAuthKey, secondaryIdentityKey, myShard, protocol, niCompiler, prng)
 	if err != nil {
@@ -126,10 +122,6 @@ func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIden
 		secondarySharingId:   theirSharingId,
 		state:                &PrimaryCosignerState{},
 	}
-	if !primaryCosigner.IsSignatureAggregator() {
-		return nil, errs.NewFailed("interactive primary cosigner must be signature aggregator")
-	}
-
 	if err := types.ValidateThresholdSignatureProtocol(primaryCosigner, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
 	}

@@ -75,7 +75,7 @@ func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader)
 				Share:     share,
 				PublicKey: privateKey.PublicKey,
 			},
-			PublicKeyShares: &boldyreva02.PublicKeyShares[K]{
+			PublicKeyShares: &boldyreva02.PartialPublicKeys[K]{
 				PublicKey:               privateKey.PublicKey,
 				Shares:                  publicKeySharesMap,
 				FeldmanCommitmentVector: feldmanCommitmentVector,

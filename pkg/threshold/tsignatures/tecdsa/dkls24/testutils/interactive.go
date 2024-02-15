@@ -104,10 +104,6 @@ func RunSignatureAggregation(protocol types.ThresholdSignatureProtocol, identiti
 	mappedPartialSignatures := MapPartialSignatures(identities, partialSignatures)
 	producedSignatures = make([]*ecdsa.Signature, len(participants))
 	for i, participant := range participants {
-		// TODO: test for signature aggregator
-		if !protocol.SignatureAggregators().Contains(participant.IdentityKey()) {
-			continue
-		}
 		signature, err := signing.Aggregate(participant.Protocol().CipherSuite(), participant.Shard().SigningKeyShare.PublicKey, mappedPartialSignatures, message)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to aggregate signature")

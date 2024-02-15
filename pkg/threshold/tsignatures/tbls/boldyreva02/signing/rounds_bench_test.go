@@ -7,10 +7,11 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
 
@@ -61,15 +62,11 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 		return err
 	}
 
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](publicKeyShares, bls.Basic, protocol)
-	if err != nil {
-		return err
-	}
-
 	b.StartTimer()
-	signature, _, err := agg.Aggregate(aggregatorInput, message, bls.Basic)
+	signature, _, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, bls.Basic)
 	if err != nil {
 		return err
 	}

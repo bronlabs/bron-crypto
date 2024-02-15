@@ -2,10 +2,8 @@ package signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
 )
 
 func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
@@ -48,22 +46,4 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 		SigmaPOPI: sigmaPOP_i,
 		POP:       pi_i,
 	}, nil
-}
-
-func (c *Cosigner[K, S]) Aggregate(partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
-	if c.round != 2 {
-		return nil, nil, errs.NewRound("round mismatch %d != 2", c.round)
-	}
-	if !c.IsSignatureAggregator() {
-		return nil, nil, errs.NewType("i'm not a signature aggregator")
-	}
-	aggregator, err := aggregation.NewAggregator[K, S](c.myShard.PublicKeyShares, scheme, c.protocol)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct aggregator")
-	}
-	signature, signaturePOP, err := aggregator.Aggregate(partialSignatures, message, scheme)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "aggregation failed")
-	}
-	return signature, signaturePOP, nil
 }

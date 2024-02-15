@@ -20,9 +20,10 @@ type Cosigner struct {
 	PreSignatures                PreSignatureBatch
 	FirstUnusedPreSignatureIndex int
 
-	MyAuthKey   types.AuthKey
-	MySharingId types.SharingID
-	Shard       *frost.Shard
+	MyAuthKey            types.AuthKey
+	MySharingId          types.SharingID
+	Shard                *frost.Shard
+	SignatureAggregators ds.HashSet[types.IdentityKey]
 
 	Protocol            types.ThresholdSignatureProtocol
 	SessionParticipants ds.HashSet[types.IdentityKey]
@@ -48,15 +49,15 @@ func (nic *Cosigner) SharingId() types.SharingID {
 }
 
 func (nic *Cosigner) IsSignatureAggregator() bool {
-	return nic.Protocol.SignatureAggregators().Contains(nic.IdentityKey())
+	return nic.SignatureAggregators.Contains(nic.IdentityKey())
 }
 
 func NewNonInteractiveCosigner(
 	authKey types.AuthKey, shard *frost.Shard,
 	preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
-	presentParties ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, prng io.Reader,
+	presentParties ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, signatureAggregators ds.HashSet[types.IdentityKey], prng io.Reader,
 ) (*Cosigner, error) {
-	err := validateInputsNonInteractiveSigning(authKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, protocol, prng)
+	err := validateInputsNonInteractiveSigning(authKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, signatureAggregators, protocol, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
@@ -98,6 +99,7 @@ func NewNonInteractiveCosigner(
 		Shard:                        shard,
 		Protocol:                     protocol,
 		SharingConfig:                sharingConfig,
+		SignatureAggregators:         signatureAggregators,
 		SessionParticipants:          presentParties,
 		myPrivateNoncePairs:          privateNoncePairs,
 		aggregationParameter: &aggregation.SignatureAggregatorParameters{
@@ -113,7 +115,7 @@ func NewNonInteractiveCosigner(
 	return participant, nil
 }
 
-func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Shard, preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair, presentParties ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Shard, preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair, presentParties, signatureAggregators ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
@@ -131,6 +133,12 @@ func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Sha
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
+	}
+	if signatureAggregators == nil {
+		return errs.NewIsNil("signature aggregators")
+	}
+	if presentParties == nil {
+		return errs.NewIsNil("present parties")
 	}
 	if !presentParties.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("present party set is not a subset of total")

@@ -37,10 +37,6 @@ func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func (p *Cosigner[K, S]) IsSignatureAggregator() bool {
-	return p.protocol.SignatureAggregators().Contains(p.IdentityKey())
-}
-
 func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.HashSet[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
 	if err := validateInputs[K, S](sid, authKey, sessionParticipants, myShard, protocol); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")

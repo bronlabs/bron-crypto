@@ -77,7 +77,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.Th
 
 	// TODO: remove pid after adding Repr method to Identity Key
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := interactive_signing.BigS(protocol.Participants())
+	bigS := interactive_signing.BigS(preSigners)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {

@@ -23,10 +23,8 @@ func ValidateProtocolConfig(f any) error {
 func ValidateProtocolParticipant(p any) error {
 	// Must be from least general to most
 	switch t := p.(type) {
-	case ThresholdSignatureParticipant:
-		return nil
-	case ThresholdParticipant:
-		return validateThresholdParticipant(t)
+	case ThresholdSignatureParticipant, ThresholdParticipant: //nolint:gocritic // false positive
+		return validateThresholdParticipant(t.(ThresholdParticipant)) //nolint:forcetypeassert // trivial
 	case MPCParticipant:
 		return validateMPCParticipant(t)
 	case GenericParticipant:

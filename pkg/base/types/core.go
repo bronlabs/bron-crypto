@@ -25,13 +25,11 @@ func (*cipherSuite) MarshalJSON() ([]byte, error) {
 }
 
 type protocol struct {
-	curve                curves.Curve
-	hash                 func() hash.Hash
-	participants         ds.HashSet[IdentityKey]
-	threshold            uint
-	totalParties         uint
-	signatureAggregators ds.HashSet[IdentityKey]
-	presignatureComposer IdentityKey
+	curve        curves.Curve
+	hash         func() hash.Hash
+	participants ds.HashSet[IdentityKey]
+	threshold    uint
+	totalParties uint
 }
 
 func (p *protocol) Curve() curves.Curve {
@@ -52,14 +50,6 @@ func (p *protocol) Threshold() uint {
 
 func (p *protocol) TotalParties() uint {
 	return p.totalParties
-}
-
-func (p *protocol) SignatureAggregators() ds.HashSet[IdentityKey] {
-	return p.signatureAggregators
-}
-
-func (p *protocol) PreSignatureComposer() IdentityKey {
-	return p.presignatureComposer
 }
 
 func (p *protocol) CipherSuite() SignatureProtocol {

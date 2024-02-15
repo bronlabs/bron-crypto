@@ -66,10 +66,6 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func (p *Cosigner) IsSignatureAggregator() bool {
-	return p.protocol.SignatureAggregators().Contains(p.IdentityKey())
-}
-
 func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sid, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
@@ -80,7 +76,7 @@ func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.Has
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := BigS(protocol.Participants())
+	bigS := BigS(sessionParticipants)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {

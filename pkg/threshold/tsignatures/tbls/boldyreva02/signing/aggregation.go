@@ -1,4 +1,4 @@
-package aggregation
+package signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -10,44 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-type Aggregator[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	publicKeyShares *boldyreva02.PublicKeyShares[K]
-	protocol        types.ThresholdSignatureProtocol
-	sharingConfig   types.SharingConfig
-	scheme          bls.RogueKeyPrevention
-}
-
-func NewAggregator[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], scheme bls.RogueKeyPrevention, protocol types.ThresholdSignatureProtocol) (*Aggregator[K, S], error) {
-	err := validateInputs[K, S](publicKeyShares, protocol)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not validate inputs")
-	}
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	return &Aggregator[K, S]{
-		publicKeyShares: publicKeyShares,
-		protocol:        protocol,
-		sharingConfig:   sharingConfig,
-		scheme:          scheme,
-	}, nil
-}
-
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](publicKeyShares *boldyreva02.PublicKeyShares[K], protocol types.ThresholdSignatureProtocol) error {
-	if bls.SameSubGroup[K, S]() {
-		return errs.NewType("key and signature subgroup should not be the same")
-	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "protocol config")
-	}
-	if protocol.CipherSuite().Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
-		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
-	}
-	if err := publicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapArgument(err, "could not validate public key shares")
-	}
-	return nil
-}
-
-func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
+func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.SharingConfig, partialPublicKeys *boldyreva02.PartialPublicKeys[K], partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
 	if bls.SameSubGroup[K, S]() {
 		return nil, nil, errs.NewType("key and signature subgroups can't be the same")
 	}
@@ -57,7 +20,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*bold
 	sharingIds := make([]uint, partialSignatures.Size())
 	i := 0
 	for pair := range partialSignatures.Iter() {
-		sharingId, exists := a.sharingConfig.LookUpRight(pair.Key)
+		sharingId, exists := sharingConfig.LookUpRight(pair.Key)
 		if !exists {
 			return nil, nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
 		}
@@ -77,7 +40,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*bold
 	for pair := range partialSignatures.Iter() {
 		identityKey := pair.Key
 		psig := pair.Value
-		sharingId, exists := a.sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.LookUpRight(identityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
 		}
@@ -91,7 +54,7 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*bold
 		if psig.SigmaI == nil {
 			return nil, nil, errs.NewMissing("missing signature for %x", identityKey.PublicKey())
 		}
-		publicKeyShare, exists := a.publicKeyShares.Shares.Get(identityKey)
+		publicKeyShare, exists := partialPublicKeys.Shares.Get(identityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("couldn't find public key share of %x", identityKey.PublicKey())
 		}
@@ -107,13 +70,13 @@ func (a *Aggregator[K, S]) Aggregate(partialSignatures types.RoundMessages[*bold
 		case bls.Basic:
 			internalMessage = message
 		case bls.MessageAugmentation:
-			internalMessage, err = bls.AugmentMessage(message, a.publicKeyShares.PublicKey)
+			internalMessage, err = bls.AugmentMessage(message, partialPublicKeys.PublicKey)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "could not augment message")
 			}
 		case bls.POP:
 			internalMessage = message
-			internalPopMessage, err := a.publicKeyShares.PublicKey.MarshalBinary()
+			internalPopMessage, err := partialPublicKeys.PublicKey.MarshalBinary()
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "could not marshal public key share")
 			}

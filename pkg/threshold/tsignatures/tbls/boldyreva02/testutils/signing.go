@@ -14,7 +14,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
 )
 
 func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]], scheme bls.RogueKeyPrevention) (participants []*signing.Cosigner[K, S], err error) {
@@ -103,14 +102,9 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 		return err
 	}
 
+	sharingConfig := types.DeriveSharingConfig(cohort.Participants())
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
-
-	agg, err := aggregation.NewAggregator[K, S](publicKeyShares, scheme, cohort)
-	if err != nil {
-		return err
-	}
-
-	signature, signaturePOP, err := agg.Aggregate(aggregatorInput, message, scheme)
+	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not aggregate partial signatures")
 	}

@@ -62,7 +62,7 @@ func (p *Participant[K]) Round3(round2output types.RoundMessages[*Round2Broadcas
 			Share:     share,
 			PublicKey: publicKey,
 		},
-		PublicKeyShares: &tbls.PublicKeyShares[K]{
+		PublicKeyShares: &tbls.PartialPublicKeys[K]{
 			PublicKey:               publicKey,
 			Shares:                  publicKeyShares.Shares,
 			FeldmanCommitmentVector: publicKeyShares.FeldmanCommitmentVector,

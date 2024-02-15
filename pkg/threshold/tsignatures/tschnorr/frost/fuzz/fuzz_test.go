@@ -161,7 +161,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	mappedPartialSignatures := testutils.MapPartialSignatures(signingIdentities, partialSignatures)
 	var producedSignatures []*schnorr.Signature
 	for i, participant := range signingParticipants {
-		if protocol.SignatureAggregators().Contains(participant.IdentityKey()) {
+		if participant.IsSignatureAggregator() {
 			signature, err := participant.Aggregate([]byte(message), mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
@@ -199,7 +199,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 
 	cosigners := make([]*noninteractive_signing.Cosigner, protocol.TotalParties())
 	for i, identity := range identities {
-		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(types.AuthKey), shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashableHashSet(identities...), protocol, random)
+		cosigners[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(types.AuthKey), shards[i], preSignatureBatch[0], firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties[i], hashset.NewHashableHashSet(identities...), protocol, hashset.NewHashableHashSet(identities...), random)
 		require.NoError(t, err)
 	}
 

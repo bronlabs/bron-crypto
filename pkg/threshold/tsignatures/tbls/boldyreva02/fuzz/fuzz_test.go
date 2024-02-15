@@ -19,7 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
 
@@ -92,12 +92,10 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	}
 	require.NoError(t, err)
 
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator[K, S](publicKeyShares, scheme, protocol)
-	require.NoError(t, err)
-
-	signature, signaturePOP, err := agg.Aggregate(aggregatorInput, message, scheme)
+	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
 	require.NoError(t, err)
 
 	err = bls.Verify(publicKey, signature, message, signaturePOP, scheme, nil)

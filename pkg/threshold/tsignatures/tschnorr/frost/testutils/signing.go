@@ -35,7 +35,7 @@ func MakeInteractiveSignParticipants(protocol types.ThresholdSignatureProtocol, 
 func MakeNonInteractiveCosigners(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*frost.Shard, preSignatureBatch noninteractive_signing.PreSignatureBatch, firstUnusedPreSignatureIndex []int, privateNoncePairsOfAllParties [][]*noninteractive_signing.PrivateNoncePair) (participants []*noninteractive_signing.Cosigner, err error) {
 	participants = make([]*noninteractive_signing.Cosigner, protocol.TotalParties())
 	for i, identity := range identities {
-		participants[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(types.AuthKey), shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashableHashSet(identities...), protocol, crand.Reader)
+		participants[i], err = noninteractive_signing.NewNonInteractiveCosigner(identity.(types.AuthKey), shards[i], preSignatureBatch, firstUnusedPreSignatureIndex[i], privateNoncePairsOfAllParties[i], hashset.NewHashableHashSet(identities...), protocol, hashset.NewHashableHashSet(identities...), crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

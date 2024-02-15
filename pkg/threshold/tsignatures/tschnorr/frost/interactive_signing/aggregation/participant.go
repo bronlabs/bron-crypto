@@ -81,9 +81,6 @@ func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProt
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol")
 	}
-	if !protocol.SignatureAggregators().Contains(authKey) {
-		return errs.NewMembership("i am not a signature aggregator")
-	}
 	if publicKey == nil {
 		return errs.NewIsNil("public key is nil")
 	}

@@ -41,9 +41,6 @@ func (c *Cosigner) Aggregate(partialSignatures types.RoundMessages[*glow.Partial
 	if c.round != 2 {
 		return nil, errs.NewRound("round mismatch %d != 2", c.round)
 	}
-	if !c.IsSignatureAggregator() {
-		return nil, errs.NewType("i'm not a signature aggregator")
-	}
 	aggregator, err := aggregation.NewAggregator(c.sid, c.myShard.PublicKeyShares, c.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct aggregator")

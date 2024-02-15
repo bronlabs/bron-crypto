@@ -7,13 +7,11 @@ import (
 
 type ThresholdSignatureParticipant interface {
 	ThresholdParticipant
-	IsSignatureAggregator() bool
 }
 
 type ThresholdSignatureProtocol interface {
 	ThresholdProtocol
 	CipherSuite() SignatureProtocol
-	SignatureAggregators() ds.HashSet[IdentityKey]
 }
 
 func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, participants ds.HashSet[IdentityKey], threshold uint, signatureAggregators ds.HashSet[IdentityKey]) (ThresholdSignatureProtocol, error) {
@@ -21,11 +19,10 @@ func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, particip
 		return nil, errs.WrapValidation(err, "signature protocol config")
 	}
 	protocol := &protocol{
-		curve:                signatureProtocol.Curve(),
-		hash:                 signatureProtocol.Hash(),
-		participants:         participants,
-		threshold:            threshold,
-		signatureAggregators: signatureAggregators,
+		curve:        signatureProtocol.Curve(),
+		hash:         signatureProtocol.Hash(),
+		participants: participants,
+		threshold:    threshold,
 	}
 	if err := ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "protocol config")
@@ -43,20 +40,6 @@ func ValidateThresholdSignatureProtocolConfig(f ThresholdSignatureProtocol) erro
 	if err := ValidateSignatureProtocolConfig(f.CipherSuite()); err != nil {
 		return errs.WrapValidation(err, "signature protocol config")
 	}
-	if err := validateExtrasThresholdSignatureProtocolConfig(f); err != nil {
-		return errs.WrapValidation(err, "tsig")
-	}
-	return nil
-}
-
-func validateExtrasThresholdSignatureProtocolConfig(f ThresholdSignatureProtocol) error {
-	sa := f.SignatureAggregators()
-	if sa == nil {
-		return errs.NewIsNil("Signature aggregators")
-	}
-	if sa.Size() == 0 {
-		return errs.NewSize("need to have at least one signature aggregator")
-	}
 	return nil
 }
 
@@ -66,12 +49,6 @@ func ValidateThresholdSignatureProtocol(p ThresholdSignatureParticipant, f Thres
 	}
 	if err := validateExtrasSignatureProtocolConfig(f.CipherSuite()); err != nil {
 		return errs.WrapValidation(err, "tsig protocol config")
-	}
-	if err := validateExtrasThresholdSignatureProtocolConfig(f); err != nil {
-		return errs.WrapValidation(err, "tsig protocol config")
-	}
-	if p.IsSignatureAggregator() && !f.SignatureAggregators().Contains(p.IdentityKey()) {
-		return errs.NewType("participant should not be an aggregator according to protocol config")
 	}
 	return nil
 }

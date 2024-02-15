@@ -17,7 +17,7 @@ type KeySubGroup = bls12381.G1
 type SignatureSubGroup = bls12381.G2
 
 type SigningKeyShare = boldyreva02.SigningKeyShare[KeySubGroup]
-type PublicKeyShares = boldyreva02.PublicKeyShares[KeySubGroup]
+type PublicKeyShares = boldyreva02.PartialPublicKeys[KeySubGroup]
 type Shard = boldyreva02.Shard[KeySubGroup]
 
 type PartialSignature struct {

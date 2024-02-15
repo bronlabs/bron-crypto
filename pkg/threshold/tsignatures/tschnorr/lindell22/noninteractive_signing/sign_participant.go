@@ -40,10 +40,6 @@ func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func (c *Cosigner) IsSignatureAggregator() bool {
-	return c.protocol.SignatureAggregators().Contains(c.IdentityKey())
-}
-
 func NewCosigner(sid []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
 	if err := validateCosignerInputs(sid, myAuthKey, myShard, protocol, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")

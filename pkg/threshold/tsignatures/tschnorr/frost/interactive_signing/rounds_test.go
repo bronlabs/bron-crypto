@@ -84,7 +84,7 @@ func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []t
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
 	var producedSignatures []*schnorr.Signature
 	for i, participant := range participants {
-		if protocol.SignatureAggregators().Contains(participant.IdentityKey()) {
+		if participant.IsSignatureAggregator() {
 			signature, err := participant.Aggregate(message, mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			if err != nil {
