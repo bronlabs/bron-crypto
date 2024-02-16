@@ -2,7 +2,6 @@ include scripts/Makefile
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
-GOLANGCI_LINT=/go/bin/golangci-lint
 
 COVERAGE_OUT=/tmp/coverage.out
 SCRIPTS_DIR=./scripts
@@ -15,7 +14,7 @@ all: build lint test
 .PHONY: codegen
 codegen:
 	${GO} generate ./...
-	${GOLANGCI_LINT} run --fix ./pkg/base/errs
+	golangci-lint run --fix ./pkg/base/errs
 
 .PHONY: build
 build:
@@ -51,18 +50,18 @@ githooks:
 .PHONY: lint
 lint:
 	${GO} vet ./...
-	${GOLANGCI_LINT} run --timeout=5m
+	golangci-lint run --timeout=5m
 
 .PHONY: lint-long
 lint-long:
 	${GO} vet ./...
-	${GOLANGCI_LINT} run --timeout=120m
+	golangci-lint run --timeout=120m
 
 .PHONY: lint-fix
 lint-fix:
 	${GO} vet ./...
 	${GO} fmt ./...
-	${GOLANGCI_LINT} run --fix --timeout=120m
+	golangci-lint run --fix --timeout=120m
 
 .PHONY: test
 test:
