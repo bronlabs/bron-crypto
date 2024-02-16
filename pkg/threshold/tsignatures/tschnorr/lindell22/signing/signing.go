@@ -1,4 +1,4 @@
-package interactive_signing
+package signing
 
 import (
 	"sort"

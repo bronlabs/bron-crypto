@@ -5,8 +5,12 @@ import (
 	"crypto/cipher"
 	"crypto/subtle"
 	"encoding/binary"
+	"math"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -66,37 +70,49 @@ type context struct {
 	key            []byte
 	exporterSecret []byte
 
-	baseNonce []byte
+	baseNonce nonce
 	sequence  uint64
 
-	aead cipher.AEAD
-	// TODO: use hashset
-	nonces        [][]byte
+	aead          cipher.AEAD
+	nonces        ds.HashSet[nonce]
 	keyScheduling *KeyScheduleContext
 	secret        []byte
 }
 
+var _ ds.Hashable[nonce] = (*nonce)(nil)
+
+type nonce []byte
+
+func (n nonce) Equal(other nonce) bool {
+	return subtle.ConstantTimeCompare(n, other) == 1
+}
+
+func (n nonce) HashCode() uint64 {
+	return binary.BigEndian.Uint64(bitstring.PadToRight(n, 8-len(n)))
+}
+
+// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-12
 func (c *context) computeNonce() ([]byte, error) {
 	Nn := aeads[c.suite.AEAD].Nn()
-	buf := make([]byte, 8)
+	buf := make([]byte, 8) // because sequence is uint64
 	binary.BigEndian.PutUint64(buf, c.sequence)
-	nonce := make([]byte, Nn)
-	copy(nonce, c.baseNonce)
-	subtle.XORBytes(nonce[Nn-8:], c.baseNonce[Nn-8:], buf)
-
-	for _, n := range c.nonces {
-		if subtle.ConstantTimeCompare(nonce, n) == 1 {
-			return nil, errs.NewDuplicate("computed nonce is used before")
-		}
+	newNonce := make(nonce, Nn)
+	copy(newNonce, c.baseNonce)
+	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-6
+	subtle.XORBytes(newNonce[Nn-8:], c.baseNonce[Nn-8:], buf) // length of sequence (uint64) is smaller than Nn. So we treat as zero-padded.
+	if c.nonces.Contains(newNonce) {
+		return nil, errs.NewDuplicate("computed nonce is used before")
 	}
-	c.nonces = append(c.nonces, nonce)
-	return nonce, nil
+	c.nonces.Add(newNonce)
+	return newNonce, nil
 }
 
 func (c *context) incrementSeq() error {
-	Nn := aeads[c.suite.AEAD].Nn()
-	if c.sequence >= (1<<(8*Nn))-1 {
-		return errs.NewFailed("message limit reached")
+	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-6
+	// Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero), but MUST raise an error if the sequence number overflows.
+	// The default check of the rfc ((1<<(8*Nn))-1) is larger than uint64, so no point in copying the rfc.
+	if c.sequence == math.MaxUint64 {
+		return errs.NewFailed("sequence number will overflow")
 	}
 	c.sequence++
 	return nil
@@ -144,6 +160,7 @@ func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, shared
 		keyScheduling:  keyScheduleContext,
 		secret:         secret,
 		exporterSecret: kdf.labeledExpand(cipherSuite.ID(), secret, []byte("exp"), keyScheduleContextMarshaled, kdf.Nh()),
+		nonces:         hashset.NewHashableHashSet[nonce](),
 	}
 
 	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.3-4

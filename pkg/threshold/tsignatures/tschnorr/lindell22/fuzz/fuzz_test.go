@@ -20,9 +20,9 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
-	interactive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	interactive_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive/testutils"
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
@@ -81,7 +81,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := interactive_signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 

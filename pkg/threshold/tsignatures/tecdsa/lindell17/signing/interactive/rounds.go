@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 type Round1OutputP2P struct {
@@ -183,18 +184,18 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	if !exists {
 		return nil, errs.NewMissing("couldn't get primary encrypted signing key share")
 	}
-	primaryLagrangeCoefficient, err := CalcOtherPartyLagrangeCoefficient((secondaryCosigner.primarySharingId), secondaryCosigner.mySharingId, secondaryCosigner.protocol.TotalParties(), secondaryCosigner.protocol.Curve())
+	primaryLagrangeCoefficient, err := signing.CalcOtherPartyLagrangeCoefficient((secondaryCosigner.primarySharingId), secondaryCosigner.mySharingId, secondaryCosigner.protocol.TotalParties(), secondaryCosigner.protocol.Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
 	q := secondaryCosigner.protocol.Curve().SubGroupOrder()
-	mPrime, err := MessageToScalar(secondaryCosigner.protocol.CipherSuite(), message)
+	mPrime, err := signing.MessageToScalar(secondaryCosigner.protocol.CipherSuite(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
 	}
 
 	// c3 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q.Nat(), paillierPublicKey, cKey, secondaryCosigner.prng)
+	c3, err := signing.CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q.Nat(), paillierPublicKey, cKey, secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}

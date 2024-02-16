@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -76,7 +77,7 @@ func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.Has
 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := BigS(sessionParticipants)
+	bigS := signing.BigS(sessionParticipants)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {

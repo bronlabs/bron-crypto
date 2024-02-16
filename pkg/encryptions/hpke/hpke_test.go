@@ -1904,23 +1904,23 @@ func setup(t *testing.T, s *setupInfo) (*ReceiverContext, *SenderContext) {
 func openCiphertext(t *testing.T, receiver *ReceiverContext, tt *encryptionInfo) {
 	t.Helper()
 	receiver.c.sequence = tt.seq
-	require.NotContains(t, receiver.c.nonces, tt.nonce)
+	require.False(t, receiver.c.nonces.Contains(tt.nonce))
 	decrypted, err := receiver.Open(tt.ct, tt.aad)
 	require.NoError(t, err)
 	require.EqualValues(t, tt.pt, decrypted)
 	require.Equal(t, tt.seq+1, receiver.c.sequence)
-	require.Contains(t, receiver.c.nonces, tt.nonce)
+	require.True(t, receiver.c.nonces.Contains(tt.nonce))
 }
 
 func sealPlaintext(t *testing.T, sender *SenderContext, tt *encryptionInfo) {
 	t.Helper()
 	sender.c.sequence = tt.seq
-	require.NotContains(t, sender.c.nonces, tt.nonce)
+	require.False(t, sender.c.nonces.Contains(tt.nonce))
 	ciphertext, err := sender.Seal(tt.pt, tt.aad)
 	require.NoError(t, err)
 	require.EqualValues(t, tt.ct, ciphertext)
 	require.Equal(t, tt.seq+1, sender.c.sequence)
-	require.Contains(t, sender.c.nonces, tt.nonce)
+	require.True(t, sender.c.nonces.Contains(tt.nonce))
 }
 
 // Test https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A

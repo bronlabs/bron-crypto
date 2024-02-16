@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/noninteractive_signing"
+	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 

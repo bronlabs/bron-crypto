@@ -14,3 +14,4 @@ conf:
 build:
   - docker-image: { no-push: true }
   - sh: docker run --rm {{ conf.docker.image }} make {{ conf.test-suite }}
+

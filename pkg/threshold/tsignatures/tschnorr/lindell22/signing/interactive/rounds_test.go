@@ -20,9 +20,9 @@ import (
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive/testutils"
 )
 
 func Test_SanityCheck(t *testing.T) {
@@ -111,7 +111,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := interactive_signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -154,7 +154,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := interactive_signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -205,7 +205,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := interactive_signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 

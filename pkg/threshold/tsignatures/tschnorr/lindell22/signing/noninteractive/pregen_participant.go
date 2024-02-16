@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -77,7 +77,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.Th
 
 	// TODO: remove pid after adding Repr method to Identity Key
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := interactive_signing.BigS(preSigners)
+	bigS := signing.BigS(preSigners)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {
