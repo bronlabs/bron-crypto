@@ -16,12 +16,11 @@ import (
 const (
 	Name compiler.Name = "RandomisedFischlin"
 
-	domainSeparationTag = "COPPER_SIGMA_NIZKPOK_RANDOMISED_FISCHLIN-"
+	transcriptLabel = "COPPER_KRYPTON_NIZK_R_FISCHLIN-"
 
-	sessionIdLabel  = "sessionIdLabel"
-	statementLabel  = "statementLabel"
-	commitmentLabel = "commitmentLabel"
-	challengeLabel  = "challengeLabel"
+	statementLabel  = "statementLabel-"
+	commitmentLabel = "commitmentLabel-"
+	challengeLabel  = "challengeLabel-"
 
 	lambda     = base.ComputationalSecurity
 	lambdaLog2 = 7
@@ -66,13 +65,11 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, nil)
-	} else {
-		transcript.AppendMessages("DST", []byte(dst))
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(sessionIdLabel, sessionId)
 
 	return &prover[X, W, A, S, Z]{
 		sessionId:     sessionId,
@@ -87,13 +84,11 @@ func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, nil)
-	} else {
-		transcript.AppendMessages("DST", []byte(dst))
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(sessionIdLabel, sessionId)
 
 	return &verifier[X, W, A, S, Z]{
 		sessionId:     sessionId,

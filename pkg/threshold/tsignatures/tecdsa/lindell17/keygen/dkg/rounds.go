@@ -3,6 +3,7 @@ package dkg
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -241,15 +242,15 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 		if !exists {
 			return nil, errs.NewMissing("could not find sharign id for participant %x", identity)
 		}
-		p.state.lpProvers[sharingId], err = lp.NewProver(128, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpProvers[sharingId], err = lp.NewProver(base.ComputationalSecurity, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create LP prover")
 		}
-		p.state.lpdlPrimeProvers[sharingId], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers[sharingId], err = lpdl.NewProver(p.sessionId, p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
@@ -310,15 +311,15 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 
 		// 4.ii. LP and LPDL continue
 		paillierProofsTranscript := p.transcript.Clone()
-		p.state.lpVerifiers[sharingId], err = lp.NewVerifier(128, theirPaillierPublicKey, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpVerifiers[sharingId], err = lp.NewVerifier(base.ComputationalSecurity, theirPaillierPublicKey, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create P verifier")
 		}
-		p.state.lpdlPrimeVerifiers[sharingId], err = lpdl.NewVerifier(p.sessionId, theirPaillierPublicKey, p.state.theirBigQPrime[sharingId], theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQPrime[sharingId], theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
-		p.state.lpdlDoublePrimeVerifiers[sharingId], err = lpdl.NewVerifier(p.sessionId, theirPaillierPublicKey, p.state.theirBigQDoublePrime[sharingId], theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQDoublePrime[sharingId], theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
@@ -503,9 +504,9 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 	}, nil
 }
 
-func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sessionId []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
 	return commitments.Commit(
-		sid,
+		sessionId,
 		prng,
 		bigQPrime.ToAffineCompressed(),
 		bigQDoublePrime.ToAffineCompressed(),
@@ -513,16 +514,16 @@ func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sid []byte,
 	)
 }
 
-func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sid []byte, pid curves.Point) (err error) {
-	return commitments.Open(sid, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed())
+func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sessionId []byte, pid curves.Point) (err error) {
+	return commitments.Open(sessionId, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed())
 }
 
-func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sid []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
+func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sessionId []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
 	// TODO: check this.
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 
 	basePoint := bigQ.Curve().Generator()
-	proof, statement, err := dlog.Prove(sid, x, basePoint, nic, transcript, prng)
+	proof, statement, err := dlog.Prove(sessionId, x, basePoint, nic, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
@@ -532,10 +533,10 @@ func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sid []byte, nic com
 	return proof, nil
 }
 
-func dlogVerify(proof compiler.NIZKPoKProof, bigQ, bigQTwin curves.Point, sid []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
+func dlogVerify(proof compiler.NIZKPoKProof, bigQ, bigQTwin curves.Point, sessionId []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
 	transcript.AppendPoints("bigQTwin", bigQTwin)
 	basePoint := bigQ.Curve().Generator()
-	if err := dlog.Verify(sid, proof, bigQ, basePoint, nic, transcript); err != nil {
+	if err := dlog.Verify(sessionId, proof, bigQ, basePoint, nic, transcript); err != nil {
 		return errs.WrapVerification(err, "dlog proof can't be verified")
 	}
 	return nil

@@ -16,7 +16,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing/aggregation"
 )
 
 func MakeSigningParticipants(uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *glow.Shard]) (participants []*signing.Cosigner, err error) {
@@ -105,12 +104,7 @@ func SigningRoundTrip(threshold, n int) error {
 
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator(sid, publicKeyShares, protocol)
-	if err != nil {
-		return errs.WrapFailed(err, "could not make aggregator")
-	}
-
-	signature, err := agg.Aggregate(aggregatorInput, message)
+	signature, err := signing.Aggregate(publicKeyShares, protocol, aggregatorInput, message)
 	if err != nil {
 		return errs.WrapFailed(err, "could not aggregate partial signatures")
 	}
@@ -169,12 +163,8 @@ func SigningWithDkg(threshold, n int) error {
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 
 	aliceShard, _ := shards.Get(identities[0])
-	agg, err := aggregation.NewAggregator(sid, aliceShard.PublicKeyShares, protocol)
-	if err != nil {
-		return errs.WrapFailed(err, "could not make aggregator")
-	}
 
-	signature, err := agg.Aggregate(aggregatorInput, message)
+	signature, err := signing.Aggregate(aliceShard.PublicKeyShares, protocol, aggregatorInput, message)
 	if err != nil {
 		return errs.WrapFailed(err, "could not aggregate partial signatures")
 	}

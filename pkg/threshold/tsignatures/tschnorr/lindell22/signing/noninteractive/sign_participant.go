@@ -2,11 +2,13 @@ package noninteractive_signing
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -40,16 +42,18 @@ func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner(sid []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
-	if err := validateCosignerInputs(sid, myAuthKey, myShard, protocol, ppm, prng); err != nil {
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
-	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
-	przsSid := bytes.Join([][]byte{sid, ppm.PrivateMaterial.K1.Bytes()}, nil)
+	dst := fmt.Sprintf("%s-%s-%d", transcriptLabel, protocol.Curve().Name(), utils.BoolTo[byte](taproot))
+	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	}
+
+	przsSid := bytes.Join([][]byte{sessionId, ppm.PrivateMaterial.K1.Bytes()}, nil)
 	przsPrngFactory, err := chacha.NewChachaPRNG(nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")
@@ -84,8 +88,8 @@ func NewCosigner(sid []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, 
 	return cosigner, nil
 }
 
-func validateCosignerInputs(sid []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
-	if len(sid) == 0 {
+func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

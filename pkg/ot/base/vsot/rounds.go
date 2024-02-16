@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
 
-const label = "KRYPTON_PRIMITIVES_BASE_OT_SIMPLEST"
+const transcriptLabel = "COPPER_KRYPTON_VSOT-"
 
 // The following aliases are not directly used within the round methods. They are helpful for composition.
 type Round1P2P struct {
@@ -40,8 +40,8 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	s.PublicKey = s.Curve.ScalarBaseMult(s.SecretKey)
 
 	// step 1.3: Generate the ZKP proof.
-	s.Transcript.AppendMessages("dlog proof", s.UniqueSessionId)
-	prover, err := s.dlog.NewProver(s.UniqueSessionId, s.Transcript.Clone())
+	s.Transcript.AppendMessages("dlog proof", s.SessionId)
+	prover, err := s.dlog.NewProver(s.SessionId, s.Transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "constructing dlog prover")
 	}
@@ -59,9 +59,9 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Name 7 (page 16) of the paper.
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 	r.SenderPublicKey = r1out.PublicKey
-	r.Transcript.AppendMessages("dlog proof", r.UniqueSessionId)
+	r.Transcript.AppendMessages("dlog proof", r.SessionId)
 	// step 2.1: Verify the dlog proof.
-	dlogVerifier, err := r.dlog.NewVerifier(r.UniqueSessionId, r.Transcript.Clone())
+	dlogVerifier, err := r.dlog.NewVerifier(r.SessionId, r.Transcript.Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dlog verifier")
 	}
@@ -90,7 +90,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out[i][l], option1Bytes)
 			// step 2.4: Compute m_b
 			m_b := r.SenderPublicKey.Mul(a)
-			output, err := hashing.HashChain(sha3.New256, r.UniqueSessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
+			output, err := hashing.HashChain(sha3.New256, r.SessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
 			}
@@ -130,7 +130,7 @@ func (s *Sender) Round3(maskedChoices Round2P2P) (challenge Round3P2P, err error
 			m[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
 
 			for k := 0; k < 2; k++ {
-				output, err := hashing.HashChain(ot.HashFunction, s.UniqueSessionId, []byte{byte(i*s.L + l)}, m[k].ToAffineCompressed())
+				output, err := hashing.HashChain(ot.HashFunction, s.SessionId, []byte{byte(i*s.L + l)}, m[k].ToAffineCompressed())
 				if err != nil {
 					return nil, errs.WrapHashing(err, "creating one time pad encryption keys")
 				}

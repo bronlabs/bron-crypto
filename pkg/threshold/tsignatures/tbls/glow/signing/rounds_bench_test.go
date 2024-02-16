@@ -10,7 +10,7 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/testutils"
 )
 
@@ -59,13 +59,8 @@ func benchmarkCombineHelper(b *testing.B, threshold, n int) error {
 
 	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
 
-	agg, err := aggregation.NewAggregator(sid, publicKeyShares, protocol)
-	if err != nil {
-		return err
-	}
-
 	b.StartTimer()
-	signature, err := agg.Aggregate(aggregatorInput, message)
+	signature, err := signing.Aggregate(publicKeyShares, protocol, aggregatorInput, message)
 	if err != nil {
 		return err
 	}

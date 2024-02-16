@@ -1,6 +1,7 @@
 package interactive_signing
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -16,8 +17,7 @@ import (
 )
 
 const (
-	transcriptLabel          = "COPPER_KRYPTON_LINDELL2017_INTERACTIVE_SIGN"
-	transcriptSessionIdLabel = "COPPER_KRYPTON_LINDELL2017_INTERACTIVE_SIGN_SESSION_ID"
+	transcriptLabel = "COPPER_KRYPTON_LINDELL17_SIGN-"
 )
 
 var (
@@ -91,10 +91,11 @@ func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIden
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
@@ -135,10 +136,11 @@ func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIden
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)

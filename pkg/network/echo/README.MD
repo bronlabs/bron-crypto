@@ -10,7 +10,7 @@ Note that original paper does not mention authentication message. We added that 
 
 **Parameters**:
 - $x$: the message to be broadcasted
-- $sid$: a unique session id
+- $sessionId$: a unique session id
 - $n$: number of parties involved, with one initiator and n-1 responders. Without loss of generality, we describe the protocol for n=3 parties
 
 **Functionalities**:
@@ -31,13 +31,13 @@ where $x_3 = x_2 = x_1$
 
 Round 1:
 
-- 1.1: $A$ sends $Send(x_1,s_1=S(sid || pk^B || x_1)) => B$ and $Send(x_1,s_2=S(sid || pk^C || x_1)) => B$ where $pk^B$ and $pk^C$ are public keys of $B$ and $C$ respectively
+- 1.1: $A$ sends $Send(x_1,s_1=S(sessionId || pk^B || x_1)) => B$ and $Send(x_1,s_2=S(sessionId || pk^C || x_1)) => B$ where $pk^B$ and $pk^C$ are public keys of $B$ and $C$ respectively
 - 1.2: $B$ and $C$ do nothing
 
 Round 2:
 
 - 2.1: $A$ does nothing
-- 2.2: $B$ and $C$ verify signature $s_1$ against $A$'s public key and the authentication message $sid || pk^B || x_1$ and $sid || pk^C || x_1$
+- 2.2: $B$ and $C$ verify signature $s_1$ against $A$'s public key and the authentication message $sessionId || pk^B || x_1$ and $sessionId || pk^C || x_1$
 - 2.3: If the signature is invalid, identifiable abort the protocol
 - 2.4: If the signature is valid, $B$ stores $x_2 = x_1$ and $Send^B(x_2,s_1) => [A,C]$. $C$ stores $x_3 = x_1$ and $Send^C(x_3,s_2) => [A,B]$
 

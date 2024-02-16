@@ -1,4 +1,4 @@
-package aggregation
+package signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -11,49 +11,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 )
 
-type Aggregator struct {
-	publicKeyShares *glow.PublicKeyShares
-	protocol        types.ThresholdSignatureProtocol
-	sid             []byte
-	sharingConfig   types.SharingConfig
-}
+func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol, partialSignatures types.RoundMessages[*glow.PartialSignature], message []byte) (*bls.Signature[bls12381.G2], error) {
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
-func NewAggregator(uniqueSessionId []byte, publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol) (*Aggregator, error) {
-	err := validateInputs(uniqueSessionId, publicKeyShares, protocol)
-	if err != nil {
+	if err := validateAggregatorInputs(publicKeyShares, protocol); err != nil {
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	return &Aggregator{
-		sid:             uniqueSessionId,
-		publicKeyShares: publicKeyShares,
-		protocol:        protocol,
-		sharingConfig:   sharingConfig,
-	}, nil
-}
-
-func validateInputs(uniqueSessionId []byte, publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol) error {
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "protocol config")
-	}
-	if protocol.CipherSuite().Curve().Name() != new(glow.KeySubGroup).Name() {
-		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
-	}
-	if err := publicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapArgument(err, "could not validate public key shares")
-	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewLength("sid length is zero")
-	}
-	return nil
-}
-
-func (a *Aggregator) Aggregate(partialSignatures types.RoundMessages[*glow.PartialSignature], message []byte) (*bls.Signature[bls12381.G2], error) {
 	sharingIds := make([]uint, partialSignatures.Size())
 	i := 0
 	for pair := range partialSignatures.Iter() {
-		sharingId, exists := a.sharingConfig.LookUpRight(pair.Key)
+		sharingId, exists := sharingConfig.LookUpRight(pair.Key)
 		if !exists {
 			return nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
 		}
@@ -76,7 +43,7 @@ func (a *Aggregator) Aggregate(partialSignatures types.RoundMessages[*glow.Parti
 	for pair := range partialSignatures.Iter() {
 		identityKey := pair.Key
 		psig := pair.Value
-		sharingId, exists := a.sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.LookUpRight(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
 		}
@@ -89,7 +56,7 @@ func (a *Aggregator) Aggregate(partialSignatures types.RoundMessages[*glow.Parti
 		if psig.SigmaI == nil {
 			return nil, errs.NewMissing("missing signature for %x", identityKey.PublicKey())
 		}
-		publicKeyShare, exists := a.publicKeyShares.Shares.Get(identityKey)
+		publicKeyShare, exists := publicKeyShares.Shares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find public key share of %x", identityKey.PublicKey())
 		}
@@ -98,7 +65,7 @@ func (a *Aggregator) Aggregate(partialSignatures types.RoundMessages[*glow.Parti
 			X1: publicKeyShare,
 			X2: psig.SigmaI.Value,
 		}
-		if err := dleq.Verify(a.sid, psig.DleqProof, dleqStatement, new(glow.KeySubGroup).Generator(), Hm, glow.DleqNIZKCompiler, nil); err != nil {
+		if err := dleq.Verify(psig.SessionId, psig.DleqProof, dleqStatement, new(glow.KeySubGroup).Generator(), Hm, glow.DleqNIZKCompiler, nil); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify dleq proof")
 		}
 
@@ -120,4 +87,17 @@ func (a *Aggregator) Aggregate(partialSignatures types.RoundMessages[*glow.Parti
 	return &bls.Signature[glow.SignatureSubGroup]{
 		Value: sigmaPairable,
 	}, nil
+}
+
+func validateAggregatorInputs(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol) error {
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
+	}
+	if protocol.CipherSuite().Curve().Name() != new(glow.KeySubGroup).Name() {
+		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
+	}
+	if err := publicKeyShares.Validate(protocol); err != nil {
+		return errs.WrapArgument(err, "could not validate public key shares")
+	}
+	return nil
 }

@@ -50,13 +50,13 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	for i := 0; i < Kappa; i++ {
 		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
 		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
-		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.UniqueSessionId); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.SessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe")
 		}
 		if _, err = r.prg.Read(t[0][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
 		}
-		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.UniqueSessionId); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.SessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 		if _, err = r.prg.Read(t[1][i]); err != nil {
@@ -97,7 +97,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	for j := 0; j < r.Xi; j++ {
 		r.Output.ChosenMessages[j] = make(ot.ChosenMessage, r.L)
 		for l := 0; l < r.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(label), r.UniqueSessionId, bitstring.ToBytesLE(j), t_j[j*r.L+l])
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId, bitstring.ToBytesLE(j), t_j[j*r.L+l])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing t_j for SoftSpoken COTe")
 			}
@@ -124,7 +124,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	t_b := ExtMessageBatch{}
 	for i := 0; i < Kappa; i++ {
 		t_b[i] = make([]byte, EtaPrimeBytes)
-		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.UniqueSessionId); err != nil {
+		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.SessionId); err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe")
 		}
 		if _, err = s.prg.Read(t_b[i]); err != nil {
@@ -180,12 +180,12 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 		s.Output.Messages[j][0] = make(ot.Message, s.L)
 		s.Output.Messages[j][1] = make(ot.Message, s.L)
 		for l := 0; l < s.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
 			copy(s.Output.Messages[j][0][l][:], digest)
-			digest, err = hashing.Hash(ot.HashFunction, []byte(label), s.UniqueSessionId, bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
+			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}
@@ -211,7 +211,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 // generating the challenge (χ) from the transcript.
 
 // commitWitness (*)(Fiat-Shamir) Appends the expansionMask to the transcript.
-func commitWitness(t transcripts.Transcript, expansionMask *ExtMessageBatch, r Witness, csrand io.Reader) (Witness, error) {
+func commitWitness(transcript transcripts.Transcript, expansionMask *ExtMessageBatch, r Witness, csrand io.Reader) (Witness, error) {
 	if len(*expansionMask) == 0 {
 		return nil, errs.NewIsNil("expansionMask is nil")
 	}
@@ -224,17 +224,17 @@ func commitWitness(t transcripts.Transcript, expansionMask *ExtMessageBatch, r W
 		}
 	}
 	for i := 0; i < Kappa; i++ {
-		t.AppendMessages("OTe_witnessCommitment", r[i][:])
-		t.AppendMessages("OTe_expansionMask", expansionMask[i])
+		transcript.AppendMessages("OTe_witnessCommitment", r[i][:])
+		transcript.AppendMessages("OTe_expansionMask", expansionMask[i])
 	}
 	return r, nil
 }
 
 // generateChallenge (*)(Fiat-Shamir) Generates the challenge (χ) using Fiat-Shamir heuristic.
-func generateChallenge(t transcripts.Transcript, M int) (challenge Challenge) {
+func generateChallenge(transcript transcripts.Transcript, M int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, M)
 	for i := 0; i < M; i++ {
-		bytes, _ := t.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
+		bytes, _ := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
 		copy(challengeFiatShamir[i][:], bytes)
 	}
 	return challengeFiatShamir

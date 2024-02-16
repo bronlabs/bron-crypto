@@ -1,6 +1,7 @@
 package hjky
 
 import (
+	"fmt"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -11,6 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
+
+const transcriptLabel = "COPPER_KRYPTON_HJKY_ZERO_SAMPLE-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
@@ -30,16 +33,18 @@ func (p *Participant) SharingId() types.SharingID {
 	return p.PedersenParty.SharingId()
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, protocol, prng); err != nil {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateInputs(sessionId, authKey, protocol, prng); err != nil {
 		return nil, errs.WrapArgument(err, "at least one argument is invalid")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_HJKY_ZERO_SHARE_SAMPLING-", nil)
-	}
-	transcript.AppendMessages("HJKY zero share session id", uniqueSessionId)
 
-	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, transcript, prng)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	}
+
+	pedersenParty, err := pedersen.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}
@@ -55,7 +60,7 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
@@ -65,8 +70,8 @@ func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package pedersen
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -15,14 +16,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const transcriptLabel = "COPPER_KRYPTON_PEDERSEN_DKG-"
+
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	prng io.Reader
 
-	myIdentityKey   types.AuthKey
-	mySharingId     types.SharingID
-	UniqueSessionId []byte
+	myIdentityKey types.AuthKey
+	mySharingId   types.SharingID
+	SessionId     []byte
 
 	Protocol      types.ThresholdProtocol
 	SharingConfig types.SharingConfig
@@ -51,15 +54,17 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, protocol types.ThresholdProtocol, nonInteractiveCompilerName compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, myAuthKey, protocol, prng)
+func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.ThresholdProtocol, nonInteractiveCompilerName compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(sessionId, myAuthKey, protocol, prng)
 	if err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_PEDERSEN_DKG-", nil)
+
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), nonInteractiveCompilerName)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("dkg", uniqueSessionId)
 
 	dlogPoKProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Curve().Generator(), prng)
 	if err != nil {
@@ -71,8 +76,8 @@ func NewParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, protocol ty
 	}
 
 	result := &Participant{
-		myIdentityKey:   myAuthKey,
-		UniqueSessionId: uniqueSessionId,
+		myIdentityKey: myAuthKey,
+		SessionId:     sessionId,
 		State: &State{
 			NiCompiler: niCompiler,
 		},
@@ -94,14 +99,14 @@ func NewParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, protocol ty
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "cohort config is invalid")
 	}
-	if len(uniqueSessionId) == 0 {
+	if len(sessionId) == 0 {
 		return errs.NewArgument("unique session id is empty")
 	}
 	if prng == nil {

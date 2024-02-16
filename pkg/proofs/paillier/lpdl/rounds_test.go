@@ -179,13 +179,13 @@ func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText
 	transcriptLabel := "LPDL"
 
 	verifierTranscript := hagrid.NewTranscript(transcriptLabel, nil)
-	verifier, err := lpdl.NewVerifier(sessionId, pk, bigQ, xEncrypted, sessionId, verifierTranscript, prng)
+	verifier, err := lpdl.NewVerifier(pk, bigQ, xEncrypted, sessionId, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 
 	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
-	prover, err := lpdl.NewProver(sessionId, sk, x, r, sessionId, proverTranscript, prng)
+	prover, err := lpdl.NewProver(sk, x, r, sessionId, proverTranscript, prng)
 	if err != nil {
 		return err
 	}

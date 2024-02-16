@@ -20,6 +20,6 @@ type NIVerifier[X sigma.Statement] interface {
 type NICompiler[X sigma.Statement, W sigma.Witness] interface {
 	Name() Name
 	SigmaProtocolName() sigma.Name
-	NewProver(sid []byte, transcript transcripts.Transcript) (NIProver[X, W], error)
-	NewVerifier(sid []byte, transcript transcripts.Transcript) (NIVerifier[X], error)
+	NewProver(sessionId []byte, transcript transcripts.Transcript) (NIProver[X, W], error)
+	NewVerifier(sessionId []byte, transcript transcripts.Transcript) (NIVerifier[X], error)
 }

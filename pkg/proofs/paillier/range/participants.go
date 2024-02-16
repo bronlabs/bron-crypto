@@ -15,18 +15,17 @@ import (
 )
 
 const (
-	transcriptAppLabel       = "PAILLIER_RANGE_PROOF"
-	transcriptSessionIdLabel = "PaillierRange_SessionId"
+	transcriptLabel = "COPPER_KRYPTON_RANGE_PROOF-"
 )
 
 type Participant struct {
-	t      int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
-	q      *saferith.Nat
-	l      *saferith.Nat
-	capLen int
-	round  int
-	sid    []byte
-	prng   io.Reader
+	t         int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
+	q         *saferith.Nat
+	l         *saferith.Nat
+	capLen    int
+	round     int
+	sessionId []byte
+	prng      io.Reader
 
 	_ ds.Incomparable
 }
@@ -69,16 +68,16 @@ type Verifier struct {
 	_ ds.Incomparable
 }
 
-func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	err = validateProverInputs(q, sid, sk, x, r, sessionId, prng)
+func NewProver(t int, q *saferith.Nat, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+	err = validateProverInputs(q, sk, x, r, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	capLen := sk.N.BitLen()
 
@@ -90,13 +89,13 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 
 	return &Prover{
 		Participant: Participant{
-			t:      t,
-			q:      q,
-			l:      l,
-			capLen: capLen,
-			round:  2,
-			sid:    sid,
-			prng:   prng,
+			t:         t,
+			q:         q,
+			l:         l,
+			capLen:    capLen,
+			round:     2,
+			sessionId: sessionId,
+			prng:      prng,
 		},
 		x:     xMinusQThird,
 		r:     r,
@@ -105,12 +104,9 @@ func NewProver(t int, q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r 
 	}, nil
 }
 
-func validateProverInputs(q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
+func validateProverInputs(q *saferith.Nat, sk *paillier.SecretKey, x, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
-	}
-	if len(sid) == 0 {
-		return errs.NewArgument("invalid sid: %s", sid)
 	}
 	if q == nil {
 		return errs.NewIsNil("q is nil")
@@ -130,16 +126,16 @@ func validateProverInputs(q *saferith.Nat, sid []byte, sk *paillier.SecretKey, x
 	return nil
 }
 
-func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	err = validateVerifierInputs(q, sid, pk, xEncrypted, sessionId, prng)
+func NewVerifier(t int, q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	err = validateVerifierInputs(q, pk, xEncrypted, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	capLen := pk.N.BitLen()
 
@@ -154,12 +150,12 @@ func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEn
 
 	return &Verifier{
 		Participant: Participant{
-			t:     t,
-			q:     q,
-			l:     l,
-			round: 1,
-			sid:   sid,
-			prng:  prng,
+			t:         t,
+			q:         q,
+			l:         l,
+			round:     1,
+			sessionId: sessionId,
+			prng:      prng,
 		},
 		c:     cMinusQThirdEncrypted,
 		pk:    pk,
@@ -167,12 +163,9 @@ func NewVerifier(t int, q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEn
 	}, nil
 }
 
-func validateVerifierInputs(q *saferith.Nat, sid []byte, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
+func validateVerifierInputs(q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
-	}
-	if len(sid) == 0 {
-		return errs.NewArgument("invalid sid: %s", sid)
 	}
 	if q == nil {
 		return errs.NewIsNil("q is nil")

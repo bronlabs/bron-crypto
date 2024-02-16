@@ -19,11 +19,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-// To get H for Pedersen commitments, we'll hash concatenation of below and provided uniqueSessionId to the curve.
+// To get H for Pedersen commitments, we'll hash concatenation of below and provided sessionId to the curve.
 // We assume that the hash to curve returns a uniformly random point. Look into hash2curve package and rfc.
 // We assume that it is not possible to get discrete log of the resulting H wrt G designated by a curve.
-// If you are not happy with the 2nd assumption, then you should add rounds to agree on H. We recommend using `agreeonrandom` package to derive a random uniqueSessionId (which normally only has to be unique) and pass it to the constructor.
-const NothingUpMySleeve = "COPPER_KRYPTON_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
+// If you are not happy with the 2nd assumption, then you should add rounds to agree on H. We recommend using `agreeonrandom` package to derive a random sessionId (which normally only has to be unique) and pass it to the constructor.
+const (
+	NothingUpMySleeve = "COPPER_KRYPTON_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
+	transcriptLabel   = "COPPER_KRYPTON_GENNARO_DKG-"
+)
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
@@ -33,9 +36,9 @@ type Participant struct {
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 
-	Protocol        types.ThresholdProtocol
-	UniqueSessionId []byte
-	SharingConfig   types.SharingConfig
+	Protocol      types.ThresholdProtocol
+	SessionId     []byte
+	SharingConfig types.SharingConfig
 
 	H curves.Point
 
@@ -65,18 +68,19 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompilerName compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, authKey, protocol, prng)
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompilerName compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	err := validateInputs(sessionId, authKey, protocol, prng)
 	if err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_GENNARO_DKG-", nil)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompilerName)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("Gennaro DKG Session", uniqueSessionId)
 
-	HMessage, err := hashing.HashChain(sha3.New256, uniqueSessionId, []byte(NothingUpMySleeve))
+	HMessage, err := hashing.HashChain(sha3.New256, sessionId, []byte(NothingUpMySleeve))
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}
@@ -105,13 +109,13 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 			niCompiler: niCompiler,
 			transcript: transcript,
 		},
-		prng:            prng,
-		Protocol:        protocol,
-		H:               H,
-		round:           1,
-		UniqueSessionId: uniqueSessionId,
-		SharingConfig:   sharingConfig,
-		mySharingId:     mySharingId,
+		prng:          prng,
+		Protocol:      protocol,
+		H:             H,
+		round:         1,
+		SessionId:     sessionId,
+		SharingConfig: sharingConfig,
+		mySharingId:   mySharingId,
 	}
 
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
@@ -120,7 +124,7 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
@@ -130,7 +134,7 @@ func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	if prng == nil {
 		return errs.NewArgument("prng is nil")
 	}
-	if len(uniqueSessionId) == 0 {
+	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id")
 	}
 	return nil

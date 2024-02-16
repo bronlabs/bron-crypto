@@ -32,7 +32,7 @@ package noninteractive_signing
 // 	mySharingId int
 // 	tau         int
 // 	protocol    types.PreSignedThresholdSignatureProtocol
-// 	sid         []byte
+// 	sessionId         []byte
 // 	transcript  transcripts.Transcript
 // 	round       int
 // 	prng        io.Reader
@@ -63,27 +63,28 @@ package noninteractive_signing
 // }.
 
 // const (
-// 	transcriptAppLabel       = "Lindell2017_PreGen"
+// 	transcriptLabel       = "Lindell2017_PreGen"
 // 	transcriptSessionIdLabel = "Lindell2017_PreGen_SessionId"
 // ).
 
-// func NewPreGenParticipant(sid []byte, transcript transcripts.Transcript, myAuthKey types.AuthKey, protocol types.PreSignedThresholdSignatureProtocol, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
-// 	err = validateInputs(sid, myAuthKey, protocol, tau, prng)
+// func NewPreGenParticipant(sessionId []byte, transcript transcripts.Transcript, myAuthKey types.AuthKey, protocol types.PreSignedThresholdSignatureProtocol, tau int, prng io.Reader) (participant *PreGenParticipant, err error) {
+// 	err = validateInputs(sessionId, myAuthKey, protocol, tau, prng)
 // 	if err != nil {
 // 		return nil, errs.WrapArgument(err, "failed to validate inputs")
-// 	}
+// 	}.
 
-// 	if transcript == nil {
-// 		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
-// 	}
-// 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+// dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+//  transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+//  if err != nil {
+// 	 return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+//  }.
 
 // 	participant = &PreGenParticipant{
 // 		myAuthKey:  myAuthKey,
 // 		protocol:   protocol,
 // 		tau:        tau,
 // 		prng:       prng,
-// 		sid:        sid,
+// 		sessionId:        sessionId,
 // 		transcript: transcript,
 // 		round:      1,
 // 		state:      &preGenParticipantState{},

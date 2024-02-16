@@ -19,16 +19,16 @@ type Participant struct {
 	prng              io.Reader
 }
 
-func NewInitiator(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) (*Participant, error) {
-	return newParticipant(suite, prng, sid, s, rs, handshakeMessage1, handshakeMessage2, true)
+func NewInitiator(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) (*Participant, error) {
+	return newParticipant(suite, prng, sessionId, s, rs, handshakeMessage1, handshakeMessage2, true)
 }
 
-func NewResponder(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) (*Participant, error) {
-	return newParticipant(suite, prng, sid, s, rs, handshakeMessage1, handshakeMessage2, false)
+func NewResponder(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) (*Participant, error) {
+	return newParticipant(suite, prng, sessionId, s, rs, handshakeMessage1, handshakeMessage2, false)
 }
 
-func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte, isInitializer bool) (*Participant, error) {
-	err := validate(suite, prng, sid, s, rs, handshakeMessage1, handshakeMessage2)
+func newParticipant(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte, isInitializer bool) (*Participant, error) {
+	err := validate(suite, prng, sessionId, s, rs, handshakeMessage1, handshakeMessage2)
 	if err != nil {
 		if isInitializer {
 			return nil, errs.WrapArgument(err, "invalid initializer")
@@ -38,9 +38,9 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 	}
 	var session noise.EncryptionContext
 	if isInitializer {
-		session.Hs, err = noise.InitializeInitiator(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_KK_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sid, s, rs)
+		session.Hs, err = noise.InitializeInitiator(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_KK_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sessionId, s, rs)
 	} else {
-		session.Hs, err = noise.InitializeResponder(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_KK_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sid, s, rs)
+		session.Hs, err = noise.InitializeResponder(suite.Curve, suite.GetHashFunc(), fmt.Sprintf("Noise_KK_%s_%s_%s", noise.MapToNoiseCurve(suite.Curve), suite.Aead, suite.Hash), sessionId, s, rs)
 	}
 	if err != nil {
 		if isInitializer {
@@ -61,7 +61,7 @@ func newParticipant(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Sign
 	}, nil
 }
 
-func validate(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) error {
+func validate(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Signer, rs curves.Point, handshakeMessage1, handshakeMessage2 []byte) error {
 	err := suite.Validate()
 	if err != nil {
 		return errs.WrapType(err, "invalid ciphersuite")
@@ -69,8 +69,8 @@ func validate(suite *noise.Suite, prng io.Reader, sid []byte, s noise.Signer, rs
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(sid) == 0 {
-		return errs.NewIsNil("sid is empty")
+	if len(sessionId) == 0 {
+		return errs.NewIsNil("sessionId is empty")
 	}
 	if s.PublicKey == nil {
 		return errs.NewIsNil("s.PublicKey is nil")

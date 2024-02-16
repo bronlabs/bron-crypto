@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	transcriptAppLabel       = "PAILLIER_NTH_ROOT_PROOF"
-	transcriptSessionIdLabel = "PaillierNthRoot_SessionId"
+	transcriptLabel = "COPPER_KRYPTON_PAILLIER_NTHROOT-"
 )
 
 type Participant struct {
@@ -61,10 +60,10 @@ func NewProver(bigN, x, y *saferith.Nat, sessionId []byte, transcript transcript
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	_, _, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	return &Prover{
 		Participant: Participant{
@@ -105,10 +104,10 @@ func NewVerifier(bigN, x *saferith.Nat, sessionId []byte, transcript transcripts
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	_, _, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	return &Verifier{
 		Participant: Participant{

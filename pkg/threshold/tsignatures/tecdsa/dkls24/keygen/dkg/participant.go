@@ -1,8 +1,10 @@
 package dkg
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"fmt"
 	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
@@ -43,14 +45,16 @@ func (p *Participant) SharingId() types.SharingID {
 	return p.MySharingId
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, signingKeyShare, partialPublicKeys, protocol, niCompiler, prng); err != nil {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
+	if err := validateInputs(sessionId, authKey, signingKeyShare, partialPublicKeys, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(DkgLabel, prng)
+
+	dst := fmt.Sprintf("%s-%s-%s", DkgLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("DKLs24 DKG Participant", uniqueSessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(authKey)
@@ -58,7 +62,7 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, signingKeySha
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	zeroSamplingParty, err := zeroSetup.NewParticipant(uniqueSessionId, authKey, protocol, transcript, prng)
+	zeroSamplingParty, err := zeroSetup.NewParticipant(sessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
 	}
@@ -68,12 +72,12 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, signingKeySha
 		if participant.Equal(authKey) {
 			continue
 		}
-		sender, err := bbot.NewSender(softspoken.Kappa, 1, protocol.Curve(), uniqueSessionId, transcript.Clone(), prng)
+		sender, err := bbot.NewSender(softspoken.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
 		senders.Put(participant, sender)
-		receiver, err := bbot.NewReceiver(softspoken.Kappa, 1, protocol.Curve(), uniqueSessionId, transcript.Clone(), prng)
+		receiver, err := bbot.NewReceiver(softspoken.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

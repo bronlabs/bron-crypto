@@ -1,6 +1,7 @@
 package interactive_signing
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -19,8 +20,7 @@ import (
 )
 
 const (
-	transcriptLabel          = "Lindell2022InteractiveSignCosignerStart"
-	transcriptSessionIdLabel = "Lindell2022InteractiveSignSessionId"
+	transcriptLabel = "COPPER_KRYPTON_LINDELL22_SIGN-"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
@@ -48,7 +48,7 @@ type Cosigner struct {
 	protocol            types.ThresholdSignatureProtocol
 	sessionParticipants ds.HashSet[types.IdentityKey]
 	sharingConfig       types.SharingConfig
-	sid                 []byte
+	sessionId           []byte
 	round               int
 	transcript          transcripts.Transcript
 	nic                 compiler.Name
@@ -67,14 +67,16 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
-	if err := validateInputs(sid, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
+func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
+	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
+
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(sessionParticipants)
@@ -88,7 +90,7 @@ func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.Has
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't configure przs")
 	}
-	przsParticipant, err := setup.NewParticipant(sid, myAuthKey, przsProtocol, transcript, prng)
+	przsParticipant, err := setup.NewParticipant(sessionId, myAuthKey, przsProtocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot initialise PRZS participant")
 	}
@@ -100,7 +102,7 @@ func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.Has
 		mySigningKeyShare:   myShard.SigningKeyShare,
 		sharingConfig:       sharingConfig,
 		protocol:            protocol,
-		sid:                 sid,
+		sessionId:           sessionId,
 		transcript:          transcript,
 		sessionParticipants: sessionParticipants,
 		taproot:             taproot,
@@ -119,8 +121,8 @@ func NewCosigner(myAuthKey types.AuthKey, sid []byte, sessionParticipants ds.Has
 	return cosigner, nil
 }
 
-func validateInputs(sid []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
-	if len(sid) == 0 {
+func validateInputs(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
@@ -13,6 +14,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const transcriptLabel = "COPPER_KRYPTON_THRESHOLD_BLS_GLOW-"
+
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
 type Cosigner struct {
@@ -24,7 +27,7 @@ type Cosigner struct {
 	myShard       *glow.Shard
 	sharingConfig types.SharingConfig
 
-	sid        []byte
+	sessionId  []byte
 	prng       io.Reader
 	transcript transcripts.Transcript
 	round      int
@@ -38,14 +41,16 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner(sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], myShard *glow.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
-	if err := validateInputs(sid, myAuthKey, sessionParticipants, myShard, protocol, prng); err != nil {
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], myShard *glow.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
+	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, prng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(glow.TranscriptLabel, nil)
+
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("threshold bls signing", sid)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
@@ -66,7 +71,7 @@ func NewCosigner(sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.Has
 		signer:        signer,
 		protocol:      protocol,
 		myAuthKey:     myAuthKey,
-		sid:           sid,
+		sessionId:     sessionId,
 		sharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 		transcript:    transcript,
@@ -82,8 +87,8 @@ func NewCosigner(sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.Has
 	return cosigner, nil
 }
 
-func validateInputs(sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *glow.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
-	if len(sid) == 0 {
+func validateInputs(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *glow.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {

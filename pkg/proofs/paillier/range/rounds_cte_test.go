@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -20,11 +21,12 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	}
 
 	prng := crand.Reader
-	pk, _, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	pk, _, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
-	x, err := randomIntInRange(q, prng)
+	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
 	xEncrypted, _, err := pk.Encrypt(x)
 	require.NoError(t, err)
@@ -33,7 +35,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 
 	internal.RunMeasurement(500, "paillierrange_round1", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err = paillierrange.NewVerifier(primesBitLength, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 	}, func() {
 		verifier.Round1()
@@ -46,11 +48,12 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	}
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
-	x, err := randomIntInRange(q, prng)
+	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
 	xEncrypted, r, err := pk.Encrypt(x)
 	require.NoError(t, err)
@@ -61,10 +64,10 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 
 	internal.RunMeasurement(500, "paillierrange_round2", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err = paillierrange.NewVerifier(base.ComputationalSecurity, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+		prover, err = paillierrange.NewProver(base.ComputationalSecurity, q, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
 		require.NoError(t, err)
@@ -79,11 +82,12 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	}
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
-	x, err := randomIntInRange(q, prng)
+	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
 	xEncrypted, r, err := pk.Encrypt(x)
 	require.NoError(t, err)
@@ -95,10 +99,10 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 
 	internal.RunMeasurement(500, "paillierrange_round3", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err = paillierrange.NewVerifier(primesBitLength, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+		prover, err = paillierrange.NewProver(primesBitLength, q, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
 		require.NoError(t, err)
@@ -115,11 +119,12 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 	}
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
-	x, err := randomIntInRange(q, prng)
+	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
 	xEncrypted, r, err := pk.Encrypt(x)
 	require.NoError(t, err)
@@ -132,10 +137,10 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 
 	internal.RunMeasurement(500, "paillierrange_round4", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err = paillierrange.NewVerifier(primesBitLength, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+		prover, err = paillierrange.NewProver(primesBitLength, q, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
 		require.NoError(t, err)
@@ -155,11 +160,12 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 	}
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
-	x, err := randomIntInRange(q, prng)
+	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
 	xEncrypted, r, err := pk.Encrypt(x)
 	require.NoError(t, err)
@@ -173,10 +179,10 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 
 	internal.RunMeasurement(500, "paillierrange_round5", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err = paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err = paillierrange.NewVerifier(base.ComputationalSecurity, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		require.NoError(t, err)
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err = paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+		prover, err = paillierrange.NewProver(base.ComputationalSecurity, q, sk, x, r, sid, proverTranscript, prng)
 		require.NoError(t, err)
 		r1, err = verifier.Round1()
 		require.NoError(t, err)

@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
@@ -14,12 +15,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const transcriptLabel = "COPPER_KRYPTON_PRZS_ZERO_SETUP-"
+
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
 	prng io.Reader
 
-	UniqueSessionId    []byte
+	SessionId          []byte
 	Curve              curves.Curve
 	myAuthKey          types.AuthKey
 	SortedParticipants []types.IdentityKey
@@ -52,18 +55,21 @@ type committedSeedContribution struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	err := validateInputs(uniqueSessionId, authKey, protocol, prng)
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	err := validateInputs(sessionId, authKey, protocol, prng)
 	if err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
 	}
 	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	sortedParticipants := types.ByPublicKey(protocol.Participants().List())
 	sort.Sort(sortedParticipants)
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_ZERO_SHARE_SETUP", nil)
+
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("zero share sampling setup", uniqueSessionId)
+
 	if prng == nil {
 		return nil, errs.NewArgument("prng is nil")
 	}
@@ -72,7 +78,7 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 		myAuthKey:          authKey,
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
-		UniqueSessionId:    uniqueSessionId,
+		SessionId:          sessionId,
 		state: &State{
 			transcript:    transcript,
 			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
@@ -86,21 +92,21 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, identityKey types.IdentityKey, protocol types.MPCProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol types.MPCProtocol, prng io.Reader) error {
 	if err := types.ValidateIdentityKey(identityKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
 	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "cohort config is invalid")
 	}
-	if len(uniqueSessionId) == 0 {
+	if len(sessionId) == 0 {
 		return errs.NewArgument("unique session id is empty")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	return nil
 }

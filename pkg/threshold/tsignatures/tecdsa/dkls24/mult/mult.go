@@ -50,12 +50,12 @@ type (
 // 	- Kappa, =|q| for a group Z_q (=256)
 // 	- Xi = kappa + 2 lambda_s (=512)
 // 	- Rho = ceil(kappa / lambda_c) (=2)
-// 	- g, a public gadget vector                                                            ---> Can be sampled by bob and reused, or  an AgreeOnRandom (just like another sid) and reused concurrently
+// 	- g, a public gadget vector                                                            ---> Can be sampled by bob and reused, or  an AgreeOnRandom (just like another sessionId) and reused concurrently
 // Functionalities:
 // 	- OTE functionality for Xi batches with message length l_OT=L+Rho
 // 	- H, a hash function to act as random oracle RO.
 // Inputs:
-// 	- sid, the session ID
+// 	- sessionId, the session ID
 // 	- A:  a (l elements in Zq)
 // Outputs:
 // 	- B: b (one element in Zq) ;   d (l elements in Zq)
@@ -77,25 +77,25 @@ type (
 // 			4.1. atilde_i = a_i + alpha_0_j  - alpha_1_j
 // 		5. for k in [rho]:
 // 			5.1. atilde_{l+k} = ahat_k + alpha_0_{l+k} - alpha_1_{l+k}
-// 		6. theta <- H_Zq(sid || atilde) of length l*rho
+// 		6. theta <- H_Zq(sessionId || atilde) of length l*rho
 // 			NOTE (not in spec): Hash2Field is required for this step. This can be achieved in a single call to Hash2Field by concatenating the atilde_i's and then hashing the result.
 // 		7. for k in [rho]:
 // 			7.1. eta_k = ahat_k + sum_i^l (theta_{i*rho + k} * a_i)
 // 		8. for j in [Xi]:
 // 			8.1. mubold_j = sum_k^rho (alpha_0_{j,l+k} + sum_i^l (theta_{i*rho + k} * alpha_0_{j,i}))
-// 		9. Mu = H (sid || mubold) of length 2*lambda_c
+// 		9. Mu = H (sessionId || mubold) of length 2*lambda_c
 // 			NOTE: This can be achieved directly with a variable length hash function.
 // 		10. Send(atilde, eta, Mu) to B
 //         RETURN c
 
 // 	B.Round3(atilde, eta, Mu)
 //         1. Run OTE.Round3(...) --> gamma
-// 		2. theta <- H_Zq(sid || atilde) of length l*rho
+// 		2. theta <- H_Zq(sessionId || atilde) of length l*rho
 //         3. for j in [Xi]:
 //             3.1 ddot_{j,i} = gamma_j,i + beta_j * atilde_{j,i}  for all i in [l]
 //             3.2 dhat_{j,k} = gamma_{j,l+k} + beta_j * ahat_{j,k}  for all k in [rho]
 //             3.3 muBoldPrime_{j,k} = dhat_{j,k} - beta_j * eta_k + sum_i^l (theta_{i*rho + k} * ddot_{j,i})  for all k in [rho]
-//         4. muPrime = H (sid || muBoldPrime) of length 2*lambda_c
+//         4. muPrime = H (sessionId || muBoldPrime) of length 2*lambda_c
 //         5. Check if muPrime == Mu, ABORT otherwise
 //         6. Compute d_i = sum_j (g_j * ddot_{j,i})  for all i in [l]
 //         RETURN d

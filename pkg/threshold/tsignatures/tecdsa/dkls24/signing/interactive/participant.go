@@ -1,6 +1,7 @@
 package interactiveSigning
 
 import (
+	"fmt"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -27,7 +28,7 @@ type Cosigner struct {
 	mySharingId types.SharingID
 	shard       *dkls24.Shard
 
-	UniqueSessionId     []byte
+	sessionId           []byte
 	protocol            types.ThresholdSignatureProtocol
 	sharingConfig       types.SharingConfig
 	SessionParticipants ds.HashSet[types.IdentityKey]
@@ -56,7 +57,7 @@ func (ic *Cosigner) Prng() io.Reader {
 }
 
 func (ic *Cosigner) SessionId() []byte {
-	return ic.UniqueSessionId
+	return ic.sessionId
 }
 
 func (ic *Cosigner) IdentityKey() types.IdentityKey {
@@ -72,14 +73,16 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
-func NewCosigner(uniqueSessionId []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
-	if err := validateInputs(uniqueSessionId, authKey, protocol, shard, sessionParticipants); err != nil {
+func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+	if err := validateInputs(sessionId, authKey, protocol, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
+
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("DKLs24 Interactive Signing", uniqueSessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(authKey)
@@ -88,7 +91,7 @@ func NewCosigner(uniqueSessionId []byte, authKey types.AuthKey, sessionParticipa
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(uniqueSessionId, authKey, shard.PairwiseSeeds, protocol, sessionParticipants, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, authKey, shard.PairwiseSeeds, protocol, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -103,11 +106,11 @@ func NewCosigner(uniqueSessionId []byte, authKey types.AuthKey, sessionParticipa
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %x", participant.PublicKey())
 		}
-		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, uniqueSessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, uniqueSessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
@@ -121,7 +124,7 @@ func NewCosigner(uniqueSessionId []byte, authKey types.AuthKey, sessionParticipa
 		myAuthKey:           authKey,
 		protocol:            protocol,
 		shard:               shard,
-		UniqueSessionId:     uniqueSessionId,
+		sessionId:           sessionId,
 		SessionParticipants: sessionParticipants,
 		prng:                prng,
 		transcript:          transcript,
@@ -143,9 +146,9 @@ func NewCosigner(uniqueSessionId []byte, authKey types.AuthKey, sessionParticipa
 	return cosigner, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, sessionParticipants ds.HashSet[types.IdentityKey]) error {
-	if len(uniqueSessionId) == 0 {
-		return errs.NewLength("invalid session id: %s", uniqueSessionId)
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, sessionParticipants ds.HashSet[types.IdentityKey]) error {
+	if len(sessionId) == 0 {
+		return errs.NewLength("invalid session id: %s", sessionId)
 	}
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold signature protocol config")

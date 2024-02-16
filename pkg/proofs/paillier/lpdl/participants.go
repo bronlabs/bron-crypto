@@ -1,10 +1,12 @@
 package lpdl
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -17,8 +19,7 @@ import (
 )
 
 const (
-	transcriptAppLabel       = "PAILLIER_LPDL_PROOF"
-	transcriptSessionIdLabel = "PaillierLP_SessionId"
+	transcriptLabel = "COPPER_KRYPTON_PAILLIER_LPDL-"
 )
 
 type Participant struct {
@@ -80,23 +81,25 @@ type Prover struct {
 	_ ds.Incomparable
 }
 
-func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	err = validateVerifierInputs(sid, publicKey, bigQ, xEncrypted, sessionId, prng)
+func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	err = validateVerifierInputs(publicKey, bigQ, xEncrypted, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
-	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
-
 	curve := bigQ.Curve()
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	}
+
 	q := curve.SubGroupOrder()
 	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
 
 	rangeProofTranscript := transcript.Clone()
-	rangeVerifier, err := paillierrange.NewVerifier(128, q.Nat(), sid, publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
+	rangeVerifier, err := paillierrange.NewVerifier(base.ComputationalSecurity, q.Nat(),
+		publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
@@ -122,12 +125,9 @@ func NewVerifier(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, x
 	}, nil
 }
 
-func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
+func validateVerifierInputs(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("sessionId is nil")
-	}
-	if len(sid) == 0 {
-		return errs.NewIsNil("sid is nil")
 	}
 	if publicKey == nil {
 		return errs.NewIsNil("public key is nil")
@@ -150,23 +150,25 @@ func validateVerifierInputs(sid []byte, publicKey *paillier.PublicKey, bigQ curv
 	return nil
 }
 
-func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
-	err = validateProverInputs(sid, secretKey, x, r, sessionId, prng)
+func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
+	err = validateProverInputs(secretKey, x, r, sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
-	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
-
 	curve := x.ScalarField().Curve()
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise participant transcript/sessionId")
+	}
+
 	q := curve.SubGroupOrder()
 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
 
 	rangeProofTranscript := transcript.Clone()
-	rangeProver, _ := paillierrange.NewProver(128, q.Nat(), sid, secretKey, x.Nat(), r, sessionId, rangeProofTranscript, prng)
+	rangeProver, _ := paillierrange.NewProver(base.ComputationalSecurity, q.Nat(),
+		secretKey, x.Nat(), r, sessionId, rangeProofTranscript, prng)
 
 	return &Prover{
 		Participant: Participant{
@@ -190,12 +192,9 @@ func NewProver(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *sa
 	}, nil
 }
 
-func validateProverInputs(sid []byte, secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
+func validateProverInputs(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("sessionId is nil")
-	}
-	if len(sid) == 0 {
-		return errs.NewIsNil("sid is nil")
 	}
 	if secretKey == nil {
 		return errs.NewIsNil("secret key is nil")

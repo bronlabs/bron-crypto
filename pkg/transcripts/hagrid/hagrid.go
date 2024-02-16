@@ -19,11 +19,6 @@ import (
 )
 
 const (
-	// Set the probability of collision to our desired security level.
-	collisionResistance = base.ComputationalSecurity
-	// Set the state length to twice the collision resistance (birthday paradox).
-	stateLength = (2 * collisionResistance) / 8
-
 	protocolLabel        string           = "Hagrid v1.0"
 	domainSeparatorLabel string           = "<@>"
 	Type                 transcripts.Type = "Hagrid"
@@ -35,7 +30,7 @@ var TranscriptHashFunction = base.TranscriptHashFunction
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
-	state [stateLength]byte
+	state [base.CollisionResistanceBytes]byte
 	prng  csprng.CSPRNG
 	salt  []byte
 
@@ -65,7 +60,7 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 		}
 	}
 	t := Transcript{
-		state: [stateLength]byte{},
+		state: [base.CollisionResistanceBytes]byte{},
 		prng:  seedablePrng,
 		salt:  salt,
 	}
@@ -80,6 +75,21 @@ func (t *Transcript) Clone() transcripts.Transcript {
 
 func (*Transcript) Type() transcripts.Type {
 	return Type
+}
+
+// InitialiseProtocol appends the sessionId to the transcript using dst as domain-separation
+// tag and extracts a fresh transcript-bound sessionId `sid`. If the transcript is nil, a new
+// one is created with the supplied `dst` label.
+func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst string) (t transcripts.Transcript, sid []byte, err error) {
+	if transcript == nil {
+		transcript = NewTranscript(dst, nil)
+	}
+	transcript.AppendMessages(dst, sessionId)
+	sessionId, err = transcript.ExtractBytes(dst, base.CollisionResistanceBytes)
+	if err != nil {
+		return nil, nil, errs.WrapHashing(err, "couldn't extract sessionId from transcript")
+	}
+	return transcript, sessionId, nil
 }
 
 /*.-------------------------- WRITE/READ OPS --------------------------------.*/

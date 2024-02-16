@@ -1,6 +1,7 @@
 package lp
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -14,9 +15,8 @@ import (
 )
 
 const (
-	transcriptAppLabel       = "PAILLIER_LP_PROOF"
-	transcriptSessionIdLabel = "PaillierLP_SessionId"
-	PaillierBitSize          = 1024
+	transcriptLabel = "COPPER_KRYPTON_PAILLIER_LP-"
+	PaillierBitSize = 1024
 )
 
 type Participant struct {
@@ -65,7 +65,12 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.NewArgument("invalid input arguments")
 	}
 
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
+	dst := fmt.Sprintf("%s-%d", transcriptLabel, k)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	}
+
 	return &Verifier{
 		Participant: Participant{
 			k:          k,
@@ -103,10 +108,11 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.NewArgument("invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	dst := fmt.Sprintf("%s-%d", transcriptLabel, k)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	return &Prover{
 		Participant: Participant{

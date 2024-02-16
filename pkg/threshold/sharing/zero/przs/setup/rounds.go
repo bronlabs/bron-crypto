@@ -44,12 +44,12 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		if _, err := p.prng.Read(randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with index %d", participantIndex)
 		}
-		seedForThisParticipant, err := hashing.HashChain(base.CommitmentHashFunction, p.UniqueSessionId, randomBytes[:])
+		seedForThisParticipant, err := hashing.HashChain(base.CommitmentHashFunction, p.SessionId, randomBytes[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce seed for participant with index %d", participantIndex)
 		}
 		commitment, witness, err := commitments.Commit(
-			p.UniqueSessionId,
+			p.SessionId,
 			p.prng,
 			seedForThisParticipant,
 		)
@@ -134,7 +134,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		if message.Witness == nil {
 			return nil, errs.NewMissing("participant with index %d sent empty witness", participantIndex)
 		}
-		if err := commitments.Open(p.UniqueSessionId, commitment, message.Witness, message.Message); err != nil {
+		if err := commitments.Open(p.SessionId, commitment, message.Witness, message.Message); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participantIndex, "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds.Get(participant)

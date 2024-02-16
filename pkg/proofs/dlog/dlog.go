@@ -17,8 +17,8 @@ const (
 	BATCH_PROTOCOL = batch_schnorr.Name
 )
 
-func Prove(uniqueSessionId []byte, secret curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement curves.Point, err error) {
-	if err := validateProveInputs(uniqueSessionId, false, secret, nil, basePoint, niCompiler, prng); err != nil {
+func Prove(sessionId []byte, secret curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement curves.Point, err error) {
+	if err := validateProveInputs(sessionId, false, secret, nil, basePoint, niCompiler, prng); err != nil {
 		return nil, nil, errs.WrapArgument(err, "invalid arguments")
 	}
 	statement = basePoint.Mul(secret)
@@ -32,7 +32,7 @@ func Prove(uniqueSessionId []byte, secret curves.Scalar, basePoint curves.Point,
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
 		}
-		prover, err := niSigma.NewProver(uniqueSessionId, transcript)
+		prover, err := niSigma.NewProver(sessionId, transcript)
 		if err != nil {
 			return nil, nil, errs.NewFailed("cannot create dlog prover")
 		}
@@ -46,8 +46,8 @@ func Prove(uniqueSessionId []byte, secret curves.Scalar, basePoint curves.Point,
 	}
 }
 
-func BatchProve(uniqueSessionId []byte, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement []curves.Point, err error) {
-	if err := validateProveInputs(uniqueSessionId, true, nil, secrets, basePoint, niCompiler, prng); err != nil {
+func BatchProve(sessionId []byte, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement []curves.Point, err error) {
+	if err := validateProveInputs(sessionId, true, nil, secrets, basePoint, niCompiler, prng); err != nil {
 		return nil, nil, errs.WrapArgument(err, "invalid arguments")
 	}
 	statement = make([]curves.Point, len(secrets))
@@ -64,7 +64,7 @@ func BatchProve(uniqueSessionId []byte, secrets []curves.Scalar, basePoint curve
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
 		}
-		prover, err := niSigma.NewProver(uniqueSessionId, transcript)
+		prover, err := niSigma.NewProver(sessionId, transcript)
 		if err != nil {
 			return nil, nil, errs.NewFailed("cannot create dlog prover")
 		}
@@ -78,8 +78,8 @@ func BatchProve(uniqueSessionId []byte, secrets []curves.Scalar, basePoint curve
 	}
 }
 
-func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
-	if err := validateVerifyInputs(uniqueSessionId, false, statement, nil, basePoint, niCompiler); err != nil {
+func Verify(sessionId []byte, proof compiler.NIZKPoKProof, statement, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
+	if err := validateVerifyInputs(sessionId, false, statement, nil, basePoint, niCompiler); err != nil {
 		return errs.WrapArgument(err, "invalid arguments")
 	}
 	switch PROTOCOL {
@@ -92,7 +92,7 @@ func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement, base
 		if err != nil {
 			return errs.WrapFailed(err, "could not convert dlog sigma protocol into non interactive")
 		}
-		verifier, err := niSigma.NewVerifier(uniqueSessionId, transcript)
+		verifier, err := niSigma.NewVerifier(sessionId, transcript)
 		if err != nil {
 			return errs.WrapFailed(err, "could not construct verifier")
 		}
@@ -105,8 +105,8 @@ func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement, base
 	}
 }
 
-func BatchVerify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement []curves.Point, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
-	if err := validateVerifyInputs(uniqueSessionId, true, nil, statement, basePoint, niCompiler); err != nil {
+func BatchVerify(sessionId []byte, proof compiler.NIZKPoKProof, statement []curves.Point, basePoint curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
+	if err := validateVerifyInputs(sessionId, true, nil, statement, basePoint, niCompiler); err != nil {
 		return errs.WrapArgument(err, "invalid arguments")
 	}
 	switch BATCH_PROTOCOL {
@@ -119,7 +119,7 @@ func BatchVerify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement 
 		if err != nil {
 			return errs.WrapFailed(err, "could not convert batch dlog sigma protocol into non interactive")
 		}
-		verifier, err := niSigma.NewVerifier(uniqueSessionId, transcript)
+		verifier, err := niSigma.NewVerifier(sessionId, transcript)
 		if err != nil {
 			return errs.WrapFailed(err, "could not construct verifier")
 		}
@@ -132,8 +132,8 @@ func BatchVerify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement 
 	}
 }
 
-func validateProveInputs(sid []byte, batched bool, secret curves.Scalar, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, prng io.Reader) error {
-	if len(sid) == 0 {
+func validateProveInputs(sessionId []byte, batched bool, secret curves.Scalar, secrets []curves.Scalar, basePoint curves.Point, niCompiler compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id")
 	}
 	if !batched && secret == nil {
@@ -154,8 +154,8 @@ func validateProveInputs(sid []byte, batched bool, secret curves.Scalar, secrets
 	return nil
 }
 
-func validateVerifyInputs(sid []byte, batched bool, statement curves.Point, statements []curves.Point, basePoint curves.Point, niCompiler compiler.Name) error {
-	if len(sid) == 0 {
+func validateVerifyInputs(sessionId []byte, batched bool, statement curves.Point, statements []curves.Point, basePoint curves.Point, niCompiler compiler.Name) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id")
 	}
 	if !batched && statement == nil {

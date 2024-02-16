@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	TranscriptLabel  = "COPPER_KRYPTON_THRESHOLD_BLS_GLOW-"
+	transcriptLabel  = "COPPER_KRYPTON_TBLS_GLOW-"
 	DleqNIZKCompiler = fiatShamir.Name
 )
 
@@ -25,4 +25,5 @@ var NewShard = boldyreva02.NewShard[KeySubGroup]
 type PartialSignature struct {
 	SigmaI    *bls.Signature[SignatureSubGroup]
 	DleqProof compiler.NIZKPoKProof
+	SessionId []byte // Required for the DLEQ verification if the aggregator is not a cosigner
 }

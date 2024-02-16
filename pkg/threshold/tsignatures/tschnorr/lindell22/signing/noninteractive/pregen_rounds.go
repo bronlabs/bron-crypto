@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	commitmentDomainRLabel               = "Lindell2022PreGenR"
-	transcriptDLogSLabel                 = "Lindell2022PreGenDLogS"
-	transcriptDLogPreSignatureIndexLabel = "Lindell2022PreGenDLogPreSignatureIndex"
+	commitmentDomainRLabel               = "Lindell2022PreGenR-"
+	transcriptDLogSLabel                 = "Lindell2022PreGenDLogS-"
+	transcriptDLogPreSignatureIndexLabel = "Lindell2022PreGenDLogPreSignatureIndex-"
 )
 
 type Round1Broadcast struct {
@@ -62,8 +62,8 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	bigR1 := p.protocol.Curve().ScalarBaseMult(k1)
 	bigR2 := p.protocol.Curve().ScalarBaseMult(k2)
 
-	// 3. compute Rcom = commit(R1, R2, pid, sid, S)
-	bigRCommitment, bigRWitness, err := commit(p.prng, bigR1, bigR2, p.state.pid, p.sid, p.state.bigS)
+	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
+	bigRCommitment, bigRWitness, err := commit(p.prng, bigR1, bigR2, p.state.pid, p.sessionId, p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -106,11 +106,11 @@ func (p *PreGenParticipant) Round2(broadcastInput types.RoundMessages[*Round1Bro
 	}
 
 	// 1. compute proof of dlog knowledge of R1 & R2
-	bigR1Proof, err := dlogProve(p.state.k1, p.state.bigR1, p.sid, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
+	bigR1Proof, err := dlogProve(p.state.k1, p.state.bigR1, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
-	bigR2Proof, err := dlogProve(p.state.k2, p.state.bigR2, p.sid, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
+	bigR2Proof, err := dlogProve(p.state.k2, p.state.bigR2, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
@@ -161,16 +161,16 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 		}
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR1, theirBigR2, theirPid, p.sid, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+		if err := openCommitment(theirBigR1, theirBigR2, theirPid, p.sessionId, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
 		// 2. verify dlog
-		if err := dlogVerifyProof(inBroadcast.BigR1Proof, theirBigR1, p.sid, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(inBroadcast.BigR1Proof, theirBigR1, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 		}
 		BigR1.Put(identity, theirBigR1)
-		if err := dlogVerifyProof(inBroadcast.BigR2Proof, theirBigR2, p.sid, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(inBroadcast.BigR2Proof, theirBigR2, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
 		}
 		BigR2.Put(identity, theirBigR2)
@@ -194,8 +194,8 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 	}, nil
 }
 
-func commit(prng io.Reader, bigR, bigR2 curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sid, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS)
+func commit(prng io.Reader, bigR, bigR2 curves.Point, pid, sessionId, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	commitment, witness, err = commitments.Commit(sessionId, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
@@ -203,18 +203,18 @@ func commit(prng io.Reader, bigR, bigR2 curves.Point, pid, sid, bigS []byte) (co
 	return commitment, witness, nil
 }
 
-func openCommitment(bigR, bigR2 curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	if err := commitments.Open(sid, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS); err != nil {
+func openCommitment(bigR, bigR2 curves.Point, pid, sessionId, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
+	if err := commitments.Open(sessionId, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS); err != nil {
 		return errs.WrapVerification(err, "cannot open commitment")
 	}
 
 	return nil
 }
 
-func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
+func dlogProve(x curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
 	curve := x.ScalarField().Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
-	proof, statement, err := dlog.Prove(sid, x, curve.Generator(), nic, transcript, prng)
+	proof, statement, err := dlog.Prove(sessionId, x, curve.Generator(), nic, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create a proof")
 	}
@@ -224,10 +224,10 @@ func dlogProve(x curves.Scalar, bigR curves.Point, sid, bigS []byte, nic compile
 	return proof, nil
 }
 
-func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sid, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
+func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
 	curve := bigR.Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
-	if err := dlog.Verify(sid, proof, bigR, curve.Generator(), nic, transcript); err != nil {
+	if err := dlog.Verify(sessionId, proof, bigR, curve.Generator(), nic, transcript); err != nil {
 		return errs.WrapVerification(err, "cannot verify commitment")
 	}
 	return nil

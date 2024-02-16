@@ -82,11 +82,11 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls24.Shard, protocol types.
 	return participant, nil
 }
 
-func validateInputsSign(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, ppm *dkls24.PreProcessingMaterial) error {
+func validateInputsSign(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, ppm *dkls24.PreProcessingMaterial) error {
 	if ppm == nil {
 		return errs.NewIsNil("ppm")
 	}
-	if err := validateInputs(uniqueSessionId, authKey, protocol, shard, ppm.PreSigners); err != nil {
+	if err := validateInputs(sessionId, authKey, protocol, shard, ppm.PreSigners); err != nil {
 		return err
 	}
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {

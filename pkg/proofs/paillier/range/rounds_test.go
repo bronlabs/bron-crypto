@@ -11,6 +11,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
@@ -21,13 +22,15 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(128)
+	primesBitLength := 128
+	nIter := 100
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 
-	for i := 0; i < 128; i++ {
+	for i := 0; i < nIter; i++ {
 		sid := append([]byte("sessionId_"), []byte(strconv.Itoa(i))...)
-		x, err := randomIntInRange(q, prng)
+		x, err := randomIntInRange(q, prng, primesBitLength)
 		require.NoError(t, err)
 
 		t.Run(fmt.Sprintf("in range %s", x.String()), func(t *testing.T) {
@@ -36,7 +39,7 @@ func Test_HappyPath(t *testing.T) {
 			xEncrypted, r, err := pk.Encrypt(x)
 			require.NoError(t, err)
 
-			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
 			require.NoError(t, err)
 		})
 	}
@@ -46,13 +49,15 @@ func Test_OutOfRange(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
-	pk, sk, err := paillier.NewKeys(64)
+	primesBitLength := 64
+	nIter := 100
+	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 
-	for i := 0; i < 128; i++ {
+	for i := 0; i < nIter; i++ {
 		sid := append([]byte("LowSessionId_"), []byte(strconv.Itoa(i))...)
-		x, err := randomIntOutRangeLow(q, prng)
+		x, err := randomIntOutRangeLow(q, prng, primesBitLength)
 		require.NoError(t, err)
 
 		t.Run(fmt.Sprintf("below range %s", x.String()), func(t *testing.T) {
@@ -60,12 +65,12 @@ func Test_OutOfRange(t *testing.T) {
 
 			xEncrypted, r, err := pk.Encrypt(x)
 			require.NoError(t, err)
-			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
 			require.Error(t, err)
 		})
 	}
 
-	for i := 0; i < 128; i++ {
+	for i := 0; i < nIter; i++ {
 		sid := append([]byte("HighSessionId_"), []byte(strconv.Itoa(i))...)
 		x, err := randomIntOutRangeHigh(q, prng)
 		require.NoError(t, err)
@@ -75,14 +80,14 @@ func Test_OutOfRange(t *testing.T) {
 
 			xEncrypted, r, err := pk.Encrypt(x)
 			require.NoError(t, err)
-			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng)
+			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
 			require.Error(t, err)
 		})
 	}
 }
 
-func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
-	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 128)
+func randomIntInRange(q *saferith.Nat, prng io.Reader, bitLength int) (*saferith.Nat, error) {
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), bitLength)
 	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
 		return nil, err
@@ -91,10 +96,10 @@ func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	return new(saferith.Nat).Add(l, x, 256), nil
 }
 
-func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
+func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader, bitLength int) (*saferith.Nat, error) {
 	// we should make x < 0 to make this 100% correct but this is good enough
 	// and current Paillier encryption does not support negative numbers
-	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), 128)
+	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), bitLength)
 	xInt, err := crand.Int(prng, l.Big()) // x < q/4
 	if err != nil {
 		return nil, err
@@ -111,16 +116,16 @@ func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, erro
 	return new(saferith.Nat).Add(x, q, 256), nil // x >= q
 }
 
-func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader) (err error) {
+func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sid []byte, prng io.Reader, primesBitLength int) (err error) {
 	appLabel := "Range"
 
 	verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-	verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+	verifier, err := paillierrange.NewVerifier(primesBitLength, q, pk, xEncrypted, sid, verifierTranscript, prng)
 	if err != nil {
 		return err
 	}
 	proverTranscript := hagrid.NewTranscript(appLabel, nil)
-	prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+	prover, err := paillierrange.NewProver(primesBitLength, q, sk, x, r, sid, proverTranscript, prng)
 	if err != nil {
 		return err
 	}
@@ -147,8 +152,8 @@ func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Na
 	}
 
 	label := "gimme, gimme"
-	proverBytes, _ := proverTranscript.ExtractBytes(label, 128)
-	verifierBytes, _ := verifierTranscript.ExtractBytes(label, 128)
+	proverBytes, _ := proverTranscript.ExtractBytes(label, base.ComputationalSecurity)
+	verifierBytes, _ := verifierTranscript.ExtractBytes(label, base.ComputationalSecurity)
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

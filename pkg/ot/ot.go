@@ -2,6 +2,7 @@ package ot
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"io"
 
 	"golang.org/x/crypto/sha3"
@@ -45,33 +46,34 @@ type Participant struct {
 	Xi int // ξ, the number of OTs that are run in parallel.
 	L  int // L, the number of elements in each OT message.
 
-	Curve           curves.Curve
-	UniqueSessionId []byte
-	Transcript      transcripts.Transcript
-	Csprng          io.Reader
+	Curve      curves.Curve
+	SessionId  []byte
+	Transcript transcripts.Transcript
+	Csprng     io.Reader
 
 	_ ds.Incomparable
 }
 
-func NewParticipant(Xi, L int, curve curves.Curve, sid []byte, label string, t transcripts.Transcript, csprng io.Reader) (*Participant, error) {
-	if err := validateInputs(Xi, L, sid, csprng); err != nil {
+func NewParticipant(Xi, L int, curve curves.Curve, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader) (*Participant, error) {
+	if err := validateInputs(Xi, L, sessionId, csprng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct ot participant")
 	}
-	if t == nil {
-		t = hagrid.NewTranscript(label, nil)
+	dst := fmt.Sprintf("%s_%d_%d_%s", label, Xi, L, curve.Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	t.AppendMessages("OT_SESSION_ID", sid)
 	return &Participant{
-		Curve:           curve,
-		Xi:              Xi,
-		L:               L,
-		UniqueSessionId: sid,
-		Transcript:      t,
-		Csprng:          csprng,
+		Curve:      curve,
+		Xi:         Xi,
+		L:          L,
+		SessionId:  sessionId,
+		Transcript: transcript,
+		Csprng:     csprng,
 	}, nil
 }
 
-func validateInputs(Xi, L int, sid []byte, csprng io.Reader) error {
+func validateInputs(Xi, L int, sessionId []byte, csprng io.Reader) error {
 	if Xi&0x07 != 0 || Xi < 1 { // `Enforce batchSize % 8 != 0`
 		return errs.NewValue("batch size should be a positive multiple of 8")
 	}
@@ -81,7 +83,7 @@ func validateInputs(Xi, L int, sid []byte, csprng io.Reader) error {
 	if csprng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(sid) == 0 {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("unique session id is empty")
 	}
 	return nil

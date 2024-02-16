@@ -5,13 +5,12 @@ import (
 )
 
 const (
-	domainSeparationTag = "COPPER_SIGMA_POK-"
+	transcriptLabel = "COPPER_KRYPTON_SIGMA_POK-"
 
-	sessionIdLabel  = "sessionIdLabel"
-	statementLabel  = "statementLabel"
-	commitmentLabel = "commitmentLabel"
-	challengeLabel  = "challengeLabel"
-	responseLabel   = "responseLabel"
+	statementLabel  = "statementLabel-"
+	commitmentLabel = "commitmentLabel-"
+	challengeLabel  = "challengeLabel-"
+	responseLabel   = "responseLabel-"
 )
 
 type (

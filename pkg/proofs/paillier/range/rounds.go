@@ -68,14 +68,14 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.WrapFailed(err, "cannot get random number")
 	}
 
-	// 1.iv. compute commitment to (e, sid) and send to P
+	// 1.iv. compute commitment to (e, sessionId) and send to P
 	esidCommitment, esidWitness, err := commitments.Commit(
-		verifier.sid,
+		verifier.sessionId,
 		verifier.prng,
 		verifier.state.e.Bytes(),
 	)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to e, sid")
+		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}
 	verifier.state.esidWitness = esidWitness
 
@@ -151,7 +151,7 @@ func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRou
 
 	verifier.round += 2
 
-	// 3. decommit (e, sid), reveal (e, sid) to P
+	// 3. decommit (e, sessionId), reveal (e, sessionId) to P
 	return &VerifierRound3Output{
 		E:           verifier.state.e,
 		EsidWitness: verifier.state.esidWitness,
@@ -163,7 +163,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 		return nil, errs.NewRound("%d != 4", prover.round)
 	}
 
-	err = commitments.Open(prover.sid, prover.state.esidCommitment, input.EsidWitness, input.E.Bytes())
+	err = commitments.Open(prover.sessionId, prover.state.esidCommitment, input.EsidWitness, input.E.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}

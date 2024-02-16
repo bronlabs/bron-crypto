@@ -27,11 +27,11 @@ func (p *Participant) SharingId() types.SharingID {
 	return p.pedersenParty.SharingId()
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) (*Participant, error) {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, prng io.Reader) (*Participant, error) {
 	if err := validateInputs(protocol, authKey, prng); err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
 	}
-	pedersenParty, err := pedersen.NewParticipant(uniqueSessionId, authKey, protocol, fiatShamir.Name, nil, prng)
+	pedersenParty, err := pedersen.NewParticipant(sessionId, authKey, protocol, fiatShamir.Name, nil, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct frost dkg participant out of pedersen dkg participant")
 	}

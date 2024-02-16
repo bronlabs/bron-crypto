@@ -23,11 +23,11 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sess
 		return nil, errs.NewArgument("protocol or is nil")
 	}
 
-	if transcript == nil {
-		dst := fmt.Sprintf("%s-%s", domainSeparationTag, sigmaProtocol.Name())
-		transcript = hagrid.NewTranscript(dst, nil)
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, sigmaProtocol.Name())
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(sessionIdLabel, sessionId)
 	transcript.AppendMessages(statementLabel, sigmaProtocol.SerializeStatement(statement))
 
 	return &Verifier[X, W, A, S, Z]{

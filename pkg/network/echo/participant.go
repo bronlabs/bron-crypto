@@ -11,7 +11,7 @@ var _ types.WithAuthKey = (*Participant)(nil)
 
 type Participant struct {
 	myAuthKey types.AuthKey
-	sid       []byte
+	sessionId []byte
 
 	Protocol types.MPCProtocol
 
@@ -41,15 +41,15 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewInitiator(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, message []byte) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, protocol, authKey); err != nil {
+func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, message []byte) (*Participant, error) {
+	if err := validateInputs(sessionId, authKey, protocol, authKey); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct initiator")
 	}
 	result := &Participant{
 		myAuthKey: authKey,
 		Protocol:  protocol,
 		initiator: authKey,
-		sid:       uniqueSessionId,
+		sessionId: sessionId,
 		state: &State{
 			messageToBroadcast: message,
 		},
@@ -61,14 +61,14 @@ func NewInitiator(uniqueSessionId []byte, authKey types.AuthKey, protocol types.
 	return result, nil
 }
 
-func NewResponder(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, protocol, initiator); err != nil {
+func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) (*Participant, error) {
+	if err := validateInputs(sessionId, authKey, protocol, initiator); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct responder")
 	}
 	result := &Participant{
 		myAuthKey: authKey,
 		initiator: initiator,
-		sid:       uniqueSessionId,
+		sessionId: sessionId,
 		state:     &State{},
 		Protocol:  protocol,
 		round:     1,
@@ -79,7 +79,7 @@ func NewResponder(uniqueSessionId []byte, authKey types.AuthKey, protocol types.
 	return result, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
@@ -95,8 +95,8 @@ func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol type
 	if protocol.Participants().Size() <= 2 {
 		return errs.NewSize("total participants (%d) <= 2", protocol.Participants().Size())
 	}
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	return nil
 }

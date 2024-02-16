@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	dlogProofLabel = "COPPER_KRYPTON_GENNARO_DKG_DLOG_PROOF-"
-	sharingIdLabel = "sharing id"
+	sharingIdLabel = "sharing_id-"
 )
 
 type Round1Broadcast struct {
@@ -57,7 +56,7 @@ func (p *Participant) Round1() (*Round1Broadcast, types.RoundMessages[*Round1P2P
 
 	proverTranscript := p.state.transcript.Clone()
 	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.state.niCompiler.NewProver(p.UniqueSessionId, proverTranscript)
+	prover, err := p.state.niCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
@@ -182,7 +181,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 
 		verifierTranscript := p.state.transcript.Clone()
 		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.state.niCompiler.NewVerifier(p.UniqueSessionId, verifierTranscript)
+		verifier, err := p.state.niCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")
 		}

@@ -27,8 +27,8 @@ type Round1P2P struct {
 }
 
 const (
-	DkgLabel       = "COPPER-PEDERSEN-DKG-V1-"
-	SharingIdLabel = "Pedersen DKG sharing id parameter"
+	DkgLabel       = "COPPER_KRYPTON_PEDERSEN_DKG-"
+	SharingIdLabel = "Pedersen_DKG_sharing_label-"
 )
 
 func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u types.RoundMessages[*Round1P2P], err error) {
@@ -50,7 +50,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.State.NiCompiler.NewProver(p.UniqueSessionId, p.Transcript.Clone())
+	prover, err := p.State.NiCompiler.NewProver(p.SessionId, p.Transcript.Clone())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
@@ -128,7 +128,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
 		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.State.NiCompiler.NewVerifier(p.UniqueSessionId, p.Transcript.Clone())
+		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, p.Transcript.Clone())
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}

@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-const label = "KRYPTON_PRIMITIVES_SOFTSPOKEN_COTe"
+const transcriptLabel = "COPPER_KRYPTON_SOFTSPOKEN_OTe-"
 
 type Receiver struct {
 	ot.Participant
@@ -34,10 +34,10 @@ type Sender struct {
 
 // NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sid []byte, t transcripts.Transcript,
+func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sid, label, t, csrand)
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
@@ -53,7 +53,7 @@ func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sid []byte, t transc
 			return nil, errs.NewLength("base OT seed[%d] message empty", i)
 		}
 	}
-	prg, err = initialisePrg(prg, sid)
+	prg, err = initialisePrg(prg, sessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not initialise receiver prg")
 	}
@@ -67,10 +67,10 @@ func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sid []byte, t transc
 
 // NewSoftspokenSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sid []byte, t transcripts.Transcript,
+func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sid, label, t, csrand)
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
@@ -86,7 +86,7 @@ func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sid []byte, t transc
 			return nil, errs.NewLength("base OT seed[%d] chosen message empty", i)
 		}
 	}
-	prg, err = initialisePrg(prg, sid)
+	prg, err = initialisePrg(prg, sessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not initialise sender prg")
 	}
@@ -98,11 +98,11 @@ func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sid []byte, t transc
 	}, nil
 }
 
-func initialisePrg(prg csprng.CSPRNG, sid []byte) (csprng.CSPRNG, error) {
+func initialisePrg(prg csprng.CSPRNG, sessionId []byte) (csprng.CSPRNG, error) {
 	var err error
 	if prg == nil { // Default prng output size optimised for DKLs24 Mult.
 		etaPrimeBytes := ((2 + 2) * (KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
-		prg, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sid)
+		prg, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sessionId)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "Could not initialise prg")
 		}

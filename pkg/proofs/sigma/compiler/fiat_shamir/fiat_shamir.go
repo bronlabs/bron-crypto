@@ -13,11 +13,10 @@ import (
 const (
 	Name compiler.Name = "FiatShamir"
 
-	domainSeparationTag = "COPPER_SIGMA_NIZKPOK_FIAT_SHAMIR-"
-	sessionIdLabel      = "sessionIdLabel"
-	statementLabel      = "statementLabel"
-	commitmentLabel     = "commitmentLabel"
-	challengeLabel      = "challengeLabel"
+	transcriptLabel = "COPPER_KRYPTON_NIZKP_FIATSHAMIR-"
+	statementLabel  = "statementLabel-"
+	commitmentLabel = "commitmentLabel-"
+	challengeLabel  = "challengeLabel-"
 )
 
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
@@ -46,13 +45,11 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, nil)
-	} else {
-		transcript.AppendMessages("DST", []byte(dst))
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
+	transcript, _, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(sessionIdLabel, sessionId)
 
 	return &prover[X, W, A, S, Z]{
 		transcript:    transcript,
@@ -65,14 +62,11 @@ func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s", domainSeparationTag, c.sigmaProtocol.Name())
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, nil)
-	} else {
-		transcript.AppendMessages("DST", []byte(dst))
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
+	transcript, _, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(sessionIdLabel, sessionId)
-
 	return &verifier[X, W, A, S, Z]{
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,

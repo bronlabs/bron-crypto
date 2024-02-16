@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	PopfKeyLabel = "COPPER-BBOT-POPF"
-	Ro0Label     = "COPPER-BBOT-RO0"
-	Ro1Label     = "COPPER-BBOT-RO1"
+	PopfKeyLabel = "COPPER-BBOT-POPF-"
+	Ro0Label     = "COPPER-BBOT-RO0-"
+	Ro1Label     = "COPPER-BBOT-RO1-"
 	TagLength    = ot.KappaBytes
 )
 

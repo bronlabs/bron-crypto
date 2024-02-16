@@ -19,8 +19,8 @@ import (
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
-	myAuthKey       types.AuthKey
-	uniqueSessionId []byte
+	myAuthKey types.AuthKey
+	sessionId []byte
 
 	Protocol            types.MPCProtocol
 	IdentitySpace       types.IdentitySpace
@@ -36,14 +36,14 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
-	if err := validateInputs(uniqueSessionId, authKey, seeds, protocol, presentParticipants, seededPrngFactory); err != nil {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
+	if err := validateInputs(sessionId, authKey, seeds, protocol, presentParticipants, seededPrngFactory); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
 	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	participant := &Participant{
 		myAuthKey:           authKey,
-		uniqueSessionId:     uniqueSessionId,
+		sessionId:           sessionId,
 		Protocol:            protocol,
 		IdentitySpace:       identitySpace,
 		Seeds:               seeds,
@@ -58,9 +58,9 @@ func NewParticipant(uniqueSessionId []byte, authKey types.AuthKey, seeds przs.Pa
 	return participant, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
@@ -109,7 +109,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		if !exists {
 			return errs.NewMissing("could not find shared seed for index %d", i)
 		}
-		salt, err := hashing.HashChain(sha3.New256, p.uniqueSessionId)
+		salt, err := hashing.HashChain(sha3.New256, p.sessionId)
 		if err != nil {
 			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)
 		}

@@ -2,6 +2,7 @@ package noninteractive_signing
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -18,9 +19,7 @@ import (
 )
 
 const (
-	transcriptLabel          = "Lindell2022PreGenStart"
-	transcriptSessionIdLabel = "Lindell2022PreGenSessionId"
-	transcriptTauLabel       = "Lindell2022PreGenTau"
+	transcriptLabel = "COPPER_KRYPTON_LINDELL22_PREGEN-"
 )
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
@@ -34,7 +33,7 @@ type PreGenParticipant struct {
 
 	protocol   types.ThresholdProtocol
 	preSigners ds.HashSet[types.IdentityKey]
-	sid        []byte
+	sessionId  []byte
 	round      int
 	prng       io.Reader
 	transcript transcripts.Transcript
@@ -65,15 +64,16 @@ type state struct {
 	_ ds.Incomparable
 }
 
-func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
-	if err := validatePreGenInputs(myAuthKey, sid, protocol, preSigners, nic, prng); err != nil {
+func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
+	if err := validatePreGenInputs(myAuthKey, sessionId, protocol, preSigners, nic, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid argument")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, nil)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), nic)
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sid)
 
 	// TODO: remove pid after adding Repr method to Identity Key
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
@@ -84,7 +84,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.Th
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	przsSid := bytes.Join([][]byte{sid, []byte("przs")}, nil)
+	przsSid := bytes.Join([][]byte{sessionId, []byte("przs")}, nil)
 	przsParticipant, err := setup.NewParticipant(przsSid, myAuthKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
@@ -97,7 +97,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.Th
 		myAuthKey:            myAuthKey,
 		mySharingId:          mySharingId,
 		protocol:             protocol,
-		sid:                  sid,
+		sessionId:            sessionId,
 		transcript:           transcript,
 		round:                1,
 		prng:                 prng,
@@ -114,8 +114,8 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sid []byte, protocol types.Th
 	return participant, nil
 }
 
-func validatePreGenInputs(authKey types.AuthKey, sid []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, prng io.Reader) error {
-	if len(sid) == 0 {
+func validatePreGenInputs(authKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

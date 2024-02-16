@@ -91,7 +91,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
-	p.state.transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
+	p.state.transcript.AppendMessages("sessionId contribution", sortRandomnessContributions...)
 	randomValue, err := p.state.transcript.ExtractBytes("session id", przs.LambdaBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive random value")

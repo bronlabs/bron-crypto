@@ -1,6 +1,7 @@
 package recovery
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
+
+const transcriptLabel = "COPPER_KRYPTON_KEY_RECOVERY-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
@@ -47,16 +50,18 @@ func (p *Participant) IsRecoverer() bool {
 	return !p.IdentityKey().Equal(p.lostPartyIdentityKey)
 }
 
-func NewRecoverer(uniqueSessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateRecovererInputs(uniqueSessionId, authKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, protocol, presentRecoverers, prng); err != nil {
+func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateRecovererInputs(sessionId, authKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, protocol, presentRecoverers, prng); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_KEY_RECOVERY-", nil)
-	}
-	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, transcript, prng)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	}
+
+	sampler, err := hjky.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -79,9 +84,9 @@ func NewRecoverer(uniqueSessionId []byte, authKey types.AuthKey, lostPartyIdenti
 	return result, nil
 }
 
-func validateRecovererInputs(uniqueSessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], prng io.Reader) error {
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
@@ -116,16 +121,17 @@ func validateRecovererInputs(uniqueSessionId []byte, authKey types.AuthKey, lost
 	return nil
 }
 
-func NewLostParty(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateLostPartyInputs(uniqueSessionId, authKey, protocol, presentRecoverers, publicKeyShares, prng); err != nil {
+func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if err := validateLostPartyInputs(sessionId, authKey, protocol, presentRecoverers, publicKeyShares, prng); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_KEY_RECOVERy-", nil)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("key recovery", uniqueSessionId)
 
-	sampler, err := hjky.NewParticipant(uniqueSessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -147,9 +153,9 @@ func NewLostParty(uniqueSessionId []byte, authKey types.AuthKey, protocol types.
 	return result, nil
 }
 
-func validateLostPartyInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, prng io.Reader) error {
-	if len(uniqueSessionId) == 0 {
-		return errs.NewIsZero("sid length is zero")
+func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsZero("sessionId length is zero")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")

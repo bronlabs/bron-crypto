@@ -110,8 +110,8 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 		}
 	}
 
-	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (ã || sid)
-	theta, err := alice.Curve.HashToScalars(L*Rho, alice.uniqueSessionId, aTildeBytes)
+	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)
+	theta, err := alice.Curve.HashToScalars(L*Rho, alice.sessionId, aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
 	}
@@ -137,8 +137,8 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 		}
 	}
 
-	// step 2.8: μ = H_{ℤ2^{2*λ_c}} (sid || μb)
-	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.uniqueSessionId, muBytes)
+	// step 2.8: μ = H_{ℤ2^{2*λ_c}} (sessionId || μb)
+	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.sessionId, muBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to Mu")
 	}
@@ -152,7 +152,7 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 		D[i] = bob.Curve.Scalar().ScalarField().Zero()
 	}
 
-	// step 3.1: θ <--- H_{ℤq^{𝓁xρ}} (ã || sid)
+	// step 3.1: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)
 	aTildeBytes := make([]byte, 0, ((L + Rho) * Xi * base.FieldBytes))
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
@@ -162,7 +162,7 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 			aTildeBytes = append(aTildeBytes, r2o.ATilde[j][L+k].Bytes()...)
 		}
 	}
-	theta, err := bob.Curve.HashToScalars(L*Rho, bob.uniqueSessionId, aTildeBytes)
+	theta, err := bob.Curve.HashToScalars(L*Rho, bob.sessionId, aTildeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}
@@ -190,8 +190,8 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 		}
 	}
 
-	// step 3.3: μ' = H_{ℤ2^{2*λ_c}} (sid || μb')
-	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.uniqueSessionId, muPrimeBytes)
+	// step 3.3: μ' = H_{ℤ2^{2*λ_c}} (sessionId || μb')
+	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.sessionId, muPrimeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to muPrime")
 	}

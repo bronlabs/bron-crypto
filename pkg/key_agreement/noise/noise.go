@@ -74,13 +74,12 @@ func Dh(curve curves.Curve, privateKey curves.Scalar, publicKey curves.Point) cu
 			return publicKeyCurve22519.X25519(privateKey).AffineX()
 		}
 		panic("could not cast public key to curve25519 point")
-	} else {
-		field, err := dh.DiffieHellman(privateKey, publicKey)
-		if err != nil {
-			panic(err)
-		}
-		return field
 	}
+	field, err := dh.DiffieHellman(privateKey, publicKey)
+	if err != nil {
+		panic(err)
+	}
+	return field
 }
 
 func NewSigner(prng io.Reader, curve curves.Curve, privateKey curves.Scalar) Signer {

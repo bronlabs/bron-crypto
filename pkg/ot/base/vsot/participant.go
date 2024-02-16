@@ -36,8 +36,8 @@ type Receiver struct {
 }
 
 // NewSender creates a new sender for the Random OT protocol.
-func NewSender(Xi, L int, curve curves.Curve, sid []byte, niCompiler compiler.Name, t transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
+func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -57,8 +57,8 @@ func NewSender(Xi, L int, curve curves.Curve, sid []byte, niCompiler compiler.Na
 }
 
 // NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
-func NewReceiver(Xi, L int, curve curves.Curve, sid []byte, niCompiler compiler.Name, t transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
+func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}

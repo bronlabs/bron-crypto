@@ -14,8 +14,8 @@ var (
 )
 
 // HashSalted hashes the κ-bit length rows of a [LOTe*ξ][κ] bit matrix, outputs
-// rows of κ bits in a [ξ][LOTe*κ] bit matrix. sid is used as a salt.
-func HashSalted(sid []byte, bufferIn, bufferOut [][]byte) (err error) {
+// rows of κ bits in a [ξ][LOTe*κ] bit matrix. sessionId is used as a salt.
+func HashSalted(sessionId []byte, bufferIn, bufferOut [][]byte) (err error) {
 	Xi := len(bufferOut)
 	LOTe := len(bufferIn) / Xi
 	for j := 0; j < Xi; j++ {
@@ -29,7 +29,7 @@ func HashSalted(sid []byte, bufferIn, bufferOut [][]byte) (err error) {
 		// Hash each element separately, same
 		idx := []byte(strconv.Itoa(j))
 		for l := 0; l < LOTe; l++ {
-			digest, err := hashing.Hash(HashFn, dst, sid, idx, bufferIn[j*LOTe+l])
+			digest, err := hashing.Hash(HashFn, dst, sessionId, idx, bufferIn[j*LOTe+l])
 			if err != nil {
 				return errs.WrapFailed(err, "writing into HashSalted")
 			}

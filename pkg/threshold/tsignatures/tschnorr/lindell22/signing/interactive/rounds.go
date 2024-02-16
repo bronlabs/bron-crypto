@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	commitmentDomainRLabel = "Lindell2022InteractiveSignR"
-	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS"
+	commitmentDomainRLabel = "Lindell2022InteractiveSignR-"
+	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS-"
 )
 
 type Round1Broadcast struct {
@@ -65,8 +65,8 @@ func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput typ
 	// 2. compute R = k * G
 	bigR := p.protocol.Curve().ScalarBaseMult(k)
 
-	// 3. compute Rcom = commit(R, pid, sid, S)
-	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sid, p.state.bigS)
+	// 3. compute Rcom = commit(R, pid, sessionId, S)
+	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sessionId, p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -117,7 +117,7 @@ func (p *Cosigner) Round2(broadcastInput types.RoundMessages[*Round1Broadcast], 
 	}
 
 	// 1. compute proof of dlog knowledge of R
-	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.sid, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
+	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
@@ -184,12 +184,12 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 		}
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR, theirPid, p.sid, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+		if err := openCommitment(theirBigR, theirPid, p.sessionId, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
 		// 2. verify dlog
-		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sid, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.PublicKey().ToAffineCompressed(), "cannot verify dlog proof")
 		}
 
@@ -241,7 +241,7 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
-	przsSampleParticipant, err := sample.NewParticipant(p.sid, p.myAuthKey, przsSeeds, p.protocol, p.sessionParticipants, seededPrng)
+	przsSampleParticipant, err := sample.NewParticipant(p.sessionId, p.myAuthKey, przsSeeds, p.protocol, p.sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
@@ -261,8 +261,8 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 	}, nil
 }
 
-func commit(prng io.Reader, bigR curves.Point, pid, sid, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sid, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
+func commit(prng io.Reader, bigR curves.Point, pid, sessionId, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
+	commitment, witness, err = commitments.Commit(sessionId, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
 	}
@@ -270,14 +270,14 @@ func commit(prng io.Reader, bigR curves.Point, pid, sid, bigS []byte) (commitmen
 	return commitment, witness, nil
 }
 
-func openCommitment(bigR curves.Point, pid, sid, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	if err := commitments.Open(sid, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS); err != nil {
+func openCommitment(bigR curves.Point, pid, sessionId, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
+	if err := commitments.Open(sessionId, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS); err != nil {
 		return errs.WrapVerification(err, "couldn't open")
 	}
 	return nil
 }
 
-func dlogProve(k curves.Scalar, bigR curves.Point, sid, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
+func dlogProve(k curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	curve := k.ScalarField().Curve()
 	sigmaProtocol, err := schnorrSigma.NewSigmaProtocol(curve.Generator(), prng)
@@ -288,7 +288,7 @@ func dlogProve(k curves.Scalar, bigR curves.Point, sid, bigS []byte, nic compile
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert schnorr sigma protocol into non interactive")
 	}
-	prover, err := niSigma.NewProver(sid, transcript)
+	prover, err := niSigma.NewProver(sessionId, transcript)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create dlog prover")
 	}
@@ -299,7 +299,7 @@ func dlogProve(k curves.Scalar, bigR curves.Point, sid, bigS []byte, nic compile
 	return proof, nil
 }
 
-func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sid, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
+func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	curve := bigR.Curve()
 	sigmaProtocol, err := schnorrSigma.NewSigmaProtocol(curve.Generator(), nil)
@@ -310,7 +310,7 @@ func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sid, bigS [
 	if err != nil {
 		return errs.WrapFailed(err, "could not convert schnorr sigma protocol into non interactive")
 	}
-	verifier, err := niSigma.NewVerifier(sid, transcript)
+	verifier, err := niSigma.NewVerifier(sessionId, transcript)
 	if err != nil {
 		return errs.WrapFailed(err, "could not construct verifier")
 	}

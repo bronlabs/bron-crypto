@@ -9,6 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
@@ -20,10 +21,10 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, sid []byte, randomSeed int64, qNum uint64) {
 		prng := rand.New(rand.NewSource(randomSeed))
 
-		pk, sk, err := paillier.NewKeys(128)
+		pk, sk, err := paillier.NewKeys(base.ComputationalSecurity)
 		require.NoError(t, err)
 		q := new(saferith.Nat).SetUint64(qNum)
-		l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 128)
+		l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), base.ComputationalSecurity)
 		xInt, err := crand.Int(prng, l.Big())
 		require.NoError(t, err)
 		x := new(saferith.Nat).Add(l, new(saferith.Nat).SetBig(xInt, 256), 256)
@@ -34,7 +35,7 @@ func Fuzz_Test(f *testing.F) {
 		appLabel := "Range"
 
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err := paillierrange.NewVerifier(128, q, sid, pk, xEncrypted, sid, verifierTranscript, prng)
+		verifier, err := paillierrange.NewVerifier(base.ComputationalSecurity, q, pk, xEncrypted, sid, verifierTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -42,7 +43,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip(err.Error())
 		}
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err := paillierrange.NewProver(128, q, sid, sk, x, r, sid, proverTranscript, prng)
+		prover, err := paillierrange.NewProver(base.ComputationalSecurity, q, sk, x, r, sid, proverTranscript, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -62,8 +63,8 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 
 		label := "gimme, gimme"
-		proverBytes, _ := proverTranscript.ExtractBytes(label, 128)
-		verifierBytes, _ := verifierTranscript.ExtractBytes(label, 128)
+		proverBytes, _ := proverTranscript.ExtractBytes(label, base.ComputationalSecurity)
+		verifierBytes, _ := verifierTranscript.ExtractBytes(label, base.ComputationalSecurity)
 		if !bytes.Equal(proverBytes, verifierBytes) {
 			t.Fail()
 		}

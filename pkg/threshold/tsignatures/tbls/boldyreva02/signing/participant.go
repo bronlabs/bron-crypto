@@ -1,6 +1,8 @@
 package signing
 
 import (
+	"fmt"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -10,6 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
+
+const transcriptLabel = "COPPER_KRYPTON_TBLS_BOLDYREVA-"
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2])(nil)
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)
@@ -24,7 +28,7 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	sharingConfig types.SharingConfig
 	scheme        bls.RogueKeyPrevention
 
-	sid        []byte
+	sessionId  []byte
 	transcript transcripts.Transcript
 	round      int
 }
@@ -37,14 +41,16 @@ func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.HashSet[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
-	if err := validateInputs[K, S](sid, authKey, sessionParticipants, myShard, protocol); err != nil {
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.HashSet[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+	if err := validateInputs[K, S](sessionId, authKey, sessionParticipants, myShard, protocol); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_THRESHOLD_BLS_BOLDYREVA-", nil)
+
+	dst := fmt.Sprintf("%s-%s-%d", transcriptLabel, protocol.Curve().Name(), scheme)
+	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("threshold bls signing", sid)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(authKey)
@@ -65,7 +71,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey
 		signer:        signer,
 		protocol:      protocol,
 		myAuthKey:     authKey,
-		sid:           sid,
+		sessionId:     sessionId,
 		sharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 		myShard:       myShard,
@@ -81,11 +87,11 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, authKey
 	return participant, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sid []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
 	if bls.SameSubGroup[K, S]() {
 		return errs.NewType("key subgroup and signature subgroup can't be the same")
 	}
-	if len(sid) == 0 {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {

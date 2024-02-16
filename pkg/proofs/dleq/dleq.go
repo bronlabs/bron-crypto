@@ -15,8 +15,8 @@ const PROTOCOL = chaum.Name
 
 type Statement = chaum.Statement
 
-func Prove(uniqueSessionId []byte, secret curves.Scalar, G1, G2 curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement *Statement, err error) {
-	if err := validateProveInputs(uniqueSessionId, secret, G1, G2, niCompiler, prng); err != nil {
+func Prove(sessionId []byte, secret curves.Scalar, G1, G2 curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, statement *Statement, err error) {
+	if err := validateProveInputs(sessionId, secret, G1, G2, niCompiler, prng); err != nil {
 		return nil, nil, errs.WrapArgument(err, "invalid arguments")
 	}
 	X1 := G1.Mul(secret)
@@ -35,7 +35,7 @@ func Prove(uniqueSessionId []byte, secret curves.Scalar, G1, G2 curves.Point, ni
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not convert dleq sigma protocol into non interactive")
 		}
-		prover, err := niSigma.NewProver(uniqueSessionId, transcript)
+		prover, err := niSigma.NewProver(sessionId, transcript)
 		if err != nil {
 			return nil, nil, errs.NewFailed("cannot create dleq prover")
 		}
@@ -49,8 +49,8 @@ func Prove(uniqueSessionId []byte, secret curves.Scalar, G1, G2 curves.Point, ni
 	}
 }
 
-func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement *Statement, G1, G2 curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
-	if err := validateVerifyInputs(uniqueSessionId, statement, G1, G2, niCompiler); err != nil {
+func Verify(sessionId []byte, proof compiler.NIZKPoKProof, statement *Statement, G1, G2 curves.Point, niCompiler compiler.Name, transcript transcripts.Transcript) error {
+	if err := validateVerifyInputs(sessionId, statement, G1, G2, niCompiler); err != nil {
 		return errs.WrapArgument(err, "invalid arguments")
 	}
 	switch PROTOCOL {
@@ -63,7 +63,7 @@ func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement *Stat
 		if err != nil {
 			return errs.WrapFailed(err, "could not convert dleq sigma protocol into non interactive")
 		}
-		verifier, err := niSigma.NewVerifier(uniqueSessionId, transcript)
+		verifier, err := niSigma.NewVerifier(sessionId, transcript)
 		if err != nil {
 			return errs.WrapFailed(err, "could not construct verifier")
 		}
@@ -76,8 +76,8 @@ func Verify(uniqueSessionId []byte, proof compiler.NIZKPoKProof, statement *Stat
 	}
 }
 
-func validateProveInputs(sid []byte, secret curves.Scalar, G1, G2 curves.Point, niCompiler compiler.Name, prng io.Reader) error {
-	if len(sid) == 0 {
+func validateProveInputs(sessionId []byte, secret curves.Scalar, G1, G2 curves.Point, niCompiler compiler.Name, prng io.Reader) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id")
 	}
 	if secret == nil {
@@ -101,8 +101,8 @@ func validateProveInputs(sid []byte, secret curves.Scalar, G1, G2 curves.Point, 
 	return nil
 }
 
-func validateVerifyInputs(sid []byte, statement *Statement, G1, G2 curves.Point, niCompiler compiler.Name) error {
-	if len(sid) == 0 {
+func validateVerifyInputs(sessionId []byte, statement *Statement, G1, G2 curves.Point, niCompiler compiler.Name) error {
+	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id")
 	}
 	if G1 == nil {

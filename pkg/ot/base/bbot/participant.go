@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-const label = "COPPER-BATCHED-BASE-OT"
+const transcriptLabel = "COPPER_KRYPTON_BBOT-"
 
 // Sender obtains the 2 random messages for the 1|2 ROT.
 type Sender struct {
@@ -30,8 +30,8 @@ type Receiver struct {
 }
 
 // NewSender constructs a Random OT sender.
-func NewSender(Xi, L int, curve curves.Curve, sid []byte, t transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
+func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -42,8 +42,8 @@ func NewSender(Xi, L int, curve curves.Curve, sid []byte, t transcripts.Transcri
 }
 
 // NewReceiver constructs a Random OT receiver.
-func NewReceiver(Xi, L int, curve curves.Curve, sid []byte, t transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sid, label, t, csprng)
+func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}

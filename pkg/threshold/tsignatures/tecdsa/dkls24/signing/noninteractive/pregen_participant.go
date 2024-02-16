@@ -1,6 +1,7 @@
 package noninteractiveSigning
 
 import (
+	"fmt"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -28,10 +29,10 @@ type PreGenParticipant struct {
 	mySharingId types.SharingID
 	shard       *dkls24.Shard
 
-	UniqueSessionId []byte
-	protocol        types.ThresholdProtocol
-	sharingConfig   types.SharingConfig
-	PreSigners      ds.HashSet[types.IdentityKey]
+	sessionId     []byte
+	protocol      types.ThresholdProtocol
+	sharingConfig types.SharingConfig
+	PreSigners    ds.HashSet[types.IdentityKey]
 
 	transcript transcripts.Transcript
 	state      *signing.SignerState
@@ -57,7 +58,7 @@ func (p *PreGenParticipant) Prng() io.Reader {
 }
 
 func (p *PreGenParticipant) SessionId() []byte {
-	return p.UniqueSessionId
+	return p.sessionId
 }
 
 func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
@@ -72,14 +73,16 @@ func (p *PreGenParticipant) IsSignatureAggregator() bool {
 	return p.Protocol().Participants().Contains(p.IdentityKey())
 }
 
-func NewPreGenParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, preSigners ds.HashSet[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
-	if err := validateInputs(uniqueSessionId, myAuthKey, protocol, myShard, preSigners); err != nil {
+func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.HashSet[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
+	if err := validateInputs(sessionId, myAuthKey, protocol, myShard, preSigners); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptLabel, prng)
+
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages("DKLs24 PreSignature generation ceremony", uniqueSessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
@@ -88,7 +91,7 @@ func NewPreGenParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, preSi
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(uniqueSessionId, myAuthKey, myShard.PairwiseSeeds, protocol, preSigners, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, myAuthKey, myShard.PairwiseSeeds, protocol, preSigners, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -103,11 +106,11 @@ func NewPreGenParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, preSi
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %x", participant.PublicKey())
 		}
-		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, uniqueSessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
-		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, uniqueSessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
@@ -118,12 +121,12 @@ func NewPreGenParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, preSi
 	}
 
 	participant = &PreGenParticipant{
-		myAuthKey:       myAuthKey,
-		protocol:        protocol,
-		shard:           myShard,
-		UniqueSessionId: uniqueSessionId,
-		prng:            prng,
-		transcript:      transcript,
+		myAuthKey:  myAuthKey,
+		protocol:   protocol,
+		shard:      myShard,
+		sessionId:  sessionId,
+		prng:       prng,
+		transcript: transcript,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
@@ -143,9 +146,9 @@ func NewPreGenParticipant(uniqueSessionId []byte, myAuthKey types.AuthKey, preSi
 	return participant, nil
 }
 
-func validateInputs(uniqueSessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, shard *dkls24.Shard, preSigners ds.HashSet[types.IdentityKey]) error {
-	if len(uniqueSessionId) == 0 {
-		return errs.NewLength("invalid session id: %s", uniqueSessionId)
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, shard *dkls24.Shard, preSigners ds.HashSet[types.IdentityKey]) error {
+	if len(sessionId) == 0 {
+		return errs.NewLength("invalid session id: %s", sessionId)
 	}
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold signature protocol config")

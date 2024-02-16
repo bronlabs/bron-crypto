@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -69,8 +70,7 @@ type Participant struct {
 }
 
 const (
-	transcriptAppLabel       = "COPPER_KRYPTON_LINDELL17_DKG"
-	transcriptSessionIdLabel = "Lindell2017 DKG Session"
+	transcriptLabel = "COPPER_KRYPTON_LINDELL17_DKG-"
 )
 
 func (p *Participant) IdentityKey() types.IdentityKey {
@@ -87,10 +87,11 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	transcript.AppendMessages(transcriptSessionIdLabel, sessionId)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)

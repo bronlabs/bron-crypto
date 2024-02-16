@@ -44,7 +44,7 @@ package noninteractive_signing
 // 			return nil, errs.WrapFailed(err, "cannot generate random k")
 // 		}
 // 		bigR[i] = p.protocol.Curve().ScalarBaseMult(k[i])
-// 		bigRCommitment[i], bigRWitness[i], err = commit(p.prng, p.sid, i, p.myAuthKey, bigR[i])
+// 		bigRCommitment[i], bigRWitness[i], err = commit(p.prng, p.sessionId, i, p.myAuthKey, bigR[i])
 // 		if err != nil {
 // 			return nil, errs.WrapFailed(err, "cannot commit to R")
 // 		}
@@ -82,7 +82,7 @@ package noninteractive_signing
 // 			theirBigRCommitments[i][identity.Hash()] = in.BigRCommitment[i]
 // 		}
 
-// 		bigRProof[i], err = proveDlog(p.sid, p.transcript.Clone(), i, p.myAuthKey, p.state.k[i], p.state.bigR[i], p.prng)
+// 		bigRProof[i], err = proveDlog(p.sessionId, p.transcript.Clone(), i, p.myAuthKey, p.state.k[i], p.state.bigR[i], p.prng)
 // 		if err != nil {
 // 			return nil, errs.WrapFailed(err, "cannot proof R dlog")
 // 		}
@@ -116,10 +116,10 @@ package noninteractive_signing
 // 				return nil, errs.NewFailed("no input from all participants")
 // 			}
 
-// 			if err := openCommitment(p.sid, i, identity, in.BigR[i], p.state.theirBigRCommitments[i][identity.Hash()], in.BigRWitness[i]); err != nil {
+// 			if err := openCommitment(p.sessionId, i, identity, in.BigR[i], p.state.theirBigRCommitments[i][identity.Hash()], in.BigRWitness[i]); err != nil {
 // 				return nil, errs.WrapFailed(err, "cannot open commitment to R")
 // 			}
-// 			if err := verifyDlogProof(p.sid, p.transcript.Clone(), i, identity, in.BigR[i], in.BigRProof[i]); err != nil {
+// 			if err := verifyDlogProof(p.sessionId, p.transcript.Clone(), i, identity, in.BigR[i], in.BigRProof[i]); err != nil {
 // 				return nil, errs.WrapFailed(err, "cannot verify dlog R proof")
 // 			}
 
@@ -141,26 +141,26 @@ package noninteractive_signing
 // 	}, nil
 // }.
 
-// func commit(prng io.Reader, sid []byte, i int, party types.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
-// 	c, w, err := commitments.Commit(sid, prng, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed())
+// func commit(prng io.Reader, sessionId []byte, i int, party types.IdentityKey, bigR curves.Point) (commitments.Commitment, commitments.Witness, error) {
+// 	c, w, err := commitments.Commit(sessionId, prng, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed())
 // 	if err != nil {
 // 		return nil, nil, errs.WrapFailed(err, "could not commit the message")
 // 	}
 // 	return c, w, nil
 // }.
 
-// func openCommitment(sid []byte, i int, party types.IdentityKey, bigR curves.Point, bigRCommitment commitments.Commitment, bigRWitness commitments.Witness) error {
-// 	if err := commitments.Open(sid, bigRCommitment, bigRWitness, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()); err != nil {
+// func openCommitment(sessionId []byte, i int, party types.IdentityKey, bigR curves.Point, bigRCommitment commitments.Commitment, bigRWitness commitments.Witness) error {
+// 	if err := commitments.Open(sessionId, bigRCommitment, bigRWitness, []byte(strconv.Itoa(i)), party.PublicKey().ToAffineCompressed(), bigR.ToAffineCompressed()); err != nil {
 // 		return errs.WrapVerificationFailed(err, "commitment could not be opened")
 // 	}
 // 	return nil
 // }.
 
-// func proveDlog(sid []byte, transcript transcripts.Transcript, i int, party types.IdentityKey, k curves.Scalar, bigR curves.Point, prng io.Reader) (proof *dlog.Proof, err error) {
+// func proveDlog(sessionId []byte, transcript transcripts.Transcript, i int, party types.IdentityKey, k curves.Scalar, bigR curves.Point, prng io.Reader) (proof *dlog.Proof, err error) {
 // 	curve := k.ScalarField().Curve()
 // 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 // 	transcript.AppendPoints("pid", party.PublicKey())
-// 	prover, err := dlog.NewProver(curve.Generator(), sid, transcript, prng)
+// 	prover, err := dlog.NewProver(curve.Generator(), sessionId, transcript, prng)
 // 	if err != nil {
 // 		return nil, errs.WrapFailed(err, "could not construct provererr")
 // 	}
@@ -176,11 +176,11 @@ package noninteractive_signing
 // 	return proof, nil
 // }.
 
-// func verifyDlogProof(sid []byte, transcript transcripts.Transcript, i int, party types.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
+// func verifyDlogProof(sessionId []byte, transcript transcripts.Transcript, i int, party types.IdentityKey, bigR curves.Point, proof *dlog.Proof) (err error) {
 // 	curve := bigR.Curve()
 // 	transcript.AppendMessages("tau", []byte(strconv.Itoa(i)))
 // 	transcript.AppendPoints("pid", party.PublicKey())
-// 	if err := dlog.Verify(curve.Generator(), bigR, proof, sid); err != nil {
+// 	if err := dlog.Verify(curve.Generator(), bigR, proof, sessionId); err != nil {
 // 		return errs.WrapVerificationFailed(err, "dlog verify failed")
 // 	}
 // 	return nil

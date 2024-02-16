@@ -51,8 +51,8 @@ package noninteractive_signing
 // 	return types.Equals(p.protocol.PreSignatureComposer(), p.IdentityKey())
 // }.
 
-// func NewCosigner(sid []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, aggregatorIdentity types.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (participant *Cosigner, err error) {
-// 	err = validateCosignerInputs(sid, protocol, myAuthKey, myShard, myPreSignatureBatch, preSignatureIndex, aggregatorIdentity, prng)
+// func NewCosigner(sessionId []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, aggregatorIdentity types.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (participant *Cosigner, err error) {
+// 	err = validateCosignerInputs(sessionId, protocol, myAuthKey, myShard, myPreSignatureBatch, preSignatureIndex, aggregatorIdentity, prng)
 // 	if err != nil {
 // 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 // 	}
@@ -60,10 +60,12 @@ package noninteractive_signing
 // 	_, keyToId, mySharingId := types.DeriveSharingIds(myAuthKey, protocol.Participants())
 // 	theirSharingId := keyToId[aggregatorIdentity.Hash()]
 
-// 	if transcript == nil {
-// 		transcript = hagrid.NewTranscript(transcriptAppLabel, nil)
-// 	}
-// 	transcript.AppendMessages(transcriptSessionIdLabel, sid)
+// dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
+// transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+// if err != nil {
+// 	return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+// }.
+
 // 	participant = &Cosigner{
 // 		myAuthKey:           myAuthKey,
 // 		mySharingId:         mySharingId,
@@ -82,9 +84,9 @@ package noninteractive_signing
 // 	return participant, nil
 // }.
 
-// func validateCosignerInputs(sid []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, other types.IdentityKey, prng io.Reader) error {
-// 	if len(sid) == 0 {
-// 		return errs.NewArgument("invalid session id: %s", sid)
+// func validateCosignerInputs(sessionId []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, other types.IdentityKey, prng io.Reader) error {
+// 	if len(sessionId) == 0 {
+// 		return errs.NewArgument("invalid session id: %s", sessionId)
 // 	}
 // 	if err := types.ValidatePreSignedThresholdSignatureProtocolConfig(protocol); err != nil {
 // 		return errs.WrapVerificationFailed(err, "presigned threshold signature protocol config")
