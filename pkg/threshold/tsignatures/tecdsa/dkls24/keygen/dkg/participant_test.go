@@ -3,8 +3,9 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"testing"
+
+	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 
 	"github.com/stretchr/testify/require"
 

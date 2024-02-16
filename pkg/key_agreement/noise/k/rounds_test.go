@@ -16,17 +16,19 @@ import (
 
 func TestHappyPath(t *testing.T) {
 	var allHashes = []noise.SupportedHash{noise.NOISE_HASH_SHA3256, noise.NOISE_HASH_BLAKE2S}
+	var messages = []string{"hello", ""}
 	for _, c := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve(), curve25519.NewCurve()} {
 		for _, hashFunc := range allHashes {
-			happyPath(t, c, hashFunc)
+			for _, message := range messages {
+				happyPath(t, c, []byte(message), hashFunc)
+			}
 		}
 	}
 }
 
-func happyPath(t *testing.T, curve curves.Curve, hashFunc noise.SupportedHash) {
+func happyPath(t *testing.T, curve curves.Curve, message []byte, hashFunc noise.SupportedHash) {
 	t.Helper()
 	sid := []byte("sid")
-	message := []byte("hello")
 	aliceIdentity := noise.NewSigner(crand.Reader, curve, nil)
 	bobIdentity := noise.NewSigner(crand.Reader, curve, nil)
 	charlieIdentity := noise.NewSigner(crand.Reader, curve, nil)

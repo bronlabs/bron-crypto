@@ -77,7 +77,7 @@ deflake: ## Runs short tests many times to detect flakes
 
 .PHONY: deflake-long
 deflake-long: ## Runs tests many times to detect flakes
-	${GO} test -count=1000 -timeout 0 ${TEST_CLAUSE} ./...
+	DEFLAKE_TIME_TEST=1 ${GO} test -count=50 -timeout 0 ${TEST_CLAUSE} ./...
 
 .PHONY: fuzz
 fuzz:

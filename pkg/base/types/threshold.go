@@ -59,7 +59,7 @@ func validateExtrasThresholdProtocolConfig(f ThresholdProtocol) error {
 	}
 	n := f.TotalParties()
 	if n < t {
-		return errs.NewValue(" t < t")
+		return errs.NewValue(" n < t")
 	}
 	if int(n) != f.Participants().Size() {
 		return errs.NewSize("n != size of participants")

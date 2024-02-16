@@ -43,36 +43,34 @@ type entry struct {
 	_ ds.Incomparable
 }
 
-// Test inputs and placeholders for results that will be filled in
-// during init()
-var testResults = []entry{
-	{msg: []byte("This is a test message"), commit: nil, witness: nil, err: nil},
-	{msg: []byte("short msg"), commit: nil, witness: nil, err: nil},
-	{
-		msg:    []byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
-		commit: nil, witness: nil, err: nil,
-	},
-	{
-		msg:    []byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-		commit: nil, witness: nil, err: nil,
-	},
-	// msg = \epsilon (empty string)
-	{msg: []byte{}, commit: nil, witness: nil, err: nil},
-	// msg == nil
-	{msg: nil, commit: nil, witness: nil, err: nil},
-}
-
-// Run our inputs through commit and record the outputs
-func init() {
+func getEntries() []entry {
+	var testResults = []entry{
+		{msg: []byte("This is a test message"), commit: nil, witness: nil, err: nil},
+		{msg: []byte("short msg"), commit: nil, witness: nil, err: nil},
+		{
+			msg:    []byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
+			commit: nil, witness: nil, err: nil,
+		},
+		{
+			msg:    []byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
+			commit: nil, witness: nil, err: nil,
+		},
+		// msg = \epsilon (empty string)
+		{msg: []byte{}, commit: nil, witness: nil, err: nil},
+		// msg == nil
+		{msg: nil, commit: nil, witness: nil, err: nil},
+	}
 	for i := range testResults {
 		entry := &testResults[i]
 		entry.commit, entry.witness, entry.err = commitments.CommitWithoutSession(crand.Reader, entry.msg)
 	}
+	return testResults
 }
 
 // Computing commitments should never produce errors
 func TestCommitWithoutErrors(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		require.NoError(t, entry.err)
 	}
@@ -81,6 +79,7 @@ func TestCommitWithoutErrors(t *testing.T) {
 // Commitments should be 256b == 64B in length
 func TestCommitmentsAreExpectedLength(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	expLen := h().Size()
 	for _, entry := range testResults {
 		require.Lenf(t, entry.commit, expLen, "commitment is not expected length: %v != %v", len(entry.commit), expLen)
@@ -90,6 +89,7 @@ func TestCommitmentsAreExpectedLength(t *testing.T) {
 // Decommit cannot be nil
 func TestCommmitProducesDecommit(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		require.NotNilf(t, entry.witness, "decommit cannot be nil: Commit(%v)", entry.msg)
 	}
@@ -99,6 +99,7 @@ func TestCommmitProducesDecommit(t *testing.T) {
 func TestCommmitProducesDistinctCommitments(t *testing.T) {
 	t.Parallel()
 	seen := make(map[string]bool)
+	testResults := getEntries()
 
 	// Check the pre-computed commitments for uniquness
 	for _, entry := range testResults {
@@ -146,6 +147,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 func TestCommmitNonceIsExpectedLength(t *testing.T) {
 	t.Parallel()
 	expLen := h().Size()
+	testResults := getEntries()
 
 	// Check the pre-computed nonces
 	for _, entry := range testResults {
@@ -174,6 +176,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 }
 
 func TestOpenOnValidCommitments(t *testing.T) {
+	testResults := getEntries()
 	for _, entry := range testResults {
 		// OpenWithSession each commitment
 		err := commitments.OpenWithoutSession(entry.commit, entry.witness, entry.msg)
@@ -184,6 +187,7 @@ func TestOpenOnValidCommitments(t *testing.T) {
 
 func TestOpenOnModifiedNonce(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		dPrime := entry.witness[:]
 
@@ -198,6 +202,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 func TestOpenOnZeroPrefixNonce(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		dPrime := entry.witness[:]
 
@@ -223,6 +228,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 // An unrelated message should fail on open
 func TestOpenOnNewMessage(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		dPrime := entry.witness[:]
 
@@ -238,7 +244,9 @@ func TestOpenOnNewMessage(t *testing.T) {
 // A modified message should fail on open
 func TestOpenOnModifiedMessage(t *testing.T) {
 	t.Parallel()
-	for _, entry := range testResults {
+	testResults := getEntries()
+	localTestResults := testResults
+	for _, entry := range localTestResults {
 		// Skip the empty string message for this test case
 		if len(entry.msg) == 0 {
 			continue
@@ -257,6 +265,7 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 // A modified commitment should fail on open
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		// Copy and then modify the commitment
 		cPrime := make([]byte, h().Size())
@@ -272,6 +281,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 // An empty decommit should fail to open
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		// OpenWithSession and check for failure
 		err := commitments.OpenWithoutSession(entry.commit, commitments.Witness{}, entry.msg)
@@ -289,6 +299,7 @@ func TestOpenOnNilCommitment(t *testing.T) {
 // Too long commitment should produce an error
 func TestOpenOnLongCommitment(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		tooLong := make([]byte, h().Size()+1)
 		copy(tooLong, entry.msg)
@@ -301,6 +312,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 // Too short commitment should produce an error
 func TestOpenOnShortCommitment(t *testing.T) {
 	t.Parallel()
+	testResults := getEntries()
 	for _, entry := range testResults {
 		tooShort := make([]byte, h().Size()-1)
 		copy(tooShort, entry.msg)

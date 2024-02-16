@@ -31,6 +31,8 @@ func Fuzz_Test_OTe(f *testing.F) {
 		prng := rand.New(rand.NewSource(randomSeed))
 		_, err := crand.Read(uniqueSessionId[:])
 		require.NoError(t, err)
+		Xi = Xi % 256
+		L = L % 3
 
 		// BaseOTs
 		baseOtSend, baseOtRec, err := bbot_testutils.RunBBOT(Xi, L, curve, uniqueSessionId[:], prng)

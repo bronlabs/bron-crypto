@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"hash"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
@@ -53,6 +54,12 @@ func Test_HappyPath(t *testing.T) {
 
 func Test_UnHappyPath(t *testing.T) {
 	t.Parallel()
+	if os.Getenv("DEFLAKE_TIME_TEST") == "1" {
+		t.Skip("Skipping this test in deflake mode.")
+	}
+	if testing.Short() {
+		t.Skip("Skipping this test in short mode.")
+	}
 	for _, curve := range testCurves {
 		for _, h := range testHashFunctions {
 			for _, thresholdConfig := range testThresholdConfigs {

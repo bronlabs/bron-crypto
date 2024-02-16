@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,9 @@ import (
 
 func Fuzz_Test_SelectBit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, i uint, vector []byte) {
+		if int(i) >= binary.Size(vector)*8 {
+			t.Skip(i, vector)
+		}
 		bitstring.SelectBit(vector, int(i))
 	})
 }

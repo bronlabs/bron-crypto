@@ -3,6 +3,7 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,9 @@ var cn = randomisedFischlin.Name
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
+	if os.Getenv("DEFLAKE_TIME_TEST") == "1" {
+		t.Skip("Skipping this test in deflake mode.")
+	}
 	if testing.Short() {
 		t.Skip("Skipping Lindell 2017 DKG tests.")
 	}

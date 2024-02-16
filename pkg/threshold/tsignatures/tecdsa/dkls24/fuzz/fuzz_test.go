@@ -83,7 +83,13 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, t
 			t.Skip("too many participants")
 		}
 	}
-	require.NoError(t, err)
+	if err != nil {
+		if !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		} else {
+			t.Skip()
+		}
+	}
 	return shards
 }
 

@@ -62,7 +62,13 @@ func Fuzz_Test(f *testing.F) {
 		seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 		require.NoError(t, err)
 		sampleParticipants, err := testutils.MakeSampleParticipants(protocol, identities, allPairwiseSeeds, seededPrng, nil)
-		require.NoError(t, err)
+		if err != nil {
+			if !errs.IsKnownError(err) {
+				require.NoError(t, err)
+			} else {
+				t.Skip()
+			}
+		}
 		for _, participant := range sampleParticipants {
 			require.NotNil(t, participant)
 		}

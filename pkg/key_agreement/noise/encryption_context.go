@@ -55,5 +55,8 @@ func (s *EncryptionContext) Decrypt(message *P2PMessage) (plaintext []byte, vali
 	if !valid {
 		return []byte{}, false, errs.WrapFailed(err, "invalid message. Maybe message was out of order")
 	}
+	if plaintext == nil {
+		return []byte{}, valid, nil
+	}
 	return plaintext, valid, nil
 }

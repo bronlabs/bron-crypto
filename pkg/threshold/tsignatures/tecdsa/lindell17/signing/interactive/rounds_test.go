@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -84,6 +85,9 @@ func Test_HappyPath(t *testing.T) {
 }
 
 func Test_HappyPathWithDkg(t *testing.T) {
+	if os.Getenv("DEFLAKE_TIME_TEST") == "1" {
+		t.Skip("Skipping this test in deflake mode.")
+	}
 	if testing.Short() {
 		t.Skip("Skipping Lindell 2017 rounds tests.")
 	}

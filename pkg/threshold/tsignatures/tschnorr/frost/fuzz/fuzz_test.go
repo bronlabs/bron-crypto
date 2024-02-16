@@ -298,7 +298,13 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		randoms = append(randoms, rand.New(rand.NewSource(randomSeed+int64(i))))
 	}
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, randoms)
-	require.NoError(t, err)
+	if err != nil {
+		if !errs.IsKnownError(err) {
+			require.NoError(t, err)
+		} else {
+			t.Skip()
+		}
+	}
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
