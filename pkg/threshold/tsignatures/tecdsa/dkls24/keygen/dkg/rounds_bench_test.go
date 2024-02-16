@@ -13,10 +13,11 @@ func Benchmark_Dkg(b *testing.B) {
 	h := sha256.New
 	threshold := 2
 	n := 3
+	sessionId := []byte("benchmarkSessionId")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, _, _, err := testutils.KeyGen(curve, h, threshold, n, nil, nil)
+		_, _, _, _, err := testutils.KeyGen(curve, h, threshold, n, nil, sessionId)
 		require.NoError(b, err)
 	}
 }
