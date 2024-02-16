@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"crypto/subtle"
 	"hash"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -94,7 +95,7 @@ func (flh *FixedLengthCurveHasher) Curve() curves.Curve {
 
 func (flh *FixedLengthCurveHasher) generateDst(curve curves.Curve, appTag, hashTag, mapperTag string) (dst []byte) {
 	suiteId := getSuiteId(curve, hashTag, DstExpTagXmd, mapperTag)
-	dst = append([]byte(appTag), suiteId...)
+	dst = slices.Concat([]byte(appTag), suiteId)
 	if len(dst) > MaxDstLen {
 		h := flh.hashFactory()
 		_, _ = h.Write([]byte(DstOversizeSalt))

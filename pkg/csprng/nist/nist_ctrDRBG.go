@@ -1,6 +1,8 @@
 package nist
 
 import (
+	"slices"
+
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
@@ -126,10 +128,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 // in SP800-90A section 10.2.1.3.2.
 func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString []byte) (err error) {
 	// 1. seed_material = entropy_input || nonce || personalization_string.
-	seedMaterial := make([]byte, 0, len(entropyInput)+len(nonce)+len(personalizationString))
-	seedMaterial = append(seedMaterial, entropyInput...)
-	seedMaterial = append(seedMaterial, nonce...)
-	seedMaterial = append(seedMaterial, personalizationString...)
+	seedMaterial := slices.Concat(entropyInput, nonce, personalizationString)
 	// 2. seed_material = df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {
@@ -154,9 +153,7 @@ func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString [
 // implements CTR_DRBG_Reseed_algorithm, specified in SP800-90A section 10.2.1.4.2.
 func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error) {
 	// 1. seed_material = entropy_input || additional_input.
-	seedMaterial := make([]byte, 0, len(entropyInput)+len(additionalInput))
-	seedMaterial = append(seedMaterial, entropyInput...)
-	seedMaterial = append(seedMaterial, additionalInput...)
+	seedMaterial := slices.Concat(entropyInput, additionalInput)
 	// 2. seed_material = Block_Cipher_df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {

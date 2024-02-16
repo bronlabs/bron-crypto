@@ -2,6 +2,7 @@ package pallas
 
 import (
 	"crypto/subtle"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
@@ -210,7 +211,7 @@ func (p *Ep) ToAffineUncompressed() []byte {
 	p1.toAffine()
 	x := p1.X.Bytes()
 	y := p1.Y.Bytes()
-	return append(x[:], y[:]...)
+	return slices.Concat(x[:], y[:])
 }
 
 func (p *Ep) FromAffineCompressed(bytes_ []byte) (*Ep, error) {

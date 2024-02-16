@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
@@ -74,7 +73,7 @@ type protocol[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitm
 }
 
 func SigmaOr[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1], prng io.Reader) sigma.Protocol[*Statement[X0, X1], *Witness[W0, W1], *Commitment[A0, A1], *State[S0, S1, Z0, Z1], *Response[Z0, Z1]] {
-	challengeBytesLength := utils.Max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
 
 	return &protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
 		sigma0:               sigma0,

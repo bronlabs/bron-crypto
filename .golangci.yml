@@ -713,7 +713,7 @@ linters-settings:
         # Detects suspicious/confusing re-assignments
         - sloppyReassign
         # Detects unsupported test and benchmark funcs
-        - sloppyTestFuncName
+        # - sloppyTestFuncName // Dropped: https://github.com/go-critic/go-critic/pull/1376
         # Detects redundant type assertions
         - sloppyTypeAssert
         # Detects suspicious sort.Slice calls

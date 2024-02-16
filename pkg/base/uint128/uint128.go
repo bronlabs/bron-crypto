@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"math/bits"
+	"slices"
 
 	"github.com/cronokirby/saferith"
 
@@ -51,7 +52,7 @@ func NewFromNat(src *saferith.Nat) Uint128 {
 	}
 	srcBytes := src.Bytes()
 	if len(srcBytes) < 16 {
-		srcBytes = append(make([]byte, 16-len(srcBytes)), srcBytes...)
+		srcBytes = slices.Concat(make([]byte, 16-len(srcBytes)), srcBytes)
 	}
 
 	dst.Lo = binary.BigEndian.Uint64(srcBytes[8:])

@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"slices"
 	"sort"
 
 	"golang.org/x/crypto/sha3"
@@ -83,8 +84,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("missing e_j for party %x", presentParty.PublicKey())
 		}
-		combinedDsAndEs = append(combinedDsAndEs, d_j.ToAffineCompressed()...)
-		combinedDsAndEs = append(combinedDsAndEs, e_j.ToAffineCompressed()...)
+		combinedDsAndEs = slices.Concat(combinedDsAndEs, d_j.ToAffineCompressed(), e_j.ToAffineCompressed())
 	}
 
 	R_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()

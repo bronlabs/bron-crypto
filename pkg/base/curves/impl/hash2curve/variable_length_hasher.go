@@ -1,6 +1,8 @@
 package hash2curve
 
 import (
+	"slices"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -53,7 +55,7 @@ func (vlh *VariableLengthHasher) Curve() curves.Curve {
 
 func (vlh *VariableLengthHasher) generateDST(curve curves.Curve, appTag, hashTag, mapperTag string) (dst []byte) {
 	suiteId := getSuiteId(curve, hashTag, DstExpTagXmd, mapperTag)
-	dst = append([]byte(appTag), suiteId...)
+	dst = slices.Concat([]byte(appTag), suiteId)
 	if len(dst) > MaxDstLen {
 		h := vlh.hashFactory()
 		h.Reset()

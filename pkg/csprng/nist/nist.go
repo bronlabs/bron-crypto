@@ -198,7 +198,7 @@ dataGeneration:
 func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
 	for i := 0; i < numRequests; i++ {
-		end := utils.Min((i+1)*maxNumberOfBytesRequest, len(buffer))
+		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {
 			return n, errs.WrapRandomSample(err, "Could not generate random bits")

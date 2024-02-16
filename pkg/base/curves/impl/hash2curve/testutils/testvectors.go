@@ -123,6 +123,7 @@ func NewHash2CurveTestVector(curve curves.Curve) *TestVector {
 var p256TestVector = &TestVector{
 	SuiteName: "P256_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-P256_XMD:SHA-256_SSWU_RO_",
+	//nolint:goconst // Test vectors may repeat constants.
 	TestCases: []TestCase{{
 		Msg: "",
 		Px:  "2c15230b26dbc6fc9a37051158c95b79656e17a1a920b11394ca91c44247d3e4",
@@ -391,6 +392,7 @@ var secp256k1TestVector = &TestVector{
 var bls12381g1TestVector = &TestVector{
 	SuiteName: "BLS12381G1_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_",
+	//nolint:goconst // Test vectors may repeat constants.
 	TestCases: []TestCase{{
 		Msg: "",
 		Px:  "052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a1",

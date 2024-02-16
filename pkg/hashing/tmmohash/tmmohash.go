@@ -7,6 +7,7 @@ import (
 	"crypto/aes"
 	"crypto/subtle"
 	"hash"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -172,7 +173,6 @@ func (h *TmmoHash) Reset() {
 func (h *TmmoHash) Sum(b []byte) (res []byte) {
 	// Finalise hash by writing the current hash counter with arbitrary padding.
 	// This avoids length extension attacks.
-
 	if len(b) == 0 {
 		res = make([]byte, h.Size())
 		copy(res, h.digest)
@@ -207,16 +207,17 @@ func NewTmmoPrng(keySize, bufferSize int, seed, salt []byte) (csprng.CSPRNG, err
 
 // Clone creates a copy of the current hash.
 func (h *TmmoHash) Clone() csprng.CSPRNG {
-	iv := append(make([]byte, 0, len(h.iv)), h.iv...)
+
+	iv := slices.Clone(h.iv)
 	return &TmmoHash{
 		keySize:           h.keySize,
 		outputBlocks:      h.outputBlocks,
 		counter:           h.counter,
 		keyedBlockCipher:  h.keyedBlockCipher.Clone(iv),
-		iv:                append(make([]byte, 0, len(h.iv)), h.iv...),
-		digest:            append(make([]byte, 0, len(h.digest)), h.digest...),
-		permutedOnceBlock: append(make([]byte, 0, AesBlockSize), h.permutedOnceBlock...),
-		tempKey:           append(make([]byte, 0, h.keySize), h.tempKey...),
+		iv:                iv,
+		digest:            slices.Clone(h.digest),
+		permutedOnceBlock: slices.Clone(h.permutedOnceBlock),
+		tempKey:           slices.Clone(h.tempKey),
 		prngBytePointer:   h.prngBytePointer,
 	}
 }

@@ -3,6 +3,7 @@ package hashing
 import (
 	"bytes"
 	"hash"
+	"slices"
 
 	"golang.org/x/crypto/hkdf"
 
@@ -54,8 +55,7 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	f := bytes.Repeat([]byte{0xFF}, 32)
 
 	for _, x := range xs {
-		ikm := append(f, x...)
-		ikm = append(ikm, okm...)
+		ikm := slices.Concat(f, x, okm)
 		kdf := hkdf.New(h, ikm, salt, info)
 		n, err := kdf.Read(okm)
 		if err != nil {

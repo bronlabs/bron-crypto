@@ -1,6 +1,7 @@
 package art
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -85,7 +86,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 	trueTreeSize := 2*len(leaves) - 1
 	allLeavesSize := 1 << utils.CeilLog2(len(leaves))
 	remainingLeavesSize := allLeavesSize - len(leaves)
-	fullLeaves := append(append(make([]*node, 0), leaves...), make([]*node, remainingLeavesSize)...)
+	fullLeaves := slices.Grow(leaves, remainingLeavesSize)
 	tree := NewArrayTree(fullLeaves)
 	for i, n := range tree {
 		if n == nil {
