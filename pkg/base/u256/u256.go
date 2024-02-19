@@ -30,7 +30,7 @@ func (u U256) Add(rhs U256) U256 {
 	sum.Limb0, carry = bits.Add64(u.Limb0, rhs.Limb0, 0)
 	sum.Limb1, carry = bits.Add64(u.Limb1, rhs.Limb1, carry)
 	sum.Limb2, carry = bits.Add64(u.Limb2, rhs.Limb2, carry)
-	sum.Limb3, carry = bits.Add64(u.Limb3, rhs.Limb3, carry)
+	sum.Limb3 = u.Limb3 + rhs.Limb3 + carry
 
 	return sum
 }
