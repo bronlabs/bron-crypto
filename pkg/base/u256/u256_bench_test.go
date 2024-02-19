@@ -28,11 +28,9 @@ func Benchmark_Add(b *testing.B) {
 	b.Run("u256", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesU256[i%nSamples]
 			rhs := samplesU256[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = lhs.Add(rhs)
 		}
 	})
@@ -41,11 +39,9 @@ func Benchmark_Add(b *testing.B) {
 		var result saferith.Nat
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesSaferith[i%nSamples]
 			rhs := samplesSaferith[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = result.Add(&lhs, &rhs, 256)
 		}
 	})
@@ -67,11 +63,9 @@ func Benchmark_Sub(b *testing.B) {
 	b.Run("u256", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesU256[i%nSamples]
 			rhs := samplesU256[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = lhs.Sub(rhs)
 		}
 	})
@@ -80,11 +74,9 @@ func Benchmark_Sub(b *testing.B) {
 		var result saferith.Nat
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesSaferith[i%nSamples]
 			rhs := samplesSaferith[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = result.Sub(&lhs, &rhs, 256)
 		}
 	})
@@ -106,11 +98,9 @@ func Benchmark_Mul(b *testing.B) {
 	b.Run("u256", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesU256[i%nSamples]
 			rhs := samplesU256[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = lhs.Mul(rhs)
 		}
 	})
@@ -119,11 +109,9 @@ func Benchmark_Mul(b *testing.B) {
 		var result saferith.Nat
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			b.StopTimer()
 			lhs := samplesSaferith[i%nSamples]
 			rhs := samplesSaferith[(i*(nSamples+1))%nSamples]
 
-			b.StartTimer()
 			_ = result.Mul(&lhs, &rhs, 256)
 		}
 	})

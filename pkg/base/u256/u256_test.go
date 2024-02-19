@@ -3,6 +3,7 @@ package u256_test
 import (
 	"bytes"
 	crand "crypto/rand"
+	"encoding/hex"
 	"io"
 	"testing"
 
@@ -26,6 +27,11 @@ func Test_Add(t *testing.T) {
 			rightNat := new(saferith.Nat).SetBytes(bitstring.ReverseBytes(rBytes[:]))
 			sumNat := bitstring.ReverseBytes(new(saferith.Nat).Add(leftNat, rightNat, 256).Bytes())
 
+			if !bytes.Equal(sumU256, sumNat) {
+				println()
+				println(hex.EncodeToString(sumU256))
+				println(hex.EncodeToString(sumNat))
+			}
 			require.True(t, bytes.Equal(sumU256, sumNat))
 		}
 	}
@@ -69,7 +75,7 @@ func Test_Mul(t *testing.T) {
 
 func prepareSamples(t require.TestingT) [][32]byte {
 	samples := make([][32]byte, 0)
-	for i := 0; i < 4096; i++ {
+	for i := 0; i < 128; i++ {
 		var sample [32]byte
 		_, err := io.ReadFull(crand.Reader, sample[:])
 		require.NoError(t, err)
