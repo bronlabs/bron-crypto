@@ -48,17 +48,22 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1Broadcast])
 	if p.round != 2 {
 		return nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}
-	for pair := range round1output.Iter() {
-		sender := pair.Key
-		round1Msg := pair.Value
-		if sender.Equal(p.IdentityKey()) {
+
+	for party := range p.Protocol.Participants().Iter() {
+		if party.Equal(p.myAuthKey) {
 			continue
+		}
+		sender := party
+		round1Msg, exists := round1output.Get(party)
+		if !exists {
+			return nil, errs.NewArgument("no response")
 		}
 		if len(round1Msg.Commitment) == 0 {
 			return nil, errs.NewArgument("commitment is empty")
 		}
 		p.state.receivedCommitments.Put(sender, round1Msg.Commitment)
 	}
+
 	p.round++
 	return &Round2Broadcast{
 		Witness: p.state.witness,
@@ -70,20 +75,25 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 	if p.round != 3 {
 		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
-	for pair := range round2output.Iter() {
-		sender := pair.Key
-		message := pair.Value
-		if sender.Equal(p.IdentityKey()) {
+
+	for party := range p.Protocol.Participants().Iter() {
+		if party.Equal(p.myAuthKey) {
 			continue
 		}
-		receivedCommitment, exists := p.state.receivedCommitments.Get(sender)
+
+		message, exists := round2output.Get(party)
 		if !exists {
-			return nil, errs.NewIdentifiableAbort(sender.PublicKey().ToAffineCompressed(), "could not find commitment for participant %x", sender.PublicKey())
+			return nil, errs.NewArgument("no response")
+		}
+		receivedCommitment, exists := p.state.receivedCommitments.Get(party)
+		if !exists {
+			return nil, errs.NewIdentifiableAbort(party.PublicKey().ToAffineCompressed(), "could not find commitment for participant %x", party.PublicKey())
 		}
 		if err := commitments.OpenWithoutSession(receivedCommitment, message.Witness, message.Ri.Bytes()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, sender.PublicKey().ToAffineCompressed(), "commitment from participant with sharing id can't be opened")
+			return nil, errs.WrapIdentifiableAbort(err, party.PublicKey().ToAffineCompressed(), "commitment from participant with sharing id can't be opened")
 		}
 	}
+
 	round2output.Put(p.IdentityKey(), &Round2Broadcast{
 		Ri: p.state.r_i,
 	})

@@ -119,17 +119,26 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 	var err error
 	baseOtRound2Output := types.NewRoundMessages[bbot.Round2P2P]()
 	zeroSamplingRound2Output := types.NewRoundMessages[*zeroSetup.Round2P2P]()
-	for pair := range round2outputP2P.Iter() {
-		sender := pair.Key
-		message := pair.Value
-		baseOtRound2Output.Put(sender, message.BaseOTReceiver)
-		zeroSamplingRound2Output.Put(sender, message.ZeroSampling)
+
+	for party := range p.Protocol.Participants().Iter() {
+		if party.Equal(p.MyAuthKey) {
+			continue
+		}
+
+		message, exists := round2outputP2P.Get(party)
+		if !exists {
+			return nil, errs.NewArgument("no sender")
+		}
+
+		baseOtRound2Output.Put(party, message.BaseOTReceiver)
+		zeroSamplingRound2Output.Put(party, message.ZeroSampling)
 	}
 
 	pairwiseSeeds, err := p.ZeroSamplingParty.Round3(zeroSamplingRound2Output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
+
 	for pair := range p.BaseOTSenderParties.Iter() {
 		identity := pair.Key
 		party := pair.Value
