@@ -1,4 +1,4 @@
-package art
+package tree
 
 import (
 	"math/bits"

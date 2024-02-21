@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/tree"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
@@ -15,7 +16,7 @@ type AsynchronousRatchetTree struct {
 	myEphemeralSecret curves.Scalar
 	myIdentityPublic  curves.Point
 	myEphemeralPublic curves.Point
-	tree              ArrayTree[*node]
+	arrayTree         tree.ArrayTree[*node]
 	size              int
 }
 
@@ -86,10 +87,10 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 	allLeavesSize := 1 << utils.CeilLog2(len(leaves))
 	remainingLeavesSize := allLeavesSize - len(leaves)
 	fullLeaves := append(append(make([]*node, 0), leaves...), make([]*node, remainingLeavesSize)...)
-	tree := NewArrayTree(fullLeaves)
-	for i, n := range tree {
+	arrayTree := tree.NewArrayTree(fullLeaves)
+	for i, n := range arrayTree {
 		if n == nil {
-			tree[i] = &node{}
+			arrayTree[i] = &node{}
 		}
 	}
 
@@ -99,7 +100,7 @@ func NewAsynchronousRatchetTree(myAuthKey, myEphemeralKey curves.Scalar, theirId
 		myEphemeralSecret: myEphemeralKey,
 		myIdentityPublic:  myPublicIdentityKey,
 		myEphemeralPublic: myPublicEphemeralKey,
-		tree:              tree,
+		arrayTree:         arrayTree,
 		size:              trueTreeSize,
 	}
 	if err := art.rebuildTree(); err != nil {
@@ -115,7 +116,7 @@ func (p *AsynchronousRatchetTree) GetMyPublicIdentityKey() curves.Point {
 
 // IsLeader return true if my identity key is the lexicographically lowest, otherwise false.
 func (p *AsynchronousRatchetTree) IsLeader() bool {
-	return p.myIdentityPublic.Equal(p.tree[0].publicIdentityKey)
+	return p.myIdentityPublic.Equal(p.arrayTree[0].publicIdentityKey)
 }
 
 // SetupGroup returns public keys of all nodes.
@@ -124,7 +125,7 @@ func (p *AsynchronousRatchetTree) SetupGroup() []curves.Point {
 	// 5. [Build ART] The leader broadcasts all node public keys.
 	publicKeys := make([]curves.Point, p.size)
 	for i := range publicKeys {
-		publicKeys[i] = p.tree[i].publicNodeKey
+		publicKeys[i] = p.arrayTree[i].publicNodeKey
 	}
 
 	return publicKeys
@@ -135,9 +136,9 @@ func (p *AsynchronousRatchetTree) SetupGroup() []curves.Point {
 func (p *AsynchronousRatchetTree) ProcessSetup(publicKeys []curves.Point) (err error) {
 	// 6. [Build ART] Every non-leader node receives public node keys...
 	for i, pk := range publicKeys {
-		if p.tree[i].publicNodeKey == nil {
-			p.tree[i].publicNodeKey = pk
-		} else if !p.tree[i].publicNodeKey.Equal(pk) {
+		if p.arrayTree[i].publicNodeKey == nil {
+			p.arrayTree[i].publicNodeKey = pk
+		} else if !p.arrayTree[i].publicNodeKey.Equal(pk) {
 			return errs.NewArgument("invalid keys")
 		}
 	}
@@ -156,23 +157,23 @@ func (p *AsynchronousRatchetTree) UpdateKey(newPrivateKey curves.Scalar) (pk []c
 	// 1. [Ratchet]
 	// It's necessary just to check leaves on the tree, hence iterate only even-indexed nodes where leaves sit at.
 	for i := 0; i < p.size; i += 2 {
-		if !p.tree[i].publicIdentityKey.Equal(p.myIdentityPublic) {
+		if !p.arrayTree[i].publicIdentityKey.Equal(p.myIdentityPublic) {
 			continue
 		}
 
 		// 1.i [Ratchet] Set net node keys in the corresponding leaf.
-		p.tree[i].privateNodeKey = newPrivateKey
-		p.tree[i].publicNodeKey = p.tree[i].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[i].privateNodeKey)
+		p.arrayTree[i].privateNodeKey = newPrivateKey
+		p.arrayTree[i].publicNodeKey = p.arrayTree[i].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.arrayTree[i].privateNodeKey)
 
 		// 1.ii [Ratchet] Void all node keys on the path from the leaf to the root of the tree.
-		j := p.tree.Parent(i)
+		j := p.arrayTree.Parent(i)
 		for {
-			p.tree[j].privateNodeKey = nil
-			p.tree[j].publicNodeKey = nil
-			if j == p.tree.Root() {
+			p.arrayTree[j].privateNodeKey = nil
+			p.arrayTree[j].publicNodeKey = nil
+			if j == p.arrayTree.Root() {
 				break
 			}
-			j = p.tree.Parent(j)
+			j = p.arrayTree.Parent(j)
 		}
 
 		// 1.iii [Ratchet] Re-run rebuild procedure.
@@ -184,11 +185,11 @@ func (p *AsynchronousRatchetTree) UpdateKey(newPrivateKey curves.Scalar) (pk []c
 		publicKeys := make([]curves.Point, 0)
 		j = i
 		for {
-			publicKeys = append(publicKeys, p.tree[j].publicNodeKey)
-			if j == p.tree.Root() {
+			publicKeys = append(publicKeys, p.arrayTree[j].publicNodeKey)
+			if j == p.arrayTree.Root() {
 				break
 			}
-			j = p.tree.Parent(j)
+			j = p.arrayTree.Parent(j)
 		}
 		return publicKeys, nil
 	}
@@ -201,19 +202,19 @@ func (p *AsynchronousRatchetTree) UpdateKey(newPrivateKey curves.Scalar) (pk []c
 func (p *AsynchronousRatchetTree) ProcessUpdate(newPublicKeys []curves.Point, publicIdentityKey curves.Point) (err error) {
 	// 2. [Ratchet] Every other member receives the node public keys.
 	for i := 0; i < p.size; i += 2 {
-		if !p.tree[i].publicIdentityKey.Equal(publicIdentityKey) {
+		if !p.arrayTree[i].publicIdentityKey.Equal(publicIdentityKey) {
 			continue
 		}
 
 		// 2.i. [Ratchet] Update the node public keys in the nodes on the path from the leaf to the root.
 		j := i
 		for k := 0; k < len(newPublicKeys); k++ {
-			p.tree[j].privateNodeKey = nil
-			p.tree[j].publicNodeKey = newPublicKeys[k]
-			if j == p.tree.Root() {
+			p.arrayTree[j].privateNodeKey = nil
+			p.arrayTree[j].publicNodeKey = newPublicKeys[k]
+			if j == p.arrayTree.Root() {
 				break
 			}
-			j = p.tree.Parent(j)
+			j = p.arrayTree.Parent(j)
 		}
 
 		// 2.ii [Ratchet] Re-run rebuild procedure.
@@ -230,46 +231,46 @@ func (p *AsynchronousRatchetTree) ProcessUpdate(newPublicKeys []curves.Point, pu
 // DeriveStageKey returns private key of the root which is used to derive a group encryption/decryption key.
 func (p *AsynchronousRatchetTree) DeriveStageKey() curves.Scalar {
 	// 7. [Build ART] The private node key at root is used to derive group encryption key.
-	return p.tree[p.tree.Root()].privateNodeKey
+	return p.arrayTree[p.arrayTree.Root()].privateNodeKey
 }
 
 func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 	// 4. [Build ART] Rebuild procedure.
 	// Iterate nodes from the lowest level bottom up...
-	for i, step := 0, 4; i < p.tree.Root(); i, step = 2*i+1, step*2 {
+	for i, step := 0, 4; i < p.arrayTree.Root(); i, step = 2*i+1, step*2 {
 		// ...starting from the most left node.
-		for left := i; left < len(p.tree); left += step {
-			right := p.tree.Sibling(left)
-			parent := p.tree.Parent(left)
+		for left := i; left < len(p.arrayTree); left += step {
+			right := p.arrayTree.Sibling(left)
+			parent := p.arrayTree.Parent(left)
 			switch {
 			// 4.i [Build ART] The left child has node private key, the right child has node public key.
-			case p.tree[left].privateNodeKey != nil && p.tree[right].publicNodeKey != nil:
-				sk, err := dh.DiffieHellman(p.tree[left].privateNodeKey, p.tree[right].publicNodeKey)
+			case p.arrayTree[left].privateNodeKey != nil && p.arrayTree[right].publicNodeKey != nil:
+				sk, err := dh.DiffieHellman(p.arrayTree[left].privateNodeKey, p.arrayTree[right].publicNodeKey)
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value at %d", parent)
 				}
-				p.tree[parent].privateNodeKey, err = p.tree[left].privateNodeKey.ScalarField().Hash(sk.Bytes())
+				p.arrayTree[parent].privateNodeKey, err = p.arrayTree[left].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
 					return errs.NewHashing("cannot hash secret value at %d", parent)
 				}
-				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
+				p.arrayTree[parent].publicNodeKey = p.arrayTree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.arrayTree[parent].privateNodeKey)
 
 			// 4.ii [Build ART] the left child has node public key, the right child has node private key.
-			case p.tree[left].publicNodeKey != nil && p.tree[right].privateNodeKey != nil:
-				sk, err := dh.DiffieHellman(p.tree[right].privateNodeKey, p.tree[left].publicNodeKey)
+			case p.arrayTree[left].publicNodeKey != nil && p.arrayTree[right].privateNodeKey != nil:
+				sk, err := dh.DiffieHellman(p.arrayTree[right].privateNodeKey, p.arrayTree[left].publicNodeKey)
 				if err != nil {
 					return errs.NewFailed("cannot derive secret value %d", parent)
 				}
-				p.tree[parent].privateNodeKey, err = p.tree[right].privateNodeKey.ScalarField().Hash(sk.Bytes())
+				p.arrayTree[parent].privateNodeKey, err = p.arrayTree[right].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
 					return errs.NewHashing("cannot hash secret value %d", parent)
 				}
-				p.tree[parent].publicNodeKey = p.tree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.tree[parent].privateNodeKey)
+				p.arrayTree[parent].publicNodeKey = p.arrayTree[parent].privateNodeKey.ScalarField().Curve().ScalarBaseMult(p.arrayTree[parent].privateNodeKey)
 
 			// 4.iii [Build ART] The right child is empty (while the left is not).
-			case p.tree[left].publicNodeKey != nil && parent >= p.size:
-				p.tree[parent].privateNodeKey = p.tree[left].privateNodeKey
-				p.tree[parent].publicNodeKey = p.tree[left].publicNodeKey
+			case p.arrayTree[left].publicNodeKey != nil && parent >= p.size:
+				p.arrayTree[parent].privateNodeKey = p.arrayTree[left].privateNodeKey
+				p.arrayTree[parent].publicNodeKey = p.arrayTree[left].publicNodeKey
 			}
 		}
 	}
