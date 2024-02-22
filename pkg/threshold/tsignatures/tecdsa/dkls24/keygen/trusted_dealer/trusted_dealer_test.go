@@ -42,6 +42,14 @@ func Test_HappyPath(t *testing.T) {
 		}
 	})
 
+	t.Run("all partial public keys are valid", func(t *testing.T) {
+		t.Parallel()
+		for pair := range shards.Iter() {
+			err := pair.Value.PublicKeyShares.Validate(protocol)
+			require.NoError(t, err)
+		}
+	})
+
 	t.Run("all public keys are the same", func(t *testing.T) {
 		t.Parallel()
 		publicKeys := map[curves.Point]bool{}

@@ -3,9 +3,8 @@ package trusted_dealer
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
-
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -54,30 +53,27 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 		return nil, errs.NewVerification("calculated public key is incorrect")
 	}
 
-	dealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
+	signingKeyShares, publicKeyShares, err := trusted_dealer.Deal(protocol, privateKey, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
+		return nil, errs.WrapFailed(err, "could not deal shares")
 	}
-	shamirShares, err := dealer.Split(privateKey, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to deal the secret")
-	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	results := hashmap.NewHashableHashMap[types.IdentityKey, *dkls24.Shard]()
-
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		sharingId := pair.Left
 		identityKey := pair.Right
-		share := shamirShares[sharingId-1].Value
+		share, exists := signingKeyShares.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("signing key share is missing")
+		}
+		partialPublic, exists := publicKeyShares.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("partial public key is missing")
+		}
+
 		results.Put(identityKey, &dkls24.Shard{
-			SigningKeyShare: &dkls24.SigningKeyShare{
-				Share:     share,
-				PublicKey: publicKey,
-			},
-			// TODO: finish this.
-			PublicKeyShares: nil,
+			SigningKeyShare: share,
+			PublicKeyShares: partialPublic,
 			PairwiseBaseOTs: nil,
 		})
 	}

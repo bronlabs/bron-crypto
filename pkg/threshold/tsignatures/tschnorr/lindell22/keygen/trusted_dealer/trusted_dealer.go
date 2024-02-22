@@ -1,16 +1,13 @@
 package trusted_dealer
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
@@ -26,47 +23,29 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not generate random schnorr private key")
 	}
-	schnorrPublicKey := protocol.Curve().ScalarBaseMult(schnorrPrivateKey)
 
-	dealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
+	signingKeyShares, partialPublicKeys, err := trusted_dealer.Deal(protocol, schnorrPrivateKey, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct feldman dealer")
-	}
-
-	shamirShares, err := dealer.Split(schnorrPrivateKey, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to deal the secret")
-	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-
-	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	for pair := range sharingConfig.Iter() {
-		sharingId := pair.Left
-		identityKey := pair.Right
-		publicKeySharesMap.Put(identityKey, protocol.Curve().ScalarBaseMult(shamirShares[sharingId-1].Value))
+		return nil, errs.WrapRandomSample(err, "could not deal shares")
 	}
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
-	// TODO: fix this
-	feldmanCommitmentVector := make([]curves.Point, protocol.Threshold())
-	for i := range feldmanCommitmentVector {
-		feldmanCommitmentVector[i] = protocol.Curve().Generator()
-	}
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		sharingId := pair.Left
 		identityKey := pair.Right
-		share := shamirShares[int(sharingId)-1].Value
+
+		sks, exists := signingKeyShares.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("share is missing")
+		}
+		ppk, exists := partialPublicKeys.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("share is missing")
+		}
+
 		shards.Put(identityKey, &lindell22.Shard{
-			SigningKeyShare: &tsignatures.SigningKeyShare{
-				Share:     share,
-				PublicKey: schnorrPublicKey,
-			},
-			PublicKeyShares: &tsignatures.PartialPublicKeys{
-				PublicKey:               schnorrPublicKey,
-				Shares:                  publicKeySharesMap,
-				FeldmanCommitmentVector: feldmanCommitmentVector,
-			},
+			SigningKeyShare: sks,
+			PublicKeyShares: ppk,
 		})
 	}
 
