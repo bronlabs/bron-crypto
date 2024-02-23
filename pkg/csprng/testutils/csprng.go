@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"bytes"
+	"io"
 	"sync"
 	"testing"
 
@@ -69,13 +70,13 @@ func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPR
 		require.NoError(t, err)
 		// generate 100B of buffer data
 		buffer := make([]byte, 100)
-		_, err = prng.Read(buffer)
+		_, err = io.ReadFull(prng, buffer)
 		require.NoError(t, err)
 		// Reset and generate same 120B of buffer data
 		buffer2 := make([]byte, 120)
 		err = prng.Seed(keys[i], nonces[i])
 		require.NoError(t, err)
-		_, err = prng.Read(buffer2)
+		_, err = io.ReadFull(prng, buffer2)
 		require.NoError(t, err)
 		// Create anew generate 200B of buffer data. Check equality of first 120B
 		buffer3 := make([]byte, 200)
@@ -89,7 +90,7 @@ func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPR
 		randomNonce := make([]byte, 16)
 		err = prng.Seed(randomKey, randomNonce)
 		require.NoError(t, err)
-		_, err = prng.Read(buffer4)
+		_, err = io.ReadFull(prng, buffer4)
 		require.NoError(t, err)
 		// compare with expected
 		require.True(t, bytes.Equal(buffer, buffer2[:100]))

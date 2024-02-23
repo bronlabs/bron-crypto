@@ -12,6 +12,7 @@ import (
 )
 
 type PartialSignature struct {
+	E curves.Scalar
 	R curves.Point
 	S curves.Scalar
 

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	interactive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -15,7 +16,7 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, taproot bool) (participants []*interactive_signing.Cosigner, err error) {
+func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, flavour tschnorr.Flavour) (participants []*interactive_signing.Cosigner, err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}
@@ -30,7 +31,7 @@ func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, ide
 		if !exists {
 			return nil, errs.NewMissing("shard for idnetity %x", identity)
 		}
-		participants[i], err = interactive_signing.NewCosigner(identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], taproot, prng)
+		participants[i], err = interactive_signing.NewCosigner(identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], flavour, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}

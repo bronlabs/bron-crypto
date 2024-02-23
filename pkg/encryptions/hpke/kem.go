@@ -317,7 +317,7 @@ func (s *DHKEMScheme) suiteID() []byte {
 
 func (s *DHKEMScheme) produceIKM(prng io.Reader) ([]byte, error) {
 	ikm := make([]byte, s.NSk())
-	if _, err := prng.Read(ikm); err != nil {
+	if _, err := io.ReadFull(prng, ikm); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not produce ikm")
 	}
 	return ikm, nil

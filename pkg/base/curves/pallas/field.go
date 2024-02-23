@@ -83,7 +83,7 @@ func (f *BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	var seed [base.WideFieldBytes]byte
-	_, err := prng.Read(seed[:])
+	_, err := io.ReadFull(prng, seed[:])
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}

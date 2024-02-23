@@ -1,140 +1,277 @@
 package noninteractive_signing_test
 
-// import (
-// 	crand "crypto/rand"
-// 	"crypto/sha512"
-// 	"fmt"
-// 	"testing"
+import (
+	nativeEddsa "crypto/ed25519"
+	crand "crypto/rand"
+	"crypto/sha256"
+	"crypto/sha512"
+	"fmt"
+	"slices"
+	"testing"
 
-// 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
+	"gonum.org/v1/gonum/stat/combin"
 
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/protocols"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-// 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-// 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
-// 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
-// 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/interactive_signing"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/noninteractive_signing"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/noninteractive_signing/testutils"
-// )
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	hashingBip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive/testutils"
+)
 
-// func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
-// 	t.Parallel()
+var configs = []struct{ nParticipants, nPreSigners, nThreshold int }{
+	{nParticipants: 3, nPreSigners: 3, nThreshold: 2},
+	{nParticipants: 3, nPreSigners: 2, nThreshold: 2},
+	{nParticipants: 5, nPreSigners: 4, nThreshold: 3},
+}
 
-// 	curve := edwards25519.NewCurve()
-// 	hashFunc := sha512.New
-// 	cipherSuite := &types.SignatureProtocol{
-// 		Curve: curve,
-// 		Hash:  hashFunc,
-// 	}
-// 	prng := crand.Reader
-// 	threshold := 3
-// 	n := 5
-// 	sid := []byte("sessionId")
-// 	tau := 64
-// 	message := []byte("Lorem ipsum")
-// 	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
+func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
+	t.Parallel()
 
-// 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-// 	require.NoError(t, err)
+	flavour := tschnorr.NewEdDsaCompatibleFlavour()
+	curve := edwards25519.NewCurve()
+	hashFunc := sha512.New
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
 
-// 	cohort, err := ttu.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
-// 	require.NoError(t, err)
+	prng := crand.Reader
+	sid := []byte("sessionId")
+	message := []byte("Lorem ipsum")
+	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
 
-// 	transcripts := ttu.MakeTranscripts(transcriptAppLabel, identities)
-// 	participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
-// 	require.NoError(t, err)
+	for _, cfg := range configs {
+		n := cfg.nParticipants
+		nPresigners := cfg.nPreSigners
+		threshold := cfg.nThreshold
+		t.Run(fmt.Sprintf("EdDSA (%d,%d,%d)", n, nPresigners, threshold), func(t *testing.T) {
+			t.Parallel()
 
-// 	batches, err := testutils.DoLindell2022PreGen(participants)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, batches)
+			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+			require.NoError(t, err)
 
-// 	shards, err := trusted_dealer.Keygen(cohort, prng)
-// 	require.NoError(t, err)
+			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			require.NoError(t, err)
 
-// 	for i := 0; i < tau; i++ {
-// 		preSignatureIndex := i
-// 		t.Run(fmt.Sprintf("valid signature %d", preSignatureIndex), func(t *testing.T) {
-// 			t.Parallel()
+			shards, err := trusted_dealer.Keygen(cohort, prng)
+			require.NoError(t, err)
 
-// 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
-// 			for i := 0; i < threshold; i++ {
-// 				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i].(types.AuthKey), shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, false, nil, prng)
-// 				require.NoError(t, err2)
-// 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
-// 			}
+			aliceShard, exists := shards.Get(identities[0])
+			require.True(t, exists)
+			publicKey := aliceShard.PublicKey()
 
-// 			signature, err := interactive_signing.Aggregate(partialSignatures...)
-// 			require.NoError(t, err)
+			preSignersCombinations := combin.Combinations(n, nPresigners)
+			for _, preSignersCombination := range preSignersCombinations {
+				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
+				for i, p := range preSignersCombination {
+					preSignersIdentities[i] = identities[p]
+				}
 
-// 			err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: shards[identities[0].Hash()].SigningKeyShare.PublicKey}, message, signature)
-// 			require.NoError(t, err)
-// 		})
-// 	}
-// }
+				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
 
-// func Test_SignNonInteractiveThresholdBIP340(t *testing.T) {
-// 	t.Parallel()
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				require.NoError(t, err)
 
-// 	curve := k256.NewCurve()
-// 	hashFunc := hashing_bip340.NewBip340HashChallenge
-// 	cipherSuite := &types.SignatureProtocol{
-// 		Curve: curve,
-// 		Hash:  hashFunc,
-// 	}
-// 	prng := crand.Reader
-// 	threshold := 3
-// 	n := 5
-// 	sid := []byte("sessionId")
-// 	tau := 64
-// 	message := []byte("Lorem ipsum")
-// 	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
+				ppms, err := testutils.DoLindell2022PreGen(preSigners)
+				require.NoError(t, err)
 
-// 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-// 	require.NoError(t, err)
+				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				for _, cosignerCombination := range cosignersCombinations {
+					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
+					for i, c := range cosignerCombination {
+						cosignersIdentities[i] = preSignersIdentities[c]
+					}
 
-// 	cohort, err := ttu.MakeCohortProtocol(cipherSuite, protocols.LINDELL22, identities, threshold, identities)
-// 	require.NoError(t, err)
+					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
+					for i, c := range cosignerCombination {
+						shard, exists := shards.Get(preSignersIdentities[c])
+						require.True(t, exists)
 
-// 	transcripts := ttu.MakeTranscripts(transcriptAppLabel, identities)
-// 	participants, err := testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
-// 	require.NoError(t, err)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						require.NoError(t, err)
 
-// 	batches, err := testutils.DoLindell2022PreGen(participants)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, batches)
+						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						require.NoError(t, err)
+					}
 
-// 	shards, err := trusted_dealer.Keygen(cohort, prng)
-// 	require.NoError(t, err)
+					signature, err := signing.Aggregate(partialSignatures...)
+					require.NoError(t, err)
 
-// 	for i := 0; i < tau; i++ {
-// 		preSignatureIndex := i
-// 		t.Run(fmt.Sprintf("valid signature %d", preSignatureIndex), func(t *testing.T) {
-// 			t.Parallel()
+					valid := nativeEddsa.Verify(
+						publicKey.ToAffineCompressed(),
+						message,
+						slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes())),
+					)
+					require.True(t, valid)
+				}
+			}
+		})
+	}
+}
 
-// 			partialSignatures := make([]*lindell22.PartialSignature, threshold)
-// 			for i := 0; i < threshold; i++ {
-// 				cosigner, err2 := noninteractive_signing.NewCosigner(identities[i].(types.AuthKey), shards[identities[i].Hash()], cohort, hashset.NewHashSet(identities[:threshold]), 0, batches[i], sid, true, nil, prng)
-// 				require.NoError(t, err2)
-// 				partialSignatures[i], err = cosigner.ProducePartialSignature(message)
-// 			}
+func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
+	t.Parallel()
 
-// 			signature, err := interactive_signing.Aggregate(partialSignatures...)
-// 			require.NoError(t, err)
+	flavour := tschnorr.NewTaprootFlavour()
+	curve := k256.NewCurve()
+	hashFunc := hashingBip340.NewBip340HashChallenge
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
 
-// 			bipSignature := &bip340.Signature{
-// 				R: signature.R,
-// 				S: signature.S,
-// 			}
+	prng := crand.Reader
+	sid := []byte("sessionId")
+	message := []byte("Lorem ipsum")
+	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
 
-// 			err = bip340.Verify(&bip340.PublicKey{A: shards[identities[0].Hash()].SigningKeyShare.PublicKey}, bipSignature, message)
-// 			require.NoError(t, err)
-// 		})
-// 	}
-// }
+	for _, cfg := range configs {
+		n := cfg.nParticipants
+		nPresigners := cfg.nPreSigners
+		threshold := cfg.nThreshold
+		t.Run(fmt.Sprintf("Taproot (%d,%d,%d)", n, nPresigners, threshold), func(t *testing.T) {
+			t.Parallel()
+
+			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+			require.NoError(t, err)
+
+			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			require.NoError(t, err)
+
+			shards, err := trusted_dealer.Keygen(cohort, prng)
+			require.NoError(t, err)
+
+			aliceShard, exists := shards.Get(identities[0])
+			require.True(t, exists)
+			publicKey := aliceShard.PublicKey()
+
+			preSignersCombinations := combin.Combinations(n, nPresigners)
+			for _, preSignersCombination := range preSignersCombinations {
+				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
+				for i, p := range preSignersCombination {
+					preSignersIdentities[i] = identities[p]
+				}
+
+				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				require.NoError(t, err)
+
+				ppms, err := testutils.DoLindell2022PreGen(preSigners)
+				require.NoError(t, err)
+
+				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				for _, cosignerCombination := range cosignersCombinations {
+					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
+					for i, c := range cosignerCombination {
+						cosignersIdentities[i] = preSignersIdentities[c]
+					}
+
+					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
+					for i, c := range cosignerCombination {
+						shard, exists := shards.Get(preSignersIdentities[c])
+						require.True(t, exists)
+
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						require.NoError(t, err)
+
+						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						require.NoError(t, err)
+					}
+
+					signature, err := signing.Aggregate(partialSignatures...)
+					require.NoError(t, err)
+
+					err = bip340.Verify(&bip340.PublicKey{A: publicKey}, (*bip340.Signature)(signature), message)
+					require.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
+	t.Parallel()
+
+	flavour := tschnorr.NewZilliqaFlavour()
+	curve := k256.NewCurve()
+	hashFunc := sha256.New
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
+
+	prng := crand.Reader
+	sid := []byte("sessionId")
+	message := []byte("Lorem ipsum")
+	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
+
+	for _, cfg := range configs {
+		n := cfg.nParticipants
+		nPresigners := cfg.nPreSigners
+		threshold := cfg.nThreshold
+		t.Run(fmt.Sprintf("Zilliqa (%d,%d,%d)", n, nPresigners, threshold), func(t *testing.T) {
+			t.Parallel()
+
+			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+			require.NoError(t, err)
+
+			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			require.NoError(t, err)
+
+			shards, err := trusted_dealer.Keygen(cohort, prng)
+			require.NoError(t, err)
+
+			aliceShard, exists := shards.Get(identities[0])
+			require.True(t, exists)
+			publicKey := aliceShard.PublicKey()
+
+			preSignersCombinations := combin.Combinations(n, nPresigners)
+			for _, preSignersCombination := range preSignersCombinations {
+				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
+				for i, p := range preSignersCombination {
+					preSignersIdentities[i] = identities[p]
+				}
+
+				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				require.NoError(t, err)
+
+				ppms, err := testutils.DoLindell2022PreGen(preSigners)
+				require.NoError(t, err)
+
+				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				for _, cosignerCombination := range cosignersCombinations {
+					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
+					for i, c := range cosignerCombination {
+						cosignersIdentities[i] = preSignersIdentities[c]
+					}
+
+					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
+					for i, c := range cosignerCombination {
+						shard, exists := shards.Get(preSignersIdentities[c])
+						require.True(t, exists)
+
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						require.NoError(t, err)
+
+						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						require.NoError(t, err)
+					}
+
+					signature, err := signing.Aggregate(partialSignatures...)
+					require.NoError(t, err)
+
+					err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, (*zilliqa.Signature)(signature), message)
+					require.NoError(t, err)
+				}
+			}
+		})
+	}
+}

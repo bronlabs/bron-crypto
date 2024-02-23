@@ -8,6 +8,7 @@ import (
 	"hash"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -96,10 +97,7 @@ func doNonInteractiveSign(protocol types.ThresholdSignatureProtocol, identities 
 				return err
 			}
 
-			s, err := signature.MarshalBinary()
-			if err != nil {
-				return err
-			}
+			s := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
 			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)

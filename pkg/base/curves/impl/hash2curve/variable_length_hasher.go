@@ -1,6 +1,8 @@
 package hash2curve
 
 import (
+	"io"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -39,7 +41,7 @@ func (vlh *VariableLengthHasher) ExpandMessage(outLen int, msg, dst []byte) ([]b
 	_, _ = h.Write([]byte{dstLen})
 	// step 5
 	out := make([]byte, outLen)
-	_, _ = h.Read(out)
+	_, _ = io.ReadFull(h, out)
 	return out, nil
 }
 
@@ -60,7 +62,7 @@ func (vlh *VariableLengthHasher) generateDST(curve curves.Curve, appTag, hashTag
 		_, _ = h.Write([]byte(DstOversizeSalt))
 		_, _ = h.Write(dst)
 		var tv [64]byte
-		_, _ = h.Read(tv[:])
+		_, _ = io.ReadFull(h, tv[:])
 		dst = tv[:]
 	}
 	return dst

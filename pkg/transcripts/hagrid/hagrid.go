@@ -51,7 +51,7 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 	seedablePrng, ok := prng.(csprng.CSPRNG)
 	if !ok {
 		var seed [chacha.ChachaPRNGSecurityStrength]byte
-		if _, err := prng.Read(seed[:]); err != nil {
+		if _, err := io.ReadFull(prng, seed[:]); err != nil {
 			panic(err)
 		}
 		seedablePrng, err = chacha.NewChachaPRNG(seed[:], salt)
@@ -137,7 +137,7 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 		if err := t.prng.Seed(t.state[:], t.salt); err != nil {
 			return nil, errs.WrapFailed(err, "failed to seed transcript prng")
 		}
-		if _, err := t.prng.Read(out); err != nil {
+		if _, err := io.ReadFull(t.prng, out); err != nil {
 			return nil, errs.WrapRandomSample(err, "failed to read from transcript prng")
 		}
 	} else {
@@ -145,7 +145,7 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 		if _, err := shake.Write(t.state[:]); err != nil {
 			return nil, errs.WrapFailed(err, "failed to write transcript state in shake")
 		}
-		if _, err := shake.Read(out); err != nil {
+		if _, err := io.ReadFull(shake, out); err != nil {
 			return nil, errs.WrapRandomSample(err, "failed to read from shake")
 		}
 	}

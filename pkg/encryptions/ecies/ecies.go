@@ -159,12 +159,9 @@ func deriveKeys(VZ []byte) (K1, K2 []byte, err error) {
 	aesKeyLength := 32
 	hmacKeyLength := 64
 	K := make([]byte, aesKeyLength+hmacKeyLength)
-	n, err := kdf.Read(K)
+	_, err = io.ReadFull(kdf, K)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "could not read bytes for K")
-	}
-	if n != 96 {
-		return nil, nil, errs.NewRandomSample("couldn't read enough bytes: read %d bytes", n)
 	}
 	K1 = K[:aesKeyLength]
 	K2 = K[aesKeyLength:]
@@ -179,7 +176,7 @@ func aes256CBCEncrypt(key, message []byte, prng io.Reader) (ciphertext []byte, e
 	padded := pkcs7Padding(message, block.BlockSize())
 	ciphertext = make([]byte, block.BlockSize()+len(padded))
 	iv := ciphertext[:block.BlockSize()]
-	if _, err := prng.Read(iv); err != nil {
+	if _, err := io.ReadFull(prng, iv); err != nil {
 		return nil, errs.WrapRandomSample(err, "couldn't read iv")
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)

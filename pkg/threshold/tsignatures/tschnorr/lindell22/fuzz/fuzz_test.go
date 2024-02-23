@@ -19,6 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -60,6 +61,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SignatureProtocol) {
 	t.Helper()
 
+	flavour := tschnorr.NewEdDsaCompatibleFlavour()
 	protocol, _ := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	shard, exists := shards.Get(identities[0])
 	require.True(t, exists)
@@ -69,7 +71,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 
 	var sid []byte
 	fz.Fuzz(&sid)
-	participants, err := interactive_testutils.MakeParticipants(sid, protocol, identities[:threshold], shards, transcripts, false)
+	participants, err := interactive_testutils.MakeParticipants(sid, protocol, identities[:threshold], shards, transcripts, flavour)
 	if len(sid) == 0 {
 		if errs.IsArgument(err) {
 			t.Skip()

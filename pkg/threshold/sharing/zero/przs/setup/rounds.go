@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -41,7 +43,7 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
 		}
 		randomBytes := przs.Seed{}
-		if _, err := p.prng.Read(randomBytes[:]); err != nil {
+		if _, err := io.ReadFull(p.prng, randomBytes[:]); err != nil {
 			return nil, errs.NewFailed("could not produce random bytes for party with index %d", participantIndex)
 		}
 		seedForThisParticipant, err := hashing.HashChain(base.CommitmentHashFunction, p.SessionId, randomBytes[:])

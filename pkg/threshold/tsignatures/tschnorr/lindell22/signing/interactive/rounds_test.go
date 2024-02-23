@@ -3,6 +3,7 @@ package interactive_signing_test
 import (
 	nativeEddsa "crypto/ed25519"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
 	"testing"
 
@@ -18,7 +19,9 @@ import (
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
 	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -79,6 +82,7 @@ func Test_SanityCheck(t *testing.T) {
 func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
+	flavour := tschnorr.NewEdDsaCompatibleFlavour()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	prng := crand.Reader
@@ -104,7 +108,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, false)
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
@@ -122,6 +126,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 func Test_HappyPathThresholdBIP340(t *testing.T) {
 	t.Parallel()
 
+	flavour := tschnorr.NewTaprootFlavour()
 	hashFunc := hashing_bip340.NewBip340HashChallenge
 	curve := k256.NewCurve()
 	prng := crand.Reader
@@ -147,7 +152,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, true)
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
@@ -167,9 +172,54 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_HappyPathThresholdZilliqa(t *testing.T) {
+	t.Parallel()
+
+	flavour := tschnorr.NewZilliqaFlavour()
+	hashFunc := sha256.New
+	curve := k256.NewCurve()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	signature, err := signing.Aggregate(partialSignatures...)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, (*zilliqa.Signature)(signature), message)
+	require.NoError(t, err)
+}
+
 func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
+	flavour := tschnorr.NewEdDsaCompatibleFlavour()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello World!")
@@ -198,7 +248,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, false)
+	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, flavour)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)

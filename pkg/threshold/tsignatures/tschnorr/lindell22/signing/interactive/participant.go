@@ -13,6 +13,7 @@ import (
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -44,7 +45,7 @@ type Cosigner struct {
 	mySharingId       types.SharingID
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
-	taproot             bool
+	flavour             tschnorr.Flavour
 	protocol            types.ThresholdSignatureProtocol
 	sessionParticipants ds.HashSet[types.IdentityKey]
 	sharingConfig       types.SharingConfig
@@ -67,7 +68,7 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, taproot bool, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, flavour tschnorr.Flavour, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
@@ -105,7 +106,7 @@ func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants 
 		sessionId:           sessionId,
 		transcript:          transcript,
 		sessionParticipants: sessionParticipants,
-		taproot:             taproot,
+		flavour:             flavour,
 		round:               1,
 		prng:                prng,
 		nic:                 niCompiler,

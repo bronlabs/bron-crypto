@@ -190,14 +190,11 @@ func (f *Fp) SetUint64(rhs uint64) *Fp {
 }
 
 // Random generates a random field element.
-func (f *Fp) Random(reader io.Reader) (*Fp, error) {
+func (f *Fp) Random(prng io.Reader) (*Fp, error) {
 	var t [WideFieldBytes]byte
-	n, err := reader.Read(t[:])
+	_, err := io.ReadFull(prng, t[:])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "reader failed")
-	}
-	if n != WideFieldBytes {
-		return nil, errs.NewFailed("can only read %d when %d are needed", n, WideFieldBytes)
 	}
 	return f.SetBytesWide(&t), nil
 }

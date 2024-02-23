@@ -3,7 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
@@ -14,11 +14,11 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakePreGenParticipants(identities []types.IdentityKey, sid []byte, protocol types.ThresholdProtocol, myTranscripts []transcripts.Transcript, preSigners ds.HashSet[types.IdentityKey]) (participants []*noninteractive_signing.PreGenParticipant, err error) {
+func MakePreGenParticipants(identities []types.IdentityKey, sid []byte, protocol types.ThresholdProtocol, myTranscripts []transcripts.Transcript) (participants []*noninteractive_signing.PreGenParticipant, err error) {
 	prng := crand.Reader
 	parties := make([]*noninteractive_signing.PreGenParticipant, len(identities))
 	for i := range identities {
-		parties[i], err = noninteractive_signing.NewPreGenParticipant(identities[i].(types.AuthKey), sid, protocol, preSigners, cn, myTranscripts[i], prng)
+		parties[i], err = noninteractive_signing.NewPreGenParticipant(identities[i].(types.AuthKey), sid, protocol, hashset.NewHashableHashSet(identities...), cn, myTranscripts[i], prng)
 		if err != nil {
 			return nil, err
 		}

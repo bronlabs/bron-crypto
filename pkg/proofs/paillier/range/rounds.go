@@ -2,6 +2,7 @@ package paillierrange
 
 import (
 	crand "crypto/rand"
+	"io"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -95,7 +96,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	prover.state.w2 = make([]*saferith.Nat, prover.t)
 	for i := 0; i < prover.t; i++ {
 		flip := make([]byte, 1)
-		_, err = prover.prng.Read(flip)
+		_, err = io.ReadFull(prover.prng, flip)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "cannot create random")
 		}

@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"slices"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -215,8 +216,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 			signature, err := cosigner.Aggregate([]byte(message), firstUnusedPreSignatureIndex, mappedPartialSignatures)
 			require.NoError(t, err)
 
-			s, err := signature.MarshalBinary()
-			require.NoError(t, err)
+			s := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
 			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)

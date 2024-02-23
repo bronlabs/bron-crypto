@@ -3,14 +3,13 @@ package noninteractive_signing
 import (
 	"fmt"
 	"io"
-	"slices"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -25,8 +24,9 @@ type Cosigner struct {
 	mySharingId types.SharingID
 	myShard     *lindell22.Shard
 	ppm         *lindell22.PreProcessingMaterial
+	cosigners   ds.HashSet[types.IdentityKey]
 
-	taproot       bool
+	flavour       tschnorr.Flavour
 	sharingConfig types.SharingConfig
 	protocol      types.ThresholdSignatureProtocol
 	prng          io.Reader
@@ -42,23 +42,22 @@ func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, taproot bool, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
-	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, ppm, prng); err != nil {
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.HashSet[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, flavour tschnorr.Flavour, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, cosigners, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%d", transcriptLabel, protocol.Curve().Name(), utils.BoolTo[byte](taproot))
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
 	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	przsSid := slices.Concat(sessionId, ppm.PrivateMaterial.K1.Bytes())
 	przsPrngFactory, err := chacha.NewChachaPRNG(nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")
 	}
-	przsParticipant, err := sample.NewParticipant(przsSid, myAuthKey, ppm.PrivateMaterial.Seeds, protocol, ppm.PreSigners, przsPrngFactory)
+	przsParticipant, err := sample.NewParticipant(sessionId, myAuthKey, ppm.PrivateMaterial.Seeds, protocol, cosigners, przsPrngFactory)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS sampler")
 	}
@@ -73,7 +72,8 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 		przsSampleParticipant: przsParticipant,
 		myAuthKey:             myAuthKey,
 		myShard:               myShard,
-		taproot:               taproot,
+		cosigners:             cosigners,
+		flavour:               flavour,
 		protocol:              protocol,
 		prng:                  prng,
 		mySharingId:           mySharingId,
@@ -88,7 +88,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 	return cosigner, nil
 }
 
-func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
+func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.HashSet[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -106,6 +106,12 @@ func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lind
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng")
+	}
+	if !cosigners.IsSubSet(ppm.PreSigners) {
+		return errs.NewValidation("cosigners not a subset of pre-signers")
+	}
+	if !cosigners.Contains(authKey) {
+		return errs.NewFailed("not a member of cosigners")
 	}
 	return nil
 }

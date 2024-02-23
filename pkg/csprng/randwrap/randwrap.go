@@ -57,14 +57,14 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 	salt := sha3.Sum256(signedTag1)
 
 	var ikm [LBytes]byte
-	if _, err := prng.Read(ikm[:]); err != nil {
+	if _, err := io.ReadFull(prng, ikm[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not sample ikm")
 	}
 
 	prk := hkdf.Extract(sha3.New256, ikm[:], salt[:])
 
 	var tag2Sample [LPrimeBytes]byte
-	if _, err := prng.Read(tag2Sample[:]); err != nil {
+	if _, err := io.ReadFull(prng, tag2Sample[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not sample tag2 as a nonce")
 	}
 
@@ -85,7 +85,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 		var tag2Bytes [NBytes]byte
 		wr.tag2.PutBytesBE(tag2Bytes[:])
 		expander := hkdf.Expand(sha3.New256, wr.prk, tag2Bytes[:])
-		if _, err := expander.Read(block[:]); err != nil {
+		if _, err := io.ReadFull(expander, block[:]); err != nil {
 			return -1, errs.WrapRandomSample(err, "couldn't expand for block %d", i)
 		}
 		if _, err := shaker.Write(block[:]); err != nil {
@@ -108,7 +108,7 @@ func validateInputs(prng io.Reader, deterministicWrappingKey types.AuthKey) erro
 		return errs.NewIsNil("deterministic wrapping key is nil")
 	}
 	var testingMessage [NBytes]byte
-	if _, err := prng.Read(testingMessage[:]); err != nil {
+	if _, err := io.ReadFull(prng, testingMessage[:]); err != nil {
 		return errs.WrapRandomSample(err, "could not sample a random testign message")
 	}
 

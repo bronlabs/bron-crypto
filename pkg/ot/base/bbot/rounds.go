@@ -1,6 +1,7 @@
 package bbot
 
 import (
+	"io"
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -39,7 +40,7 @@ func (S *Sender) Round1() (mS Round1P2P, err error) {
 func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 	if len(R.Output.Choices) == 0 {
 		R.Output.Choices = make(ot.ChoiceBits, R.Xi/8)
-		if _, err := R.Csprng.Read(R.Output.Choices); err != nil {
+		if _, err := io.ReadFull(R.Csprng, R.Output.Choices); err != nil {
 			return nil, errs.WrapRandomSample(err, "generating random choice bits")
 		}
 	}

@@ -27,9 +27,14 @@ func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *sch
 		return nil, errs.NewFailed("not enough partial signatures")
 	}
 
+	e := partialSignatures[0].E
 	r := partialSignatures[0].R.Curve().Identity()
 	s := partialSignatures[0].S.ScalarField().Zero()
 	for _, partialSignature := range partialSignatures {
+		if !e.Equal(partialSignature.E) {
+			return nil, errs.NewFailed("invalid partial signature")
+		}
+
 		// compute Rsum
 		r = r.Add(partialSignature.R)
 
@@ -39,6 +44,7 @@ func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *sch
 
 	// return (Rsum, Ssum) as signature
 	return &schnorr.Signature{
+		E: e,
 		R: r,
 		S: s,
 	}, nil

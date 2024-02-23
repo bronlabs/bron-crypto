@@ -41,7 +41,7 @@ func Benchmark_Verify(b *testing.B) {
 		require.NoError(b, err)
 
 		messages[i] = message
-		publicKeys[i] = &privateKeys[i].PublicKey
+		publicKeys[i] = (*bip340.PublicKey)(&privateKeys[i].PublicKey)
 		signatures[i] = signature
 	}
 
@@ -109,18 +109,18 @@ func Benchmark_TwoPartyManyMessageVerify(b *testing.B) {
 		bobSignatures[i], err = bob.Sign(bobMessages[i], aux, nil)
 		require.NoError(b, err)
 
-		alicePKs[i] = &alicePrivateKey.PublicKey
-		bobPKs[i] = &bobPrivateKey.PublicKey
+		alicePKs[i] = (*bip340.PublicKey)(&alicePrivateKey.PublicKey)
+		bobPKs[i] = (*bip340.PublicKey)(&bobPrivateKey.PublicKey)
 	}
 
 	b.Run("SingleVerify", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			for i := 0; i < batchSize; i++ {
-				err := bip340.Verify(&alicePrivateKey.PublicKey, aliceSignatures[i], aliceMessages[i])
+				err := bip340.Verify((*bip340.PublicKey)(&alicePrivateKey.PublicKey), aliceSignatures[i], aliceMessages[i])
 				if err != nil {
 					b.Fatal(err)
 				}
-				err = bip340.Verify(&bobPrivateKey.PublicKey, bobSignatures[i], bobMessages[i])
+				err = bip340.Verify((*bip340.PublicKey)(&bobPrivateKey.PublicKey), bobSignatures[i], bobMessages[i])
 				if err != nil {
 					b.Fatal(err)
 				}

@@ -2,7 +2,6 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	crand "crypto/rand"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
 
@@ -84,7 +83,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 				continue
 			}
 			randomSeed := [base.FieldBytes]byte{}
-			if _, err := crand.Read(randomSeed[:]); err != nil {
+			if _, err := io.ReadFull(prng, randomSeed[:]); err != nil {
 				return nil, errs.WrapRandomSample(err, "could not produce random seed")
 			}
 		}

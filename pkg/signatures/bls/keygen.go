@@ -48,12 +48,9 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		var okm [base.WideFieldBytes]byte
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
-		read, err := kdf.Read(okm[:48])
+		_, err := io.ReadFull(kdf, okm[:48])
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not read from kdf")
-		}
-		if read != 48 {
-			return nil, errs.NewFailed("failed to create private key")
 		}
 		copy(okm[:48], bitstring.ReverseBytes(okm[:48]))
 
@@ -88,7 +85,7 @@ func KeyGen[K KeySubGroup](prng io.Reader) (*PrivateKey[K], error) {
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	ikm := make([]byte, 32)
-	if _, err := prng.Read(ikm); err != nil {
+	if _, err := io.ReadFull(prng, ikm); err != nil {
 		return nil, errs.WrapFailed(err, "could not read random bytes")
 	}
 	return KeyGenWithSeed[K](ikm)

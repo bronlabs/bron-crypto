@@ -95,7 +95,9 @@ func (c Curve) Random(prng io.Reader) (curves.Point, error) {
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	var seed [64]byte
-	_, _ = prng.Read(seed[:])
+	if _, err := io.ReadFull(prng, seed[:]); err != nil {
+		return nil, errs.WrapRandomSample(err, "could not read seed")
+	}
 	return c.Hash(seed[:])
 }
 

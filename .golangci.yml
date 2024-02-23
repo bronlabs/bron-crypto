@@ -712,8 +712,6 @@ linters-settings:
         - returnAfterHttpError
         # Detects suspicious/confusing re-assignments
         - sloppyReassign
-        # Detects unsupported test and benchmark funcs
-#        - sloppyTestFuncName
         # Detects redundant type assertions
         - sloppyTypeAssert
         # Detects suspicious sort.Slice calls
@@ -802,8 +800,6 @@ linters-settings:
         - stringsCompare
         # Detects switch-over-bool statements that use explicit true tag value
         - switchTrue
-        # Detects Before/After call of time.Time that can be simplified
-#        - timeCmpSimplify
         # Detects manual conversion to milli- or microseconds
         - timeExprSimplify
         # # Detects TODO comments without detail/assignee

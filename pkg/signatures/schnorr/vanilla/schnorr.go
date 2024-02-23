@@ -30,18 +30,11 @@ type PrivateKey struct {
 }
 
 type Signature struct {
+	E curves.Scalar
 	R curves.Point
 	S curves.Scalar
 
 	_ ds.Incomparable
-}
-
-func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := slices.Concat(
-		s.R.ToAffineCompressed(),
-		bitstring.ReverseBytes(s.S.Bytes()),
-	)
-	return serializedSignature, nil
 }
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
@@ -120,6 +113,7 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 
 	s := k.Add(signer.privateKey.S.Mul(e))
 	return &Signature{
+		E: e,
 		R: R,
 		S: s,
 	}, nil
@@ -145,7 +139,7 @@ func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte,
 	}
 
 	if IsEd25519Compliant(suite) {
-		return verifyEd25519(publicKey, message, signature)
+		return verifyNativeEd25519(publicKey, message, signature)
 	}
 	return verifySchnorr(suite, publicKey, message, signature)
 }
@@ -159,6 +153,9 @@ func verifySchnorr(suite types.SignatureProtocol, publicKey *PublicKey, message 
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
+	if signature.E != nil && !signature.E.Equal(e) {
+		return errs.NewFailed("incompatible schnorr signature")
+	}
 
 	cofactorNat := suite.Curve().Cofactor()
 	cofactor := suite.Curve().ScalarField().Element().SetNat(cofactorNat)
@@ -171,11 +168,8 @@ func verifySchnorr(suite types.SignatureProtocol, publicKey *PublicKey, message 
 	return nil
 }
 
-func verifyEd25519(publicKey *PublicKey, message []byte, signature *Signature) error {
-	serializedSignature, err := signature.MarshalBinary()
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise signature to binary")
-	}
+func verifyNativeEd25519(publicKey *PublicKey, message []byte, signature *Signature) error {
+	serializedSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
 	serializedPublicKey, err := publicKey.MarshalBinary()
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not serialise signature to binary")
@@ -200,7 +194,7 @@ func MakeSchnorrCompatibleChallenge(suite types.SignatureProtocol, xs ...[]byte)
 	}
 
 	var challenge curves.Scalar
-	// In EdDSA, the digest is treated and passed as little endian, however for consistency, all our curves' inputs are big endians.
+	// In EdDSA, the digest is treated and passed as little endian, however for consistency, all our curves' inputs are big endian.
 	if IsEd25519Compliant(suite) {
 		challenge, err = edwards25519.NewScalar(0).SetBytesWideLE(digest)
 	} else {

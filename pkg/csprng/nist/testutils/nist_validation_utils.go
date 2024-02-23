@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -242,10 +243,10 @@ func (nistTest *NistTestHelper) RunReseed(prng csprng.CSPRNG, buffer []byte) err
 
 // RunRead reads the next `len(buffer)` random bytes and stores them in `buffer`.
 func (*NistTestHelper) RunRead(prng csprng.CSPRNG, buffer []byte) error {
-	if _, err := prng.Read(buffer); err != nil {
+	if _, err := io.ReadFull(prng, buffer); err != nil {
 		return errs.WrapRandomSample(err, "cannot read random bytes")
 	}
-	if _, err := prng.Read(buffer); err != nil {
+	if _, err := io.ReadFull(prng, buffer); err != nil {
 		return errs.WrapRandomSample(err, "cannot read random bytes")
 	}
 	return nil

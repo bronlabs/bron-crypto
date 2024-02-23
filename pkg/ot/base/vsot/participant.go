@@ -76,7 +76,7 @@ func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler com
 		dlog:        nic,
 	}
 	receiver.Output.Choices = make(ot.ChoiceBits, Xi/8)
-	if _, err := crand.Read(receiver.Output.Choices); err != nil {
+	if _, err := io.ReadFull(crand.Reader, receiver.Output.Choices); err != nil {
 		return nil, errs.WrapRandomSample(err, "choosing random choice bits")
 	}
 	return receiver, nil

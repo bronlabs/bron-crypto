@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive/testutils"
 )
@@ -31,8 +30,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	transcripts := ttu.MakeTranscripts(transcriptAppLabel, identities)
-	presigners := hashset.NewHashableHashSet(identities...)
-	participants, err := testutils.MakePreGenParticipants(identities, sid, protocol, transcripts, presigners)
+	participants, err := testutils.MakePreGenParticipants(identities, sid, protocol, transcripts)
 	require.NoError(t, err)
 
 	ppm, err := testutils.DoLindell2022PreGen(participants)

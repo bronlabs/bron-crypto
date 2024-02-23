@@ -197,33 +197,17 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 		bigR = bigR.Add(theirBigR)
 	}
 
-	if p.taproot {
-		if bigR.AffineY().IsOdd() {
-			p.state.k = p.state.k.Neg()
-			bigR = bigR.Neg()
-		}
-	}
-
 	// 3.ii. compute e
-	var e curves.Scalar
-	if p.taproot {
-		e, err = schnorr.MakeSchnorrCompatibleChallenge(p.protocol.CipherSuite(), bigR.ToAffineCompressed()[1:], p.mySigningKeyShare.PublicKey.ToAffineCompressed()[1:], message)
-	} else {
-		e, err = schnorr.MakeSchnorrCompatibleChallenge(p.protocol.CipherSuite(), bigR.ToAffineCompressed(), p.mySigningKeyShare.PublicKey.ToAffineCompressed(), message)
-	}
+	eBytes := p.flavour.ComputeChallengeBytes(bigR, p.mySigningKeyShare.PublicKey, message)
+	e, err := schnorr.MakeSchnorrCompatibleChallenge(p.protocol.CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 
 	// 4.iii. compute additive share d_i'
-	dPrime, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.sessionParticipants, p.protocol)
+	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.sessionParticipants, p.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
-	}
-	if p.taproot {
-		if p.mySigningKeyShare.PublicKey.AffineY().IsOdd() {
-			dPrime = dPrime.Neg()
-		}
 	}
 
 	// 3. run PRZS round 3 to get zero share
@@ -251,12 +235,13 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 	}
 
 	// 4.iv. compute s
-	s := p.state.k.Add(e.Mul(dPrime)).Add(zeroS)
+	s := p.flavour.ComputePartialResponse(bigR, p.mySigningKeyShare.PublicKey, p.state.k, sk, e).Add(zeroS)
 
 	// 4. return (R, s) as partial signature
 	p.round++
 	return &lindell22.PartialSignature{
-		R: p.protocol.Curve().ScalarBaseMult(p.state.k),
+		E: e,
+		R: p.flavour.ComputePartialNonceCommitment(bigR, p.state.bigR),
 		S: s,
 	}, nil
 }

@@ -2,6 +2,7 @@ package mult
 
 import (
 	"crypto/subtle"
+	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -19,7 +20,7 @@ type Round1Output = softspoken.Round1Output
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// step 1.1: Sample β ∈ [ξ]bits
 	bob.Beta = make(ot.ChoiceBits, XiBytes)
-	if _, err := bob.csrand.Read(bob.Beta); err != nil {
+	if _, err := io.ReadFull(bob.csrand, bob.Beta); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "bob could not sample beta")
 	}
 

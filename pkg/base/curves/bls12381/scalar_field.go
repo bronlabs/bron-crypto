@@ -96,12 +96,9 @@ func (sf *ScalarField[_]) Random(prng io.Reader) (curves.Scalar, error) {
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	var buffer [base.WideFieldBytes]byte
-	n, err := prng.Read(buffer[:])
+	_, err := io.ReadFull(prng, buffer[:])
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
-	}
-	if n != base.WideFieldBytes {
-		return nil, errs.NewRandomSample("could not read enough bytes from prng")
 	}
 	res, _ := sf.Element().SetBytesWide(buffer[:])
 	return res, nil

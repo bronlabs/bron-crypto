@@ -3,6 +3,7 @@ package hashing
 import (
 	"bytes"
 	"hash"
+	"io"
 
 	"golang.org/x/crypto/hkdf"
 
@@ -57,13 +58,11 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		ikm := append(f, x...)
 		ikm = append(ikm, okm...)
 		kdf := hkdf.New(h, ikm, salt, info)
-		n, err := kdf.Read(okm)
+		_, err := io.ReadFull(kdf, okm)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "write to kdf failed")
 		}
-		if n != len(okm) {
-			return nil, errs.NewFailed("unable to read expected number of bytes want=%v got=%v", len(okm), n)
-		}
+
 		bitstring.ByteSubLE(f)
 	}
 	return okm, nil

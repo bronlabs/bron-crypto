@@ -17,12 +17,12 @@ const (
 	auxSizeBytes = 32
 )
 
-type PublicKey = schnorr.PublicKey
+type PublicKey schnorr.PublicKey
 
-type PrivateKey = schnorr.PrivateKey
+type PrivateKey schnorr.PrivateKey
 
 // Signature BIP-340 signature.
-type Signature = schnorr.Signature
+type Signature schnorr.Signature
 
 type Signer struct {
 	privateKey *PrivateKey
@@ -52,7 +52,7 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 	public := curve.ScalarBaseMult(dPrime)
 
 	return &PrivateKey{
-		PublicKey: PublicKey{
+		PublicKey: schnorr.PublicKey{
 			A: public.Clone(),
 		},
 		S: dPrime.Clone(),
@@ -73,7 +73,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	}
 	if len(aux) == 0 {
 		aux = make([]byte, auxSizeBytes)
-		_, err := prng.Read(aux)
+		_, err := io.ReadFull(prng, aux)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate nonce")
 		}
@@ -130,12 +130,13 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	// 12. Let sig = (R, (k + ed) mod n)).
 	s := k.Add(e.Mul(d))
 	signature := &Signature{
+		E: e,
 		R: bigR,
 		S: s,
 	}
 
 	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
-	err = Verify(&signer.privateKey.PublicKey, signature, message)
+	err = Verify((*PublicKey)(&signer.privateKey.PublicKey), signature, message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create signature")
 	}
@@ -162,6 +163,10 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	e, err := calcChallenge(signature.R, bigP, message)
 	if err != nil {
 		return errs.WrapVerification(err, "invalid signature")
+	}
+
+	if signature.E != nil && !signature.E.Equal(e) {
+		return errs.NewFailed("incompatible signature")
 	}
 
 	// 5. Let R = s⋅G - e⋅P.

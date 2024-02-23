@@ -68,7 +68,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, securityStrength)
-		if _, err := NistPrng.entropySource.Read(entropyInput); err != nil {
+		if _, err := io.ReadFull(NistPrng.entropySource, entropyInput); err != nil {
 			return nil, errs.WrapRandomSample(err, "cannot sample entropyInput")
 		}
 	case entropyInputLen < securityStrength:
@@ -80,7 +80,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, securityStrength/2)
-		if _, err = NistPrng.entropySource.Read(nonce); err != nil {
+		if _, err = io.ReadFull(NistPrng.entropySource, nonce); err != nil {
 			return nil, errs.WrapRandomSample(err, "cannot sample nonce")
 		}
 	case nonceLen < securityStrength/2:
@@ -118,7 +118,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 		if prg.entropySource == nil {
 			return errs.NewArgument("cannot reseed without external entropy")
 		}
-		if _, err := prg.entropySource.Read(entropyInput); err != nil {
+		if _, err := io.ReadFull(prg.entropySource, entropyInput); err != nil {
 			return errs.WrapRandomSample(err, "cannot sample entropyInput")
 		}
 	case entropyInputLen < prg.SecurityStrength():
@@ -225,7 +225,7 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, prg.SecurityStrength()/2)
-		if _, err = prg.entropySource.Read(nonce); err != nil {
+		if _, err = io.ReadFull(prg.entropySource, nonce); err != nil {
 			return errs.WrapRandomSample(err, "cannot sample nonce")
 		}
 	case nonceLen < prg.SecurityStrength()/2:

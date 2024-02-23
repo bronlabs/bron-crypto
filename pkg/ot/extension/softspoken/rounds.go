@@ -26,7 +26,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	// Sanitise inputs and compute sizes
 	if len(x) == 0 {
 		x = make(ot.ChoiceBits, r.Xi/8)
-		if _, err := r.Csprng.Read(r.Output.Choices); err != nil {
+		if _, err := io.ReadFull(r.Csprng, r.Output.Choices); err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "generating random choice bits")
 		}
 	} else if len(x)%KappaBytes != 0 {
@@ -41,7 +41,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	// step 1.1 & 1.2: Generate x' as a concatenation of L copies of x and σ random bits
 	r.xPrime = make([]byte, etaPrimeBytes)
 	copy(r.xPrime[:etaBytes], bitstring.RepeatBits(x, r.L)) // x' = {x0 || x0 || ... }_L || {x1 || x1 || ... }_L || ...
-	if _, err = r.Csprng.Read(r.xPrime[etaBytes:]); err != nil {
+	if _, err = io.ReadFull(r.Csprng, r.xPrime[etaBytes:]); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe")
 	}
 
@@ -53,13 +53,13 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.SessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe")
 		}
-		if _, err = r.prg.Read(t[0][i]); err != nil {
+		if _, err = io.ReadFull(r.prg, t[0][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
 		}
 		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.SessionId); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
-		if _, err = r.prg.Read(t[1][i]); err != nil {
+		if _, err = io.ReadFull(r.prg, t[1][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 	}
@@ -127,7 +127,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.SessionId); err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe")
 		}
-		if _, err = s.prg.Read(t_b[i]); err != nil {
+		if _, err = io.ReadFull(s.prg, t_b[i]); err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe")
 		}
 	}
@@ -218,7 +218,7 @@ func commitWitness(transcript transcripts.Transcript, expansionMask *ExtMessageB
 	if r == nil {
 		r = make(Witness, Kappa)
 		for i := 0; i < Kappa; i++ {
-			if _, err := csrand.Read(r[i][:]); err != nil {
+			if _, err := io.ReadFull(csrand, r[i][:]); err != nil {
 				return nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe (WitnessCommitment)")
 			}
 		}

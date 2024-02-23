@@ -3,7 +3,6 @@ package noninteractive_signing
 import (
 	"fmt"
 	"io"
-	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -77,15 +76,19 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 
 	// TODO: remove pid after adding Repr method to Identity Key
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := signing.BigS(preSigners)
+	bigS := signing.BigS(protocol.Participants())
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	przsSid := slices.Concat(sessionId, []byte("przs"))
-	przsParticipant, err := setup.NewParticipant(przsSid, myAuthKey, protocol, transcript, prng)
+	przsProtocol, err := types.NewMPCProtocol(protocol.Curve(), preSigners)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create MPC protocol")
+	}
+
+	przsParticipant, err := setup.NewParticipant(sessionId, myAuthKey, przsProtocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
 	}

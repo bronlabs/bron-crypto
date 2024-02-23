@@ -82,7 +82,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 		panic("prng in nil")
 	}
 	var seed [32]byte
-	if _, err := prng.Read(seed[:]); err != nil {
+	if _, err := io.ReadFull(prng, seed[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
 	return &Scalar{V: seed}, nil

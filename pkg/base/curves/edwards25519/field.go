@@ -94,7 +94,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	buf := make([]byte, base.FieldBytes)
-	_, err := prng.Read(buf)
+	_, err := io.ReadFull(prng, buf)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
