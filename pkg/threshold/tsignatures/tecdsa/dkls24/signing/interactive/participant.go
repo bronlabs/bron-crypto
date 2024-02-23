@@ -90,13 +90,12 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	// step 0.2
+	// step 0.2: zero share sampling setup
 	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, authKey, shard.PairwiseSeeds, protocol, sessionParticipants, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 
-	// step 0.3
 	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
 	for participant := range sessionParticipants.Iter() {
 		if participant.Equal(authKey) {
@@ -106,10 +105,12 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %x", participant.PublicKey())
 		}
+		// step 0.3: RVOLE setup as Alice, with P_k as Bob
 		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
 		}
+		// step 0.4: RVOLE setup as Bob, with P_k as Alice
 		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())

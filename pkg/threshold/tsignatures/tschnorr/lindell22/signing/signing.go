@@ -35,14 +35,13 @@ func Aggregate(partialSignatures ...*lindell22.PartialSignature) (signature *sch
 			return nil, errs.NewFailed("invalid partial signature")
 		}
 
-		// compute Rsum
+		// step 1: r <- Σ ri
 		r = r.Add(partialSignature.R)
 
-		// compute Ssum
+		// step 2: s <- Σ si
 		s = s.Add(partialSignature.S)
 	}
 
-	// return (Rsum, Ssum) as signature
 	return &schnorr.Signature{
 		E: e,
 		R: r,

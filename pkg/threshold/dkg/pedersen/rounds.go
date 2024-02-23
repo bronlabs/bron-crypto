@@ -35,7 +35,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 	if p.round != 1 {
 		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
-
+	// step 1.1: a_i0 <-$- Z_q
 	if a_i0 == nil {
 		a_i0, err = p.Protocol.Curve().ScalarField().Random(p.prng)
 		if err != nil {
@@ -47,7 +47,6 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
-
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
 	prover, err := p.State.NiCompiler.NewProver(p.SessionId, p.Transcript.Clone())
@@ -55,6 +54,8 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
 
+	// step 1.2: (x_i, Ci) <- Feldman.Split(a_i0)
+	// step 1.3: π_i <- NIZKPoK.Prove(s)  ∀s∈{a_i0, x_i1, x_i2, ..., x_in}
 	commitments, shares, proof, err := dealer.Split(a_i0, prover, p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't split the secret via feldman dealer")
@@ -64,6 +65,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 
 	outboundP2PMessages := types.NewRoundMessages[*Round1P2P]()
 
+	// step 1.4: send (x_ij) to P_j
 	for pair := range p.SharingConfig.Iter() {
 		sharingId := pair.Left
 		identityKey := pair.Right
@@ -78,6 +80,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 	p.State.A_i0 = a_i0
 
 	p.round++
+	// step 1.5: Broadcast(Ci)
 	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
@@ -125,7 +128,8 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 			Id:    uint(p.SharingId()),
 			Value: receivedSecretKeyShare,
 		}
-
+		// step 2.1: Feldman.Verify(Ci)
+		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
 		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
 		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, p.Transcript.Clone())
@@ -153,8 +157,9 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
 			return nil, nil, errs.NewFailed("shares received from sharing id %d is inconsistent", senderSharingId)
 		}
-
+		// step 2.3: x_i <- Σ x_ij
 		secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.Xij)
+		// step 2.4: Y <- Sum C_{j,0}
 		publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)
 		commitmentVectors[senderSharingId] = senderCommitmentVector
 	}

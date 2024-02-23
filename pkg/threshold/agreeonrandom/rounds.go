@@ -27,11 +27,12 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	if p.round != 1 {
 		return nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
-
+	// step 1.1: sample a random scalar r_i
 	r_i, err := p.Protocol.Curve().ScalarField().Random(p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate random scalar")
 	}
+	// step 1.2: commit your sample
 	commitment, witness, err := commitments.CommitWithoutSession(p.prng, r_i.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().PublicKey().ToAffineCompressed())
@@ -39,6 +40,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	p.round++
 	p.state.r_i = r_i
 	p.state.witness = witness
+	// step 1.3: broadcast your commitment
 	return &Round1Broadcast{
 		Commitment: commitment,
 	}, nil
@@ -65,6 +67,7 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1Broadcast])
 	}
 
 	p.round++
+	// step 2.1: broadcast your witness and your sample r_i
 	return &Round2Broadcast{
 		Witness: p.state.witness,
 		Ri:      p.state.r_i,
@@ -89,6 +92,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 		if !exists {
 			return nil, errs.NewIdentifiableAbort(party.PublicKey().ToAffineCompressed(), "could not find commitment for participant %x", party.PublicKey())
 		}
+		// step 3.2: open and check the commitments
 		if err := commitments.OpenWithoutSession(receivedCommitment, message.Witness, message.Ri.Bytes()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, party.PublicKey().ToAffineCompressed(), "commitment from participant with sharing id can't be opened")
 		}
@@ -101,7 +105,8 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive r vector")
 	}
-	p.state.transcript.AppendMessages("sessionId contribution", sortRandomnessContributions...)
+	// step 3.3: hash to derive the random value
+	p.state.transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
 	randomValue, err := p.state.transcript.ExtractBytes("session id", przs.LambdaBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive random value")

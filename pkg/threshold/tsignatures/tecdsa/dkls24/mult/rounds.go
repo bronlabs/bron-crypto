@@ -111,7 +111,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 		}
 	}
 
-	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)
+	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (sessionId || ã)
 	theta, err := alice.Curve.HashToScalars(L*Rho, alice.sessionId, aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
@@ -168,21 +168,20 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}
 
-	// step 3.2
 	var ddot_j [L]curves.Scalar
 	var dhat_j_k, muBoldPrime_j_k curves.Scalar
 	muPrimeBytes := make([]byte, 0, (Xi * Rho * base.FieldBytes))
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
-			// step 3.2.1: ḋ_{j,i} = α1_{j,i} + β_j * (α0_{j,i} - α1_{j,i} + a_i) ∀i∈[𝓁] ∀j∈[ξ]
+			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]
 			ddot_j[i] = ct.SelectScalar(bob.Beta[j], bob.Gamma[j][i].Add(r2o.ATilde[j][i]), bob.Gamma[j][i])
-			// step 3.2.2: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
+			// step 3.3: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
 			D[i] = D[i].Add(bob.gadget[j].Mul(ddot_j[i]))
 		}
 		for k := 0; k < Rho; k++ {
-			// step 3.2.3: d'_{j, k} = α1_{j,𝓁+k} + β_j * (α0_{j,𝓁+k} - α1_{j,l+k} + â_k) ∀k∈[ρ] ∀j∈[ξ]
+			// step 3.4: ḓ_{j,k} = γ_{j,𝓁+k} + β_j * ã_{j,l+k}   ∀k∈[ρ] ∀j∈[ξ]
 			dhat_j_k = ct.SelectScalar(bob.Beta[j], bob.Gamma[j][L+k].Add(r2o.ATilde[j][L+k]), bob.Gamma[j][L+k])
-			// step 3.2.4: μb'_{j,k} = α0_{j,l+k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * α0_{j,i} - β_j * η_k  ∀k∈[ρ] ∀j∈[ξ]
+			// step 3.5: μb'_{j,k} = ḓ_{j,k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * ḋ_{j,i} - β_j * η_k  ∀k∈[ρ] ∀j∈[ξ]
 			muBoldPrime_j_k = ct.SelectScalar(bob.Beta[j], dhat_j_k.Sub(r2o.Eta[k]), dhat_j_k)
 			for i := 0; i < L; i++ {
 				muBoldPrime_j_k = muBoldPrime_j_k.Add(theta[i*Rho+k].Mul(ddot_j[i]))
@@ -191,13 +190,13 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 		}
 	}
 
-	// step 3.3: μ' = H_{ℤ2^{2*λ_c}} (sessionId || μb')
+	// step 3.6: μ' = H_{ℤ2^{2*λ_c}} (sessionId || μb')
 	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.sessionId, muPrimeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to muPrime")
 	}
 
-	// step 3.4: Check if μ' == μ, ABORT if not
+	// step 3.7: Check if μ' == μ, ABORT if not
 	if len(muPrime) != len(r2o.Mu) {
 		return nil, errs.NewLength("len(muPrime) != len(Mu)  (%d != %d)", len(muPrime), len(r2o.Mu))
 	}

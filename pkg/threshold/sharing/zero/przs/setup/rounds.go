@@ -42,27 +42,26 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
 		}
-		randomBytes := przs.Seed{}
-		if _, err := io.ReadFull(p.prng, randomBytes[:]); err != nil {
-			return nil, errs.NewFailed("could not produce random bytes for party with index %d", participantIndex)
+		// step 1.1: produce a random seed for this participant
+		seedForThisParticipant := przs.Seed{}
+		if _, err := io.ReadFull(p.prng, seedForThisParticipant[:]); err != nil {
+			return nil, errs.WrapRandomSample(err, "could not produce random bytes for party with index %d", participantIndex)
 		}
-		seedForThisParticipant, err := hashing.HashChain(base.CommitmentHashFunction, p.SessionId, randomBytes[:])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not produce seed for participant with index %d", participantIndex)
-		}
+		// step 1.2: commit to the seed
 		commitment, witness, err := commitments.Commit(
 			p.SessionId,
 			p.prng,
-			seedForThisParticipant,
+			seedForThisParticipant[:],
 		)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)
 		}
 		p.state.sentSeeds.Put(participant, &committedSeedContribution{
-			seed:       seedForThisParticipant,
+			seed:       seedForThisParticipant[:],
 			commitment: commitment,
 			witness:    witness,
 		})
+		// step 1.3: send the commitment to the participant
 		output.Put(participant, &Round1P2P{
 			Commitment: commitment,
 		})
@@ -96,6 +95,7 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (type
 		if !exists {
 			return nil, errs.NewMissing("missing what I contributed to participant with index %d", participantIndex)
 		}
+		// step 2.1: send the seed and the witness to the participant
 		output.Put(participant, &Round2P2P{
 			Message: contributed.seed,
 			Witness: contributed.witness,
@@ -115,6 +115,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 	}
 	pairwiseSeeds := hashmap.NewHashableHashMap[types.IdentityKey, przs.Seed]()
 	for _, participant := range p.SortedParticipants {
+		// step 3.1: open the commitment from the participant and verify it
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -143,6 +144,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		if !exists {
 			return nil, errs.NewMissing("what I contributed to the participant with sharing id %d is missing", participantIndex)
 		}
+		// step 3.2: combine to produce the final seed
 		var orderedAppendedSeeds []byte
 		if myIndex < participantIndex {
 			orderedAppendedSeeds = append(myContributedSeed.seed, message.Message...)

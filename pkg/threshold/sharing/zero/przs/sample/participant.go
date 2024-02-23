@@ -49,6 +49,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWise
 		Seeds:               seeds,
 		PresentParticipants: presentParticipants,
 	}
+	// step 3.3 of przs.setup
 	if err := participant.createPrngs(seededPrngFactory); err != nil {
 		return nil, errs.WrapFailed(err, "could not seed prngs")
 	}

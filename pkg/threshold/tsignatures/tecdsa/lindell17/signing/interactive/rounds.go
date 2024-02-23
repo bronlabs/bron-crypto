@@ -47,13 +47,14 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	if primaryCosigner.round != 1 {
 		return nil, errs.NewRound("round mismatch %d != 1", primaryCosigner.round)
 	}
-
+	// step 1.1: k1 <-$ Zq     &    R1 <- k1 * G
 	primaryCosigner.state.k1, err = primaryCosigner.protocol.Curve().ScalarField().Random(primaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "cannot generate k1")
 	}
 	primaryCosigner.state.bigR1 = primaryCosigner.protocol.Curve().ScalarBaseMult(primaryCosigner.state.k1)
 
+	// step 1.2: c1 <- Commit(sid || Q || R1)
 	bigR1Commitment, bigR1Witness, err := commitments.Commit(
 		primaryCosigner.sessionId,
 		primaryCosigner.prng,
@@ -67,6 +68,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 	primaryCosigner.state.bigR1Witness = bigR1Witness
 
 	primaryCosigner.round++
+	// step 1.3: Send(c1) -> P_2
 	return &Round1OutputP2P{
 		BigR1Commitment: bigR1Commitment,
 	}, nil
@@ -78,13 +80,13 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	}
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
-
+	// step 2.1: k2 <-$ Zq     &    R2 <- k2 * G
 	secondaryCosigner.state.k2, err = secondaryCosigner.protocol.Curve().ScalarField().Random(secondaryCosigner.prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "cannot generate k2")
 	}
 	secondaryCosigner.state.bigR2 = secondaryCosigner.protocol.Curve().ScalarBaseMult(secondaryCosigner.state.k2)
-
+	// step 2.2: π <- NIPoK.Prove(k2)
 	bigR2ProofSessionId, err := hashing.HashChain(sha3.New256, secondaryCosigner.sessionId, secondaryCosigner.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
@@ -99,6 +101,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	}
 
 	secondaryCosigner.round++
+	// step 2.3: Send(R2, π) -> P_1
 	return &Round2OutputP2P{
 		BigR2:      secondaryCosigner.state.bigR2,
 		BigR2Proof: bigR2Proof,
