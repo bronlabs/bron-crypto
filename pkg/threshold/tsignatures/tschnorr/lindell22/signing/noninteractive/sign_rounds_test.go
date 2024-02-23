@@ -19,9 +19,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	hashingBip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -38,7 +38,7 @@ var configs = []struct{ nParticipants, nPreSigners, nThreshold int }{
 func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewEdDsaCompatibleFlavour()
+	variant := schnorr.NewEdDsaCompatibleVariant()
 	curve := edwards25519.NewCurve()
 	hashFunc := sha512.New
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -96,14 +96,14 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
 					}
 
-					signature, err := signing.Aggregate(partialSignatures...)
+					signature, err := signing.Aggregate(variant, partialSignatures...)
 					require.NoError(t, err)
 
 					valid := nativeEddsa.Verify(
@@ -121,7 +121,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewTaprootFlavour()
+	variant := schnorr.NewTaprootVariant()
 	curve := k256.NewCurve()
 	hashFunc := hashingBip340.NewBip340HashChallenge
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -179,17 +179,17 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
 					}
 
-					signature, err := signing.Aggregate(partialSignatures...)
+					signature, err := signing.Aggregate(variant, partialSignatures...)
 					require.NoError(t, err)
 
-					err = bip340.Verify(&bip340.PublicKey{A: publicKey}, (*bip340.Signature)(signature), message)
+					err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
 					require.NoError(t, err)
 				}
 			}
@@ -200,7 +200,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewZilliqaFlavour()
+	variant := schnorr.NewZilliqaVariant()
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -258,17 +258,17 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], flavour, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
 					}
 
-					signature, err := signing.Aggregate(partialSignatures...)
+					signature, err := signing.Aggregate(variant, partialSignatures...)
 					require.NoError(t, err)
 
-					err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, (*zilliqa.Signature)(signature), message)
+					err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)
 					require.NoError(t, err)
 				}
 			}

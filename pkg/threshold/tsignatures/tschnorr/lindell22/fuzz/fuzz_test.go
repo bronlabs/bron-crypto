@@ -18,8 +18,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -61,7 +61,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SignatureProtocol) {
 	t.Helper()
 
-	flavour := tschnorr.NewEdDsaCompatibleFlavour()
+	variant := schnorr.NewEdDsaCompatibleVariant()
 	protocol, _ := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	shard, exists := shards.Get(identities[0])
 	require.True(t, exists)
@@ -71,7 +71,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 
 	var sid []byte
 	fz.Fuzz(&sid)
-	participants, err := interactive_testutils.MakeParticipants(sid, protocol, identities[:threshold], shards, transcripts, flavour)
+	participants, err := interactive_testutils.MakeParticipants(sid, protocol, identities[:threshold], shards, transcripts, variant)
 	if len(sid) == 0 {
 		if errs.IsArgument(err) {
 			t.Skip()
@@ -83,11 +83,11 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(variant, partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: publicKey}, message, signature)
+	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }
 

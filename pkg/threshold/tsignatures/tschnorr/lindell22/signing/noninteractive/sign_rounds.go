@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
-func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	bigR1Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
 	bigR2Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
 	for identity := range c.cosigners.Iter() {
@@ -46,7 +46,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	bigR := bigR1Sum.Add(bigR2Sum.Mul(delta))
 
 	// 3.ii. compute e = H(R || pk || message)
-	eBytes := c.flavour.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)
+	eBytes := c.variant.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)
 	e, err := schnorr.MakeSchnorrCompatibleChallenge(c.protocol.CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
@@ -64,11 +64,11 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	}
 
 	// 3.iv. compute s = k + d * e
-	s := c.flavour.ComputePartialResponse(bigR, c.myShard.PublicKey(), k, sk, e).Add(zeroS)
+	s := c.variant.ComputePartialResponse(bigR, c.myShard.PublicKey(), k, sk, e).Add(zeroS)
 
 	return &lindell22.PartialSignature{
 		E: e,
-		R: c.flavour.ComputePartialNonceCommitment(bigR, c.protocol.CipherSuite().Curve().ScalarBaseMult(k)),
+		R: c.variant.ComputePartialNonceCommitment(bigR, c.protocol.CipherSuite().Curve().ScalarBaseMult(k)),
 		S: s,
 	}, nil
 }

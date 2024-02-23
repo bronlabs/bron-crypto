@@ -1,7 +1,6 @@
 package eddsa
 
 import (
-	"bytes"
 	"crypto/sha512"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -10,20 +9,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
-type Signature schnorr.Signature
+type Signature = schnorr.Signature[schnorr.EdDsaCompatibleVariant]
 
-type PublicKey schnorr.PublicKey
-
-func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := bytes.Join([][]byte{
-		s.R.ToAffineCompressed(),
-		bitstring.ReverseBytes(s.S.Bytes()),
-	}, nil)
-	return serializedSignature, nil
-}
+type PublicKey vanillaSchnorr.PublicKey
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()
@@ -47,17 +39,11 @@ func MakeEdDSACompatibleChallenge(xs ...[]byte) (curves.Scalar, error) {
 }
 
 func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
-	if !schnorr.IsEd25519Compliant(suite) {
+	if !vanillaSchnorr.IsEd25519Compliant(suite) {
 		return errs.NewVerification("unsupported cipher suite")
 	}
 
-	if err := schnorr.Verify(suite, &schnorr.PublicKey{
-		A: publicKey.A,
-	}, message, &schnorr.Signature{
-		R: signature.R,
-		S: signature.S,
-		E: signature.E,
-	}); err != nil {
+	if err := vanillaSchnorr.Verify(suite, &vanillaSchnorr.PublicKey{A: publicKey.A}, message, signature); err != nil {
 		return errs.WrapVerification(err, "invalid signature")
 	}
 	return nil

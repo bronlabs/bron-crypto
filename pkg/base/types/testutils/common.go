@@ -21,15 +21,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 type TestAuthKey struct {
 	suite      types.SignatureProtocol
-	privateKey *schnorr.PrivateKey
-	publicKey  *schnorr.PublicKey
+	privateKey *vanillaSchnorr.PrivateKey
+	publicKey  *vanillaSchnorr.PublicKey
 
 	_ ds.Incomparable
 }
@@ -56,7 +57,7 @@ func (k *TestAuthKey) Equal(rhs types.IdentityKey) bool {
 }
 
 func (k *TestAuthKey) Sign(message []byte) []byte {
-	signer, err := schnorr.NewSigner(k.suite, k.privateKey)
+	signer, err := vanillaSchnorr.NewSigner(k.suite, k.privateKey)
 	if err != nil {
 		panic(err)
 	}
@@ -86,14 +87,11 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 		return errs.NewSerialisation("cannot deserialize signature")
 	}
 
-	schnorrSignature := &schnorr.Signature{
-		R: r,
-		S: s,
-	}
-	schnorrPublicKey := &schnorr.PublicKey{
+	schnorrSignature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, r, s)
+	schnorrPublicKey := &vanillaSchnorr.PublicKey{
 		A: k.publicKey.A,
 	}
-	if err := schnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
+	if err := vanillaSchnorr.Verify(k.suite, schnorrPublicKey, message, schnorrSignature); err != nil {
 		return errs.WrapVerification(err, "could not verify schnorr signature")
 	}
 	return nil
@@ -225,13 +223,13 @@ func MakeTestIdentities(cipherSuite types.SignatureProtocol, n int) (identities 
 }
 
 func MakeTestIdentity(cipherSuite types.SignatureProtocol, secret curves.Scalar) (types.IdentityKey, error) {
-	var sk *schnorr.PrivateKey
-	var pk *schnorr.PublicKey
+	var sk *vanillaSchnorr.PrivateKey
+	var pk *vanillaSchnorr.PublicKey
 	var err error
 	if secret != nil {
-		pk, sk, err = schnorr.NewKeys(secret)
+		pk, sk, err = vanillaSchnorr.NewKeys(secret)
 	} else {
-		pk, sk, err = schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
+		pk, sk, err = vanillaSchnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate schnorr key pair")

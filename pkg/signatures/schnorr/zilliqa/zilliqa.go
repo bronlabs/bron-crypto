@@ -3,19 +3,17 @@ package zilliqa
 import (
 	"crypto/sha256"
 	"encoding"
-	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
-type Signature schnorr.Signature
+type PublicKey vanillaSchnorr.PublicKey
 
-var _ encoding.BinaryMarshaler = (*Signature)(nil)
-
-type PublicKey schnorr.PublicKey
+type Signature = schnorr.Signature[schnorr.ZilliqaVariant]
 
 var _ encoding.BinaryMarshaler = (*PublicKey)(nil)
 
@@ -54,7 +52,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create protocol")
 	}
-	eCheck, err := schnorr.MakeSchnorrCompatibleChallenge(protocol, q.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
+	eCheck, err := vanillaSchnorr.MakeSchnorrCompatibleChallenge(protocol, q.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot compute challenge")
 	}
@@ -64,10 +62,6 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	}
 
 	return nil
-}
-
-func (s *Signature) MarshalBinary() (data []byte, err error) {
-	return slices.Concat(s.E.Bytes(), s.S.Bytes()), nil
 }
 
 func (pk *PublicKey) MarshalBinary() (data []byte, err error) {

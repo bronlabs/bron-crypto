@@ -51,7 +51,7 @@ type Round2P2P struct {
 	_ ds.Incomparable
 }
 
-func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput types.RoundMessages[*Round1P2P], err error) {
+func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput types.RoundMessages[*Round1P2P], err error) {
 	if p.round != 1 {
 		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
 	}
@@ -97,7 +97,7 @@ func (p *Cosigner) Round1() (broadcastOutput *Round1Broadcast, unicastOutput typ
 	return broadcast, unicast, nil
 }
 
-func (p *Cosigner) Round2(broadcastInput types.RoundMessages[*Round1Broadcast], unicastInput types.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput types.RoundMessages[*Round2P2P], err error) {
+func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast], unicastInput types.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput types.RoundMessages[*Round2P2P], err error) {
 	if p.round != 2 {
 		return nil, nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}
@@ -159,7 +159,7 @@ func (p *Cosigner) Round2(broadcastInput types.RoundMessages[*Round1Broadcast], 
 	return broadcast, unicast, nil
 }
 
-func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], unicastInput types.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], unicastInput types.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	if p.round != 3 {
 		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
@@ -229,18 +229,18 @@ func (p *Cosigner) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], 
 	}
 
 	// step 3.7.2: compute e
-	eBytes := p.flavour.ComputeChallengeBytes(bigR, p.mySigningKeyShare.PublicKey, message)
+	eBytes := p.variant.ComputeChallengeBytes(bigR, p.mySigningKeyShare.PublicKey, message)
 	e, err := schnorr.MakeSchnorrCompatibleChallenge(p.protocol.CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 	// step 3.7.3 & 3.8: compute s'_i and set s_i <- s'_i + ζ_i
-	s := p.flavour.ComputePartialResponse(bigR, p.mySigningKeyShare.PublicKey, p.state.k, sk, e).Add(zeroS)
+	s := p.variant.ComputePartialResponse(bigR, p.mySigningKeyShare.PublicKey, p.state.k, sk, e).Add(zeroS)
 
 	p.round++
 	return &lindell22.PartialSignature{
 		E: e,
-		R: p.flavour.ComputePartialNonceCommitment(bigR, p.state.bigR),
+		R: p.variant.ComputePartialNonceCommitment(bigR, p.state.bigR),
 		S: s,
 	}, nil
 }

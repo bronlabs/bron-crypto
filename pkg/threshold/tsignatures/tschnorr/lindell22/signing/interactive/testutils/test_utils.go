@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	interactive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -16,13 +16,13 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, flavour tschnorr.Flavour) (participants []*interactive_signing.Cosigner, err error) {
+func MakeParticipants[F schnorr.Variant[F]](sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, variant schnorr.Variant[F]) (participants []*interactive_signing.Cosigner[F], err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}
 
 	prng := crand.Reader
-	participants = make([]*interactive_signing.Cosigner, protocol.Threshold())
+	participants = make([]*interactive_signing.Cosigner[F], protocol.Threshold())
 	for i, identity := range identities {
 		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("cohort is missing identity")
@@ -31,7 +31,7 @@ func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, ide
 		if !exists {
 			return nil, errs.NewMissing("shard for idnetity %x", identity)
 		}
-		participants[i], err = interactive_signing.NewCosigner(identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], flavour, prng)
+		participants[i], err = interactive_signing.NewCosigner(identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], variant, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
@@ -40,7 +40,7 @@ func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, ide
 	return participants, nil
 }
 
-func DoRound1(participants []*interactive_signing.Cosigner) (round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P], err error) {
+func DoRound1[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F]) (round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P], err error) {
 	round1BroadcastOutputs := make([]*interactive_signing.Round1Broadcast, len(participants))
 	round1UnicastOutputs := make([]types.RoundMessages[*interactive_signing.Round1P2P], len(participants))
 	for i, participant := range participants {
@@ -71,7 +71,7 @@ func DoRound1(participants []*interactive_signing.Cosigner) (round2BroadcastInpu
 	return round2BroadcastInputs, round2UnicastInputs, nil
 }
 
-func DoRound2(participants []*interactive_signing.Cosigner, round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P]) (round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], err error) {
+func DoRound2[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P]) (round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], err error) {
 	round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
 	round2UnicastOutputs := make([]types.RoundMessages[*interactive_signing.Round2P2P], len(participants))
 	for i, participant := range participants {
@@ -103,7 +103,7 @@ func DoRound2(participants []*interactive_signing.Cosigner, round2BroadcastInput
 	return round3BroadcastInputs, round3UnicastInputs, nil
 }
 
-func DoRound3(participants []*interactive_signing.Cosigner, round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func DoRound3[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	partialSignatures = make([]*lindell22.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
@@ -115,7 +115,7 @@ func DoRound3(participants []*interactive_signing.Cosigner, round3BroadcastInput
 	return partialSignatures, nil
 }
 
-func RunInteractiveSigning(participants []*interactive_signing.Cosigner, message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func RunInteractiveSigning[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	r2bi, r2ui, err := DoRound1(participants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to do lindell22 round 1")

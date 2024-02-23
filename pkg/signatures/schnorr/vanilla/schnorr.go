@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 )
 
 type PublicKey struct {
@@ -29,13 +30,7 @@ type PrivateKey struct {
 	_ ds.Incomparable
 }
 
-type Signature struct {
-	E curves.Scalar
-	R curves.Point
-	S curves.Scalar
-
-	_ ds.Incomparable
-}
+type Signature = schnorr.Signature[schnorr.EdDsaCompatibleVariant]
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()
@@ -112,11 +107,7 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 	}
 
 	s := k.Add(signer.privateKey.S.Mul(e))
-	return &Signature{
-		E: e,
-		R: R,
-		S: s,
-	}, nil
+	return schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), e, R, s), nil
 }
 
 func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {

@@ -17,11 +17,11 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
 	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -67,22 +67,19 @@ func Test_SanityCheck(t *testing.T) {
 	require.True(t, ok)
 
 	// verify krypton
-	kryptonSignature := &schnorr.Signature{
-		R: bigR,
-		S: bigS,
-	}
-	kryptonPublicKey := &schnorr.PublicKey{
+	kryptonSignature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
+	kryptonPublicKey := &vanillaSchnorr.PublicKey{
 		A: publicKey,
 	}
 
-	err = schnorr.Verify(suite, kryptonPublicKey, message, kryptonSignature)
+	err = vanillaSchnorr.Verify(suite, kryptonPublicKey, message, kryptonSignature)
 	require.NoError(t, err)
 }
 
 func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewEdDsaCompatibleFlavour()
+	variant := schnorr.NewEdDsaCompatibleVariant()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	prng := crand.Reader
@@ -108,25 +105,25 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(variant, partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = schnorr.Verify(cipherSuite, &schnorr.PublicKey{A: publicKey}, message, signature)
+	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }
 
 func Test_HappyPathThresholdBIP340(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewTaprootFlavour()
+	variant := schnorr.NewTaprootVariant()
 	hashFunc := hashing_bip340.NewBip340HashChallenge
 	curve := k256.NewCurve()
 	prng := crand.Reader
@@ -152,30 +149,25 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(variant, partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	bipSignature := &bip340.Signature{
-		R: signature.R,
-		S: signature.S,
-	}
-
-	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, bipSignature, message)
+	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
 	require.NoError(t, err)
 }
 
 func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewZilliqaFlavour()
+	variant := schnorr.NewZilliqaVariant()
 	hashFunc := sha256.New
 	curve := k256.NewCurve()
 	prng := crand.Reader
@@ -201,25 +193,25 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, flavour)
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(variant, partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, (*zilliqa.Signature)(signature), message)
+	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)
 	require.NoError(t, err)
 }
 
 func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
-	flavour := tschnorr.NewEdDsaCompatibleFlavour()
+	variant := schnorr.NewEdDsaCompatibleVariant()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello World!")
@@ -248,18 +240,18 @@ func Test_HappyPathWithDkg(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, flavour)
+	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, variant)
 	require.NoError(t, err)
 
 	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(partialSignatures...)
+	signature, err := signing.Aggregate(variant, partialSignatures...)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
 	publicKey := signingKeyShares[0].PublicKey
-	err = schnorr.Verify(signatureProtocol, &schnorr.PublicKey{A: publicKey}, message, signature)
+	err = vanillaSchnorr.Verify(signatureProtocol, &vanillaSchnorr.PublicKey{A: publicKey}, message, signature)
 	require.NoError(t, err)
 }

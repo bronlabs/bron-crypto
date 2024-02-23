@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 )
 
@@ -302,7 +303,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		signatureBob, err := bob.Sign(message2, nil, crand.Reader)
 		require.NoError(t, err)
 
-		err = bip340.VerifyBatch([]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey}, []*bip340.Signature{signatureAlice, signatureBob}, [][]byte{
+		err = bip340.VerifyBatch([]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey}, []*schnorr.Signature[schnorr.TaprootVariant]{signatureAlice, signatureBob}, [][]byte{
 			message1,
 			message2,
 		}, crand.Reader)
@@ -351,7 +352,7 @@ func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	return sk, nil
 }
 
-func unmarshalSignature(input []byte) (*bip340.Signature, error) {
+func unmarshalSignature(input []byte) (*schnorr.Signature[schnorr.TaprootVariant], error) {
 	if len(input) != 64 {
 		return nil, errs.NewSerialisation("invalid length")
 	}
@@ -365,10 +366,7 @@ func unmarshalSignature(input []byte) (*bip340.Signature, error) {
 		return nil, errs.NewSerialisation("invalid signature")
 	}
 
-	signature := &bip340.Signature{
-		R: r,
-		S: s,
-	}
+	signature := schnorr.NewSignature(schnorr.NewTaprootVariant(), nil, r, s)
 	return signature, nil
 }
 

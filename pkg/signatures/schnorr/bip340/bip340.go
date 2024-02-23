@@ -1,7 +1,6 @@
 package bip340
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"io"
 
@@ -11,14 +10,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 const (
 	auxSizeBytes = 32
 )
 
-type PublicKey schnorr.PublicKey
+type PublicKey vanillaSchnorr.PublicKey
 
 type PrivateKey struct {
 	S curves.Scalar
@@ -27,15 +27,7 @@ type PrivateKey struct {
 	_ ds.Incomparable
 }
 
-type Signature schnorr.Signature
-
-func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := bytes.Join([][]byte{
-		s.R.ToAffineCompressed()[1:],
-		s.S.Bytes(),
-	}, nil)
-	return serializedSignature, nil
-}
+type Signature = schnorr.Signature[schnorr.TaprootVariant]
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()[1:]
@@ -147,11 +139,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 
 	// 12. Let sig = (R, (k + ed) mod n)).
 	s := k.Add(e.Mul(d))
-	signature := &Signature{
-		E: e,
-		R: bigR,
-		S: s,
-	}
+	signature := schnorr.NewSignature(schnorr.NewTaprootVariant(), e, bigR, s)
 
 	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
 	err = Verify(&signer.privateKey.PublicKey, signature, message)

@@ -8,16 +8,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
-
-type Cosigner struct {
+type Cosigner[F schnorr.Variant[F]] struct {
 	przsSampleParticipant *sample.Participant
 
 	myAuthKey   types.AuthKey
@@ -26,7 +24,7 @@ type Cosigner struct {
 	ppm         *lindell22.PreProcessingMaterial
 	cosigners   ds.Set[types.IdentityKey]
 
-	flavour       tschnorr.Flavour
+	variant       schnorr.Variant[F]
 	sharingConfig types.SharingConfig
 	protocol      types.ThresholdSignatureProtocol
 	prng          io.Reader
@@ -34,15 +32,17 @@ type Cosigner struct {
 	_ ds.Incomparable
 }
 
-func (c *Cosigner) IdentityKey() types.IdentityKey {
+var _ types.ThresholdSignatureParticipant = (*Cosigner[schnorr.EdDsaCompatibleVariant])(nil)
+
+func (c *Cosigner[F]) IdentityKey() types.IdentityKey {
 	return c.myAuthKey
 }
 
-func (c *Cosigner) SharingId() types.SharingID {
+func (c *Cosigner[F]) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, flavour tschnorr.Flavour, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+func NewCosigner[F schnorr.Variant[F]](sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, variant schnorr.Variant[F], transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner[F], err error) {
 	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, cosigners, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
@@ -68,12 +68,12 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	cosigner = &Cosigner{
+	cosigner = &Cosigner[F]{
 		przsSampleParticipant: przsParticipant,
 		myAuthKey:             myAuthKey,
 		myShard:               myShard,
 		cosigners:             cosigners,
-		flavour:               flavour,
+		variant:               variant,
 		protocol:              protocol,
 		prng:                  prng,
 		mySharingId:           mySharingId,
