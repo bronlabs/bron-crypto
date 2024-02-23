@@ -2,10 +2,10 @@ package types
 
 import (
 	"crypto/subtle"
-	"encoding/binary"
 	"encoding/json"
 	"sort"
 
+	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/constraints"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -78,9 +78,10 @@ func (l ByPublicKey) Len() int {
 }
 
 func (l ByPublicKey) Less(i, j int) bool {
-	iKey := binary.BigEndian.Uint64(l[i].PublicKey().ToAffineCompressed())
-	jKey := binary.BigEndian.Uint64(l[j].PublicKey().ToAffineCompressed())
-	return iKey < jKey
+	lhs := new(saferith.Nat).SetBytes(l[i].PublicKey().ToAffineCompressed())
+	rhs := new(saferith.Nat).SetBytes(l[j].PublicKey().ToAffineCompressed())
+	_, _, less := lhs.Cmp(rhs)
+	return less != 0
 }
 
 func (l ByPublicKey) Swap(i, j int) {

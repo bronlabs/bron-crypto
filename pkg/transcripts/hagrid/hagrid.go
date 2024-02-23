@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"io"
+	"slices"
 
 	"golang.org/x/crypto/chacha20"
 	"golang.org/x/crypto/sha3"
@@ -21,26 +22,24 @@ import (
 const (
 	protocolLabel        string           = "Hagrid v1.0"
 	domainSeparatorLabel string           = "<@>"
-	Type                 transcripts.Type = "Hagrid"
+	transcriptType       transcripts.Type = "Hagrid"
+	stateSize                             = base.CollisionResistanceBytes
 )
 
-// Hash function used to chain message hashes.
-var TranscriptHashFunction = base.TranscriptHashFunction
+// hash function used to chain message hashes.
+var transcriptXofFunction = base.TranscriptXofFunction
 
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
-	state [base.CollisionResistanceBytes]byte
+	state [stateSize]byte
 	prng  csprng.CSPRNG
 	salt  []byte
-
-	transcripts.Transcript
 
 	_ ds.Incomparable
 }
 
 // NewTranscript creates a new transcript with the supplied application label. The initial state is a hash of the appLabel.
-// TODO: add error type
 func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 	if prng == nil {
 		prng = crand.Reader
@@ -60,7 +59,7 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 		}
 	}
 	t := Transcript{
-		state: [base.CollisionResistanceBytes]byte{},
+		state: [stateSize]byte{},
 		prng:  seedablePrng,
 		salt:  salt,
 	}
@@ -74,7 +73,7 @@ func (t *Transcript) Clone() transcripts.Transcript {
 }
 
 func (*Transcript) Type() transcripts.Type {
-	return Type
+	return transcriptType
 }
 
 // InitialiseProtocol appends the sessionId to the transcript using dst as domain-separation
@@ -85,16 +84,14 @@ func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst
 		transcript = NewTranscript(dst, nil)
 	}
 	transcript.AppendMessages(dst, sessionId)
-	sessionId, err = transcript.ExtractBytes(dst, base.CollisionResistanceBytes)
+	sessionId, err = transcript.ExtractBytes(dst, stateSize)
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "couldn't extract sessionId from transcript")
 	}
 	return transcript, sessionId, nil
 }
 
-/*.-------------------------- WRITE/READ OPS --------------------------------.*/
-
-// AppendMessage adds the message to the transcript with the supplied label.
+// AppendMessages adds the message to the transcript with the supplied label.
 func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
 	for _, message := range messages {
 		t.appendMessage(label, message)
@@ -102,9 +99,8 @@ func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
 }
 
 func (t *Transcript) appendMessage(label string, message []byte) {
-	// AdditionalData[label]
-	t.ratchet([]byte(label))
-	t.ratchet(message)
+	_ = t.ratchet([]byte(label))
+	_ = t.ratchet(message)
 }
 
 // AppendScalars appends a vector of scalars to the transcript, serialising each scalar
@@ -130,8 +126,10 @@ func (t *Transcript) AppendPoints(label string, points ...curves.Point) {
 // based on the current transcript state and the supplied label. If the `prng`
 // is nil, a Shake256 hash is used instead.
 func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err error) {
-	// AdditionalData[label]
-	t.ratchet([]byte(label))
+	if err := t.ratchet([]byte(label)); err != nil {
+		return nil, errs.WrapFailed(err, "cannot update state")
+	}
+
 	out = make([]byte, outLen)
 	if t.prng != nil {
 		if err := t.prng.Seed(t.state[:], t.salt); err != nil {
@@ -152,10 +150,18 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 	return out, nil
 }
 
-// hash hashes the previous transcript state with the supplied message.
-func (t *Transcript) ratchet(message []byte) {
-	h := TranscriptHashFunction()
-	h.Write(t.state[:])
-	h.Write(message)
-	copy(t.state[:], h.Sum(nil))
+// ratchet hashes the previous transcript state with the supplied message.
+func (t *Transcript) ratchet(message []byte) error {
+	h := transcriptXofFunction()
+	if _, err := h.Write(slices.Concat(t.state[:], message)); err != nil {
+		return errs.WrapHashing(err, "cannot create digest")
+	}
+
+	newState := make([]byte, stateSize)
+	if _, err := io.ReadFull(h, newState); err != nil {
+		return errs.WrapHashing(err, "cannot create digest")
+	}
+
+	copy(t.state[:], newState)
+	return nil
 }

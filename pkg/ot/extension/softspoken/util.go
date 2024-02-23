@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	HashFn = base.TranscriptHashFunction
+	hashFn = base.RandomOracleHashFunction
 	dst    = []byte("Copper_Softspoken_COTe")
 )
 
@@ -29,7 +29,7 @@ func HashSalted(sessionId []byte, bufferIn, bufferOut [][]byte) (err error) {
 		// Hash each element separately, same
 		idx := []byte(strconv.Itoa(j))
 		for l := 0; l < LOTe; l++ {
-			digest, err := hashing.Hash(HashFn, dst, sessionId, idx, bufferIn[j*LOTe+l])
+			digest, err := hashing.Hash(hashFn, dst, sessionId, idx, bufferIn[j*LOTe+l])
 			if err != nil {
 				return errs.WrapFailed(err, "writing into HashSalted")
 			}

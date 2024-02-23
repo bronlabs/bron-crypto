@@ -22,6 +22,6 @@ const HASH2CURVE_APP_TAG = "KRYPTON-H2C-"
 // Choices of hash functions.
 var (
 	CommitmentHashFunction   = sha3.New256 // Use the `commitments` package for a UC-secure commitment scheme which chains HMACs from `CommitmentHashFunction` and enforces presence of a session-id.
-	TranscriptHashFunction   = sha3.New256
+	TranscriptXofFunction    = sha3.NewShake256
 	RandomOracleHashFunction = sha3.New256
 )

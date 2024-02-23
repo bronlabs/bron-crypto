@@ -16,7 +16,7 @@ func TestSimpleTranscript(t *testing.T) {
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
 	cHex := hex.EncodeToString(cBytes)
-	expectedHex := "b4752959f476bb668a88a7239cae99d6bdc9f0add4523c01e8724d4dffdf5ac2"
+	expectedHex := "36e5c27c9fb496cb398e3cd11e41cf54973cb17c854dacfc7f1c62d207e27e7b"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -31,7 +31,7 @@ func TestSimpleTranscriptWithPRNG(t *testing.T) {
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
 	cHex := hex.EncodeToString(cBytes)
-	expectedHex := "a8d87ccb6aee6f5578080155895aa969ed14ff7aa5a8f534fdf65dac079123dd"
+	expectedHex := "38a99bc5802f931b57bc471b13359cd6d385e882804d9f9a8d96f51333fd33a6"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -54,7 +54,7 @@ func TestComplexTranscript(t *testing.T) {
 		tr.AppendMessages("challengedata", chlBytes)
 	}
 
-	expectedChlHex := "8eb0ae7f68452f2a81389b4fa6014162dd3221c0a02d9b0b2c8b94b0b4fb35eb"
+	expectedChlHex := "4b9293b6ceb652ec9e9cf33429add29a537781a59918d2820135770238b466b6"
 	chlHex := hex.EncodeToString(chlBytes)
 
 	if chlHex != expectedChlHex {
