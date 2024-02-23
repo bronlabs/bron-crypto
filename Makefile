@@ -85,5 +85,5 @@ fuzz:
 
 .PHONY: fuzz-long
 fuzz-long:
-	$(MAKE) fuzz-test-long-pkg
+	$(MAKE) long-fuzz-test-pkg
 

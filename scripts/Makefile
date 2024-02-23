@@ -15,7 +15,7 @@ fuzz-test-%:
 long-fuzz-test-%:
 	$(MAKE) clean
 	chmod +x ${SCRIPTS_DIR}/run_fuzz.sh
-	${SCRIPTS_DIR}/run_fuzz.sh ${*}
+	${SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=120s
 
 .PHONY: profile-test-%
 profile-test-%:
