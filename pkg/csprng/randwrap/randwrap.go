@@ -138,7 +138,7 @@ func bindDevice(prng io.Reader) ([]byte, error) {
 	}
 	info, err := hashing.HashChain(base.RandomOracleHashFunction, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not hash device info")
+		return nil, errs.WrapHashing(err, "could not hash device info")
 	}
 	return info, nil
 }

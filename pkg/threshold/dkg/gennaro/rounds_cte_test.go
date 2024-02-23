@@ -29,18 +29,18 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	require.NoError(t, err)
 
 	var identities []types.IdentityKey
-	var cohortConfig types.ThresholdProtocol
+	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*gennaro.Participant
 
 	internal.RunMeasurement(500, "gennaro_round1", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, config, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 	}, func() {
 		testutils.DoDkgRound1(participants)
@@ -58,7 +58,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	require.NoError(t, err)
 
 	var identities []types.IdentityKey
-	var cohortConfig types.ThresholdProtocol
+	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*gennaro.Participant
 	var r1OutsB []*gennaro.Round1Broadcast
@@ -67,11 +67,11 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	internal.RunMeasurement(500, "gennaro_round2", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, config, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)
@@ -91,7 +91,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	require.NoError(t, err)
 
 	var identities []types.IdentityKey
-	var cohortConfig types.ThresholdProtocol
+	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*gennaro.Participant
 	var r1OutsB []*gennaro.Round1Broadcast
@@ -104,11 +104,11 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	internal.RunMeasurement(500, "gennaro_round3", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, randomisedFischlin.Name, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, config, identities, randomisedFischlin.Name, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants)
 		require.NoError(t, err)

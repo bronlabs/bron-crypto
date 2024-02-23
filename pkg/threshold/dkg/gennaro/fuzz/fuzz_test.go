@@ -42,22 +42,22 @@ func FuzzGennaro(f *testing.F) {
 		identityKeys := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 		set := hashset.NewHashableHashSet(identityKeys...)
 		th = th % uint8(set.Size())
-		cohortConfig, _ := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identityKeys, int(th))
-		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(types.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
+		protocolConfig, _ := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identityKeys, int(th))
+		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(types.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
+		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(types.AuthKey), cohortConfig, randomisedFischlin.Name, prng, nil)
+		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -74,7 +74,7 @@ func FuzzGennaro(f *testing.F) {
 			t.Skip()
 		}
 		for _, out := range r1OutsU {
-			require.Equal(t, out.Size(), int(cohortConfig.TotalParties())-1)
+			require.Equal(t, out.Size(), int(protocolConfig.TotalParties())-1)
 		}
 
 		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)

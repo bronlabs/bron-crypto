@@ -41,15 +41,15 @@ func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
 	return nil
 }
 
-func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentParticipants ds.Set[types.IdentityKey], protocol types.ThresholdProtocol) (curves.Scalar, error) {
-	if !presentParticipants.IsSubSet(protocol.Participants()) {
+func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.Set[types.IdentityKey], protocol types.ThresholdProtocol) (curves.Scalar, error) {
+	if !quorum.IsSubSet(protocol.Participants()) {
 		return nil, errs.NewMembership("present participants is not a subset of total participants")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId := uint(0)
-	shamirIdentities := make([]uint, presentParticipants.Size())
+	shamirIdentities := make([]uint, quorum.Size())
 	i := 0
-	for identityKey := range presentParticipants.Iter() {
+	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant sharing id %x", identityKey.PublicKey())

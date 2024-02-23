@@ -40,7 +40,7 @@ func Fuzz_Test(f *testing.F) {
 		set := hashset.NewHashableHashSet(identities...)
 		th = th % uint8(set.Size())
 
-		cohortConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, int(th))
+		protocolConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, int(th))
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -56,7 +56,7 @@ func Fuzz_Test(f *testing.F) {
 			t.Skip()
 		}
 
-		participants, err := testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -73,7 +73,7 @@ func Fuzz_Test(f *testing.F) {
 		}
 
 		for _, out := range r1OutsU {
-			require.Equal(t, out.Size(), int(cohortConfig.TotalParties())-1)
+			require.Equal(t, out.Size(), int(protocolConfig.TotalParties())-1)
 		}
 
 		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)

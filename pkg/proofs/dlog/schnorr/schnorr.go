@@ -64,7 +64,7 @@ func (s *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 	return r, k, nil
 }
 
-func (s *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes []byte) (Response, error) {
+func (s *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes sigma.ChallengeBytes) (Response, error) {
 	if witness == nil || witness.ScalarField().Curve().Name() != s.curve.Name() {
 		return nil, errs.NewArgument("invalid curve")
 	}
@@ -83,7 +83,7 @@ func (s *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitm
 	return z, nil
 }
 
-func (s *protocol) Verify(statement Statement, commitment Commitment, challengeBytes []byte, response Response) error {
+func (s *protocol) Verify(statement Statement, commitment Commitment, challengeBytes sigma.ChallengeBytes, response Response) error {
 	if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
@@ -110,7 +110,7 @@ func (s *protocol) Verify(statement Statement, commitment Commitment, challengeB
 	return nil
 }
 
-func (s *protocol) RunSimulator(statement Statement, challengeBytes []byte) (Commitment, Response, error) {
+func (s *protocol) RunSimulator(statement Statement, challengeBytes sigma.ChallengeBytes) (Commitment, Response, error) {
 	if statement == nil || statement.Curve().Name() != s.curve.Name() {
 		return nil, nil, errs.NewArgument("statement")
 	}

@@ -36,7 +36,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
 	salt, err := hashing.Hash(base.RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not produce salt")
+		return nil, errs.WrapHashing(err, "could not produce salt")
 	}
 
 	// step 2.3.1
@@ -62,7 +62,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		}
 		salt, err = hashing.Hash(base.RandomOracleHashFunction, salt)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not produce salt")
+			return nil, errs.WrapHashing(err, "could not produce salt")
 		}
 	}
 
@@ -85,7 +85,7 @@ func KeyGen[K KeySubGroup](prng io.Reader) (*PrivateKey[K], error) {
 	}
 	ikm := make([]byte, 32)
 	if _, err := io.ReadFull(prng, ikm); err != nil {
-		return nil, errs.WrapFailed(err, "could not read random bytes")
+		return nil, errs.WrapRandomSample(err, "could not read random bytes")
 	}
 	return KeyGenWithSeed[K](ikm)
 }

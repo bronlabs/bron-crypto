@@ -12,7 +12,7 @@ The details of the protocol are sketched in Protocol 3.6 of the main paper. We a
 
 **Players**:
 - `n` players where at least `t` of them are present during the signing session.
-- At least one signature aggregator, who may or may not be in the cohort.
+- At least one signature aggregator, who may or may not be a player.
 
 **Parameters**:
 - Follows whatever is defined in the subprotocols used.

@@ -26,7 +26,7 @@ func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueS
 	participants = make([]*signing.Cosigner[K, S], len(identities))
 	for i, identity := range identities {
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("cohort is missing identity")
+			return nil, errs.NewMissing("protocol config is missing identity")
 		}
 		thisShard, exists := shards.Get(identity)
 		if !exists {
@@ -77,12 +77,12 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 		return errs.WrapFailed(err, "Could not make test identities")
 	}
 
-	cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		return errs.WrapFailed(err, "Could not make cohort protocol")
+		return errs.WrapFailed(err, "Could not make protocol config")
 	}
 
-	shards, err := trusted_dealer.Keygen[K](cohort, crand.Reader)
+	shards, err := trusted_dealer.Keygen[K](protocolConfig, crand.Reader)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 	publicKeyShares := aliceShard.PublicKeyShares
 	publicKey := publicKeyShares.PublicKey
 
-	participants, err := MakeSigningParticipants[K, S](sid, cohort, identities, shards, scheme)
+	participants, err := MakeSigningParticipants[K, S](sid, protocolConfig, identities, shards, scheme)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 		return err
 	}
 
-	sharingConfig := types.DeriveSharingConfig(cohort.Participants())
+	sharingConfig := types.DeriveSharingConfig(protocolConfig.Participants())
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
 	if err != nil {
@@ -137,7 +137,7 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 
 	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, threshold, identities)
 	if err != nil {
-		return errs.WrapFailed(err, "Could not make cohort protocol")
+		return errs.WrapFailed(err, "Could not make protocol config")
 	}
 
 	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, thresholdSignatureProtocol, identities)

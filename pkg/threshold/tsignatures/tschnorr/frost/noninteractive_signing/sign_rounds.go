@@ -24,7 +24,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	partialSignature, err := signing_helpers.ProducePartialSignature(
 		nic,
 		nic.Protocol,
-		nic.SessionParticipants,
+		nic.Quorum,
 		nic.Shard.SigningKeyShare,
 		d_i, e_i,
 		nic.aggregationParameter.D_alpha, nic.aggregationParameter.E_alpha,
@@ -38,7 +38,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 }
 
 func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures types.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
-	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.Protocol, nic.Shard.SigningKeyShare.PublicKey, nic.Shard.PublicKeyShares, nic.SessionParticipants, message, nic.aggregationParameter)
+	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.Protocol, nic.Shard.SigningKeyShare.PublicKey, nic.Shard.PublicKeyShares, nic.Quorum, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}

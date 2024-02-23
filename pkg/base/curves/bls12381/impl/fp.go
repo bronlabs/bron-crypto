@@ -194,7 +194,7 @@ func (f *Fp) Random(prng io.Reader) (*Fp, error) {
 	var t [WideFieldBytes]byte
 	_, err := io.ReadFull(prng, t[:])
 	if err != nil {
-		return nil, errs.WrapFailed(err, "reader failed")
+		return nil, errs.WrapRandomSample(err, "reader failed")
 	}
 	return f.SetBytesWide(&t), nil
 }

@@ -92,7 +92,7 @@ type Round2Broadcast struct {
 	_ ds.Incomparable
 }
 
-func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState) (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
+func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
 	var err error
 
 	// step 1.1: Sample inversion mask Phi_i and instance key R_i
@@ -113,7 +113,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	outputP2P := types.NewRoundMessages[*Round1P2P]()
 
 	// step 1.3: For each other cosigner in the quorum...
-	for participant := range sessionParticipants.Iter() {
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -161,7 +161,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round1Broadcast], inputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, types.RoundMessages[*Round2P2P], error) {
+func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round1Broadcast], inputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, types.RoundMessages[*Round2P2P], error) {
 	// step 2.1: ζ_i <- Zero.Sample()
 	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
 	if err != nil {
@@ -170,7 +170,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	state.Zeta_i = zeta_i
 
 	// step 2.2: a_i <- Shamir.AdditiveShare(i, S, x_i)
-	myAdditiveShare, err := p.Shard().SigningKeyShare.ToAdditive(p.IdentityKey(), sessionParticipants, protocol)
+	myAdditiveShare, err := p.Shard().SigningKeyShare.ToAdditive(p.IdentityKey(), quorum, protocol)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not convert my shamir share to additive share")
 	}
@@ -187,7 +187,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := types.NewRoundMessages[*Round2P2P]()
 	// step 2.4: For each other cosigner in the quorum...
-	for participant := range sessionParticipants.Iter() {
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -245,13 +245,13 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round2Broadcast], inputP2P types.RoundMessages[*Round2P2P]) (err error) {
+func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round2Broadcast], inputP2P types.RoundMessages[*Round2P2P]) (err error) {
 	state.Du_i = make(map[types.SharingID]curves.Scalar)
 	state.Dv_i = make(map[types.SharingID]curves.Scalar)
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
 	refreshedPublicKey := state.Pk_i // this has zeta_i added so different from the one from public key share map
 	// step 3.1: For each other cosigner in the quorum...
-	for participant := range sessionParticipants.Iter() {
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -336,12 +336,12 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionPa
 	return nil
 }
 
-func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, sessionParticipants ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
+func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
 	R := r.ScalarField().Curve().ScalarBaseMult(r)
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
 	cVdV := phi.ScalarField().Zero()
-	for participant := range sessionParticipants.Iter() {
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -374,11 +374,11 @@ func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, 
 	rx := protocol.CipherSuite().Curve().Scalar().SetNat(R.AffineX().Nat())
 	digest, err := hashing.Hash(protocol.CipherSuite().Hash(), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "digest")
+		return nil, errs.WrapHashing(err, "digest")
 	}
 	digestScalar, err := protocol.CipherSuite().Curve().Scalar().SetBytesWide(digest)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "digestScalar")
+		return nil, errs.WrapSerialisation(err, "digestScalar")
 	}
 	w_i := digestScalar.Mul(phi).Add(rx.Mul(v_i))
 

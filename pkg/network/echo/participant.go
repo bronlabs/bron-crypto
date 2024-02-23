@@ -84,7 +84,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 		return errs.WrapValidation(err, "identity key")
 	}
 	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "cohort config is invalid")
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateIdentityKey(initiator); err != nil {
 		return errs.WrapValidation(err, "initator identity key")

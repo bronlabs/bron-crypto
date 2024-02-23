@@ -36,7 +36,7 @@ func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtoc
 		return errs.NewIsNil("attestor is nil")
 	}
 	if !protocol.Participants().Contains(ac.Attestor) {
-		return errs.NewArgument("attestor is not in cohort")
+		return errs.NewArgument("attestor is not in protocol config")
 	}
 	if ac.D.IsIdentity() {
 		return errs.NewIsIdentity("D is at infinity")
@@ -111,7 +111,7 @@ func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 		return errs.NewIsNil("presignature is nil")
 	}
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "could not validate cohort config")
+		return errs.WrapValidation(err, "could not validate protocol config")
 	}
 	if len(*psb) == 0 {
 		return errs.NewIsZero("batch is empty")
@@ -143,7 +143,7 @@ func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 // We require that attested commitments within a presignature are sorted by the sharing id of the attestor.
 func sortPreSignatureInPlace(protocol types.ThresholdProtocol, attestedCommitments []*AttestedCommitmentToNoncePair) error {
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
-		return errs.WrapArgument(err, "cohort config is invalid")
+		return errs.WrapArgument(err, "protocol config is invalid")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	sort.Slice(attestedCommitments, func(i, j int) bool {

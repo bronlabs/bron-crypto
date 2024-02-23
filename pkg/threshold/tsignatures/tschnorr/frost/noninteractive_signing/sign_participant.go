@@ -25,9 +25,9 @@ type Cosigner struct {
 	Shard                *frost.Shard
 	SignatureAggregators ds.Set[types.IdentityKey]
 
-	Protocol            types.ThresholdSignatureProtocol
-	SessionParticipants ds.Set[types.IdentityKey]
-	SharingConfig       types.SharingConfig
+	Protocol      types.ThresholdSignatureProtocol
+	Quorum        ds.Set[types.IdentityKey]
+	SharingConfig types.SharingConfig
 
 	myPrivateNoncePairs []*PrivateNoncePair
 
@@ -100,7 +100,7 @@ func NewNonInteractiveCosigner(
 		Protocol:                     protocol,
 		SharingConfig:                sharingConfig,
 		SignatureAggregators:         signatureAggregators,
-		SessionParticipants:          presentParties,
+		Quorum:                       presentParties,
 		myPrivateNoncePairs:          privateNoncePairs,
 		aggregationParameter: &aggregation.SignatureAggregatorParameters{
 			D_alpha: D_alpha,

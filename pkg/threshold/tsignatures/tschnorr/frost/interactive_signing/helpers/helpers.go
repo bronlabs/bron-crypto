@@ -18,14 +18,14 @@ import (
 func ProducePartialSignature(
 	participant types.ThresholdSignatureParticipant,
 	protocolConfig types.ThresholdSignatureProtocol,
-	sessionParticipants ds.Set[types.IdentityKey],
+	quorum ds.Set[types.IdentityKey],
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
 	D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point],
 	sharingConfig types.SharingConfig,
 	message []byte,
 ) (*frost.PartialSignature, error) {
-	R, _, r_js, err := ComputeR(protocolConfig, sharingConfig, sessionParticipants, D_alpha, E_alpha, message)
+	R, _, r_js, err := ComputeR(protocolConfig, sharingConfig, quorum, D_alpha, E_alpha, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute R")
 	}
@@ -40,9 +40,9 @@ func ProducePartialSignature(
 		return nil, errs.WrapSerialisation(err, "converting hash to c failed")
 	}
 
-	presentPartySharingIds := make([]uint, sessionParticipants.Size())
+	presentPartySharingIds := make([]uint, quorum.Size())
 	i := 0
-	for identityKey := range sessionParticipants.Iter() {
+	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %x", identityKey.PublicKey())
@@ -68,10 +68,10 @@ func ProducePartialSignature(
 	}, nil
 }
 
-func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, sessionParticipants ds.Set[types.IdentityKey], D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], message []byte) (R curves.Point, R_js ds.Map[types.IdentityKey, curves.Point], r_js ds.Map[types.IdentityKey, curves.Scalar], err error) {
+func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, quorum ds.Set[types.IdentityKey], D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], message []byte) (R curves.Point, R_js ds.Map[types.IdentityKey, curves.Point], r_js ds.Map[types.IdentityKey, curves.Scalar], err error) {
 	// we need to consistently order the Ds and Es
 	combinedDsAndEs := []byte{}
-	sortedIdentities := types.ByPublicKey(sessionParticipants.List())
+	sortedIdentities := types.ByPublicKey(quorum.List())
 	sort.Sort(sortedIdentities)
 	for _, presentParty := range sortedIdentities {
 		d_j, exists := D_alpha.Get(presentParty)
@@ -88,7 +88,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 
 	R_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	r_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Scalar]()
-	for identityKey := range sessionParticipants.Iter() {
+	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %x", identityKey.PublicKey())

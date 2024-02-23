@@ -79,7 +79,7 @@ func (c *protocol) ComputeProverCommitment(_ *Statement, w Witness) (*Commitment
 	}, s, nil
 }
 
-func (c *protocol) ComputeProverResponse(_ *Statement, witness Witness, _ *Commitment, state State, challengeBytes []byte) (Response, error) {
+func (c *protocol) ComputeProverResponse(_ *Statement, witness Witness, _ *Commitment, state State, challengeBytes sigma.ChallengeBytes) (Response, error) {
 	if len(challengeBytes) != c.GetChallengeBytesLength() {
 		return nil, errs.NewArgument("invalid challenge bytes length")
 	}
@@ -92,7 +92,7 @@ func (c *protocol) ComputeProverResponse(_ *Statement, witness Witness, _ *Commi
 	return z, nil
 }
 
-func (c *protocol) Verify(statement *Statement, commitment *Commitment, challengeBytes []byte, response Response) error {
+func (c *protocol) Verify(statement *Statement, commitment *Commitment, challengeBytes sigma.ChallengeBytes, response Response) error {
 	if statement == nil || statement.X1 == nil || statement.X2 == nil || commitment == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
@@ -114,7 +114,7 @@ func (c *protocol) Verify(statement *Statement, commitment *Commitment, challeng
 	return nil
 }
 
-func (c *protocol) RunSimulator(statement *Statement, challengeBytes []byte) (*Commitment, Response, error) {
+func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.ChallengeBytes) (*Commitment, Response, error) {
 	if statement == nil {
 		return nil, nil, errs.NewArgument("statement")
 	}
@@ -173,7 +173,7 @@ func (*protocol) SerializeResponse(response Response) []byte {
 	return response.Bytes()
 }
 
-func (c *protocol) mapChallengeBytesToChallenge(challengeBytes []byte) (curves.Scalar, error) {
+func (c *protocol) mapChallengeBytesToChallenge(challengeBytes sigma.ChallengeBytes) (curves.Scalar, error) {
 	e, err := c.g1.Curve().ScalarField().Zero().SetBytesWide(challengeBytes)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash to scalar")

@@ -122,11 +122,11 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	//  Q = r^(-1)(sR - zG)
 	messageHash, err := hashing.Hash(hashFunc, message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot hash message")
+		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
 	zInt, err := HashToInt(messageHash, curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get int from hash")
+		return nil, errs.WrapHashing(err, "cannot get int from hash")
 	}
 	var zIntBytes [32]byte
 	zInt.FillBytes(zIntBytes[:])
@@ -160,7 +160,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	messageDigest, err := hashing.Hash(hashFunc, message)
 	if err != nil {
-		return errs.WrapFailed(err, "could not produce message digest")
+		return errs.WrapHashing(err, "could not produce message digest")
 	}
 
 	nativeCurve, err := curveutils.ToGoEllipticCurve(curve)

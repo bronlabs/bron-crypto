@@ -34,7 +34,7 @@ func MakeParticipants(sid []byte, protocol types.ThresholdProtocol, identities [
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not in protocol config (problem in tests?)")
 		}
 		participants[i], err = lindell17_dkg.NewParticipant(sid, identity.(types.AuthKey), signingShares[i], publicKeyShares[i], protocol, cn, prng, transcript)
 		if err != nil {

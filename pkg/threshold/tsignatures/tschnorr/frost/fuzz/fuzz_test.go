@@ -79,8 +79,8 @@ func FuzzInteractiveSigning(f *testing.F) {
 		curve := allCurves[curveIndex%len(allCurves)]
 		h := allHashes[hashIndex%len(allHashes)]
 
-		identities, cohortConfig, _, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
-		doInteractiveSigning(t, signingKeyShares, publicKeyShares, threshold, identities, cohortConfig, message)
+		identities, protocolConfig, _, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
+		doInteractiveSigning(t, signingKeyShares, publicKeyShares, threshold, identities, protocolConfig, message)
 		fmt.Println("OK")
 	})
 }
@@ -121,10 +121,10 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 		curve := allCurves[curveIndex%len(allCurves)]
 		h := allHashes[hashIndex%len(allHashes)]
 
-		identities, cohortConfig, participants, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
+		identities, protocolConfig, participants, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
 
-		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, cohortConfig, identities, tau, prng, participants)
-		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, cohortConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, prng, participants, message)
+		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, protocolConfig, identities, tau, prng, participants)
+		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, protocolConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, prng, participants, message)
 		fmt.Println("OK")
 	})
 }

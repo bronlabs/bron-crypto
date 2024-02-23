@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -19,8 +20,7 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 	supportedCurves := []curves.Curve{
 		k256.NewCurve(),
 		p256.NewCurve(),
-		// TODO: reenable when curve order is here
-		// edwards25519.New(),
+		edwards25519.NewCurve(),
 	}
 
 	for _, c := range supportedCurves {
@@ -73,8 +73,7 @@ func Test_ShouldSplit(t *testing.T) {
 	supportedCurves := []curves.Curve{
 		k256.NewCurve(),
 		p256.NewCurve(),
-		// TODO: reenable when curve order is here
-		// edwards25519.New(),
+		edwards25519.NewCurve(),
 	}
 
 	for _, c := range supportedCurves {

@@ -28,18 +28,18 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	require.NoError(t, err)
 
 	var identities []types.IdentityKey
-	var cohortConfig types.ThresholdProtocol
+	var protocolConfig types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*pedersen.Participant
 
 	internal.RunMeasurement(500, "pedersen_round1", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+		protocolConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
 		require.NoError(t, err)
 	}, func() {
 		testutils.DoDkgRound1(participants, nil)
@@ -57,7 +57,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	require.NoError(t, err)
 
 	var identities []types.IdentityKey
-	var cohortConfig types.ThresholdProtocol
+	var protocolConfig types.ThresholdProtocol
 	var uniqueSessionId []byte
 	var participants []*pedersen.Participant
 	var r1OutsB []*pedersen.Round1Broadcast
@@ -68,11 +68,11 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	internal.RunMeasurement(500, "pedersen_round2", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		cohortConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+		protocolConfig, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
 		require.NoError(t, err)
 		uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 		require.NoError(t, err)
-		participants, err = testutils.MakeParticipants(uniqueSessionId, cohortConfig, identities, nil)
+		participants, err = testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
 		require.NoError(t, err)
 		r1OutsB, r1OutsU, err = testutils.DoDkgRound1(participants, nil)
 		require.NoError(t, err)

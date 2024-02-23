@@ -22,7 +22,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 	for pair := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
 		if !exists {
-			return nil, nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
+			return nil, nil, errs.NewMembership("participant %x is not in protocol config", pair.Key.PublicKey())
 		}
 		sharingIds[i] = uint(sharingId)
 		i++

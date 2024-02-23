@@ -59,10 +59,10 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 			require.NoError(t, err)
 
-			shards, err := trusted_dealer.Keygen(cohort, prng)
+			shards, err := trusted_dealer.Keygen(protocolConfig, prng)
 			require.NoError(t, err)
 
 			aliceShard, exists := shards.Get(identities[0])
@@ -78,7 +78,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
 				require.NoError(t, err)
 
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
@@ -96,7 +96,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
@@ -142,10 +142,10 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 			require.NoError(t, err)
 
-			shards, err := trusted_dealer.Keygen(cohort, prng)
+			shards, err := trusted_dealer.Keygen(protocolConfig, prng)
 			require.NoError(t, err)
 
 			aliceShard, exists := shards.Get(identities[0])
@@ -161,7 +161,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
 				require.NoError(t, err)
 
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
@@ -179,7 +179,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
@@ -221,10 +221,10 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 			require.NoError(t, err)
 
-			cohort, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 			require.NoError(t, err)
 
-			shards, err := trusted_dealer.Keygen(cohort, prng)
+			shards, err := trusted_dealer.Keygen(protocolConfig, prng)
 			require.NoError(t, err)
 
 			aliceShard, exists := shards.Get(identities[0])
@@ -240,7 +240,7 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, cohort, preSignerstranscripts)
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
 				require.NoError(t, err)
 
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
@@ -258,7 +258,7 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, cohort, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)

@@ -52,7 +52,7 @@ func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 	challengeBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 	_, err := io.ReadFull(v.prng, challengeBytes)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot read PRNG")
+		return nil, errs.WrapRandomSample(err, "cannot read PRNG")
 	}
 
 	v.transcript.AppendMessages(challengeLabel, challengeBytes)

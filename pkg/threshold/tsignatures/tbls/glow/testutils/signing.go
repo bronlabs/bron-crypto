@@ -77,7 +77,7 @@ func SigningRoundTrip(threshold, n int) error {
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		return errs.WrapFailed(err, "could not make cohort protocol")
+		return errs.WrapFailed(err, "could not make protocol config")
 	}
 
 	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
@@ -133,7 +133,7 @@ func SigningWithDkg(threshold, n int) error {
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		return errs.WrapFailed(err, "could not make cohort protocol")
+		return errs.WrapFailed(err, "could not make protocol config")
 	}
 
 	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, protocol, identities)

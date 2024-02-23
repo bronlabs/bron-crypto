@@ -28,10 +28,10 @@ type Cosigner struct {
 	mySharingId types.SharingID
 	shard       *dkls24.Shard
 
-	sessionId           []byte
-	protocol            types.ThresholdSignatureProtocol
-	sharingConfig       types.SharingConfig
-	SessionParticipants ds.Set[types.IdentityKey]
+	sessionId     []byte
+	protocol      types.ThresholdSignatureProtocol
+	sharingConfig types.SharingConfig
+	Quorum        ds.Set[types.IdentityKey]
 
 	transcript transcripts.Transcript
 	state      *signing.SignerState
@@ -73,8 +73,8 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
-func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
-	if err := validateInputs(sessionId, authKey, protocol, shard, sessionParticipants); err != nil {
+func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+	if err := validateInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
 
@@ -91,13 +91,13 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 	}
 
 	// step 0.2: zero share sampling setup
-	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, authKey, shard.PairwiseSeeds, protocol, sessionParticipants, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, authKey, shard.PairwiseSeeds, protocol, quorum, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
 
 	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
-	for participant := range sessionParticipants.Iter() {
+	for participant := range quorum.Iter() {
 		if participant.Equal(authKey) {
 			continue
 		}
@@ -122,13 +122,13 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 	}
 
 	cosigner := &Cosigner{
-		myAuthKey:           authKey,
-		protocol:            protocol,
-		shard:               shard,
-		sessionId:           sessionId,
-		SessionParticipants: sessionParticipants,
-		prng:                prng,
-		transcript:          transcript,
+		myAuthKey:  authKey,
+		protocol:   protocol,
+		shard:      shard,
+		sessionId:  sessionId,
+		Quorum:     quorum,
+		prng:       prng,
+		transcript: transcript,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
@@ -147,7 +147,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 	return cosigner, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, sessionParticipants ds.Set[types.IdentityKey]) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, quorum ds.Set[types.IdentityKey]) error {
 	if len(sessionId) == 0 {
 		return errs.NewLength("invalid session id: %s", sessionId)
 	}
@@ -160,16 +160,16 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if err := shard.Validate(protocol, authKey); err != nil {
 		return errs.WrapValidation(err, "could not validate shard")
 	}
-	if sessionParticipants == nil {
+	if quorum == nil {
 		return errs.NewIsNil("invalid number of session participants")
 	}
-	if sessionParticipants.Size() < int(protocol.Threshold()) {
-		return errs.NewSize("not enough session participants: %d", sessionParticipants.Size())
+	if quorum.Size() < int(protocol.Threshold()) {
+		return errs.NewSize("not enough session participants: %d", quorum.Size())
 	}
-	if sessionParticipants.Difference(protocol.Participants()).Size() != 0 {
+	if quorum.Difference(protocol.Participants()).Size() != 0 {
 		return errs.NewMembership("there are some present session participant that are not part of the protocol config")
 	}
-	if !sessionParticipants.Contains(authKey) {
+	if !quorum.Contains(authKey) {
 		return errs.NewMembership("session participants do not include me")
 	}
 	return nil

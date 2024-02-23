@@ -64,12 +64,12 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.Signature
 
 func doInteractiveSigning(t *testing.T, threshold int, identities []types.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite types.SignatureProtocol) {
 	t.Helper()
-	cohortConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
-	err = testutils.RunInteractiveSign(cohortConfig, signerIdentities, shards, message, seededPrng, nil)
+	err = testutils.RunInteractiveSign(protocolConfig, signerIdentities, shards, message, seededPrng, nil)
 	require.NoError(t, err)
 }
 

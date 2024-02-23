@@ -88,7 +88,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitmen
 	return a, s, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1], challengeBytes []byte) (*Response[Z0, Z1], error) {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1], challengeBytes sigma.ChallengeBytes) (*Response[Z0, Z1], error) {
 	var err error
 	z := new(Response[Z0, Z1])
 
@@ -102,7 +102,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 	return z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes []byte, response *Response[Z0, Z1]) error {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
 		return errs.WrapVerification(err, "verification failed")
 	}
@@ -113,7 +113,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes []byte) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
 	var err error
 	a := new(Commitment[A0, A1])
 	z := new(Response[Z0, Z1])

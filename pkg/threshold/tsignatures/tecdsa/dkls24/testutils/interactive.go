@@ -44,7 +44,7 @@ func MakeInteractiveCosigners(protocol types.ThresholdSignatureProtocol, identit
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewIdentifier("identity not in cohort")
+			return nil, errs.NewIdentifier("identity not in protocol config")
 		}
 		participants[i], err = interactiveSigning.NewCosigner(sids[i], identity.(types.AuthKey), hashset.NewHashableHashSet(identities...), shards[i], protocol, prng, seededPrng, nil)
 		if err != nil || participants[i] == nil {

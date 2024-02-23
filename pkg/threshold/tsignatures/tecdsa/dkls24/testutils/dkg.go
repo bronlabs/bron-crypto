@@ -41,7 +41,7 @@ func MakeDkgParticipants(curve curves.Curve, protocol types.ThresholdProtocol, i
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not in protocol config (problem in tests?)")
 		}
 
 		participants[i], err = dkg.NewParticipant(sid, identity.(types.AuthKey), signingKeyShares[i], partialPublicKeys[i], protocol, cn, prng, nil)

@@ -93,7 +93,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.Signatur
 // 	aliceIdx := 0
 // 	bobIdx := 1
 // 	tau := maxNumberOfPreSignatures
-// 	cohort, err := ttu.MakePreSignedThresholdSignatureProtocol(cipherSuite, identities, lindell17.Threshold, identities, identities[0])
+// 	protocolConfig, err := ttu.MakePreSignedThresholdSignatureProtocol(cipherSuite, identities, lindell17.Threshold, identities, identities[0])
 // 	require.NoError(t, err)
 // 	var sid []byte
 // 	fz.Fuzz(&sid)
@@ -105,7 +105,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.Signatur
 // 	}
 // 	fmt.Println("sid: ", sid, "preSignatureIndex: ", preSignatureIndex)
 // 	transcripts := ttu.MakeTranscripts("TEST", identities)
-// 	participants, err := noninteractive_testutils.MakePreGenParticipants(tau, identities, sid, cohort, transcripts)
+// 	participants, err := noninteractive_testutils.MakePreGenParticipants(tau, identities, sid, protocolConfig, transcripts)
 // 	if len(sid) == 0 {
 // 		if errs.IsArgument(err) {
 // 			t.Skip()
@@ -118,12 +118,12 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.Signatur
 
 // 	aliceShard, exists := shards.Get(identities[aliceIdx])
 // 	require.True(t, exists)
-// 	alice, err := noninteractive_signing.NewCosigner(sid, cohort, identities[aliceIdx].(types.AuthKey), aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], nil, crand.Reader)
+// 	alice, err := noninteractive_signing.NewCosigner(sid, protocolConfig, identities[aliceIdx].(types.AuthKey), aliceShard, batches[aliceIdx], preSignatureIndex, identities[bobIdx], nil, crand.Reader)
 // 	require.NoError(t, err)
 
 // 	bobShard, exists := shards.Get(identities[bobIdx])
 // 	require.True(t, exists)
-// 	bob, err := noninteractive_signing.NewCosigner(sid, cohort, identities[bobIdx].(types.AuthKey), bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], nil, crand.Reader)
+// 	bob, err := noninteractive_signing.NewCosigner(sid, protocolConfig, identities[bobIdx].(types.AuthKey), bobShard, batches[bobIdx], preSignatureIndex, identities[aliceIdx], nil, crand.Reader)
 // 	require.NoError(t, err)
 
 // 	partialSignature, err := alice.ProducePartialSignature(message)

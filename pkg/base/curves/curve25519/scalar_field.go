@@ -81,7 +81,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		panic("prng in nil")
 	}
-	var seed [32]byte
+	var seed [base.FieldBytes]byte
 	if _, err := io.ReadFull(prng, seed[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}

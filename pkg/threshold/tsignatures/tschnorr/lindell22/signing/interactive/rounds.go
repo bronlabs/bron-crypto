@@ -103,7 +103,7 @@ func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast
 	}
 
 	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
-	for identity := range p.sessionParticipants.Iter() {
+	for identity := range p.quorum.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -166,7 +166,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 
 	bigR := p.state.bigR
 	// step 3.1: For all other participants P_j in the quorum...
-	for identity := range p.sessionParticipants.Iter() {
+	for identity := range p.quorum.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -213,7 +213,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
-	przsSampleParticipant, err := sample.NewParticipant(p.sessionId, p.myAuthKey, przsSeeds, p.protocol, p.sessionParticipants, seededPrng)
+	przsSampleParticipant, err := sample.NewParticipant(p.sessionId, p.myAuthKey, przsSeeds, p.protocol, p.quorum, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
@@ -223,7 +223,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	}
 
 	// step 3.7.1: compute additive share d_i'
-	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.sessionParticipants, p.protocol)
+	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.quorum, p.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}

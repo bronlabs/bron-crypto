@@ -133,7 +133,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitmen
 	return a, s, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1, Z0, Z1], challengeBytes []byte) (*Response[Z0, Z1], error) {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1, Z0, Z1], challengeBytes sigma.ChallengeBytes) (*Response[Z0, Z1], error) {
 	if statement == nil || witness == nil || commitment == nil || state == nil {
 		return nil, errs.NewIsNil("statement/witness/commitment/statement is nil")
 	}
@@ -144,7 +144,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 	e := make([]byte, p.challengeBytesLength)
 	_, err := io.ReadFull(p.prng, e)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot generate challenge")
+		return nil, errs.WrapRandomSample(err, "cannot generate challenge")
 	}
 
 	z := new(Response[Z0, Z1])
@@ -178,7 +178,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 	return z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes []byte, response *Response[Z0, Z1]) error {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
 	if statement == nil || commitment == nil || response == nil {
 		return errs.NewIsNil("statement/commitment/response is nil")
 	}
@@ -205,7 +205,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes []byte) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
+func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
 	if statement == nil {
 		return nil, nil, errs.NewIsNil("statement")
 	}
@@ -219,7 +219,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement
 	z.E0 = make([]byte, p.challengeBytesLength)
 	_, err := io.ReadFull(p.prng, z.E0)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "prng failed")
+		return nil, nil, errs.WrapRandomSample(err, "prng failed")
 	}
 	z.E1 = make([]byte, p.challengeBytesLength)
 	subtle.XORBytes(z.E1, challengeBytes, z.E0)

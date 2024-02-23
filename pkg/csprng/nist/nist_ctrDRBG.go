@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -261,7 +260,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	for i := 0; i < tempBlocks; i++ {
 		// 9.1. IV = i || 0^(outlen - len(i)).
 		if i > 0 {
-			bitstring.Memset(ivNs[:aes.BlockSize], 0)
+			clear(ivNs[:aes.BlockSize])
 		}
 		binary.BigEndian.PutUint32(ivNs[:aes.BlockSize], uint32(i))
 		// 9.2. temp = temp || BCC (K, (IV || S)).
@@ -306,7 +305,7 @@ func BCC(aesCipher cipher.Block, data, outputBlock []byte) {
 	var dataBlock []byte
 	inputBlock := make([]byte, aes.BlockSize)
 	// 1. chaining_value = 0^outlen. Set the first chaining value to outlen zeros.
-	bitstring.Memset(outputBlock, 0) // chaining_value
+	clear(outputBlock) // chaining_value
 	// 2. n = len(data)/outlen.
 	n := len(data) / aes.BlockSize
 	// 4. For i = 1 to n do

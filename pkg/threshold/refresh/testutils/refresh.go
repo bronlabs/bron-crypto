@@ -29,7 +29,7 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not a participant (problem in tests?)")
 		}
 
 		participants[i], err = refresh.NewParticipant(uniqueSessionId, identity.(types.AuthKey), signingKeyShares[i], publicKeyShares[i], protocol, cn, nil, prng)

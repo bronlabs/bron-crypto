@@ -30,7 +30,7 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not a participant (problem in tests?)")
 		}
 
 		if lostPartyIndex == i {

@@ -25,7 +25,7 @@ func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader)
 
 	if protocol.Curve().Name() != subGroup.Name() {
 		return nil, errs.NewCurve(
-			"cohort's subgroup (%s) is not the same the generic type (%s)",
+			"protocol's subgroup (%s) is not the same the generic type (%s)",
 			protocol.Curve().Name(),
 			subGroup.Name(),
 		)

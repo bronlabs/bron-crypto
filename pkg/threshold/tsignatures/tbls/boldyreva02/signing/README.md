@@ -20,7 +20,7 @@ Unlike threshold ECDSA or Schnorr which can be made noninteractive by preprocess
 
 **Players**:
 - `n` players where at least `t` of them are present during the signing session.
-- At least one signature aggregator, who may or may not be in the cohort.
+- At least one signature aggregator, who may or may not be a player.
 
 **Parameters**:
 - Choice of curve is hardcoded to BLS 123-81.

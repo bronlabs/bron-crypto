@@ -7,7 +7,6 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -214,10 +213,10 @@ func (rROT *ReceiverRotOutput) ApplyCorrelation(tau []CorrelationMask) (z_B []Co
 				return nil, errs.WrapHashing(err, "bad hashing r_x_j to scalar for ROT -> COT")
 			}
 			r_x = r_x.Neg()
-			bit := rROT.Choices.Select(j)
+			bit := rROT.Choices.Select(j) != 0
 			// z_B_j = τ_j - ECS(r_x_j)  if x_j == 1
 			//       =     - ECS(r_x_j)  if x_j == 0
-			z_B[j][l] = ct.SelectScalar(bit, tau[j][l].Add(r_x), r_x)
+			z_B[j][l] = scalarField.Select(bit, r_x, tau[j][l].Add(r_x))
 		}
 	}
 	return z_B, nil

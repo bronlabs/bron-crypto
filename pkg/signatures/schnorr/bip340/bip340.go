@@ -85,7 +85,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 		aux = make([]byte, auxSizeBytes)
 		_, err := io.ReadFull(prng, aux)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot generate nonce")
+			return nil, errs.WrapRandomSample(err, "cannot generate nonce")
 		}
 	}
 	if len(aux) != auxSizeBytes {
@@ -100,7 +100,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
 	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, aux)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "hash failed")
+		return nil, errs.WrapHashing(err, "hash failed")
 	}
 	t := make([]byte, len(auxDigest))
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
@@ -109,7 +109,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
 	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.A), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "hash failed")
+		return nil, errs.WrapHashing(err, "hash failed")
 	}
 
 	// 7. Let k' = int(rand) mod n.
@@ -255,7 +255,7 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 func calcChallenge(bigR, bigP curves.Point, message []byte) (curves.Scalar, error) {
 	eBytes, err := hashing.Hash(bip340.NewBip340HashChallenge, encodePoint(bigR), encodePoint(bigP), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create challenge")
+		return nil, errs.WrapHashing(err, "cannot create challenge")
 	}
 	e, err := bigR.Curve().Scalar().SetBytes(eBytes)
 	if err != nil {

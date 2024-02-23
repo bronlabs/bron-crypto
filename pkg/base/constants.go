@@ -13,8 +13,6 @@ const ComputationalSecurityLog2 = 7
 const CollisionResistance = 2 * ComputationalSecurity
 const CollisionResistanceBytes = 2 * ComputationalSecurityBytes
 
-// TODO: use CollisionResistanceBytes for Digest sizes across the repo.
-
 // FieldBytes is the number of bytes needed to represent a FieldElement|Scalar in most fields of the `curves` package.
 const FieldBytes = 32
 

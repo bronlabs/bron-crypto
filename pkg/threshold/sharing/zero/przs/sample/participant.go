@@ -111,7 +111,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		}
 		salt, err := hashing.HashChain(base.RandomOracleHashFunction, p.sessionId)
 		if err != nil {
-			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)
+			return errs.WrapHashing(err, "could not seed PRNG for index %d", i)
 		}
 		prng, err := seededPrng.New(sharedSeed[:], salt)
 		if err != nil {

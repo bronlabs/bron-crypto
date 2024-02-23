@@ -36,8 +36,7 @@ func (m ComparableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldVa
 }
 
 func (m ComparableHashMap[K, V]) Clear() {
-	// TODO: use clear keyword in go 1.21
-	maps.Clear(m)
+	clear(m)
 }
 
 func (m ComparableHashMap[K, V]) Size() int {

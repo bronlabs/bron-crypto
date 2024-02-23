@@ -32,7 +32,7 @@ outer:
 		ei := make([]byte, length)
 		_, err := io.ReadFull(prng, ei[:tBytes])
 		if err != nil {
-			return nil, errs.NewFailed("cannot read from PRNG")
+			return nil, errs.NewRandomSample("cannot read from PRNG")
 		}
 
 		for _, e := range existing {

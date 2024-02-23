@@ -120,7 +120,7 @@ func GetHash(hashFunc func() hash.Hash, a, b []byte) ([32]byte, error) {
 	hasher.Write(append(a, b...))
 	hashed, err := hashing.Hash(hashFunc, a, b)
 	if err != nil {
-		return result, errs.WrapFailed(err, "could not hash")
+		return result, errs.WrapHashing(err, "could not hash")
 	}
 	copy(result[:], hashed)
 	return result, nil

@@ -31,7 +31,7 @@ func HashSalted(sessionId []byte, bufferIn, bufferOut [][]byte) (err error) {
 		for l := 0; l < LOTe; l++ {
 			digest, err := hashing.Hash(base.RandomOracleHashFunction, dst, sessionId, idx, bufferIn[j*LOTe+l])
 			if err != nil {
-				return errs.WrapFailed(err, "writing into HashSalted")
+				return errs.WrapHashing(err, "writing into HashSalted")
 			}
 			copy(bufferOut[j][l*ot.KappaBytes:(l+1)*ot.KappaBytes], digest)
 		}

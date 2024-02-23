@@ -11,13 +11,13 @@ import (
 )
 
 type Aggregator struct {
-	Protocol            types.ThresholdSignatureProtocol
-	PublicKey           curves.Point
-	MyAuthKey           types.AuthKey
-	SessionParticipants ds.Set[types.IdentityKey]
-	SharingConfig       types.SharingConfig
-	PublicKeyShares     *frost.PublicKeyShares
-	Message             []byte
+	Protocol        types.ThresholdSignatureProtocol
+	PublicKey       curves.Point
+	MyAuthKey       types.AuthKey
+	Quorum          ds.Set[types.IdentityKey]
+	SharingConfig   types.SharingConfig
+	PublicKeyShares *frost.PublicKeyShares
+	Message         []byte
 
 	parameters *SignatureAggregatorParameters
 
@@ -56,25 +56,25 @@ func (s *SignatureAggregatorParameters) Validate(protocol types.ThresholdSignatu
 	return nil
 }
 
-func NewSignatureAggregator(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) (*Aggregator, error) {
-	if err := validateInputs(authKey, protocol, publicKey, publicKeyShares, sessionParticipants, message, parameters); err != nil {
+func NewSignatureAggregator(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, quorum ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) (*Aggregator, error) {
+	if err := validateInputs(authKey, protocol, publicKey, publicKeyShares, quorum, message, parameters); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	aggregator := &Aggregator{
-		Protocol:            protocol,
-		PublicKey:           publicKey,
-		PublicKeyShares:     publicKeyShares,
-		MyAuthKey:           authKey,
-		SessionParticipants: sessionParticipants,
-		SharingConfig:       sharingConfig,
-		Message:             message,
-		parameters:          parameters,
+		Protocol:        protocol,
+		PublicKey:       publicKey,
+		PublicKeyShares: publicKeyShares,
+		MyAuthKey:       authKey,
+		Quorum:          quorum,
+		SharingConfig:   sharingConfig,
+		Message:         message,
+		parameters:      parameters,
 	}
 	return aggregator, nil
 }
 
-func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) error {
+func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, quorum ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
@@ -90,10 +90,10 @@ func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProt
 	if err := publicKeyShares.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "public key shares")
 	}
-	if sessionParticipants == nil {
+	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if !sessionParticipants.IsSubSet(protocol.Participants()) {
+	if !quorum.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("session participant is not a subset of total")
 	}
 	if len(message) == 0 {

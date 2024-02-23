@@ -97,7 +97,7 @@ func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol ty
 		return errs.WrapValidation(err, "identity key")
 	}
 	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "cohort config is invalid")
+		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if len(sessionId) == 0 {
 		return errs.NewArgument("unique session id is empty")

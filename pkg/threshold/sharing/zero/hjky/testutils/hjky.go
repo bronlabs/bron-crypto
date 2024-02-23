@@ -29,7 +29,7 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 		}
 
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not in protocol config (problem in tests?)")
 		}
 
 		participants[i], err = hjky.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, cn, nil, prng)

@@ -11,7 +11,7 @@ import (
 )
 
 func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *frost.PartialSignature]) (*schnorr.Signature, error) {
-	R, R_js, _, err := helpers.ComputeR(a.Protocol, a.SharingConfig, a.SessionParticipants, a.parameters.D_alpha, a.parameters.E_alpha, a.Message)
+	R, R_js, _, err := helpers.ComputeR(a.Protocol, a.SharingConfig, a.Quorum, a.parameters.D_alpha, a.parameters.E_alpha, a.Message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute R")
 	}
@@ -21,9 +21,9 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		return nil, errs.WrapFailed(err, "could not initialise shamir config")
 	}
 
-	sharingIds := make([]uint, a.SessionParticipants.Size())
+	sharingIds := make([]uint, a.Quorum.Size())
 	i := 0
-	for identityKey := range a.SessionParticipants.Iter() {
+	for identityKey := range a.Quorum.Iter() {
 		sharingId, exists := a.SharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharign id of %x", identityKey.PublicKey())
@@ -42,7 +42,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		return nil, errs.WrapSerialisation(err, "converting hash to c failed")
 	}
 
-	for jIdentityKey := range a.SessionParticipants.Iter() {
+	for jIdentityKey := range a.Quorum.Iter() {
 		j, exists := a.SharingConfig.Reverse().Get(jIdentityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)

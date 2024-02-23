@@ -161,8 +161,8 @@ func (h *TmmoHash) Reset() {
 		panic("failed to create block cipher") // panic because Reset doesn't return error
 	}
 	h.keyedBlockCipher = blockCipher
-	bitstring.Memset(h.digest, byte(0))
-	bitstring.Memset(h.permutedOnceBlock, byte(0))
+	clear(h.digest)
+	clear(h.permutedOnceBlock)
 }
 
 // Sum appends current hash digest to b after a finalisation. It does not change

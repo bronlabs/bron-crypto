@@ -22,7 +22,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	for pair := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
 		if !exists {
-			return nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
+			return nil, errs.NewMembership("participant %x is not in protocol config", pair.Key.PublicKey())
 		}
 		sharingIds[i] = uint(sharingId)
 		i++
@@ -94,7 +94,7 @@ func validateAggregatorInputs(publicKeyShares *glow.PublicKeyShares, protocol ty
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if protocol.CipherSuite().Curve().Name() != new(glow.KeySubGroup).Name() {
-		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
+		return errs.NewArgument("protocol config curve mismatch with the declared subgroup")
 	}
 	if err := publicKeyShares.Validate(protocol); err != nil {
 		return errs.WrapArgument(err, "could not validate public key shares")

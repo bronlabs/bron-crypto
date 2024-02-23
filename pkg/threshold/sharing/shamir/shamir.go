@@ -18,9 +18,8 @@ type Share struct {
 	_ ds.Incomparable
 }
 
-// TODO: pointer receiver
 // TODO: add transform from t-n1 to t-n2
-func (ss Share) Validate(curve curves.Curve) error {
+func (ss *Share) Validate(curve curves.Curve) error {
 	if ss.Id == 0 {
 		return errs.NewIdentifier("invalid identifier - id is zero")
 	}
@@ -35,7 +34,7 @@ func (ss Share) Validate(curve curves.Curve) error {
 	return nil
 }
 
-func (ss Share) LagrangeCoefficient(identities []uint) (curves.Scalar, error) {
+func (ss *Share) LagrangeCoefficient(identities []uint) (curves.Scalar, error) {
 	curve := ss.Value.ScalarField().Curve()
 	coefficients, err := LagrangeCoefficients(curve, identities)
 	if err != nil {
@@ -44,7 +43,7 @@ func (ss Share) LagrangeCoefficient(identities []uint) (curves.Scalar, error) {
 	return coefficients[ss.Id], nil
 }
 
-func (ss Share) ToAdditive(identities []uint) (curves.Scalar, error) {
+func (ss *Share) ToAdditive(identities []uint) (curves.Scalar, error) {
 	lambda, err := ss.LagrangeCoefficient(identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my lagrange coefficient")

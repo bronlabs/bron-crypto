@@ -25,7 +25,7 @@ func MakeParticipants[F schnorr.Variant[F]](sid []byte, protocol types.Threshold
 	participants = make([]*interactive_signing.Cosigner[F], protocol.Threshold())
 	for i, identity := range identities {
 		if !protocol.Participants().Contains(identity) {
-			return nil, errs.NewMissing("cohort is missing identity")
+			return nil, errs.NewMissing("protocol config is missing identity")
 		}
 		thisShard, exists := shards.Get(identity)
 		if !exists {

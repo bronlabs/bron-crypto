@@ -43,7 +43,7 @@ func (s ComparableHashSet[E]) Remove(e E) {
 }
 
 func (s ComparableHashSet[E]) Clear() {
-	maps.Clear(s)
+	clear(s)
 }
 
 func (s ComparableHashSet[E]) Equal(other ds.Set[E]) bool {

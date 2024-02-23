@@ -50,7 +50,7 @@ func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, er
 
 	_, err := io.ReadFull(prng, witness)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "reading random bytes")
+		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
 
 	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
@@ -58,7 +58,7 @@ func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, er
 	for _, message := range messages {
 		commitment, err = hashing.Hash(hmacHash, commitment, message)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "computing commitment hash")
+			return nil, nil, errs.WrapHashing(err, "computing commitment hash")
 		}
 	}
 	return commitment, witness, nil
@@ -79,7 +79,7 @@ func openInternal(commitment Commitment, witness Witness, message ...[]byte) err
 		var err error
 		recomputedCommitment, err = hashing.Hash(hmacHash, recomputedCommitment, m)
 		if err != nil {
-			return errs.WrapFailed(err, "recomputing commitment hash")
+			return errs.WrapHashing(err, "recomputing commitment hash")
 		}
 	}
 

@@ -26,7 +26,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 	}
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct cohort protocol")
+		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct protocol config")
 	}
 
 	private, public, err := gennaroTestutils.RunDKG(sid, protocol, identities)

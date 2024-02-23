@@ -57,7 +57,7 @@ func (ic *Cosigner) Round2(round1output types.RoundMessages[*Round1Broadcast], m
 	partialSignature, err := helpers.ProducePartialSignature(
 		ic,
 		ic.protocol,
-		ic.sessionParticipants,
+		ic.quorum,
 		ic.shard.SigningKeyShare,
 		ic.state.d_i, ic.state.e_i,
 		D_alpha, E_alpha,
@@ -79,7 +79,7 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures types.RoundMessa
 	if ic.round != 3 {
 		return nil, errs.NewRound("round mismatch %d != 3", ic.round)
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.myAuthKey, ic.protocol, ic.shard.SigningKeyShare.PublicKey, ic.shard.PublicKeyShares, ic.sessionParticipants, message, ic.state.aggregation)
+	aggregator, err := aggregation.NewSignatureAggregator(ic.myAuthKey, ic.protocol, ic.shard.SigningKeyShare.PublicKey, ic.shard.PublicKeyShares, ic.quorum, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
@@ -99,7 +99,7 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output types.RoundMessage
 	D_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	E_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
-	for senderIdentityKey := range ic.sessionParticipants.Iter() {
+	for senderIdentityKey := range ic.quorum.Iter() {
 		sharingId, exists := ic.sharingConfig.Reverse().Get(senderIdentityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sender sharing id")

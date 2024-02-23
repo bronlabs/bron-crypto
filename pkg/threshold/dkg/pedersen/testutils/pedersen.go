@@ -27,7 +27,7 @@ func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, id
 		}
 
 		if !config.Participants().Contains(identity) {
-			return nil, errs.NewMissing("given test identity not in cohort (problem in tests?)")
+			return nil, errs.NewMissing("given test identity not a participant (problem in tests?)")
 		}
 
 		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(types.AuthKey), config, randomisedFischlin.Name, nil, prng)

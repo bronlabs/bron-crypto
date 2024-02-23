@@ -43,15 +43,15 @@ type Cosigner[F schnorr.Variant[F]] struct {
 	mySharingId       types.SharingID
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
-	variant             schnorr.Variant[F]
-	protocol            types.ThresholdSignatureProtocol
-	sessionParticipants ds.Set[types.IdentityKey]
-	sharingConfig       types.SharingConfig
-	sessionId           []byte
-	round               int
-	transcript          transcripts.Transcript
-	nic                 compiler.Name
-	prng                io.Reader
+	variant       schnorr.Variant[F]
+	protocol      types.ThresholdSignatureProtocol
+	quorum        ds.Set[types.IdentityKey]
+	sharingConfig types.SharingConfig
+	sessionId     []byte
+	round         int
+	transcript    transcripts.Transcript
+	nic           compiler.Name
+	prng          io.Reader
 
 	state *state
 
@@ -68,8 +68,8 @@ func (p *Cosigner[F]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, variant schnorr.Variant[F], prng io.Reader) (p *Cosigner[F], err error) {
-	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
+func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte, quorum ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, variant schnorr.Variant[F], prng io.Reader) (p *Cosigner[F], err error) {
+	if err := validateInputs(sessionId, myAuthKey, quorum, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
@@ -80,14 +80,14 @@ func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte
 	}
 
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
-	bigS := signing.BigS(sessionParticipants)
+	bigS := signing.BigS(quorum)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my sharign id")
 	}
 
-	przsProtocol, err := types.NewMPCProtocol(protocol.Curve(), sessionParticipants)
+	przsProtocol, err := types.NewMPCProtocol(protocol.Curve(), quorum)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't configure przs")
 	}
@@ -97,19 +97,19 @@ func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte
 	}
 
 	cosigner := &Cosigner[F]{
-		przsParticipant:     przsParticipant,
-		myAuthKey:           myAuthKey,
-		mySharingId:         mySharingId,
-		mySigningKeyShare:   myShard.SigningKeyShare,
-		sharingConfig:       sharingConfig,
-		protocol:            protocol,
-		sessionId:           sessionId,
-		transcript:          transcript,
-		sessionParticipants: sessionParticipants,
-		variant:             variant,
-		round:               1,
-		prng:                prng,
-		nic:                 niCompiler,
+		przsParticipant:   przsParticipant,
+		myAuthKey:         myAuthKey,
+		mySharingId:       mySharingId,
+		mySigningKeyShare: myShard.SigningKeyShare,
+		sharingConfig:     sharingConfig,
+		protocol:          protocol,
+		sessionId:         sessionId,
+		transcript:        transcript,
+		quorum:            quorum,
+		variant:           variant,
+		round:             1,
+		prng:              prng,
+		nic:               niCompiler,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,
@@ -122,7 +122,7 @@ func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte
 	return cosigner, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}
@@ -135,13 +135,13 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, sessionParticipants
 	if err := shard.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "shard")
 	}
-	if sessionParticipants == nil {
+	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if sessionParticipants.Size() < int(protocol.Threshold()) {
+	if quorum.Size() < int(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants")
 	}
-	if !sessionParticipants.IsSubSet(protocol.Participants()) {
+	if !quorum.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("session participant is not a subset of the protocol")
 	}
 	if !compilerUtils.CompilerIsSupported(nic) {

@@ -72,13 +72,13 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 	return ppm
 }
 
-func MakeNonInteractiveCosigners(t *testing.T, protocol types.ThresholdSignatureProtocol, sessionParticipants []types.IdentityKey, shards []*dkls24.Shard, preSignatures []*dkls24.PreProcessingMaterial) []*noninteractiveSigning.Cosigner {
+func MakeNonInteractiveCosigners(t *testing.T, protocol types.ThresholdSignatureProtocol, quorum []types.IdentityKey, shards []*dkls24.Shard, preSignatures []*dkls24.PreProcessingMaterial) []*noninteractiveSigning.Cosigner {
 	t.Helper()
 	var err error
 
-	cosigners := make([]*noninteractiveSigning.Cosigner, len(sessionParticipants))
-	for i := range sessionParticipants {
-		cosigners[i], err = noninteractiveSigning.NewCosigner(sessionParticipants[i].(types.AuthKey), shards[i], protocol, preSignatures[i])
+	cosigners := make([]*noninteractiveSigning.Cosigner, len(quorum))
+	for i := range quorum {
+		cosigners[i], err = noninteractiveSigning.NewCosigner(quorum[i].(types.AuthKey), shards[i], protocol, preSignatures[i])
 		require.NoError(t, err)
 	}
 

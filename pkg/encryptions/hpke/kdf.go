@@ -67,7 +67,7 @@ func (s *KDFScheme) ID() KDFID {
 func (s *KDFScheme) Hash(messages ...[]byte) ([]byte, error) {
 	digest, err := hashing.Hash(s.hash.New, messages...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not hash via %s", s.hash.String())
+		return nil, errs.WrapHashing(err, "could not hash via %s", s.hash.String())
 	}
 	return digest, nil
 }

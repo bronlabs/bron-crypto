@@ -152,7 +152,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		}
 		finalSeedBytes, err := hashing.HashChain(commitments.CommitmentHashFunction, orderedAppendedSeeds)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", participantIndex)
+			return nil, errs.WrapHashing(err, "could not produce final seed for participant with sharing id %d", participantIndex)
 		}
 		finalSeed := przs.Seed{}
 		copy(finalSeed[:], finalSeedBytes)

@@ -72,11 +72,11 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 func MessageToScalar(cipherSuite types.SignatureProtocol, message []byte) (curves.Scalar, error) {
 	messageHash, err := hashing.Hash(cipherSuite.Hash(), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot hash message")
+		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
 	mPrimeInt, err := ecdsa.HashToInt(messageHash, cipherSuite.Curve())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create int from hash")
+		return nil, errs.WrapHashing(err, "cannot create int from hash")
 	}
 	mPrime := cipherSuite.Curve().Scalar().SetNat(mPrimeInt)
 

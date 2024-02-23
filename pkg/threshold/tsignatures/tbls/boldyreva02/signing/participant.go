@@ -41,8 +41,8 @@ func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.Set[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
-	if err := validateInputs[K, S](sessionId, authKey, sessionParticipants, myShard, protocol); err != nil {
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, quorum ds.Set[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+	if err := validateInputs[K, S](sessionId, authKey, quorum, myShard, protocol); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
 
@@ -87,7 +87,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	return participant, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
 	if bls.SameSubGroup[K, S]() {
 		return errs.NewType("key subgroup and signature subgroup can't be the same")
 	}
@@ -101,18 +101,18 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if protocol.Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {
-		return errs.NewArgument("cohort config curve mismatch with the declared subgroup")
+		return errs.NewArgument("protocol config curve mismatch with the declared subgroup")
 	}
 	if err := shard.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "shard")
 	}
-	if sessionParticipants == nil {
+	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if sessionParticipants.Size() < int(protocol.Threshold()) {
+	if quorum.Size() < int(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants")
 	}
-	if !sessionParticipants.IsSubSet(protocol.Participants()) {
+	if !quorum.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("session participant is not a subset of the protocol")
 	}
 	return nil
