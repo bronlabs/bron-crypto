@@ -1,9 +1,9 @@
 package noninteractive_signing
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -84,7 +84,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	przsSid := bytes.Join([][]byte{sessionId, []byte("przs")}, nil)
+	przsSid := slices.Concat(sessionId, []byte("przs"))
 	przsParticipant, err := setup.NewParticipant(przsSid, myAuthKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")

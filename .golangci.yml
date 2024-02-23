@@ -353,18 +353,18 @@ linters-settings:
       # Default: "0600"
       G306: "0600"
   gosimple:
-    go: "1.20"
+    go: "1.22"
     # https://staticcheck.io/docs/configuration/options/#checks
     checks: ["all"]
   predeclared:
     # include method names and field names (i.e., qualified names) in checks
     q: true
   staticcheck:
-    go: "1.20"
+    go: "1.22"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
   unused:
-    go: "1.20"
+    go: "1.22"
   # testpackage:
   #   # regexp pattern to skip files
   #   # We're skipping securechannel tests - and keep them as internal tests
@@ -713,7 +713,7 @@ linters-settings:
         # Detects suspicious/confusing re-assignments
         - sloppyReassign
         # Detects unsupported test and benchmark funcs
-        - sloppyTestFuncName
+#        - sloppyTestFuncName
         # Detects redundant type assertions
         - sloppyTypeAssert
         # Detects suspicious sort.Slice calls
@@ -803,7 +803,7 @@ linters-settings:
         # Detects switch-over-bool statements that use explicit true tag value
         - switchTrue
         # Detects Before/After call of time.Time that can be simplified
-        - timeCmpSimplify
+#        - timeCmpSimplify
         # Detects manual conversion to milli- or microseconds
         - timeExprSimplify
         # # Detects TODO comments without detail/assignee

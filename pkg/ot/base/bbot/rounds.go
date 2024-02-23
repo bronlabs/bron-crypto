@@ -1,7 +1,7 @@
 package bbot
 
 import (
-	"bytes"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -87,7 +87,7 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 			phi[i][1-c_i][l] = R.Curve.ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
-			hashInput := bytes.Join([][]byte{phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i]}, nil)
+			hashInput := slices.Concat(phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i])
 			sc, err = R.Curve.ScalarField().Hash(hashInput)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing phi[%d][%d]", i, 1-c_i)
@@ -124,7 +124,7 @@ func (S *Sender) Round3(phi Round2P2P) (err error) {
 		for l := 0; l < S.L; l++ {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
-				hashInput := bytes.Join([][]byte{phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j]}, nil)
+				hashInput := slices.Concat(phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j])
 				sc, err := S.Curve.ScalarField().Hash(hashInput)
 				if err != nil {
 					return errs.WrapHashing(err, "hashing for phi[%d][%d]", i, j)

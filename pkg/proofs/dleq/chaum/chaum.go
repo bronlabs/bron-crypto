@@ -1,9 +1,9 @@
 package chaum
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"io"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -162,11 +162,11 @@ func (c *protocol) ValidateStatement(statement *Statement, witness Witness) erro
 }
 
 func (*protocol) SerializeStatement(statement *Statement) []byte {
-	return bytes.Join([][]byte{statement.X1.ToAffineCompressed(), statement.X2.ToAffineCompressed()}, nil)
+	return slices.Concat(statement.X1.ToAffineCompressed(), statement.X2.ToAffineCompressed())
 }
 
 func (*protocol) SerializeCommitment(commitment *Commitment) []byte {
-	return bytes.Join([][]byte{commitment.A1.ToAffineCompressed(), commitment.A2.ToAffineCompressed()}, nil)
+	return slices.Concat(commitment.A1.ToAffineCompressed(), commitment.A2.ToAffineCompressed())
 }
 
 func (*protocol) SerializeResponse(response Response) []byte {

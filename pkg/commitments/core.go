@@ -1,11 +1,11 @@
 package commitments
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/subtle"
 	"hash"
 	"io"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -23,7 +23,7 @@ func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witne
 
 	msgs := make([][]byte, 0)
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
 	}
 
 	return commitInternal(prng, msgs...)
@@ -32,7 +32,7 @@ func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witne
 func OpenWithoutSession(commitment Commitment, witness Witness, messages ...[]byte) error {
 	msgs := make([][]byte, 0)
 	for i, m := range messages {
-		msgs = append(msgs, bytes.Join([][]byte{bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m}, nil))
+		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
 	}
 
 	return openInternal(commitment, witness, msgs...)

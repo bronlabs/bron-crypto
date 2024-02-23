@@ -122,7 +122,7 @@ func (sf *ScalarField[_]) Select(choice bool, x0, x1 curves.Scalar) curves.Scala
 	if !ok0 || !ok1 || oks {
 		panic("Not a BLS12381 scalar")
 	}
-	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice))
+	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice)) //nolint:govet
 	return s
 }
 

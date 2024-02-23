@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
-const Name sigma.Name = "ZKPOK_BATCH_DLOG_SCHNORR" //nolint:gosec // false positive.
+const Name sigma.Name = "ZKPOK_BATCH_DLOG_SCHNORR"
 
 type Statement []curves.Point
 

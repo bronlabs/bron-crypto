@@ -1,10 +1,10 @@
 package hpke
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/hmac"
 	"encoding/binary"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -108,9 +108,9 @@ func (s *KDFScheme) Nh() int {
 
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-10
 func (s *KDFScheme) labeledExtract(suiteId, salt, label, ikm []byte) []byte {
-	labeledIkm := bytes.Join([][]byte{
+	labeledIkm := slices.Concat(
 		[]byte(version), suiteId, label, ikm,
-	}, nil)
+	)
 	return s.Extract(salt, labeledIkm)
 }
 
@@ -121,8 +121,8 @@ func (s *KDFScheme) labeledExpand(suiteId, prk, label, info []byte, L int) []byt
 	}
 	lengthBuffer := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthBuffer, uint16(L))
-	labeledInfo := bytes.Join([][]byte{
+	labeledInfo := slices.Concat(
 		lengthBuffer, []byte(version), suiteId, label, info,
-	}, nil)
+	)
 	return s.Expand(prk, labeledInfo, L)
 }

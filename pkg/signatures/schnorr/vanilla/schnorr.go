@@ -1,11 +1,11 @@
 package schnorr
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"crypto/sha512"
 	"io"
 	"reflect"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -37,10 +37,10 @@ type Signature struct {
 }
 
 func (s *Signature) MarshalBinary() ([]byte, error) {
-	serializedSignature := bytes.Join([][]byte{
+	serializedSignature := slices.Concat(
 		s.R.ToAffineCompressed(),
 		bitstring.ReverseBytes(s.S.Bytes()),
-	}, nil)
+	)
 	return serializedSignature, nil
 }
 

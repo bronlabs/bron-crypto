@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"hash"
+	"slices"
 	"sort"
 	"strings"
 
@@ -63,7 +64,7 @@ func (k *TestAuthKey) Sign(message []byte) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
+	return slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 }
 
 func (k *TestAuthKey) Verify(signature, message []byte) error {

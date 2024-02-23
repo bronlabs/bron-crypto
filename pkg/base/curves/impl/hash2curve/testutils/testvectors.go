@@ -119,12 +119,22 @@ func NewHash2CurveTestVector(curve curves.Curve) *TestVector {
 	}
 }
 
+const (
+	emptyMsg = ""
+	abcMsg   = "abc"
+	abc16Msg = "abcdef0123456789"
+	q128Msg  = "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
+		"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
+		"qqqqq"
+	a512Msg = "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+)
+
 // RFC 9380 Appendix J.1.1. P256_XMD:SHA-256_SSWU_RO_
 var p256TestVector = &TestVector{
 	SuiteName: "P256_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-P256_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
-		Msg: "",
+		Msg: emptyMsg,
 		Px:  "2c15230b26dbc6fc9a37051158c95b79656e17a1a920b11394ca91c44247d3e4",
 		Py:  "8a7a74985cc5c776cdfe4b1f19884970453912e9d31528c060be9ab5c43e8415",
 		U0:  "ad5342c66a6dd0ff080df1da0ea1c04b96e0330dd89406465eeba11582515009",
@@ -134,7 +144,7 @@ var p256TestVector = &TestVector{
 		Q1x: "51cce63c50d972a6e51c61334f0f4875c9ac1cd2d3238412f84e31da7d980ef5",
 		Q1y: "b45d1a36d00ad90e5ec7840a60a4de411917fbe7c82c3949a6e699e5a1b66aac",
 	}, {
-		Msg: "abc",
+		Msg: abcMsg,
 		Px:  "0bb8b87485551aa43ed54f009230450b492fead5f1cc91658775dac4a3388a0f",
 		Py:  "5c41b3d0731a27a7b14bc0bf0ccded2d8751f83493404c84a88e71ffd424212e",
 		U0:  "afe47f2ea2b10465cc26ac403194dfb68b7f5ee865cda61e9f3e07a537220af1",
@@ -144,7 +154,7 @@ var p256TestVector = &TestVector{
 		Q1x: "019b7cb4efcfeaf39f738fe638e31d375ad6837f58a852d032ff60c69ee3875f",
 		Q1y: "589a62d2b22357fed5449bc38065b760095ebe6aeac84b01156ee4252715446e",
 	}, {
-		Msg: "abcdef0123456789",
+		Msg: abc16Msg,
 		Px:  "65038ac8f2b1def042a5df0b33b1f4eca6bff7cb0f9c6c1526811864e544ed80",
 		Py:  "cad44d40a656e7aff4002a8de287abc8ae0482b5ae825822bb870d6df9b56ca3",
 		U0:  "0fad9d125a9477d55cf9357105b0eb3a5c4259809bf87180aa01d651f53d312c",
@@ -154,9 +164,7 @@ var p256TestVector = &TestVector{
 		Q1x: "7da48bb67225c1a17d452c983798113f47e438e4202219dd0715f8419b274d66",
 		Q1y: "b765696b2913e36db3016c47edb99e24b1da30e761a8a3215dc0ec4d8f96e6f9",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqq",
+		Msg: q128Msg,
 		Px:  "4be61ee205094282ba8a2042bcb48d88dfbb609301c49aa8b078533dc65a0b5d",
 		Py:  "98f8df449a072c4721d241a3b1236d3caccba603f916ca680f4539d2bfb3c29e",
 		U0:  "3bbc30446f39a7befad080f4d5f32ed116b9534626993d2cc5033f6f8d805919",
@@ -166,15 +174,7 @@ var p256TestVector = &TestVector{
 		Q1x: "418ac3d85a5ccc4ea8dec14f750a3a9ec8b85176c95a7022f391826794eb5a75",
 		Q1y: "fd6604f69e9d9d2b74b072d14ea13050db72c932815523305cb9e807cc900aff",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaa",
+		Msg: a512Msg,
 		Px:  "457ae2981f70ca85d8e24c308b14db22f3e3862c5ea0f652ca38b5e49cd64bc5",
 		Py:  "ecb9f0eadc9aeed232dabc53235368c1394c78de05dd96893eefa62b0f4757dc",
 		U0:  "4ebc95a6e839b1ae3c63b847798e85cb3c12d3817ec6ebc10af6ee51adb29fec",
@@ -191,7 +191,7 @@ var curve25519TestVector = &TestVector{
 	SuiteName: "curve25519_XMD:SHA-512_ELL2_RO_",
 	Dst:       "QUUX-V01-CS02-with-curve25519_XMD:SHA-512_ELL2_RO_",
 	TestCases: []TestCase{{
-		Msg: "",
+		Msg: emptyMsg,
 		Px:  "2de3780abb67e861289f5749d16d3e217ffa722192d16bbd9d1bfb9d112b98c0",
 		Py:  "3b5dc2a498941a1033d176567d457845637554a2fe7a3507d21abd1c1bd6e878",
 		U0:  "005fe8a7b8fef0a16c105e6cadf5a6740b3365e18692a9c05bfbb4d97f645a6a",
@@ -201,7 +201,7 @@ var curve25519TestVector = &TestVector{
 		Q1x: "3fa114783a505c0b2b2fbeef0102853c0b494e7757f2a089d0daae7ed9a0db2b",
 		Q1y: "76c0fe7fec932aaafb8eefb42d9cbb32eb931158f469ff3050af15cfdbbeff94",
 	}, {
-		Msg: "abc",
+		Msg: abcMsg,
 		Px:  "2b4419f1f2d48f5872de692b0aca72cc7b0a60915dd70bde432e826b6abc526d",
 		Py:  "1b8235f255a268f0a6fa8763e97eb3d22d149343d495da1160eff9703f2d07dd",
 		U0:  "49bed021c7a3748f09fa8cdfcac044089f7829d3531066ac9e74e0994e05bc7d",
@@ -211,7 +211,7 @@ var curve25519TestVector = &TestVector{
 		Q1x: "7ec29ddbf34539c40adfa98fcb39ec36368f47f30e8f888cc7e86f4d46e0c264",
 		Q1y: "10d1abc1cae2d34c06e247f2141ba897657fb39f1080d54f09ce0af128067c74",
 	}, {
-		Msg: "abcdef0123456789",
+		Msg: abc16Msg,
 		Px:  "68ca1ea5a6acf4e9956daa101709b1eee6c1bb0df1de3b90d4602382a104c036",
 		Py:  "2a375b656207123d10766e68b938b1812a4a6625ff83cb8d5e86f58a4be08353",
 		U0:  "6412b7485ba26d3d1b6c290a8e1435b2959f03721874939b21782df17323d160",
@@ -221,9 +221,7 @@ var curve25519TestVector = &TestVector{
 		Q1x: "5704069021f61e41779e2ba6b932268316d6d2a6f064f997a22fef16d1eaeaca",
 		Q1y: "50483c7540f64fb4497619c050f2c7fe55454ec0f0e79870bb44302e34232210",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqq",
+		Msg: q128Msg,
 		Px:  "096e9c8bae6c06b554c1ee69383bb0e82267e064236b3a30608d4ed20b73ac5a",
 		Py:  "1eb5a62612cafb32b16c3329794645b5b948d9f8ffe501d4e26b073fef6de355",
 		U0:  "5e123990f11bbb5586613ffabdb58d47f64bb5f2fa115f8ea8df0188e0c9e1b5",
@@ -233,15 +231,7 @@ var curve25519TestVector = &TestVector{
 		Q1x: "30506fb7a32136694abd61b6113770270debe593027a968a01f271e146e60c18",
 		Q1y: "7eeee0e706b40c6b5174e551426a67f975ad5a977ee2f01e8e20a6d612458c3b",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaa",
+		Msg: a512Msg,
 		Px:  "1bc61845a138e912f047b5e70ba9606ba2a447a4dade024c8ef3dd42b7bbc5fe",
 		Py:  "623d05e47b70e25f7f1d51dda6d7c23c9a18ce015fe3548df596ea9e38c69bf1",
 		U0:  "20f481e85da7a3bf60ac0fb11ed1d0558fc6f941b3ac5469aa8b56ec883d6d7d",
@@ -258,7 +248,7 @@ var edwards25519TestVector = &TestVector{
 	SuiteName: "edwards25519_XMD:SHA-512_ELL2_RO_",
 	Dst:       "QUUX-V01-CS02-with-edwards25519_XMD:SHA-512_ELL2_RO_",
 	TestCases: []TestCase{{
-		Msg: "",
+		Msg: emptyMsg,
 		Px:  "3c3da6925a3c3c268448dcabb47ccde5439559d9599646a8260e47b1e4822fc6",
 		Py:  "09a6c8561a0b22bef63124c588ce4c62ea83a3c899763af26d795302e115dc21",
 		U0:  "03fef4813c8cb5f98c6eef88fae174e6e7d5380de2b007799ac7ee712d203f3a",
@@ -268,7 +258,7 @@ var edwards25519TestVector = &TestVector{
 		Q1x: "31dcfc5c58aa1bee6e760bf78cbe71c2bead8cebb2e397ece0f37a3da19c9ed2",
 		Q1y: "7876d81474828d8a5928b50c82420b2bd0898d819e9550c5c82c39fc9bafa196",
 	}, {
-		Msg: "abc",
+		Msg: abcMsg,
 		Px:  "608040b42285cc0d72cbb3985c6b04c935370c7361f4b7fbdb1ae7f8c1a8ecad",
 		Py:  "1a8395b88338f22e435bbd301183e7f20a5f9de643f11882fb237f88268a5531",
 		U0:  "5081955c4141e4e7d02ec0e36becffaa1934df4d7a270f70679c78f9bd57c227",
@@ -278,7 +268,7 @@ var edwards25519TestVector = &TestVector{
 		Q1x: "37b03bba828860c6b459ddad476c83e0f9285787a269df2156219b7e5c86210c",
 		Q1y: "285ebf5412f84d0ad7bb4e136729a9ffd2195d5b8e73c0dc85110ce06958f432",
 	}, {
-		Msg: "abcdef0123456789",
+		Msg: abc16Msg,
 		Px:  "6d7fabf47a2dc03fe7d47f7dddd21082c5fb8f86743cd020f3fb147d57161472",
 		Py:  "53060a3d140e7fbcda641ed3cf42c88a75411e648a1add71217f70ea8ec561a6",
 		U0:  "285ebaa3be701b79871bcb6e225ecc9b0b32dff2d60424b4c50642636a78d5b3",
@@ -288,9 +278,7 @@ var edwards25519TestVector = &TestVector{
 		Q1x: "0757e7e904f5e86d2d2f4acf7e01c63827fde2d363985aa7432106f1b3a444ec",
 		Q1y: "50026c96930a24961e9d86aa91ea1465398ff8e42015e2ec1fa397d416f6a1c0",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqq",
+		Msg: q128Msg,
 		Px:  "5fb0b92acedd16f3bcb0ef83f5c7b7a9466b5f1e0d8d217421878ea3686f8524",
 		Py:  "2eca15e355fcfa39d2982f67ddb0eea138e2994f5956ed37b7f72eea5e89d2f7",
 		U0:  "4fedd25431c41f2a606952e2945ef5e3ac905a42cf64b8b4d4a83c533bf321af",
@@ -300,15 +288,7 @@ var edwards25519TestVector = &TestVector{
 		Q1x: "0c9077c5c31720ed9413abe59bf49ce768506128d810cb882435aa90f713ef6b",
 		Q1y: "7d5aec5210db638c53f050597964b74d6dda4be5b54fa73041bf909ccb3826cb",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaa",
+		Msg: a512Msg,
 		Px:  "0efcfde5898a839b00997fbe40d2ebe950bc81181afbd5cd6b9618aa336c1e8c",
 		Py:  "6dc2fc04f266c5c27f236a80b14f92ccd051ef1ff027f26a07f8c0f327d8f995",
 		U0:  "6e34e04a5106e9bd59f64aba49601bf09d23b27f7b594e56d5de06df4a4ea33b",
@@ -325,7 +305,7 @@ var secp256k1TestVector = &TestVector{
 	SuiteName: "secp256k1_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-secp256k1_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
-		Msg: "",
+		Msg: emptyMsg,
 		Px:  "c1cae290e291aee617ebaef1be6d73861479c48b841eaba9b7b5852ddfeb1346",
 		Py:  "64fa678e07ae116126f08b022a94af6de15985c996c3a91b64c406a960e51067",
 		U0:  "6b0f9910dd2ba71c78f2ee9f04d73b5f4c5f7fc773a701abea1e573cab002fb3",
@@ -335,7 +315,7 @@ var secp256k1TestVector = &TestVector{
 		Q1x: "44548adb1b399263ded3510554d28b4bead34b8cf9a37b4bd0bd2ba4db87ae63",
 		Q1y: "96eb8e2faf05e368efe5957c6167001760233e6dd2487516b46ae725c4cce0c6",
 	}, {
-		Msg: "abc",
+		Msg: abcMsg,
 		Px:  "3377e01eab42db296b512293120c6cee72b6ecf9f9205760bd9ff11fb3cb2c4b",
 		Py:  "7f95890f33efebd1044d382a01b1bee0900fb6116f94688d487c6c7b9c8371f6",
 		U0:  "128aab5d3679a1f7601e3bdf94ced1f43e491f544767e18a4873f397b08a2b61",
@@ -345,7 +325,7 @@ var secp256k1TestVector = &TestVector{
 		Q1x: "e9ef9794d15d4e77dde751e06c182782046b8dac05f8491eb88764fc65321f78",
 		Q1y: "cb07ce53670d5314bf236ee2c871455c562dd76314aa41f012919fe8e7f717b3",
 	}, {
-		Msg: "abcdef0123456789",
+		Msg: abc16Msg,
 		Px:  "bac54083f293f1fe08e4a70137260aa90783a5cb84d3f35848b324d0674b0e3a",
 		Py:  "4436476085d4c3c4508b60fcf4389c40176adce756b398bdee27bca19758d828",
 		U0:  "ea67a7c02f2cd5d8b87715c169d055a22520f74daeb080e6180958380e2f98b9",
@@ -355,9 +335,7 @@ var secp256k1TestVector = &TestVector{
 		Q1x: "f89d6d261a5e00fe5cf45e827b507643e67c2a947a20fd9ad71039f8b0e29ff8",
 		Q1y: "b33855e0cc34a9176ead91c6c3acb1aacb1ce936d563bc1cee1dcffc806caf57",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqq",
+		Msg: q128Msg,
 		Px:  "e2167bc785333a37aa562f021f1e881defb853839babf52a7f72b102e41890e9",
 		Py:  "f2401dd95cc35867ffed4f367cd564763719fbc6a53e969fb8496a1e6685d873",
 		U0:  "eda89a5024fac0a8207a87e8cc4e85aa3bce10745d501a30deb87341b05bcdf5",
@@ -367,15 +345,7 @@ var secp256k1TestVector = &TestVector{
 		Q1x: "10fee3284d7be6bd5912503b972fc52bf4761f47141a0015f1c6ae36848d869b",
 		Q1y: "0b163d9b4bf21887364332be3eff3c870fa053cf508732900fc69a6eb0e1b672",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaa",
+		Msg: a512Msg,
 		Px:  "e3c8d35aaaf0b9b647e88a0a0a7ee5d5bed5ad38238152e4e6fd8c1f8cb7c998",
 		Py:  "8446eeb6181bf12f56a9d24e262221cc2f0c4725c7e3803024b5888ee5823aa6",
 		U0:  "8d862e7e7e23d7843fe16d811d46d7e6480127a6b78838c277bca17df6900e9f",
@@ -392,7 +362,7 @@ var bls12381g1TestVector = &TestVector{
 	SuiteName: "BLS12381G1_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
-		Msg: "",
+		Msg: emptyMsg,
 		Px:  "052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a1",
 		Py:  "08ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265",
 		U0:  "0ba14bd907ad64a016293ee7c2d276b8eae71f25a4b941eece7b0d89f17f75cb3ae5438a614fb61d6835ad59f29c564f",
@@ -402,7 +372,7 @@ var bls12381g1TestVector = &TestVector{
 		Q1x: "160003aaf1632b13396dbad518effa00fff532f604de1a7fc2082ff4cb0afa2d63b2c32da1bef2bf6c5ca62dc6b72f9c",
 		Q1y: "0d8bb2d14e20cf9f6036152ed386d79189415b6d015a20133acb4e019139b94e9c146aaad5817f866c95d609a361735e",
 	}, {
-		Msg: "abc",
+		Msg: abcMsg,
 		Px:  "03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f6903",
 		Py:  "0b9c15f3fe6e5cf4211f346271d7b01c8f3b28be689c8429c85b67af215533311f0b8dfaaa154fa6b88176c229f2885d",
 		U0:  "0d921c33f2bad966478a03ca35d05719bdf92d347557ea166e5bba579eea9b83e9afa5c088573c2281410369fbd32951",
@@ -412,7 +382,7 @@ var bls12381g1TestVector = &TestVector{
 		Q1x: "11def93719829ecda3b46aa8c31fc3ac9c34b428982b898369608e4f042babee6c77ab9218aad5c87ba785481eff8ae4",
 		Q1y: "0007c9cef122ccf2efd233d6eb9bfc680aa276652b0661f4f820a653cec1db7ff69899f8e52b8e92b025a12c822a6ce6",
 	}, {
-		Msg: "abcdef0123456789",
+		Msg: abc16Msg,
 		Px:  "11e0b079dea29a68f0383ee94fed1b940995272407e3bb916bbf268c263ddd57a6a27200a784cbc248e84f357ce82d98",
 		Py:  "03a87ae2caf14e8ee52e51fa2ed8eefe80f02457004ba4d486d6aa1f517c0889501dc7413753f9599b099ebcbbd2d709",
 		U0:  "062d1865eb80ebfa73dcfc45db1ad4266b9f3a93219976a3790ab8d52d3e5f1e62f3b01795e36834b17b70e7b76246d4",
@@ -422,8 +392,7 @@ var bls12381g1TestVector = &TestVector{
 		Q1x: "158418ed6b27e2549f05531a8281b5822b31c3bf3144277fbb977f8d6e2694fedceb7011b3c2b192f23e2a44b2bd106e",
 		Q1y: "1879074f344471fac5f839e2b4920789643c075792bec5af4282c73f7941cda5aa77b00085eb10e206171b9787c4169f",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+		Msg: q128Msg,
 		Px:  "15f68eaa693b95ccb85215dc65fa81038d69629f70aeee0d0f677cf22285e7bf58d7cb86eefe8f2e9bc3f8cb84fac488",
 		Py:  "1807a1d50c29f430b8cafc4f8638dfeeadf51211e1602a5f184443076715f91bb90a48ba1e370edce6ae1062f5e6dd38",
 		U0:  "010476f6a060453c0b1ad0b628f3e57c23039ee16eea5e71bb87c3b5419b1255dc0e5883322e563b84a29543823c0e86",
@@ -433,12 +402,7 @@ var bls12381g1TestVector = &TestVector{
 		Q1x: "06493fb68f0d513af08be0372f849436a787e7b701ae31cb964d968021d6ba6bd7d26a38aaa5a68e8c21a6b17dc8b579",
 		Q1y: "02e98f2ccf5802b05ffaac7c20018bc0c0b2fd580216c4aa2275d2909dc0c92d0d0bdc979226adeb57a29933536b6bb4",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Msg: a512Msg,
 		Px:  "082aabae8b7dedb0e78aeb619ad3bfd9277a2f77ba7fad20ef6aabdc6c31d19ba5a6d12283553294c1825c4b3ca2dcfe",
 		Py:  "05b84ae5a942248eea39e1d91030458c40153f3b654ab7872d779ad1e942856a20c438e8d99bc8abfbf74729ce1f7ac8",
 		U0:  "0a8ffa7447f6be1c5a2ea4b959c9454b431e29ccc0802bc052413a9c5b4f9aac67a93431bd480d15be1e057c8a08e8c6",
@@ -455,7 +419,7 @@ var bls12381g2TestVector = &TestVector{
 	SuiteName: "BLS12381G2_XMD:SHA-256_SSWU_RO_",
 	Dst:       "QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_",
 	TestCases: []TestCase{{
-		Msg:  "",
+		Msg:  emptyMsg,
 		Px:   "0141ebfbdca40eb85b87142e130ab689c673cf60f1a3e98d69335266f30d9b8d4ac44c1038e9dcdd5393faf5c41fb78a",
 		PxI:  "05cb8437535e20ecffaef7752baddf98034139c38452458baeefab379ba13dff5bf5dd71b72418717047f5b0f37da03d",
 		Py:   "0503921d7f6a12805e72940b963c0cf3471c7b2a524950ca195d11062ee75ec076daf2d4bc358c4b190c0c98064fdd92",
@@ -473,7 +437,7 @@ var bls12381g2TestVector = &TestVector{
 		Q1y:  "0fd3def0b7574a1d801be44fde617162aa2e89da47f464317d9bb5abc3a7071763ce74180883ad7ad9a723a9afafcdca",
 		Q1yI: "056f617902b3c0d0f78a9a8cbda43a26b65f602f8786540b9469b060db7b38417915b413ca65f875c130bebfaa59790c",
 	}, {
-		Msg:  "abc",
+		Msg:  abcMsg,
 		Px:   "02c2d18e033b960562aae3cab37a27ce00d80ccd5ba4b7fe0e7a210245129dbec7780ccc7954725f4168aff2787776e6",
 		PxI:  "139cddbccdc5e91b9623efd38c49f81a6f83f175e80b06fc374de9eb4b41dfe4ca3a230ed250fbe3a2acf73a41177fd8",
 		Py:   "1787327b68159716a37440985269cf584bcb1e621d3a7202be6ea05c4cfe244aeb197642555a0645fb87bf7466b2ba48",
@@ -491,7 +455,7 @@ var bls12381g2TestVector = &TestVector{
 		Q1y:  "05e47c1781286e61c7ade887512bd9c2cb9f640d3be9cf87ea0bad24bd0ebfe946497b48a581ab6c7d4ca74b5147287f",
 		Q1yI: "19f98db2f4a1fcdf56a9ced7b320ea9deecf57c8e59236b0dc21f6ee7229aa9705ce9ac7fe7a31c72edca0d92370c096",
 	}, {
-		Msg:  "abcdef0123456789",
+		Msg:  abc16Msg,
 		Px:   "121982811d2491fde9ba7ed31ef9ca474f0e1501297f68c298e9f4c0028add35aea8bb83d53c08cfc007c1e005723cd0",
 		PxI:  "190d119345b94fbd15497bcba94ecf7db2cbfd1e1fe7da034d26cbba169fb3968288b3fafb265f9ebd380512a71c3f2c",
 		Py:   "05571a0f8d3c08d094576981f4a3b8eda0a8e771fcdcc8ecceaf1356a6acf17574518acb506e435b639353c2e14827c8",
@@ -509,8 +473,7 @@ var bls12381g2TestVector = &TestVector{
 		Q1y:  "0dc7fa13fff6b12558419e0a1e94bfc3cfaf67238009991c5f24ee94b632c3d09e27eca329989aee348a67b50d5e236c",
 		Q1yI: "169585e164c131103d85324f2d7747b23b91d66ae5d947c449c8194a347969fc6bbd967729768da485ba71868df8aed2",
 	}, {
-		Msg: "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" +
-			"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+		Msg:  q128Msg,
 		Px:   "19a84dd7248a1066f737cc34502ee5555bd3c19f2ecdb3c7d9e24dc65d4e25e50d83f0f77105e955d78f4762d33c17da",
 		PxI:  "0934aba516a52d8ae479939a91998299c76d39cc0c035cd18813bec433f587e2d7a4fef038260eef0cef4d02aae3eb91",
 		Py:   "14f81cd421617428bc3b9fe25afbb751d934a00493524bc4e065635b0555084dd54679df1536101b2c979c0152d09192",
@@ -528,12 +491,7 @@ var bls12381g2TestVector = &TestVector{
 		Q1y:  "0aaf1dee3adf3ed4c80e481c09b57ea4c705e1b8d25b897f0ceeec3990748716575f92abff22a1c8f4582aff7b872d52",
 		Q1yI: "0d058d9061ed27d4259848a06c96c5ca68921a5d269b078650c882cb3c2bd424a8702b7a6ee4e0ead9982baf6843e924",
 	}, {
-		Msg: "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Msg:  a512Msg,
 		Px:   "01a6ba2f9a11fa5598b2d8ace0fbe0a0eacb65deceb476fbbcb64fd24557c2f4b18ecfc5663e54ae16a84f5ab7f62534",
 		PxI:  "11fca2ff525572795a801eed17eb12785887c7b63fb77a42be46ce4a34131d71f7a73e95fee3f812aea3de78b4d01569",
 		Py:   "0b6798718c8aed24bc19cb27f866f1c9effcdbf92397ad6448b5c9db90d2b9da6cbabf48adc1adf59a1a28344e79d57e",

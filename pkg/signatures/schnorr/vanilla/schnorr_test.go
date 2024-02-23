@@ -1,12 +1,12 @@
 package schnorr_test
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -76,7 +76,7 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 	signature, err := signer.Sign(message, crand.Reader)
 	require.NoError(t, err)
 
-	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes())}, nil)
+	nativeSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
 	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 }
@@ -111,7 +111,7 @@ func Test_InvalidMessageOrSignatureFailure(t *testing.T) {
 				signature, err := signer.Sign(message, crand.Reader)
 				require.NoError(t, err)
 
-				err = schnorr.Verify(cipherSuite, publicKey, bytes.Join([][]byte{message, []byte("x")}, nil), signature)
+				err = schnorr.Verify(cipherSuite, publicKey, slices.Concat(message, []byte("x")), signature)
 				require.Error(t, err)
 			})
 		}
@@ -136,7 +136,7 @@ func Test_InvalidMessageOrSignatureWithEd25519Verifier(t *testing.T) {
 	signature, err := signer.Sign(message, crand.Reader)
 	require.NoError(t, err)
 
-	nativeSignature := bytes.Join([][]byte{signature.R.ToAffineCompressed(), signature.S.Bytes()}, nil)
+	nativeSignature := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), []byte("something else"), nativeSignature)
 	require.False(t, ok)
 }

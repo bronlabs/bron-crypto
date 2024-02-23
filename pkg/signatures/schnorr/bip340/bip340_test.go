@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -340,7 +341,7 @@ func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 }
 
 func marshalSignature(signature *bip340.Signature) []byte {
-	return bytes.Join([][]byte{encodePoint(signature.R), signature.S.Bytes()}, nil)
+	return slices.Concat(encodePoint(signature.R), signature.S.Bytes())
 }
 
 func unmarshalSignature(input []byte) (*bip340.Signature, error) {
@@ -370,7 +371,7 @@ func encodePoint(p curves.Point) []byte {
 
 func decodePoint(data []byte) (curves.Point, error) {
 	curve := k256.NewCurve()
-	p, err := curve.Point().FromAffineCompressed(bytes.Join([][]byte{{0x02}, data}, nil))
+	p, err := curve.Point().FromAffineCompressed(slices.Concat([]byte{0x02}, data))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decode point")
 	}

@@ -174,7 +174,7 @@ func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, utils.BoolTo[int](choice))
 	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, utils.BoolTo[int](choice))
 	var err error
-	sEd.V, err = sEd.V.SetExtendedCoordinates(xEd, yEd, zEd, tEd)
+	sEd.V, err = sEd.V.SetExtendedCoordinates(xEd, yEd, zEd, tEd) //nolint:govet
 	if err != nil {
 		panic(err)
 	}

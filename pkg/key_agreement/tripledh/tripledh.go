@@ -1,7 +1,7 @@
 package tripledh
 
 import (
-	"bytes"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -30,7 +30,7 @@ func DeriveSecretLocal(a curves.Scalar, B curves.Point, x curves.Scalar, Y curve
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	res, err := a.ScalarField().Hash(bytes.Join([][]byte{dh1.Bytes(), dh2.Bytes(), dh3.Bytes(), dh4.Bytes()}, nil))
+	res, err := a.ScalarField().Hash(slices.Concat(dh1.Bytes(), dh2.Bytes(), dh3.Bytes(), dh4.Bytes()))
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot derive secret")
 	}
@@ -59,7 +59,7 @@ func DeriveSecretRemote(A curves.Point, b curves.Scalar, X curves.Point, y curve
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive secret")
 	}
-	res, err := A.Curve().ScalarField().Hash(bytes.Join([][]byte{dh1.Bytes(), dh2.Bytes(), dh3.Bytes(), dh4.Bytes()}, nil))
+	res, err := A.Curve().ScalarField().Hash(slices.Concat(dh1.Bytes(), dh2.Bytes(), dh3.Bytes(), dh4.Bytes()))
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot derive secret")
 	}

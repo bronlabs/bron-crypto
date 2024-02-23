@@ -1,11 +1,10 @@
 package sigmaAnd
 
 import (
-	"bytes"
 	"fmt"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
@@ -65,7 +64,7 @@ type protocol[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitm
 }
 
 func SigmaAnd[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1]) sigma.Protocol[*Statement[X0, X1], *Witness[W0, W1], *Commitment[A0, A1], *State[S0, S1], *Response[Z0, Z1]] {
-	challengeBytesLength := utils.Max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
+	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
 
 	return &protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
 		sigma0:               sigma0,
@@ -145,15 +144,15 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(stat
 }
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
-	return bytes.Join([][]byte{p.sigma0.SerializeStatement(statement.X0), p.sigma1.SerializeStatement(statement.X1)}, nil)
+	return slices.Concat(p.sigma0.SerializeStatement(statement.X0), p.sigma1.SerializeStatement(statement.X1))
 }
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(commitment *Commitment[A0, A1]) []byte {
-	return bytes.Join([][]byte{p.sigma0.SerializeCommitment(commitment.A0), p.sigma1.SerializeCommitment(commitment.A1)}, nil)
+	return slices.Concat(p.sigma0.SerializeCommitment(commitment.A0), p.sigma1.SerializeCommitment(commitment.A1))
 }
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
-	return bytes.Join([][]byte{p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1)}, nil)
+	return slices.Concat(p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1))
 }
 
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {

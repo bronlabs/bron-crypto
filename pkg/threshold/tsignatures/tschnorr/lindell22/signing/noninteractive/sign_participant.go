@@ -1,9 +1,9 @@
 package noninteractive_signing
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"slices"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -53,7 +53,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	przsSid := bytes.Join([][]byte{sessionId, ppm.PrivateMaterial.K1.Bytes()}, nil)
+	przsSid := slices.Concat(sessionId, ppm.PrivateMaterial.K1.Bytes())
 	przsPrngFactory, err := chacha.NewChachaPRNG(nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")

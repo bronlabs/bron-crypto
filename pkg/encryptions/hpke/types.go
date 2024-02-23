@@ -1,11 +1,11 @@
 package hpke
 
 import (
-	"bytes"
 	"crypto/cipher"
 	"crypto/subtle"
 	"encoding/binary"
 	"math"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -61,7 +61,7 @@ type KeyScheduleContext struct {
 }
 
 func (ksc *KeyScheduleContext) Marshal() []byte {
-	return bytes.Join([][]byte{{byte(ksc.Mode)}, ksc.PskIdHash, ksc.InfoHash}, nil)
+	return slices.Concat([]byte{byte(ksc.Mode)}, ksc.PskIdHash, ksc.InfoHash)
 }
 
 type context struct {

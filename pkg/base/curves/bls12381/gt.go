@@ -98,8 +98,8 @@ func (g *Gt) Select(choice bool, x0, x1 curves.GtMember) curves.GtMember {
 	if !ok0 || !ok1 || oks {
 		panic("Not a BLS12381 Gt element")
 	}
-	sGt.V.A.CMove(&x0Gt.V.A, &x1Gt.V.A, utils.BoolTo[int](choice))
-	sGt.V.B.CMove(&x0Gt.V.B, &x1Gt.V.B, utils.BoolTo[int](choice))
+	sGt.V.A.CMove(&x0Gt.V.A, &x1Gt.V.A, utils.BoolTo[int](choice)) //nolint:govet
+	sGt.V.B.CMove(&x0Gt.V.B, &x1Gt.V.B, utils.BoolTo[int](choice)) //nolint:govet
 	return sGt
 }
 

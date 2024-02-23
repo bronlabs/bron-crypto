@@ -7,22 +7,6 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// Min returns the minimum of two elements.
-func Min[T constraints.Ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// Max returns the minimum of two elements.
-func Max[T constraints.Ordered](a, b T) T {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
 	if b {
