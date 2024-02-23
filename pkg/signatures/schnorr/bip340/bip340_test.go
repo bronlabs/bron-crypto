@@ -16,7 +16,6 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_BIP340TestVectors(t *testing.T) {
@@ -241,7 +240,11 @@ func doTestSign(privateKeyString string, messageString string, auxString string)
 		return nil, errs.WrapFailed(err, "cannot sign")
 	}
 
-	return marshalSignature(signature), nil
+	marshalledSignature, err := signature.MarshalBinary()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot marshal signature")
+	}
+	return marshalledSignature, nil
 }
 
 func doTestVerify(publicKeyString string, signatureString string, messageString string) error {
@@ -299,7 +302,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		signatureBob, err := bob.Sign(message2, nil, crand.Reader)
 		require.NoError(t, err)
 
-		err = bip340.VerifyBatch([]*bip340.PublicKey{(*bip340.PublicKey)(&aliceKey.PublicKey), (*bip340.PublicKey)(&bobKey.PublicKey)}, []*bip340.Signature{signatureAlice, signatureBob}, [][]byte{
+		err = bip340.VerifyBatch([]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey}, []*bip340.Signature{signatureAlice, signatureBob}, [][]byte{
 			message1,
 			message2,
 		}, crand.Reader)
@@ -329,20 +332,23 @@ func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	if err != nil {
 		return nil, errs.NewSerialisation("invalid scalar")
 	}
-	bigP, err := decodePoint(encodePoint(curve.ScalarBaseMult(k)))
+	publicKey := &bip340.PublicKey{
+		A: curve.ScalarBaseMult(k),
+	}
+	marshalledPublicKey, err := publicKey.MarshalBinary()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot marshal public key")
+	}
+	bigP, err := decodePoint(marshalledPublicKey)
 	if err != nil {
 		return nil, errs.NewSerialisation("invalid scalar")
 	}
 
 	sk := &bip340.PrivateKey{
-		PublicKey: schnorr.PublicKey{A: bigP},
+		PublicKey: bip340.PublicKey{A: bigP},
 		S:         k,
 	}
 	return sk, nil
-}
-
-func marshalSignature(signature *bip340.Signature) []byte {
-	return slices.Concat(encodePoint(signature.R), signature.S.Bytes())
 }
 
 func unmarshalSignature(input []byte) (*bip340.Signature, error) {
@@ -364,10 +370,6 @@ func unmarshalSignature(input []byte) (*bip340.Signature, error) {
 		S: s,
 	}
 	return signature, nil
-}
-
-func encodePoint(p curves.Point) []byte {
-	return p.ToAffineCompressed()[1:]
 }
 
 func decodePoint(data []byte) (curves.Point, error) {

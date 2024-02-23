@@ -1,6 +1,7 @@
 package bip340
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"io"
 
@@ -19,10 +20,27 @@ const (
 
 type PublicKey schnorr.PublicKey
 
-type PrivateKey schnorr.PrivateKey
+type PrivateKey struct {
+	S curves.Scalar
+	PublicKey
 
-// Signature BIP-340 signature.
+	_ ds.Incomparable
+}
+
 type Signature schnorr.Signature
+
+func (s *Signature) MarshalBinary() ([]byte, error) {
+	serializedSignature := bytes.Join([][]byte{
+		s.R.ToAffineCompressed()[1:],
+		s.S.Bytes(),
+	}, nil)
+	return serializedSignature, nil
+}
+
+func (pk *PublicKey) MarshalBinary() ([]byte, error) {
+	serializedPublicKey := pk.A.ToAffineCompressed()[1:]
+	return serializedPublicKey, nil
+}
 
 type Signer struct {
 	privateKey *PrivateKey
@@ -52,7 +70,7 @@ func NewPrivateKey(scalar curves.Scalar) (*PrivateKey, error) {
 	public := curve.ScalarBaseMult(dPrime)
 
 	return &PrivateKey{
-		PublicKey: schnorr.PublicKey{
+		PublicKey: PublicKey{
 			A: public.Clone(),
 		},
 		S: dPrime.Clone(),
@@ -136,7 +154,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	}
 
 	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
-	err = Verify((*PublicKey)(&signer.privateKey.PublicKey), signature, message)
+	err = Verify(&signer.privateKey.PublicKey, signature, message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create signature")
 	}

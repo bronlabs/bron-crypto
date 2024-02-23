@@ -45,10 +45,10 @@ func Fuzz_Test(f *testing.F) {
 		}
 		require.NoError(t, err)
 
-		err = bip340.Verify((*bip340.PublicKey)(&privateKey.PublicKey), signature, msg)
+		err = bip340.Verify(&privateKey.PublicKey, signature, msg)
 		require.NoError(t, err)
 
-		err = bip340.VerifyBatch([]*bip340.PublicKey{(*bip340.PublicKey)(&privateKey.PublicKey)}, []*bip340.Signature{signature}, [][]byte{
+		err = bip340.VerifyBatch([]*bip340.PublicKey{&privateKey.PublicKey}, []*bip340.Signature{signature}, [][]byte{
 			msg,
 		}, prng)
 		require.NoError(t, err)

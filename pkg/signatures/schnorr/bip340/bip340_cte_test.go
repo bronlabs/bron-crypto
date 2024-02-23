@@ -62,7 +62,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		signature, err = signer.Sign(message, aux, nil)
 		require.NoError(t, err)
 	}, func() {
-		err = bip340.Verify((*bip340.PublicKey)(&privateKey.PublicKey), signature, message)
+		err = bip340.Verify(&privateKey.PublicKey, signature, message)
 	})
 }
 
@@ -92,6 +92,6 @@ func Test_MeasureConstantTime_batchverify(t *testing.T) {
 		signature, err = signer.Sign(message, aux, nil)
 		require.NoError(t, err)
 	}, func() {
-		_ = bip340.VerifyBatch([]*bip340.PublicKey{(*bip340.PublicKey)(&privateKey.PublicKey)}, []*bip340.Signature{signature}, [][]byte{message}, crand.Reader)
+		_ = bip340.VerifyBatch([]*bip340.PublicKey{&privateKey.PublicKey}, []*bip340.Signature{signature}, [][]byte{message}, crand.Reader)
 	})
 }
