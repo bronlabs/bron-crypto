@@ -3,7 +3,6 @@ package setup
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -151,7 +150,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		} else {
 			orderedAppendedSeeds = append(message.Message, myContributedSeed.seed...)
 		}
-		finalSeedBytes, err := hashing.HashChain(base.CommitmentHashFunction, orderedAppendedSeeds)
+		finalSeedBytes, err := hashing.HashChain(commitments.CommitmentHashFunction, orderedAppendedSeeds)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce final seed for participant with sharing id %d", participantIndex)
 		}

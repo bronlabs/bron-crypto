@@ -1,6 +1,7 @@
 package tmmohash_test
 
 import (
+	"crypto/aes"
 	"os"
 	"testing"
 
@@ -22,7 +23,7 @@ func Test_MeasureConstantTime_HashAes(t *testing.T) {
 	internal.RunMeasurement(500, "hashaes", func(i int) {
 		inputBytes = internal.GetBigEndianBytesWithLowestBitsSet(128, i)
 	}, func() {
-		hash, err := hashing.NewTmmoHash(keySize, 2*hashing.AesBlockSize, iv)
+		hash, err := hashing.NewTmmoHash(keySize, 2*aes.BlockSize, iv)
 		require.NoError(t, err)
 		n, err := hash.Write(inputBytes)
 		require.NoError(t, err)

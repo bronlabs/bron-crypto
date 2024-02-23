@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -16,7 +17,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -72,12 +72,12 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		if participant.Equal(authKey) {
 			continue
 		}
-		sender, err := bbot.NewSender(softspoken.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
+		sender, err := bbot.NewSender(ot.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
 		senders.Put(participant, sender)
-		receiver, err := bbot.NewReceiver(softspoken.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
+		receiver, err := bbot.NewReceiver(ot.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

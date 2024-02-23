@@ -1,8 +1,7 @@
 package interactive_signing
 
 import (
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -87,7 +86,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 	}
 	secondaryCosigner.state.bigR2 = secondaryCosigner.protocol.Curve().ScalarBaseMult(secondaryCosigner.state.k2)
 	// step 2.2: π <- NIPoK.Prove(k2)
-	bigR2ProofSessionId, err := hashing.HashChain(sha3.New256, secondaryCosigner.sessionId, secondaryCosigner.IdentityKey().PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, secondaryCosigner.sessionId, secondaryCosigner.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -113,7 +112,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.NewRound("round mismatch %d != 2", primaryCosigner.round)
 	}
 
-	bigR2ProofSessionId, err := hashing.HashChain(sha3.New256, primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -122,7 +121,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 		return nil, errs.WrapTotalAbort(err, "secondary", "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(sha3.New256, primaryCosigner.sessionId, primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, primaryCosigner.sessionId, primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}
@@ -157,7 +156,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapTotalAbort(err, "primary", "cannot open R1 commitment")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(sha3.New256, secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}

@@ -18,8 +18,6 @@ import (
 const (
 	// IV is the hash's initialisation vector. We choose 32 arbitrary bytes.
 	IV = string("ThereIsNothingUpMySleeveMrCopper")
-	// AesBlockSize is the input/output size of the internal AES block cipher. 16B by default.
-	AesBlockSize = aes.BlockSize
 )
 
 /*
@@ -66,7 +64,7 @@ type TmmoHash struct {
 
 // NewTmmoHash creates a new TMMO hash object to perform AES-based hashing, setting:
 //   - `keySize` selects the size of AES keys in {16, 24, 32} bytes.
-//   - `outputSize` (multiple of AesBlockSize==16B) sets the digest size (# of Bytes)
+//   - `outputSize` (multiple of aes.BlockSize==16B) sets the digest size (# of Bytes)
 //   - `iv` (optional), an initialization vector of AesKeSize bytes to personalise
 //     the hash function (typ. use a session ID).
 func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
@@ -74,8 +72,8 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 	if (keySize != 16) && (keySize != 24) && (keySize != 32) {
 		return nil, errs.NewArgument("keySize (%dB) must be one of {16, 24, 32}", keySize)
 	}
-	if outputSize < AesBlockSize || outputSize%AesBlockSize != 0 {
-		return nil, errs.NewArgument("outputSize (%dB) must be a multiple of AesBlockSize (%dB)", outputSize, AesBlockSize)
+	if outputSize < aes.BlockSize || outputSize%aes.BlockSize != 0 {
+		return nil, errs.NewArgument("outputSize (%dB) must be a multiple of aes.BlockSize (%dB)", outputSize, aes.BlockSize)
 	}
 	// 2) Initialise the cipher with the initialization vector (iv) as key.
 	// If no iv is provided, use the hardcoded IV.
@@ -98,12 +96,12 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 	// 3) Initialise the digest and the auxiliary variables.
 	return &TmmoHash{
 		keySize:           keySize,
-		outputBlocks:      outputSize / AesBlockSize,
+		outputBlocks:      outputSize / aes.BlockSize,
 		counter:           0,
 		keyedBlockCipher:  blockCipher,
 		iv:                internalHashIv,
 		digest:            make([]byte, outputSize),
-		permutedOnceBlock: make([]byte, AesBlockSize),
+		permutedOnceBlock: make([]byte, aes.BlockSize),
 		tempKey:           tempKey,
 		prngBytePointer:   0,
 	}, nil
@@ -112,18 +110,18 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 // Write (via the embedded io.Writer interface) adds more data to the running hash.
 // It never returns an error.
 func (h *TmmoHash) Write(input []byte) (n int, err error) {
-	// A) Align the input into blocks of AesBlockSize bytes. Pad 0s if unalligned.
+	// A) Align the input into blocks of aes.BlockSize bytes. Pad 0s if unalligned.
 	inputLength := len(input)
-	inputBlocks := utils.CeilDiv(inputLength, AesBlockSize)
-	input = bitstring.PadToRight(input, (AesBlockSize-(inputLength%AesBlockSize))%AesBlockSize)
+	inputBlocks := utils.CeilDiv(inputLength, aes.BlockSize)
+	input = bitstring.PadToRight(input, (aes.BlockSize-(inputLength%aes.BlockSize))%aes.BlockSize)
 	// 3) Loop over the output blocks, applying TMMO^π (x,i) at each iteration.
 	for i := 0; i < h.outputBlocks; i++ {
-		outputBlock := h.digest[i*AesBlockSize : (i+1)*AesBlockSize]
+		outputBlock := h.digest[i*aes.BlockSize : (i+1)*aes.BlockSize]
 		// 3.B) Loop over the input blocks.
 		for j := 0; j < inputBlocks; j++ {
 			// 3.1) TMMO^π (x,i) - Apply the TMMO to the current block.
 			// 3.1.1) π(x) - Apply the block cipher to the current block.
-			h.keyedBlockCipher.Encrypt(h.permutedOnceBlock, input[j*AesBlockSize:(j+1)*AesBlockSize])
+			h.keyedBlockCipher.Encrypt(h.permutedOnceBlock, input[j*aes.BlockSize:(j+1)*aes.BlockSize])
 			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
 			// We increase a hash-level counter on each TMMO call and use it as index.
 			h.counter++
@@ -134,9 +132,9 @@ func (h *TmmoHash) Write(input []byte) (n int, err error) {
 			subtle.XORBytes(outputBlock, outputBlock, h.permutedOnceBlock)
 			// 3.1.B) Refresh the AES key for the next iteration.
 			// 	key[1] = key[0] ⊕ key[1]
-			subtle.XORBytes(h.tempKey[AesBlockSize:], h.tempKey[AesBlockSize:], h.tempKey[:AesBlockSize])
+			subtle.XORBytes(h.tempKey[aes.BlockSize:], h.tempKey[aes.BlockSize:], h.tempKey[:aes.BlockSize])
 			// 	key[0] = TMMO^π(x,i)
-			copy(h.tempKey[:AesBlockSize], outputBlock)
+			copy(h.tempKey[:aes.BlockSize], outputBlock)
 			h.keyedBlockCipher.SetKey(h.tempKey)
 		}
 	}
@@ -151,7 +149,7 @@ func (h *TmmoHash) Size() int {
 // BlockSize returns the hash's underlying block size. The Write method avoids
 // padding if all writes are a multiple of the block size.
 func (*TmmoHash) BlockSize() int {
-	return AesBlockSize
+	return aes.BlockSize
 }
 
 // Reset resets the Hash to its initial state.
@@ -215,7 +213,7 @@ func (h *TmmoHash) Clone() csprng.CSPRNG {
 		keyedBlockCipher:  h.keyedBlockCipher.Clone(iv),
 		iv:                append(make([]byte, 0, len(h.iv)), h.iv...),
 		digest:            append(make([]byte, 0, len(h.digest)), h.digest...),
-		permutedOnceBlock: append(make([]byte, 0, AesBlockSize), h.permutedOnceBlock...),
+		permutedOnceBlock: append(make([]byte, 0, aes.BlockSize), h.permutedOnceBlock...),
 		tempKey:           append(make([]byte, 0, h.keySize), h.tempKey...),
 		prngBytePointer:   h.prngBytePointer,
 	}

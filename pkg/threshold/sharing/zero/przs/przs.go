@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-const LambdaBytes = base.FieldBytes
+const LambdaBytes = base.CollisionResistanceBytes
 
 type (
 	Seed          = [LambdaBytes]byte

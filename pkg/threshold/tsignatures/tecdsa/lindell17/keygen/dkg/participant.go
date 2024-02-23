@@ -21,6 +21,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const (
+	transcriptLabel = "COPPER_KRYPTON_LINDELL17_DKG-"
+)
+
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type State struct {
@@ -68,10 +72,6 @@ type Participant struct {
 
 	_ ds.Incomparable
 }
-
-const (
-	transcriptLabel = "COPPER_KRYPTON_LINDELL17_DKG-"
-)
 
 func (p *Participant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey

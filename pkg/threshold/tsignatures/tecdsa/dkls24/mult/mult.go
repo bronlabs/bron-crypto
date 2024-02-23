@@ -16,20 +16,20 @@ const (
 	SBytes = S / 8
 
 	// Group order bit-size (=|q| for group Zq).
-	Kappa      = base.FieldBytes * 8
-	KappaBytes = base.FieldBytes
+	QBitLen      = base.FieldBytes * 8
+	QBitLenBytes = base.FieldBytes
 
 	// Scalar batch size.
 	L = 2
 
 	// Expansion ratio, set to ceil(kappa / lambda_c) = 2.
-	Rho = (Kappa + Lambda - 1) / Lambda
+	Rho = (QBitLen + Lambda - 1) / Lambda
 
 	// Number of OTe messages needed for the OTe functionality.
 	LOTe = L + Rho
 
 	// number of random choice bits per element in each batch.
-	Xi      = Kappa + 2*S
+	Xi      = QBitLen + 2*S
 	XiBytes = Xi / 8
 
 	// OTe batch size.

@@ -54,14 +54,17 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 	}
 
 	signedTag1 := deterministicWrappingKey.Sign(tag1)
-	salt := sha3.Sum256(signedTag1)
+	salt, err := hashing.Hash(base.RandomOracleHashFunction, signedTag1)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "could not hash signed tag1")
+	}
 
 	var ikm [LBytes]byte
 	if _, err := io.ReadFull(prng, ikm[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not sample ikm")
 	}
 
-	prk := hkdf.Extract(sha3.New256, ikm[:], salt[:])
+	prk := hkdf.Extract(base.RandomOracleHashFunction, ikm[:], salt)
 
 	var tag2Sample [LPrimeBytes]byte
 	if _, err := io.ReadFull(prng, tag2Sample[:]); err != nil {
@@ -84,7 +87,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 		var block [NBytes]byte
 		var tag2Bytes [NBytes]byte
 		wr.tag2.PutBytesBE(tag2Bytes[:])
-		expander := hkdf.Expand(sha3.New256, wr.prk, tag2Bytes[:])
+		expander := hkdf.Expand(base.RandomOracleHashFunction, wr.prk, tag2Bytes[:])
 		if _, err := io.ReadFull(expander, block[:]); err != nil {
 			return -1, errs.WrapRandomSample(err, "couldn't expand for block %d", i)
 		}
@@ -133,7 +136,7 @@ func bindDevice(prng io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not json marshal device profile")
 	}
-	info, err := hashing.HashChain(sha3.New256, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
+	info, err := hashing.HashChain(base.RandomOracleHashFunction, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not hash device info")
 	}

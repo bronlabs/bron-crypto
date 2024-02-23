@@ -3,8 +3,7 @@ package sample
 import (
 	"sort"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -110,7 +109,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		if !exists {
 			return errs.NewMissing("could not find shared seed for index %d", i)
 		}
-		salt, err := hashing.HashChain(sha3.New256, p.sessionId)
+		salt, err := hashing.HashChain(base.RandomOracleHashFunction, p.sessionId)
 		if err != nil {
 			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)
 		}

@@ -23,7 +23,7 @@ const (
 	challengeLabel  = "challengeLabel-"
 
 	lambda     = base.ComputationalSecurity
-	lambdaLog2 = 7
+	lambdaLog2 = base.ComputationalSecurityLog2
 	l          = 8
 	r          = lambda / l
 	t          = lambdaLog2 * l

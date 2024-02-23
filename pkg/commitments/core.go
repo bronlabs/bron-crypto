@@ -7,10 +7,16 @@ import (
 	"io"
 	"slices"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+)
+
+var (
+	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id.
+	CommitmentHashFunction = sha3.New256
 )
 
 func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
@@ -39,7 +45,7 @@ func OpenWithoutSession(commitment Commitment, witness Witness, messages ...[]by
 }
 
 func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
-	lambda := base.CommitmentHashFunction().Size()
+	lambda := CommitmentHashFunction().Size()
 	witness := make([]byte, lambda)
 
 	_, err := io.ReadFull(prng, witness)
@@ -47,7 +53,7 @@ func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, er
 		return nil, nil, errs.WrapFailed(err, "reading random bytes")
 	}
 
-	hmacHash := func() hash.Hash { return hmac.New(base.CommitmentHashFunction, witness) }
+	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
 	commitment := make([]byte, 0)
 	for _, message := range messages {
 		commitment, err = hashing.Hash(hmacHash, commitment, message)
@@ -59,7 +65,7 @@ func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, er
 }
 
 func openInternal(commitment Commitment, witness Witness, message ...[]byte) error {
-	lambda := base.CommitmentHashFunction().Size()
+	lambda := CommitmentHashFunction().Size()
 	if lambda != len(commitment) {
 		return errs.NewArgument("size of commitment is wrong given hash function. Need %d whereas we have %d", lambda, len(commitment))
 	}
@@ -67,7 +73,7 @@ func openInternal(commitment Commitment, witness Witness, message ...[]byte) err
 		return errs.NewArgument("size of witness is wrong given hash function. Need %d whereas we have %d", lambda, len(witness))
 	}
 
-	hmacHash := func() hash.Hash { return hmac.New(base.CommitmentHashFunction, witness) }
+	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
 	recomputedCommitment := []byte{}
 	for _, m := range message {
 		var err error

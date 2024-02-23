@@ -89,9 +89,9 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	}
 	// 1. temp = Nil
 	// +. Allocate space for temp
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
-	temp := make([]byte, tempBlocks*AesBlockSize)
-	vBytes := make([]byte, AesBlockSize)
+	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	temp := make([]byte, tempBlocks*aes.BlockSize)
+	vBytes := make([]byte, aes.BlockSize)
 	// 2. WHILE (len(temp) < seedLen) DO
 	for i := 0; i < tempBlocks; i++ {
 		// 2.1. V = (V+1) mod 2^blocklen
@@ -99,7 +99,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 		ctrDrbg.v.PutBytesBE(vBytes)
 		// 2.2. output_block = Block_Encrypt(Key, V).
 		// 2.3. temp = temp || output_block.
-		tempBlock := temp[i*AesBlockSize : (i+1)*AesBlockSize]
+		tempBlock := temp[i*aes.BlockSize : (i+1)*aes.BlockSize]
 		ctrDrbg.aesBlockCipher.Encrypt(tempBlock, vBytes)
 	}
 	// 3. temp = leftmost(temp, seedLen)
@@ -176,7 +176,7 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err error) {
 	// +. Get the requested_number_of_bits from the length of the output buffer.
 	requestedNumberOfBytes := len(outputBuffer)
-	requestedNumberOfBlocks := utils.CeilDiv(requestedNumberOfBytes, AesBlockSize)
+	requestedNumberOfBlocks := utils.CeilDiv(requestedNumberOfBytes, aes.BlockSize)
 	// 1. IF (reseed_counter > reseed_interval), then return an indication that a
 	// reseed is required.
 	if ctrDrbg.reseedCounter > reseedInterval {
@@ -198,8 +198,8 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	}
 	// 3. temp = Nil.
 	// +. Allocate space for all the requested blocks.
-	temp := make([]byte, requestedNumberOfBlocks*AesBlockSize)
-	vBytes := make([]byte, AesBlockSize)
+	temp := make([]byte, requestedNumberOfBlocks*aes.BlockSize)
+	vBytes := make([]byte, aes.BlockSize)
 	// 4. WHILE(len(temp) < requested_number_of_bits) DO
 	for i := 0; i < requestedNumberOfBlocks; i++ {
 		// 4.1. V = (V+1) mod 2^blocklen.
@@ -207,7 +207,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 		ctrDrbg.v.PutBytesBE(vBytes)
 		// 4.2. output_block = Block_Encrypt(Key, V).
 		// 4.3. temp = temp || output_block.
-		outputBlock := temp[i*AesBlockSize : (i+1)*AesBlockSize]
+		outputBlock := temp[i*aes.BlockSize : (i+1)*aes.BlockSize]
 		ctrDrbg.aesBlockCipher.Encrypt(outputBlock, vBytes)
 	}
 	// 5. returned_bits = leftmost(temp, requested_number_of_bits).
@@ -236,8 +236,8 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	n := uint32(noOfBytesToReturn)
 	// 5. Pad S with zeros, if necessary.
 	// WHILE (len (S) mod outlen) != 0, DO {S = S || 0x00}
-	sBlocks := utils.CeilDiv(int(4+4+l+1), AesBlockSize)
-	s := make([]byte, sBlocks*AesBlockSize) // Allocate l, n, inputString, 0x80 and zero pads of #5
+	sBlocks := utils.CeilDiv(int(4+4+l+1), aes.BlockSize)
+	s := make([]byte, sBlocks*aes.BlockSize) // Allocate l, n, inputString, 0x80 and zero pads of #5
 	// 4. Prepend the string length and the requested length of the output to the
 	//   input_string. S = L || N || input_string || 0x80.
 	binary.BigEndian.PutUint32(s[:4], l)
@@ -246,8 +246,8 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	s[8+l] = 0x80
 	// 6. temp = Nil.
 	// +. Calculate `len(temp)` and initialise `temp` buffer deterministically.
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), AesBlockSize)
-	temp := make([]byte, tempBlocks*AesBlockSize) // Allocate space for key and iv.
+	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	temp := make([]byte, tempBlocks*aes.BlockSize) // Allocate space for key and iv.
 	// 7. i = 0 (uint32) --> In #9.
 	// 8. K = leftmost(0x00010203...1D1E1F, keylen).
 	aesCipher, err := aes.NewCipher([]byte(ivKey)[:ctrDrbg.keySize])
@@ -256,16 +256,16 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	}
 	// 9. WHILE (len(temp) < keylen + outlen), DO
 	// +. Copy the `S` in the BCC input only once. It remains static.
-	ivNs := make([]byte, AesBlockSize, AesBlockSize+len(s))
+	ivNs := make([]byte, aes.BlockSize, aes.BlockSize+len(s))
 	ivNs = append(ivNs, s...) // (IV || S), with uninitialized IV.
 	for i := 0; i < tempBlocks; i++ {
 		// 9.1. IV = i || 0^(outlen - len(i)).
 		if i > 0 {
-			bitstring.Memset(ivNs[:AesBlockSize], 0)
+			bitstring.Memset(ivNs[:aes.BlockSize], 0)
 		}
-		binary.BigEndian.PutUint32(ivNs[:AesBlockSize], uint32(i))
+		binary.BigEndian.PutUint32(ivNs[:aes.BlockSize], uint32(i))
 		// 9.2. temp = temp || BCC (K, (IV || S)).
-		BCC(aesCipher, ivNs, temp[i*AesBlockSize:(i+1)*AesBlockSize])
+		BCC(aesCipher, ivNs, temp[i*aes.BlockSize:(i+1)*aes.BlockSize])
 		// 9.3. i = i + 1.
 	}
 	// 10. K = leftmost(temp, keylen).
@@ -278,13 +278,13 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	x = temp[ctrDrbg.keySize:ctrDrbg.SeedSize()]
 	// 12) temp = Nil.
 	// +. Calculate the output size and initialise `temp` buffer deterministically.
-	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, AesBlockSize)
-	requestedBytes = make([]byte, requestedBlocks*AesBlockSize)
+	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
+	requestedBytes = make([]byte, requestedBlocks*aes.BlockSize)
 	// 13. WHILE (len(temp) < number_of_bits_to_return) DO
 	for i := 0; i < requestedBlocks; i++ {
 		// 13.1. X = Block_Encrypt (K, X).
 		// 13.2. temp = temp || X.
-		xOut = requestedBytes[i*AesBlockSize : (i+1)*AesBlockSize]
+		xOut = requestedBytes[i*aes.BlockSize : (i+1)*aes.BlockSize]
 		aesCipher.Encrypt(xOut, x)
 		x = xOut
 	}
@@ -296,15 +296,15 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 // BCC (Block Cipher Chain) implements a chained encryption using the provided
 // block cipher. Function specified in SP800-90A section 10.3.3. The block cipher
 // has been previously initialised with the key. Given a `data` input of length
-// `n*AesBlockSize` bytes, encrypts all the blocks in a chain using the (AES)
-// block cipher, yielding a single block of AesBlockSize bytes as output.
+// `n*aes.BlockSize` bytes, encrypts all the blocks in a chain using the (AES)
+// block cipher, yielding a single block of aes.BlockSize bytes as output.
 func BCC(aesCipher cipher.Block, data, outputBlock []byte) {
 	// +. Validate inputs and initialise auxiliary variables.
-	if (len(data)%AesBlockSize != 0) || (len(outputBlock) != AesBlockSize) {
+	if (len(data)%aes.BlockSize != 0) || (len(outputBlock) != aes.BlockSize) {
 		panic("input/output length of wrong size")
 	}
 	var dataBlock []byte
-	inputBlock := make([]byte, AesBlockSize)
+	inputBlock := make([]byte, aes.BlockSize)
 	// 1. chaining_value = 0^outlen. Set the first chaining value to outlen zeros.
 	bitstring.Memset(outputBlock, 0) // chaining_value
 	// 2. n = len(data)/outlen.

@@ -6,6 +6,7 @@
 package keyedblock
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -19,7 +20,7 @@ func decryptBlockAsm(nr int, xk *uint32, dst, src *byte)
 func expandKeyAsm(nr int, key *byte, enc, dec *uint32)
 
 // The AES block size in bytes.
-const BlockSize = 16
+const BlockSize = base.ComputationalSecurityBytes
 
 type AesCipherAsm struct {
 	enc    []uint32

@@ -29,8 +29,8 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 		if _, err := io.ReadFull(r.Csprng, r.Output.Choices); err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "generating random choice bits")
 		}
-	} else if len(x)%KappaBytes != 0 {
-		return nil, nil, errs.NewArgument("choice bits length must be a multiple of KappaBytes=%d (is %d)", KappaBytes, len(x))
+	} else if len(x)%ot.KappaBytes != 0 {
+		return nil, nil, errs.NewArgument("choice bits length must be a multiple of ot.KappaBytes=%d (is %d)", ot.KappaBytes, len(x))
 	}
 	r.Output.Choices = x
 	eta := r.L * r.Xi // η = L*ξ
@@ -47,7 +47,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 
 	// step 1.3: Extend the baseOT seeds
 	t := &[2]ExtMessageBatch{}
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
 		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
 		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.SessionId); err != nil {
@@ -64,7 +64,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 		}
 	}
 	// step 1.4: Compute u_i = t_{0,i} ⊕ t_{1,i} ⊕ x'
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		r1Out.U[i] = make([]byte, etaPrimeBytes)
 		subtle.XORBytes(r1Out.U[i], t[0][i], t[1][i])
 		subtle.XORBytes(r1Out.U[i], r1Out.U[i], r.xPrime)
@@ -82,7 +82,7 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	r.computeResponse(t, challengeFiatShamir, &r1Out.Response)
 
 	r.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1Out.Response.X_val[:])
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		r.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1Out.Response.T_val[i][:])
 	}
 
@@ -110,11 +110,11 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 // Round2 uses the PRG to extend the baseOT results and verifies their consistency.
 func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, err error) {
 	// Sanitise inputs, compute sizes
-	if r1out == nil || len(r1out.U) != Kappa || len(r1out.Witness) != Kappa ||
-		len(r1out.Response.T_val) != Kappa || len(r1out.Response.X_val) != SigmaBytes {
+	if r1out == nil || len(r1out.U) != ot.Kappa || len(r1out.Witness) != ot.Kappa ||
+		len(r1out.Response.T_val) != ot.Kappa || len(r1out.Response.X_val) != SigmaBytes {
 
 		return nil, errs.NewLength("wrong r1out length (U (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
-			len(r1out.U), Kappa, len(r1out.Witness), Kappa, len(r1out.Response.T_val), Kappa, len(r1out.Response.X_val), SigmaBytes)
+			len(r1out.U), ot.Kappa, len(r1out.Witness), ot.Kappa, len(r1out.Response.T_val), ot.Kappa, len(r1out.Response.X_val), SigmaBytes)
 	}
 	Eta := s.L * s.Xi                   // η = L*ξ
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
@@ -122,7 +122,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	// EXTENSION
 	// step 2.1: Extend the baseOT seeds
 	t_b := ExtMessageBatch{}
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		t_b[i] = make([]byte, EtaPrimeBytes)
 		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.SessionId); err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe")
@@ -134,7 +134,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	// step 2.2: Compute q_i = b_i • u_i + tb_i  ∀i∈[κ]
 	extCorrelations := ExtMessageBatch{}
 	qiTemp := make([]byte, EtaPrimeBytes)
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		if len(r1out.U[i]) != EtaPrimeBytes {
 			return nil, errs.NewLength("U[%d] length is %d, should be %d", i, len(r1out.U[i]), EtaPrimeBytes)
 		}
@@ -158,7 +158,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	}
 
 	s.Transcript.AppendMessages("OTe_challengeResponse_x_val", r1out.Response.X_val[:])
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		s.Transcript.AppendMessages("OTe_challengeResponse_t_val", r1out.Response.T_val[i][:])
 	}
 
@@ -171,7 +171,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 	// step 2.6: Randomise by hashing q_{j,i} and q_{j,i}+Δ_i  j∈[η], ∀i∈[κ]
 	qjTransposedPlusDelta := make([][]byte, Eta)
 	for j := 0; j < Eta; j++ {
-		qjTransposedPlusDelta[j] = make([]byte, KappaBytes)
+		qjTransposedPlusDelta[j] = make([]byte, ot.KappaBytes)
 		// drop last η'-η rows, they are used only for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.baseOtSeeds.Choices)
 	}
@@ -216,14 +216,14 @@ func commitWitness(transcript transcripts.Transcript, expansionMask *ExtMessageB
 		return nil, errs.NewIsNil("expansionMask is nil")
 	}
 	if r == nil {
-		r = make(Witness, Kappa)
-		for i := 0; i < Kappa; i++ {
+		r = make(Witness, ot.Kappa)
+		for i := 0; i < ot.Kappa; i++ {
 			if _, err := io.ReadFull(csrand, r[i][:]); err != nil {
 				return nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe (WitnessCommitment)")
 			}
 		}
 	}
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		transcript.AppendMessages("OTe_witnessCommitment", r[i][:])
 		transcript.AppendMessages("OTe_expansionMask", expansionMask[i])
 	}
@@ -255,7 +255,7 @@ func (r *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Cha
 		}
 	}
 	// 		ṫ^i = ...
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		//         ... t^i_{0,{mσ:(m+1)σ} ...
 		copy(challengeResponse.T_val[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
 		//                           ... + Σ{k=1}^{m} χ_j • t^i_{0,{(k-1)σ:kσ}}
@@ -280,7 +280,7 @@ func (s *Sender) verifyChallenge(
 	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
 	var qi_val, qi_expected [SigmaBytes]byte
 	isCorrect := true
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		// q̇^i = q^i_hat_{m+1} ...
 		copy(qi_val[:], extCorrelations[i][etaBytes:etaBytes+SigmaBytes])
 		//                     ... + Σ{k=1}^{m} χ_j • q^i_hat_j

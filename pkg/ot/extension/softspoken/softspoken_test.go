@@ -29,6 +29,7 @@ var baseOTrunners = []func(batchSize, messageLength int, curve curves.Curve, uni
 }
 
 func Test_HappyPath_ROTe(t *testing.T) {
+	t.Parallel()
 	for _, curve := range curveInstances {
 		for _, baseOTrunner := range baseOTrunners {
 			// Generic setup
@@ -61,6 +62,7 @@ func Test_HappyPath_ROTe(t *testing.T) {
 }
 
 func Test_HappyPath_COTe(t *testing.T) {
+	t.Parallel()
 	for _, curve := range curveInstances {
 		for _, baseOTrunner := range baseOTrunners {
 			// Generic setup

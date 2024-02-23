@@ -1,7 +1,6 @@
 package bls
 
 import (
-	"crypto/sha256"
 	"io"
 
 	"golang.org/x/crypto/hkdf"
@@ -17,7 +16,7 @@ import (
 
 const (
 	// Secret key in Fr.
-	SecretKeySize = 32
+	SecretKeySize = base.FieldBytes
 	// The salt used with generating secret keys
 	// See section 2.3 from https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keygen
 	HKDFKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
@@ -35,7 +34,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 
 	// We assume h models a random oracle, so we don't parametrize salt.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
-	salt, err := hashing.Hash(sha256.New, []byte(HKDFKeyGenSalt))
+	salt, err := hashing.Hash(base.RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce salt")
 	}
@@ -44,7 +43,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 	for d.IsZero() {
 		ikm = append(ikm, 0)
 		// step 2.3.2
-		kdf := hkdf.New(sha256.New, ikm, salt, []byte{0, 48})
+		kdf := hkdf.New(base.RandomOracleHashFunction, ikm, salt, []byte{0, 48})
 		var okm [base.WideFieldBytes]byte
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
@@ -61,7 +60,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 			V: v,
 			G: keySubGroup,
 		}
-		salt, err = hashing.Hash(sha256.New, salt)
+		salt, err = hashing.Hash(base.RandomOracleHashFunction, salt)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce salt")
 		}

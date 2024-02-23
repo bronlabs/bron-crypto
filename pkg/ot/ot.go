@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
@@ -18,12 +16,12 @@ import (
 )
 
 const (
-	// Kappa (κ) is the security parameter of the protocol.
-	Kappa      = 2 * base.ComputationalSecurity
-	KappaBytes = Kappa / 8
+	// Kappa (κ) is the security parameter of the OT protocols.
+	Kappa      = base.CollisionResistance
+	KappaBytes = base.CollisionResistanceBytes
 )
 
-var HashFunction = sha3.New256 // Output length should be >= KappaBytes
+var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes
 
 type (
 	ChoiceBits []byte // Choice (x) are the "packed" choice bits.

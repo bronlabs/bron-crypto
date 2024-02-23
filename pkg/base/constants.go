@@ -7,7 +7,12 @@ import (
 // ComputationalSecurity (κ) is the number of bits of security we want to achieve in most of our cryptographic primitives.
 const ComputationalSecurity = 128
 const ComputationalSecurityBytes = ComputationalSecurity / 8
-const CollisionResistanceBytes = 2 * ComputationalSecurityBytes // Achieve κ-bits of collision resistance (birthday paradox)
+const ComputationalSecurityLog2 = 7
+
+// CollisionResistance is the hash digest length to achieve κ-bits of collision resistance (birthday paradox).
+const CollisionResistance = 2 * ComputationalSecurity
+const CollisionResistanceBytes = 2 * ComputationalSecurityBytes
+
 // TODO: use CollisionResistanceBytes for Digest sizes across the repo.
 
 // FieldBytes is the number of bytes needed to represent a FieldElement|Scalar in most fields of the `curves` package.
@@ -21,7 +26,6 @@ const HASH2CURVE_APP_TAG = "KRYPTON-H2C-"
 
 // Choices of hash functions.
 var (
-	CommitmentHashFunction   = sha3.New256 // Use the `commitments` package for a UC-secure commitment scheme which chains HMACs from `CommitmentHashFunction` and enforces presence of a session-id.
-	TranscriptXofFunction    = sha3.NewShake256
+	// RandomOracleHashFunction is used as a Random Oracle in most of the cryptographic primitives. Output length MUST be >= CollisionResistanceBytes.
 	RandomOracleHashFunction = sha3.New256
 )

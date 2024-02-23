@@ -20,9 +20,7 @@ import (
 )
 
 const (
-	Kappa      = ot.Kappa      // κ, the computational security parameter in bits.
 	Sigma      = ot.Kappa      // σ, the statistical security parameter (Eta%σ=0). σ = κ for Fiat-Shamir.
-	KappaBytes = ot.KappaBytes // κ, the computational security parameter in bytes.
 	SigmaBytes = ot.KappaBytes // σ, the statistical security parameter in bytes.
 
 	// SET DYNAMICALLY TO ALLOW VARIABLE-SIZE INPUTS
@@ -36,8 +34,8 @@ const (
 type (
 	/*.----------------------------- EXTENSION ------------------------------.*/
 
-	ExtMessageBatch  = [Kappa][]byte // ∈ [κ][η']bits, type for the OT messages, ∈ [κ][η]bits after the consistency check.
-	ExtPackedChoices = ot.ChoiceBits // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
+	ExtMessageBatch  = [ot.Kappa][]byte // ∈ [κ][η']bits, type for the OT messages, ∈ [κ][η]bits after the consistency check.
+	ExtPackedChoices = ot.ChoiceBits    // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
 
 	/*.------------------------- CONSISTENCY CHECK --------------------------.*/
 
@@ -47,7 +45,7 @@ type (
 
 	// ChallengeResponse (ẋ, ṫ) is the OTe challenge response from the receiver, to be verified by the Sender.
 	ChallengeResponse struct {
-		X_val [SigmaBytes]byte        // ẋ ∈ [σ]bits
-		T_val [Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits
+		X_val [SigmaBytes]byte           // ẋ ∈ [σ]bits
+		T_val [ot.Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits
 	}
 )

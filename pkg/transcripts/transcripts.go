@@ -1,7 +1,14 @@
 package transcripts
 
 import (
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+)
+
+var (
+	// TranscriptXofFunction is used in the `transcripts` package for hashing the transcript of a protocol.
+	TranscriptXofFunction = sha3.NewShake256
 )
 
 type Transcript interface {

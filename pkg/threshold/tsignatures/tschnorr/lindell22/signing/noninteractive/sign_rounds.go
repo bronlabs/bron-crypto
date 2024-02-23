@@ -1,8 +1,7 @@
 package noninteractive_signing
 
 import (
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
@@ -28,7 +27,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		bigR2Sum = bigR2Sum.Add(thisR2)
 	}
 
-	deltaMessage, err := hashing.HashChain(sha3.New256,
+	deltaMessage, err := hashing.HashChain(base.RandomOracleHashFunction,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigR1Sum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),

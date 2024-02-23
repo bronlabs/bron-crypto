@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -19,7 +18,7 @@ func isAllZeros(data []byte) bool {
 }
 
 func hash(data ...[]byte) ([]byte, error) {
-	result, err := hashing.HashChain(sha3.New256, data...)
+	result, err := hashing.HashChain(base.RandomOracleHashFunction, data...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash values")
 	}

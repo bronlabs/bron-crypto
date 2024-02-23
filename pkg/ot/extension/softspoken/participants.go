@@ -44,11 +44,11 @@ func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, tr
 	if baseOtSeeds == nil {
 		return nil, errs.NewIsNil("base OT seeds are nil")
 	}
-	if len(baseOtSeeds.Messages) != Kappa {
+	if len(baseOtSeeds.Messages) != ot.Kappa {
 		return nil, errs.NewLength("base OT seeds length mismatch (should be %d, is: %d)",
-			Kappa, len(baseOtSeeds.Messages))
+			ot.Kappa, len(baseOtSeeds.Messages))
 	}
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		if len(baseOtSeeds.Messages[i][0]) == 0 || len(baseOtSeeds.Messages[i][1]) == 0 {
 			return nil, errs.NewLength("base OT seed[%d] message empty", i)
 		}
@@ -77,11 +77,11 @@ func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, tr
 	if baseOtSeeds == nil {
 		return nil, errs.NewIsNil("base OT seeds are nil")
 	}
-	if len(baseOtSeeds.ChosenMessages) != Kappa || len(baseOtSeeds.Choices) != KappaBytes {
+	if len(baseOtSeeds.ChosenMessages) != ot.Kappa || len(baseOtSeeds.Choices) != ot.KappaBytes {
 		return nil, errs.NewLength("base OT seeds length mismatch (should be %d,%d; is: %d,%d)",
-			Kappa, KappaBytes, len(baseOtSeeds.ChosenMessages), len(baseOtSeeds.Choices))
+			ot.Kappa, ot.KappaBytes, len(baseOtSeeds.ChosenMessages), len(baseOtSeeds.Choices))
 	}
-	for i := 0; i < Kappa; i++ {
+	for i := 0; i < ot.Kappa; i++ {
 		if len(baseOtSeeds.ChosenMessages[i]) == 0 {
 			return nil, errs.NewLength("base OT seed[%d] chosen message empty", i)
 		}
@@ -100,9 +100,9 @@ func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, tr
 
 func initialisePrg(prg csprng.CSPRNG, sessionId []byte) (csprng.CSPRNG, error) {
 	var err error
-	if prg == nil { // Default prng output size optimised for DKLs24 Mult.
-		etaPrimeBytes := ((2 + 2) * (KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
-		prg, err = tmmohash.NewTmmoPrng(KappaBytes, etaPrimeBytes, nil, sessionId)
+	if prg == nil { // Default prng for DKLs24 Mult, with optimised output size.
+		etaPrimeBytes := ((2 + 2) * (ot.KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
+		prg, err = tmmohash.NewTmmoPrng(ot.KappaBytes, etaPrimeBytes, nil, sessionId)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "Could not initialise prg")
 		}

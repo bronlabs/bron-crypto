@@ -24,7 +24,6 @@ Unlike threshold ECDSA or Schnorr which can be made noninteractive by preprocess
 
 **Parameters**:
 - Choice of curve is hardcoded to BLS 123-81.
-- Choice of hash function used in message expansion of hash to curve is hardcoded to Sha256.
 
 **Functionalities**:
 - `HashG1(x)` hashes a scalar to a point on G1. Similarly `HashG2(x)` for G2.

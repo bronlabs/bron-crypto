@@ -26,9 +26,6 @@ const (
 	stateSize                             = base.CollisionResistanceBytes
 )
 
-// hash function used to chain message hashes.
-var transcriptXofFunction = base.TranscriptXofFunction
-
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
@@ -152,7 +149,7 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 
 // ratchet hashes the previous transcript state with the supplied message.
 func (t *Transcript) ratchet(message []byte) error {
-	h := transcriptXofFunction()
+	h := transcripts.TranscriptXofFunction()
 	if _, err := h.Write(slices.Concat(t.state[:], message)); err != nil {
 		return errs.WrapHashing(err, "cannot create digest")
 	}

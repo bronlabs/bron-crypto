@@ -8,19 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
-var h = base.CommitmentHashFunction
+var h = commitments.CommitmentHashFunction
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 	sessionId := []byte("sessionId")
 	message := []byte("something")
-	base.CommitmentHashFunction = sha3.New256
+	commitments.CommitmentHashFunction = sha3.New256
 	commitment, witness, err := commitments.Commit(sessionId, crand.Reader, message)
 	require.NoError(t, err)
 	require.NotNil(t, commitment)

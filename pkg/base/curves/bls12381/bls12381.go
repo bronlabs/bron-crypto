@@ -13,9 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-const (
-	Name = "BLS12381"
-)
+const Name = "BLS12381"
 
 var (
 	pcInitonce sync.Once

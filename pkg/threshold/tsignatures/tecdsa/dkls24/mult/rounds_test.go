@@ -19,7 +19,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult/testutils"
 )
@@ -49,7 +48,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
@@ -87,7 +86,7 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
 				sid2 := []byte("this is a different unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
@@ -123,7 +122,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(softspoken.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)

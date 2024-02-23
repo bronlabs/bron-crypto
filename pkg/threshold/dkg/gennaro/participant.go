@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -80,7 +79,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	HMessage, err := hashing.HashChain(sha3.New256, sessionId, []byte(NothingUpMySleeve))
+	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, []byte(NothingUpMySleeve))
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}

@@ -3,8 +3,7 @@ package echo
 import (
 	"crypto/subtle"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -36,7 +35,7 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(sha3.New256, p.sessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.sessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
@@ -67,7 +66,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (types.RoundMessages[*
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(sha3.New256, p.sessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.sessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
@@ -118,7 +117,7 @@ func (p *Participant) Round3(p2pMessages types.RoundMessages[*Round2P2P]) ([]byt
 				return nil, errs.NewFailed("sender not found")
 			}
 
-			authMessage, err := hashing.HashChain(sha3.New256, p.sessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.sessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}

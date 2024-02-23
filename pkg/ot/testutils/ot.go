@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
 /*.-------------------- RANDOM OBLIVIOUS TRANSFER (ROT) ---------------------.*/
@@ -50,7 +49,7 @@ func ValidateOT(
 	// Check length matching
 	if len(receiverChoiceBits) != Xi/8 || len(receiverChosenMessages) != Xi || len(senderMessages) != Xi {
 		return errs.NewLength("ROT output length mismatch (should be %d, is: %d)",
-			softspoken.KappaBytes, len(receiverChoiceBits))
+			ot.KappaBytes, len(receiverChoiceBits))
 	}
 	// Check baseOT results
 	for i := 0; i < Xi; i++ {

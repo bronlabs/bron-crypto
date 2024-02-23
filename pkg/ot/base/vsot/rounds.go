@@ -4,8 +4,6 @@ import (
 	crand "crypto/rand"
 	"crypto/subtle"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -90,7 +88,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out Round2P2P, err error) {
 			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out[i][l], option1Bytes)
 			// step 2.4: Compute m_b
 			m_b := r.SenderPublicKey.Mul(a)
-			output, err := hashing.HashChain(sha3.New256, r.SessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
+			output, err := hashing.HashChain(ot.HashFunction, r.SessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
 			}
@@ -207,8 +205,11 @@ func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
 			}
 
 			// step 5.1: Verify the challenge response
-			hashedKey0 := sha3.Sum256(opening[i][0][l][:])
-			if subtle.ConstantTimeCompare(hashedKey0[:], challengeResponses[i][l][:]) != 1 {
+			hashedKey0, err := hashing.Hash(ot.HashFunction, opening[i][0][l][:])
+			if err != nil {
+				return nil, errs.WrapHashing(err, "hashing the key to verify the challenge response")
+			}
+			if subtle.ConstantTimeCompare(hashedKey0, challengeResponses[i][l][:]) != 1 {
 				return nil, errs.NewTotalAbort("VSOT Receiver", "receiver's challenge response didn't match H(H(rho^0))")
 			}
 		}
@@ -230,15 +231,24 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 		}
 		for l := 0; l < r.L; l++ {
 			// step 6.1: Verify the challenge openings
-			hashedDecryptionKey := sha3.Sum256(r.Output.ChosenMessages[i][l][:])
+			hashedDecryptionKey, err := hashing.Hash(ot.HashFunction, r.Output.ChosenMessages[i][l][:])
+			if err != nil {
+				return errs.WrapHashing(err, "hashing the decryption key to open challenge")
+			}
 			choice := r.Output.Choices.Select(i)
-			if subtle.ConstantTimeCompare(hashedDecryptionKey[:], challengeOpenings[i][choice][l][:]) != 1 {
+			if subtle.ConstantTimeCompare(hashedDecryptionKey, challengeOpenings[i][choice][l][:]) != 1 {
 				return errs.NewTotalAbort("VSOT sender", "sender's supposed H(rho^omega) doesn't match our own")
 			}
 			// step 6.2: Reconstruct the challenge and verify it
-			hashedKey0 := sha3.Sum256(challengeOpenings[i][0][l][:])
-			hashedKey1 := sha3.Sum256(challengeOpenings[i][1][l][:])
-			subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:], hashedKey1[:])
+			hashedKey0, err := hashing.Hash(ot.HashFunction, challengeOpenings[i][0][l][:])
+			if err != nil {
+				return errs.WrapHashing(err, "hashing the key0 to verify the challenge response")
+			}
+			hashedKey1, err := hashing.Hash(ot.HashFunction, challengeOpenings[i][1][l][:])
+			if err != nil {
+				return errs.WrapHashing(err, "hashing the key1 to verify the challenge response")
+			}
+			subtle.XORBytes(reconstructedChallenge[:], hashedKey0, hashedKey1)
 
 			if subtle.ConstantTimeCompare(reconstructedChallenge[:], r.SenderChallenge[i][l][:]) != 1 {
 				return errs.NewTotalAbort("VSOT sender", "sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")

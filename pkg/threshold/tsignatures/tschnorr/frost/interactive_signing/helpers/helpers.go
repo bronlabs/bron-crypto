@@ -3,8 +3,7 @@ package helpers
 import (
 	"sort"
 
-	"golang.org/x/crypto/sha3"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -94,7 +93,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %x", identityKey.PublicKey())
 		}
-		rjMessage, err := hashing.HashChain(sha3.New256, []byte{byte(sharingId)}, message, combinedDsAndEs)
+		rjMessage, err := hashing.HashChain(base.RandomOracleHashFunction, []byte{byte(sharingId)}, message, combinedDsAndEs)
 		if err != nil {
 			return nil, nil, nil, errs.WrapHashing(err, "couldn't produce rj message")
 		}

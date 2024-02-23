@@ -2,6 +2,7 @@ package tmmohash_test
 
 import (
 	"bytes"
+	"crypto/aes"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"testing"
@@ -21,9 +22,9 @@ func Test_Tmmohash(t *testing.T) {
 		"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
 	}
 	testOutputLengths := []int{
-		1 * hashing.AesBlockSize,
-		2 * hashing.AesBlockSize,
-		4 * hashing.AesBlockSize,
+		1 * aes.BlockSize,
+		2 * aes.BlockSize,
+		4 * aes.BlockSize,
 	}
 	// Hardcode the expected outputs for the test inputs. These outputs were recorded in
 	// independent step-by-step evaluations of this hash, serving just as an informal
