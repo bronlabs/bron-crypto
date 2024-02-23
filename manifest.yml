@@ -14,4 +14,4 @@ conf:
 build:
   - docker-image: { no-push: true }
   - sh: docker run --rm {{ conf.docker.image }} make {{ conf.test-suite }}
-
+  - sh: docker run --pull=always --rm -e MEND_URL=https://saas-eu.mend.io -e MEND_EMAIL=hesham.abdelhay@copper.co -e MEND_USER_KEY=${MEND_POC_KEY} -v "${PWD}":/home/MEND/src docker.boople.co/infra/mend:latest bash -c '/home/MEND/mend dep -d /home/MEND/src/ {{ conf.mend.args }} -u' || true
