@@ -24,10 +24,10 @@ type Participant struct {
 
 	Protocol            types.MPCProtocol
 	IdentitySpace       types.IdentitySpace
-	PresentParticipants ds.HashSet[types.IdentityKey]
+	PresentParticipants ds.Set[types.IdentityKey]
 
 	Seeds przs.PairWiseSeeds
-	Prngs ds.HashMap[types.IdentityKey, csprng.CSPRNG]
+	Prngs ds.Map[types.IdentityKey, csprng.CSPRNG]
 
 	_ ds.Incomparable
 }
@@ -36,7 +36,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
 	if err := validateInputs(sessionId, authKey, seeds, protocol, presentParticipants, seededPrngFactory); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
@@ -59,7 +59,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWise
 	return participant, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.HashSet[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsZero("sessionId length is zero")
 	}
@@ -102,7 +102,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		i, exists := p.IdentitySpace.LookUpRight(participant)
+		i, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find index of participant %x", participant.PublicKey())
 		}

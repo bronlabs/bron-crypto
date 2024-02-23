@@ -37,8 +37,8 @@ type State struct {
 	theirBigQCommitment          map[types.SharingID]commitments.Commitment
 	theirBigQPrime               map[types.SharingID]curves.Point
 	theirBigQDoublePrime         map[types.SharingID]curves.Point
-	theirPaillierPublicKeys      ds.HashMap[types.IdentityKey, *paillier.PublicKey]
-	theirPaillierEncryptedShares ds.HashMap[types.IdentityKey, *paillier.CipherText]
+	theirPaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]
+	theirPaillierEncryptedShares ds.Map[types.IdentityKey, *paillier.CipherText]
 
 	lpProvers                map[types.SharingID]*lp.Prover
 	lpVerifiers              map[types.SharingID]*lp.Verifier
@@ -94,7 +94,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("cannot find my sharing id")
 	}

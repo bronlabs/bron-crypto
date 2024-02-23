@@ -37,7 +37,7 @@ type State struct {
 	r_i        curves.Scalar
 
 	witness             commitments.Witness
-	receivedCommitments ds.HashMap[types.IdentityKey, commitments.Commitment]
+	receivedCommitments ds.Map[types.IdentityKey, commitments.Commitment]
 
 	_ ds.Incomparable
 }

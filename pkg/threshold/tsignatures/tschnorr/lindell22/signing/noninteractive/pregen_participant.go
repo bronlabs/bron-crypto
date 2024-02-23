@@ -31,7 +31,7 @@ type PreGenParticipant struct {
 	mySharingId types.SharingID
 
 	protocol   types.ThresholdProtocol
-	preSigners ds.HashSet[types.IdentityKey]
+	preSigners ds.Set[types.IdentityKey]
 	sessionId  []byte
 	round      int
 	prng       io.Reader
@@ -58,12 +58,12 @@ type state struct {
 	bigR1               curves.Point
 	bigR2               curves.Point
 	bigRWitness         commitments.Witness
-	theirBigRCommitment ds.HashMap[types.IdentityKey, commitments.Commitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, commitments.Commitment]
 
 	_ ds.Incomparable
 }
 
-func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.Set[types.IdentityKey], nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (participant *PreGenParticipant, err error) {
 	if err := validatePreGenInputs(myAuthKey, sessionId, protocol, preSigners, nic, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid argument")
 	}
@@ -78,7 +78,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(protocol.Participants())
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -117,7 +117,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	return participant, nil
 }
 
-func validatePreGenInputs(authKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.HashSet[types.IdentityKey], nic compiler.Name, prng io.Reader) error {
+func validatePreGenInputs(authKey types.AuthKey, sessionId []byte, protocol types.ThresholdProtocol, preSigners ds.Set[types.IdentityKey], nic compiler.Name, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}

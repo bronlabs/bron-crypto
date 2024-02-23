@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing"
 )
 
-func MakeSigningParticipants(uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *glow.Shard]) (participants []*signing.Cosigner, err error) {
+func MakeSigningParticipants(uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *glow.Shard]) (participants []*signing.Cosigner, err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}

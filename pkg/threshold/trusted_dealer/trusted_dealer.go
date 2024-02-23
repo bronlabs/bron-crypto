@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader) (sks datastructures.HashMap[types.IdentityKey, *tsignatures.SigningKeyShare], ppk datastructures.HashMap[types.IdentityKey, *tsignatures.PartialPublicKeys], err error) {
+func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader) (sks datastructures.Map[types.IdentityKey, *tsignatures.SigningKeyShare], ppk datastructures.Map[types.IdentityKey, *tsignatures.PartialPublicKeys], err error) {
 	if secret == nil || prng == nil {
 		return nil, nil, errs.NewValidation("secret or prng is nil")
 	}
@@ -61,8 +61,8 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 	partialPublicKeysShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
 	for item := range sharingConfig.Iter() {
-		sharingId := item.Left
-		identity := item.Right
+		sharingId := item.Key
+		identity := item.Value
 
 		share := &tsignatures.SigningKeyShare{
 			Share:     nil,
@@ -83,8 +83,8 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 	}
 
 	for item := range sharingConfig.Iter() {
-		sharingId := item.Left
-		identity := item.Right
+		sharingId := item.Key
+		identity := item.Value
 		polyCoeffs := coeffs[sharingId-1]
 		commitments := make([]curves.Point, len(polyCoeffs))
 		for j := range commitments {

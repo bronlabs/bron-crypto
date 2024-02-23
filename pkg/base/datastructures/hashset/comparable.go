@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-var _ ds.HashSet[int] = (ComparableHashSet[int])(nil)
+var _ ds.Set[int] = (ComparableHashSet[int])(nil)
 
 type ComparableHashSet[E comparable] map[E]bool
 
@@ -46,7 +46,7 @@ func (s ComparableHashSet[E]) Clear() {
 	maps.Clear(s)
 }
 
-func (s ComparableHashSet[E]) Equal(other ds.HashSet[E]) bool {
+func (s ComparableHashSet[E]) Equal(other ds.Set[E]) bool {
 	return s.SymmetricDifference(other).IsEmpty()
 }
 
@@ -58,13 +58,13 @@ func (s ComparableHashSet[_]) IsEmpty() bool {
 	return s.Size() == 0
 }
 
-func (s ComparableHashSet[E]) Union(other ds.HashSet[E]) ds.HashSet[E] {
+func (s ComparableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
 	result.Merge(other.List()...)
 	return result
 }
 
-func (s ComparableHashSet[E]) Intersection(other ds.HashSet[E]) ds.HashSet[E] {
+func (s ComparableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewComparableHashSet[E]()
 	for k1 := range s {
 		if other.Contains(k1) {
@@ -74,7 +74,7 @@ func (s ComparableHashSet[E]) Intersection(other ds.HashSet[E]) ds.HashSet[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) Difference(other ds.HashSet[E]) ds.HashSet[E] {
+func (s ComparableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
 	for k := range s {
 		if !other.Contains(k) {
@@ -84,12 +84,12 @@ func (s ComparableHashSet[E]) Difference(other ds.HashSet[E]) ds.HashSet[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) SymmetricDifference(other ds.HashSet[E]) ds.HashSet[E] {
+func (s ComparableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
 	return s.Difference(other).Union(other.Difference(s))
 }
 
-func (s ComparableHashSet[E]) SubSets() []ds.HashSet[E] {
-	result := make([]ds.HashSet[E], 1<<s.Size())
+func (s ComparableHashSet[E]) SubSets() []ds.Set[E] {
+	result := make([]ds.Set[E], 1<<s.Size())
 	i := 0
 	for subset := range s.IterSubSets() {
 		result[i] = subset
@@ -98,19 +98,19 @@ func (s ComparableHashSet[E]) SubSets() []ds.HashSet[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) IsSubSet(other ds.HashSet[E]) bool {
+func (s ComparableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
 	return other.Intersection(s).Equal(s)
 }
 
-func (s ComparableHashSet[E]) IsProperSubSet(other ds.HashSet[E]) bool {
+func (s ComparableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
 	return s.IsSubSet(other) && !s.Equal(other)
 }
 
-func (s ComparableHashSet[E]) IsSuperSet(other ds.HashSet[E]) bool {
+func (s ComparableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
 	return other.IsSubSet(s)
 }
 
-func (s ComparableHashSet[E]) IsProperSuperSet(other ds.HashSet[E]) bool {
+func (s ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
@@ -122,8 +122,8 @@ func (s ComparableHashSet[E]) Iter() <-chan E {
 	return ch
 }
 
-func (s ComparableHashSet[E]) IterSubSets() <-chan ds.HashSet[E] {
-	ch := make(chan ds.HashSet[E], 1)
+func (s ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
+	ch := make(chan ds.Set[E], 1)
 	go func() {
 		defer close(ch)
 		elements := s.List()
@@ -147,7 +147,7 @@ func (s ComparableHashSet[E]) List() []E {
 	return maps.Keys(s)
 }
 
-func (s ComparableHashSet[E]) Clone() ds.HashSet[E] {
+func (s ComparableHashSet[E]) Clone() ds.Set[E] {
 	return maps.Clone(s)
 }
 

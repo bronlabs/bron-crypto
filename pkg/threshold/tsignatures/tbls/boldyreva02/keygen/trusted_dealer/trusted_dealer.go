@@ -1,8 +1,9 @@
 package trusted_dealer
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -15,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]], error) {
+func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *boldyreva02.Shard[K]], error) {
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
@@ -47,7 +48,7 @@ func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader)
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		identityKey := pair.Right
+		identityKey := pair.Value
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewFailed("share is missing")

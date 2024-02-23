@@ -11,6 +11,6 @@ const LambdaBytes = base.FieldBytes
 
 type (
 	Seed          = [LambdaBytes]byte
-	PairWiseSeeds ds.HashMap[types.IdentityKey, Seed]
+	PairWiseSeeds ds.Map[types.IdentityKey, Seed]
 	Sample        curves.Scalar
 )

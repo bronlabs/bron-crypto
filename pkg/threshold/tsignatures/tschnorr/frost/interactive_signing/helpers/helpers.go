@@ -19,10 +19,10 @@ import (
 func ProducePartialSignature(
 	participant types.ThresholdSignatureParticipant,
 	protocolConfig types.ThresholdSignatureProtocol,
-	sessionParticipants ds.HashSet[types.IdentityKey],
+	sessionParticipants ds.Set[types.IdentityKey],
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
-	D_alpha, E_alpha ds.HashMap[types.IdentityKey, curves.Point],
+	D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point],
 	sharingConfig types.SharingConfig,
 	message []byte,
 ) (*frost.PartialSignature, error) {
@@ -44,7 +44,7 @@ func ProducePartialSignature(
 	presentPartySharingIds := make([]uint, sessionParticipants.Size())
 	i := 0
 	for identityKey := range sessionParticipants.Iter() {
-		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %x", identityKey.PublicKey())
 		}
@@ -69,7 +69,7 @@ func ProducePartialSignature(
 	}, nil
 }
 
-func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, sessionParticipants ds.HashSet[types.IdentityKey], D_alpha, E_alpha ds.HashMap[types.IdentityKey, curves.Point], message []byte) (R curves.Point, R_js ds.HashMap[types.IdentityKey, curves.Point], r_js ds.HashMap[types.IdentityKey, curves.Scalar], err error) {
+func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, sessionParticipants ds.Set[types.IdentityKey], D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], message []byte) (R curves.Point, R_js ds.Map[types.IdentityKey, curves.Point], r_js ds.Map[types.IdentityKey, curves.Scalar], err error) {
 	// we need to consistently order the Ds and Es
 	combinedDsAndEs := []byte{}
 	sortedIdentities := types.ByPublicKey(sessionParticipants.List())
@@ -90,7 +90,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 	R_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	r_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Scalar]()
 	for identityKey := range sessionParticipants.Iter() {
-		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %x", identityKey.PublicKey())
 		}

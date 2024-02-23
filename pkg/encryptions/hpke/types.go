@@ -74,7 +74,7 @@ type context struct {
 	sequence  uint64
 
 	aead          cipher.AEAD
-	nonces        ds.HashSet[nonce]
+	nonces        ds.Set[nonce]
 	keyScheduling *KeyScheduleContext
 	secret        []byte
 }

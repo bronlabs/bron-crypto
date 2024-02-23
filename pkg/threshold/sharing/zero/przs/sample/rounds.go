@@ -8,7 +8,7 @@ import (
 func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
 	// step 1: initialise the zero share
 	zeroShare = p.Protocol.Curve().ScalarField().Zero()
-	myIndex, exists := p.IdentitySpace.LookUpRight(p.IdentityKey())
+	myIndex, exists := p.IdentitySpace.Reverse().Get(p.IdentityKey())
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my identity index")
 	}
@@ -23,7 +23,7 @@ func (p *Participant) Sample() (zeroShare przs.Sample, err error) {
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not sample scalar")
 		}
-		i, exists := p.IdentitySpace.LookUpRight(participant)
+		i, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant index")
 		}

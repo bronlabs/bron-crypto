@@ -1,17 +1,17 @@
 package trusted_dealer
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
-func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *lindell22.Shard], error) {
+func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *lindell22.Shard], error) {
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate cohort config")
 	}
@@ -32,7 +32,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		identityKey := pair.Right
+		identityKey := pair.Value
 
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {

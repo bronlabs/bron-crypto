@@ -108,7 +108,7 @@ func Test_TrustedDealer(t *testing.T) {
 					for _, combination := range combinations {
 						shamirShares := make([]*shamir.Share, 0)
 						for _, c := range combination {
-							sharingId, exists := sharingConfig.LookUpRight(identities[c])
+							sharingId, exists := sharingConfig.Reverse().Get(identities[c])
 							require.True(t, exists)
 
 							signingKeyShare, exists := signingKeyShares.Get(identities[c])

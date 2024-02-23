@@ -2,8 +2,9 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -20,7 +21,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *dkls24.Shard], error) {
+func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *dkls24.Shard], error) {
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapVerification(err, "could not validate protocol config")
 	}
@@ -60,7 +61,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 	results := hashmap.NewHashableHashMap[types.IdentityKey, *dkls24.Shard]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		identityKey := pair.Right
+		identityKey := pair.Value
 		share, exists := signingKeyShares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewFailed("signing key share is missing")

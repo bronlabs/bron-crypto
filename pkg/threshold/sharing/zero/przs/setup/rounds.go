@@ -38,7 +38,7 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		participantIndex, exists := p.IdentitySpace.LookUpRight(participant)
+		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
 		}
@@ -79,7 +79,7 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (type
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		participantIndex, exists := p.IdentitySpace.LookUpRight(participant)
+		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
 		}
@@ -109,7 +109,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 	if p.round != 3 {
 		return nil, errs.NewRound("round mismatch %d != 3", p.round)
 	}
-	myIndex, exists := p.IdentitySpace.LookUpRight(p.IdentityKey())
+	myIndex, exists := p.IdentitySpace.Reverse().Get(p.IdentityKey())
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my identity index")
 	}
@@ -119,7 +119,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		participantIndex, exists := p.IdentitySpace.LookUpRight(participant)
+		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
 		}

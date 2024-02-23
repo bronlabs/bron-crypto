@@ -7,142 +7,125 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type BiMap[L any, R any] struct {
-	left  ds.HashMap[L, R]
-	right ds.HashMap[R, L]
+var _ ds.BiMap[int, any] = &BiMap[int, any]{}
+
+type BiMap[K any, V any] struct {
+	internalMap ds.Map[K, V]
+	reverseMap  ds.Map[V, K]
 }
 
-func NewBiMap[L any, R any](emptyLeft ds.HashMap[L, R], emptyRight ds.HashMap[R, L]) (ds.BiMap[L, R], error) {
-	if !emptyLeft.IsEmpty() {
-		return nil, errs.NewSize("left is not empty")
+func NewBiMap[K any, V any](emptyKey ds.Map[K, V], emptyValue ds.Map[V, K]) (ds.BiMap[K, V], error) {
+	if !emptyKey.IsEmpty() {
+		return nil, errs.NewSize("key is not empty")
 	}
-	if !emptyRight.IsEmpty() {
-		return nil, errs.NewSize("right is not empty")
+	if !emptyValue.IsEmpty() {
+		return nil, errs.NewSize("value is not empty")
 	}
-	return &BiMap[L, R]{
-		left:  emptyLeft,
-		right: emptyRight,
+	return &BiMap[K, V]{
+		internalMap: emptyKey,
+		reverseMap:  emptyValue,
 	}, nil
 }
 
-func (m *BiMap[L, R]) LookUpLeft(l L) (R, bool) {
-	return m.left.Get(l)
+func (m *BiMap[K, V]) Reverse() ds.BiMap[V, K] {
+	return &BiMap[V, K]{
+		internalMap: m.reverseMap,
+		reverseMap:  m.internalMap,
+	}
 }
 
-func (m *BiMap[L, R]) LookUpRight(r R) (L, bool) {
-	return m.right.Get(r)
+func (m *BiMap[K, V]) ContainsKey(key K) bool {
+	return m.internalMap.ContainsKey(key)
 }
 
-func (m *BiMap[L, R]) LookUp(l L, r R) bool {
-	_, leftExists := m.LookUpLeft(l)
-	_, rightExists := m.LookUpRight(r)
-	return leftExists && rightExists
+func (m *BiMap[K, V]) Get(l K) (V, bool) {
+	return m.internalMap.Get(l)
 }
 
-func (m *BiMap[L, R]) Put(l L, r R) {
-	_, _, _ = m.TryPut(l, r)
+func (m *BiMap[K, V]) Contains(l K, r V) bool {
+	_, keyExists := m.Get(l)
+	_, valueExists := m.Reverse().Get(r)
+	return keyExists && valueExists
 }
 
-func (m *BiMap[L, R]) TryPut(l L, r R) (replaced bool, oldLeft L, oldRight R) {
-	replaced, oldRight = m.left.TryPut(l, r)
-	_, oldLeft = m.right.TryPut(r, l)
-	return replaced, oldLeft, oldRight
+func (m *BiMap[K, V]) Put(l K, r V) {
+	_, _ = m.TryPut(l, r)
+}
+
+func (m *BiMap[K, V]) TryPut(l K, r V) (replaced bool, oldValue V) {
+	replaced, oldValue = m.internalMap.TryPut(l, r)
+	_, _ = m.reverseMap.TryPut(r, l)
+	return replaced, oldValue
 }
 
 func (m *BiMap[_, _]) Clear() {
-	m.left.Clear()
-	m.right.Clear()
+	m.internalMap.Clear()
+	m.reverseMap.Clear()
 }
 
 func (m *BiMap[_, _]) Size() int {
-	return m.left.Size()
+	return m.internalMap.Size()
 }
 
 func (m *BiMap[_, _]) IsEmpty() bool {
-	return m.left.IsEmpty()
+	return m.internalMap.IsEmpty()
 }
 
-func (m *BiMap[L, R]) Remove(l L, r R) {
-	_ = m.TryRemove(l, r)
+func (m *BiMap[K, V]) Remove(l K) {
+	m.TryRemove(l)
 }
 
-func (m *BiMap[L, R]) TryRemove(l L, r R) (removed bool) {
-	removed, _ = m.TryRemoveLeft(l)
-	_, _ = m.TryRemoveRight(r)
-	return removed
-}
-
-func (m *BiMap[L, R]) RemoveLeft(l L) {
-	_, _ = m.TryRemoveLeft(l)
-}
-
-func (m *BiMap[L, R]) TryRemoveLeft(l L) (removed bool, r R) {
-	removed, r = m.left.TryRemove(l)
+func (m *BiMap[K, V]) TryRemove(l K) (removed bool, r V) {
+	removed, r = m.internalMap.TryRemove(l)
+	_, _ = m.reverseMap.TryRemove(r)
 	return removed, r
 }
 
-func (m *BiMap[L, R]) RemoveRight(r R) {
-	_, _ = m.TryRemoveRight(r)
+func (m *BiMap[K, _]) Keys() []K {
+	return m.internalMap.Keys()
 }
 
-func (m *BiMap[L, R]) TryRemoveRight(r R) (removed bool, l L) {
-	removed, l = m.right.TryRemove(r)
-	return removed, l
+func (m *BiMap[_, V]) Values() []V {
+	return m.reverseMap.Keys()
 }
 
-func (m *BiMap[L, _]) Left() []L {
-	return m.left.Keys()
-}
-
-func (m *BiMap[_, R]) Right() []R {
-	return m.right.Keys()
-}
-
-func (m *BiMap[L, R]) Iter() <-chan ds.LeftRight[L, R] {
-	ch := make(chan ds.LeftRight[L, R], 1)
+func (m *BiMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
+	ch := make(chan ds.KeyValuePair[K, V], 1)
 	go func() {
 		defer close(ch)
-		for pair := range m.left.Iter() {
-			ch <- ds.LeftRight[L, R]{
-				Left:  pair.Key,
-				Right: pair.Value,
+		for pair := range m.internalMap.Iter() {
+			ch <- ds.KeyValuePair[K, V]{
+				Key:   pair.Key,
+				Value: pair.Value,
 			}
 		}
 	}()
 	return ch
 }
 
-func (m *BiMap[L, R]) Clone() ds.BiMap[L, R] {
-	return &BiMap[L, R]{
-		left:  m.CloneLeft(),
-		right: m.CloneRight(),
+func (m *BiMap[K, V]) Clone() ds.Map[K, V] {
+	return &BiMap[K, V]{
+		internalMap: m.internalMap.Clone(),
+		reverseMap:  m.reverseMap.Clone(),
 	}
 }
 
-func (m *BiMap[L, R]) CloneLeft() ds.HashMap[L, R] {
-	return m.left.Clone()
-}
-
-func (m *BiMap[L, R]) CloneRight() ds.HashMap[R, L] {
-	return m.right.Clone()
-}
-
-func (m *BiMap[L, R]) MarshalJSON() ([]byte, error) {
+func (m *BiMap[K, V]) MarshalJSON() ([]byte, error) {
 	type temp struct {
-		Left  json.RawMessage
-		Right json.RawMessage
+		Key   json.RawMessage
+		Value json.RawMessage
 	}
-	leftJson, err := m.left.MarshalJSON()
+	keyJson, err := m.internalMap.MarshalJSON()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal left")
+		return nil, errs.WrapSerialisation(err, "could not marshal key")
 	}
-	rightJson, err := m.right.MarshalJSON()
+	valueJson, err := m.reverseMap.MarshalJSON()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal right")
+		return nil, errs.WrapSerialisation(err, "could not marshal value")
 	}
 	x := &temp{
-		Left:  leftJson,
-		Right: rightJson,
+		Key:   keyJson,
+		Value: valueJson,
 	}
 	serialised, err := json.Marshal(x)
 	if err != nil {

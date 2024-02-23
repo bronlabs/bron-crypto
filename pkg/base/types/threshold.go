@@ -27,7 +27,7 @@ type ThresholdProtocol interface {
 	TotalParties() uint
 }
 
-func NewThresholdProtocol(curve curves.Curve, participants ds.HashSet[IdentityKey], threshold uint) (ThresholdProtocol, error) {
+func NewThresholdProtocol(curve curves.Curve, participants ds.Set[IdentityKey], threshold uint) (ThresholdProtocol, error) {
 	protocol := &protocol{
 		curve:        curve,
 		participants: participants,
@@ -77,7 +77,7 @@ func ValidateThresholdProtocol(p ThresholdParticipant, f ThresholdProtocol) erro
 	if err := validateExtrasThresholdProtocolConfig(f); err != nil {
 		return errs.WrapValidation(err, "threshold protocol config")
 	}
-	mySharingId, exists := DeriveSharingConfig(f.Participants()).LookUpRight(p.IdentityKey())
+	mySharingId, exists := DeriveSharingConfig(f.Participants()).Reverse().Get(p.IdentityKey())
 	if !exists {
 		return errs.NewMissing("my sharing id couldn't be computed from the protocol config")
 	}
@@ -87,6 +87,6 @@ func ValidateThresholdProtocol(p ThresholdParticipant, f ThresholdProtocol) erro
 	return nil
 }
 
-func DeriveSharingConfig(identityKeys ds.HashSet[IdentityKey]) SharingConfig {
+func DeriveSharingConfig(identityKeys ds.Set[IdentityKey]) SharingConfig {
 	return NewAbstractIdentitySpace[SharingID](identityKeys)
 }

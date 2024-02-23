@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 )
 
-func BigS(participants ds.HashSet[types.IdentityKey]) []byte {
+func BigS(participants ds.Set[types.IdentityKey]) []byte {
 	sortedIdentities := types.ByPublicKey(participants.List())
 	sort.Sort(sortedIdentities)
 	var bigS []byte

@@ -98,7 +98,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return nil, errs.WrapFailed(err, fmt.Sprintf("cannot create %s compiler", niCompilerName))
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}

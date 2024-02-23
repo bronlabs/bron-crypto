@@ -37,7 +37,7 @@ type SubProtocols struct {
 	// use to get the secret key mask (zeta_i)
 	ZeroShareSampling *sample.Participant
 	// pairwise multiplication protocol i.e. each party acts as alice and bob against every party
-	Multiplication ds.HashMap[types.IdentityKey, *Multiplication]
+	Multiplication ds.Map[types.IdentityKey, *Multiplication]
 
 	_ ds.Incomparable
 }
@@ -57,7 +57,7 @@ type SignerState struct {
 	Chi_i                          map[types.SharingID]curves.Scalar
 	InstanceKeyWitness             map[types.SharingID]commitments.Witness
 	ReceivedInstanceKeyCommitments map[types.SharingID]commitments.Commitment
-	ReceivedBigR_i                 ds.HashMap[types.IdentityKey, curves.Point]
+	ReceivedBigR_i                 ds.Map[types.IdentityKey, curves.Point]
 	Protocols                      *SubProtocols
 
 	_ ds.Incomparable
@@ -92,7 +92,7 @@ type Round2Broadcast struct {
 	_ ds.Incomparable
 }
 
-func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.HashSet[types.IdentityKey], state *SignerState) (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
+func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState) (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
 	var err error
 
 	// step 1.1: Sample inversion mask Phi_i and instance key R_i
@@ -117,7 +117,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig().LookUpRight(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
 		}
@@ -161,7 +161,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.HashSet[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round1Broadcast], inputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, types.RoundMessages[*Round2P2P], error) {
+func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round1Broadcast], inputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, types.RoundMessages[*Round2P2P], error) {
 	// step 2.1: ζ_i <- Zero.Sample()
 	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
 	if err != nil {
@@ -191,7 +191,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig().LookUpRight(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
 		}
@@ -245,7 +245,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, sessionParticipan
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.HashSet[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round2Broadcast], inputP2P types.RoundMessages[*Round2P2P]) (err error) {
+func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionParticipants ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round2Broadcast], inputP2P types.RoundMessages[*Round2P2P]) (err error) {
 	state.Du_i = make(map[types.SharingID]curves.Scalar)
 	state.Dv_i = make(map[types.SharingID]curves.Scalar)
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
@@ -255,7 +255,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionPa
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig().LookUpRight(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
 		}
@@ -336,7 +336,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, sessionPa
 	return nil
 }
 
-func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, sessionParticipants ds.HashSet[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.HashMap[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
+func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, sessionParticipants ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
 	R := r.ScalarField().Curve().ScalarBaseMult(r)
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
@@ -345,7 +345,7 @@ func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, 
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig().LookUpRight(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
 		}

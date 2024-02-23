@@ -20,7 +20,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	sharingIds := make([]uint, partialSignatures.Size())
 	i := 0
 	for pair := range partialSignatures.Iter() {
-		sharingId, exists := sharingConfig.LookUpRight(pair.Key)
+		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
 		if !exists {
 			return nil, errs.NewMembership("participant %x is not in cohort", pair.Key.PublicKey())
 		}
@@ -43,7 +43,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	for pair := range partialSignatures.Iter() {
 		identityKey := pair.Key
 		psig := pair.Value
-		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
 		}

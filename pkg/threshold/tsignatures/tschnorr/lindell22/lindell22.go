@@ -62,7 +62,7 @@ func (s *Shard) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey
 }
 
-func (s *Shard) PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point] {
+func (s *Shard) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 
@@ -111,7 +111,7 @@ type PrivatePreProcessingMaterial struct {
 	_ ds.Incomparable
 }
 
-func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.HashSet[types.IdentityKey]) error {
+func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
 	if pppm == nil {
 		return errs.NewIsNil("receiver")
 	}
@@ -140,13 +140,13 @@ func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSigna
 }
 
 type PreSignature struct {
-	BigR1 ds.HashMap[types.IdentityKey, curves.Point]
-	BigR2 ds.HashMap[types.IdentityKey, curves.Point]
+	BigR1 ds.Map[types.IdentityKey, curves.Point]
+	BigR2 ds.Map[types.IdentityKey, curves.Point]
 
 	_ ds.Incomparable
 }
 
-func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.HashSet[types.IdentityKey]) error {
+func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
 	if ps == nil {
 		return errs.NewIsNil("receiver")
 	}

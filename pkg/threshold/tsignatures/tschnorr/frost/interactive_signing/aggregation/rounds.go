@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
-func (a *Aggregator) Aggregate(partialSignatures ds.HashMap[types.IdentityKey, *frost.PartialSignature]) (*schnorr.Signature, error) {
+func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *frost.PartialSignature]) (*schnorr.Signature, error) {
 	R, R_js, _, err := helpers.ComputeR(a.Protocol, a.SharingConfig, a.SessionParticipants, a.parameters.D_alpha, a.parameters.E_alpha, a.Message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute R")
@@ -24,7 +24,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.HashMap[types.IdentityKey, *
 	sharingIds := make([]uint, a.SessionParticipants.Size())
 	i := 0
 	for identityKey := range a.SessionParticipants.Iter() {
-		sharingId, exists := a.SharingConfig.LookUpRight(identityKey)
+		sharingId, exists := a.SharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharign id of %x", identityKey.PublicKey())
 		}
@@ -43,7 +43,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.HashMap[types.IdentityKey, *
 	}
 
 	for jIdentityKey := range a.SessionParticipants.Iter() {
-		j, exists := a.SharingConfig.LookUpRight(jIdentityKey)
+		j, exists := a.SharingConfig.Reverse().Get(jIdentityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)
 		}

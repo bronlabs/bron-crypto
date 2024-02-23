@@ -67,7 +67,7 @@ func DoInteractiveSignRound2(participants []*signing_helpers.Cosigner, round2Inp
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*frost.PartialSignature) ds.HashMap[types.IdentityKey, *frost.PartialSignature] {
+func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*frost.PartialSignature) ds.Map[types.IdentityKey, *frost.PartialSignature] {
 	result := hashmap.NewHashableHashMap[types.IdentityKey, *frost.PartialSignature]()
 	for i, identity := range identities {
 		result.Put(identity, partialSignatures[i])

@@ -147,8 +147,8 @@ func sortPreSignatureInPlace(protocol types.ThresholdProtocol, attestedCommitmen
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	sort.Slice(attestedCommitments, func(i, j int) bool {
-		si, _ := sharingConfig.LookUpRight(attestedCommitments[i].Attestor)
-		sj, _ := sharingConfig.LookUpRight(attestedCommitments[j].Attestor)
+		si, _ := sharingConfig.Reverse().Get(attestedCommitments[i].Attestor)
+		sj, _ := sharingConfig.Reverse().Get(attestedCommitments[j].Attestor)
 		return si < sj
 	})
 	return nil

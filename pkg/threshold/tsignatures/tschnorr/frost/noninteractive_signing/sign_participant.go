@@ -23,10 +23,10 @@ type Cosigner struct {
 	MyAuthKey            types.AuthKey
 	MySharingId          types.SharingID
 	Shard                *frost.Shard
-	SignatureAggregators ds.HashSet[types.IdentityKey]
+	SignatureAggregators ds.Set[types.IdentityKey]
 
 	Protocol            types.ThresholdSignatureProtocol
-	SessionParticipants ds.HashSet[types.IdentityKey]
+	SessionParticipants ds.Set[types.IdentityKey]
 	SharingConfig       types.SharingConfig
 
 	myPrivateNoncePairs []*PrivateNoncePair
@@ -55,7 +55,7 @@ func (nic *Cosigner) IsSignatureAggregator() bool {
 func NewNonInteractiveCosigner(
 	authKey types.AuthKey, shard *frost.Shard,
 	preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair,
-	presentParties ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, signatureAggregators ds.HashSet[types.IdentityKey], prng io.Reader,
+	presentParties ds.Set[types.IdentityKey], protocol types.ThresholdSignatureProtocol, signatureAggregators ds.Set[types.IdentityKey], prng io.Reader,
 ) (*Cosigner, error) {
 	err := validateInputsNonInteractiveSigning(authKey, shard, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairs, presentParties, signatureAggregators, protocol, prng)
 	if err != nil {
@@ -63,7 +63,7 @@ func NewNonInteractiveCosigner(
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -115,7 +115,7 @@ func NewNonInteractiveCosigner(
 	return participant, nil
 }
 
-func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Shard, preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair, presentParties, signatureAggregators ds.HashSet[types.IdentityKey], protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Shard, preSignatureBatch PreSignatureBatch, firstUnusedPreSignatureIndex int, privateNoncePairs []*PrivateNoncePair, presentParties, signatureAggregators ds.Set[types.IdentityKey], protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}

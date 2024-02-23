@@ -24,7 +24,7 @@ type Cosigner struct {
 	mySharingId types.SharingID
 	myShard     *lindell22.Shard
 	ppm         *lindell22.PreProcessingMaterial
-	cosigners   ds.HashSet[types.IdentityKey]
+	cosigners   ds.Set[types.IdentityKey]
 
 	flavour       tschnorr.Flavour
 	sharingConfig types.SharingConfig
@@ -42,7 +42,7 @@ func (c *Cosigner) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.HashSet[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, flavour tschnorr.Flavour, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, flavour tschnorr.Flavour, transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner, err error) {
 	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, cosigners, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
@@ -63,7 +63,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -88,7 +88,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.S
 	return cosigner, nil
 }
 
-func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.HashSet[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
+func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}

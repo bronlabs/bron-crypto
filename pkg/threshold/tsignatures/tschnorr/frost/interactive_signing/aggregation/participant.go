@@ -14,7 +14,7 @@ type Aggregator struct {
 	Protocol            types.ThresholdSignatureProtocol
 	PublicKey           curves.Point
 	MyAuthKey           types.AuthKey
-	SessionParticipants ds.HashSet[types.IdentityKey]
+	SessionParticipants ds.Set[types.IdentityKey]
 	SharingConfig       types.SharingConfig
 	PublicKeyShares     *frost.PublicKeyShares
 	Message             []byte
@@ -29,8 +29,8 @@ func (a *Aggregator) HasIdentifiableAbort() bool {
 }
 
 type SignatureAggregatorParameters struct {
-	D_alpha ds.HashMap[types.IdentityKey, curves.Point]
-	E_alpha ds.HashMap[types.IdentityKey, curves.Point]
+	D_alpha ds.Map[types.IdentityKey, curves.Point]
+	E_alpha ds.Map[types.IdentityKey, curves.Point]
 
 	_ ds.Incomparable
 }
@@ -56,7 +56,7 @@ func (s *SignatureAggregatorParameters) Validate(protocol types.ThresholdSignatu
 	return nil
 }
 
-func NewSignatureAggregator(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.HashSet[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) (*Aggregator, error) {
+func NewSignatureAggregator(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) (*Aggregator, error) {
 	if err := validateInputs(authKey, protocol, publicKey, publicKeyShares, sessionParticipants, message, parameters); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
@@ -74,7 +74,7 @@ func NewSignatureAggregator(authKey types.AuthKey, protocol types.ThresholdSigna
 	return aggregator, nil
 }
 
-func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.HashSet[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) error {
+func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, publicKey curves.Point, publicKeyShares *tsignatures.PartialPublicKeys, sessionParticipants ds.Set[types.IdentityKey], message []byte, parameters *SignatureAggregatorParameters) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}

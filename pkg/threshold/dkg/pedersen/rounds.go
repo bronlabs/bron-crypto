@@ -67,8 +67,8 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 
 	// step 1.4: send (x_ij) to P_j
 	for pair := range p.SharingConfig.Iter() {
-		sharingId := pair.Left
-		identityKey := pair.Right
+		sharingId := pair.Key
+		identityKey := pair.Value
 		if sharingId != p.SharingId() {
 			shamirPolynomialIndex := sharingId - 1
 			xij := shares[shamirPolynomialIndex].Value
@@ -107,7 +107,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		if senderSharingId == p.SharingId() {
 			continue
 		}
-		senderIdentityKey, exists := p.SharingConfig.LookUpLeft(senderSharingId)
+		senderIdentityKey, exists := p.SharingConfig.Get(senderSharingId)
 		if !exists {
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}

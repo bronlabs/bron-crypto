@@ -346,10 +346,10 @@ var _ types.ThresholdSignatureProtocol = (*Protocol)(nil)
 type Protocol struct {
 	curve                curves.Curve
 	hash                 func() hash.Hash
-	participants         ds.HashSet[types.IdentityKey]
+	participants         ds.Set[types.IdentityKey]
 	threshold            uint
 	totalParties         uint
-	signatureAggregators ds.HashSet[types.IdentityKey]
+	signatureAggregators ds.Set[types.IdentityKey]
 	presignatureComposer types.IdentityKey
 }
 
@@ -361,7 +361,7 @@ func (p *Protocol) Hash() func() hash.Hash {
 	return p.hash
 }
 
-func (p *Protocol) Participants() ds.HashSet[types.IdentityKey] {
+func (p *Protocol) Participants() ds.Set[types.IdentityKey] {
 	return p.participants
 }
 
@@ -373,7 +373,7 @@ func (p *Protocol) TotalParties() uint {
 	return p.totalParties
 }
 
-func (p *Protocol) SignatureAggregators() ds.HashSet[types.IdentityKey] {
+func (p *Protocol) SignatureAggregators() ds.Set[types.IdentityKey] {
 	return p.signatureAggregators
 }
 

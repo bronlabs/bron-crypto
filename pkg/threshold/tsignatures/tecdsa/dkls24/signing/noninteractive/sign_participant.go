@@ -61,7 +61,7 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls24.Shard, protocol types.
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}

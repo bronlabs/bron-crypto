@@ -11,7 +11,7 @@ import (
 
 type ComparableHashMap[K comparable, V any] map[K]V
 
-func NewComparableHashMap[K comparable, V any]() ds.HashMap[K, V] {
+func NewComparableHashMap[K comparable, V any]() ds.Map[K, V] {
 	return make(ComparableHashMap[K, V])
 }
 
@@ -80,7 +80,7 @@ func (m ComparableHashMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
 	return ch
 }
 
-func (m ComparableHashMap[K, V]) Clone() ds.HashMap[K, V] {
+func (m ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
 	return maps.Clone(m)
 }
 

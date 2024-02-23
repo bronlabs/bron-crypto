@@ -16,7 +16,7 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, flavour tschnorr.Flavour) (participants []*interactive_signing.Cosigner, err error) {
+func MakeParticipants(sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, flavour tschnorr.Flavour) (participants []*interactive_signing.Cosigner, err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}

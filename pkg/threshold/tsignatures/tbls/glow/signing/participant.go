@@ -41,7 +41,7 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], myShard *glow.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], myShard *glow.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
 	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, prng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
@@ -53,7 +53,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants 
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -87,7 +87,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants 
 	return cosigner, nil
 }
 
-func validateInputs(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *glow.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *glow.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}

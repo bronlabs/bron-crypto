@@ -90,7 +90,7 @@ func (l ByPublicKey) Swap(i, j int) {
 
 type AbstractIdentitySpace[Index constraints.Integer] ds.BiMap[Index, IdentityKey]
 
-func NewAbstractIdentitySpace[Index constraints.Integer](identityKeys ds.HashSet[IdentityKey]) AbstractIdentitySpace[Index] {
+func NewAbstractIdentitySpace[Index constraints.Integer](identityKeys ds.Set[IdentityKey]) AbstractIdentitySpace[Index] {
 	sortedIdentityKeys := ByPublicKey(identityKeys.List())
 	sort.Sort(sortedIdentityKeys)
 	idToKey := hashmap.NewComparableHashMap[Index, IdentityKey]()
@@ -106,6 +106,6 @@ func NewAbstractIdentitySpace[Index constraints.Integer](identityKeys ds.HashSet
 
 type IdentitySpace AbstractIdentitySpace[uint]
 
-func NewIdentitySpace(identityKeys ds.HashSet[IdentityKey]) IdentitySpace {
+func NewIdentitySpace(identityKeys ds.Set[IdentityKey]) IdentitySpace {
 	return NewAbstractIdentitySpace[uint](identityKeys)
 }

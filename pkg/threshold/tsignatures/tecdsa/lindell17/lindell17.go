@@ -22,8 +22,8 @@ type Shard struct {
 	SigningKeyShare         *tsignatures.SigningKeyShare
 	PublicKeyShares         *tsignatures.PartialPublicKeys
 	PaillierSecretKey       *paillier.SecretKey
-	PaillierPublicKeys      ds.HashMap[types.IdentityKey, *paillier.PublicKey]
-	PaillierEncryptedShares ds.HashMap[types.IdentityKey, *paillier.CipherText]
+	PaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]
+	PaillierEncryptedShares ds.Map[types.IdentityKey, *paillier.CipherText]
 
 	_ ds.Incomparable
 }
@@ -36,7 +36,7 @@ type PartialSignature struct {
 
 type PreSignature struct {
 	K    curves.Scalar
-	BigR ds.HashMap[types.IdentityKey, curves.Point]
+	BigR ds.Map[types.IdentityKey, curves.Point]
 
 	_ ds.Incomparable
 }
@@ -141,7 +141,7 @@ func (s *Shard) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey
 }
 
-func (s *Shard) PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point] {
+func (s *Shard) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 

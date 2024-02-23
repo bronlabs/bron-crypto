@@ -41,7 +41,7 @@ func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.HashSet[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
+func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, sessionParticipants ds.Set[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
 	if err := validateInputs[K, S](sessionId, authKey, sessionParticipants, myShard, protocol); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct the cossigner")
 	}
@@ -53,7 +53,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -87,7 +87,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	return participant, nil
 }
 
-func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
+func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, myAuthKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol) error {
 	if bls.SameSubGroup[K, S]() {
 		return errs.NewType("key subgroup and signature subgroup can't be the same")
 	}

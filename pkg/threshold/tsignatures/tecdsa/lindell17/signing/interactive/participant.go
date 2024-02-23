@@ -98,11 +98,11 @@ func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIden
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharign id")
 	}
-	theirSharingId, exists := sharingConfig.LookUpRight(secondaryIdentityKey)
+	theirSharingId, exists := sharingConfig.Reverse().Get(secondaryIdentityKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find the other party sharign id")
 	}
@@ -143,11 +143,11 @@ func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIden
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharign id")
 	}
-	theirSharingId, exists := sharingConfig.LookUpRight(primaryIdentityKey)
+	theirSharingId, exists := sharingConfig.Reverse().Get(primaryIdentityKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find the other party sharign id")
 	}

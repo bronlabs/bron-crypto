@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
 )
 
-func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]], scheme bls.RogueKeyPrevention) (participants []*signing.Cosigner[K, S], err error) {
+func MakeSigningParticipants[K bls.KeySubGroup, S bls.SignatureSubGroup](uniqueSessionId []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *boldyreva02.Shard[K]], scheme bls.RogueKeyPrevention) (participants []*signing.Cosigner[K, S], err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}

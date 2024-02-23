@@ -99,7 +99,7 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 	require.NoError(t, err)
 }
 
-func keygen[K bls.KeySubGroup](t *testing.T, identities []types.IdentityKey, threshold, n int) ds.HashMap[types.IdentityKey, *boldyreva02.Shard[K]] {
+func keygen[K bls.KeySubGroup](t *testing.T, identities []types.IdentityKey, threshold, n int) ds.Map[types.IdentityKey, *boldyreva02.Shard[K]] {
 	t.Helper()
 
 	curve := bls12381.GetSourceSubGroup[K]()

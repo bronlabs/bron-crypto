@@ -38,7 +38,7 @@ func MakeSampleParticipants(protocol types.MPCProtocol, identities []types.Ident
 func DoSample(participants []*sample.Participant) (samples []przs.Sample, err error) {
 	sampleMap := make(map[uint]przs.Sample)
 	for _, participant := range participants {
-		index, exists := participant.IdentitySpace.LookUpRight(participant.IdentityKey())
+		index, exists := participant.IdentitySpace.Reverse().Get(participant.IdentityKey())
 		if !exists {
 			return nil, errs.NewMissing("participant %x", participant.IdentityKey().PublicKey())
 		}

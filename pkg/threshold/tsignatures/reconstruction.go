@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.HashMap[types.IdentityKey, Shard]) (curves.Scalar, error) {
+func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, Shard]) (curves.Scalar, error) {
 	if err := validatePrivateKeyConstructionInputs(protocol, shards); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct private key")
 	}
@@ -23,7 +23,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ha
 	for pair := range shards.Iter() {
 		identityKey := pair.Key
 		shard := pair.Value
-		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find sharing id for identity key %x", identityKey.PublicKey().ToAffineCompressed())
 		}
@@ -47,7 +47,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ha
 	return recoveredPrivateKey, nil
 }
 
-func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProtocol, shards ds.HashMap[types.IdentityKey, Shard]) error {
+func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, Shard]) error {
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}

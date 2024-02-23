@@ -14,7 +14,7 @@ import (
 type Shard interface {
 	SecretShare() curves.Scalar
 	PublicKey() curves.Point
-	PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point]
+	PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point]
 	FeldmanCommitmentVector() []curves.Point
 }
 
@@ -41,7 +41,7 @@ func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
 	return nil
 }
 
-func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentParticipants ds.HashSet[types.IdentityKey], protocol types.ThresholdProtocol) (curves.Scalar, error) {
+func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentParticipants ds.Set[types.IdentityKey], protocol types.ThresholdProtocol) (curves.Scalar, error) {
 	if !presentParticipants.IsSubSet(protocol.Participants()) {
 		return nil, errs.NewMembership("present participants is not a subset of total participants")
 	}
@@ -50,7 +50,7 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentPar
 	shamirIdentities := make([]uint, presentParticipants.Size())
 	i := 0
 	for identityKey := range presentParticipants.Iter() {
-		sharingId, exists := sharingConfig.LookUpRight(identityKey)
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant sharing id %x", identityKey.PublicKey())
 		}
@@ -76,7 +76,7 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, presentPar
 
 type PartialPublicKeys struct {
 	PublicKey               curves.Point
-	Shares                  ds.HashMap[types.IdentityKey, curves.Point]
+	Shares                  ds.Map[types.IdentityKey, curves.Point]
 	FeldmanCommitmentVector []curves.Point
 
 	_ ds.Incomparable
@@ -115,7 +115,7 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	for i := 0; i < int(protocol.TotalParties()); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(sharingId))
-		identityKey, exists := sharingConfig.LookUpLeft(sharingId)
+		identityKey, exists := sharingConfig.Get(sharingId)
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
 		}
@@ -137,7 +137,7 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 }
 
 type PreProcessingMaterial[PrivateType any, PreSignatureType any] struct {
-	PreSigners      ds.HashSet[types.IdentityKey]
+	PreSigners      ds.Set[types.IdentityKey]
 	PrivateMaterial PrivateType
 	PreSignature    PreSignatureType
 }

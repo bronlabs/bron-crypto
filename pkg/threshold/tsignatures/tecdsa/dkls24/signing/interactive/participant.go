@@ -31,7 +31,7 @@ type Cosigner struct {
 	sessionId           []byte
 	protocol            types.ThresholdSignatureProtocol
 	sharingConfig       types.SharingConfig
-	SessionParticipants ds.HashSet[types.IdentityKey]
+	SessionParticipants ds.Set[types.IdentityKey]
 
 	transcript transcripts.Transcript
 	state      *signing.SignerState
@@ -73,7 +73,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
-func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInputs(sessionId, authKey, protocol, shard, sessionParticipants); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
@@ -85,7 +85,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -147,7 +147,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, sessionParticipants ds
 	return cosigner, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, sessionParticipants ds.HashSet[types.IdentityKey]) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls24.Shard, sessionParticipants ds.Set[types.IdentityKey]) error {
 	if len(sessionId) == 0 {
 		return errs.NewLength("invalid session id: %s", sessionId)
 	}

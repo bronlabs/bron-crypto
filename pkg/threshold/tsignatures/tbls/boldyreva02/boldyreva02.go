@@ -73,7 +73,7 @@ func (s *Shard[_]) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey.Y
 }
 
-func (s *Shard[_]) PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point] {
+func (s *Shard[_]) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 
@@ -106,7 +106,7 @@ func (s *SigningKeyShare[K]) Validate(protocol types.ThresholdProtocol) error {
 
 type PartialPublicKeys[K bls.KeySubGroup] struct {
 	PublicKey               *bls.PublicKey[K]
-	Shares                  ds.HashMap[types.IdentityKey, curves.Point]
+	Shares                  ds.Map[types.IdentityKey, curves.Point]
 	FeldmanCommitmentVector []curves.Point
 
 	_ ds.Incomparable
@@ -145,7 +145,7 @@ func (p *PartialPublicKeys[K]) Validate(protocol types.ThresholdProtocol) error 
 	for i := 0; i < int(protocol.TotalParties()); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Y.Curve().ScalarField().New(uint64(sharingId))
-		identityKey, exists := sharingConfig.LookUpLeft(sharingId)
+		identityKey, exists := sharingConfig.Get(sharingId)
 		if !exists {
 			return errs.NewMissing("missing identity key for sharing id %d", i+1)
 		}

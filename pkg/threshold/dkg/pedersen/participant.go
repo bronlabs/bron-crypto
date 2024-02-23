@@ -87,7 +87,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 		Transcript:    transcript,
 		round:         1,
 	}
-	mySharingId, exists := result.SharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := result.SharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my sharing id")
 	}

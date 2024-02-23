@@ -11,7 +11,7 @@ import (
 )
 
 type HashableHashSet[E ds.Hashable[E]] struct {
-	v ds.HashMap[E, bool]
+	v ds.Map[E, bool]
 }
 
 func NewHashableHashSet[E ds.Hashable[E]](xs ...E) *HashableHashSet[E] {
@@ -46,7 +46,7 @@ func (s HashableHashSet[E]) Clear() {
 	s.v.Clear()
 }
 
-func (s HashableHashSet[E]) Equal(other ds.HashSet[E]) bool {
+func (s HashableHashSet[E]) Equal(other ds.Set[E]) bool {
 	return s.SymmetricDifference(other).IsEmpty()
 }
 
@@ -58,13 +58,13 @@ func (s HashableHashSet[_]) IsEmpty() bool {
 	return s.Size() == 0
 }
 
-func (s HashableHashSet[E]) Union(other ds.HashSet[E]) ds.HashSet[E] {
+func (s HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
 	result.Merge(other.List()...)
 	return result
 }
 
-func (s HashableHashSet[E]) Intersection(other ds.HashSet[E]) ds.HashSet[E] {
+func (s HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 	for k1 := range s.Iter() {
 		if other.Contains(k1) {
@@ -74,7 +74,7 @@ func (s HashableHashSet[E]) Intersection(other ds.HashSet[E]) ds.HashSet[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) Difference(other ds.HashSet[E]) ds.HashSet[E] {
+func (s HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 	for k := range s.Iter() {
 		if !other.Contains(k) {
@@ -84,12 +84,12 @@ func (s HashableHashSet[E]) Difference(other ds.HashSet[E]) ds.HashSet[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) SymmetricDifference(other ds.HashSet[E]) ds.HashSet[E] {
+func (s HashableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
 	return s.Difference(other).Union(other.Difference(s))
 }
 
-func (s HashableHashSet[E]) SubSets() []ds.HashSet[E] {
-	result := make([]ds.HashSet[E], 1<<s.Size())
+func (s HashableHashSet[E]) SubSets() []ds.Set[E] {
+	result := make([]ds.Set[E], 1<<s.Size())
 	i := 0
 	for subset := range s.IterSubSets() {
 		result[i] = subset
@@ -98,19 +98,19 @@ func (s HashableHashSet[E]) SubSets() []ds.HashSet[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) IsSubSet(other ds.HashSet[E]) bool {
+func (s HashableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
 	return other.Intersection(s).Equal(s)
 }
 
-func (s HashableHashSet[E]) IsProperSubSet(other ds.HashSet[E]) bool {
+func (s HashableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
 	return s.IsSubSet(other) && !s.Equal(other)
 }
 
-func (s HashableHashSet[E]) IsSuperSet(other ds.HashSet[E]) bool {
+func (s HashableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
 	return other.IsSubSet(s)
 }
 
-func (s HashableHashSet[E]) IsProperSuperSet(other ds.HashSet[E]) bool {
+func (s HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
@@ -125,8 +125,8 @@ func (s HashableHashSet[E]) Iter() <-chan E {
 	return ch
 }
 
-func (s HashableHashSet[E]) IterSubSets() <-chan ds.HashSet[E] {
-	ch := make(chan ds.HashSet[E], 1)
+func (s HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
+	ch := make(chan ds.Set[E], 1)
 	go func() {
 		defer close(ch)
 		elements := s.List()
@@ -156,7 +156,7 @@ func (s HashableHashSet[E]) List() []E {
 	return results
 }
 
-func (s HashableHashSet[E]) Clone() ds.HashSet[E] {
+func (s HashableHashSet[E]) Clone() ds.Set[E] {
 	return NewHashableHashSet(s.List()...)
 }
 

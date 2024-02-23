@@ -49,7 +49,7 @@ type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
 	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs ds.HashMap[types.IdentityKey, *BaseOTConfig]
+	PairwiseBaseOTs ds.Map[types.IdentityKey, *BaseOTConfig]
 
 	_ ds.Incomparable
 }
@@ -107,7 +107,7 @@ func (s *Shard) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey
 }
 
-func (s *Shard) PartialPublicKeys() ds.HashMap[types.IdentityKey, curves.Point] {
+func (s *Shard) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 
@@ -166,7 +166,7 @@ type PrivatePreProcessingMaterial struct {
 	_    ds.Incomparable
 }
 
-func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol, preSigners ds.HashSet[types.IdentityKey]) error {
+func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
 	if pppm == nil {
 		return errs.NewIsNil("receiver")
 	}
@@ -184,7 +184,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 		if participant.Equal(myIdentityKey) {
 			continue
 		}
-		id, exists := sharingConfig.LookUpRight(participant)
+		id, exists := sharingConfig.Reverse().Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
 		}
@@ -228,4 +228,4 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 }
 
 // PreSignature is individual contributions to R.
-type PreSignature ds.HashMap[types.IdentityKey, curves.Point]
+type PreSignature ds.Map[types.IdentityKey, curves.Point]

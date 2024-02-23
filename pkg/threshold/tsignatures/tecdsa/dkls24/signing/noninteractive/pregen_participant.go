@@ -32,7 +32,7 @@ type PreGenParticipant struct {
 	sessionId     []byte
 	protocol      types.ThresholdProtocol
 	sharingConfig types.SharingConfig
-	PreSigners    ds.HashSet[types.IdentityKey]
+	PreSigners    ds.Set[types.IdentityKey]
 
 	transcript transcripts.Transcript
 	state      *signing.SignerState
@@ -73,7 +73,7 @@ func (p *PreGenParticipant) IsSignatureAggregator() bool {
 	return p.Protocol().Participants().Contains(p.IdentityKey())
 }
 
-func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.HashSet[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.Set[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
 	if err := validateInputs(sessionId, myAuthKey, protocol, myShard, preSigners); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
@@ -85,7 +85,7 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -146,7 +146,7 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 	return participant, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, shard *dkls24.Shard, preSigners ds.HashSet[types.IdentityKey]) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, shard *dkls24.Shard, preSigners ds.Set[types.IdentityKey]) error {
 	if len(sessionId) == 0 {
 		return errs.NewLength("invalid session id: %s", sessionId)
 	}

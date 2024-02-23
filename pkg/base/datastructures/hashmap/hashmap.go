@@ -13,7 +13,7 @@ type HashableHashMap[K ds.Hashable[K], V any] struct {
 
 type entry[K ds.Hashable[K], V any] ds.KeyValuePair[K, V]
 
-func NewHashableHashMap[K ds.Hashable[K], V any]() ds.HashMap[K, V] {
+func NewHashableHashMap[K ds.Hashable[K], V any]() ds.Map[K, V] {
 	return &HashableHashMap[K, V]{
 		inner: make(map[uint64][]*entry[K, V]),
 	}
@@ -150,7 +150,7 @@ func (m *HashableHashMap[K, V]) Values() []V {
 	return result
 }
 
-func (m *HashableHashMap[K, V]) Clone() ds.HashMap[K, V] {
+func (m *HashableHashMap[K, V]) Clone() ds.Map[K, V] {
 	result := NewHashableHashMap[K, V]().(*HashableHashMap[K, V]) //nolint:errcheck,forcetypeassert // trivial
 	for code, entries := range m.inner {
 		result.inner[code] = make([]*entry[K, V], len(entries))

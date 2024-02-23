@@ -69,8 +69,8 @@ func (p *Participant) Round1() (*Round1Broadcast, types.RoundMessages[*Round1P2P
 	// step 1.4: Send (x_ij, x'_ij) -> P_j
 	outboundP2PMessages := types.NewRoundMessages[*Round1P2P]()
 	for pair := range p.SharingConfig.Iter() {
-		identityKey := pair.Right
-		sharingId := pair.Left
+		identityKey := pair.Value
+		sharingId := pair.Key
 		if sharingId == p.SharingId() {
 			continue
 		}
@@ -113,7 +113,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		if senderSharingId == p.SharingId() {
 			continue
 		}
-		senderIdentityKey, exists := p.SharingConfig.LookUpLeft(senderSharingId)
+		senderIdentityKey, exists := p.SharingConfig.Get(senderSharingId)
 		if !exists {
 			return nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}
@@ -169,7 +169,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 		if senderSharingId == p.SharingId() {
 			continue
 		}
-		senderIdentityKey, exists := p.SharingConfig.LookUpLeft(senderSharingId)
+		senderIdentityKey, exists := p.SharingConfig.Get(senderSharingId)
 		if !exists {
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}

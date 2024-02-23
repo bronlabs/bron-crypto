@@ -33,7 +33,7 @@ type state struct {
 	bigR        curves.Point
 	bigRWitness commitments.Witness
 
-	theirBigRCommitment ds.HashMap[types.IdentityKey, commitments.Commitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, commitments.Commitment]
 
 	_ ds.Incomparable
 }
@@ -47,7 +47,7 @@ type Cosigner struct {
 
 	flavour             tschnorr.Flavour
 	protocol            types.ThresholdSignatureProtocol
-	sessionParticipants ds.HashSet[types.IdentityKey]
+	sessionParticipants ds.Set[types.IdentityKey]
 	sharingConfig       types.SharingConfig
 	sessionId           []byte
 	round               int
@@ -68,7 +68,7 @@ func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.HashSet[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, flavour tschnorr.Flavour, prng io.Reader) (p *Cosigner, err error) {
+func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, flavour tschnorr.Flavour, prng io.Reader) (p *Cosigner, err error) {
 	if err := validateInputs(sessionId, myAuthKey, sessionParticipants, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
@@ -82,7 +82,7 @@ func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants 
 	pid := myAuthKey.PublicKey().ToAffineCompressed()
 	bigS := signing.BigS(sessionParticipants)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(myAuthKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my sharign id")
 	}
@@ -122,7 +122,7 @@ func NewCosigner(myAuthKey types.AuthKey, sessionId []byte, sessionParticipants 
 	return cosigner, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("session id is empty")
 	}

@@ -40,8 +40,8 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 }
 
 type State struct {
-	receivedSeeds ds.HashMap[types.IdentityKey, commitments.Commitment]
-	sentSeeds     ds.HashMap[types.IdentityKey, *committedSeedContribution]
+	receivedSeeds ds.Map[types.IdentityKey, commitments.Commitment]
+	sentSeeds     ds.Map[types.IdentityKey, *committedSeedContribution]
 	transcript    transcripts.Transcript
 
 	_ ds.Incomparable

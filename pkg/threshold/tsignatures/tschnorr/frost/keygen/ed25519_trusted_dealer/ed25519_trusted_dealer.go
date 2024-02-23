@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *frost.Shard], error) {
+func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *frost.Shard], error) {
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate cohort config")
 	}
@@ -44,15 +44,15 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.HashMap[types.
 
 	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	for pair := range sharingConfig.Iter() {
-		sharingId := pair.Left
-		identityKey := pair.Right
+		sharingId := pair.Key
+		identityKey := pair.Value
 		publicKeySharesMap.Put(identityKey, protocol.Curve().ScalarBaseMult(shamirShares[sharingId-1].Value))
 	}
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *frost.Shard]()
 	for pair := range sharingConfig.Iter() {
-		sharingId := pair.Left
-		identityKey := pair.Right
+		sharingId := pair.Key
+		identityKey := pair.Value
 		share := shamirShares[int(sharingId)-1].Value
 		shards.Put(identityKey, &frost.Shard{
 			SigningKeyShare: &tsignatures.SigningKeyShare{

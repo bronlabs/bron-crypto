@@ -50,7 +50,7 @@ func (p *Participant) IsRecoverer() bool {
 	return !p.IdentityKey().Equal(p.lostPartyIdentityKey)
 }
 
-func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if err := validateRecovererInputs(sessionId, authKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, protocol, presentRecoverers, prng); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
@@ -84,7 +84,7 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	return result, nil
 }
 
-func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], prng io.Reader) error {
+func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsZero("sessionId length is zero")
 	}
@@ -121,7 +121,7 @@ func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyI
 	return nil
 }
 
-func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, presentRecoverers ds.Set[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if err := validateLostPartyInputs(sessionId, authKey, protocol, presentRecoverers, publicKeyShares, prng); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
@@ -153,7 +153,7 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 	return result, nil
 }
 
-func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, presentRecoverers ds.HashSet[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, prng io.Reader) error {
+func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsZero("sessionId length is zero")
 	}

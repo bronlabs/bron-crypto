@@ -21,10 +21,10 @@ func validateMPCParticipant(p MPCParticipant) error {
 
 type MPCProtocol interface {
 	GenericProtocol
-	Participants() ds.HashSet[IdentityKey]
+	Participants() ds.Set[IdentityKey]
 }
 
-func NewMPCProtocol(curve curves.Curve, participants ds.HashSet[IdentityKey]) (MPCProtocol, error) {
+func NewMPCProtocol(curve curves.Curve, participants ds.Set[IdentityKey]) (MPCProtocol, error) {
 	protocol := &protocol{
 		curve:        curve,
 		participants: participants,
@@ -74,7 +74,7 @@ func ValidateMPCProtocol(p MPCParticipant, f MPCProtocol) error {
 	return nil
 }
 
-type RoundMessages[Message any] ds.HashMap[IdentityKey, Message]
+type RoundMessages[Message any] ds.Map[IdentityKey, Message]
 
 func NewRoundMessages[Message any]() RoundMessages[Message] {
 	return hashmap.NewHashableHashMap[IdentityKey, Message]()

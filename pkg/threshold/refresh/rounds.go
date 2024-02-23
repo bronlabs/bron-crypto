@@ -54,7 +54,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 			continue
 		}
 
-		senderIdentityKey, exists := p.sampler.PedersenParty.SharingConfig.LookUpLeft(senderSharingId)
+		senderIdentityKey, exists := p.sampler.PedersenParty.SharingConfig.Get(senderSharingId)
 		if !exists {
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}

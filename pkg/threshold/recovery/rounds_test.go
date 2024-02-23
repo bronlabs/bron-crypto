@@ -53,7 +53,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
 
 			presentRecoverers := hashset.NewHashableHashSet(identities...)
 			presentRecoverers.Remove(identities[lostPartyIndex])
-			allPresentRecoverers := make([]ds.HashSet[types.IdentityKey], len(identities))
+			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
 			for i := 0; i < len(identities); i++ {
 				allPresentRecoverers[i] = presentRecoverers.Clone()
 			}

@@ -8,11 +8,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVectors map[types.SharingID][]curves.Point, sharingConfig types.SharingConfig) (ds.HashMap[types.IdentityKey, curves.Point], error) {
+func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVectors map[types.SharingID][]curves.Point, sharingConfig types.SharingConfig) (ds.Map[types.IdentityKey, curves.Point], error) {
 	shares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	for pair := range sharingConfig.Iter() {
-		j := pair.Left
-		identityKey := pair.Right
+		j := pair.Key
+		identityKey := pair.Value
 		Y_j := protocol.Curve().Identity()
 		for _, C_l := range commitmentVectors {
 			jToKs := make([]curves.Scalar, protocol.Threshold())

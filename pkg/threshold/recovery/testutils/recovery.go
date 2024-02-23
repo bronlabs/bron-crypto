@@ -15,7 +15,7 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.HashSet[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, err error) {
+func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.Set[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, err error) {
 	if len(identities) != int(protocol.TotalParties()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
@@ -80,7 +80,7 @@ func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, 
 	return signingKeyShare, nil
 }
 
-func RunRecovery(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.HashSet[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, recoveredShare *tsignatures.SigningKeyShare, err error) {
+func RunRecovery(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.Set[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, recoveredShare *tsignatures.SigningKeyShare, err error) {
 	participants, err = MakeParticipants(uniqueSessionId, protocol, presentRecoverers, identities, lostPartyIndex, signingKeyShares, publicKeyShares, prngs)
 	if err != nil {
 		return nil, nil, err

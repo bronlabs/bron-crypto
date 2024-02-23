@@ -27,7 +27,7 @@ func (*cipherSuite) MarshalJSON() ([]byte, error) {
 type protocol struct {
 	curve        curves.Curve
 	hash         func() hash.Hash
-	participants ds.HashSet[IdentityKey]
+	participants ds.Set[IdentityKey]
 	threshold    uint
 	totalParties uint
 }
@@ -40,7 +40,7 @@ func (p *protocol) Hash() func() hash.Hash {
 	return p.hash
 }
 
-func (p *protocol) Participants() ds.HashSet[IdentityKey] {
+func (p *protocol) Participants() ds.Set[IdentityKey] {
 	return p.participants
 }
 

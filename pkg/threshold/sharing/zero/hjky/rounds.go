@@ -23,7 +23,7 @@ func (p *Participant) Round1() (*Round1Broadcast, types.RoundMessages[*Round1P2P
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Broadcast], round1outputP2P types.RoundMessages[*Round1P2P]) (sample Sample, publicKeySharesMap ds.HashMap[types.IdentityKey, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
+func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Broadcast], round1outputP2P types.RoundMessages[*Round1P2P]) (sample Sample, publicKeySharesMap ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
 	if p.round != 2 {
 		return nil, nil, nil, errs.NewRound("round mismatch %d != 2", p.round)
 	}

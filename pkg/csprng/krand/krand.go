@@ -15,7 +15,7 @@ import (
 )
 
 type cacheType struct {
-	wrappedReaders ds.HashMap[types.IdentityKey, csprng.CSPRNG]
+	wrappedReaders ds.Map[types.IdentityKey, csprng.CSPRNG]
 	mu             sync.RWMutex
 }
 

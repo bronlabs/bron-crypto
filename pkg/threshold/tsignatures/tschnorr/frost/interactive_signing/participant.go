@@ -22,7 +22,7 @@ type Cosigner struct {
 
 	protocol            types.ThresholdSignatureProtocol
 	sharingConfig       types.SharingConfig
-	sessionParticipants ds.HashSet[types.IdentityKey]
+	sessionParticipants ds.Set[types.IdentityKey]
 
 	round int
 	state *State
@@ -53,14 +53,14 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewInteractiveCosigner(authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) (*Cosigner, error) {
+func NewInteractiveCosigner(authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) (*Cosigner, error) {
 	err := validateInputs(authKey, sessionParticipants, shard, protocol, prng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
@@ -88,7 +88,7 @@ func NewInteractiveCosigner(authKey types.AuthKey, sessionParticipants ds.HashSe
 	return cosigner, nil
 }
 
-func validateInputs(authKey types.AuthKey, sessionParticipants ds.HashSet[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
+func validateInputs(authKey types.AuthKey, sessionParticipants ds.Set[types.IdentityKey], shard *frost.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "my auth key")
 	}

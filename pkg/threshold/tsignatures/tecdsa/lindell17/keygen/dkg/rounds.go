@@ -129,7 +129,7 @@ func (p *Participant) Round2(input types.RoundMessages[*Round1Broadcast]) (outpu
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -175,7 +175,7 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -238,7 +238,7 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 			continue
 		}
 		paillierProofsTranscript := p.transcript.Clone()
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharign id for participant %x", identity)
 		}
@@ -281,7 +281,7 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -355,7 +355,7 @@ func (p *Participant) Round5(input types.RoundMessages[*Round4P2P]) (output type
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -395,7 +395,7 @@ func (p *Participant) Round6(input types.RoundMessages[*Round5P2P]) (output type
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -435,7 +435,7 @@ func (p *Participant) Round7(input types.RoundMessages[*Round6P2P]) (output type
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}
@@ -473,7 +473,7 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.sharingConfig.LookUpRight(identity)
+		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
 		}

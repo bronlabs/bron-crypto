@@ -2,7 +2,6 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -13,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/cronokirby/saferith"
 
@@ -29,7 +29,7 @@ const (
 	paillierPrimeBitLength = 1024
 )
 
-func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashMap[types.IdentityKey, *lindell17.Shard], error) {
+func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *lindell17.Shard], error) {
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
@@ -58,7 +58,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashM
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell17.Shard]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	for pair := range sharingConfig.Iter() {
-		identityKey := pair.Right
+		identityKey := pair.Value
 
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {
@@ -79,8 +79,8 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashM
 
 	// generate Paillier key pairs and encrypt share
 	for pair := range sharingConfig.Iter() {
-		i := pair.Left
-		identityKey := pair.Right
+		i := pair.Key
+		identityKey := pair.Value
 		paillierPublicKey, paillierSecretKey, err := paillier.NewKeys(paillierPrimeBitLength)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
@@ -91,8 +91,8 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashM
 		}
 		thisShard.PaillierSecretKey = paillierSecretKey
 		for pair := range sharingConfig.Iter() {
-			j := pair.Left
-			otherIdentityKey := pair.Right
+			j := pair.Key
+			otherIdentityKey := pair.Value
 			if identityKey.Equal(otherIdentityKey) {
 				continue
 			}
@@ -116,7 +116,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.HashM
 	return shards, nil
 }
 
-func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.HashMap[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
+func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	for pair := range shards.Iter() {
@@ -131,7 +131,7 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.HashMap
 	feldmanShares := make([]*feldman.Share, shards.Size())
 	for i := range feldmanShares {
 		sharingId := types.SharingID(i + 1)
-		identity, exists := sharingConfig.LookUpLeft(sharingId)
+		identity, exists := sharingConfig.Get(sharingId)
 		if !exists {
 			return errs.NewMissing("could not find identity for sharing id %d", sharingId)
 		}

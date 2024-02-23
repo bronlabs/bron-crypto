@@ -116,11 +116,11 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 }
 
 func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi types.RoundMessages[*Round2Broadcast]) ([][]byte, error) {
-	sortedIdentityIndices := p.IdentitySpace.Left()
+	sortedIdentityIndices := p.IdentitySpace.Keys()
 	sort.Slice(sortedIdentityIndices, func(i, j int) bool { return sortedIdentityIndices[i] < sortedIdentityIndices[j] })
 	sortedRVector := make([][]byte, allIdentityKeysToRi.Size())
 	for i, identityIndex := range sortedIdentityIndices {
-		identityKey, exists := p.IdentitySpace.LookUpLeft(identityIndex)
+		identityKey, exists := p.IdentitySpace.Get(identityIndex)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find identity key %d", identityIndex)
 		}

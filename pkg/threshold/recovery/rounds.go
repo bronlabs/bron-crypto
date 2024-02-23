@@ -51,13 +51,13 @@ func (p *Participant) Round2(round1broadcast types.RoundMessages[*Round1Broadcas
 	}
 
 	partiesOfAdditiveConversion := make([]uint, len(p.sortedPresentRecoverersList)+1) // recoverers and lost party, all share samples of zero.
-	lostPartySharingId, exists := p.sampler.PedersenParty.SharingConfig.LookUpRight(p.lostPartyIdentityKey)
+	lostPartySharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.lostPartyIdentityKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find lost party sharing id")
 	}
 	partiesOfAdditiveConversion[0] = uint(lostPartySharingId)
 	for i := 0; i < len(p.sortedPresentRecoverersList); i++ {
-		recovererSharingId, exists := p.sampler.PedersenParty.SharingConfig.LookUpRight(p.sortedPresentRecoverersList[i]) // 0'th identity is that of the lost party, hence indexing at i+1
+		recovererSharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.sortedPresentRecoverersList[i]) // 0'th identity is that of the lost party, hence indexing at i+1
 		if !exists {
 			return nil, errs.NewMissing("couldn't find sharing id for recoverer %d", i)
 		}

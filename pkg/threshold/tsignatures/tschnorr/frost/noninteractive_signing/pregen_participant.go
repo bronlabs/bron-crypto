@@ -51,7 +51,7 @@ func NewPreGenParticipant(authKey types.AuthKey, protocol types.ThresholdProtoco
 		return nil, errs.WrapFailed(err, "failed to validate inputs")
 	}
 
-	mySharingId, exists := types.DeriveSharingConfig(protocol.Participants()).LookUpRight(authKey)
+	mySharingId, exists := types.DeriveSharingConfig(protocol.Participants()).Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}

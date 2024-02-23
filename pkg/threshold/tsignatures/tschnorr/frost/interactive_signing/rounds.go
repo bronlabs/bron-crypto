@@ -91,7 +91,7 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures types.RoundMessa
 	return signature, nil
 }
 
-func (ic *Cosigner) processNonceCommitmentOnline(round1output types.RoundMessages[*Round1Broadcast]) (D_alpha, E_alpha ds.HashMap[types.IdentityKey, curves.Point], err error) {
+func (ic *Cosigner) processNonceCommitmentOnline(round1output types.RoundMessages[*Round1Broadcast]) (D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], err error) {
 	round1output.Put(ic.IdentityKey(), &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
@@ -100,7 +100,7 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output types.RoundMessage
 	E_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
 	for senderIdentityKey := range ic.sessionParticipants.Iter() {
-		sharingId, exists := ic.sharingConfig.LookUpRight(senderIdentityKey)
+		sharingId, exists := ic.sharingConfig.Reverse().Get(senderIdentityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sender sharing id")
 		}

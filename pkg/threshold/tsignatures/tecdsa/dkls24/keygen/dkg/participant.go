@@ -30,8 +30,8 @@ type Participant struct {
 	MySigningKeyShare     *tsignatures.SigningKeyShare
 	MyPartialPublicKeys   *tsignatures.PartialPublicKeys
 	ZeroSamplingParty     *zeroSetup.Participant
-	BaseOTSenderParties   ds.HashMap[types.IdentityKey, *bbot.Sender]
-	BaseOTReceiverParties ds.HashMap[types.IdentityKey, *bbot.Receiver]
+	BaseOTSenderParties   ds.Map[types.IdentityKey, *bbot.Sender]
+	BaseOTReceiverParties ds.Map[types.IdentityKey, *bbot.Receiver]
 	Protocol              types.ThresholdProtocol
 
 	_ ds.Incomparable
@@ -57,7 +57,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.LookUpRight(authKey)
+	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
