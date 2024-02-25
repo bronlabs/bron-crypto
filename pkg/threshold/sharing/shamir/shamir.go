@@ -21,7 +21,7 @@ type Share struct {
 // TODO: add transform from t-n1 to t-n2
 func (ss *Share) Validate(curve curves.Curve) error {
 	if ss.Id == 0 {
-		return errs.NewIdentifier("invalid identifier - id is zero")
+		return errs.NewValue("invalid identifier - id is zero")
 	}
 	if ss.Value.IsZero() {
 		return errs.NewIsZero("invalid share - value is zero")
@@ -123,7 +123,7 @@ func (s *Dealer) LagrangeCoefficients(identities []uint) (map[uint]curves.Scalar
 
 func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 	if len(shares) < int(s.Threshold) {
-		return nil, errs.NewCount("invalid number of shares")
+		return nil, errs.NewSize("invalid number of shares")
 	}
 	dups := make(map[uint]bool, len(shares))
 	xs := make([]curves.Scalar, len(shares))
@@ -135,10 +135,10 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 			return nil, errs.WrapArgument(err, "invalid share")
 		}
 		if share.Id > s.Total {
-			return nil, errs.NewIdentifier("invalid share identifier id: %d must be greater than total: %d", share.Id, s.Total)
+			return nil, errs.NewValue("invalid share identifier id: %d must be greater than total: %d", share.Id, s.Total)
 		}
 		if _, in := dups[share.Id]; in {
-			return nil, errs.NewDuplicate("duplicate share")
+			return nil, errs.NewMembership("duplicate share")
 		}
 		dups[share.Id] = true
 		ys[i] = share.Value
@@ -153,7 +153,7 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 
 func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 	if len(shares) < int(s.Threshold) {
-		return nil, errs.NewCount("invalid number of shares (%d != %d)", len(shares), s.Threshold)
+		return nil, errs.NewSize("invalid number of shares (%d != %d)", len(shares), s.Threshold)
 	}
 
 	dups := make(map[uint]bool, len(shares))
@@ -166,10 +166,10 @@ func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
 			return nil, errs.WrapArgument(err, "invalid share")
 		}
 		if share.Id > s.Total {
-			return nil, errs.NewIdentifier("invalid share id: %d must be greater than total: %d", share.Id, s.Total)
+			return nil, errs.NewValue("invalid share id: %d must be greater than total: %d", share.Id, s.Total)
 		}
 		if _, in := dups[share.Id]; in {
-			return nil, errs.NewDuplicate("duplicate share")
+			return nil, errs.NewMembership("duplicate share")
 		}
 		dups[share.Id] = true
 		ys[i] = s.Curve.ScalarBaseMult(share.Value)

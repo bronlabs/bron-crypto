@@ -22,7 +22,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	for pair := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
 		if !exists {
-			return nil, errs.NewMembership("participant %x is not in protocol config", pair.Key.PublicKey())
+			return nil, errs.NewMembership("participant %s is not in protocol config", pair.Key.String())
 		}
 		sharingIds[i] = uint(sharingId)
 		i++
@@ -45,20 +45,20 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 		psig := pair.Value
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("could not find sharing id of participant %s", identityKey.String())
 		}
 		if psig == nil {
-			return nil, errs.NewMissing("missing partial signature for %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("missing partial signature for %s", identityKey.String())
 		}
 		if psig.DleqProof == nil {
-			return nil, errs.NewMissing("missing pop for %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("missing pop for %s", identityKey.String())
 		}
 		if psig.SigmaI == nil {
-			return nil, errs.NewMissing("missing signature for %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("missing signature for %s", identityKey.String())
 		}
 		publicKeyShare, exists := publicKeyShares.Shares.Get(identityKey)
 		if !exists {
-			return nil, errs.NewMissing("couldn't find public key share of %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("couldn't find public key share of %s", identityKey.String())
 		}
 
 		dleqStatement := &dleq.Statement{
@@ -66,12 +66,12 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 			X2: psig.SigmaI.Value,
 		}
 		if err := dleq.Verify(psig.SessionId, psig.DleqProof, dleqStatement, new(glow.KeySubGroup).Generator(), Hm, glow.DleqNIZKCompiler, nil); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify dleq proof")
+			return nil, errs.WrapIdentifiableAbort(err, identityKey.String(), "could not verify dleq proof")
 		}
 
 		lambda_i, exists := lambdas[uint(sharingId)]
 		if !exists {
-			return nil, errs.NewMissing("couldn't find lagrange coefficient for %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("couldn't find lagrange coefficient for %s", identityKey.String())
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)

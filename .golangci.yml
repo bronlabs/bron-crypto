@@ -975,6 +975,12 @@ issues:
       linters:
         staticcheck
 
+    # a lot of false positives for cselect
+    - path: curves/
+      text: "nilness: nil dereference in field selection"
+      linters:
+        govet
+
     # contents of impl are not supposed to be used by outside libraries, its constants
     - path: impl/
       text: "unexported-return"

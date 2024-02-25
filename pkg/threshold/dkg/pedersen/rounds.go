@@ -137,7 +137,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}
 		if err := feldman.Verify(receivedShare, broadcastedMessageFromSender.Ci, verifier, broadcastedMessageFromSender.DlogProof); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from feldman given sharing id")
+			return nil, nil, errs.WrapIdentifiableAbort(err, senderIdentityKey.String(), "abort from feldman")
 		}
 
 		partialPublicKeyShare := p.Protocol.Curve().ScalarBaseMult(receivedSecretKeyShare)

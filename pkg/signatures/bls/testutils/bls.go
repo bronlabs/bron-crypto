@@ -13,7 +13,7 @@ type (
 	G2 = bls12381.G2
 )
 
-func keygenInG1() (*bls.PrivateKey[G1], error) {
+func KeygenInG1() (*bls.PrivateKey[G1], error) {
 	privateKey, err := bls.KeyGen[G1](crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate key")
@@ -24,7 +24,7 @@ func keygenInG1() (*bls.PrivateKey[G1], error) {
 	return privateKey, nil
 }
 
-func keygenInG2() (*bls.PrivateKey[G2], error) {
+func KeygenInG2() (*bls.PrivateKey[G2], error) {
 	privateKey, err := bls.KeyGen[G2](crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate key")
@@ -35,10 +35,13 @@ func keygenInG2() (*bls.PrivateKey[G2], error) {
 	return privateKey, nil
 }
 
-func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.PrivateKey[G1], *bls.Signature[G2], *bls.ProofOfPossession[G2], error) {
-	privateKey, err := keygenInG1()
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "could not generate key")
+func RoundTripWithKeysInG1(privateKey *bls.PrivateKey[bls12381.G1], message []byte, scheme bls.RogueKeyPrevention) (*bls.PrivateKey[G1], *bls.Signature[G2], *bls.ProofOfPossession[G2], error) {
+	var err error
+	if privateKey == nil {
+		privateKey, err = KeygenInG1()
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "could not generate key")
+		}
 	}
 	signer, err := bls.NewSigner[G1, G2](privateKey, scheme)
 	if err != nil {
@@ -83,10 +86,13 @@ func RoundTripWithKeysInG1(message []byte, scheme bls.RogueKeyPrevention) (*bls.
 	return privateKey, signature, pop, nil
 }
 
-func RoundTripWithKeysInG2(message []byte, scheme bls.RogueKeyPrevention) (*bls.PrivateKey[G2], *bls.Signature[G1], *bls.ProofOfPossession[G1], error) {
-	privateKey, err := keygenInG2()
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "could not generate key")
+func RoundTripWithKeysInG2(privateKey *bls.PrivateKey[bls12381.G2], message []byte, scheme bls.RogueKeyPrevention) (*bls.PrivateKey[G2], *bls.Signature[G1], *bls.ProofOfPossession[G1], error) {
+	var err error
+	if privateKey == nil {
+		privateKey, err = KeygenInG2()
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "could not generate key")
+		}
 	}
 	signer, err := bls.NewSigner[G2, G1](privateKey, scheme)
 	if err != nil {

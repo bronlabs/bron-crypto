@@ -130,7 +130,7 @@ func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast
 		}
 		r2 := pair.Value
 		if r2 == nil {
-			return nil, nil, errs.NewIsNil("r2 for identity %x", identity.PublicKey())
+			return nil, nil, errs.NewIsNil("r2 for identity %s", identity.String())
 		}
 		przsInput.Put(identity, r2.Przs)
 	}
@@ -191,7 +191,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
 		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, identity.PublicKey().ToAffineCompressed(), "cannot verify dlog proof")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 
 		// step 3.4: R <- Σ R_j

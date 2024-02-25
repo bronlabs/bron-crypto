@@ -133,9 +133,9 @@ func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	if !ok0 || !ok1 || okp {
 		panic("Not a K256 point")
 	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[int](choice)) //nolint:govet
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[int](choice)) //nolint:govet
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[int](choice)) //nolint:govet
+	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[int](choice))
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[int](choice))
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[int](choice))
 	return p
 }
 

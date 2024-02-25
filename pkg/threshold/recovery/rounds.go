@@ -115,10 +115,10 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (*tsi
 	for _, recoverer := range p.sortedPresentRecoverersList {
 		receivedMessage, exists := round2output.Get(recoverer)
 		if !exists {
-			return nil, errs.NewMissing("did not receive a message from %x", recoverer.PublicKey())
+			return nil, errs.NewMissing("did not receive a message from %x", recoverer.String())
 		}
 		if receivedMessage.BlindedPartiallyRecoveredShare == nil {
-			return nil, errs.NewIsNil("blinded partially recovered share of recoverer %x is nil", recoverer.PublicKey())
+			return nil, errs.NewIsNil("blinded partially recovered share of recoverer %x is nil", recoverer.String())
 		}
 		res = res.Add(receivedMessage.BlindedPartiallyRecoveredShare)
 	}

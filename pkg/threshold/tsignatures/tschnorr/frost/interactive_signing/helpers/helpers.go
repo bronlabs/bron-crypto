@@ -45,7 +45,7 @@ func ProducePartialSignature(
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, errs.NewMissing("could not find sharing id of %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
 		}
 		presentPartySharingIds[i] = uint(sharingId)
 		i++
@@ -76,11 +76,11 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 	for _, presentParty := range sortedIdentities {
 		d_j, exists := D_alpha.Get(presentParty)
 		if !exists {
-			return nil, nil, nil, errs.NewMissing("missing d_j for party %x", presentParty.PublicKey())
+			return nil, nil, nil, errs.NewMissing("missing d_j for party %s", presentParty.String())
 		}
 		e_j, exists := E_alpha.Get(presentParty)
 		if !exists {
-			return nil, nil, nil, errs.NewMissing("missing e_j for party %x", presentParty.PublicKey())
+			return nil, nil, nil, errs.NewMissing("missing e_j for party %s", presentParty.String())
 		}
 		combinedDsAndEs = append(combinedDsAndEs, d_j.ToAffineCompressed()...)
 		combinedDsAndEs = append(combinedDsAndEs, e_j.ToAffineCompressed()...)
@@ -91,7 +91,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %x", identityKey.PublicKey())
+			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %s", identityKey.String())
 		}
 		rjMessage, err := hashing.HashChain(base.RandomOracleHashFunction, []byte{byte(sharingId)}, message, combinedDsAndEs)
 		if err != nil {

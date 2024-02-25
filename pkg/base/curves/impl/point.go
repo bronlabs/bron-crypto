@@ -221,7 +221,7 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldV
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly
 	if len(points) != len(scalars) {
-		return nil, errs.NewCount("#points != #scalars")
+		return nil, errs.NewSize("#points != #scalars")
 	}
 
 	bucketSize := 1 << W

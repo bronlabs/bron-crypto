@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"hash"
 	"slices"
 	"sort"
@@ -97,6 +98,10 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 	return nil
 }
 
+func (k *TestAuthKey) String() string {
+	return fmt.Sprintf("%x", k.PublicKey().ToAffineCompressed())
+}
+
 func (*TestIdentityKey) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }
@@ -143,6 +148,10 @@ func (k *TestDeterministicAuthKey) Verify(signature, message []byte) error {
 		return errs.NewFailed("invalid signature")
 	}
 	return nil
+}
+
+func (k *TestDeterministicAuthKey) String() string {
+	return fmt.Sprintf("%x", k.PublicKey().ToAffineCompressed())
 }
 
 func (*TestDeterministicAuthKey) MarshalJSON() ([]byte, error) {

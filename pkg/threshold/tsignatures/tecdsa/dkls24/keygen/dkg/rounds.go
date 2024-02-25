@@ -1,8 +1,6 @@
 package dkg
 
 import (
-	"encoding/hex"
-
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -38,7 +36,7 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		party := pair.Value
 		r1out, err := party.Round1()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "BaseOT as sender for identity %x", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()[:]))
+			return nil, errs.WrapFailed(err, "BaseOT as sender for identity %s", identity.String())
 		}
 		baseOtP2P.Put(identity, r1out)
 	}
@@ -50,11 +48,11 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		}
 		zeroSamplingMessage, exists := zeroSamplingP2P.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("do not have a zero sampling message for %x", identity.PublicKey())
+			return nil, errs.NewMissing("do not have a zero sampling message for %s", identity.String())
 		}
 		baseOtMessage, exists := baseOtP2P.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("do not have a baseot message for %x", identity.PublicKey())
+			return nil, errs.NewMissing("do not have a baseot message for %s", identity.String())
 		}
 		p2pOutput.Put(identity, &Round1P2P{
 			ZeroSampling: zeroSamplingMessage,
@@ -85,11 +83,11 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 		party := pair.Value
 		r2In, exists := baseOtRound1Output.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("did not have a message from %x", identity.PublicKey())
+			return nil, errs.NewMissing("did not have a message from %s", identity.String())
 		}
 		r2out, err := party.Round2(r2In)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "base OT as receiver for identity %x", identity.PublicKey())
+			return nil, errs.WrapFailed(err, "base OT as receiver for identity %s", identity.String())
 		}
 		baseOTP2P.Put(identity, r2out)
 	}
@@ -100,11 +98,11 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 		}
 		zeroSamplingMessage, exists := zeroSamplingP2P.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("do not have a zero sampling message for %x", identity.PublicKey())
+			return nil, errs.NewMissing("do not have a zero sampling message for %s", identity.String())
 		}
 		baseOtMessage, exists := baseOTP2P.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("do not have a baseot message for %x", identity.PublicKey())
+			return nil, errs.NewMissing("do not have a baseot message for %s", identity.String())
 		}
 		p2pOutput.Put(identity, &Round2P2P{
 			ZeroSampling:   zeroSamplingMessage,
@@ -144,10 +142,10 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 		party := pair.Value
 		message, exists := baseOtRound2Output.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("do not have a base ot message from %x", identity.PublicKey())
+			return nil, errs.NewMissing("do not have a base ot message from %s", identity.String())
 		}
 		if err := party.Round3(message); err != nil {
-			return nil, errs.WrapFailed(err, "base OT as sender for identity %x", identity.PublicKey())
+			return nil, errs.WrapFailed(err, "base OT as sender for identity %s", identity.String())
 		}
 	}
 	pairwiseBaseOTs := hashmap.NewHashableHashMap[types.IdentityKey, *dkls24.BaseOTConfig]()
@@ -157,11 +155,11 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 		}
 		sender, exists := p.BaseOTSenderParties.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("cannot get the sender party for %x", identity.PublicKey())
+			return nil, errs.NewMissing("cannot get the sender party for %s", identity.String())
 		}
 		receiver, exists := p.BaseOTReceiverParties.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("cannot get the receiver party for %x", identity.PublicKey())
+			return nil, errs.NewMissing("cannot get the receiver party for %s", identity.String())
 		}
 		pairwiseBaseOTs.Put(identity, &dkls24.BaseOTConfig{
 			AsSender:   sender.Output,

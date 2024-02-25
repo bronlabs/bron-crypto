@@ -28,14 +28,13 @@ func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], mes
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreverify
 func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], message []byte, value curves.PairingPoint, dst []byte) error {
-	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.7.2
 	if value == nil || message == nil || publicKey == nil {
 		return errs.NewArgument("signature or message or public key cannot be nil or zero")
 	}
 	// step 2.7.3
-	if value.IsIdentity() || !value.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
-		return errs.NewMembership("signature is not in the correct subgroup")
+	if err := subgroupCheck[S](value); err != nil {
+		return errs.WrapMembership(err, "signature is not in the correct subgroup")
 	}
 
 	// step 2.7.4
@@ -85,26 +84,25 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreaggregateverify
 func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, aggregatedSignatureValue curves.PairingPoint, dst []byte) error {
-	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.9.2
 	if aggregatedSignatureValue == nil {
 		return errs.NewIsNil("aggregated signature value is nil")
 	}
 	// step 2.9.3
-	if aggregatedSignatureValue.IsIdentity() || !aggregatedSignatureValue.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
-		return errs.NewMembership("signature is not in the correct subgroup")
+	if err := subgroupCheck[S](aggregatedSignatureValue); err != nil {
+		return errs.WrapMembership(err, "signature is not in the correct subgroup")
 	}
 
 	if len(publicKeys) < 1 || publicKeys[0] == nil {
-		return errs.NewCount("at least one key is required")
+		return errs.NewSize("at least one key is required")
 	}
 	keysInG1 := publicKeys[0].InG1()
 
 	if len(messages) < 1 {
-		return errs.NewCount("at least one message is required")
+		return errs.NewLength("at least one message is required")
 	}
 	if len(publicKeys) != len(messages) {
-		return errs.NewCount("the number of public keys does not match the number of messages: %v != %v", len(publicKeys), len(messages))
+		return errs.NewLength("the number of public keys does not match the number of messages: %v != %v", len(publicKeys), len(messages))
 	}
 
 	// e(pk_1, H(m_1))*...*e(pk_N, H(m_N)) == e(g1, s) OR if signature in G1 e(H(m_1), pk_1)*...*e(H(m_N), pk_N) == e(s, g2)
@@ -113,9 +111,9 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	// e(pk_1, H(m_1))*...*e(pk_N, H(m_N)) * e(g1^-1, s) == 1 OR if signature in G1 e(H(m_1), pk_1)*...*e(H(m_N), pk_N) * e(s^-1, g2) == 1
 
 	multiPairingInputs := make([]curves.PairingPoint, 2*len(publicKeys)+2)
-	for mpInputIndexOfG1 := 0; mpInputIndexOfG1 < 2*len(publicKeys); mpInputIndexOfG1 += 2 {
-		mpInputIndexOfG2 := mpInputIndexOfG1 + 1
-		i := mpInputIndexOfG1 / 2
+	for myInputIndexOfG1 := 0; myInputIndexOfG1 < 2*len(publicKeys); myInputIndexOfG1 += 2 {
+		myInputIndexOfG2 := myInputIndexOfG1 + 1
+		i := myInputIndexOfG1 / 2
 		publicKey := publicKeys[i]
 		message := messages[i]
 
@@ -137,11 +135,11 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 		}
 
 		if keysInG1 {
-			multiPairingInputs[mpInputIndexOfG1] = publicKey.Y
-			multiPairingInputs[mpInputIndexOfG2] = Q.(curves.PairingPoint)
+			multiPairingInputs[myInputIndexOfG1] = publicKey.Y
+			multiPairingInputs[myInputIndexOfG2] = Q.(curves.PairingPoint)
 		} else {
-			multiPairingInputs[mpInputIndexOfG1] = Q.(curves.PairingPoint)
-			multiPairingInputs[mpInputIndexOfG2] = publicKey.Y
+			multiPairingInputs[myInputIndexOfG1] = Q.(curves.PairingPoint)
+			multiPairingInputs[myInputIndexOfG2] = publicKey.Y
 		}
 	}
 
@@ -217,7 +215,7 @@ func AugmentMessage[K KeySubGroup](message []byte, publicKey *PublicKey[K]) ([]b
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregate
 func AggregateSignatures[S SignatureSubGroup](signatures ...*Signature[S]) (*Signature[S], error) {
 	if len(signatures) < 1 {
-		return nil, errs.NewCount("at least one signature is needed")
+		return nil, errs.NewLength("at least one signature is needed")
 	}
 	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
 	result := signatureSubGroup.Identity()
@@ -225,8 +223,8 @@ func AggregateSignatures[S SignatureSubGroup](signatures ...*Signature[S]) (*Sig
 		if signature == nil {
 			return nil, errs.NewIsNil("signature %d is nil", i)
 		}
-		if signature.Value.IsIdentity() || !signature.Value.IsTorsionElement(signatureSubGroup.SubGroupOrder()) || signature.Value.ClearCofactor().IsIdentity() {
-			return nil, errs.NewVerification("signature is invalid")
+		if err := subgroupCheck[S](signature.Value); err != nil {
+			return nil, errs.WrapVerification(err, "signature is not in the correct subgroup")
 		}
 		result = result.Add(signature.Value)
 	}
@@ -238,7 +236,7 @@ func AggregateSignatures[S SignatureSubGroup](signatures ...*Signature[S]) (*Sig
 
 func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey[K], error) {
 	if len(publicKeys) < 1 {
-		return nil, errs.NewCount("at least one public key is needed")
+		return nil, errs.NewLength("at least one public key is needed")
 	}
 	keySubGroup := bls12381.GetSourceSubGroup[K]()
 	result := keySubGroup.Identity()
@@ -246,8 +244,8 @@ func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey
 		if publicKey == nil {
 			return nil, errs.NewIsNil("public key %d is nil", i)
 		}
-		if publicKey.Y.IsIdentity() || !publicKey.Y.IsTorsionElement(keySubGroup.SubGroupOrder()) || publicKey.Y.ClearCofactor().IsIdentity() {
-			return nil, errs.NewValidation("public key is invalid")
+		if err := subgroupCheck[K](publicKey.Y); err != nil {
+			return nil, errs.WrapValidation(err, "public key is invalid")
 		}
 		result = result.Add(publicKey.Y)
 	}
@@ -261,24 +259,24 @@ func SameSubGroup[K KeySubGroup, S SignatureSubGroup]() bool {
 	return bls12381.GetSourceSubGroup[K]().Name() == bls12381.GetSourceSubGroup[S]().Name()
 }
 
-func allUnique(messages [][]byte) (bool, error) {
+func allUnique(messages [][]byte) error {
 	if messages == nil {
-		return false, errs.NewIsNil("messages is nil")
+		return errs.NewIsNil("messages is nil")
 	}
 	for i, message := range messages {
 		if message == nil {
-			return false, errs.NewIsNil("message %d is nil", i)
+			return errs.NewIsNil("message %d is nil", i)
 		}
 		for j := i + 1; j < len(messages); j++ {
 			if messages[j] == nil {
-				return false, errs.NewIsNil("message %d is nil", j)
+				return errs.NewIsNil("message %d is nil", j)
 			}
 			if bytes.Equal(message, messages[j]) {
-				return false, errs.NewDuplicate("message %d and %d are the same", i, j)
+				return errs.NewMembership("message %d and %d are the same", i, j)
 			}
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func GetDst(scheme RogueKeyPrevention, keysInG1 bool) ([]byte, error) {
@@ -308,4 +306,18 @@ func GetPOPDst(keysInG1 bool) []byte {
 		return []byte(DstPopProofInG2)
 	}
 	return []byte(DstPopProofInG1)
+}
+
+func subgroupCheck[G bls12381.SourceSubGroups](value curves.PairingPoint) error {
+	subgroup := bls12381.GetSourceSubGroup[G]()
+	if value.IsIdentity() {
+		return errs.NewIsIdentity("value")
+	}
+	if !value.IsTorsionElement(subgroup.SubGroupOrder()) {
+		return errs.NewValidation("value is not torsion element of the given subgroup's order")
+	}
+	if value.IsSmallOrder() {
+		return errs.NewValidation("value is small order")
+	}
+	return nil
 }

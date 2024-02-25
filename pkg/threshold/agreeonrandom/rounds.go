@@ -35,7 +35,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	// step 1.2: commit your sample
 	commitment, witness, err := commitments.CommitWithoutSession(p.prng, r_i.Bytes())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().PublicKey().ToAffineCompressed())
+		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
 	}
 	p.round++
 	p.state.r_i = r_i
@@ -90,11 +90,11 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 		}
 		receivedCommitment, exists := p.state.receivedCommitments.Get(party)
 		if !exists {
-			return nil, errs.NewIdentifiableAbort(party.PublicKey().ToAffineCompressed(), "could not find commitment for participant %x", party.PublicKey())
+			return nil, errs.NewMissing("could not find commitment for participant %s", party.String())
 		}
 		// step 3.2: open and check the commitments
 		if err := commitments.OpenWithoutSession(receivedCommitment, message.Witness, message.Ri.Bytes()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, party.PublicKey().ToAffineCompressed(), "commitment from participant with sharing id can't be opened")
+			return nil, errs.WrapIdentifiableAbort(err, party.String(), "commitment from participant with sharing id can't be opened")
 		}
 	}
 

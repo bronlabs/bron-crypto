@@ -2,6 +2,7 @@ package bls_test
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 )
 
-func Benchmark_TwoPartyManyMessageVerify_ShortKeys(b *testing.B) {
+func Benchmark_TwoPartyManyMessageAggregateVerify_ShortKeys(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping benchmark in short mode.")
 	}
@@ -52,6 +53,11 @@ func Benchmark_TwoPartyManyMessageVerify_ShortKeys(b *testing.B) {
 		bobPKs[i] = bobPrivateKey.PublicKey
 	}
 
+	aliceAggregateSignature, err := bls.AggregateSignatures(aliceSignatures...)
+	require.NoError(b, err)
+	bobAggregateSignature, err := bls.AggregateSignatures(bobSignatures...)
+	require.NoError(b, err)
+
 	b.Run("SingleVerify", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			for i := 0; i < batchSize; i++ {
@@ -67,18 +73,12 @@ func Benchmark_TwoPartyManyMessageVerify_ShortKeys(b *testing.B) {
 		}
 	})
 
-	b.Run("BatchVerify", func(b *testing.B) {
+	b.Run("AggregateVerify", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			aliceAggregateSignature, err := bls.AggregateSignatures(aliceSignatures...)
-			require.NoError(b, err)
-
 			err = bls.AggregateVerify(alicePKs, aliceMessages, aliceAggregateSignature, nil, bls.Basic, nil)
 			if err != nil {
 				b.Fatal(err)
 			}
-
-			bobAggregateSignature, err := bls.AggregateSignatures(bobSignatures...)
-			require.NoError(b, err)
 
 			err = bls.AggregateVerify(bobPKs, bobMessages, bobAggregateSignature, nil, bls.Basic, nil)
 			if err != nil {
@@ -86,5 +86,49 @@ func Benchmark_TwoPartyManyMessageVerify_ShortKeys(b *testing.B) {
 			}
 		}
 	})
+}
 
+func Benchmark_ManyPartyBatchVerify_ShortKeys(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode.")
+	}
+	batchSize := 100
+	scheme := bls.Basic
+
+	publicKeys := make([]*bls.PublicKey[bls12381.G1], batchSize)
+	people := make([]*bls.Signer[bls12381.G1, bls12381.G2], batchSize)
+	messages := make([][]byte, batchSize)
+	signatures := make([]*bls.Signature[bls12381.G2], batchSize)
+	schemes := make([]bls.RogueKeyPrevention, batchSize)
+	for i := 0; i < batchSize; i++ {
+		privateKey, err := bls.KeyGen[bls12381.G1](crand.Reader)
+		require.NoError(b, err)
+		publicKeys[i] = privateKey.PublicKey
+		people[i], err = bls.NewSigner[bls12381.G1, bls12381.G2](privateKey, scheme)
+		require.NoError(b, err)
+		messages[i] = []byte(fmt.Sprintf("%d_%x", i, privateKey.PublicKey.Y.ToAffineCompressed()))
+		signatures[i], _, err = people[i].Sign(messages[i], nil)
+		require.NoError(b, err)
+		schemes[i] = scheme
+	}
+
+	b.Run("SingleVerify", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			for i := 0; i < batchSize; i++ {
+				err := bls.Verify(publicKeys[i], signatures[i], messages[i], nil, bls.Basic, nil)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		}
+	})
+
+	b.Run("BatchVerify", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			err := bls.BatchVerify(publicKeys, messages, signatures, nil, schemes, nil, crand.Reader)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

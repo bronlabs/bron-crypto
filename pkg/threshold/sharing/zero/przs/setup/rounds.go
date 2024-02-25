@@ -39,7 +39,7 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		}
 		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.String())
 		}
 		// step 1.1: produce a random seed for this participant
 		seedForThisParticipant := przs.Seed{}
@@ -80,7 +80,7 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (type
 		}
 		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.String())
 		}
 		message, exists := round1output.Get(participant)
 		if !exists {
@@ -120,7 +120,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		}
 		participantIndex, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.String())
 		}
 		message, exists := round2output.Get(participant)
 		if !exists {
@@ -137,7 +137,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 			return nil, errs.NewMissing("participant with index %d sent empty witness", participantIndex)
 		}
 		if err := commitments.Open(p.SessionId, commitment, message.Witness, message.Message); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, participantIndex, "commitment from participant with sharing id can't be opened")
+			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds.Get(participant)
 		if !exists {

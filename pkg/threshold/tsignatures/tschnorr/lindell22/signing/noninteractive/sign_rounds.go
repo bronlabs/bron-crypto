@@ -17,11 +17,11 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 		}
 		thisR1, exists := c.ppm.PreSignature.BigR1.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find R1 contribution from %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find R1 contribution from %s", identity.String())
 		}
 		thisR2, exists := c.ppm.PreSignature.BigR2.Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find R2 contribution from %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find R2 contribution from %s", identity.String())
 		}
 		bigR1Sum = bigR1Sum.Add(thisR1)
 		bigR2Sum = bigR2Sum.Add(thisR2)

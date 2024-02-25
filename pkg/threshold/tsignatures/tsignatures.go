@@ -52,7 +52,7 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, errs.NewMissing("could not find participant sharing id %x", identityKey.PublicKey())
+			return nil, errs.NewMissing("could not find participant sharing id %s", identityKey.String())
 		}
 		if identityKey.Equal(myIdentityKey) {
 			mySharingId = uint(sharingId)

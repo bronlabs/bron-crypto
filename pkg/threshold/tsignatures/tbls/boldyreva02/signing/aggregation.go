@@ -22,7 +22,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 	for pair := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
 		if !exists {
-			return nil, nil, errs.NewMembership("participant %x is not in protocol config", pair.Key.PublicKey())
+			return nil, nil, errs.NewMembership("participant %s is not in protocol config", pair.Key.String())
 		}
 		sharingIds[i] = uint(sharingId)
 		i++
@@ -42,25 +42,25 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 		psig := pair.Value
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, nil, errs.NewMissing("could not find sharing id of participant %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("could not find sharing id of participant %s", identityKey.String())
 		}
 		var internalMessage []byte
 		if psig == nil {
-			return nil, nil, errs.NewMissing("missing partial signature for %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("missing partial signature for %s", identityKey.String())
 		}
 		if psig.POP == nil {
-			return nil, nil, errs.NewMissing("missing pop for %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("missing pop for %s", identityKey.String())
 		}
 		if psig.SigmaI == nil {
-			return nil, nil, errs.NewMissing("missing signature for %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("missing signature for %s", identityKey.String())
 		}
 		publicKeyShare, exists := partialPublicKeys.Shares.Get(identityKey)
 		if !exists {
-			return nil, nil, errs.NewMissing("couldn't find public key share of %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("couldn't find public key share of %s", identityKey.String())
 		}
 		Y, ok := publicKeyShare.(curves.PairingPoint)
 		if !ok {
-			return nil, nil, errs.NewType("partial public key of %x is invalid", identityKey.PublicKey())
+			return nil, nil, errs.NewType("partial public key of %s is invalid", identityKey.String())
 		}
 		publicKeyShareAsPublicKey := &bls.PublicKey[K]{
 			Y: Y,
@@ -81,7 +81,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 				return nil, nil, errs.WrapFailed(err, "could not marshal public key share")
 			}
 			if err := bls.Verify(publicKeyShareAsPublicKey, psig.SigmaPOPI, internalPopMessage, psig.POP, bls.POP, bls.GetPOPDst(publicKeyShareAsPublicKey.InG1())); err != nil {
-				return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify partial signature")
+				return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.String(), "could not verify partial signature")
 			}
 		}
 		tag, err := bls.GetDst(scheme, publicKeyShareAsPublicKey.InG1())
@@ -89,12 +89,12 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 			return nil, nil, errs.WrapFailed(err, "could not get dst")
 		}
 		if err := bls.Verify(publicKeyShareAsPublicKey, psig.SigmaI, internalMessage, psig.POP, bls.POP, tag); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.PublicKey().ToAffineCompressed(), "could not verify partial signature")
+			return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.String(), "could not verify partial signature")
 		}
 
 		lambda_i, exists := lambdas[uint(sharingId)]
 		if !exists {
-			return nil, nil, errs.NewMissing("couldn't find lagrange coefficient for %x", identityKey.PublicKey())
+			return nil, nil, errs.NewMissing("couldn't find lagrange coefficient for %s", identityKey.String())
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)

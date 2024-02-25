@@ -65,7 +65,7 @@ func (p *PreGenParticipant) Round2(round1output types.RoundMessages[*Round1Broad
 		Commitments: p.state.Commitments,
 	})
 	if round1output.Size() != int(p.Protocol.TotalParties()) {
-		return nil, nil, errs.NewCount("the number of received messages is not equal to total parties")
+		return nil, nil, errs.NewSize("the number of received messages is not equal to total parties")
 	}
 
 	batch := make(PreSignatureBatch, p.Tau)

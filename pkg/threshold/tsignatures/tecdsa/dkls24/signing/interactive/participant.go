@@ -103,17 +103,17 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		}
 		seedOtResults, exists := shard.PairwiseBaseOTs.Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("missing ot config for participant %x", participant.PublicKey())
+			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
 		// step 0.3: RVOLE setup as Alice, with P_k as Bob
 		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
 		// step 0.4: RVOLE setup as Bob, with P_k as Alice
 		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
 		multipliers.Put(participant, &signing.Multiplication{
 			Alice: alice,

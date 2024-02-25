@@ -71,10 +71,10 @@ func (ps *PreSignature) Validate(protocol types.ThresholdProtocol) error {
 	EHashSet := map[curves.Point]bool{}
 	for _, thisPartyAttestedCommitment := range *ps {
 		if DHashSet[thisPartyAttestedCommitment.D] {
-			return errs.NewDuplicate("found duplicate D")
+			return errs.NewMembership("found duplicate D")
 		}
 		if EHashSet[thisPartyAttestedCommitment.E] {
-			return errs.NewDuplicate("found duplicate E")
+			return errs.NewMembership("found duplicate E")
 		}
 		if err := thisPartyAttestedCommitment.Validate(protocol); err != nil {
 			return errs.WrapValidation(err, "invalid attested commitments")
@@ -126,13 +126,13 @@ func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 		}
 		for _, D := range preSignature.Ds() {
 			if DHashSet[D] {
-				return errs.NewDuplicate("found duplicate D")
+				return errs.NewMembership("found duplicate D")
 			}
 			DHashSet[D] = true
 		}
 		for _, E := range preSignature.Es() {
 			if EHashSet[E] {
-				return errs.NewDuplicate("found duplicate E")
+				return errs.NewMembership("found duplicate E")
 			}
 			EHashSet[E] = true
 		}

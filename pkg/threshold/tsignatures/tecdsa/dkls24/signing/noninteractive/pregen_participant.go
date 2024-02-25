@@ -104,15 +104,15 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		}
 		seedOtResults, exists := myShard.PairwiseBaseOTs.Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("missing ot config for participant %x", participant.PublicKey())
+			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
 		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "alice construction for participant %x", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
 		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "bob construction for participant %x", participant.PublicKey().ToAffineCompressed())
+			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
 		multipliers.Put(participant, &signing.Multiplication{
 			Alice: alice,

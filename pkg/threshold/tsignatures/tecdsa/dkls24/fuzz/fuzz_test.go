@@ -79,7 +79,7 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, t
 	fz.Fuzz(&sid)
 	_, _, _, shards, err := dklstu.KeyGen(cipherSuite.Curve(), cipherSuite.Hash(), threshold, len(identities), identities, sid)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsCount(err) {
+		if errs.IsMembership(err) || errs.IsSize(err) {
 			t.Skip("too many participants")
 		}
 	}

@@ -190,7 +190,7 @@ func (ct *CipherText) Validate(publicKey *PublicKey) error {
 		return errs.NewIsZero("ciphertext")
 	}
 	if _, _, ok := ct.C.CmpMod(publicKey.N2); ok == 0 {
-		return errs.NewRange("ciphertext")
+		return errs.NewValue("ciphertext range")
 	}
 	return nil
 }

@@ -147,7 +147,7 @@ func validateInputsNonInteractiveSigning(authKey types.AuthKey, shard *frost.Sha
 		return errs.NewIsNil("private nonce pairs is nil")
 	}
 	if len(privateNoncePairs) != len(preSignatureBatch) {
-		return errs.NewCount("number of provided private nonce pairs is not equal to total presignatures")
+		return errs.NewSize("number of provided private nonce pairs is not equal to total presignatures")
 	}
 	return nil
 }

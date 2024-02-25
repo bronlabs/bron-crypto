@@ -19,7 +19,7 @@ func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves
 		numerator = numerator.Mul(xj.Sub(x))
 		denominator = denominator.Mul(xj.Sub(xs[i]))
 		if denominator.IsZero() {
-			return nil, errs.NewDivisionByZero("denominator became zero")
+			return nil, errs.NewValue("division by zero")
 		}
 	}
 	return numerator.Div(denominator), nil

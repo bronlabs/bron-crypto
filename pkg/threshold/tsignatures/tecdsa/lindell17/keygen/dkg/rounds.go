@@ -131,7 +131,7 @@ func (p *Participant) Round2(input types.RoundMessages[*Round1Broadcast]) (outpu
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -177,7 +177,7 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -206,7 +206,7 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 			return nil, errs.NewMissing("could not find participant partial publickey (sharing id=%d)", sharingId)
 		}
 		if !theirBigQ.Equal(partialPublicKey) {
-			return nil, errs.NewIdentifiableAbort(identity.PublicKey().ToAffineCompressed(), "invalid Q' or Q''")
+			return nil, errs.NewIdentifiableAbort(identity.String(), "invalid Q' or Q''")
 		}
 	}
 
@@ -283,7 +283,7 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -357,7 +357,7 @@ func (p *Participant) Round5(input types.RoundMessages[*Round4P2P]) (output type
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -397,7 +397,7 @@ func (p *Participant) Round6(input types.RoundMessages[*Round5P2P]) (output type
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -437,7 +437,7 @@ func (p *Participant) Round7(input types.RoundMessages[*Round6P2P]) (output type
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -475,7 +475,7 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 		}
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sender sharing id %x", identity.PublicKey())
+			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
 		message, exists := input.Get(identity)
 		if !exists {
@@ -483,13 +483,13 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 		}
 
 		if err := p.state.lpVerifiers[sharingId].Round5(message.LpRound4Output); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, sharingId, "failed to verify valid Paillier public-key")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "failed to verify valid Paillier public-key")
 		}
 		if err := p.state.lpdlPrimeVerifiers[sharingId].Round5(message.LpdlPrimeRound4Output); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, sharingId, "failed to verify encrypted dlog")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "failed to verify encrypted dlog")
 		}
 		if err := p.state.lpdlDoublePrimeVerifiers[sharingId].Round5(message.LpdlDoublePrimeRound4Output); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, sharingId, "failed to verify encrypted dlog")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "failed to verify encrypted dlog")
 		}
 	}
 

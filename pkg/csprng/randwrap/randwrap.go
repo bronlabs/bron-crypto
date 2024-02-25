@@ -1,7 +1,6 @@
 package randwrap
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"reflect"
@@ -110,15 +109,7 @@ func validateInputs(prng io.Reader, deterministicWrappingKey types.AuthKey) erro
 	if deterministicWrappingKey == nil {
 		return errs.NewIsNil("deterministic wrapping key is nil")
 	}
-	var testingMessage [NBytes]byte
-	if _, err := io.ReadFull(prng, testingMessage[:]); err != nil {
-		return errs.WrapRandomSample(err, "could not sample a random testign message")
-	}
-
-	firstSignature := deterministicWrappingKey.Sign(testingMessage[:])
-	secondSignature := deterministicWrappingKey.Sign(testingMessage[:])
-
-	if subtle.ConstantTimeCompare(firstSignature, secondSignature) == 0 {
+	if !types.AuthKeyIsDeterministic(deterministicWrappingKey) {
 		return errs.NewType("wrapping key is not deterministic")
 	}
 	return nil

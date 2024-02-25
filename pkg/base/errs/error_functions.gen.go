@@ -39,22 +39,6 @@ func HasCoordinates(err error) bool {
 	return Has(err, Coordinates)
 }
 
-func NewCount(format string, args ...any) error {
-	return errors.Errorf("%s %s", Count, fmt.Sprintf(format, args...))
-}
-
-func WrapCount(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Count, fmt.Sprintf(format, args...))
-}
-
-func IsCount(err error) bool {
-	return Is(err, Count)
-}
-
-func HasCount(err error) bool {
-	return Has(err, Count)
-}
-
 func NewCurve(format string, args ...any) error {
 	return errors.Errorf("%s %s", Curve, fmt.Sprintf(format, args...))
 }
@@ -71,38 +55,6 @@ func HasCurve(err error) bool {
 	return Has(err, Curve)
 }
 
-func NewDivisionByZero(format string, args ...any) error {
-	return errors.Errorf("%s %s", DivisionByZero, fmt.Sprintf(format, args...))
-}
-
-func WrapDivisionByZero(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", DivisionByZero, fmt.Sprintf(format, args...))
-}
-
-func IsDivisionByZero(err error) bool {
-	return Is(err, DivisionByZero)
-}
-
-func HasDivisionByZero(err error) bool {
-	return Has(err, DivisionByZero)
-}
-
-func NewDuplicate(format string, args ...any) error {
-	return errors.Errorf("%s %s", Duplicate, fmt.Sprintf(format, args...))
-}
-
-func WrapDuplicate(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Duplicate, fmt.Sprintf(format, args...))
-}
-
-func IsDuplicate(err error) bool {
-	return Is(err, Duplicate)
-}
-
-func HasDuplicate(err error) bool {
-	return Has(err, Duplicate)
-}
-
 func NewHashing(format string, args ...any) error {
 	return errors.Errorf("%s %s", Hashing, fmt.Sprintf(format, args...))
 }
@@ -117,22 +69,6 @@ func IsHashing(err error) bool {
 
 func HasHashing(err error) bool {
 	return Has(err, Hashing)
-}
-
-func NewIdentifier(format string, args ...any) error {
-	return errors.Errorf("%s %s", Identifier, fmt.Sprintf(format, args...))
-}
-
-func WrapIdentifier(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Identifier, fmt.Sprintf(format, args...))
-}
-
-func IsIdentifier(err error) bool {
-	return Is(err, Identifier)
-}
-
-func HasIdentifier(err error) bool {
-	return Has(err, Identifier)
 }
 
 func NewIsIdentity(format string, args ...any) error {
@@ -231,22 +167,6 @@ func HasMissing(err error) bool {
 	return Has(err, Missing)
 }
 
-func NewPanic(format string, args ...any) error {
-	return errors.Errorf("%s %s", Panic, fmt.Sprintf(format, args...))
-}
-
-func WrapPanic(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Panic, fmt.Sprintf(format, args...))
-}
-
-func IsPanic(err error) bool {
-	return Is(err, Panic)
-}
-
-func HasPanic(err error) bool {
-	return Has(err, Panic)
-}
-
 func NewRandomSample(format string, args ...any) error {
 	return errors.Errorf("%s %s", RandomSample, fmt.Sprintf(format, args...))
 }
@@ -261,22 +181,6 @@ func IsRandomSample(err error) bool {
 
 func HasRandomSample(err error) bool {
 	return Has(err, RandomSample)
-}
-
-func NewRange(format string, args ...any) error {
-	return errors.Errorf("%s %s", Range, fmt.Sprintf(format, args...))
-}
-
-func WrapRange(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", Range, fmt.Sprintf(format, args...))
-}
-
-func IsRange(err error) bool {
-	return Is(err, Range)
-}
-
-func HasRange(err error) bool {
-	return Has(err, Range)
 }
 
 func NewRound(format string, args ...any) error {
@@ -389,38 +293,6 @@ func IsVerification(err error) bool {
 
 func HasVerification(err error) bool {
 	return Has(err, Verification)
-}
-
-func NewIsNotNil(format string, args ...any) error {
-	return errors.Errorf("%s %s", IsNotNil, fmt.Sprintf(format, args...))
-}
-
-func WrapIsNotNil(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", IsNotNil, fmt.Sprintf(format, args...))
-}
-
-func IsIsNotNil(err error) bool {
-	return Is(err, IsNotNil)
-}
-
-func HasIsNotNil(err error) bool {
-	return Has(err, IsNotNil)
-}
-
-func NewIsNotZero(format string, args ...any) error {
-	return errors.Errorf("%s %s", IsNotZero, fmt.Sprintf(format, args...))
-}
-
-func WrapIsNotZero(err error, format string, args ...any) error {
-	return errors.Wrapf(err, "%s %s", IsNotZero, fmt.Sprintf(format, args...))
-}
-
-func IsIsNotZero(err error) bool {
-	return Is(err, IsNotZero)
-}
-
-func HasIsNotZero(err error) bool {
-	return Has(err, IsNotZero)
 }
 
 func NewFailed(format string, args ...any) error {

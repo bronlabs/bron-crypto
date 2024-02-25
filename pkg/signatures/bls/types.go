@@ -73,6 +73,9 @@ func (sk *PrivateKey[K]) D() curves.Scalar {
 }
 
 func (sk *PrivateKey[K]) Validate() error {
+	if sk == nil {
+		return errs.NewIsNil("receiver")
+	}
 	if sk.d == nil {
 		return errs.NewIsNil("scalar is nil")
 	}

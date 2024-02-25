@@ -73,7 +73,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (types.RoundMessages[*
 			// step 2.2 if responder
 			if err := p.initiator.Verify(initiatorMessage.InitiatorSignature, authMessage); err != nil {
 				// step 2.3
-				return nil, errs.NewIdentifiableAbort(p.initiator.PublicKey().ToAffineCompressed(), "failed to verify signature")
+				return nil, errs.NewIdentifiableAbort(p.initiator.String(), "failed to verify signature")
 			}
 			// step 2.4
 			result.Put(participant, &Round2P2P{
@@ -123,7 +123,7 @@ func (p *Participant) Round3(p2pMessages types.RoundMessages[*Round2P2P]) ([]byt
 			}
 			// Step 3.1
 			if err := p.initiator.Verify(message.InitiatorSignature, authMessage); err != nil {
-				return nil, errs.NewIdentifiableAbort(sender.PublicKey().ToAffineCompressed(), "failed to verify signature")
+				return nil, errs.NewIdentifiableAbort(sender.String(), "failed to verify signature")
 			}
 		}
 

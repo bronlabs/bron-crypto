@@ -1,6 +1,9 @@
 package bls
 
 import (
+	"io"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -60,8 +63,7 @@ func NewSigner[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], sc
 		Scheme:     scheme,
 		PrivateKey: privateKey,
 	}
-	err := signer.Validate()
-	if err != nil {
+	if err := signer.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "signer validation failed")
 	}
 	return signer, nil
@@ -205,27 +207,23 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 	}
 
 	if len(publicKeys) != len(messages) {
-		return errs.NewCount("#public keys != #messages")
+		return errs.NewSize("#public keys != #messages")
 	}
 
 	switch scheme {
 	// case 3.1.1
 	case Basic:
 		if len(pops) > 0 {
-			return errs.NewCount("nonzero number of pops when scheme is basic")
+			return errs.NewSize("nonzero number of pops when scheme is basic")
 		}
 		// step 3.1.1.1
-		areAllUnique, err := allUnique(messages)
-		if err != nil {
-			return errs.WrapFailed(err, "could not determine if all messages are unique")
-		}
-		if !areAllUnique {
-			return errs.NewVerification("not all messages are unique")
+		if err := allUnique(messages); err != nil {
+			return errs.WrapFailed(err, "message uniqueness")
 		}
 	// case 3.3
 	case POP:
 		if len(publicKeys) != len(pops) {
-			return errs.NewCount("#publicKeys != #pops")
+			return errs.NewSize("#publicKeys != #pops")
 		}
 		for i, publicKey := range publicKeys {
 			if err := PopVerify(publicKey, pops[i]); err != nil {
@@ -235,7 +233,7 @@ func AggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey
 	// case 3.2.3 https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 	case MessageAugmentation:
 		if len(pops) > 0 {
-			return errs.NewCount("nonzero number of pops when scheme is message augmentation")
+			return errs.NewSize("nonzero number of pops when scheme is message augmentation")
 		}
 		// step 3.2.3.1
 		for i, publicKey := range publicKeys {
@@ -282,10 +280,10 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	}
 
 	if len(publicKeys) != len(pops) {
-		return errs.NewCount("#public keys != #pops")
+		return errs.NewSize("#public keys != #pops")
 	}
 	if len(publicKeys) < 2 {
-		return errs.NewCount("at least two public key is needed")
+		return errs.NewSize("at least two public key is needed")
 	}
 
 	// step 3.3.4.1-5
@@ -311,6 +309,278 @@ func FastAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	// step 3.3.4.6
 	if err := coreVerify[K, S](aggregatePublicKey, message, aggregatedSignature.Value, dst); err != nil {
 		return errs.WrapVerification(err, "invalid signature")
+	}
+	return nil
+}
+
+// BatchAggregateVerify simultaneously verifies n aggregated signatures where each signature is aggregation of M signatures from the provided public keys. Each aggregated signature may have different rogue key prevention schemes.
+// https://ethresear.ch/t/security-of-bls-batch-verification/10748
+func BatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], batchMessages [][][]byte, aggregatedSignatures []*Signature[S], pops []*ProofOfPossession[S], schemes []RogueKeyPrevention, tags [][]byte, prng io.Reader) error {
+	if err := validateInputsBatchAggregateVerify(publicKeys, batchMessages, aggregatedSignatures, schemes, tags, prng); err != nil {
+		return errs.WrapArgument(err, "invalid arguments")
+	}
+	batchSize := len(aggregatedSignatures)
+	keysInG1 := publicKeys[0].InG1()
+	keySubGroup := bls12381.GetSourceSubGroup[K]()
+	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
+	verifiedPops := false
+	sStar := signatureSubGroup.Identity()
+	multiPairingInputs := []curves.PairingPoint{}
+
+	for batch := 0; batch < batchSize; batch++ {
+		scheme := schemes[batch]
+		messages := batchMessages[batch]
+		aggregatedSignature := aggregatedSignatures[batch]
+
+		if len(messages) != len(publicKeys) {
+			return errs.NewSize("#messages != #public keys in batch %d", batch)
+		}
+
+		var dst []byte
+		var err error
+		if tags == nil || len(tags) < batchSize || len(tags[batch]) == 0 {
+			dst, err = GetDst(scheme, keysInG1)
+			if err != nil {
+				return errs.WrapFailed(err, "could not get domain separation tag")
+			}
+		} else {
+			dst = tags[batch]
+		}
+
+		switch scheme {
+		case Basic:
+			if err := allUnique(messages); err != nil {
+				return errs.WrapFailed(err, "message uniqueness")
+			}
+		case POP:
+			if !verifiedPops {
+				if len(publicKeys) != len(pops) {
+					return errs.NewSize("#publicKeys != #pops")
+				}
+				for i, publicKey := range publicKeys {
+					if err := PopVerify(publicKey, pops[i]); err != nil {
+						return errs.WrapVerification(err, "pop %d is invalid", i)
+					}
+				}
+				verifiedPops = true
+			}
+		case MessageAugmentation:
+			for i, publicKey := range publicKeys {
+				augmentedMessage, err := AugmentMessage(messages[i], publicKey)
+				if err != nil {
+					return errs.WrapFailed(err, " could not augment message")
+				}
+				messages[i] = augmentedMessage
+			}
+		default:
+			return errs.NewType("rogue key prevention scheme %d is not supported", scheme)
+		}
+
+		r, err := signatureSubGroup.ScalarField().Random(prng)
+		if err != nil {
+			return errs.WrapRandomSample(err, "could not compute r")
+		}
+
+		sStar = sStar.Add(aggregatedSignature.Value.Mul(r))
+
+		for i, m := range messages {
+			M, err := signatureSubGroup.HashWithDst(m, dst)
+			if err != nil {
+				return errs.WrapHashing(err, "could not compute hash of m_%d", i)
+			}
+			rM := M.Mul(r).(curves.PairingPoint)
+
+			if keysInG1 {
+				multiPairingInputs = append(multiPairingInputs, publicKeys[i].Y, rM)
+			} else {
+				multiPairingInputs = append(multiPairingInputs, rM, publicKeys[i].Y)
+			}
+		}
+	}
+
+	if keysInG1 {
+		gInv := keySubGroup.Generator().Neg().(curves.PairingPoint)
+		multiPairingInputs = append(multiPairingInputs, gInv, sStar.(curves.PairingPoint))
+	} else {
+		sStarInv := sStar.Neg().(curves.PairingPoint)
+		multiPairingInputs = append(multiPairingInputs, sStarInv, keySubGroup.Generator().(curves.PairingPoint))
+	}
+
+	scalarGt, err := aggregatedSignatures[0].Value.PairingCurve().MultiPair(multiPairingInputs...)
+	if err != nil {
+		return errs.WrapFailed(err, "multipairing failed")
+	}
+	if !scalarGt.IsIdentity() {
+		return errs.NewVerification("batch")
+	}
+	return nil
+}
+
+func validateInputsBatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], batchMessages [][][]byte, aggregatedSignatures []*Signature[S], schemes []RogueKeyPrevention, tags [][]byte, prng io.Reader) error {
+	if SameSubGroup[K, S]() {
+		return errs.NewType("key and signature should be in different subgroups")
+	}
+	batchSize := len(aggregatedSignatures)
+	if batchSize == 0 {
+		return errs.NewSize("#aggregated signatures == 0")
+	}
+	if batchSize != len(batchMessages) {
+		return errs.NewSize("#batch messages != batch size")
+	}
+	if batchSize != len(schemes) {
+		return errs.NewSize("#schemes != batch size")
+	}
+	if tags != nil && batchSize != len(tags) {
+		return errs.NewSize("#tags != batch size")
+	}
+	if len(publicKeys) == 0 {
+		return errs.NewSize("#PublicKeys == 0")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng")
+	}
+	for batch := 0; batch < batchSize; batch++ {
+		if aggregatedSignatures[batch] == nil {
+			return errs.NewIsNil("aggregated signature of batch %d", batch)
+		}
+		if err := subgroupCheck[S](aggregatedSignatures[batch].Value); err != nil {
+			return errs.WrapValidation(err, "aggregated signature of batch %d", batch)
+		}
+	}
+	for i, pk := range publicKeys {
+		if pk == nil {
+			return errs.NewIsNil("public key %d", i)
+		}
+		if err := subgroupCheck[K](pk.Y); err != nil {
+			return errs.WrapValidation(err, "public key %d", i)
+		}
+	}
+	return nil
+}
+
+// BatchVerify simultaneously verifies n signatures of the provided messages with the provided public keys. Each signature may have its own rogue key prevention scheme.
+// https://github.com/ethereum/bls12-381-tests/blob/master/main.py#L453
+// https://ethresear.ch/t/security-of-bls-batch-verification/10748
+func BatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, signatures []*Signature[S], pops []*ProofOfPossession[S], schemes []RogueKeyPrevention, tags [][]byte, prng io.Reader) error {
+	if err := validateInputsBatchVerify(publicKeys, messages, signatures, schemes, tags, prng); err != nil {
+		return errs.WrapArgument(err, "invalid arguments")
+	}
+	batchSize := len(signatures)
+	keysInG1 := publicKeys[0].InG1()
+	keySubGroup := bls12381.GetSourceSubGroup[K]()
+	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
+	sStar := signatureSubGroup.Identity()
+	multiPairingInputs := []curves.PairingPoint{}
+
+	for batch := 0; batch < batchSize; batch++ {
+		signature := signatures[batch]
+		message := messages[batch]
+		publicKey := publicKeys[batch]
+		scheme := schemes[batch]
+
+		var dst []byte
+		var err error
+		if tags == nil || len(tags) < batchSize || len(tags[batch]) == 0 {
+			dst, err = GetDst(scheme, keysInG1)
+			if err != nil {
+				return errs.WrapFailed(err, "could not get domain separation tag")
+			}
+		} else {
+			dst = tags[batch]
+		}
+
+		switch scheme {
+		case Basic:
+		case POP:
+			if len(publicKeys) != len(pops) {
+				return errs.NewSize("#publicKeys != #pops")
+			}
+			if err := PopVerify(publicKey, pops[batch]); err != nil {
+				return errs.WrapVerification(err, "pop %d is invalid", batch)
+			}
+		case MessageAugmentation:
+			message, err = AugmentMessage(message, publicKey)
+			if err != nil {
+				return errs.WrapFailed(err, " could not augment message")
+			}
+		default:
+			return errs.NewType("rogue key prevention scheme %d is not supported", scheme)
+		}
+
+		r, err := signatureSubGroup.ScalarField().Random(prng)
+		if err != nil {
+			return errs.WrapRandomSample(err, "could not compute r")
+		}
+
+		sStar = sStar.Add(signature.Value.Mul(r))
+
+		M, err := signatureSubGroup.HashWithDst(message, dst)
+		if err != nil {
+			return errs.WrapHashing(err, "could not compute hash of m_%d", batch)
+		}
+		rM := M.Mul(r).(curves.PairingPoint)
+
+		if keysInG1 {
+			multiPairingInputs = append(multiPairingInputs, publicKey.Y, rM)
+		} else {
+			multiPairingInputs = append(multiPairingInputs, rM, publicKey.Y)
+		}
+	}
+
+	if keysInG1 {
+		gInv := keySubGroup.Generator().Neg().(curves.PairingPoint)
+		multiPairingInputs = append(multiPairingInputs, gInv, sStar.(curves.PairingPoint))
+	} else {
+		sStarInv := sStar.Neg().(curves.PairingPoint)
+		multiPairingInputs = append(multiPairingInputs, sStarInv, keySubGroup.Generator().(curves.PairingPoint))
+	}
+
+	scalarGt, err := signatures[0].Value.PairingCurve().MultiPair(multiPairingInputs...)
+	if err != nil {
+		return errs.WrapFailed(err, "multipairing failed")
+	}
+	if !scalarGt.IsIdentity() {
+		return errs.NewVerification("batch")
+	}
+	return nil
+}
+
+func validateInputsBatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K], messages [][]byte, signatures []*Signature[S], schemes []RogueKeyPrevention, tags [][]byte, prng io.Reader) error {
+	if SameSubGroup[K, S]() {
+		return errs.NewType("key and signature should be in different subgroups")
+	}
+	batchSize := len(signatures)
+	if batchSize == 0 {
+		return errs.NewSize("#signatures == 0")
+	}
+	if batchSize != len(messages) {
+		return errs.NewSize("#messages != batch size")
+	}
+	if batchSize != len(schemes) {
+		return errs.NewSize("#schemes != batch size")
+	}
+	if tags != nil && batchSize != len(tags) {
+		return errs.NewSize("#tags != batch size")
+	}
+	if batchSize != len(publicKeys) {
+		return errs.NewSize("#PublicKeys != batch size")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng")
+	}
+	for batch := 0; batch < batchSize; batch++ {
+		if signatures[batch] == nil {
+			return errs.NewIsNil("signature of batch %d", batch)
+		}
+		if err := subgroupCheck[S](signatures[batch].Value); err != nil {
+			return errs.WrapValidation(err, "signature of batch %d", batch)
+		}
+		if publicKeys[batch] == nil {
+			return errs.NewIsNil("public key %d", batch)
+		}
+		if err := subgroupCheck[K](publicKeys[batch].Y); err != nil {
+			return errs.WrapValidation(err, "public key %d", batch)
+		}
 	}
 	return nil
 }

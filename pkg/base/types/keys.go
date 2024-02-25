@@ -16,6 +16,7 @@ import (
 )
 
 type IdentityKey interface {
+	String() string
 	PublicKey() curves.Point
 	Verify(signature []byte, message []byte) error
 	ds.Hashable[IdentityKey]

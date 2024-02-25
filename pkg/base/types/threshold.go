@@ -16,7 +16,7 @@ type ThresholdParticipant interface {
 
 func validateThresholdParticipant(p ThresholdParticipant) error {
 	if id := p.SharingId(); id <= 0 {
-		return errs.NewIdentifier("sharing id must be a positive number")
+		return errs.NewValue("sharing id must be a positive number")
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func ValidateThresholdProtocol(p ThresholdParticipant, f ThresholdProtocol) erro
 		return errs.NewMissing("my sharing id couldn't be computed from the protocol config")
 	}
 	if mySharingId != p.SharingId() {
-		return errs.NewIdentifier("sharing id (%d) != what it should be (%d)", p.SharingId(), mySharingId)
+		return errs.NewValue("sharing id (%d) != what it should be (%d)", p.SharingId(), mySharingId)
 	}
 	return nil
 }

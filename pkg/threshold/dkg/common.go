@@ -11,16 +11,16 @@ import (
 func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVectors map[types.SharingID][]curves.Point, sharingConfig types.SharingConfig) (ds.Map[types.IdentityKey, curves.Point], error) {
 	shares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	for pair := range sharingConfig.Iter() {
-		j := pair.Key
 		identityKey := pair.Value
+		j := pair.Key
 		Y_j := protocol.Curve().Identity()
+		jToKs := make([]curves.Scalar, protocol.Threshold())
+		for k := 0; k < int(protocol.Threshold()); k++ {
+			exp := protocol.Curve().ScalarField().New(uint64(k))
+			jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp)
+			jToKs[k] = jToK
+		}
 		for _, C_l := range commitmentVectors {
-			jToKs := make([]curves.Scalar, protocol.Threshold())
-			for k := 0; k < int(protocol.Threshold()); k++ {
-				exp := protocol.Curve().ScalarField().New(uint64(k))
-				jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp)
-				jToKs[k] = jToK
-			}
 			jkC_lk, err := protocol.Curve().MultiScalarMult(jToKs, C_l)
 			if err != nil {
 				return nil, errs.NewFailed("couldn't derive partial public key share")

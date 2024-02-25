@@ -101,7 +101,7 @@ func (c *context) computeNonce() ([]byte, error) {
 	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-6
 	subtle.XORBytes(newNonce[Nn-8:], c.baseNonce[Nn-8:], buf) // length of sequence (uint64) is smaller than Nn. So we treat as zero-padded.
 	if c.nonces.Contains(newNonce) {
-		return nil, errs.NewDuplicate("computed nonce is used before")
+		return nil, errs.NewMembership("computed nonce is used before")
 	}
 	c.nonces.Add(newNonce)
 	return newNonce, nil
@@ -123,7 +123,7 @@ func (c *context) incrementSeq() error {
 func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 	kdf := kdfs[c.suite.KDF]
 	if L > 255*kdf.Nh() {
-		return nil, errs.NewRange("L is out of range")
+		return nil, errs.NewValue("L is out of range")
 	}
 	return kdf.labeledExpand(c.suite.ID(), c.exporterSecret, []byte("sec"), exporterContext, L), nil
 }

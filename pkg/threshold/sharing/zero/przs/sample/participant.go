@@ -69,7 +69,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWise
 		return errs.WrapValidation(err, "mpc protocol")
 	}
 	if presentParticipants.Size() < 2 {
-		return errs.NewCount("need at least 2 participants")
+		return errs.NewSize("need at least 2 participants")
 	}
 	if !presentParticipants.IsSubSet(protocol.Participants()) {
 		return errs.NewSize("present sampler set is not a subset of all participants")
@@ -103,7 +103,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		}
 		i, exists := p.IdentitySpace.Reverse().Get(participant)
 		if !exists {
-			return errs.NewMissing("could not find index of participant %x", participant.PublicKey())
+			return errs.NewMissing("could not find index of participant %x", participant.String())
 		}
 		sharedSeed, exists := p.Seeds.Get(participant)
 		if !exists {

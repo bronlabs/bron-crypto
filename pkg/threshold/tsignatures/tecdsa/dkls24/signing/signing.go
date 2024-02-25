@@ -119,7 +119,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 		}
 		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
-			return nil, nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
+			return nil, nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
@@ -138,7 +138,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 		// step 1.5: Run γ_ij <- RVOLE.Round1() as Bob
 		multInstance, exists := state.Protocols.Multiplication.Get(participant)
 		if !exists {
-			return nil, nil, errs.NewMissing("could not find multiplication instance for %x", participant.PublicKey())
+			return nil, nil, errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
 		b, multiplicationOutput, err := multInstance.Bob.Round1()
 		if err != nil {
@@ -193,7 +193,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 		}
 		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
-			return nil, nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
+			return nil, nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
 
 		receivedBroadcastMessage, exists := inputBroadcast.Get(participant)
@@ -211,7 +211,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 		// step 2.5: Run (μ_ij, c={c^u_ij, c^v_ij}) <- RVOLE.Round2(γ_ij, a={r_i, sk_i}) as Alice
 		multInstance, exists := state.Protocols.Multiplication.Get(participant)
 		if !exists {
-			return nil, nil, errs.NewMissing("could not find multiplication instance for %x", participant.PublicKey())
+			return nil, nil, errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
 		c_ij, multiplicationOutput, err := multInstance.Alice.Round2(receivedP2PMessage.MultiplicationOutput, a)
 		if err != nil {
@@ -257,7 +257,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 		}
 		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
-			return errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
+			return errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
 
 		receivedBroadcastMessage, exists := inputBroadcast.Get(participant)
@@ -275,7 +275,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 
 		receivedBigR_i, exists := state.ReceivedBigR_i.Get(participant)
 		if !exists {
-			return errs.NewMissing("do not have BigRI in memory for %x", participant.PublicKey())
+			return errs.NewMissing("do not have BigRI in memory for %s", participant.String())
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
 		if err := commitments.Open(
@@ -292,7 +292,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 		// step 3.3: Run ({d^u_ij, d^v_ij}) <- RVOLE.Round3(μ_ij) as Bob
 		multInstance, exists := state.Protocols.Multiplication.Get(participant)
 		if !exists {
-			return errs.NewMissing("could not find multiplication instance for %x", participant.PublicKey())
+			return errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
 		d_ij, err := multInstance.Bob.Round3(receivedP2PMessage.Multiplication)
 		if err != nil {
@@ -347,7 +347,7 @@ func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, 
 		}
 		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
-			return nil, errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
+			return nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
 		cu_ij := cu[sharingId]
 		cv_ij := cv[sharingId]

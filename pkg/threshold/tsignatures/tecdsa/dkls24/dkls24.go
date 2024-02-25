@@ -75,13 +75,13 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 		id := pair.Key
 		v := pair.Value
 		if v == nil {
-			return errs.NewIsNil("base ot pair for id %x", id.PublicKey())
+			return errs.NewIsNil("base ot pair for id %s", id.String())
 		}
 		if v.AsSender == nil {
-			return errs.NewIsNil("base ot as sender wrt id %x", id.PublicKey())
+			return errs.NewIsNil("base ot as sender wrt id %s", id.String())
 		}
 		if v.AsReceiver == nil {
-			return errs.NewIsNil("base ot as receiver wrt id %x", id.PublicKey())
+			return errs.NewIsNil("base ot as receiver wrt id %s", id.String())
 		}
 	}
 	if s.PairwiseSeeds == nil {
@@ -142,7 +142,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	for participant := range ppm.PreSigners.Iter() {
 		Ri, exists := ppm.PreSignature.Get(participant)
 		if !exists {
-			return errs.NewMissing("could not find Ri for identity %x", participant.PublicKey())
+			return errs.NewMissing("could not find Ri for identity %s", participant.String())
 		}
 		if Ri == nil {
 			return errs.NewIsNil("Ri")
@@ -186,7 +186,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 		}
 		id, exists := sharingConfig.Reverse().Get(participant)
 		if !exists {
-			return errs.NewMissing("could not find sharing id of %x", participant.PublicKey())
+			return errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
 		cu, exists := pppm.Cu[id]
 		if !exists {

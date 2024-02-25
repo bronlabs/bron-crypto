@@ -137,7 +137,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		}
 		// step 2.1: Pedersen.Verify(x_j, x'_j, B_i)
 		if err := pedersen.Verify(receivedShare, receivedBlindingShare, senderBlindedCommitmentVector, p.H); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from pedersen given sharing id")
+			return nil, errs.WrapIdentifiableAbort(err, senderIdentityKey.String(), "abort from pedersen")
 		}
 		// step 2.2: x_i <- Σ x_ij
 		secretKeyShare = secretKeyShare.Add(p2pMessageFromSender.X_ij)
@@ -190,7 +190,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")
 		}
 		if err := verifier.Verify(senderCommitmentVector, broadcastedMessageFromSender.CommitmentsProof); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, senderSharingId, "abort from dlog proof of a_i0 given sharing id")
+			return nil, nil, errs.WrapIdentifiableAbort(err, senderIdentityKey.String(), "abort from dlog proof of a_i0")
 		}
 		// step 3.2: Feldman.Verify(C_i, B_i)
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderSharingId]
@@ -208,7 +208,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 			return nil, nil, errs.WrapFailed(err, "couldn't derive partial public key share")
 		}
 		if !partialPublicKeyShare.Equal(derivedPartialPublicKeyShare) {
-			return nil, nil, errs.NewIdentifiableAbort(senderSharingId, "shares received from sharing id is inconsistent")
+			return nil, nil, errs.NewIdentifiableAbort(senderIdentityKey.String(), "shares received from sharing id is inconsistent")
 		}
 		// step 3.3: Y <- Sum C_{j,0}
 		publicKey = publicKey.Add(senderCommitmentToTheirLocalSecret)

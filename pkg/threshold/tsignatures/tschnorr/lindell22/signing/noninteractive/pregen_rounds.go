@@ -1,7 +1,6 @@
 package noninteractive_signing
 
 import (
-	"encoding/hex"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -100,7 +99,7 @@ func (p *PreGenParticipant) Round2(broadcastInput types.RoundMessages[*Round1Bro
 
 		inBroadcast, ok := broadcastInput.Get(identity)
 		if !ok {
-			return nil, nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			return nil, nil, errs.NewIdentifiableAbort(identity.String(), "no input from participant")
 		}
 		theirBigRCommitment.Put(identity, inBroadcast.BigRCommitment)
 	}
@@ -148,7 +147,7 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 
 		inBroadcast, ok := broadcastInput.Get(identity)
 		if !ok {
-			return nil, errs.NewIdentifiableAbort("no input from participant %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			return nil, errs.NewIdentifiableAbort(identity.String(), "no input from participant")
 		}
 
 		theirBigR1 := inBroadcast.BigR1
@@ -167,11 +166,11 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 
 		// 2. verify dlog
 		if err := dlogVerifyProof(inBroadcast.BigR1Proof, theirBigR1, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 		BigR1.Put(identity, theirBigR1)
 		if err := dlogVerifyProof(inBroadcast.BigR2Proof, theirBigR2, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, "cannot verify dlog proof from %s", hex.EncodeToString(identity.PublicKey().ToAffineCompressed()))
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 		BigR2.Put(identity, theirBigR2)
 	}

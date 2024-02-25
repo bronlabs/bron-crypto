@@ -278,7 +278,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsCount(err) {
+		if errs.IsMembership(err) || errs.IsSize(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)
@@ -286,7 +286,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	if err != nil {
-		if errs.IsDuplicate(err) || errs.IsCount(err) {
+		if errs.IsMembership(err) || errs.IsSize(err) {
 			t.SkipNow()
 		} else {
 			require.NoError(t, err)

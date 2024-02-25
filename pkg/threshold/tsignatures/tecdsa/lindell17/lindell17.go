@@ -122,13 +122,13 @@ func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdenti
 		esk := pair.Value
 		pk, exists := s.PaillierPublicKeys.Get(id)
 		if !exists {
-			return errs.NewMissing("paillier public key for %x", id.PublicKey())
+			return errs.NewMissing("paillier public key for %s", id.String())
 		}
 		if err := pk.Validate(recomputeCached); err != nil {
-			return errs.WrapValidation(err, "invalid public key %x", id.PublicKey())
+			return errs.WrapValidation(err, "invalid public key %s", id.String())
 		}
 		if err := esk.Validate(pk); err != nil {
-			return errs.WrapValidation(err, "invalid public key %x", id.PublicKey())
+			return errs.WrapValidation(err, "invalid public key %s", id.String())
 		}
 	}
 	return nil

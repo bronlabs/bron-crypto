@@ -94,7 +94,7 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 				require.NoError(t, err)
 				m = p.ToAffineCompressed()
 			}
-			privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(m, boundedScheme)
+			privateKey, signature, pop, err := testutils.RoundTripWithKeysInG1(nil, m, boundedScheme)
 			if err != nil && !errs.IsKnownError(err) {
 				require.NoError(t, err)
 			}
