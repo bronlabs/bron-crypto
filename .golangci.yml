@@ -376,8 +376,11 @@ linters-settings:
     # Default is to use a neutral variety of English.
     # Setting locale to US will correct the British spelling of 'colour' to 'color'.
     locale: UK
-    # ignore-words:
-    #   - cancelled
+    extra-words:
+      - typo: "quorom"
+        correction: "quorum"
+      - typo: "sharign"
+        correction: "sharing"
   tagliatelle:
     # Check the struct tag name case.
     case:

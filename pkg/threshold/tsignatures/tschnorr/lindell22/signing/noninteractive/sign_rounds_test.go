@@ -96,7 +96,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
@@ -179,7 +179,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
@@ -258,7 +258,7 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
-						cosigner, err := noninteractive_signing.NewCosigner(sid, preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
 						partialSignatures[i], err = cosigner.ProducePartialSignature(message)

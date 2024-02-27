@@ -160,7 +160,7 @@ func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIden
 			sessionId:   sessionId,
 			transcript:  transcript,
 			prng:        prng,
-			round:       1,
+			round:       2,
 			nic:         niCompiler,
 		},
 		primaryIdentityKey: primaryIdentityKey,

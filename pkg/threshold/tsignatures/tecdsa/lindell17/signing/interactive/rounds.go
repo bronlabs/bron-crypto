@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
@@ -11,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
@@ -32,12 +33,6 @@ type Round3OutputP2P struct {
 	BigR1Witness commitments.Witness
 	BigR1        curves.Point
 	BigR1Proof   compiler.NIZKPoKProof
-
-	_ ds.Incomparable
-}
-
-type Round4OutputP2P struct {
-	C3 *paillier.CipherText
 
 	_ ds.Incomparable
 }
@@ -66,7 +61,7 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 
 	primaryCosigner.state.bigR1Witness = bigR1Witness
 
-	primaryCosigner.round++
+	primaryCosigner.round += 2
 	// step 1.3: Send(c1) -> P_2
 	return &Round1OutputP2P{
 		BigR1Commitment: bigR1Commitment,
@@ -74,8 +69,8 @@ func (primaryCosigner *PrimaryCosigner) Round1() (round1Output *Round1OutputP2P,
 }
 
 func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P) (round2Output *Round2OutputP2P, err error) {
-	if secondaryCosigner.round != 1 {
-		return nil, errs.NewRound("round mismatch %d != 1", secondaryCosigner.round)
+	if secondaryCosigner.round != 2 {
+		return nil, errs.NewRound("round mismatch %d != 2", secondaryCosigner.round)
 	}
 
 	secondaryCosigner.state.bigR1Commitment = round1Output.BigR1Commitment
@@ -99,7 +94,7 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 		return nil, errs.NewFailed("invalid statement, something went terribly wrong")
 	}
 
-	secondaryCosigner.round++
+	secondaryCosigner.round += 2
 	// step 2.3: Send(R2, π) -> P_1
 	return &Round2OutputP2P{
 		BigR2:      secondaryCosigner.state.bigR2,
@@ -108,8 +103,8 @@ func (secondaryCosigner *SecondaryCosigner) Round2(round1Output *Round1OutputP2P
 }
 
 func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (round3Output *Round3OutputP2P, err error) {
-	if primaryCosigner.round != 2 {
-		return nil, errs.NewRound("round mismatch %d != 2", primaryCosigner.round)
+	if primaryCosigner.round != 3 {
+		return nil, errs.NewRound("round mismatch %d != 3", primaryCosigner.round)
 	}
 
 	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, primaryCosigner.sessionId, primaryCosigner.secondaryIdentityKey.PublicKey().ToAffineCompressed())
@@ -138,7 +133,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	bigRx := primaryCosigner.state.bigR.AffineX().Nat()
 	primaryCosigner.state.r = primaryCosigner.protocol.Curve().Scalar().SetNat(bigRx)
 
-	primaryCosigner.round++
+	primaryCosigner.round += 2
 	return &Round3OutputP2P{
 		BigR1Witness: primaryCosigner.state.bigR1Witness,
 		BigR1:        primaryCosigner.state.bigR1,
@@ -146,9 +141,9 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}, nil
 }
 
-func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P, message []byte) (round4Output *Round4OutputP2P, err error) {
-	if secondaryCosigner.round != 2 {
-		return nil, errs.NewRound("round mismatch %d != 2", secondaryCosigner.round)
+func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P, message []byte) (round4Output *lindell17.PartialSignature, err error) {
+	if secondaryCosigner.round != 4 {
+		return nil, errs.NewRound("round mismatch %d != 4", secondaryCosigner.round)
 	}
 
 	err = commitments.Open(secondaryCosigner.sessionId, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed(), round3Output.BigR1.ToAffineCompressed())
@@ -170,11 +165,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	r := secondaryCosigner.protocol.Curve().Scalar().SetNat(bigRx)
 
 	k2 := secondaryCosigner.state.k2
-	shamirShare := &shamir.Share{
-		Id:    uint(secondaryCosigner.SharingId()),
-		Value: secondaryCosigner.myShard.SigningKeyShare.Share,
-	}
-	additiveShare, err := shamirShare.ToAdditive([]uint{uint(secondaryCosigner.SharingId()), uint(secondaryCosigner.primarySharingId)})
+	additiveShare, err := secondaryCosigner.myShard.SigningKeyShare.ToAdditive(secondaryCosigner.IdentityKey(), hashset.NewHashableHashSet(secondaryCosigner.IdentityKey(), secondaryCosigner.primaryIdentityKey), secondaryCosigner.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
@@ -202,15 +193,15 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
 
-	secondaryCosigner.round++
-	return &Round4OutputP2P{
+	secondaryCosigner.round += 2
+	return &lindell17.PartialSignature{
 		C3: c3,
 	}, nil
 }
 
-func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, message []byte) (signature *ecdsa.Signature, err error) {
-	if primaryCosigner.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", primaryCosigner.round)
+func (primaryCosigner *PrimaryCosigner) Round5(round4Output *lindell17.PartialSignature, message []byte) (signature *ecdsa.Signature, err error) {
+	if primaryCosigner.round != 5 {
+		return nil, errs.NewRound("round mismatch %d != 5", primaryCosigner.round)
 	}
 
 	paillierSecretKey := primaryCosigner.myShard.PaillierSecretKey
@@ -241,5 +232,6 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *Round4OutputP2P, me
 	if err := ecdsa.Verify(signature, primaryCosigner.protocol.CipherSuite().Hash(), primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapTotalAbort(err, "secondary", "could not verify produced signature")
 	}
+	primaryCosigner.round += 2
 	return signature, nil
 }

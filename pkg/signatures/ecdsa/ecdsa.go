@@ -145,8 +145,14 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	if curve.Name() != k256.Name && curve.Name() != p256.Name {
 		return errs.NewFailed("curve is not supported")
 	}
+	if publicKey == nil {
+		return errs.NewIsNil("public key")
+	}
 	if publicKey.IsIdentity() {
 		return errs.NewIsIdentity("public key is identity")
+	}
+	if signature == nil {
+		return errs.NewIsNil("signature")
 	}
 	if signature.V != nil {
 		recoveredPublicKey, err := RecoverPublicKey(signature, hashFunc, message)

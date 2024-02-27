@@ -49,7 +49,7 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		}
 	}
 
-	info := []byte("KRYPTON_PRIMITIVES_FIAT_SHAMIR_WITH_HKDF")
+	info := []byte("COPPER_KRYPTON_HASH_CHAIN_HKDF-")
 	salt := make([]byte, 32)
 	okm := make([]byte, 32)
 	f := bytes.Repeat([]byte{0xFF}, 32)

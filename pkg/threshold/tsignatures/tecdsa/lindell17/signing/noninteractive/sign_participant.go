@@ -1,119 +1,114 @@
 package noninteractive_signing
 
-// import (
-// 	"io"
+import (
+	"io"
 
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-// 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-// 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-// 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-// ).
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+)
 
-// var _ types.PreSignedThresholdSignatureParticipant = (*Cosigner)(nil).
+var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
-// type Cosigner struct {
-// 	lindell17.Participant
+type Cosigner struct {
+	myAuthKey             types.AuthKey
+	mySharingId           types.SharingID
+	myShard               *lindell17.Shard
+	preProcessingMaterial *lindell17.PreProcessingMaterial
 
-// 	myAuthKey           types.AuthKey
-// 	mySharingId         int
-// 	myShard             *lindell17.Shard
-// 	myPreSignatureBatch *lindell17.PreSignatureBatch
+	initiatorIdentity   types.IdentityKey
+	aggregatorIdentity  types.IdentityKey
+	aggregatorSharingId types.SharingID
 
-// 	theirIdentityKey types.IdentityKey
-// 	theirSharingId   int
+	protocol types.ThresholdSignatureProtocol
+	prng     io.Reader
 
-// 	preSignatureIndex int
-// 	protocol          types.PreSignedThresholdSignatureProtocol
-// 	prng              io.Reader
+	_ ds.Incomparable
+}
 
-// 	_ ds.Incomparable
-// }.
+func (p *Cosigner) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
+}
 
-// func (p *Cosigner) IdentityKey() types.IdentityKey {
-// 	return p.myAuthKey
-// }.
+func (p *Cosigner) AuthKey() types.AuthKey {
+	return p.myAuthKey
+}
 
-// func (p *Cosigner) AuthKey() types.AuthKey {
-// 	return p.myAuthKey
-// }.
+func (p *Cosigner) SharingId() types.SharingID {
+	return p.mySharingId
+}
 
-// func (p *Cosigner) SharingId() int {
-// 	return p.mySharingId
-// }.
+func (p *Cosigner) IsSignatureAggregator() bool {
+	return p.aggregatorIdentity.Equal(p.IdentityKey())
+}
 
-// func (p *Cosigner) IsSignatureAggregator() bool {
-// 	return p.protocol.SignatureAggregators().Contains(p.IdentityKey())
-// }.
+func NewCosigner(protocol types.ThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, ppm *lindell17.PreProcessingMaterial, initiatorIdentity, aggregatorIdentity types.IdentityKey, prng io.Reader) (participant *Cosigner, err error) {
+	if err := validateCosignerInputs(protocol, myAuthKey, myShard, ppm, initiatorIdentity, aggregatorIdentity, prng); err != nil {
+		return nil, errs.WrapFailed(err, "failed to validate inputs")
+	}
 
-// func (p *Cosigner) IsPreSignatureComposer() bool {
-// 	return types.Equals(p.protocol.PreSignatureComposer(), p.IdentityKey())
-// }.
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
+	if !exists {
+		return nil, errs.NewMissing("my sharing id")
+	}
+	aggregatorSharingId, exists := sharingConfig.Reverse().Get(aggregatorIdentity)
+	if !exists {
+		return nil, errs.NewMissing("aggregator sharing id")
+	}
 
-// func NewCosigner(sessionId []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, aggregatorIdentity types.IdentityKey, transcript transcripts.Transcript, prng io.Reader) (participant *Cosigner, err error) {
-// 	err = validateCosignerInputs(sessionId, protocol, myAuthKey, myShard, myPreSignatureBatch, preSignatureIndex, aggregatorIdentity, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "failed to validate inputs")
-// 	}
+	participant = &Cosigner{
+		myAuthKey:             myAuthKey,
+		mySharingId:           mySharingId,
+		myShard:               myShard,
+		preProcessingMaterial: ppm,
+		initiatorIdentity:     initiatorIdentity,
+		aggregatorIdentity:    aggregatorIdentity,
+		aggregatorSharingId:   aggregatorSharingId,
+		protocol:              protocol,
+		prng:                  prng,
+	}
 
-// 	_, keyToId, mySharingId := types.DeriveSharingIds(myAuthKey, protocol.Participants())
-// 	theirSharingId := keyToId[aggregatorIdentity.Hash()]
+	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "couldn't construct non interactive cosigner")
+	}
+	return participant, nil
+}
 
-// dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-// transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
-// if err != nil {
-// 	return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-// }.
-
-// 	participant = &Cosigner{
-// 		myAuthKey:           myAuthKey,
-// 		mySharingId:         mySharingId,
-// 		myShard:             myShard,
-// 		myPreSignatureBatch: myPreSignatureBatch,
-// 		theirIdentityKey:    aggregatorIdentity,
-// 		theirSharingId:      theirSharingId,
-// 		preSignatureIndex:   preSignatureIndex,
-// 		protocol:            protocol,
-// 		prng:                prng,
-// 	}
-
-// 	if err := types.ValidatePreSignedThresholdSignatureProtocol(participant, protocol); err != nil {
-// 		return nil, errs.WrapVerificationFailed(err, "couldn't construct non interactive cosigner")
-// 	}
-// 	return participant, nil
-// }.
-
-// func validateCosignerInputs(sessionId []byte, protocol types.PreSignedThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, myPreSignatureBatch *lindell17.PreSignatureBatch, preSignatureIndex int, other types.IdentityKey, prng io.Reader) error {
-// 	if len(sessionId) == 0 {
-// 		return errs.NewArgument("invalid session id: %s", sessionId)
-// 	}
-// 	if err := types.ValidatePreSignedThresholdSignatureProtocolConfig(protocol); err != nil {
-// 		return errs.WrapVerificationFailed(err, "presigned threshold signature protocol config")
-// 	}
-// 	if err := types.ValidateAuthKey(myAuthKey); err != nil {
-// 		return errs.WrapVerificationFailed(err, "auth key")
-// 	}
-// 	if err := myShard.Validate(protocol, myAuthKey, false); err != nil {
-// 		return errs.WrapVerificationFailed(err, "my shard")
-// 	}
-// 	if err := myPreSignatureBatch.Validate(protocol); err != nil {
-// 		return errs.WrapVerificationFailed(err, "pre signature batch")
-// 	}
-// 	if preSignatureIndex >= len(myPreSignatureBatch.PreSignatures) {
-// 		return errs.NewArgument("presignature index %d is invalid", preSignatureIndex)
-// 	}
-// 	if err := types.ValidateIdentityKey(other); err != nil {
-// 		return errs.WrapVerificationFailed(err, "other party identity key")
-// 	}
-// 	if !protocol.Participants().Contains(other) {
-// 		return errs.NewMembership("secondary is not a participant")
-// 	}
-// 	if types.Equals(myAuthKey, other) {
-// 		return errs.NewArgument("other and me are the same")
-// 	}
-// 	if prng == nil {
-// 		return errs.NewIsNil("prng is nil")
-// 	}
-// 	return nil
-// }.
+func validateCosignerInputs(protocol types.ThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, ppm *lindell17.PreProcessingMaterial, initiator, aggregator types.IdentityKey, prng io.Reader) error {
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
+	}
+	if err := types.ValidateAuthKey(myAuthKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
+	}
+	if err := myShard.Validate(protocol, myAuthKey, false); err != nil {
+		return errs.WrapValidation(err, "my shard")
+	}
+	if err := ppm.Validate(myAuthKey, protocol); err != nil {
+		return errs.WrapValidation(err, "pre processing material")
+	}
+	if err := types.ValidateIdentityKey(initiator); err != nil {
+		return errs.WrapValidation(err, "initiator")
+	}
+	if !ppm.PreSigners.Contains(initiator) {
+		return errs.NewMembership("initiator is not a participant")
+	}
+	if err := types.ValidateIdentityKey(aggregator); err != nil {
+		return errs.WrapValidation(err, "aggregator")
+	}
+	if !ppm.PreSigners.Contains(aggregator) {
+		return errs.NewMembership("aggregator is not a participant")
+	}
+	if initiator.Equal(aggregator) {
+		return errs.NewType("initiator can't be aggregator")
+	}
+	if !myAuthKey.Equal(initiator) && !myAuthKey.Equal(aggregator) {
+		return errs.NewValue("i need to be either an initiator or an aggregator")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}

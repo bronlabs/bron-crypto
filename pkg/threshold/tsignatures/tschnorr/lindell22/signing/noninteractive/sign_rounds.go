@@ -11,7 +11,7 @@ import (
 func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	bigR1Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
 	bigR2Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
-	for identity := range c.cosigners.Iter() {
+	for identity := range c.quorum.Iter() {
 		if identity.Equal(c.IdentityKey()) {
 			continue
 		}
@@ -53,7 +53,7 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 	}
 
 	// 3.iii. compute additive share d_i' = lambda_i * share
-	sk, err := c.myShard.SigningKeyShare.ToAdditive(c.IdentityKey(), c.cosigners, c.protocol)
+	sk, err := c.myShard.SigningKeyShare.ToAdditive(c.IdentityKey(), c.quorum, c.protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}

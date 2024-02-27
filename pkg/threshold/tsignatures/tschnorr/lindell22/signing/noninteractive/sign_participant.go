@@ -3,7 +3,9 @@ package noninteractive_signing
 import (
 	"fmt"
 	"io"
+	"sort"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -22,7 +24,7 @@ type Cosigner[F schnorr.Variant[F]] struct {
 	mySharingId types.SharingID
 	myShard     *lindell22.Shard
 	ppm         *lindell22.PreProcessingMaterial
-	cosigners   ds.Set[types.IdentityKey]
+	quorum      ds.Set[types.IdentityKey]
 
 	variant       schnorr.Variant[F]
 	sharingConfig types.SharingConfig
@@ -42,13 +44,25 @@ func (c *Cosigner[F]) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner[F schnorr.Variant[F]](sessionId []byte, myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, variant schnorr.Variant[F], transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner[F], err error) {
-	if err := validateCosignerInputs(sessionId, myAuthKey, myShard, protocol, cosigners, ppm, prng); err != nil {
+func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, variant schnorr.Variant[F], transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner[F], err error) {
+	if err := validateCosignerInputs(myAuthKey, myShard, protocol, quorum, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
 
+	// In zero share sampling, the sampler uses its session id to salt the seeds and produce the shares. This requires the session id
+	// to be random as well as unique, which will be the case if participants use agreeonrandom primitive.
+	// As shared randomness via agreeonrandom requires interactivity, and since this cosigner is noninteractive, instead we salt
+	// the seeds with the hash of public signature material which should have high enough entropy.
+	// This is secure if used only once, which should be the case as the user of this primitive should already ensure presignatures are
+	// not used more than once.
+	// We call this non-interactive session id based on how sampler uses it, even though this is not really a session id!
+	nonInteractiveSessionId, err := produceSharedOneTimeUseRandomValue(myAuthKey, protocol, quorum, ppm)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not produce non interactive session id")
+	}
+
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	_, sessionId, err := hagrid.InitialiseProtocol(transcript, nonInteractiveSessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -57,7 +71,7 @@ func NewCosigner[F schnorr.Variant[F]](sessionId []byte, myAuthKey types.AuthKey
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRNG factory")
 	}
-	przsParticipant, err := sample.NewParticipant(sessionId, myAuthKey, ppm.PrivateMaterial.Seeds, protocol, cosigners, przsPrngFactory)
+	przsParticipant, err := sample.NewParticipant(sessionId, myAuthKey, ppm.PrivateMaterial.Seeds, protocol, quorum, przsPrngFactory)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create PRZS sampler")
 	}
@@ -72,7 +86,7 @@ func NewCosigner[F schnorr.Variant[F]](sessionId []byte, myAuthKey types.AuthKey
 		przsSampleParticipant: przsParticipant,
 		myAuthKey:             myAuthKey,
 		myShard:               myShard,
-		cosigners:             cosigners,
+		quorum:                quorum,
 		variant:               variant,
 		protocol:              protocol,
 		prng:                  prng,
@@ -88,10 +102,7 @@ func NewCosigner[F schnorr.Variant[F]](sessionId []byte, myAuthKey types.AuthKey
 	return cosigner, nil
 }
 
-func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, cosigners ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsNil("session id is empty")
-	}
+func validateCosignerInputs(authKey types.AuthKey, shard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
@@ -107,11 +118,43 @@ func validateCosignerInputs(sessionId []byte, authKey types.AuthKey, shard *lind
 	if prng == nil {
 		return errs.NewIsNil("prng")
 	}
-	if !cosigners.IsSubSet(ppm.PreSigners) {
-		return errs.NewValidation("cosigners not a subset of pre-signers")
+	if !quorum.IsSubSet(ppm.PreSigners) {
+		return errs.NewValidation("quorum not a subset of pre-signers")
 	}
-	if !cosigners.Contains(authKey) {
-		return errs.NewFailed("not a member of cosigners")
+	if !quorum.Contains(authKey) {
+		return errs.NewFailed("not a member of quorum")
 	}
 	return nil
+}
+
+func produceSharedOneTimeUseRandomValue(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial) ([]byte, error) {
+	ro := base.RandomOracleHashFunction()
+	sortedQuorum := quorum.List()
+	sort.Sort(types.ByPublicKey(sortedQuorum))
+	for _, identity := range sortedQuorum {
+		if identity.Equal(myIdentityKey) {
+			if _, err := ro.Write(protocol.Curve().ScalarBaseMult(ppm.PrivateMaterial.K1).ToAffineCompressed()); err != nil {
+				return nil, errs.WrapHashing(err, "could not write k1*G to RO hasher")
+			}
+			if _, err := ro.Write(protocol.Curve().ScalarBaseMult(ppm.PrivateMaterial.K2).ToAffineCompressed()); err != nil {
+				return nil, errs.WrapHashing(err, "could not write k2*G to RO hasher")
+			}
+		} else {
+			R1, exists := ppm.PreSignature.BigR1.Get(identity)
+			if !exists {
+				return nil, errs.NewMissing("could not find R1 from %s", identity.String())
+			}
+			if _, err := ro.Write(R1.ToAffineCompressed()); err != nil {
+				return nil, errs.WrapHashing(err, "could not write R1 from %s", identity.String())
+			}
+			R2, exists := ppm.PreSignature.BigR2.Get(identity)
+			if !exists {
+				return nil, errs.NewMissing("could not find R2 from %s", identity.String())
+			}
+			if _, err := ro.Write(R2.ToAffineCompressed()); err != nil {
+				return nil, errs.WrapHashing(err, "could not write R2 from %s", identity.String())
+			}
+		}
+	}
+	return ro.Sum(nil), nil
 }

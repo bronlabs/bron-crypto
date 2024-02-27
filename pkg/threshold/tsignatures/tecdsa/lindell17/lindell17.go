@@ -34,22 +34,65 @@ type PartialSignature struct {
 	_ ds.Incomparable
 }
 
+type PreProcessingMaterial tsignatures.PreProcessingMaterial[*PrivatePreProcessingMaterial, *PreSignature]
+
+type PrivatePreProcessingMaterial struct {
+	K curves.Scalar
+
+	_ ds.Incomparable
+}
+
 type PreSignature struct {
-	K    curves.Scalar
 	BigR ds.Map[types.IdentityKey, curves.Point]
 
 	_ ds.Incomparable
 }
 
-func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if ps == nil {
+func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol) error {
+	if ppm == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if ps.K == nil {
+	if ppm.PreSigners == nil {
+		return errs.NewIsNil("presigners")
+	}
+	if ppm.PreSigners.Size() < int(protocol.Threshold()) {
+		return errs.NewSize("not enough session participants: %d", ppm.PreSigners.Size())
+	}
+	if !ppm.PreSigners.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("presigners must be non empty subset of all participants")
+	}
+	if err := ppm.PrivateMaterial.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "private material")
+	}
+	if err := ppm.PreSignature.Validate(myIdentityKey, protocol, ppm.PreSigners); err != nil {
+		return errs.WrapValidation(err, "presignature")
+	}
+	myContribution, exists := ppm.PreSignature.BigR.Get(myIdentityKey)
+	if !exists {
+		return errs.NewMissing("my contribution is missing")
+	}
+	if !myContribution.Equal(protocol.Curve().ScalarBaseMult(ppm.PrivateMaterial.K)) {
+		return errs.NewValue("my contribution != k * G")
+	}
+	return nil
+}
+
+func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSignatureProtocol) error {
+	if pppm == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if pppm.K == nil {
 		return errs.NewIsNil("K")
 	}
-	if !curveutils.AllScalarsOfSameCurve(protocol.Curve(), ps.K) {
+	if !curveutils.AllScalarsOfSameCurve(protocol.Curve(), pppm.K) {
 		return errs.NewCurve("K")
+	}
+	return nil
+}
+
+func (ps *PreSignature) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
+	if ps == nil {
+		return errs.NewIsNil("receiver")
 	}
 	if ps.BigR == nil {
 		return errs.NewIsNil("BigR")
@@ -57,32 +100,16 @@ func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol) erro
 	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), ps.BigR.Values()...) {
 		return errs.NewCurve("BigR")
 	}
+	if !ps.BigR.ContainsKey(myIdentityKey) {
+		return errs.NewMembership("BigR does not contain my contribution")
+	}
 	bigRKeys := hashset.NewHashableHashSet(ps.BigR.Keys()...)
-	if !bigRKeys.Equal(protocol.Participants()) {
-		return errs.NewMembership("set of people with BigR is not the same as participants")
+	if !bigRKeys.Equal(preSigners) {
+		return errs.NewMembership("set of people with BigR is not the same as presigners")
 	}
 	bigRValues := hashset.NewHashableHashSet(ps.BigR.Values()...)
 	if bigRValues.Size() != len(ps.BigR.Values()) {
 		return errs.NewMembership("not all big R values are unique")
-	}
-	return nil
-}
-
-type PreSignatureBatch []PreSignature
-
-func (psb PreSignatureBatch) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if psb == nil {
-		return errs.NewIsNil("receiver")
-	}
-	Rs := hashset.NewHashableHashSet[curves.Point]()
-	for i, ps := range psb {
-		if err := ps.Validate(protocol); err != nil {
-			return errs.WrapValidation(err, "presignature index %d", i)
-		}
-		Rs.Merge(ps.BigR.Values()...)
-	}
-	if Rs.Size() != protocol.Participants().Size()*len(psb) {
-		return errs.NewValue("there exist a duplicate R across the batch")
 	}
 	return nil
 }
