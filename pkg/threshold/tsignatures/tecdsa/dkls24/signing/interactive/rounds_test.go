@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
@@ -96,7 +96,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
 
-	combinations := combin.Combinations(n, threshold)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
+
+	combinations, err := combinatorics.Combinations(N, uint(threshold))
+	require.NoError(t, err)
 	if testing.Short() {
 		combinations = combinations[:1]
 	}

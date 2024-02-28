@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -41,6 +41,10 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 	t.Parallel()
 	total := 5
 	threshold := 3
+	Total := make([]int, total)
+	for i := range total {
+		Total[i] = i
+	}
 	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve(), p256.NewCurve()} {
 		boundedCurve := curve
 		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
@@ -58,9 +62,11 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 
 			allValidSetsOfShamirIndices := [][]int{}
 			for i := 0; i <= total-threshold; i++ {
+				c, err := combinatorics.Combinations(Total, uint(threshold+i))
+				require.NoError(t, err)
 				allValidSetsOfShamirIndices = append(
 					allValidSetsOfShamirIndices,
-					combin.Combinations(total, threshold+i)...,
+					c...,
 				)
 			}
 			for _, indices := range allValidSetsOfShamirIndices {

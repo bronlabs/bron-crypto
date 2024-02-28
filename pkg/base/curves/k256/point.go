@@ -315,6 +315,9 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	value.X = x
 	value.Y = y
 	value.Z.SetOne()
+	if !value.IsOnCurve() {
+		return nil, errs.NewMembership("deserialised value is not on curve")
+	}
 	return &Point{V: value}, nil
 }
 

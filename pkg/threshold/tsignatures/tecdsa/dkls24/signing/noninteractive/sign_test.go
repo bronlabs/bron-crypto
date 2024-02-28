@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
@@ -44,6 +44,10 @@ func Test_HappyPath(t *testing.T) {
 				hashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
 				threshold := thresholdConfig.t
 				n := thresholdConfig.n
+				N := make([]int, n)
+				for i := range n {
+					N[i] = i
+				}
 				cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 				require.NoError(t, err)
 				t.Run(fmt.Sprintf("NonInteractive sign happy path with curve=%s and hash=%s and t=%d and n=%d", curve.Name(), hashName[strings.LastIndex(hashName, "/")+1:], threshold, n), func(t *testing.T) {
@@ -58,7 +62,8 @@ func Test_HappyPath(t *testing.T) {
 					_, shards, err := testutils.RunDKG(cipherSuite.Curve(), protocol, allIdentities)
 					require.NoError(t, err)
 
-					combinations := combin.Combinations(n, threshold)
+					combinations, err := combinatorics.Combinations(N, uint(threshold))
+					require.NoError(t, err)
 					for _, combination := range combinations {
 						selectedIdentities := make([]types.IdentityKey, threshold)
 						selectedShards := make([]*dkls24.Shard, threshold)

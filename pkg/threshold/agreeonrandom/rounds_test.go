@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -53,9 +53,14 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
-		combinations := combin.Combinations(n, subsetSize)
+		combinations, err := combinatorics.Combinations(N, uint(subsetSize))
+		require.NoError(t, err)
 		for _, combinationIndices := range combinations {
 			identities := make([]types.IdentityKey, subsetSize)
 			for i, index := range combinationIndices {
@@ -74,9 +79,14 @@ func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
 	var random []byte
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
-		combinations := combin.Combinations(n, subsetSize)
+		combinations, err := combinatorics.Combinations(N, uint(subsetSize))
+		require.NoError(t, err)
 		for _, combinationIndices := range combinations {
 			identities := make([]types.IdentityKey, subsetSize)
 			for i, index := range combinationIndices {

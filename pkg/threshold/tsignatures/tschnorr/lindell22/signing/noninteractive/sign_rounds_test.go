@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat/combin"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
@@ -69,7 +69,12 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 
-			preSignersCombinations := combin.Combinations(n, nPresigners)
+			N := make([]int, n)
+			for i := range n {
+				N[i] = i
+			}
+			preSignersCombinations, err := combinatorics.Combinations(N, uint(nPresigners))
+			require.NoError(t, err)
 			for _, preSignersCombination := range preSignersCombinations {
 				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
 				for i, p := range preSignersCombination {
@@ -84,7 +89,12 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
 				require.NoError(t, err)
 
-				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				PS := make([]int, len(preSigners))
+				for i := range preSigners {
+					PS[i] = i
+				}
+				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
 					for i, c := range cosignerCombination {
@@ -152,7 +162,12 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 
-			preSignersCombinations := combin.Combinations(n, nPresigners)
+			N := make([]int, n)
+			for i := range n {
+				N[i] = i
+			}
+			preSignersCombinations, err := combinatorics.Combinations(N, uint(nPresigners))
+			require.NoError(t, err)
 			for _, preSignersCombination := range preSignersCombinations {
 				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
 				for i, p := range preSignersCombination {
@@ -167,7 +182,12 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
 				require.NoError(t, err)
 
-				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				PS := make([]int, len(preSigners))
+				for i := range preSigners {
+					PS[i] = i
+				}
+				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
 					for i, c := range cosignerCombination {
@@ -231,7 +251,12 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 
-			preSignersCombinations := combin.Combinations(n, nPresigners)
+			N := make([]int, n)
+			for i := range n {
+				N[i] = i
+			}
+			preSignersCombinations, err := combinatorics.Combinations(N, uint(nPresigners))
+			require.NoError(t, err)
 			for _, preSignersCombination := range preSignersCombinations {
 				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
 				for i, p := range preSignersCombination {
@@ -246,7 +271,12 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 				ppms, err := testutils.DoLindell2022PreGen(preSigners)
 				require.NoError(t, err)
 
-				cosignersCombinations := combin.Combinations(len(preSigners), threshold)
+				PS := make([]int, len(preSigners))
+				for i := range preSigners {
+					PS[i] = i
+				}
+				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
 					for i, c := range cosignerCombination {

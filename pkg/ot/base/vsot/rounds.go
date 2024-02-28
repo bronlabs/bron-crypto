@@ -210,7 +210,7 @@ func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
 				return nil, errs.WrapHashing(err, "hashing the key to verify the challenge response")
 			}
 			if subtle.ConstantTimeCompare(hashedKey0, challengeResponses[i][l][:]) != 1 {
-				return nil, errs.NewTotalAbort("VSOT Receiver", "receiver's challenge response didn't match H(H(rho^0))")
+				return nil, errs.NewTotalAbort("VSOT Receiver", "receiver's challenge response didn't match H(H(m^0))")
 			}
 		}
 	}
@@ -237,7 +237,7 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 			}
 			choice := r.Output.Choices.Select(i)
 			if subtle.ConstantTimeCompare(hashedDecryptionKey, challengeOpenings[i][choice][l][:]) != 1 {
-				return errs.NewTotalAbort("VSOT sender", "sender's supposed H(rho^omega) doesn't match our own")
+				return errs.NewTotalAbort("VSOT sender", "sender's supposed H(m^omega) doesn't match our own")
 			}
 			// step 6.2: Reconstruct the challenge and verify it
 			hashedKey0, err := hashing.Hash(ot.HashFunction, challengeOpenings[i][0][l][:])
@@ -251,7 +251,7 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 			subtle.XORBytes(reconstructedChallenge[:], hashedKey0, hashedKey1)
 
 			if subtle.ConstantTimeCompare(reconstructedChallenge[:], r.SenderChallenge[i][l][:]) != 1 {
-				return errs.NewTotalAbort("VSOT sender", "sender's openings H(rho^0) and H(rho^1) didn't decommit to its prior message")
+				return errs.NewTotalAbort("VSOT sender", "sender's openings H(m^0) and H(m^1) didn't decommit to its prior message")
 			}
 		}
 	}

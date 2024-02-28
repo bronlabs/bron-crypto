@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
@@ -111,8 +111,13 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	require.NoError(t, err)
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
-		combinations := combin.Combinations(n, subsetSize)
+		combinations, err := combinatorics.Combinations(N, uint(subsetSize))
+		require.NoError(t, err)
 		for _, combinationIndices := range combinations {
 			identities := make([]types.IdentityKey, subsetSize)
 			seeds := make([]przs.PairWiseSeeds, subsetSize)
@@ -139,8 +144,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	require.NoError(t, err)
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
 	for subsetSize := 2; subsetSize <= n; subsetSize++ {
-		combinations := combin.Combinations(n, subsetSize)
+		combinations, err := combinatorics.Combinations(N, uint(subsetSize))
+		require.NoError(t, err)
 		for _, combinationIndices := range combinations {
 			identities := make([]types.IdentityKey, subsetSize)
 			seeds := make([]przs.PairWiseSeeds, subsetSize)

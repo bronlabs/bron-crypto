@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat/combin"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -102,9 +102,14 @@ func Test_TrustedDealer(t *testing.T) {
 
 				t.Run("all signing key shares interpolate to dlog of public key", func(t *testing.T) {
 					t.Parallel()
+					N := make([]int, n)
+					for i := range n {
+						N[i] = i
+					}
 
 					sharingConfig := types.DeriveSharingConfig(hashset.NewHashableHashSet(identities...))
-					combinations := combin.Combinations(n, threshold)
+					combinations, err := combinatorics.Combinations(N, uint(threshold))
+					require.NoError(t, err)
 					for _, combination := range combinations {
 						shamirShares := make([]*shamir.Share, 0)
 						for _, c := range combination {

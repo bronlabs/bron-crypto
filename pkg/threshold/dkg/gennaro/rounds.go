@@ -181,6 +181,12 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2Broadcast])
 			return nil, nil, errs.NewMissing("do not have the dlog proof of a_i0 for sharing id %d", senderSharingId)
 		}
 		senderCommitmentVector := broadcastedMessageFromSender.Commitments
+		if senderCommitmentVector == nil {
+			return nil, nil, errs.NewIsNil("sender commitment vector")
+		}
+		if len(senderCommitmentVector) != int(p.Protocol.Threshold()) {
+			return nil, nil, errs.NewLength("len(senderCommitmentVector) == %d != t == %d", len(senderCommitmentVector), p.Protocol.Threshold())
+		}
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 		// step 3.1: NIZKPoK.Verify(π_i)
 		verifierTranscript := p.state.transcript.Clone()

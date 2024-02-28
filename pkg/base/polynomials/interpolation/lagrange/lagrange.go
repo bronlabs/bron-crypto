@@ -7,7 +7,7 @@ import (
 
 // L_i returns the i'th basis polynomial.
 func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves.Scalar, error) {
-	if i < 0 || i > len(xs) {
+	if i < 0 || i >= len(xs) {
 		return nil, errs.NewArgument("i is out of range")
 	}
 	numerator := curve.ScalarField().One()
