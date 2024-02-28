@@ -29,7 +29,6 @@ type protocol struct {
 	hash         func() hash.Hash
 	participants ds.Set[IdentityKey]
 	threshold    uint
-	totalParties uint
 }
 
 func (p *protocol) Curve() curves.Curve {
@@ -49,7 +48,7 @@ func (p *protocol) Threshold() uint {
 }
 
 func (p *protocol) TotalParties() uint {
-	return p.totalParties
+	return uint(p.participants.Size())
 }
 
 func (p *protocol) CipherSuite() SignatureProtocol {

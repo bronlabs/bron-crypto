@@ -14,7 +14,7 @@ type ThresholdSignatureProtocol interface {
 	CipherSuite() SignatureProtocol
 }
 
-func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, participants ds.Set[IdentityKey], threshold uint, signatureAggregators ds.Set[IdentityKey]) (ThresholdSignatureProtocol, error) {
+func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol, error) {
 	if err := ValidateSignatureProtocolConfig(signatureProtocol); err != nil {
 		return nil, errs.WrapValidation(err, "signature protocol config")
 	}
