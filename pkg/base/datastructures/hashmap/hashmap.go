@@ -203,12 +203,18 @@ func (m *HashableHashMap[K, V]) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(&m.inner)
-	return buf.Bytes(), err
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "error when binary marshalling hashmap")
+	}
+	return buf.Bytes(), nil
 }
 
 func (m *HashableHashMap[K, V]) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buf)
 	err := dec.Decode(&m.inner)
-	return err
+	if err != nil {
+		return errs.WrapSerialisation(err, "error when binary unmarshalling hashmap")
+	}
+	return nil
 }

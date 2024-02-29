@@ -190,16 +190,22 @@ func (s HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m *HashableHashSet[E]) MarshalBinary() ([]byte, error) {
+func (s *HashableHashSet[E]) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(&m.v)
-	return buf.Bytes(), err
+	err := enc.Encode(&s.v)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "error when binary marshalling hashset")
+	}
+	return buf.Bytes(), nil
 }
 
-func (m *HashableHashSet[E]) UnmarshalBinary(data []byte) error {
+func (s *HashableHashSet[E]) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&m.v)
-	return err
+	err := dec.Decode(&s.v)
+	if err != nil {
+		return errs.WrapSerialisation(err, "error when binary unmarshalling hashmap")
+	}
+	return nil
 }
