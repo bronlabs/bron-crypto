@@ -1,6 +1,8 @@
 package hashmap
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -195,4 +197,18 @@ func (m *HashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	}
 	m.inner = temp
 	return nil
+}
+
+func (m *HashableHashMap[K, V]) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(&m.inner)
+	return buf.Bytes(), err
+}
+
+func (m *HashableHashMap[K, V]) UnmarshalBinary(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	err := dec.Decode(&m.inner)
+	return err
 }

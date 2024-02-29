@@ -1,6 +1,8 @@
 package hashset
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -186,4 +188,18 @@ func (s HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 		s.Add(x)
 	}
 	return nil
+}
+
+func (m *HashableHashSet[E]) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(&m.v)
+	return buf.Bytes(), err
+}
+
+func (m *HashableHashSet[E]) UnmarshalBinary(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	err := dec.Decode(&m.v)
+	return err
 }
