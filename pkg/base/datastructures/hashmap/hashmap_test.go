@@ -216,10 +216,3 @@ func Test_OrderedHashMap(t *testing.T) {
 	_, ok = hashMap.Get(33)
 	require.False(t, ok)
 }
-
-func Test_Pipeline(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-	require.Fail(t, "test the pipeline. should be removed when testing is done")
-}
