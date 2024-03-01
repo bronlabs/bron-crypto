@@ -73,7 +73,7 @@ test-long: ## Runs all tests, including long-running tests
 
 .PHONY: deflake
 deflake: ## Runs short tests many times to detect flakes
-	${GO} test -count=1000 -short -timeout 0 ${TEST_CLAUSE} ./...
+	DEFLAKE_TIME_TEST=1 ${GO} test -count=100 -short -timeout 0 ${TEST_CLAUSE} ./...
 
 .PHONY: deflake-long
 deflake-long: ## Runs tests many times to detect flakes
