@@ -243,11 +243,13 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	})
 
 	t.Run("Disaster recovery", func(t *testing.T) {
-		shardMap := hashmap.NewHashableHashMap[types.IdentityKey, tsignatures.Shard]()
-		for i := 0; i < threshold; i++ {
-			shardMap.Put(identities[i], shards[i])
+		for i := 0; i < n-threshold; i++ {
+			shardMap := hashmap.NewHashableHashMap[types.IdentityKey, tsignatures.Shard]()
+			for j := i; j < i+threshold; j++ {
+				shardMap.Put(identities[j], shards[j])
+			}
+			_, err := tsignatures.ConstructPrivateKey(protocol, shardMap)
+			require.NoError(t, err)
 		}
-		_, err := tsignatures.ConstructPrivateKey(protocol, shardMap)
-		require.NoError(t, err)
 	})
 }

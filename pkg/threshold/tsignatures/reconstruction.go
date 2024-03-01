@@ -20,6 +20,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	shares := make([]*shamir.Share, shards.Size())
 	var publicKey curves.Point
+	index := 0
 	for pair := range shards.Iter() {
 		identityKey := pair.Key
 		shard := pair.Value
@@ -27,11 +28,11 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 		if !exists {
 			return nil, errs.NewMissing("couldn't find sharing id for identity key %s", identityKey.String())
 		}
-		shamirPolynomialIndex := uint(sharingId) - 1
-		shares[shamirPolynomialIndex] = &shamir.Share{
+		shares[index] = &shamir.Share{
 			Id:    uint(sharingId),
 			Value: shard.SecretShare(),
 		}
+		index++
 		if publicKey == nil {
 			publicKey = shard.PublicKey()
 		}
