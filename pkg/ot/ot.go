@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -139,13 +140,15 @@ func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMe
 		return nil, errs.NewArgument("number of masks should be Xi (%d != %d)", len(masks), Xi)
 	}
 	OTchosenMessages = make([]ChosenMessage, Xi)
+	var mask MessageElement
 	for j := 0; j < Xi; j++ {
 		if len(masks[j][0]) != L || len(masks[j][1]) != L {
 			return nil, errs.NewArgument("mask[%d] length should be L (%d != %d)", j, len(masks[j][0]), L)
 		}
 		OTchosenMessages[j] = make(ChosenMessage, L)
-		choice := rROT.Choices.Select(j)
+		choice := int(rROT.Choices.Select(j))
 		for l := 0; l < L; l++ {
+			ct.SelectSlice(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
 			subtle.XORBytes(OTchosenMessages[j][l][:], rROT.ChosenMessages[j][l][:], masks[j][choice][l][:])
 		}
 	}

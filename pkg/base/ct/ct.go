@@ -27,8 +27,8 @@ func LessThanOrEqual(x, y uint64) int {
 	return 1 - GreaterThan(y, x)
 }
 
-// ConstantTimeSelect returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
-func ConstantTimeSelect(v, x, y uint64) uint64 {
+// Select returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
+func Select(v, x, y uint64) uint64 {
 	return ^(v-1)&x | (v-1)&y
 }
 
@@ -36,4 +36,17 @@ func ConstantTimeSelect(v, x, y uint64) uint64 {
 func IsAllZero(x []byte) int {
 	zero := make([]byte, len(x))
 	return subtle.ConstantTimeCompare(x, zero)
+}
+
+// SelectSlice yields y if v == 1, x if v == 0. Its behaviour is undefined if v
+// takes any other value. Based on subtle.ConstantTimeCopy.
+func SelectSlice(v int, dst, x, y []byte) {
+	if len(x) != len(y) || len(x) != len(dst) {
+		panic("subtle: slices have different lengths")
+	}
+	xmask := byte(v - 1)
+	ymask := byte(^(v - 1))
+	for i := 0; i < len(x); i++ {
+		dst[i] = x[i]&xmask | y[i]&ymask
+	}
 }

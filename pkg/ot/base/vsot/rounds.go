@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/subtle"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -223,7 +224,7 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 	if len(challengeOpenings) != r.Xi {
 		return errs.NewLength("number of challenge openings should be Xi (%d != %d)", len(challengeOpenings), r.Xi)
 	}
-	var reconstructedChallenge [ot.KappaBytes]byte
+	var reconstructedChallenge, challengeOpening [ot.KappaBytes]byte
 	for i := 0; i < r.Xi; i++ {
 		if len(challengeOpenings[i][0]) != r.L || len(challengeOpenings[i][1]) != r.L {
 			return errs.NewLength("challengeOpenings[%d] length should be L (%d != %d || %d != %d )",
@@ -235,8 +236,9 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 			if err != nil {
 				return errs.WrapHashing(err, "hashing the decryption key to open challenge")
 			}
-			choice := r.Output.Choices.Select(i)
-			if subtle.ConstantTimeCompare(hashedDecryptionKey, challengeOpenings[i][choice][l][:]) != 1 {
+			choice := int(r.Output.Choices.Select(i))
+			ct.SelectSlice(choice, challengeOpening[:], challengeOpenings[i][0][l][:], challengeOpenings[i][1][l][:])
+			if subtle.ConstantTimeCompare(hashedDecryptionKey, challengeOpening[:]) != 1 {
 				return errs.NewTotalAbort("VSOT sender", "sender's supposed H(m^omega) doesn't match our own")
 			}
 			// step 6.2: Reconstruct the challenge and verify it
