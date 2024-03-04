@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
@@ -140,7 +140,7 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 		return errs.WrapFailed(err, "Could not make protocol config")
 	}
 
-	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, thresholdSignatureProtocol, identities)
+	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, thresholdSignatureProtocol, identities)
 	if err != nil {
 		return errs.WrapFailed(err, "could not run JK-DKG")
 	}

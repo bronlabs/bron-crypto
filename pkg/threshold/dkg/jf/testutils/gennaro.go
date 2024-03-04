@@ -9,16 +9,16 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*gennaro.Participant, err error) {
+func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*jf.Participant, err error) {
 	if len(identities) != int(protocol.TotalParties()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
 
-	participants = make([]*gennaro.Participant, protocol.TotalParties())
+	participants = make([]*jf.Participant, protocol.TotalParties())
 	for i, identity := range identities {
 		var prng io.Reader
 		if len(prngs) != 0 && prngs[i] != nil {
@@ -30,7 +30,7 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("given test identity not a participant (problem in tests?)")
 		}
-		participants[i], err = gennaro.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, niCompilerName, prng, nil)
+		participants[i], err = jf.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, niCompilerName, prng, nil)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -39,37 +39,37 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*gennaro.Participant) (round1BroadcastOutputs []*gennaro.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*gennaro.Round1P2P], err error) {
-	round1BroadcastOutputs = make([]*gennaro.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*gennaro.Round1P2P], len(participants))
+func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*jf.Round1P2P], err error) {
+	round1BroadcastOutputs = make([]*jf.Round1Broadcast, len(participants))
+	round1UnicastOutputs = make([]types.RoundMessages[*jf.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run Gennaro DKG round 1")
+			return nil, nil, errs.WrapFailed(err, "could not run JF round 1")
 		}
 	}
 
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*gennaro.Participant, round2BroadcastInputs []types.RoundMessages[*gennaro.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*gennaro.Round1P2P]) (round2Outputs []*gennaro.Round2Broadcast, err error) {
-	round2Outputs = make([]*gennaro.Round2Broadcast, len(participants))
+func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []types.RoundMessages[*jf.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*jf.Round1P2P]) (round2Outputs []*jf.Round2Broadcast, err error) {
+	round2Outputs = make([]*jf.Round2Broadcast, len(participants))
 	for i := range participants {
 		round2Outputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Gennaro DKG round 2")
+			return nil, errs.WrapFailed(err, "could not run JF round 2")
 		}
 	}
 	return round2Outputs, nil
 }
 
-func DoDkgRound3(participants []*gennaro.Participant, round3Inputs []types.RoundMessages[*gennaro.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func DoDkgRound3(participants []*jf.Participant, round3Inputs []types.RoundMessages[*jf.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
 	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round3(round3Inputs[i])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run Gennaro DKG round 3")
+			return nil, nil, errs.WrapFailed(err, "could not run JF round 3")
 		}
 	}
 

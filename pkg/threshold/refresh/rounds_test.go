@@ -19,7 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/refresh/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -38,7 +38,7 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaro_testutils.RunDKG(uniqueSessionId, protocol, identities)
+	dkgSigningKeyShares, dkgPublicKeyShares, err = jf_testutils.RunDKG(uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
 	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares

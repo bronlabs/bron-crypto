@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/signing"
@@ -136,7 +136,7 @@ func SigningWithDkg(threshold, n int) error {
 		return errs.WrapFailed(err, "could not make protocol config")
 	}
 
-	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, protocol, identities)
+	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, protocol, identities)
 	if err != nil {
 		return errs.WrapFailed(err, "could not run JK-DKG")
 	}

@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,7 +34,7 @@ func Test_CanInitialize(t *testing.T) {
 	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, protocol, identities)
+	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, protocol, identities)
 	require.NoError(t, err)
 
 	alice, err := dkg.NewParticipant(sid, identities[0].(types.AuthKey), signingKeyShares[0], partialPublicKeys[0], protocol, cn, crand.Reader, nil)

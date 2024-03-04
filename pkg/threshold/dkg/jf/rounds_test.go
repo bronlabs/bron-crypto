@@ -1,4 +1,4 @@
-package gennaro_test
+package jf_test
 
 import (
 	crand "crypto/rand"
@@ -24,7 +24,7 @@ import (
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 

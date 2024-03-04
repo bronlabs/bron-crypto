@@ -1,4 +1,4 @@
-package gennaro
+package fuzz
 
 import (
 	"crypto/sha256"
@@ -20,15 +20,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
-	gennaro_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 var allHashes = []func() hash.Hash{sha256.New, sha3.New256}
 
-func FuzzGennaro(f *testing.F) {
+func FuzzJf(f *testing.F) {
 	f.Add(uint(0), uint(0), []byte("sid"), int64(0), uint8(2), uint64(1), uint64(2), uint64(3))
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, sid []byte, randomSeed int64, th uint8, aliceSecret uint64, bobSecret uint64, charlieSecret uint64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
@@ -43,30 +43,30 @@ func FuzzGennaro(f *testing.F) {
 		set := hashset.NewHashableHashSet(identityKeys...)
 		th = th % uint8(set.Size())
 		protocolConfig, _ := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identityKeys, int(th))
-		aliceParticipant, err := gennaro.NewParticipant(sid, aliceIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
+		aliceParticipant, err := jf.NewParticipant(sid, aliceIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		bobParticipant, err := gennaro.NewParticipant(sid, bobIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
+		bobParticipant, err := jf.NewParticipant(sid, bobIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		charlieParticipant, err := gennaro.NewParticipant(sid, charlieIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
+		charlieParticipant, err := jf.NewParticipant(sid, charlieIdentity.(types.AuthKey), protocolConfig, randomisedFischlin.Name, prng, nil)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		participants := []*gennaro.Participant{aliceParticipant, bobParticipant, charlieParticipant}
+		participants := []*jf.Participant{aliceParticipant, bobParticipant, charlieParticipant}
 
-		r1OutsB, r1OutsU, err := gennaro_testutils.DoDkgRound1(participants)
+		r1OutsB, r1OutsU, err := jf_testutils.DoDkgRound1(participants)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -78,13 +78,13 @@ func FuzzGennaro(f *testing.F) {
 		}
 
 		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-		r2Outs, err := gennaro_testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+		r2Outs, err := jf_testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.NoError(t, err)
 		for _, out := range r2Outs {
 			require.NotNil(t, out)
 		}
 		r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
-		signingKeyShares, publicKeyShares, err := gennaro_testutils.DoDkgRound3(participants, r3Ins)
+		signingKeyShares, publicKeyShares, err := jf_testutils.DoDkgRound3(participants, r3Ins)
 		require.NoError(t, err)
 		for _, publicKeyShare := range publicKeyShares {
 			require.NotNil(t, publicKeyShare)

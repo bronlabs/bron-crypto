@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	gennaro_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	lindell17_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
@@ -48,23 +48,23 @@ func Test_HappyPath(t *testing.T) {
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 	require.NoError(t, err)
 
-	gennaroParticipants, err := gennaro_dkg_testutils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
+	jf_participants, err := jf_testutils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := gennaro_dkg_testutils.DoDkgRound1(gennaroParticipants)
+	r1OutsB, r1OutsU, err := jf_testutils.DoDkgRound1(jf_participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(gennaroParticipants, r1OutsB, r1OutsU)
-	r2Outs, err := gennaro_dkg_testutils.DoDkgRound2(gennaroParticipants, r2InsB, r2InsU)
+	r2InsB, r2InsU := ttu.MapO2I(jf_participants, r1OutsB, r1OutsU)
+	r2Outs, err := jf_testutils.DoDkgRound2(jf_participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
-	r3Ins := ttu.MapBroadcastO2I(gennaroParticipants, r2Outs)
-	signingKeyShares, publicKeyShares, err := gennaro_dkg_testutils.DoDkgRound3(gennaroParticipants, r3Ins)
+	r3Ins := ttu.MapBroadcastO2I(jf_participants, r2Outs)
+	signingKeyShares, publicKeyShares, err := jf_testutils.DoDkgRound3(jf_participants, r3Ins)
 	require.NoError(t, err)
 
 	transcripts := make([]transcripts.Transcript, len(identities))

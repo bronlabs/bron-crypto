@@ -1,4 +1,4 @@
-package gennaro
+package jf
 
 import (
 	"fmt"
@@ -23,8 +23,8 @@ import (
 // We assume that it is not possible to get discrete log of the resulting H wrt G designated by a curve.
 // If you are not happy with the 2nd assumption, then you should add rounds to agree on H. We recommend using `agreeonrandom` package to derive a random sessionId (which normally only has to be unique) and pass it to the constructor.
 const (
-	NothingUpMySleeve = "COPPER_KRYPTON_GENNARO_DKG_SOMETHING_UP_MY_SLEEVE-"
-	transcriptLabel   = "COPPER_KRYPTON_GENNARO_DKG-"
+	NothingUpMySleeve = "COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-"
+	transcriptLabel   = "COPPER_KRYPTON_JF-"
 )
 
 var _ types.ThresholdParticipant = (*Participant)(nil)

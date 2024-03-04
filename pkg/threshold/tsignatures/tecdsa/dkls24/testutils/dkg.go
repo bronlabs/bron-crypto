@@ -10,7 +10,7 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandomTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
@@ -90,7 +90,7 @@ func DoDkgRound3(participants []*dkg.Participant, round3UnicastInputs []types.Ro
 func RunDKG(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*dkg.Participant, shards []*dkls24.Shard, err error) {
 	// Run JF-DKG first
 	sessionId := []byte("JoinFeldmanDkgTestSessionId")
-	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sessionId, protocol, identities)
+	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sessionId, protocol, identities)
 	if err != nil {
 		return nil, nil, err
 	}

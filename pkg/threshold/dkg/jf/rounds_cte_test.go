@@ -1,4 +1,4 @@
-package gennaro_test
+package jf_test
 
 import (
 	crand "crypto/rand"
@@ -14,8 +14,8 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 )
 
 func Test_MeasureConstantTime_round1(t *testing.T) {
@@ -31,9 +31,9 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var identities []types.IdentityKey
 	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
-	var participants []*gennaro.Participant
+	var participants []*jf.Participant
 
-	internal.RunMeasurement(500, "gennaro_round1", func(i int) {
+	internal.RunMeasurement(500, "jf_round1", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
@@ -60,11 +60,11 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var identities []types.IdentityKey
 	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
-	var participants []*gennaro.Participant
-	var r1OutsB []*gennaro.Round1Broadcast
-	var r1OutsU []types.RoundMessages[*gennaro.Round1P2P]
+	var participants []*jf.Participant
+	var r1OutsB []*jf.Round1Broadcast
+	var r1OutsU []types.RoundMessages[*jf.Round1P2P]
 
-	internal.RunMeasurement(500, "gennaro_round2", func(i int) {
+	internal.RunMeasurement(500, "jf_round2", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
@@ -93,15 +93,15 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var identities []types.IdentityKey
 	var config types.ThresholdProtocol
 	var uniqueSessionId []byte
-	var participants []*gennaro.Participant
-	var r1OutsB []*gennaro.Round1Broadcast
-	var r1OutsU []types.RoundMessages[*gennaro.Round1P2P]
-	var r2InsB []types.RoundMessages[*gennaro.Round1Broadcast]
-	var r2InsU []types.RoundMessages[*gennaro.Round1P2P]
-	var r2Outs []*gennaro.Round2Broadcast
-	var r3Ins []types.RoundMessages[*gennaro.Round2Broadcast]
+	var participants []*jf.Participant
+	var r1OutsB []*jf.Round1Broadcast
+	var r1OutsU []types.RoundMessages[*jf.Round1P2P]
+	var r2InsB []types.RoundMessages[*jf.Round1Broadcast]
+	var r2InsU []types.RoundMessages[*jf.Round1P2P]
+	var r2Outs []*jf.Round2Broadcast
+	var r3Ins []types.RoundMessages[*jf.Round2Broadcast]
 
-	internal.RunMeasurement(500, "gennaro_round3", func(i int) {
+	internal.RunMeasurement(500, "jf_round3", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
 		config, err = ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)

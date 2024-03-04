@@ -1,4 +1,4 @@
-package gennaro_test
+package jf_test
 
 import (
 	crand "crypto/rand"
@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
 )
 
 func Test_CanInitialize(t *testing.T) {
@@ -26,9 +26,9 @@ func Test_CanInitialize(t *testing.T) {
 
 	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
-	alice, err := gennaro.NewParticipant([]byte("sid"), identities[0].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
+	alice, err := jf.NewParticipant([]byte("sid"), identities[0].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
 	require.NoError(t, err)
-	bob, err := gennaro.NewParticipant([]byte("sid"), identities[1].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
+	bob, err := jf.NewParticipant([]byte("sid"), identities[1].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 	require.True(t, alice.H.Equal(bob.H))

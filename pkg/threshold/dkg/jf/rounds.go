@@ -1,4 +1,4 @@
-package gennaro
+package jf
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"

@@ -21,7 +21,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -228,7 +228,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, th, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, partialPublicKeys, err := gennaroTestutils.RunDKG(sid, thresholdSignatureProtocol, identities)
+	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, thresholdSignatureProtocol, identities)
 	require.NoError(t, err)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()

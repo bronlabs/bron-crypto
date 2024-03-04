@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	gennaroTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -29,7 +29,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct protocol config")
 	}
 
-	private, public, err := gennaroTestutils.RunDKG(sid, protocol, identities)
+	private, public, err := jf_testutils.RunDKG(sid, protocol, identities)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run JF-DKG protocol")
 	}
