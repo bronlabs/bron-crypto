@@ -1,4 +1,4 @@
-package compilerUtils
+package compiler_utils
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 )
 
 var compilers = map[compiler.Name]any{

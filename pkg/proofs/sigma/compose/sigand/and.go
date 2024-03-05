@@ -1,4 +1,4 @@
-package sigmaAnd
+package sigand
 
 import (
 	"fmt"

@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	agreeonrandomTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"

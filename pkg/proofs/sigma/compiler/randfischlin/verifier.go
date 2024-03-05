@@ -1,4 +1,4 @@
-package randomisedFischlin
+package randfischlin
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"

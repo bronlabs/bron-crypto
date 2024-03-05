@@ -1,4 +1,4 @@
-package sigmaAnd_test
+package sigand_test
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/and"
+	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/sigand"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 

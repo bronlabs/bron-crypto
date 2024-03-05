@@ -1,4 +1,4 @@
-package interactiveSigning
+package interactive
 
 import (
 	"fmt"

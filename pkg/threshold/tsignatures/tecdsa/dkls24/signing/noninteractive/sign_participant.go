@@ -1,4 +1,4 @@
-package noninteractiveSigning
+package noninteractive
 
 import (
 	"io"

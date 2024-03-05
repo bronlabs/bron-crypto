@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )

@@ -1,4 +1,4 @@
-package sigmaOr_test
+package sigor_test
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/or"
+	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/sigor"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 

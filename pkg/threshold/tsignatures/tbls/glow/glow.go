@@ -3,7 +3,7 @@ package glow
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )

@@ -1,4 +1,4 @@
-package sigmaOr
+package sigor
 
 import (
 	"bytes"

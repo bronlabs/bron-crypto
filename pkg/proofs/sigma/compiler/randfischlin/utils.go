@@ -1,4 +1,4 @@
-package randomisedFischlin
+package randfischlin
 
 import (
 	"bytes"

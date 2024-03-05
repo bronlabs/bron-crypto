@@ -1,4 +1,4 @@
-package interactiveSigning
+package interactive
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"

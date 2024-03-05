@@ -1,4 +1,4 @@
-package ecsdvpDhc
+package dhc
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"

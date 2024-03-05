@@ -1,4 +1,4 @@
-package fiatShamir_test
+package fiatshamir_test
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiat_shamir"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 

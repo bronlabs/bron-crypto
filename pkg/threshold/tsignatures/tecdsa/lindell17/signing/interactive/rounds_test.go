@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"

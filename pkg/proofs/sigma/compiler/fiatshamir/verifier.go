@@ -1,4 +1,4 @@
-package fiatShamir
+package fiatshamir
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"

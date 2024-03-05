@@ -21,7 +21,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"

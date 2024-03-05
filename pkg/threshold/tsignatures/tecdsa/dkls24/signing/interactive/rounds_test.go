@@ -1,4 +1,4 @@
-package interactiveSigning_test
+package interactive_test
 
 import (
 	"crypto/sha256"

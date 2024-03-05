@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randomised_fischlin"
+	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 )
 

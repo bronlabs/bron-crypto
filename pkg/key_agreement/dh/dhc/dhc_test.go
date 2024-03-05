@@ -1,4 +1,4 @@
-package ecsdvpDhc_test
+package dhc_test
 
 import (
 	crand "crypto/rand"
@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh/ecsdvp_dhc"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh/dhc"
 )
 
 func TestHappyPath(t *testing.T) {
@@ -27,10 +27,10 @@ func TestHappyPath(t *testing.T) {
 			require.NoError(t, err)
 			bobPublicKey := c.ScalarBaseMult(bobPrivateKey)
 
-			aliceDerivation, err := ecsdvpDhc.DeriveSharedSecretValue(alicePrivateKey, bobPublicKey)
+			aliceDerivation, err := dhc.DeriveSharedSecretValue(alicePrivateKey, bobPublicKey)
 			require.NoError(t, err)
 			require.False(t, aliceDerivation.IsZero())
-			bobDerivation, err := ecsdvpDhc.DeriveSharedSecretValue(bobPrivateKey, alicePublicKey)
+			bobDerivation, err := dhc.DeriveSharedSecretValue(bobPrivateKey, alicePublicKey)
 			require.NoError(t, err)
 			require.False(t, bobDerivation.IsZero())
 

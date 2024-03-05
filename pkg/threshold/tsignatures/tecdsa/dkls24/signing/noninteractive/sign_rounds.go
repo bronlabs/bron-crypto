@@ -1,4 +1,4 @@
-package noninteractiveSigning
+package noninteractive
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"

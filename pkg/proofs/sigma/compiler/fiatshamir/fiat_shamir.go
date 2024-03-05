@@ -1,4 +1,4 @@
-package fiatShamir
+package fiatshamir
 
 import (
 	"fmt"

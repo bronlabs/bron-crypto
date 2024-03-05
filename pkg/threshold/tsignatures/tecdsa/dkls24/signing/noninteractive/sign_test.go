@@ -1,4 +1,4 @@
-package noninteractiveSigning_test
+package noninteractive_test
 
 import (
 	"crypto/sha256"
