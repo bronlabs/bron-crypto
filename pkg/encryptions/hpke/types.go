@@ -19,6 +19,8 @@ const version = "HPKE-v1"
 type PrivateKey struct {
 	D curves.Scalar
 	PublicKey
+
+	_ ds.Incomparable
 }
 
 type PublicKey = curves.Point
@@ -77,6 +79,8 @@ type context struct {
 	nonces        ds.Set[nonce]
 	keyScheduling *KeyScheduleContext
 	secret        []byte
+
+	_ ds.Incomparable
 }
 
 var _ ds.Hashable[nonce] = (*nonce)(nil)

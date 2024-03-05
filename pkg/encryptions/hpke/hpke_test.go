@@ -1891,12 +1891,18 @@ func setup(t *testing.T, s *setupInfo) (*ReceiverContext, *SenderContext) {
 	require.EqualValues(t, s.key, ctx.key)
 	require.EqualValues(t, s.exporter_secret, ctx.exporterSecret)
 
-	receiverContext := &ReceiverContext{receiverPrivateKey, ctx}
+	receiverContext := &ReceiverContext{
+		myPrivateKey: &PrivateKey{},
+		c:            ctx,
+	}
 	var senderContext *SenderContext
 	if senderPrivateKey != nil {
 		ctx, _, err := keySchedule(SenderRole, cipherSuite, s.mode, sharedSecret, s.info, s.psk, s.psk_id)
 		require.NoError(t, err)
-		senderContext = &SenderContext{senderPrivateKey, ctx}
+		senderContext = &SenderContext{
+			myPrivateKey: &PrivateKey{},
+			c:            ctx,
+		}
 	}
 	return receiverContext, senderContext
 }

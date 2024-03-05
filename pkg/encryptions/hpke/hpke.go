@@ -3,6 +3,7 @@ package hpke
 import (
 	"io"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -10,6 +11,8 @@ import (
 type Sender struct {
 	myPrivateKey *PrivateKey
 	c            *context
+
+	_ ds.Incomparable
 }
 
 func NewSender(mode ModeID, suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info, psk, pskId []byte, prng io.Reader) (*Sender, PublicKey, error) {
@@ -65,6 +68,8 @@ func (s *Sender) Export(exporterContext []byte, L int) ([]byte, error) {
 type Receiver struct {
 	myPrivateKey *PrivateKey
 	c            *context
+
+	_ ds.Incomparable
 }
 
 func NewReceiver(mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, info, psk, pskId []byte) (*Receiver, error) {

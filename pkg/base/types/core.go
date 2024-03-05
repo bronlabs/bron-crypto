@@ -10,6 +10,8 @@ import (
 type cipherSuite struct {
 	curve curves.Curve
 	hash  func() hash.Hash
+
+	_ ds.Incomparable
 }
 
 func (cs *cipherSuite) Curve() curves.Curve {

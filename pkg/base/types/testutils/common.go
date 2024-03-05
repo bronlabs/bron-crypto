@@ -334,6 +334,8 @@ var _ types.SignatureProtocol = (*CipherSuite)(nil)
 type CipherSuite struct {
 	curve curves.Curve
 	hash  func() hash.Hash
+
+	_ ds.Incomparable
 }
 
 func (cs *CipherSuite) Curve() curves.Curve {

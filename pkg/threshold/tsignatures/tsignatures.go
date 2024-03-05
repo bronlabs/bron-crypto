@@ -140,4 +140,6 @@ type PreProcessingMaterial[PrivateType any, PreSignatureType any] struct {
 	PreSigners      ds.Set[types.IdentityKey]
 	PrivateMaterial PrivateType
 	PreSignature    PreSignatureType
+
+	_ ds.Incomparable
 }

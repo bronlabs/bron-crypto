@@ -2,6 +2,7 @@ package glow
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
@@ -26,4 +27,6 @@ type PartialSignature struct {
 	SigmaI    *bls.Signature[SignatureSubGroup]
 	DleqProof compiler.NIZKPoKProof
 	SessionId []byte // Required for the DLEQ verification if the aggregator is not a cosigner
+
+	_ ds.Incomparable
 }

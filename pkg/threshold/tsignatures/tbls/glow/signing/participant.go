@@ -31,6 +31,8 @@ type Cosigner struct {
 	prng       io.Reader
 	transcript transcripts.Transcript
 	round      int
+
+	_ ds.Incomparable
 }
 
 func (p *Cosigner) IdentityKey() types.IdentityKey {

@@ -31,6 +31,8 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 	sessionId  []byte
 	transcript transcripts.Transcript
 	round      int
+
+	_ ds.Incomparable
 }
 
 func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {

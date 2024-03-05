@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -14,6 +15,8 @@ type DeviceProfile struct {
 	CPUs         int
 	HostName     string
 	Network      []net.Interface
+
+	_ ds.Incomparable
 }
 
 func GetDeviceProfile() (*DeviceProfile, error) {

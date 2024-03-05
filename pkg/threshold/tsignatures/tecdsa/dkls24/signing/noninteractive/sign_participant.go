@@ -3,6 +3,7 @@ package noninteractive
 import (
 	"io"
 
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
@@ -18,6 +19,8 @@ type Cosigner struct {
 	protocol      types.ThresholdSignatureProtocol
 	sharingConfig types.SharingConfig
 	ppm           *dkls24.PreProcessingMaterial
+
+	_ ds.Incomparable
 }
 
 func (c *Cosigner) Shard() *dkls24.Shard {

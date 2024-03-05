@@ -10,9 +10,9 @@ import (
 )
 
 type Share struct {
-	_ ds.Incomparable
-
 	Value curves.Scalar `json:"value"`
+
+	_ ds.Incomparable
 }
 
 // ConvertToShamir converts len(identities) many additive shares into a (t, n) shamir scheme. An `id`
