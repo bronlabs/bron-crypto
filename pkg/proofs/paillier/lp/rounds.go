@@ -7,23 +7,24 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
 type Round1Output struct {
-	NthRootProverOutputs []*nthroot.Round1Output
+	NthRootProverOutputs []nthroot.Commitment
 	X                    []*paillier.CipherText
 
 	_ ds.Incomparable
 }
 
 type Round2Output struct {
-	NthRootVerifierOutputs []*nthroot.Round2Output
+	NthRootVerifierOutputs []sigma.ChallengeBytes
 
 	_ ds.Incomparable
 }
 
 type Round3Output struct {
-	NthRootProverOutputs []*nthroot.Round3Output
+	NthRootProverOutputs []nthroot.Response
 
 	_ ds.Incomparable
 }
@@ -43,8 +44,8 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	verifier.state.x = make([]*paillier.CipherText, verifier.k)
 
 	zero := new(saferith.Nat).SetUint64(0)
-	nthRootProverRound1Outputs := make([]*nthroot.Round1Output, verifier.k)
-	verifier.state.rootProvers = make([]*nthroot.Prover, verifier.k)
+	nthRootProverRound1Outputs := make([]nthroot.Commitment, verifier.k)
+	verifier.state.rootProvers = make([]*sigma.Prover[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response], verifier.k)
 	rootTranscript := verifier.transcript.Clone()
 	for i := 0; i < verifier.k; i++ {
 		// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
@@ -54,7 +55,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		}
 
 		// V proves the knowledge of y, the Nth root of x,
-		verifier.state.rootProvers[i], err = nthroot.NewProver(verifier.paillierPublicKey.N.Nat(), verifier.state.x[i].C, verifier.state.y[i], verifier.sessionId, rootTranscript, verifier.prng)
+		verifier.state.rootProvers[i], err = sigma.NewProver(verifier.sessionId, rootTranscript.Clone(), verifier.nthRootProtocol, verifier.state.x[i].C, verifier.state.y[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root prover")
 		}
@@ -78,12 +79,12 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 	prover.state.x = input.X
 
-	nthRootVerifierRound2Outputs := make([]*nthroot.Round2Output, prover.k)
-	prover.state.rootVerifiers = make([]*nthroot.Verifier, prover.k)
+	nthRootVerifierRound2Outputs := make([]sigma.ChallengeBytes, prover.k)
+	prover.state.rootVerifiers = make([]*sigma.Verifier[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response], prover.k)
 	rootTranscript := prover.transcript.Clone()
 	for i := 0; i < prover.k; i++ {
 		// round 2 of proving the knowledge of y
-		prover.state.rootVerifiers[i], err = nthroot.NewVerifier(prover.paillierSecretKey.N.Nat(), input.X[i].C, prover.sessionId, rootTranscript, prover.prng)
+		prover.state.rootVerifiers[i], err = sigma.NewVerifier(prover.sessionId, rootTranscript.Clone(), prover.nthRootProtocol, input.X[i].C, prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 		}
@@ -104,7 +105,7 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 		return nil, errs.NewRound("%d != 3", verifier.round)
 	}
 
-	nthRootProverRound3Outputs := make([]*nthroot.Round3Output, verifier.k)
+	nthRootProverRound3Outputs := make([]nthroot.Response, verifier.k)
 	for i := 0; i < verifier.k; i++ {
 		// round 3 of proving the knowledge of y
 		nthRootProverRound3Outputs[i], err = verifier.state.rootProvers[i].Round3(input.NthRootVerifierOutputs[i])
@@ -126,7 +127,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 
 	for i := 0; i < prover.k; i++ {
 		// round 4 of proving the knowledge of y
-		if err := prover.state.rootVerifiers[i].Round4(input.NthRootProverOutputs[i]); err != nil {
+		if err := prover.state.rootVerifiers[i].Verify(input.NthRootProverOutputs[i]); err != nil {
 			return nil, errs.WrapVerification(err, "cannot verify knowledge of Nth root from Verifier")
 		}
 	}

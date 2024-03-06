@@ -11,6 +11,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
@@ -27,6 +28,8 @@ func Fuzz_Test(f *testing.F) {
 		q := new(saferith.Nat).SetBig(qInt, 128)
 		bigN := new(saferith.Nat).Mul(p, q, 256)
 		bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 512))
+		protocol, err := nthroot.NewSigmaProtocol(bigN, prng)
+		require.NoError(t, err)
 
 		yInt, err := crand.Int(prng, bigN.Big())
 		require.NoError(t, err)
@@ -35,15 +38,16 @@ func Fuzz_Test(f *testing.F) {
 
 		appLabel := "NthRoot"
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err := nthroot.NewProver(bigN, x, y, sid, proverTranscript, prng)
+		prover, err := sigma.NewProver(sid, proverTranscript, protocol, x, y)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
+
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err := nthroot.NewVerifier(bigN, x, sid, verifierTranscript, prng)
+		verifier, err := sigma.NewVerifier(sid, verifierTranscript, protocol, x, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -58,7 +62,7 @@ func Fuzz_Test(f *testing.F) {
 		r3, err := prover.Round3(r2)
 		require.NoError(t, err)
 
-		err = verifier.Round4(r3)
+		err = verifier.Verify(r3)
 		require.NoError(t, err)
 
 		label := "gimme, gimme"

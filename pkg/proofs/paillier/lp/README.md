@@ -16,7 +16,7 @@ Steps:
 3. $V$ aborts if $y \ne y'$,
 4. Repeat steps above $k$ times, $V$ accepts if there were no aborts in step 3.
 
-Notably, if $\gcd(N, \phi(N)) = 1$, then $y$ is unique, hence $y = y'$ . Otherwise there are multiple candidates, and the probability that $y = y'$ is $\le \frac{1}{2}$.
+Notably, if $\gcd(N, \phi(N)) = 1$, then $y$ is unique, hence $y = y'$ . Otherwise, there are multiple candidates, and the probability that $y = y'$ is $\le \frac{1}{2}$.
 
 [Lin17]: <https://eprint.iacr.org/2017/552.pdf>
 [HMRT12]: <https://eprint.iacr.org/2011/494.pdf>
