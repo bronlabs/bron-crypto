@@ -10,14 +10,12 @@ var _ types.MPCParticipant = (*Participant)(nil)
 var _ types.WithAuthKey = (*Participant)(nil)
 
 type Participant struct {
+	*types.BaseParticipant[types.MPCProtocol]
+
 	myAuthKey types.AuthKey
-	sessionId []byte
-
-	Protocol types.MPCProtocol
-
 	initiator types.IdentityKey
-	round     int
-	state     *State
+
+	state *State
 
 	_ ds.Incomparable
 }
@@ -34,6 +32,12 @@ func (p *Participant) IsInitiator() bool {
 	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
 }
 
+func (p *Participant) NonInitiatorParticipants() ds.Set[types.IdentityKey] {
+	receivers := p.Protocol().Participants().Clone()
+	receivers.Remove(p.initiator)
+	return receivers
+}
+
 type State struct {
 	messageToBroadcast       []byte
 	receivedBroadcastMessage []byte
@@ -47,13 +51,11 @@ func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.MPCPro
 	}
 	result := &Participant{
 		myAuthKey: authKey,
-		Protocol:  protocol,
 		initiator: authKey,
-		sessionId: sessionId,
 		state: &State{
 			messageToBroadcast: message,
 		},
-		round: 1,
+		BaseParticipant: types.NewBaseParticipant(nil, protocol, 1, sessionId, nil),
 	}
 	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")
@@ -66,12 +68,10 @@ func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.MPCPro
 		return nil, errs.WrapArgument(err, "couldn't construct responder")
 	}
 	result := &Participant{
-		myAuthKey: authKey,
-		initiator: initiator,
-		sessionId: sessionId,
-		state:     &State{},
-		Protocol:  protocol,
-		round:     1,
+		myAuthKey:       authKey,
+		initiator:       initiator,
+		state:           &State{},
+		BaseParticipant: types.NewBaseParticipant(nil, protocol, 1, sessionId, nil),
 	}
 	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")

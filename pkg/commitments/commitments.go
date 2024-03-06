@@ -2,7 +2,6 @@ package commitments
 
 import (
 	"io"
-	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -25,9 +24,9 @@ func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, W
 	}
 
 	msgs := make([][]byte, 0)
-	msgs = append(msgs, slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId))
+	msgs = append(msgs, []byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId)
 	for i, m := range messages {
-		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
+		msgs = append(msgs, bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m)
 	}
 
 	return commitInternal(prng, msgs...)
@@ -35,9 +34,9 @@ func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, W
 
 func Open(sessionId []byte, commitment Commitment, witness Witness, messages ...[]byte) error {
 	msgs := make([][]byte, 0)
-	msgs = append(msgs, slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId))
+	msgs = append(msgs, []byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId)
 	for i, m := range messages {
-		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
+		msgs = append(msgs, bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m)
 	}
 
 	return openInternal(commitment, witness, msgs...)

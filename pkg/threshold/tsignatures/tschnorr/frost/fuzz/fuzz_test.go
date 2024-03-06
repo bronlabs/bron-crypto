@@ -25,6 +25,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
@@ -239,9 +240,9 @@ func doGeneratePreSignatures(t *testing.T, protocol types.ThresholdProtocol, ide
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]types.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
+	round2Inputs := make([]network.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
 	for i := range participants {
-		round2Inputs[i] = types.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
+		round2Inputs[i] = network.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
 		for j := range participants {
 			if j != i {
 				round2Inputs[i].Put(participants[j].IdentityKey(), round1Outputs[j])

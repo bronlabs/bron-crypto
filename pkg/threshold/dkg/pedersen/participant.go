@@ -21,18 +21,13 @@ const transcriptLabel = "COPPER_KRYPTON_PEDERSEN_DKG-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	*types.BaseParticipant[types.ThresholdProtocol]
 
 	myIdentityKey types.AuthKey
 	mySharingId   types.SharingID
-	SessionId     []byte
-
-	Protocol      types.ThresholdProtocol
 	SharingConfig types.SharingConfig
 
-	Transcript transcripts.Transcript
-	round      int
-	State      *State
+	State *State
 
 	_ ds.Incomparable
 }
@@ -76,16 +71,12 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 	}
 
 	result := &Participant{
-		myIdentityKey: myAuthKey,
-		SessionId:     sessionId,
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		myIdentityKey:   myAuthKey,
 		State: &State{
 			NiCompiler: niCompiler,
 		},
-		prng:          prng,
 		SharingConfig: types.DeriveSharingConfig(protocol.Participants()),
-		Protocol:      protocol,
-		Transcript:    transcript,
-		round:         1,
 	}
 	mySharingId, exists := result.SharingConfig.Reverse().Get(myAuthKey)
 	if !exists {

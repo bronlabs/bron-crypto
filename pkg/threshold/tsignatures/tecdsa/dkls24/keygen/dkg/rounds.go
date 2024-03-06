@@ -1,9 +1,9 @@
 package dkg
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -11,26 +11,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 )
 
-type Round1P2P struct {
-	ZeroSampling *zeroSetup.Round1P2P
-	BaseOTSender bbot.Round1P2P
+func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, errs.Forward(err)
+	}
 
-	_ ds.Incomparable
-}
-
-type Round2P2P struct {
-	ZeroSampling   *zeroSetup.Round2P2P
-	BaseOTReceiver bbot.Round2P2P
-
-	_ ds.Incomparable
-}
-
-func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 	zeroSamplingP2P, err := p.ZeroSamplingParty.Round1()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "zero sampling round 1 failed")
 	}
-	baseOtP2P := hashmap.NewHashableHashMap[types.IdentityKey, bbot.Round1P2P]()
+	baseOtP2P := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Round1P2P]()
 	for pair := range p.BaseOTSenderParties.Iter() {
 		identity := pair.Key
 		party := pair.Value
@@ -41,8 +32,8 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		baseOtP2P.Put(identity, r1out)
 	}
 
-	p2pOutput := types.NewRoundMessages[*Round1P2P]()
-	for identity := range p.Protocol.Participants().Iter() {
+	p2pOutput := network.NewRoundMessages[*Round1P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -59,12 +50,22 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 			BaseOTSender: baseOtMessage,
 		})
 	}
+
+	p.NextRound()
 	return p2pOutput, nil
 }
 
-func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (types.RoundMessages[*Round2P2P], error) {
-	zeroSamplingRound1Output := types.NewRoundMessages[*zeroSetup.Round1P2P]()
-	baseOtRound1Output := types.NewRoundMessages[bbot.Round1P2P]()
+func (p *Participant) Round2(round1outputP2P network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
+	// Validation
+	if err := p.InRound(2); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputP2P); err != nil {
+		return nil, errs.WrapValidation(err, "round 1 output is invalid")
+	}
+
+	zeroSamplingRound1Output := network.NewRoundMessages[*zeroSetup.Round1P2P]()
+	baseOtRound1Output := network.NewRoundMessages[*bbot.Round1P2P]()
 	for pair := range round1outputP2P.Iter() {
 		sender := pair.Key
 		message := pair.Value
@@ -77,7 +78,7 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 		return nil, errs.WrapFailed(err, "zero sampling round 2 failed")
 	}
 
-	baseOTP2P := types.NewRoundMessages[bbot.Round2P2P]()
+	baseOTP2P := network.NewRoundMessages[*bbot.Round2P2P]()
 	for pair := range p.BaseOTReceiverParties.Iter() {
 		identity := pair.Key
 		party := pair.Value
@@ -91,8 +92,8 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 		}
 		baseOTP2P.Put(identity, r2out)
 	}
-	p2pOutput := types.NewRoundMessages[*Round2P2P]()
-	for identity := range p.Protocol.Participants().Iter() {
+	p2pOutput := network.NewRoundMessages[*Round2P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -110,24 +111,27 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 		})
 	}
 
+	p.NextRound()
 	return p2pOutput, nil
 }
 
-func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*dkls24.Shard, error) {
-	var err error
-	baseOtRound2Output := types.NewRoundMessages[bbot.Round2P2P]()
-	zeroSamplingRound2Output := types.NewRoundMessages[*zeroSetup.Round2P2P]()
+func (p *Participant) Round3(round2outputP2P network.RoundMessages[*Round2P2P]) (shard *dkls24.Shard, err error) {
+	// Validation
+	if err := p.InRound(3); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2outputP2P); err != nil {
+		return nil, errs.WrapValidation(err, "round 2 output is invalid")
+	}
 
-	for party := range p.Protocol.Participants().Iter() {
+	baseOtRound2Output := network.NewRoundMessages[*bbot.Round2P2P]()
+	zeroSamplingRound2Output := network.NewRoundMessages[*zeroSetup.Round2P2P]()
+
+	for party := range p.Protocol().Participants().Iter() {
 		if party.Equal(p.MyAuthKey) {
 			continue
 		}
-
-		message, exists := round2outputP2P.Get(party)
-		if !exists {
-			return nil, errs.NewArgument("no sender")
-		}
-
+		message, _ := round2outputP2P.Get(party)
 		baseOtRound2Output.Put(party, message.BaseOTReceiver)
 		zeroSamplingRound2Output.Put(party, message.ZeroSampling)
 	}
@@ -140,16 +144,13 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 	for pair := range p.BaseOTSenderParties.Iter() {
 		identity := pair.Key
 		party := pair.Value
-		message, exists := baseOtRound2Output.Get(identity)
-		if !exists {
-			return nil, errs.NewMissing("do not have a base ot message from %s", identity.String())
-		}
+		message, _ := baseOtRound2Output.Get(identity)
 		if err := party.Round3(message); err != nil {
 			return nil, errs.WrapFailed(err, "base OT as sender for identity %s", identity.String())
 		}
 	}
 	pairwiseBaseOTs := hashmap.NewHashableHashMap[types.IdentityKey, *dkls24.BaseOTConfig]()
-	for identity := range p.Protocol.Participants().Iter() {
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -167,7 +168,7 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 		})
 	}
 
-	shard := &dkls24.Shard{
+	shard = &dkls24.Shard{
 		SigningKeyShare: p.MySigningKeyShare,
 		PublicKeyShares: p.MyPartialPublicKeys,
 		PairwiseSeeds:   pairwiseSeeds,
@@ -175,8 +176,10 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 	}
 
 	// by now, it's fully computed
-	if err := shard.Validate(p.Protocol, p.IdentityKey()); err != nil {
+	if err := shard.Validate(p.Protocol(), p.IdentityKey()); err != nil {
 		return nil, errs.WrapValidation(err, "resulting shard is invalid")
 	}
+
+	p.LastRound()
 	return shard, nil
 }

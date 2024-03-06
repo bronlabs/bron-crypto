@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -72,10 +71,4 @@ func ValidateMPCProtocol(p MPCParticipant, f MPCProtocol) error {
 		return errs.NewMissing("participant is not included in the protocol")
 	}
 	return nil
-}
-
-type RoundMessages[Message any] ds.Map[IdentityKey, Message]
-
-func NewRoundMessages[Message any]() RoundMessages[Message] {
-	return hashmap.NewHashableHashMap[IdentityKey, Message]()
 }

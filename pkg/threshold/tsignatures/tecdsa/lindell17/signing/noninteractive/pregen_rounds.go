@@ -4,30 +4,16 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
-
-type Round1Broadcast struct {
-	BigRCommitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round2Broadcast struct {
-	BigR        curves.Point
-	BigRProof   compiler.NIZKPoKProof
-	BigRWitness commitments.Witness
-
-	_ ds.Incomparable
-}
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	if p.round != 1 {
@@ -54,7 +40,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input types.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(input network.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
 	if p.round != 2 {
 		return nil, errs.NewRound("rounds mismatch %d != 2", p.round)
 	}
@@ -90,7 +76,7 @@ func (p *PreGenParticipant) Round2(input types.RoundMessages[*Round1Broadcast]) 
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input types.RoundMessages[*Round2Broadcast]) (*lindell17.PreProcessingMaterial, error) {
+func (p *PreGenParticipant) Round3(input network.RoundMessages[*Round2Broadcast]) (*lindell17.PreProcessingMaterial, error) {
 	if p.round != 3 {
 		return nil, errs.NewRound("rounds mismatch %d != 3", p.round)
 	}

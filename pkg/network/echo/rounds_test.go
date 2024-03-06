@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/network/echo"
 )
 
@@ -56,14 +57,14 @@ func happyPath(t *testing.T, cipherSuite types.SignatureProtocol, n int, msg str
 	}
 	allParticipants := []*echo.Participant{initiator}
 	allParticipants = append(allParticipants, responders...)
-	r1OutMessages := make([]types.RoundMessages[*echo.Round1P2P], len(allParticipants))
+	r1OutMessages := make([]network.RoundMessages[*echo.Round1P2P], len(allParticipants))
 	for i, participant := range allParticipants {
 		r1OutMessage, err := participant.Round1()
 		require.NoError(t, err)
 		r1OutMessages[i] = r1OutMessage
 	}
-	_, r2InMessages := ttu.MapO2I(allParticipants, []string{}, r1OutMessages)
-	r2OutMessages := make([]types.RoundMessages[*echo.Round2P2P], len(allParticipants))
+	r2InMessages := ttu.MapUnicastO2I(allParticipants, r1OutMessages)
+	r2OutMessages := make([]network.RoundMessages[*echo.Round2P2P], len(allParticipants))
 	for i, participant := range allParticipants {
 		var msg *echo.Round1P2P
 		var exists bool
@@ -80,7 +81,7 @@ func happyPath(t *testing.T, cipherSuite types.SignatureProtocol, n int, msg str
 
 	outputMessages := make([][]byte, len(allParticipants))
 	for i, participant := range allParticipants {
-		nonNilR3InMessages := types.NewRoundMessages[*echo.Round2P2P]()
+		nonNilR3InMessages := network.NewRoundMessages[*echo.Round2P2P]()
 		for mj := range r3InMessages[i].Iter() {
 			if mj.Value != nil {
 				nonNilR3InMessages.Put(mj.Key, mj.Value)

@@ -13,17 +13,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+const transcriptLabel = "COPPER_KRYPTON_AGREE_ON_RANDOM-"
+
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	*types.BaseParticipant[types.MPCProtocol]
 
-	Protocol      types.MPCProtocol
 	myAuthKey     types.AuthKey
 	IdentitySpace types.IdentitySpace
 
 	state *State
-	round int
 
 	_ ds.Incomparable
 }
@@ -33,9 +33,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 }
 
 type State struct {
-	transcript transcripts.Transcript
-	r_i        curves.Scalar
-
+	r_i                 curves.Scalar
 	witness             commitments.Witness
 	receivedCommitments ds.Map[types.IdentityKey, commitments.Commitment]
 
@@ -48,17 +46,15 @@ func NewParticipant(authKey types.AuthKey, protocol types.MPCProtocol, transcrip
 	}
 	// if you pass presentParticipants to below, sharing ids will be different
 	if transcript == nil {
-		transcript = hagrid.NewTranscript("COPPER_KRYPTON_AGREE_ON_RANDOM-", nil)
+		transcript = hagrid.NewTranscript(transcriptLabel, nil)
 	}
+
 	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	participant := &Participant{
-		prng:          prng,
-		myAuthKey:     authKey,
-		round:         1,
-		Protocol:      protocol,
-		IdentitySpace: identitySpace,
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, nil, transcript),
+		myAuthKey:       authKey,
+		IdentitySpace:   identitySpace,
 		state: &State{
-			transcript:          transcript,
 			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
 		},
 	}

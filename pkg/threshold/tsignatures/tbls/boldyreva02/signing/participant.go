@@ -19,20 +19,15 @@ var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2]
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)
 
 type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	signer   *bls.Signer[K, S]
-	protocol types.ThresholdSignatureProtocol
+	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+
+	signer *bls.Signer[K, S]
 
 	myAuthKey     types.AuthKey
 	mySharingId   types.SharingID
 	myShard       *boldyreva02.Shard[K]
 	sharingConfig types.SharingConfig
 	scheme        bls.RogueKeyPrevention
-
-	sessionId  []byte
-	transcript transcripts.Transcript
-	round      int
-
-	_ ds.Incomparable
 }
 
 func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {
@@ -70,16 +65,13 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	}
 
 	participant := &Cosigner[K, S]{
-		signer:        signer,
-		protocol:      protocol,
-		myAuthKey:     authKey,
-		sessionId:     sessionId,
-		sharingConfig: sharingConfig,
-		mySharingId:   mySharingId,
-		myShard:       myShard,
-		transcript:    transcript,
-		scheme:        scheme,
-		round:         1,
+		BaseParticipant: types.NewBaseParticipant(nil, protocol, -1, sessionId, transcript),
+		signer:          signer,
+		myAuthKey:       authKey,
+		sharingConfig:   sharingConfig,
+		mySharingId:     mySharingId,
+		myShard:         myShard,
+		scheme:          scheme,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {

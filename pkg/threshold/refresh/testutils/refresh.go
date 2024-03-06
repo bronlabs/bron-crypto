@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/refresh"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -41,9 +42,9 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*refresh.Participant) (round1BroadcastOutputs []*refresh.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*refresh.Round1P2P], err error) {
+func DoDkgRound1(participants []*refresh.Participant) (round1BroadcastOutputs []*refresh.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[*refresh.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*refresh.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*refresh.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]network.RoundMessages[*refresh.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -54,7 +55,7 @@ func DoDkgRound1(participants []*refresh.Participant) (round1BroadcastOutputs []
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*refresh.Participant, round2BroadcastInputs []types.RoundMessages[*refresh.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*refresh.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func DoDkgRound2(participants []*refresh.Participant, round2BroadcastInputs []network.RoundMessages[*refresh.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*refresh.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
 	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {

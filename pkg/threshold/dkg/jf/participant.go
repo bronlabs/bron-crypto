@@ -30,18 +30,15 @@ const (
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	*types.BaseParticipant[types.ThresholdProtocol]
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 
-	Protocol      types.ThresholdProtocol
-	SessionId     []byte
 	SharingConfig types.SharingConfig
 
 	H curves.Point
 
-	round int
 	state *State
 
 	_ ds.Incomparable
@@ -59,7 +56,6 @@ type State struct {
 	myPartialSecretShare   *pedersen.Share
 	commitments            []curves.Point
 	commitmentsProof       compiler.NIZKPoKProof
-	transcript             transcripts.Transcript
 	secretKeyShare         curves.Scalar
 	partialPublicKeyShares map[types.SharingID]curves.Point
 	niCompiler             compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness]
@@ -103,16 +99,12 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 
 	result := &Participant{
-		myAuthKey: authKey,
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		myAuthKey:       authKey,
 		state: &State{
 			niCompiler: niCompiler,
-			transcript: transcript,
 		},
-		prng:          prng,
-		Protocol:      protocol,
 		H:             H,
-		round:         1,
-		SessionId:     sessionId,
 		SharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 	}

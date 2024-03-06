@@ -37,7 +37,7 @@ type Sender struct {
 func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
@@ -70,7 +70,7 @@ func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, tr
 func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}

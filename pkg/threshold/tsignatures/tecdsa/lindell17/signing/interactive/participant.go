@@ -26,15 +26,12 @@ var (
 )
 
 type Cosigner struct {
-	prng        io.Reader
-	protocol    types.ThresholdSignatureProtocol
-	sessionId   []byte
-	transcript  transcripts.Transcript
+	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 	myShard     *lindell17.Shard
 	nic         compiler.Name
-	round       int
 
 	_ ds.Incomparable
 }
@@ -85,90 +82,66 @@ func (cosigner *Cosigner) SharingId() types.SharingID {
 	return cosigner.mySharingId
 }
 
-func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
-	err = validateInputs(sessionId, myAuthKey, secondaryIdentityKey, myShard, protocol, niCompiler, prng)
+func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, hisIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader, roundNo int) (cosigner *Cosigner, hisSharingId types.SharingID, err error) {
+	err = validateInputs(sessionId, myAuthKey, hisIdentityKey, myShard, protocol, niCompiler, prng)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid input arguments")
+		return nil, 0, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
 	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+		return nil, 0, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
-		return nil, errs.NewMissing("could not find my sharign id")
+		return nil, 0, errs.NewMissing("could not find my sharign id")
 	}
-	theirSharingId, exists := sharingConfig.Reverse().Get(secondaryIdentityKey)
+	hisSharingId, exists = sharingConfig.Reverse().Get(hisIdentityKey)
 	if !exists {
-		return nil, errs.NewMissing("could not find the other party sharign id")
+		return nil, 0, errs.NewMissing("could not find the other party sharign id")
 	}
+	return &Cosigner{
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, roundNo, sessionId, transcript),
+		myAuthKey:       myAuthKey,
+		mySharingId:     mySharingId,
+		myShard:         myShard,
+		nic:             niCompiler,
+	}, hisSharingId, nil
+}
 
+func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
+	cosigner, hisSharingId, err := NewCosigner(sessionId, myAuthKey, secondaryIdentityKey, myShard, protocol, niCompiler, transcript, prng, 1)
+	if err != nil {
+		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
+	}
 	primaryCosigner = &PrimaryCosigner{
-		Cosigner: Cosigner{
-			myAuthKey:   myAuthKey,
-			mySharingId: mySharingId,
-			myShard:     myShard,
-			protocol:    protocol,
-			sessionId:   sessionId,
-			transcript:  transcript,
-			prng:        prng,
-			nic:         niCompiler,
-			round:       1,
-		},
+		Cosigner:             *cosigner,
 		secondaryIdentityKey: secondaryIdentityKey,
-		secondarySharingId:   theirSharingId,
+		secondarySharingId:   hisSharingId,
 		state:                &PrimaryCosignerState{},
 	}
 	if err := types.ValidateThresholdSignatureProtocol(primaryCosigner, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
+		return nil, errs.WrapValidation(err, "could not validate primary cosigner")
 	}
-
 	return primaryCosigner, nil
 }
 
 func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
-	err = validateInputs(sessionId, myAuthKey, primaryIdentityKey, myShard, protocol, niCompiler, prng)
+	cosigner, hisSharingId, err := NewCosigner(sessionId, myAuthKey, primaryIdentityKey, myShard, protocol, niCompiler, transcript, prng, 2)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid input arguments")
-	}
-
-	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find my sharign id")
-	}
-	theirSharingId, exists := sharingConfig.Reverse().Get(primaryIdentityKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find the other party sharign id")
+		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
 	}
 	secondaryCosigner = &SecondaryCosigner{
-		Cosigner: Cosigner{
-			myAuthKey:   myAuthKey,
-			mySharingId: mySharingId,
-			myShard:     myShard,
-			protocol:    protocol,
-			sessionId:   sessionId,
-			transcript:  transcript,
-			prng:        prng,
-			round:       2,
-			nic:         niCompiler,
-		},
+		Cosigner:           *cosigner,
 		primaryIdentityKey: primaryIdentityKey,
-		primarySharingId:   theirSharingId,
+		primarySharingId:   hisSharingId,
 		state:              &SecondaryCosignerState{},
 	}
 	if err := types.ValidateThresholdSignatureProtocol(secondaryCosigner, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
+		return nil, errs.WrapValidation(err, "could not validate secondary cosigner")
 	}
 	return secondaryCosigner, nil
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
@@ -83,7 +84,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
-	participants[0].SessionId = []byte("invalid")
+	participants[0].BaseParticipant = types.NewBaseParticipant(crand.Reader, protocol, 1, []byte("invalid"), nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)

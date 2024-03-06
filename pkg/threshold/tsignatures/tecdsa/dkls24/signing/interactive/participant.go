@@ -19,23 +19,23 @@ import (
 
 const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS24-"
 
-var _ signing.Participant = (*Cosigner)(nil)
-
 type Cosigner struct {
+	signing.Participant
+
 	prng io.Reader
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 	shard       *dkls24.Shard
 
-	sessionId     []byte
-	protocol      types.ThresholdSignatureProtocol
+	SessionId     []byte
+	Protocol      types.ThresholdSignatureProtocol
 	sharingConfig types.SharingConfig
 	Quorum        ds.Set[types.IdentityKey]
 
-	transcript transcripts.Transcript
+	Transcript transcripts.Transcript
 	state      *signing.SignerState
-	round      int
+	Round      int
 
 	_ ds.Incomparable
 }
@@ -44,20 +44,8 @@ func (ic *Cosigner) Shard() *dkls24.Shard {
 	return ic.shard
 }
 
-func (ic *Cosigner) Protocol() types.ThresholdSignatureProtocol {
-	return ic.protocol
-}
-
 func (ic *Cosigner) SharingConfig() types.SharingConfig {
 	return ic.sharingConfig
-}
-
-func (ic *Cosigner) Prng() io.Reader {
-	return ic.prng
-}
-
-func (ic *Cosigner) SessionId() []byte {
-	return ic.sessionId
 }
 
 func (ic *Cosigner) IdentityKey() types.IdentityKey {
@@ -69,7 +57,7 @@ func (ic *Cosigner) SharingId() types.SharingID {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	return ic.Protocol().Participants().Contains(ic.IdentityKey())
+	return ic.Protocol.Participants().Contains(ic.IdentityKey())
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
@@ -123,12 +111,12 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 
 	cosigner := &Cosigner{
 		myAuthKey:  authKey,
-		protocol:   protocol,
+		Protocol:   protocol,
 		shard:      shard,
-		sessionId:  sessionId,
+		SessionId:  sessionId,
 		Quorum:     quorum,
 		prng:       prng,
-		transcript: transcript,
+		Transcript: transcript,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
@@ -137,7 +125,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		},
 		mySharingId:   mySharingId,
 		sharingConfig: sharingConfig,
-		round:         1,
+		Round:         1,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {

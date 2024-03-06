@@ -37,7 +37,7 @@ type Receiver struct {
 
 // NewSender creates a new sender for the Random OT protocol.
 func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -58,7 +58,7 @@ func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compi
 
 // NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
 func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}

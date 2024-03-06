@@ -4,12 +4,12 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	schnorrSigma "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
@@ -25,46 +25,21 @@ const (
 	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS-"
 )
 
-type Round1Broadcast struct {
-	BigRCommitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round1P2P struct {
-	Przs *setup.Round1P2P
-
-	_ ds.Incomparable
-}
-
-type Round2Broadcast struct {
-	BigRProof   compiler.NIZKPoKProof
-	BigR        curves.Point
-	BigRWitness commitments.Witness
-
-	_ ds.Incomparable
-}
-
-type Round2P2P struct {
-	Przs *setup.Round2P2P
-
-	_ ds.Incomparable
-}
-
-func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput types.RoundMessages[*Round1P2P], err error) {
-	if p.round != 1 {
-		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
+func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
 
 	// step 1.1: Sample k_i <-$- ℤ_q  &  compute R_i = k_i * G
-	k, err := p.protocol.Curve().ScalarField().Random(p.prng)
+	k, err := p.Protocol().Curve().ScalarField().Random(p.Prng())
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot generate random k")
 	}
-	bigR := p.protocol.Curve().ScalarBaseMult(k)
+	bigR := p.Protocol().Curve().ScalarBaseMult(k)
 
 	// step 1.2: Run c_i <= commit(R_i || i || sid || S)
-	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sessionId, p.state.bigS)
+	bigRCommitment, bigRWitness, err := commit(p.Prng(), bigR, p.state.pid, p.SessionId(), p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -80,26 +55,28 @@ func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput 
 		BigRCommitment: bigRCommitment,
 	}
 	// step 1.5: Send(z^{a}_ij) -> P_j   ∀j
-	unicast := types.NewRoundMessages[*Round1P2P]()
+	unicast := network.NewRoundMessages[*Round1P2P]()
 	for pair := range przsOutput.Iter() {
 		id := pair.Key
 		r1 := pair.Value
-		unicast.Put(id, &Round1P2P{
-			Przs: r1,
-		})
+		unicast.Put(id, r1)
 	}
 
 	p.state.k = k
 	p.state.bigR = bigR
 	p.state.bigRWitness = bigRWitness
-	p.round++
+	p.NextRound()
 
 	return broadcast, unicast, nil
 }
 
-func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast], unicastInput types.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput types.RoundMessages[*Round2P2P], err error) {
-	if p.round != 2 {
-		return nil, nil, errs.NewRound("round mismatch %d != 2", p.round)
+func (p *Cosigner[F]) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
+	// Validation, unicastInput is delegated to Przs.Round2
+	if err := p.InRound(2); err != nil {
+		return nil, nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
 	}
 
 	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
@@ -107,32 +84,25 @@ func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-
-		in, ok := broadcastInput.Get(identity)
-		if !ok {
-			return nil, nil, errs.NewMissing("no input from participant")
-		}
+		in, _ := broadcastInput.Get(identity)
 		p.state.theirBigRCommitment.Put(identity, in.BigRCommitment)
 	}
 
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionId, S, nic)
-	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone(), p.prng)
+	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone(), p.Prng())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
 
 	// step 2.2: Run z^{b}_i <- PRZS.Round1({z^{a}_ji}_∀j)
-	przsInput := types.NewRoundMessages[*setup.Round1P2P]()
+	przsInput := network.NewRoundMessages[*setup.Round1P2P]()
 	for pair := range unicastInput.Iter() {
 		identity := pair.Key
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
 		r2 := pair.Value
-		if r2 == nil {
-			return nil, nil, errs.NewIsNil("r2 for identity %s", identity.String())
-		}
-		przsInput.Put(identity, r2.Przs)
+		przsInput.Put(identity, r2)
 	}
 	przsOutput, err := p.przsParticipant.Round2(przsInput)
 	if err != nil {
@@ -146,22 +116,24 @@ func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast
 		BigRProof:   bigRProof,
 	}
 	// step 2.4: Send(z^{b}_ij) -> P_j   ∀j
-	unicast := types.NewRoundMessages[*Round2P2P]()
+	unicast := network.NewRoundMessages[*Round2P2P]()
 	for pair := range przsOutput.Iter() {
 		id := pair.Key
 		r2 := pair.Value
-		unicast.Put(id, &Round2P2P{
-			Przs: r2,
-		})
+		unicast.Put(id, r2)
 	}
 
-	p.round++
+	p.NextRound()
 	return broadcast, unicast, nil
 }
 
-func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast], unicastInput types.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
-	if p.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", p.round)
+func (p *Cosigner[F]) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+	// Validation, unicastInput is delegated to Przs.Round3
+	if err := p.InRound(3); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 output")
 	}
 
 	bigR := p.state.bigR
@@ -170,12 +142,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-
-		in, ok := broadcastInput.Get(identity)
-		if !ok {
-			return nil, errs.NewMissing("no input from participant")
-		}
-
+		in, _ := broadcastInput.Get(identity)
 		theirPid := identity.PublicKey().ToAffineCompressed()
 		theirBigR := in.BigR
 		theirBigRWitness := in.BigRWitness
@@ -185,12 +152,12 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 		}
 
 		// step 3.2: Open(R_j || j || sid || S)
-		if err := openCommitment(theirBigR, theirPid, p.sessionId, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+		if err := openCommitment(theirBigR, theirPid, p.SessionId(), p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
-		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.sessionId, p.state.bigS, p.nic, p.transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 
@@ -198,11 +165,11 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 		bigR = bigR.Add(theirBigR)
 	}
 	// step 3.5: Run PRZS.Round3({z^{b}_ji}_{∀j})
-	przsInput := types.NewRoundMessages[*setup.Round2P2P]()
+	przsInput := network.NewRoundMessages[*setup.Round2P2P]()
 	for pair := range unicastInput.Iter() {
 		identity := pair.Key
 		r3 := pair.Value
-		przsInput.Put(identity, r3.Przs)
+		przsInput.Put(identity, r3)
 	}
 	przsSeeds, err := p.przsParticipant.Round3(przsInput)
 	if err != nil {
@@ -213,7 +180,7 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
-	przsSampleParticipant, err := sample.NewParticipant(p.sessionId, p.myAuthKey, przsSeeds, p.protocol, p.quorum, seededPrng)
+	przsSampleParticipant, err := sample.NewParticipant(p.SessionId(), p.myAuthKey, przsSeeds, p.Protocol(), p.quorum, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create seeded CSPRNG")
 	}
@@ -223,21 +190,21 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	}
 
 	// step 3.7.1: compute additive share d_i'
-	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.quorum, p.protocol)
+	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.quorum, p.Protocol())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
 
 	// step 3.7.2: compute e
 	eBytes := p.variant.ComputeChallengeBytes(bigR, p.mySigningKeyShare.PublicKey, message)
-	e, err := schnorr.MakeSchnorrCompatibleChallenge(p.protocol.CipherSuite(), eBytes)
+	e, err := schnorr.MakeSchnorrCompatibleChallenge(p.Protocol().CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 	// step 3.7.3 & 3.8: compute s'_i and set s_i <- s'_i + ζ_i
 	s := p.variant.ComputePartialResponse(bigR, p.mySigningKeyShare.PublicKey, p.state.k, sk, e).Add(zeroS)
 
-	p.round++
+	p.LastRound()
 	return &lindell22.PartialSignature{
 		E: e,
 		R: p.variant.ComputePartialNonceCommitment(bigR, p.state.bigR),

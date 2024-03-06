@@ -6,57 +6,56 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
-type Round1Broadcast struct {
-	Di curves.Point
-	Ei curves.Point
-
-	_ ds.Incomparable
-}
-
 func (ic *Cosigner) Round1() (r1b *Round1Broadcast, err error) {
-	if ic.round != 1 {
-		return nil, errs.NewRound("round mismatch %d != 1", ic.round)
+	// Validation
+	if err := ic.InRound(1); err != nil {
+		return nil, errs.Forward(err)
 	}
-	ic.state.d_i, err = ic.protocol.CipherSuite().Curve().ScalarField().Random(ic.prng)
+
+	ic.state.d_i, err = ic.Curve().ScalarField().Random(ic.Prng())
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not generate random d_i")
 	}
-	ic.state.e_i, err = ic.protocol.CipherSuite().Curve().ScalarField().Random(ic.prng)
+	ic.state.e_i, err = ic.Curve().ScalarField().Random(ic.Prng())
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not generate random e_i")
 	}
-	ic.state.D_i = ic.protocol.CipherSuite().Curve().ScalarBaseMult(ic.state.d_i)
-	ic.state.E_i = ic.protocol.CipherSuite().Curve().ScalarBaseMult(ic.state.e_i)
-	ic.round++
+	ic.state.D_i = ic.Curve().ScalarBaseMult(ic.state.d_i)
+	ic.state.E_i = ic.Curve().ScalarBaseMult(ic.state.e_i)
+
+	ic.NextRound()
 	return &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	}, nil
 }
 
-func (ic *Cosigner) Round2(round1output types.RoundMessages[*Round1Broadcast], message []byte) (*frost.PartialSignature, error) {
-	if ic.round != 2 {
-		return nil, errs.NewRound("round mismatch %d != 2", ic.round)
+func (ic *Cosigner) Round2(round1output network.RoundMessages[*Round1Broadcast], message []byte) (*frost.PartialSignature, error) {
+	// Validation
+	if err := ic.InRound(2); err != nil {
+		return nil, errs.Forward(err)
 	}
+	if err := network.ValidateMessages(ic.quorum, ic.IdentityKey(), round1output); err != nil {
+		return nil, errs.WrapFailed(err, "invalid round 1 output")
+	}
+	if len(message) == 0 {
+		return nil, errs.NewIsNil("message is empty")
+	}
+
 	D_alpha, E_alpha, err := ic.processNonceCommitmentOnline(round1output)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't not derive D alpha and E alpha")
 	}
-	if message == nil {
-		return nil, errs.NewIsNil("message is empty")
-	}
-	if len(message) == 0 {
-		return nil, errs.NewIsZero("message is empty")
-	}
 	partialSignature, err := helpers.ProducePartialSignature(
 		ic,
-		ic.protocol,
+		ic.Protocol(),
 		ic.quorum,
 		ic.shard.SigningKeyShare,
 		ic.state.d_i, ic.state.e_i,
@@ -71,15 +70,24 @@ func (ic *Cosigner) Round2(round1output types.RoundMessages[*Round1Broadcast], m
 		ic.state.aggregation.D_alpha = D_alpha
 		ic.state.aggregation.E_alpha = E_alpha
 	}
-	ic.round++
+
+	ic.NextRound()
 	return partialSignature, nil
 }
 
-func (ic *Cosigner) Aggregate(message []byte, partialSignatures types.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
-	if ic.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", ic.round)
+func (ic *Cosigner) Aggregate(message []byte, partialSignatures network.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
+	// Validation
+	if err := ic.InRound(3); err != nil {
+		return nil, errs.Forward(err)
 	}
-	aggregator, err := aggregation.NewSignatureAggregator(ic.myAuthKey, ic.protocol, ic.shard.SigningKeyShare.PublicKey, ic.shard.PublicKeyShares, ic.quorum, message, ic.state.aggregation)
+	if err := network.ValidateMessages(ic.quorum, ic.IdentityKey(), partialSignatures); err != nil {
+		return nil, errs.WrapFailed(err, "invalid partial signatures")
+	}
+	if len(message) == 0 {
+		return nil, errs.NewIsNil("message is empty")
+	}
+
+	aggregator, err := aggregation.NewSignatureAggregator(ic.myAuthKey, ic.Protocol(), ic.shard.SigningKeyShare.PublicKey, ic.shard.PublicKeyShares, ic.quorum, message, ic.state.aggregation)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")
 	}
@@ -87,11 +95,12 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures types.RoundMessa
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not aggregate partial signatures")
 	}
-	ic.round++
+
+	ic.LastRound()
 	return signature, nil
 }
 
-func (ic *Cosigner) processNonceCommitmentOnline(round1output types.RoundMessages[*Round1Broadcast]) (D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], err error) {
+func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessages[*Round1Broadcast]) (D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], err error) {
 	round1output.Put(ic.IdentityKey(), &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,

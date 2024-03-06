@@ -7,19 +7,21 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
-type Round1Output = softspoken.Round1Output
-
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
+	// Validation
+	if err := bob.InRound(1); err != nil {
+		return nil, nil, errs.Forward(err)
+	}
+
 	// step 1.1: Sample β ∈ [ξ]bits
 	bob.Beta = make(ot.ChoiceBits, XiBytes)
-	if _, err := io.ReadFull(bob.csrand, bob.Beta); err != nil {
+	if _, err := io.ReadFull(bob.Prng(), bob.Beta); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "bob could not sample beta")
 	}
 
@@ -30,7 +32,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	}
 	for j := 0; j < Xi; j++ {
 		for l := 0; l < LOTe; l++ {
-			bob.Gamma[j][l], err = bob.Curve.Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
+			bob.Gamma[j][l], err = bob.Curve().Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bob could not hash to gamma")
 			}
@@ -40,25 +42,23 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	bob.Beta = bitstring.UnpackBits(bob.Beta) // unpack beta for easier access to individual bits
 
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
-	b = bob.Curve.Scalar().ScalarField().Zero()
+	b = bob.Curve().Scalar().ScalarField().Zero()
 	for j := 0; j < Xi; j++ {
-		b = bob.Curve.Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
+		b = bob.Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
 	}
 
+	bob.NextRound(3)
 	return b, r1out, nil
 }
 
-type Round2Output struct {
-	ATilde [Xi][LOTe]curves.Scalar
-	Eta    [Rho]curves.Scalar
-	Mu     []byte
-
-	_ ds.Incomparable
-}
-
 func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputShares, r2o *Round2Output, err error) {
+	// Validation, r1out and a delegated to OTE.Round2
+	if err := alice.InRound(2); err != nil {
+		return nil, nil, errs.Forward(err)
+	}
+
 	C := new(OutputShares)
-	scalarField := alice.Curve.Scalar().ScalarField()
+	scalarField := alice.Curve().Scalar().ScalarField()
 
 	// step 2.1: Run OTE.Round2(...) --> (α0_j, α1_j) ∈ ℤq^[LOTe]   ∀j∈[ξ]
 	alphaBits, err := alice.sender.Round2(r1out)
@@ -90,7 +90,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	// step 2.3: Sample â ∈ ℤq^[ρ]
 	var aHat [Rho]curves.Scalar
 	for k := 0; k < Rho; k++ {
-		aHat[k], err = scalarField.Random(alice.csrand)
+		aHat[k], err = scalarField.Random(alice.Prng())
 		if err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "alice failed to sample a hat")
 		}
@@ -112,7 +112,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (sessionId || ã)
-	theta, err := alice.Curve.HashToScalars(L*Rho, alice.sessionId, aTildeBytes)
+	theta, err := alice.Curve().HashToScalars(L*Rho, alice.SessionId(), aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
 	}
@@ -139,16 +139,25 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.8: μ = H_{ℤ2^{2*λ_c}} (sessionId || μb)
-	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.sessionId, muBytes)
+	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.SessionId(), muBytes)
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "could not hash to Mu")
 	}
 
+	alice.LastRound()
 	return C, &Round2Output{ATilde: aTilde, Eta: eta, Mu: mu}, nil
 }
 
-func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
-	scalarField := bob.Curve.Scalar().ScalarField()
+func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
+	// Validation
+	if err := bob.InRound(3); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessage(r2out); err != nil {
+		return nil, errs.WrapValidation(err, "wrong round 2 output")
+	}
+
+	scalarField := bob.Curve().Scalar().ScalarField()
 	D = new([L]curves.Scalar)
 	for i := 0; i < L; i++ {
 		D[i] = scalarField.Zero()
@@ -158,13 +167,13 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 	aTildeBytes := make([]byte, 0, ((L + Rho) * Xi * base.FieldBytes))
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
-			aTildeBytes = append(aTildeBytes, r2o.ATilde[j][i].Bytes()...)
+			aTildeBytes = append(aTildeBytes, r2out.ATilde[j][i].Bytes()...)
 		}
 		for k := 0; k < Rho; k++ {
-			aTildeBytes = append(aTildeBytes, r2o.ATilde[j][L+k].Bytes()...)
+			aTildeBytes = append(aTildeBytes, r2out.ATilde[j][L+k].Bytes()...)
 		}
 	}
-	theta, err := bob.Curve.HashToScalars(L*Rho, bob.sessionId, aTildeBytes)
+	theta, err := bob.Curve().HashToScalars(L*Rho, bob.SessionId(), aTildeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}
@@ -175,15 +184,15 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]
-			ddot_j[i] = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][i], bob.Gamma[j][i].Add(r2o.ATilde[j][i]))
+			ddot_j[i] = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][i], bob.Gamma[j][i].Add(r2out.ATilde[j][i]))
 			// step 3.3: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
 			D[i] = D[i].Add(bob.gadget[j].Mul(ddot_j[i]))
 		}
 		for k := 0; k < Rho; k++ {
 			// step 3.4: ḓ_{j,k} = γ_{j,𝓁+k} + β_j * ã_{j,l+k}   ∀k∈[ρ] ∀j∈[ξ]
-			dhat_j_k = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2o.ATilde[j][L+k]))
+			dhat_j_k = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2out.ATilde[j][L+k]))
 			// step 3.5: μb'_{j,k} = ḓ_{j,k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * ḋ_{j,i} - β_j * η_k  ∀k∈[ρ] ∀j∈[ξ]
-			muBoldPrime_j_k = scalarField.Select(bob.Beta[j] != 0, dhat_j_k, dhat_j_k.Sub(r2o.Eta[k]))
+			muBoldPrime_j_k = scalarField.Select(bob.Beta[j] != 0, dhat_j_k, dhat_j_k.Sub(r2out.Eta[k]))
 			for i := 0; i < L; i++ {
 				muBoldPrime_j_k = muBoldPrime_j_k.Add(theta[i*Rho+k].Mul(ddot_j[i]))
 			}
@@ -192,18 +201,19 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 	}
 
 	// step 3.6: μ' = H_{ℤ2^{2*λ_c}} (sessionId || μb')
-	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.sessionId, muPrimeBytes)
+	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.SessionId(), muPrimeBytes)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "bob could not hash to muPrime")
 	}
 
 	// step 3.7: Check if μ' == μ, ABORT if not
-	if len(muPrime) != len(r2o.Mu) {
-		return nil, errs.NewLength("len(muPrime) != len(Mu)  (%d != %d)", len(muPrime), len(r2o.Mu))
+	if len(muPrime) != len(r2out.Mu) {
+		return nil, errs.NewLength("len(muPrime) != len(Mu)  (%d != %d)", len(muPrime), len(r2out.Mu))
 	}
-	if subtle.ConstantTimeCompare(muPrime, r2o.Mu) != 1 {
+	if subtle.ConstantTimeCompare(muPrime, r2out.Mu) != 1 {
 		return nil, errs.NewVerification("bob verification failed. muPrime != Mu")
 	}
 
+	bob.LastRound()
 	return D, nil
 }

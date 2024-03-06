@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -40,9 +41,9 @@ func MakeParticipants[F schnorr.Variant[F]](sid []byte, protocol types.Threshold
 	return participants, nil
 }
 
-func DoRound1[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F]) (round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P], err error) {
+func DoRound1[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F]) (round2BroadcastInputs []network.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*interactive_signing.Round1P2P], err error) {
 	round1BroadcastOutputs := make([]*interactive_signing.Round1Broadcast, len(participants))
-	round1UnicastOutputs := make([]types.RoundMessages[*interactive_signing.Round1P2P], len(participants))
+	round1UnicastOutputs := make([]network.RoundMessages[*interactive_signing.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -50,11 +51,11 @@ func DoRound1[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner
 		}
 	}
 
-	round2BroadcastInputs = make([]types.RoundMessages[*interactive_signing.Round1Broadcast], len(participants))
-	round2UnicastInputs = make([]types.RoundMessages[*interactive_signing.Round1P2P], len(participants))
+	round2BroadcastInputs = make([]network.RoundMessages[*interactive_signing.Round1Broadcast], len(participants))
+	round2UnicastInputs = make([]network.RoundMessages[*interactive_signing.Round1P2P], len(participants))
 	for i := range participants {
-		round2BroadcastInputs[i] = types.NewRoundMessages[*interactive_signing.Round1Broadcast]()
-		round2UnicastInputs[i] = types.NewRoundMessages[*interactive_signing.Round1P2P]()
+		round2BroadcastInputs[i] = network.NewRoundMessages[*interactive_signing.Round1Broadcast]()
+		round2UnicastInputs[i] = network.NewRoundMessages[*interactive_signing.Round1P2P]()
 		for j := range participants {
 			if i == j {
 				continue
@@ -71,9 +72,9 @@ func DoRound1[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner
 	return round2BroadcastInputs, round2UnicastInputs, nil
 }
 
-func DoRound2[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*interactive_signing.Round1P2P]) (round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], err error) {
+func DoRound2[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round2BroadcastInputs []network.RoundMessages[*interactive_signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*interactive_signing.Round1P2P]) (round3BroadcastInputs []network.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[*interactive_signing.Round2P2P], err error) {
 	round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
-	round2UnicastOutputs := make([]types.RoundMessages[*interactive_signing.Round2P2P], len(participants))
+	round2UnicastOutputs := make([]network.RoundMessages[*interactive_signing.Round2P2P], len(participants))
 	for i, participant := range participants {
 		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
@@ -81,11 +82,11 @@ func DoRound2[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner
 		}
 	}
 
-	round3BroadcastInputs = make([]types.RoundMessages[*interactive_signing.Round2Broadcast], len(participants))
-	round3UnicastInputs = make([]types.RoundMessages[*interactive_signing.Round2P2P], len(participants))
+	round3BroadcastInputs = make([]network.RoundMessages[*interactive_signing.Round2Broadcast], len(participants))
+	round3UnicastInputs = make([]network.RoundMessages[*interactive_signing.Round2P2P], len(participants))
 	for i := range participants {
-		round3BroadcastInputs[i] = types.NewRoundMessages[*interactive_signing.Round2Broadcast]()
-		round3UnicastInputs[i] = types.NewRoundMessages[*interactive_signing.Round2P2P]()
+		round3BroadcastInputs[i] = network.NewRoundMessages[*interactive_signing.Round2Broadcast]()
+		round3UnicastInputs[i] = network.NewRoundMessages[*interactive_signing.Round2P2P]()
 		for j := range participants {
 			if i == j {
 				continue
@@ -103,7 +104,7 @@ func DoRound2[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner
 	return round3BroadcastInputs, round3UnicastInputs, nil
 }
 
-func DoRound3[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*interactive_signing.Round2P2P], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
+func DoRound3[F schnorr.Variant[F]](participants []*interactive_signing.Cosigner[F], round3BroadcastInputs []network.RoundMessages[*interactive_signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[*interactive_signing.Round2P2P], message []byte) (partialSignatures []*lindell22.PartialSignature, err error) {
 	partialSignatures = make([]*lindell22.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)

@@ -5,7 +5,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -20,17 +19,14 @@ const transcriptLabel = "COPPER_KRYPTON_PRZS_ZERO_SETUP-"
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	*types.BaseParticipant[types.MPCProtocol]
 
-	SessionId          []byte
-	Curve              curves.Curve
 	myAuthKey          types.AuthKey
 	SortedParticipants []types.IdentityKey
 
 	IdentitySpace types.IdentitySpace
 
 	state *State
-	round int
 
 	_ ds.Incomparable
 }
@@ -42,7 +38,6 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 type State struct {
 	receivedSeeds ds.Map[types.IdentityKey, commitments.Commitment]
 	sentSeeds     ds.Map[types.IdentityKey, *committedSeedContribution]
-	transcript    transcripts.Transcript
 
 	_ ds.Incomparable
 }
@@ -74,17 +69,14 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 		return nil, errs.NewArgument("prng is nil")
 	}
 	result := &Participant{
-		prng:               prng,
+		BaseParticipant:    types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		myAuthKey:          authKey,
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
-		SessionId:          sessionId,
 		state: &State{
-			transcript:    transcript,
 			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
 			sentSeeds:     hashmap.NewHashableHashMap[types.IdentityKey, *committedSeedContribution](),
 		},
-		round: 1,
 	}
 	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")

@@ -6,11 +6,11 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -23,36 +23,17 @@ const (
 
 var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes
 
-type (
-	ChoiceBits []byte // Choice (x) are the "packed" choice bits.
-
-	MessageElement = [KappaBytes]byte // [κ]bits, κ-bit chunks of the ROT/OT message.
-	Message        = []MessageElement // [L][κ]bits, the messages in ROT/OT.
-	MessagePair    = [2]Message       // [2][L][κ]bits, the 2 sender messages in ROT/OT.
-	ChosenMessage  = Message          // [L][κ]bits, the receiver's chosen message in ROT/OT.
-
-	CorrelatedElement = curves.Scalar       // ℤq, each element of the COT message.
-	CorrelatedMessage = []CorrelatedElement // [L]ℤq, (a, Z_A, z_B) are the L-scalar messages in COT.
-)
-
-func (c ChoiceBits) Select(i int) byte {
-	return bitstring.SelectBit(c, i)
-}
-
 // Participant contains the common members of the sender and receiver.
 type Participant struct {
-	Xi int // ξ, the number of OTs that are run in parallel.
-	L  int // L, the number of elements in each OT message.
+	*types.BaseParticipant[types.GenericProtocol]
 
-	Curve      curves.Curve
-	SessionId  []byte
-	Transcript transcripts.Transcript
-	Csprng     io.Reader
+	L  int // L, the number of elements in each OT message.
+	Xi int // ξ, the number of OTs that are run in parallel.
 
 	_ ds.Incomparable
 }
 
-func NewParticipant(Xi, L int, curve curves.Curve, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader) (*Participant, error) {
+func NewParticipant(Xi, L int, curve curves.Curve, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader, round int) (*Participant, error) {
 	if err := validateInputs(Xi, L, sessionId, csprng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct ot participant")
 	}
@@ -61,13 +42,14 @@ func NewParticipant(Xi, L int, curve curves.Curve, sessionId []byte, label strin
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
+	protocol, err := types.NewGenericProtocol(curve)
+	if err != nil {
+		return nil, errs.WrapValidation(err, "couldn't construct ot participant protocol")
+	}
 	return &Participant{
-		Curve:      curve,
-		Xi:         Xi,
-		L:          L,
-		SessionId:  sessionId,
-		Transcript: transcript,
-		Csprng:     csprng,
+		BaseParticipant: types.NewBaseParticipant(csprng, protocol, round, sessionId, transcript),
+		L:               L,
+		Xi:              Xi,
 	}, nil
 }
 

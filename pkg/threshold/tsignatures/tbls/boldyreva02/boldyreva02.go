@@ -173,3 +173,22 @@ type PartialSignature[S bls.SignatureSubGroup] struct {
 
 	_ ds.Incomparable
 }
+
+func (p *PartialSignature[S]) Validate(none ...int) error {
+	if p == nil {
+		return errs.NewIsNil("partial signature is nil")
+	}
+	if p.SigmaI == nil {
+		return errs.NewIsNil("sigma i")
+	}
+	if p.SigmaPOPI == nil {
+		return errs.NewIsNil("sigma pop i")
+	}
+	if p.POP == nil {
+		return errs.NewIsNil("pop")
+	}
+	if !curveutils.AllOfSameCurve(p.SigmaI.Value.Curve(), p.SigmaI, p.SigmaPOPI, p.POP) {
+		return errs.NewCurve("curve mismatch")
+	}
+	return nil
+}

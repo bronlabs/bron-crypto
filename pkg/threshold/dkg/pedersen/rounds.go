@@ -3,67 +3,55 @@ package pedersen
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-type Round1Broadcast struct {
-	Ci        []curves.Point
-	DlogProof compiler.NIZKPoKProof
-
-	_ ds.Incomparable
-}
-
-type Round1P2P struct {
-	Xij curves.Scalar
-
-	_ ds.Incomparable
-}
-
 const (
 	DkgLabel       = "COPPER_KRYPTON_PEDERSEN_DKG-"
 	SharingIdLabel = "Pedersen_DKG_sharing_label-"
 )
 
-func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u types.RoundMessages[*Round1P2P], err error) {
-	if p.round != 1 {
-		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
+func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u network.RoundMessages[*Round1P2P], err error) {
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
+
 	// step 1.1: a_i0 <-$- Z_q
 	if a_i0 == nil {
-		a_i0, err = p.Protocol.Curve().ScalarField().Random(p.prng)
+		a_i0, err = p.Protocol().Curve().ScalarField().Random(p.Prng())
 		if err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "could not generate random scalar")
 		}
 	}
 
-	dealer, err := feldman.NewDealer(p.Protocol.Threshold(), p.Protocol.TotalParties(), p.Protocol.Curve())
+	dealer, err := feldman.NewDealer(p.Protocol().Threshold(), p.Protocol().TotalParties(), p.Protocol().Curve())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.State.NiCompiler.NewProver(p.SessionId, p.Transcript.Clone())
+	prover, err := p.State.NiCompiler.NewProver(p.SessionId(), p.Transcript().Clone())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
 
 	// step 1.2: (x_i, Ci) <- Feldman.Split(a_i0)
 	// step 1.3: π_i <- NIZKPoK.Prove(s)  ∀s∈{a_i0, x_i1, x_i2, ..., x_in}
-	commitments, shares, proof, err := dealer.Split(a_i0, prover, p.prng)
+	commitments, shares, proof, err := dealer.Split(a_i0, prover, p.Prng())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't split the secret via feldman dealer")
 	}
 	p.State.ShareVector = shares
 	p.State.Commitments = commitments
 
-	outboundP2PMessages := types.NewRoundMessages[*Round1P2P]()
+	outboundP2PMessages := network.NewRoundMessages[*Round1P2P]()
 
 	// step 1.4: send (x_ij) to P_j
 	for pair := range p.SharingConfig.Iter() {
@@ -79,20 +67,28 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u type
 	}
 	p.State.A_i0 = a_i0
 
-	p.round++
 	// step 1.5: Broadcast(Ci)
+	p.NextRound()
 	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Broadcast], round1outputP2P types.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
-	if p.round != 2 {
-		return nil, nil, errs.NewRound("round mismatch %d != 2", p.round)
+func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
+	// Validation
+	if err := p.InRound(2); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputP2P); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round 1 p2p messages")
+	}
+
 	myShamirShare := p.State.ShareVector[p.SharingId()-1]
-	if myShamirShare == nil {
+	if myShamirShare == nil || myShamirShare.Value == nil {
 		return nil, nil, errs.NewMissing("could not find my shamir share from the state")
 	}
 	secretKeyShare := myShamirShare.Value
@@ -102,7 +98,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		p.SharingId(): p.State.Commitments,
 	}
 
-	for senderSharingIdUint := uint(1); senderSharingIdUint <= p.Protocol.TotalParties(); senderSharingIdUint++ {
+	for senderSharingIdUint := uint(1); senderSharingIdUint <= p.Protocol().TotalParties(); senderSharingIdUint++ {
 		senderSharingId := types.SharingID(senderSharingIdUint)
 		if senderSharingId == p.SharingId() {
 			continue
@@ -111,18 +107,11 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		if !exists {
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}
-		broadcastedMessageFromSender, exists := round1outputBroadcast.Get(senderIdentityKey)
-		if !exists {
-			return nil, nil, errs.NewMissing("do not have broadcasted message of the sender with sharing id %d", senderSharingId)
-		}
-
+		broadcastedMessageFromSender, _ := round1outputBroadcast.Get(senderIdentityKey)
 		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 
-		p2pMessageFromSender, exists := round1outputP2P.Get(senderIdentityKey)
-		if !exists {
-			return nil, nil, errs.NewMissing("did not get a p2p message from sender with sharing id %d", senderSharingId)
-		}
+		p2pMessageFromSender, _ := round1outputP2P.Get(senderIdentityKey)
 		receivedSecretKeyShare := p2pMessageFromSender.Xij
 		receivedShare := &feldman.Share{
 			Id:    uint(p.SharingId()),
@@ -132,7 +121,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
 		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, p.Transcript.Clone())
+		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId(), p.Transcript().Clone())
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}
@@ -140,17 +129,17 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 			return nil, nil, errs.WrapIdentifiableAbort(err, senderIdentityKey.String(), "abort from feldman")
 		}
 
-		partialPublicKeyShare := p.Protocol.Curve().ScalarBaseMult(receivedSecretKeyShare)
-		iToKs := make([]curves.Scalar, p.Protocol.Threshold())
-		C_lks := make([]curves.Point, p.Protocol.Threshold())
-		for k := 0; k < int(p.Protocol.Threshold()); k++ {
-			exp := p.Protocol.Curve().ScalarField().New(uint64(k))
-			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp)
+		partialPublicKeyShare := p.Protocol().Curve().ScalarBaseMult(receivedSecretKeyShare)
+		iToKs := make([]curves.Scalar, p.Protocol().Threshold())
+		C_lks := make([]curves.Point, p.Protocol().Threshold())
+		for k := 0; k < int(p.Protocol().Threshold()); k++ {
+			exp := p.Protocol().Curve().ScalarField().New(uint64(k))
+			iToK := p.Protocol().Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp)
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk
 		}
-		derivedPartialPublicKeyShare, err := p.Protocol.Curve().MultiScalarMult(iToKs, C_lks)
+		derivedPartialPublicKeyShare, err := p.Protocol().Curve().MultiScalarMult(iToKs, C_lks)
 		if err != nil {
 			return nil, nil, errs.NewFailed("couldn't derive partial public key share")
 		}
@@ -164,7 +153,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		commitmentVectors[senderSharingId] = senderCommitmentVector
 	}
 
-	publicKeySharesMap, err := dkg.ConstructPublicKeySharesMap(p.Protocol, commitmentVectors, p.SharingConfig)
+	publicKeySharesMap, err := dkg.ConstructPublicKeySharesMap(p.Protocol(), commitmentVectors, p.SharingConfig)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't derive public key shares")
 	}
@@ -172,7 +161,7 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 	if !exists {
 		return nil, nil, errs.NewMissing("couldn't find my own computed partial public key")
 	}
-	myPublicKeyShare := p.Protocol.Curve().ScalarBaseMult(secretKeyShare)
+	myPublicKeyShare := p.Protocol().Curve().ScalarBaseMult(secretKeyShare)
 	if !myPublicKeyShare.Equal(myPresumedPublicKeyShare) {
 		return nil, nil, errs.NewFailed("did not calculate my public key share correctly")
 	}
@@ -182,11 +171,11 @@ func (p *Participant) Round2(round1outputBroadcast types.RoundMessages[*Round1Br
 		Shares:                  publicKeySharesMap,
 		FeldmanCommitmentVector: p.State.Commitments,
 	}
-	if err := publicKeyShares.Validate(p.Protocol); err != nil {
+	if err := publicKeyShares.Validate(p.Protocol()); err != nil {
 		return nil, nil, errs.WrapValidation(err, "couldn't verify public key shares")
 	}
 
-	p.round++
+	p.LastRound()
 	return &tsignatures.SigningKeyShare{
 		Share:     secretKeyShare,
 		PublicKey: publicKey,

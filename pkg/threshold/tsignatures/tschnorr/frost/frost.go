@@ -35,3 +35,10 @@ type PartialSignature struct {
 
 	_ ds.Incomparable
 }
+
+func (ps *PartialSignature) Validate(none ...int) error {
+	if ps.Zi == nil {
+		return errs.NewIsNil("Zi is nil")
+	}
+	return nil
+}

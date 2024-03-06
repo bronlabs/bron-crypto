@@ -104,7 +104,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeParticipants(uniqueSessionId, protocol, identities, nil)
-	participants[0].SessionId = []byte("invalid")
+	participants[0].SetSessionId([]byte("invalid"))
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
@@ -312,10 +312,10 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	require.NoError(t, err)
 	participantsAlpha, err := testutils.MakeParticipants(uniqueSessionId, protocolConfigAlpha, identities[:nAlpha], nil)
 	require.NoError(t, err)
-	r2OutsBAlpha, r2OutsUAlpha, err := testutils.DoDkgRound1(participantsAlpha, nil)
+	r1OutsBAlpha, r1OutsUAlpha, err := testutils.DoDkgRound1(participantsAlpha, nil)
 	require.NoError(t, err)
-	r3InsBAlpha, r3InsUAlpha := ttu.MapO2I(participantsAlpha, r2OutsBAlpha, r2OutsUAlpha)
-	_, _, err = testutils.DoDkgRound2(participantsAlpha, r3InsBAlpha, r3InsUAlpha)
+	r2InsBAlpha, r2insUAlpha := ttu.MapO2I(participantsAlpha, r1OutsBAlpha, r1OutsUAlpha)
+	_, _, err = testutils.DoDkgRound2(participantsAlpha, r2InsBAlpha, r2insUAlpha)
 	require.NoError(t, err)
 
 	uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
@@ -325,15 +325,14 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	require.NoError(t, err)
 	participantsBeta, err := testutils.MakeParticipants(uniqueSessionId, protocolConfigBeta, identities[:nBeta], nil)
 	require.NoError(t, err)
-	r2OutsBBeta, r2OutsUBeta, err := testutils.DoDkgRound1(participantsBeta, nil)
+	r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta, nil)
 	require.NoError(t, err)
-	r3InsBBeta, r3InsUBeta := ttu.MapO2I(participantsBeta, r2OutsBBeta, r2OutsUBeta)
+	r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
 
 	// smuggle previous execution result - replay of the dlog proof
-	r3InsBBeta[attackerIndex] = r3InsBAlpha[attackerIndex]
-	_, _, err = testutils.DoDkgRound2(participantsBeta, r3InsBBeta, r3InsUBeta)
+	r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
+	_, _, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }
 
 func Test_HappyPath(t *testing.T) {

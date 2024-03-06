@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	agreeonrandomTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
@@ -53,8 +54,8 @@ func MakeDkgParticipants(curve curves.Curve, protocol types.ThresholdProtocol, i
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*dkg.Participant) (round1UnicastOutputs []types.RoundMessages[*dkg.Round1P2P], err error) {
-	round1UnicastOutputs = make([]types.RoundMessages[*dkg.Round1P2P], len(participants))
+func DoDkgRound1(participants []*dkg.Participant) (round1UnicastOutputs []network.RoundMessages[*dkg.Round1P2P], err error) {
+	round1UnicastOutputs = make([]network.RoundMessages[*dkg.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -65,8 +66,8 @@ func DoDkgRound1(participants []*dkg.Participant) (round1UnicastOutputs []types.
 	return round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*dkg.Participant, round2UnicastInputs []types.RoundMessages[*dkg.Round1P2P]) (round2UnicastOutputs []types.RoundMessages[*dkg.Round2P2P], err error) {
-	round2UnicastOutputs = make([]types.RoundMessages[*dkg.Round2P2P], len(participants))
+func DoDkgRound2(participants []*dkg.Participant, round2UnicastInputs []network.RoundMessages[*dkg.Round1P2P]) (round2UnicastOutputs []network.RoundMessages[*dkg.Round2P2P], err error) {
+	round2UnicastOutputs = make([]network.RoundMessages[*dkg.Round2P2P], len(participants))
 	for i := range participants {
 		round2UnicastOutputs[i], err = participants[i].Round2(round2UnicastInputs[i])
 		if err != nil {
@@ -76,7 +77,7 @@ func DoDkgRound2(participants []*dkg.Participant, round2UnicastInputs []types.Ro
 	return round2UnicastOutputs, nil
 }
 
-func DoDkgRound3(participants []*dkg.Participant, round3UnicastInputs []types.RoundMessages[*dkg.Round2P2P]) (shards []*dkls24.Shard, err error) {
+func DoDkgRound3(participants []*dkg.Participant, round3UnicastInputs []network.RoundMessages[*dkg.Round2P2P]) (shards []*dkls24.Shard, err error) {
 	shards = make([]*dkls24.Shard, len(participants))
 	for i := range participants {
 		shards[i], err = participants[i].Round3(round3UnicastInputs[i])

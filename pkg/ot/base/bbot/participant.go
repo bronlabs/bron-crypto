@@ -31,7 +31,7 @@ type Receiver struct {
 
 // NewSender constructs a Random OT sender.
 func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -43,12 +43,18 @@ func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, transcript trans
 
 // NewReceiver constructs a Random OT receiver.
 func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
+
+	choices := make(ot.ChoiceBits, Xi/8)
+	if _, err := io.ReadFull(csprng, choices); err != nil {
+		return nil, errs.WrapRandomSample(err, "generating random choice bits")
+	}
+
 	return &Receiver{
-		Output:      &ot.ReceiverRotOutput{},
+		Output:      &ot.ReceiverRotOutput{Choices: choices},
 		Participant: *participant,
 	}, nil
 }

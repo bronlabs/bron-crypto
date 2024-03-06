@@ -10,9 +10,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 )
 
-var _ signing.Participant = (*Cosigner)(nil)
-
 type Cosigner struct {
+	signing.Participant
+
 	myAuthKey     types.AuthKey
 	mySharingId   types.SharingID
 	myShard       *dkls24.Shard

@@ -19,10 +19,11 @@ import (
 
 const transcriptLabel = "COPPER_KRYPTON_PREGEN_DKLS24-"
 
-var _ signing.Participant = (*PreGenParticipant)(nil)
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold piece of the protocol is important.
 
 type PreGenParticipant struct {
+	signing.Participant
+
 	prng io.Reader
 
 	myAuthKey   types.AuthKey
