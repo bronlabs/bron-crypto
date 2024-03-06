@@ -42,5 +42,5 @@ func KeyGenWithPrimeGenerator(bits int, prng io.Reader, primeGen func(bits int, 
 }
 
 func KeyGen(bits int, prng io.Reader) (*PublicKey, *SecretKey, error) {
-	return KeyGenWithPrimeGenerator(bits, prng, primes.GeneratePrimePair2)
+	return KeyGenWithPrimeGenerator(bits, prng, primes.GeneratePrimePair)
 }
