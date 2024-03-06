@@ -60,11 +60,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
-	acEnc, err := verifier.pk.Mul(verifier.state.a, verifier.c)
+	acEnc, err := verifier.pk.MulPlaintext(verifier.c, verifier.state.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot perform homomorphic multiplication")
 	}
-	bEnc, _, err := verifier.pk.Encrypt(verifier.state.b)
+	bEnc, _, err := verifier.pk.Encrypt(verifier.state.b, verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}

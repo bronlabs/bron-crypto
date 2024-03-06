@@ -132,7 +132,7 @@ func validateVerifierInputs(publicKey *paillier.PublicKey, bigQ curves.Point, xE
 	if publicKey == nil {
 		return errs.NewIsNil("public key is nil")
 	}
-	if publicKey.N.BitLen() < lp.PaillierBitSize {
+	if publicKey.N.TrueLen() < lp.PaillierBitSize {
 		return errs.NewArgument("invalid paillier public key: modulus is too small")
 	}
 	if bigQ == nil {
@@ -199,7 +199,7 @@ func validateProverInputs(secretKey *paillier.SecretKey, x curves.Scalar, r *saf
 	if secretKey == nil {
 		return errs.NewIsNil("secret key is nil")
 	}
-	if secretKey.N.BitLen() < lp.PaillierBitSize {
+	if secretKey.N.TrueLen() < lp.PaillierBitSize {
 		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if x == nil {

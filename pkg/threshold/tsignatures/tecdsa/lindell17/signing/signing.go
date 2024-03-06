@@ -41,17 +41,17 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 		return nil, errs.WrapFailed(err, "cannot generate random int")
 	}
 	rhoMulQ := new(saferith.Nat).ModMul(rho, q, saferith.ModulusFromNat(qSquared))
-	c1, _, err := pk.Encrypt(new(saferith.Nat).ModAdd(rhoMulQ, c1Plain, saferith.ModulusFromNat(qSquared)))
+	c1, _, err := pk.Encrypt(new(saferith.Nat).ModAdd(rhoMulQ, c1Plain, saferith.ModulusFromNat(qSquared)), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c1")
 	}
 
 	// c2 = Enc(k2^(-1) * r * (cKey * λ1 + share * λ2))
-	c2Left, err := pk.Mul(k2Inv.Mul(r).Mul(lambda1).Nat(), cKey)
+	c2Left, err := pk.MulPlaintext(cKey, k2Inv.Mul(r).Mul(lambda1).Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic multiplication failed")
 	}
-	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(additiveShare).Nat())
+	c2Right, _, err := pk.Encrypt(k2Inv.Mul(r).Mul(additiveShare).Nat(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c2")
 	}

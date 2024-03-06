@@ -124,7 +124,7 @@ func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdenti
 	if err := s.PublicKeyShares.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "invalid public key shares")
 	}
-	if err := s.PaillierSecretKey.Validate(recomputeCached); err != nil {
+	if err := s.PaillierSecretKey.Validate(); err != nil {
 		return errs.WrapValidation(err, "paillier secret key")
 	}
 	if s.PaillierPublicKeys == nil {
@@ -151,7 +151,7 @@ func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdenti
 		if !exists {
 			return errs.NewMissing("paillier public key for %s", id.String())
 		}
-		if err := pk.Validate(recomputeCached); err != nil {
+		if err := pk.Validate(); err != nil {
 			return errs.WrapValidation(err, "invalid public key %s", id.String())
 		}
 		if err := esk.Validate(pk); err != nil {

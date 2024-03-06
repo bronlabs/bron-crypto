@@ -12,4 +12,3 @@ This module provides APIs for:
 - multiplying a plain value, `a`, and an encrypted value `Enc(b)`, and obtaining `Enc(a * b)`.
 
 The encrypted values are represented as `saferith.Nat` and are serializable.
-This module also provides JSON serialization for the PublicKey and the SecretKey.

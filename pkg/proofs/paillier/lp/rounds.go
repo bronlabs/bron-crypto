@@ -49,7 +49,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	rootTranscript := verifier.transcript.Clone()
 	for i := 0; i < verifier.k; i++ {
 		// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
-		verifier.state.x[i], verifier.state.y[i], err = verifier.paillierPublicKey.Encrypt(zero)
+		verifier.state.x[i], verifier.state.y[i], err = verifier.paillierPublicKey.Encrypt(zero, verifier.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "encryption failed")
 		}
@@ -137,8 +137,8 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	for i := 0; i < prover.k; i++ {
 		// P calculates a y', the Nth root of x
 		// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
-		m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N.Nat(), saferith.ModulusFromNat(prover.paillierSecretKey.Lambda))
-		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i].C, m, prover.paillierSecretKey.N)
+		m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N, saferith.ModulusFromNat(prover.paillierSecretKey.Phi))
+		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i].C, m, prover.paillierSecretKey.PublicKey.GetPrecomputed().NModulus)
 	}
 
 	// P returns a y'

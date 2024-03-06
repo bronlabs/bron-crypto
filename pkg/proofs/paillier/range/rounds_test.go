@@ -24,7 +24,7 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	primesBitLength := 128
 	nIter := 100
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 
@@ -36,7 +36,7 @@ func Test_HappyPath(t *testing.T) {
 		t.Run(fmt.Sprintf("in range %s", x.String()), func(t *testing.T) {
 			t.Parallel()
 
-			xEncrypted, r, err := pk.Encrypt(x)
+			xEncrypted, r, err := pk.Encrypt(x, prng)
 			require.NoError(t, err)
 
 			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
@@ -51,7 +51,7 @@ func Test_OutOfRange(t *testing.T) {
 	prng := crand.Reader
 	primesBitLength := 64
 	nIter := 100
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 
@@ -63,7 +63,7 @@ func Test_OutOfRange(t *testing.T) {
 		t.Run(fmt.Sprintf("below range %s", x.String()), func(t *testing.T) {
 			t.Parallel()
 
-			xEncrypted, r, err := pk.Encrypt(x)
+			xEncrypted, r, err := pk.Encrypt(x, prng)
 			require.NoError(t, err)
 			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
 			require.Error(t, err)
@@ -78,7 +78,7 @@ func Test_OutOfRange(t *testing.T) {
 		t.Run(fmt.Sprintf("above range %s", x.String()), func(t *testing.T) {
 			t.Parallel()
 
-			xEncrypted, r, err := pk.Encrypt(x)
+			xEncrypted, r, err := pk.Encrypt(x, prng)
 			require.NoError(t, err)
 			err = doProof(x, xEncrypted, r, q, pk, sk, sid, prng, primesBitLength)
 			require.Error(t, err)

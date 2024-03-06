@@ -81,7 +81,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 	for pair := range sharingConfig.Iter() {
 		i := pair.Key
 		identityKey := pair.Value
-		paillierPublicKey, paillierSecretKey, err := paillier.NewKeys(paillierPrimeBitLength)
+		paillierPublicKey, paillierSecretKey, err := paillier.KeyGen(paillierPrimeBitLength, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
 		}
@@ -100,7 +100,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 			if !exists {
 				return nil, errs.NewMissing("shard for sharing id %d is missing", j)
 			}
-			ct, _, err := paillierPublicKey.Encrypt(thisShard.SigningKeyShare.Share.Nat())
+			ct, _, err := paillierPublicKey.Encrypt(thisShard.SigningKeyShare.Share.Nat(), prng)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "couldn't encrypt share of %d for %d", i, j)
 			}
@@ -178,7 +178,7 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 		myPaillierPrivateKey := myShard.PaillierSecretKey
 		for pair := range shards.Iter() {
 			theirShard := pair.Value
-			if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
+			if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
 				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
 				if !exists {
 					return errs.NewMissing("their encrypted share did not exist")

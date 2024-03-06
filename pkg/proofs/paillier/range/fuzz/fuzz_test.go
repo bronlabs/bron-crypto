@@ -21,7 +21,7 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, sid []byte, randomSeed int64, qNum uint64) {
 		prng := rand.New(rand.NewSource(randomSeed))
 
-		pk, sk, err := paillier.NewKeys(base.ComputationalSecurity)
+		pk, sk, err := paillier.KeyGen(base.ComputationalSecurity, crand.Reader)
 		require.NoError(t, err)
 		q := new(saferith.Nat).SetUint64(qNum)
 		l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), base.ComputationalSecurity)
@@ -29,7 +29,7 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 		x := new(saferith.Nat).Add(l, new(saferith.Nat).SetBig(xInt, 256), 256)
 
-		xEncrypted, r, err := pk.Encrypt(x)
+		xEncrypted, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
 		appLabel := "Range"

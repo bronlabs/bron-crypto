@@ -79,7 +79,7 @@ func NewProver(t int, q *saferith.Nat, sk *paillier.SecretKey, x, r *saferith.Na
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	capLen := sk.N.BitLen()
+	capLen := sk.N.AnnouncedLen()
 
 	// 2.i. computes l = ceil(q/3)
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), capLen)
@@ -137,13 +137,13 @@ func NewVerifier(t int, q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *pai
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	capLen := pk.N.BitLen()
+	capLen := pk.N.AnnouncedLen()
 
 	// 1.i. computes l = ceil(q/3)
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), capLen)
 
 	// 1.ii. computes c = c (-) l
-	cMinusQThirdEncrypted, err := pk.SubPlain(xEncrypted, l)
+	cMinusQThirdEncrypted, err := pk.SubPlaintext(xEncrypted, l)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt l")
 	}

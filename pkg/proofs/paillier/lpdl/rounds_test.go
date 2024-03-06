@@ -23,7 +23,7 @@ func Test_HappyPath(t *testing.T) {
 		t.Skip("Skipping test in short mode")
 	}
 
-	pk, sk, err := paillier.NewKeys(1024)
+	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.NewCurve()
@@ -35,7 +35,7 @@ func Test_HappyPath(t *testing.T) {
 	x := curve.Scalar().SetNat(xNat)
 
 	bigQ := curve.ScalarBaseMult(x)
-	xEncrypted, r, err := pk.Encrypt(xNat)
+	xEncrypted, r, err := pk.Encrypt(xNat, prng)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -50,7 +50,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 		t.Skip("Skipping test in short mode")
 	}
 
-	pk, sk, err := paillier.NewKeys(1024)
+	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.NewCurve()
@@ -65,7 +65,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	x2 := curve.Scalar().SetNat(x2Nat)
 
 	bigQ2 := curve.ScalarBaseMult(x2)
-	x1Encrypted, r, err := pk.Encrypt(x1Nat)
+	x1Encrypted, r, err := pk.Encrypt(x1Nat, prng)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -80,7 +80,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 		t.Skip("Skipping test in short mode")
 	}
 
-	pk, sk, err := paillier.NewKeys(1024)
+	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.NewCurve()
@@ -95,7 +95,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	x2Int, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
 	x2IntNat := x2Int.Nat()
-	x2Encrypted, r, err := pk.Encrypt(x2IntNat)
+	x2Encrypted, r, err := pk.Encrypt(x2IntNat, prng)
 	require.NoError(t, err)
 
 	sid := []byte("sessionId")
@@ -109,7 +109,7 @@ func Test_FailOnOutOfRange(t *testing.T) {
 		t.Skip("Skipping test in short mode")
 	}
 
-	pk, sk, err := paillier.NewKeys(1024)
+	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
 	prng := crand.Reader
 	curve := p256.NewCurve()
@@ -119,14 +119,14 @@ func Test_FailOnOutOfRange(t *testing.T) {
 	require.NoError(t, err)
 	xLow := curve.Scalar().SetNat(xLowNat)
 	bigQLow := curve.ScalarBaseMult(xLow)
-	xLowEncrypted, _, err := pk.Encrypt(xLowNat)
+	xLowEncrypted, _, err := pk.Encrypt(xLowNat, crand.Reader)
 	require.NoError(t, err)
 
 	xHighNat, err := randomIntOutRangeHigh(q.Nat(), prng)
 	require.NoError(t, err)
 	xHigh := curve.Scalar().SetNat(xHighNat)
 	bigQHigh := curve.ScalarBaseMult(xHigh)
-	xHighEncrypted, r, err := pk.Encrypt(xHighNat)
+	xHighEncrypted, r, err := pk.Encrypt(xHighNat, prng)
 	require.NoError(t, err)
 
 	t.Run("x below the range", func(t *testing.T) {
