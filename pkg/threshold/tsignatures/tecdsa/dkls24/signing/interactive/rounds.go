@@ -13,7 +13,7 @@ func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[*s
 		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound1(&ic.Participant, ic.Protocol, ic.Quorum, ic.state)
+	outputBroadcast, outputP2P, err := signing.DoRound1(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -28,7 +28,7 @@ func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[*signing.
 		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound2(&ic.Participant, ic.Protocol, ic.Quorum, ic.state, round1outputBroadcast, round1outputP2P)
+	outputBroadcast, outputP2P, err := signing.DoRound2(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round1outputBroadcast, round1outputP2P)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -43,13 +43,13 @@ func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[*signing.
 		return nil, errs.Forward(err)
 	}
 
-	if err := signing.DoRound3Prologue(&ic.Participant, ic.Protocol, ic.Quorum, ic.state, round2outputBroadcast, round2outputP2P); err != nil {
+	if err := signing.DoRound3Prologue(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round2outputBroadcast, round2outputP2P); err != nil {
 		return nil, errs.Forward(err)
 	}
 
 	partialSignature, err := signing.DoRound3Epilogue(
 		&ic.Participant,
-		ic.Protocol,
+		ic.Protocol(),
 		ic.Quorum,
 		message,
 		ic.state.R_i,

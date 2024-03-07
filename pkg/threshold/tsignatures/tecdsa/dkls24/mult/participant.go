@@ -82,7 +82,7 @@ func NewAlice(curve curves.Curve, seedOtResults *ot.ReceiverRotOutput, sessionId
 }
 
 func NewBob(curve curves.Curve, seedOtResults *ot.SenderRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
-	participant, gadget, err := NewParticipant(curve, seedOtResults, sessionId, csrand, seededPrng, transcript, 2)
+	participant, gadget, err := NewParticipant(curve, seedOtResults, sessionId, csrand, seededPrng, transcript, 1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}

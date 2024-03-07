@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
+func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
 	t.Helper()
 
 	parties := make([]*noninteractiveSigning.PreGenParticipant, len(identities))

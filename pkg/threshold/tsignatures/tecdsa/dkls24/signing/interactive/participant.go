@@ -22,42 +22,15 @@ const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS24-"
 type Cosigner struct {
 	signing.Participant
 
-	prng io.Reader
+	Quorum ds.Set[types.IdentityKey]
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	shard       *dkls24.Shard
-
-	SessionId     []byte
-	Protocol      types.ThresholdSignatureProtocol
-	sharingConfig types.SharingConfig
-	Quorum        ds.Set[types.IdentityKey]
-
-	Transcript transcripts.Transcript
-	state      *signing.SignerState
-	Round      int
+	state *signing.SignerState
 
 	_ ds.Incomparable
 }
 
-func (ic *Cosigner) Shard() *dkls24.Shard {
-	return ic.shard
-}
-
-func (ic *Cosigner) SharingConfig() types.SharingConfig {
-	return ic.sharingConfig
-}
-
-func (ic *Cosigner) IdentityKey() types.IdentityKey {
-	return ic.myAuthKey
-}
-
-func (ic *Cosigner) SharingId() types.SharingID {
-	return ic.mySharingId
-}
-
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	return ic.Protocol.Participants().Contains(ic.IdentityKey())
+	return ic.Protocol().Participants().Contains(ic.IdentityKey())
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
@@ -108,30 +81,21 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 			Bob:   bob,
 		})
 	}
-
+	BaseParticipant := types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript)
+	signingParticipant := signing.NewParticipant(BaseParticipant, authKey, mySharingId, shard, sharingConfig)
 	cosigner := &Cosigner{
-		myAuthKey:  authKey,
-		Protocol:   protocol,
-		shard:      shard,
-		SessionId:  sessionId,
-		Quorum:     quorum,
-		prng:       prng,
-		Transcript: transcript,
+		Participant: *signingParticipant,
+		Quorum:      quorum,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
 				Multiplication:    multipliers,
 			},
 		},
-		mySharingId:   mySharingId,
-		sharingConfig: sharingConfig,
-		Round:         1,
 	}
-
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls24 cosigner")
 	}
-
 	return cosigner, nil
 }
 

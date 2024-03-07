@@ -24,57 +24,14 @@ var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold p
 type PreGenParticipant struct {
 	signing.Participant
 
-	prng io.Reader
+	Quorum ds.Set[types.IdentityKey]
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	shard       *dkls24.Shard
-
-	sessionId     []byte
-	protocol      types.ThresholdProtocol
-	sharingConfig types.SharingConfig
-	PreSigners    ds.Set[types.IdentityKey]
-
-	transcript transcripts.Transcript
-	state      *signing.SignerState
-	round      int
+	state *signing.SignerState
 
 	_ ds.Incomparable
 }
 
-func (p *PreGenParticipant) Shard() *dkls24.Shard {
-	return p.shard
-}
-
-func (p *PreGenParticipant) Protocol() types.ThresholdProtocol {
-	return p.protocol
-}
-
-func (p *PreGenParticipant) SharingConfig() types.SharingConfig {
-	return p.sharingConfig
-}
-
-func (p *PreGenParticipant) Prng() io.Reader {
-	return p.prng
-}
-
-func (p *PreGenParticipant) SessionId() []byte {
-	return p.sessionId
-}
-
-func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
-	return p.myAuthKey
-}
-
-func (p *PreGenParticipant) SharingId() types.SharingID {
-	return p.mySharingId
-}
-
-func (p *PreGenParticipant) IsSignatureAggregator() bool {
-	return p.Protocol().Participants().Contains(p.IdentityKey())
-}
-
-func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.Set[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.Set[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
 	if err := validateInputs(sessionId, myAuthKey, protocol, myShard, preSigners); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
@@ -121,23 +78,17 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		})
 	}
 
+	baseParticipant := types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript)
+	signingParticipant := signing.NewParticipant(baseParticipant, myAuthKey, mySharingId, myShard, sharingConfig)
 	participant = &PreGenParticipant{
-		myAuthKey:  myAuthKey,
-		protocol:   protocol,
-		shard:      myShard,
-		sessionId:  sessionId,
-		prng:       prng,
-		transcript: transcript,
+		Participant: *signingParticipant,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
 				Multiplication:    multipliers,
 			},
 		},
-		mySharingId:   mySharingId,
-		sharingConfig: sharingConfig,
-		PreSigners:    preSigners,
-		round:         1,
+		Quorum: preSigners,
 	}
 
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {

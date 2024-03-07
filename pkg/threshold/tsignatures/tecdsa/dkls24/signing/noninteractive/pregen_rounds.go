@@ -13,7 +13,7 @@ func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMes
 		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol(), p.PreSigners, p.state)
+	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol(), p.Quorum, p.state)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -28,7 +28,7 @@ func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*
 		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol(), p.PreSigners, p.state, round1outputBroadcast, round1outputP2P)
+	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol(), p.Quorum, p.state, round1outputBroadcast, round1outputP2P)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -43,15 +43,15 @@ func (p *PreGenParticipant) Round3(round2outputBroadcast network.RoundMessages[*
 		return nil, errs.Forward(err)
 	}
 
-	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol(), p.PreSigners, p.state, round2outputBroadcast, round2outputP2P); err != nil {
+	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol(), p.Quorum, p.state, round2outputBroadcast, round2outputP2P); err != nil {
 		return nil, errs.Forward(err)
 	}
 
 	Rs := p.state.ReceivedBigR_i.Clone()
-	Rs.Put(p.IdentityKey(), p.protocol.Curve().ScalarBaseMult(p.state.R_i))
+	Rs.Put(p.IdentityKey(), p.Curve().ScalarBaseMult(p.state.R_i))
 
 	ppm := &dkls24.PreProcessingMaterial{
-		PreSigners: p.PreSigners,
+		PreSigners: p.Quorum,
 		PrivateMaterial: &dkls24.PrivatePreProcessingMaterial{
 			Cu:   p.state.Cu_i,
 			Cv:   p.state.Cv_i,

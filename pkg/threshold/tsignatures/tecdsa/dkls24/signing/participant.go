@@ -10,13 +10,52 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
 
+var _ types.ThresholdSignatureParticipant = (*Participant)(nil)
+
 type Participant struct {
-	types.BaseParticipant[types.ThresholdSignatureProtocol]
+	*types.BaseParticipant[types.ThresholdSignatureProtocol]
 
-	types.ThresholdSignatureParticipant
+	myAuthKey   types.AuthKey
+	mySharingId types.SharingID
 
-	Shard         *dkls24.Shard
-	SharingConfig types.SharingConfig
+	shard         *dkls24.Shard
+	sharingConfig types.SharingConfig
+}
+
+func NewParticipant(
+	baseParticipant *types.BaseParticipant[types.ThresholdSignatureProtocol],
+	myAuthKey types.AuthKey,
+	mySharingId types.SharingID,
+	shard *dkls24.Shard,
+	sharingConfig types.SharingConfig,
+) *Participant {
+	return &Participant{
+		BaseParticipant: baseParticipant,
+		myAuthKey:       myAuthKey,
+		mySharingId:     mySharingId,
+		shard:           shard,
+		sharingConfig:   sharingConfig,
+	}
+}
+
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
+}
+
+func (p *Participant) SharingId() types.SharingID {
+	return p.mySharingId
+}
+
+func (p *Participant) Shard() *dkls24.Shard {
+	return p.shard
+}
+
+func (p *Participant) SharingConfig() types.SharingConfig {
+	return p.sharingConfig
+}
+
+func (p *Participant) IsSignatureAggregator() bool {
+	return p.Protocol().Participants().Contains(p.IdentityKey())
 }
 
 // Multiplication contains corresponding participant objects for pairwise multiplication subProtocols.

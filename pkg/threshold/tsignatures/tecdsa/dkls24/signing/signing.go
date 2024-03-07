@@ -38,7 +38,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig.Reverse().Get(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
@@ -91,7 +91,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	state.Zeta_i = zeta_i
 
 	// step 2.2: a_i <- Shamir.AdditiveShare(i, S, x_i)
-	myAdditiveShare, err := p.Shard.SigningKeyShare.ToAdditive(p.IdentityKey(), quorum, protocol)
+	myAdditiveShare, err := p.Shard().SigningKeyShare.ToAdditive(p.IdentityKey(), quorum, protocol)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not convert my shamir share to additive share")
 	}
@@ -112,7 +112,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig.Reverse().Get(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
@@ -176,7 +176,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig.Reverse().Get(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
@@ -250,7 +250,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 	}
 
 	// step 3.6: Check Σ Pk_j = Pk
-	if !refreshedPublicKey.Equal(p.Shard.SigningKeyShare.PublicKey) {
+	if !refreshedPublicKey.Equal(p.Shard().SigningKeyShare.PublicKey) {
 		return errs.NewTotalAbort(nil, "recomputed public key is wrong")
 	}
 
@@ -266,7 +266,7 @@ func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
-		sharingId, exists := p.SharingConfig.Reverse().Get(participant)
+		sharingId, exists := p.SharingConfig().Reverse().Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %s", participant.String())
 		}
