@@ -17,11 +17,11 @@ type BaseParticipant[ProtocolT GenericProtocol] struct {
 	transcript transcripts.Transcript
 }
 
-func NewBaseParticipant[ProtocolT GenericProtocol](prng io.Reader, protocol ProtocolT, round int, sessionId []byte, transcript transcripts.Transcript) *BaseParticipant[ProtocolT] {
+func NewBaseParticipant[ProtocolT GenericProtocol](prng io.Reader, protocol ProtocolT, initialRound int, sessionId []byte, transcript transcripts.Transcript) *BaseParticipant[ProtocolT] {
 	return &BaseParticipant[ProtocolT]{
 		prng:       prng,
 		protocol:   protocol,
-		round:      round,
+		round:      initialRound,
 		sessionId:  sessionId,
 		transcript: transcript,
 	}
@@ -41,6 +41,9 @@ func (b *BaseParticipant[ProtocolT]) Protocol() ProtocolT {
 
 func (b *BaseParticipant[_]) SessionId() []byte {
 	return b.sessionId
+}
+func (b *BaseParticipant[_]) SetSessionId(sessionId []byte) {
+	b.sessionId = sessionId
 }
 
 func (b *BaseParticipant[_]) Transcript() transcripts.Transcript {
@@ -62,10 +65,6 @@ func (b *BaseParticipant[_]) SetRound(roundNo int) {
 	b.round = roundNo
 }
 
-func (b *BaseParticipant[_]) SetSessionId(sessionId []byte) {
-	b.sessionId = sessionId
-}
-
 func (b *BaseParticipant[_]) NextRound(step ...int) {
 	if len(step) > 0 {
 		b.round = step[0]
@@ -82,7 +81,7 @@ func (b *BaseParticipant[ProtocolT]) Clone() *BaseParticipant[ProtocolT] {
 	return &BaseParticipant[ProtocolT]{
 		prng:       b.prng,
 		protocol:   b.protocol,
-		round:      1,
+		round:      b.round,
 		sessionId:  slices.Clone(b.sessionId),
 		transcript: b.transcript.Clone(),
 	}

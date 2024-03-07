@@ -37,7 +37,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	}
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.State.NiCompiler.NewProver(p.SessionId(), p.Transcript().Clone())
+	prover, err := p.State.NiCompiler.NewProver(p.SessionId(), transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
@@ -121,7 +121,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
 		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId(), p.Transcript().Clone())
+		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId(), transcript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -40,7 +41,9 @@ func ValidateMessages[MessageT MessageLike](senders ds.Set[types.IdentityKey], r
 			return errs.NewMissing("no response from sender %s", sender.String())
 		}
 		if err := ValidateMessage(message, parameters...); err != nil {
-			return errs.WrapValidation(err, "invalid message from sender %s", sender.String())
+			return errs.WrapValidation(err, "invalid message from sender %s to receiver %s",
+				bitstring.TruncateWithEllipsis(sender.String(), 16),
+				bitstring.TruncateWithEllipsis(receiver.String(), 16))
 		}
 	}
 	return nil
