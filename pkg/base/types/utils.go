@@ -27,8 +27,6 @@ func ValidateProtocolParticipant(p any) error {
 		return validateThresholdParticipant(t.(ThresholdParticipant)) //nolint:forcetypeassert // trivial
 	case MPCParticipant:
 		return validateMPCParticipant(t)
-	case GenericParticipant:
-		return nil
 	default:
 		return errs.NewType("protocol is not recognised %v", t)
 	}
@@ -61,11 +59,7 @@ func ValidateProtocol(participant, protocol any) error {
 		}
 		return ValidateSignatureProtocolConfig(f)
 	case GenericProtocol:
-		p, ok := participant.(GenericParticipant)
-		if !ok {
-			return errs.NewType("participant type != protocol type")
-		}
-		return ValidateGenericProtocol(p, f)
+		return ValidateGenericProtocol(f)
 	default:
 		return errs.NewType("protocol is not recognised %v", f)
 	}

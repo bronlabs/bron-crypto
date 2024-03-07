@@ -18,11 +18,11 @@ import (
 
 const transcriptLabel = "COPPER_DKLS_MULTIPLY-"
 
-var _ types.GenericParticipant = (*Alice)(nil)
-var _ types.GenericParticipant = (*Bob)(nil)
+var _ types.MPCParticipant = (*Alice)(nil)
+var _ types.MPCParticipant = (*Bob)(nil)
 
 type Alice struct {
-	*types.BaseParticipant[types.GenericProtocol]
+	*types.BaseParticipant[types.MPCProtocol]
 
 	sender *softspoken.Sender
 	gadget *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
@@ -31,7 +31,7 @@ type Alice struct {
 }
 
 type Bob struct {
-	*types.BaseParticipant[types.GenericProtocol]
+	*types.BaseParticipant[types.MPCProtocol]
 
 	receiver *softspoken.Receiver
 	gadget   *[Xi]curves.Scalar // g ∈ [ξ]ℤq is the gadget vector

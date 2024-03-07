@@ -7,8 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type GenericParticipant any
-
 type GenericProtocol interface {
 	Curve() curves.Curve // At this point all supported protocols are algebraic.
 	json.Marshaler
@@ -34,7 +32,7 @@ func ValidateGenericProtocolConfig(f GenericProtocol) error {
 	return nil
 }
 
-func ValidateGenericProtocol(p GenericParticipant, f GenericProtocol) error {
+func ValidateGenericProtocol(f GenericProtocol) error {
 	if err := ValidateGenericProtocolConfig(f); err != nil {
 		return errs.WrapValidation(err, "input for protocol is not a generic protocol")
 	}

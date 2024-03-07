@@ -73,21 +73,6 @@ func (*Transcript) Type() transcripts.Type {
 	return transcriptType
 }
 
-// InitialiseProtocol appends the sessionId to the transcript using dst as domain-separation
-// tag and extracts a fresh transcript-bound sessionId `sid`. If the transcript is nil, a new
-// one is created with the supplied `dst` label.
-func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst string) (transcripts.Transcript, []byte, error) {
-	if transcript == nil {
-		transcript = NewTranscript(dst, nil)
-	}
-	transcript.AppendMessages(dst, sessionId)
-	sessionId, err := transcript.ExtractBytes(dst, stateSize)
-	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "couldn't extract sessionId from transcript")
-	}
-	return transcript, sessionId, nil
-}
-
 // AppendMessages adds the message to the transcript with the supplied label.
 func (t *Transcript) AppendMessages(label string, messages ...[]byte) {
 	for _, message := range messages {

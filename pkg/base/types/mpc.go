@@ -7,12 +7,16 @@ import (
 )
 
 type MPCParticipant interface {
-	GenericParticipant
 	WithIdentityKey
 }
 
 func validateMPCParticipant(p MPCParticipant) error {
-	if err := ValidateIdentityKey(p.IdentityKey()); err != nil {
+	authKey, ok := p.IdentityKey().(AuthKey)
+	if !ok {
+		if err := ValidateIdentityKey(p.IdentityKey()); err != nil {
+			return errs.WrapValidation(err, "identity key")
+		}
+	} else if err := ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
 	return nil
@@ -58,7 +62,7 @@ func validateExtrasMPCProtocolConfig(f MPCProtocol) error {
 }
 
 func ValidateMPCProtocol(p MPCParticipant, f MPCProtocol) error {
-	if err := ValidateGenericProtocol(p, f); err != nil {
+	if err := ValidateGenericProtocol(f); err != nil {
 		return errs.WrapValidation(err, "generic protocol")
 	}
 	if err := validateMPCParticipant(p); err != nil {
