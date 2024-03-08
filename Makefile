@@ -65,8 +65,9 @@ lint-fix:
 
 .PHONY: test
 test:
-	ls
 	cd prng_test
+	ls
+	pwd
 	${GO} run main.go
 
 .PHONY: test-long
