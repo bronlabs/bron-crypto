@@ -241,6 +241,24 @@ func (publicKey *PublicKey) Add(lhsCipherText, rhsCipherText *CipherText) (*Ciph
 	return &CipherText{C: c}, nil
 }
 
+func (publicKey *PublicKey) Sub(lhsCipherText, rhsCipherText *CipherText) (*CipherText, error) {
+	if lhsCipherText == nil || rhsCipherText == nil || lhsCipherText.C == nil || rhsCipherText.C == nil {
+		return nil, errs.NewIsNil("one of the cipher texts in nil")
+	}
+
+	// Ensure lhsCipherText, rhsCipherText ∈ Z_N²
+	if err := lhsCipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "lhs")
+	}
+	if err := rhsCipherText.Validate(publicKey); err != nil {
+		return nil, errs.WrapArgument(err, "rhs")
+	}
+
+	rhsInv := new(saferith.Nat).ModInverse(rhsCipherText.C, publicKey.N2)
+	c := new(saferith.Nat).ModMul(lhsCipherText.C, rhsInv, publicKey.N2)
+	return &CipherText{C: c}, nil
+}
+
 // SubPlain subtract homomorphically plain integer from cipher text.
 func (publicKey *PublicKey) SubPlain(lhsCipherText *CipherText, rhsPlain *saferith.Nat) (*CipherText, error) {
 	if lhsCipherText == nil || lhsCipherText.C == nil || rhsPlain == nil {
@@ -369,6 +387,23 @@ func (decryptor *Decryptor) Decrypt(cipherText *CipherText) (*saferith.Nat, erro
 	// message ≡ lu = L(alpha)*u = L(cipherText^{λ(N)})*u	mod N
 	message := new(saferith.Nat).ModMul(ell, decryptor.secretKey.U, decryptor.secretKey.N)
 	return message, nil
+}
+
+func (decryptor *Decryptor) DecryptWithNonce(cipherText *CipherText) (plainText, nonce *saferith.Nat, err error) {
+	message, err := decryptor.Decrypt(cipherText)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot decrypt cipher text")
+	}
+
+	zero, err := decryptor.secretKey.PublicKey.SubPlain(cipherText, message)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute zero encryption")
+	}
+
+	m := new(saferith.Nat).ModInverse(decryptor.secretKey.PublicKey.N.Nat(), saferith.ModulusFromNat(decryptor.secretKey.Totient))
+	nonce = new(saferith.Nat).Exp(zero.C, m, decryptor.secretKey.PublicKey.N)
+
+	return message, nonce, nil
 }
 
 // Lcm calculates the least common multiple.

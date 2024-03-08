@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -1030,4 +1031,22 @@ func TestNewSecretKeyErrorConditions(t *testing.T) {
 			require.True(t, errs.IsIsNil(err))
 		})
 	}
+}
+
+func Test_CanExtractNonce(t *testing.T) {
+	pk, sk, err := paillier.NewKeys(512)
+	require.NoError(t, err)
+
+	plain := new(saferith.Nat).SetUint64(uint64(rand.Int63()))
+	cipher, nonce, err := pk.Encrypt(plain)
+	require.NoError(t, err)
+
+	decryptor, err := paillier.NewDecryptor(sk)
+	require.NoError(t, err)
+
+	plainCheck, nonceCheck, err := decryptor.DecryptWithNonce(cipher)
+	require.NoError(t, err)
+
+	require.Equal(t, plainCheck.Eq(plain), saferith.Choice(1))
+	require.Equal(t, nonceCheck.Eq(nonce), saferith.Choice(1))
 }
