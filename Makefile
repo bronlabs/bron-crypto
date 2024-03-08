@@ -65,10 +65,11 @@ lint-fix:
 
 .PHONY: test
 test:
-	cd prng_test && \
-		ls && \
-		pwd && \
-		CGO_ENABLED=1 ${GO} run main.go
+	${GO} test -short ${TEST_CLAUSE} ./...
+
+.PHONY: prng-test
+prng-test:
+	CGO_ENABLED=1 ${GO} run main.go
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests

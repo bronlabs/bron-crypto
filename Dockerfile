@@ -9,3 +9,5 @@ COPY go.mod go.sum .golangci.yml ./
 RUN go mod download
 
 COPY . .
+
+RUN make build lint test
