@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -149,6 +150,12 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), quorum.List()...) {
+		return errs.NewCurve("presigners have different curves")
+	}
+	if !curveutils.AllOfSameCurve(protocol.Curve(), shard.SigningKeyShare.PublicKey, shard.SigningKeyShare.PublicKey) {
+		return errs.NewCurve("shard and protocol have different curves")
 	}
 	return nil
 }

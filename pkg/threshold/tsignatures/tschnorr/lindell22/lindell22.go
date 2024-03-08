@@ -3,6 +3,7 @@ package lindell22
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -100,6 +101,9 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if !hashset.NewHashableHashSet(ppm.PreSignature.BigR1.Keys()...).Equal(hashset.NewHashableHashSet(ppm.PrivateMaterial.Seeds.Keys()...)) {
 		return errs.NewMembership("seed holders and presignature contributors are not the same set")
 	}
+	if ppm.PreSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(ppm.PreSigners.List()[0].PublicKey().Curve(), ppm.PreSigners.List()...) {
+		return errs.NewCurve("not all preSigners are on the same curve")
+	}
 	return nil
 }
 
@@ -136,6 +140,9 @@ func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSigna
 			return errs.NewIsZero("found seed that's all zero")
 		}
 	}
+	if preSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(preSigners.List()[0].PublicKey().Curve(), preSigners.List()...) {
+		return errs.NewCurve("not all preSigners are on the same curve")
+	}
 	return nil
 }
 
@@ -166,6 +173,9 @@ func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preS
 	bigR2Holders := hashset.NewHashableHashSet(ps.BigR2.Keys()...)
 	if !bigR2Holders.Equal(bigRHolders) {
 		return errs.NewMembership("BigR2 holders are not equal to BigR holders")
+	}
+	if preSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(preSigners.List()[0].PublicKey().Curve(), preSigners.List()...) {
+		return errs.NewCurve("not all preSigners are on the same curve")
 	}
 	return nil
 }

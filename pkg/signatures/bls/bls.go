@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -454,6 +455,13 @@ func validateInputsBatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publ
 		if err := subgroupCheck[K](pk.Y); err != nil {
 			return errs.WrapValidation(err, "public key %d", i)
 		}
+	}
+	allPublicKeys := make([]curves.Point, len(publicKeys))
+	for i, pk := range publicKeys {
+		allPublicKeys[i] = pk.Y
+	}
+	if len(allPublicKeys) > 1 && !curveutils.AllPointsOfSameCurve(publicKeys[0].Y.Curve(), allPublicKeys...) {
+		return errs.NewType("public keys are not of the same curve")
 	}
 	return nil
 }

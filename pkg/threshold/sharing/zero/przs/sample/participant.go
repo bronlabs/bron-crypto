@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
@@ -88,6 +89,15 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWise
 	}
 	if seededPrngFactory == nil {
 		return errs.NewIsNil("seeded prng factory")
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), protocol.Participants().List()...) {
+		return errs.NewCurve("authKey and participants have different curves")
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), presentParticipants.List()...) {
+		return errs.NewCurve("authKey and presentParticipants have different curves")
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), seeders.List()...) {
+		return errs.NewCurve("authKey and seeders have different curves")
 	}
 	return nil
 }

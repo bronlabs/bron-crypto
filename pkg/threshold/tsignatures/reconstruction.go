@@ -2,6 +2,7 @@ package tsignatures
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -89,6 +90,12 @@ func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProto
 		} else if !seenPublicKey.Equal(shard.PublicKey()) {
 			return errs.NewValue("not all public keys are the same")
 		}
+	}
+	if shardHolders.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(shardHolders.List()[0].PublicKey().Curve(), protocol.Participants().List()...) {
+		return errs.NewCurve("shardHolders and participants have different curves")
+	}
+	if shardHolders.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(shardHolders.List()[0].PublicKey().Curve(), shardHolders.List()...) {
+		return errs.NewCurve("shardHolders have different curves")
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -54,6 +55,9 @@ func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtoc
 	message = append(message, ac.E.ToAffineCompressed()...)
 	if err := ac.Attestor.Verify(ac.Attestation, message); err != nil {
 		return errs.WrapVerification(err, "could not verify attestation")
+	}
+	if !curveutils.AllOfSameCurve(protocol.Curve(), ac.D, ac.E) {
+		return errs.NewCurve("curve mismatch")
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package dkls24
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -223,6 +224,12 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 		if psi == nil {
 			return errs.NewIsNil("psi")
 		}
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(myIdentityKey.PublicKey().Curve(), protocol.Participants().List()...) {
+		return errs.NewCurve("myIdentityKey and participants have different curves")
+	}
+	if !curveutils.AllIdentityKeysWithSameCurve(myIdentityKey.PublicKey().Curve(), preSigners.List()...) {
+		return errs.NewCurve("myIdentityKey and preSigners have different curves")
 	}
 	return nil
 }

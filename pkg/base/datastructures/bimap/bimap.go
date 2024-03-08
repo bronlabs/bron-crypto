@@ -42,12 +42,6 @@ func (m *BiMap[K, V]) Get(l K) (V, bool) {
 	return m.internalMap.Get(l)
 }
 
-func (m *BiMap[K, V]) Contains(l K, r V) bool {
-	_, keyExists := m.Get(l)
-	_, valueExists := m.Reverse().Get(r)
-	return keyExists && valueExists
-}
-
 func (m *BiMap[K, V]) Put(l K, r V) {
 	_, _ = m.TryPut(l, r)
 }
@@ -77,7 +71,9 @@ func (m *BiMap[K, V]) Remove(l K) {
 
 func (m *BiMap[K, V]) TryRemove(l K) (removed bool, r V) {
 	removed, r = m.internalMap.TryRemove(l)
-	_, _ = m.reverseMap.TryRemove(r)
+	if removed {
+		_, _ = m.reverseMap.TryRemove(r)
+	}
 	return removed, r
 }
 

@@ -55,6 +55,12 @@ func validateExtrasMPCProtocolConfig(f MPCProtocol) error {
 	if f.Participants().Size() == 0 {
 		return errs.NewSize("need to have at least one participant")
 	}
+	curveName := f.Participants().List()[0].PublicKey().Curve().Name()
+	for _, p := range f.Participants().List() {
+		if p.PublicKey().Curve().Name() != curveName {
+			return errs.NewCurve("participants have different curves")
+		}
+	}
 	return nil
 }
 

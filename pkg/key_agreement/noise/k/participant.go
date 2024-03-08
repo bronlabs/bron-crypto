@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/noise"
 )
@@ -82,6 +83,9 @@ func validate(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Sign
 	}
 	if len(message) == 0 {
 		return errs.NewIsNil("message is empty")
+	}
+	if !curveutils.AllOfSameCurve(rs.Curve().Point().Curve(), rs, s.PublicKey, s.PrivateKey) {
+		return errs.NewCurve("participants have different curves")
 	}
 	return nil
 }

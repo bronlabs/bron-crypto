@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/noise"
 )
@@ -89,6 +90,9 @@ func validate(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Sign
 	}
 	if bytes.Equal(handshakeMessage1, handshakeMessage2) {
 		return errs.NewType("handshake message in each round must be different")
+	}
+	if !curveutils.AllOfSameCurve(rs.Curve().Point().Curve(), rs, s.PublicKey, s.PrivateKey) {
+		return errs.NewCurve("participants have different curves")
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
@@ -150,6 +151,12 @@ func validateProveInputs(sessionId []byte, batched bool, secret curves.Scalar, s
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng")
+	}
+	if !curveutils.AllOfSameCurve(secret.ScalarField().Curve(), secret, basePoint) {
+		return errs.NewCurve("secret and base point have different curves")
+	}
+	if !curveutils.AllScalarsOfSameCurve(secret.ScalarField().Curve(), secrets...) {
+		return errs.NewCurve("secrets have different curves")
 	}
 	return nil
 }

@@ -216,3 +216,99 @@ func Test_OrderedHashMap(t *testing.T) {
 	_, ok = hashMap.Get(33)
 	require.False(t, ok)
 }
+func Test_HashableHashMap_Remove(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+
+	// add some elements
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+
+	// remove an existing key
+	hashMap.Remove(&data{value: 2})
+	require.False(t, hashMap.ContainsKey(&data{value: 2}))
+	require.Equal(t, hashMap.Size(), 2)
+
+	// remove a non-existing key
+	hashMap.Remove(&data{value: 4})
+	require.Equal(t, hashMap.Size(), 2)
+}
+func Test_TryRemove_KeyNotExists(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+
+	// check empty map
+	require.Zero(t, hashMap.Size())
+	require.True(t, hashMap.IsEmpty())
+
+	// try remove non-existing key
+	removed, removedValue := hashMap.TryRemove(&data{value: 1})
+	require.False(t, removed)
+	require.Zero(t, removedValue)
+
+	// check map remains empty
+	require.Zero(t, hashMap.Size())
+	require.True(t, hashMap.IsEmpty())
+}
+func Test_HashableHashMap_Keys(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+
+	keys := hashMap.Keys()
+	require.Len(t, keys, 3)
+	require.Contains(t, keys, &data{value: 1})
+	require.Contains(t, keys, &data{value: 2})
+	require.Contains(t, keys, &data{value: 3})
+}
+
+func Test_HashableHashMap_Values(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+
+	values := hashMap.Values()
+	require.Len(t, values, 3)
+	require.Contains(t, values, 1)
+	require.Contains(t, values, 2)
+	require.Contains(t, values, 3)
+}
+
+func Test_HashableHashMap_Clones(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+
+	clone := hashMap.Clone()
+	require.Equal(t, hashMap.Size(), clone.Size())
+
+	// Check if the clone contains the same key-value pairs
+	for pair := range hashMap.Iter() {
+		value, ok := clone.Get(pair.Key)
+		require.True(t, ok)
+		require.Equal(t, pair.Value, value)
+	}
+
+	// Check if modifying the clone does not affect the original map
+	clone.Put(&data{value: 4}, 4)
+	require.Equal(t, hashMap.Size(), 3)
+	require.Equal(t, clone.Size(), 4)
+}
+
+func Test_HashableHashMap_Iter(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+
+	count := 0
+	for pair := range hashMap.Iter() {
+		require.Contains(t, hashMap.Keys(), pair.Key)
+		require.Contains(t, hashMap.Values(), pair.Value)
+		count++
+	}
+
+	require.Equal(t, count, hashMap.Size())
+}

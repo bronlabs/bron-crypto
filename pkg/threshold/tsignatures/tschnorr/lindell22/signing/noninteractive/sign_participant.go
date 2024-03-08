@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -123,6 +124,9 @@ func validateCosignerInputs(authKey types.AuthKey, shard *lindell22.Shard, proto
 	}
 	if !quorum.Contains(authKey) {
 		return errs.NewFailed("not a member of quorum")
+	}
+	if quorum.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(quorum.List()[0].PublicKey().Curve(), quorum.List()...) {
+		return errs.NewCurve("participants have different curves")
 	}
 	return nil
 }

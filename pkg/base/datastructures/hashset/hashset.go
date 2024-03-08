@@ -137,7 +137,7 @@ func (s HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 			var subset []E
 			for j := 0; j < n; j++ {
 				if i&(1<<j) != 0 {
-					subset = append(subset, elements[i])
+					subset = append(subset, elements[j])
 				}
 			}
 			ch <- NewHashableHashSet(subset...)

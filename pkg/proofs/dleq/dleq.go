@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -97,6 +98,12 @@ func validateProveInputs(sessionId []byte, secret curves.Scalar, G1, G2 curves.P
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng")
+	}
+	if curveutils.AllPointsOfSameCurve(G1.Curve(), G1, G2) {
+		return errs.NewValue("G1 and G2 have the same curves")
+	}
+	if !curveutils.AllScalarsOfSameCurve(G1.Curve(), secret) {
+		return errs.NewValue("secret is not on the same curve as G1 G2")
 	}
 	return nil
 }
