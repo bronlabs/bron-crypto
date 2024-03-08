@@ -68,7 +68,7 @@ test:
 	cd prng_test && \
 		ls && \
 		pwd && \
-		${GO} run main.go
+		CGO_ENABLED=1 ${GO} run main.go
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
