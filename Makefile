@@ -65,10 +65,10 @@ lint-fix:
 
 .PHONY: test
 test:
-	cd prng_test
-	ls
-	pwd
-	${GO} run main.go
+	cd prng_test && \
+		ls && \
+		pwd && \
+		${GO} run main.go
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
