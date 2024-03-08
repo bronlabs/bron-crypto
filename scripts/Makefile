@@ -72,3 +72,4 @@ test-nightly:
 	$(MAKE) lint-long
 	$(MAKE) fuzz-long
 	$(MAKE) deflake-long
+	$(MAKE) check-aes

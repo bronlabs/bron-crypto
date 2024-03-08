@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !purego
+
 #include "textflag.h"
 DATA rotInvSRows<>+0x00(SB)/8, $0x080f0205040b0e01
 DATA rotInvSRows<>+0x08(SB)/8, $0x00070a0d0c030609
@@ -149,7 +151,7 @@ ks128Loop:
 	BNE	ks128Loop
 	CBZ	R11, ksDone       // If dec is nil we are done
 	SUB	$176, R10
-        // Decryption keys are encryption keys with InverseMixColumns applied
+	// Decryption keys are encryption keys with InverseMixColumns applied
 	VLD1.P	64(R10), [V0.B16, V1.B16, V2.B16, V3.B16]
 	VMOV	V0.B16, V7.B16
 	AESIMC	V1.B16, V6.B16

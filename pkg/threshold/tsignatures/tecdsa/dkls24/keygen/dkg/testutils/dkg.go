@@ -61,7 +61,7 @@ func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities
 	}
 
 	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
-	shards, err := testutils.DoDkgRound3(participants, r3InsU)
+	shards, err := testutils.DoDkgRound3(private, participants, r3InsU)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
 	}

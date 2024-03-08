@@ -2,6 +2,7 @@ package dkg
 
 import (
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -113,8 +114,14 @@ func (p *Participant) Round2(round1outputP2P types.RoundMessages[*Round1P2P]) (t
 	return p2pOutput, nil
 }
 
-func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*dkls24.Shard, error) {
+func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, round2outputP2P types.RoundMessages[*Round2P2P]) (*dkls24.Shard, error) {
 	var err error
+	if mySigningKeyShare == nil {
+		return nil, errs.NewMissing("my signing key share")
+	}
+	if err := mySigningKeyShare.Validate(p.Protocol); err != nil {
+		return nil, errs.WrapValidation(err, "signing key share is invalid")
+	}
 	baseOtRound2Output := types.NewRoundMessages[bbot.Round2P2P]()
 	zeroSamplingRound2Output := types.NewRoundMessages[*zeroSetup.Round2P2P]()
 
@@ -168,7 +175,7 @@ func (p *Participant) Round3(round2outputP2P types.RoundMessages[*Round2P2P]) (*
 	}
 
 	shard := &dkls24.Shard{
-		SigningKeyShare: p.MySigningKeyShare,
+		SigningKeyShare: mySigningKeyShare,
 		PublicKeyShares: p.MyPartialPublicKeys,
 		PairwiseSeeds:   pairwiseSeeds,
 		PairwiseBaseOTs: pairwiseBaseOTs,

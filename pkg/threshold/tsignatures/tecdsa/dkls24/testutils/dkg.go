@@ -76,10 +76,10 @@ func DoDkgRound2(participants []*dkg.Participant, round2UnicastInputs []types.Ro
 	return round2UnicastOutputs, nil
 }
 
-func DoDkgRound3(participants []*dkg.Participant, round3UnicastInputs []types.RoundMessages[*dkg.Round2P2P]) (shards []*dkls24.Shard, err error) {
+func DoDkgRound3(mySigningKeyShares []*tsignatures.SigningKeyShare, participants []*dkg.Participant, round3UnicastInputs []types.RoundMessages[*dkg.Round2P2P]) (shards []*dkls24.Shard, err error) {
 	shards = make([]*dkls24.Shard, len(participants))
 	for i := range participants {
-		shards[i], err = participants[i].Round3(round3UnicastInputs[i])
+		shards[i], err = participants[i].Round3(mySigningKeyShares[i], round3UnicastInputs[i])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not run DKG round 3")
 		}
@@ -113,7 +113,7 @@ func RunDKG(curve curves.Curve, protocol types.ThresholdProtocol, identities []t
 	}
 
 	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
-	shards, err = DoDkgRound3(participants, r3InsU)
+	shards, err = DoDkgRound3(signingKeyShares, participants, r3InsU)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
 	}

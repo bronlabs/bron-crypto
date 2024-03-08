@@ -27,7 +27,6 @@ var _ types.ThresholdParticipant = (*Participant)(nil)
 type Participant struct {
 	MyAuthKey             types.AuthKey
 	MySharingId           types.SharingID
-	MySigningKeyShare     *tsignatures.SigningKeyShare
 	MyPartialPublicKeys   *tsignatures.PartialPublicKeys
 	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   ds.Map[types.IdentityKey, *bbot.Sender]
@@ -86,7 +85,6 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	participant := &Participant{
 		MyAuthKey:             authKey,
 		MySharingId:           mySharingId,
-		MySigningKeyShare:     signingKeyShare,
 		MyPartialPublicKeys:   partialPublicKeys,
 		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,

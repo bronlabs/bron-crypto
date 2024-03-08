@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build ppc64 || ppc64le
+//go:build (ppc64 || ppc64le) && !purego
 
 // Based on CRYPTOGAMS code with the following comment:
 // # ====================================================================
@@ -644,7 +644,7 @@ TEXT ·cryptBlocksChain(SB), NOSPLIT|NOFRAME, $0
 
 	BEQ	Lcbc_dec
 
-	PCALIGN $32
+	PCALIGN $16
 Lcbc_enc:
 	P8_LXVB16X(INP, R0, INOUT)
 	ADD	$16, INP
@@ -659,7 +659,7 @@ Lcbc_enc:
 	CLEAR_KEYS()
 	RET
 
-	PCALIGN $32
+	PCALIGN $16
 Lcbc_dec:
 	P8_LXVB16X(INP, R0, TMP)
 	ADD	$16, INP
