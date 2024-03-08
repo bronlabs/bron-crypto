@@ -27,7 +27,7 @@ import (
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
 var (
-	maxParticipants = 5
+	maxParticipants = 3
 	// maxNumberOfPreSignatures = 10
 	cn = randomisedFischlin.Name
 )

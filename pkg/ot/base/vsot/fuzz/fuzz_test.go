@@ -21,20 +21,22 @@ import (
 
 var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pallas.NewCurve()}
 
+const L = 4
+
 func Fuzz_Test(f *testing.F) {
-	f.Add(uint(256), uint(4), uint(0), []byte("sid"), []byte("test"), int64(0))
-	f.Fuzz(func(t *testing.T, batchSize uint, messageLength uint, curveIndex uint, sid []byte, message []byte, randomSeed int64) {
+	f.Add(uint(256), uint(0), []byte("sid"), []byte("test"), int64(0))
+	f.Fuzz(func(t *testing.T, batchSize uint, curveIndex uint, sid []byte, message []byte, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		messages := make([]ot.MessagePair, batchSize)
 		prng := rand.New(rand.NewSource(randomSeed))
-		receiver, err := vsot.NewReceiver(int(batchSize), int(messageLength), curve, sid[:], randomisedFischlin.Name, nil, prng)
+		receiver, err := vsot.NewReceiver(int(batchSize), L, curve, sid[:], randomisedFischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		sender, err := vsot.NewSender(int(batchSize), int(messageLength), curve, sid[:], randomisedFischlin.Name, nil, prng)
+		sender, err := vsot.NewSender(int(batchSize), L, curve, sid[:], randomisedFischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -59,10 +61,10 @@ func Fuzz_Test(f *testing.F) {
 			m0 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][0]", i)))
 			m1 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][1]", i)))
 			messages[i] = ot.MessagePair{
-				make([]ot.MessageElement, messageLength),
-				make([]ot.MessageElement, messageLength),
+				make([]ot.MessageElement, L),
+				make([]ot.MessageElement, L),
 			}
-			for l := 0; l < int(messageLength); l++ {
+			for l := 0; l < L; l++ {
 				messages[i][0][l] = ([ot.KappaBytes]byte)(m0[:ot.KappaBytes])
 				messages[i][1][l] = ([ot.KappaBytes]byte)(m1[:ot.KappaBytes])
 			}

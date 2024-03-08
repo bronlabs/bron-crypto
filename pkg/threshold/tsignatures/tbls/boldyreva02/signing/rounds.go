@@ -16,6 +16,9 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 	switch c.scheme {
 	case bls.Basic:
 	case bls.MessageAugmentation:
+		if len(message) == 0 {
+			return nil, errs.NewIsNil("message cannot be nil")
+		}
 		message, err = bls.AugmentMessage[K](message, c.myShard.PublicKeyShares.PublicKey)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not augment message")

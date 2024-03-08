@@ -26,6 +26,7 @@ var schemes = []bls.RogueKeyPrevention{
 
 func Fuzz_Test(f *testing.F) {
 	f.Add(uint(0), uint64(0), uint64(1), uint64(2), []byte("sid"), []byte("message"))
+	f.Add(uint(0), uint64(0), uint64(1), uint64(2), []byte("sid"), []byte(""))
 	f.Fuzz(func(t *testing.T, schemeIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, sid []byte, message []byte) {
 		roundtrip[bls12381.G1, bls12381.G2](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message)
 		roundtrip[bls12381.G2, bls12381.G1](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message)

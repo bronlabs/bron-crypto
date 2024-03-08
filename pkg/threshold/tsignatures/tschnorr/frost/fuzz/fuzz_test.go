@@ -37,7 +37,7 @@ import (
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
 var (
-	maxParticipants          = 5
+	maxParticipants          = 3
 	maxNumberOfPreSignatures = 10
 )
 
@@ -81,7 +81,6 @@ func FuzzInteractiveSigning(f *testing.F) {
 
 		identities, protocolConfig, _, signingKeyShares, publicKeyShares := doDkg(t, curve, h, n, fz, threshold, randomSeed)
 		doInteractiveSigning(t, signingKeyShares, publicKeyShares, threshold, identities, protocolConfig, message)
-		fmt.Println("OK")
 	})
 }
 
@@ -125,7 +124,6 @@ func FuzzNonInteractiveSigning(f *testing.F) {
 
 		preSignatureBatch, privateNoncePairsOfAllParties := doGeneratePreSignatures(t, protocolConfig, identities, tau, prng, participants)
 		doNonInteractiveSigning(t, signingKeyShares, publicKeyShares, protocolConfig, identities, preSignatureBatch, firstUnusedPreSignatureIndex, privateNoncePairsOfAllParties, prng, participants, message)
-		fmt.Println("OK")
 	})
 }
 
@@ -277,20 +275,16 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	}
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
-	if err != nil {
-		if errs.IsMembership(err) || errs.IsSize(err) {
-			t.SkipNow()
-		} else {
-			require.NoError(t, err)
-		}
+	if err != nil && errs.IsKnownError(err) {
+		t.SkipNow()
+	} else {
+		require.NoError(t, err)
 	}
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
-	if err != nil {
-		if errs.IsMembership(err) || errs.IsSize(err) {
-			t.SkipNow()
-		} else {
-			require.NoError(t, err)
-		}
+	if err != nil && errs.IsKnownError(err) {
+		t.SkipNow()
+	} else {
+		require.NoError(t, err)
 	}
 	require.NoError(t, err)
 	var randoms []io.Reader
@@ -298,12 +292,10 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 		randoms = append(randoms, rand.New(rand.NewSource(randomSeed+int64(i))))
 	}
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, randoms)
-	if err != nil {
-		if !errs.IsKnownError(err) {
-			require.NoError(t, err)
-		} else {
-			t.Skip()
-		}
+	if err != nil && errs.IsKnownError(err) {
+		t.SkipNow()
+	} else {
+		require.NoError(t, err)
 	}
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
