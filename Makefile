@@ -65,7 +65,8 @@ lint-fix:
 
 .PHONY: test
 test:
-	${GO} test -short ${TEST_CLAUSE} ./...
+	cd prng_test
+	${GO} run main.go
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
