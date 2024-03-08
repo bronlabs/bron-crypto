@@ -5,4 +5,5 @@
 !/internal/*
 !/pkg/*
 !/scripts/*
+!/prng_test/*
 !/Makefile
