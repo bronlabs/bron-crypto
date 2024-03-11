@@ -13,6 +13,6 @@ chmod +x configure install-sh
 make
 make install
 cd ..
-go build -o prng_test main.go
+go build -o prng_test .
 chmod +x prng_test
 ./prng_test
