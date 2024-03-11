@@ -69,7 +69,7 @@ test:
 
 .PHONY: prng-test
 prng-test:
-	CGO_ENABLED=1 ${GO} run main.go
+	cd prng_test && ./build.sh
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests

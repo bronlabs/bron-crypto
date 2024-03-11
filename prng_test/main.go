@@ -1,9 +1,7 @@
 package main
 
-// #cgo darwin,arm64 CFLAGS: -std=c99 -O3 -Wall -I${SRCDIR}/testu01/darwin/arm64/include
-// #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/testu01/darwin/arm64/lib -ltestu01 -lprobdist -lmylib -lm -lc
-// #cgo linux,amd64 CFLAGS: -std=c99 -O3 -Wall -I${SRCDIR}/testu01/linux/amd64/include
-// #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/testu01/linux/amd64/lib -ltestu01 -lprobdist -lmylib -lm -lc
+// #cgo CFLAGS: -std=c99 -O3 -Wall -I${SRCDIR}/testu01/dist/include
+// #cgo LDFLAGS: -L${SRCDIR}/testu01/dist/lib -ltestu01 -lprobdist -lmylib -lm -lc
 // #include <stdlib.h>
 // #include "TestU01.h"
 // typedef unsigned int (*RandomGeneratorType)(void);

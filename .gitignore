@@ -25,3 +25,5 @@ testdata/
 # Mac
 .DS_Store
 .vscode
+prng_test/testu01/
+prng_test/prng_test

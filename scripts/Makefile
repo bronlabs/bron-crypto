@@ -71,6 +71,5 @@ test-nightly:
 	$(MAKE) test-long
 	$(MAKE) lint-long
 	$(MAKE) fuzz-long
-	$(MAKE) prng-test
 	$(MAKE) deflake-long
 	$(MAKE) check-aes
