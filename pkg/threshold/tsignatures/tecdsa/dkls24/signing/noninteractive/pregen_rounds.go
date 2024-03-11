@@ -2,53 +2,56 @@ package noninteractive
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 )
 
-func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, types.RoundMessages[*signing.Round1P2P], error) {
-	if p.round != 1 {
-		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
+func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMessages[*signing.Round1P2P], error) {
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound1(p, p.Protocol(), p.PreSigners, p.state)
+	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol(), p.Quorum, p.state)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	p.round++
+	p.NextRound()
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *PreGenParticipant) Round2(round1outputBroadcast types.RoundMessages[*signing.Round1Broadcast], round1outputP2P types.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, types.RoundMessages[*signing.Round2P2P], error) {
-	if p.round != 2 {
-		return nil, nil, errs.NewRound("round mismatch %d != 2", p.round)
+func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*signing.Round1Broadcast], round1outputP2P network.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[*signing.Round2P2P], error) {
+	// Validation, round 1 messages delegated to signing.DoRound2
+	if err := p.InRound(2); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound2(p, p.Protocol(), p.PreSigners, p.state, round1outputBroadcast, round1outputP2P)
+	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol(), p.Quorum, p.state, round1outputBroadcast, round1outputP2P)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	p.round++
+	p.NextRound()
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *PreGenParticipant) Round3(round2outputBroadcast types.RoundMessages[*signing.Round2Broadcast], round2outputP2P types.RoundMessages[*signing.Round2P2P]) (*dkls24.PreProcessingMaterial, error) {
-	if p.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", p.round)
+func (p *PreGenParticipant) Round3(round2outputBroadcast network.RoundMessages[*signing.Round2Broadcast], round2outputP2P network.RoundMessages[*signing.Round2P2P]) (*dkls24.PreProcessingMaterial, error) {
+	// Validation, round 2 messages delegated to signing.DoRound3Prologue
+	if err := p.InRound(3); err != nil {
+		return nil, errs.Forward(err)
 	}
 
-	if err := signing.DoRound3Prologue(p, p.Protocol(), p.PreSigners, p.state, round2outputBroadcast, round2outputP2P); err != nil {
-		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
+	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol(), p.Quorum, p.state, round2outputBroadcast, round2outputP2P); err != nil {
+		return nil, errs.Forward(err)
 	}
 
 	Rs := p.state.ReceivedBigR_i.Clone()
-	Rs.Put(p.IdentityKey(), p.protocol.Curve().ScalarBaseMult(p.state.R_i))
+	Rs.Put(p.IdentityKey(), p.Curve().ScalarBaseMult(p.state.R_i))
 
 	ppm := &dkls24.PreProcessingMaterial{
-		PreSigners: p.PreSigners,
+		PreSigners: p.Quorum,
 		PrivateMaterial: &dkls24.PrivatePreProcessingMaterial{
 			Cu:   p.state.Cu_i,
 			Cv:   p.state.Cv_i,
@@ -62,6 +65,6 @@ func (p *PreGenParticipant) Round3(round2outputBroadcast types.RoundMessages[*si
 		PreSignature: Rs,
 	}
 
-	p.round++
+	p.LastRound()
 	return ppm, nil
 }

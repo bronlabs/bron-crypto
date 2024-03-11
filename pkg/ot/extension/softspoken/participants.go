@@ -37,7 +37,7 @@ type Sender struct {
 func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
@@ -70,7 +70,7 @@ func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}

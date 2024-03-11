@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
 // TODO: Create generics for DoRoundX functions
@@ -9,14 +10,14 @@ import (
 
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round.
 func MapO2I[
-	PartyT types.MPCParticipant, BcastT any, UnicastT any,
+	PartyT types.MPCParticipant, BcastT network.MessageLike, UnicastT network.MessageLike,
 ](
 	participants []PartyT,
 	broadcastOutputs []BcastT,
-	UnicastOutputs []types.RoundMessages[UnicastT],
+	UnicastOutputs []network.RoundMessages[UnicastT],
 ) (
-	broadcastInputs []types.RoundMessages[BcastT],
-	UnicastInputs []types.RoundMessages[UnicastT],
+	broadcastInputs []network.RoundMessages[BcastT],
+	UnicastInputs []network.RoundMessages[UnicastT],
 ) {
 	if len(broadcastOutputs) != 0 {
 		broadcastInputs = MapBroadcastO2I(participants, broadcastOutputs)
@@ -29,16 +30,16 @@ func MapO2I[
 
 // MapBroadcastO2I maps the broadcasts of all participants in a round of a protocol to the inputs of the next round.
 func MapBroadcastO2I[
-	PartyT types.MPCParticipant, BcastT any,
+	PartyT types.MPCParticipant, BcastT network.MessageLike,
 ](
 	participants []PartyT,
 	broadcastOutputs []BcastT,
 ) (
-	broadcastInputs []types.RoundMessages[BcastT],
+	broadcastInputs []network.RoundMessages[BcastT],
 ) {
-	broadcastInputs = make([]types.RoundMessages[BcastT], len(participants))
+	broadcastInputs = make([]network.RoundMessages[BcastT], len(participants))
 	for i := range participants {
-		broadcastInputs[i] = types.NewRoundMessages[BcastT]()
+		broadcastInputs[i] = network.NewRoundMessages[BcastT]()
 		for j := range participants {
 			if j != i {
 				broadcastInputs[i].Put(participants[j].IdentityKey(), broadcastOutputs[j])
@@ -50,16 +51,16 @@ func MapBroadcastO2I[
 
 // MapUnicastO2I maps the P2P messages of all participants in a round of a protocol to the inputs of the next round.
 func MapUnicastO2I[
-	PartyT types.MPCParticipant, UnicastT any,
+	PartyT types.MPCParticipant, UnicastT network.MessageLike,
 ](
 	participants []PartyT,
-	UnicastOutputs []types.RoundMessages[UnicastT],
+	UnicastOutputs []network.RoundMessages[UnicastT],
 ) (
-	UnicastInputs []types.RoundMessages[UnicastT],
+	UnicastInputs []network.RoundMessages[UnicastT],
 ) {
-	UnicastInputs = make([]types.RoundMessages[UnicastT], len(participants))
+	UnicastInputs = make([]network.RoundMessages[UnicastT], len(participants))
 	for i := range participants {
-		UnicastInputs[i] = types.NewRoundMessages[UnicastT]()
+		UnicastInputs[i] = network.NewRoundMessages[UnicastT]()
 		for j := range participants {
 			if j != i {
 				msg, _ := UnicastOutputs[j].Get(participants[i].IdentityKey())

@@ -6,6 +6,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
 )
 
@@ -39,7 +40,7 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (r
 	return round1Outputs, nil
 }
 
-func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2Inputs []types.RoundMessages[*noninteractive_signing.Round1Broadcast]) ([]noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
+func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2Inputs []network.RoundMessages[*noninteractive_signing.Round1Broadcast]) ([]noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
 	var err error
 	preSignatures := make([]noninteractive_signing.PreSignatureBatch, len(participants))
 	privateNoncePairs := make([][]*noninteractive_signing.PrivateNoncePair, len(participants))

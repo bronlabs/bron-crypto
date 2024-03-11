@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
@@ -55,9 +56,9 @@ func MakeInteractiveCosigners(protocol types.ThresholdSignatureProtocol, identit
 	return participants, nil
 }
 
-func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round1OutputsBroadcast []*signing.Round1Broadcast, round1OutputsP2P []types.RoundMessages[*signing.Round1P2P], err error) {
+func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round1OutputsBroadcast []*signing.Round1Broadcast, round1OutputsP2P []network.RoundMessages[*signing.Round1P2P], err error) {
 	round1OutputsBroadcast = make([]*signing.Round1Broadcast, len(participants))
-	round1OutputsP2P = make([]types.RoundMessages[*signing.Round1P2P], len(participants))
+	round1OutputsP2P = make([]network.RoundMessages[*signing.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1OutputsBroadcast[i], round1OutputsP2P[i], err = participant.Round1()
 		if err != nil {
@@ -68,9 +69,9 @@ func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round
 	return round1OutputsBroadcast, round1OutputsP2P, nil
 }
 
-func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2BroadcastInputs []types.RoundMessages[*signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*signing.Round1P2P]) (round2BroadcastOutputs []*signing.Round2Broadcast, round2UnicastOutputs []types.RoundMessages[*signing.Round2P2P], err error) {
+func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2BroadcastInputs []network.RoundMessages[*signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*signing.Round1P2P]) (round2BroadcastOutputs []*signing.Round2Broadcast, round2UnicastOutputs []network.RoundMessages[*signing.Round2P2P], err error) {
 	round2BroadcastOutputs = make([]*signing.Round2Broadcast, len(participants))
-	round2UnicastOutputs = make([]types.RoundMessages[*signing.Round2P2P], len(participants))
+	round2UnicastOutputs = make([]network.RoundMessages[*signing.Round2P2P], len(participants))
 	for i := range participants {
 		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
@@ -80,7 +81,7 @@ func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2
 	return round2BroadcastOutputs, round2UnicastOutputs, nil
 }
 
-func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3BroadcastInputs []types.RoundMessages[*signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*signing.Round2P2P], message []byte) (partialSignatures []*dkls24.PartialSignature, err error) {
+func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3BroadcastInputs []network.RoundMessages[*signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[*signing.Round2P2P], message []byte) (partialSignatures []*dkls24.PartialSignature, err error) {
 	partialSignatures = make([]*dkls24.PartialSignature, len(participants))
 	for i := range participants {
 		partialSignatures[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
@@ -92,8 +93,8 @@ func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*dkls24.PartialSignature) types.RoundMessages[*dkls24.PartialSignature] {
-	result := types.NewRoundMessages[*dkls24.PartialSignature]()
+func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*dkls24.PartialSignature) network.RoundMessages[*dkls24.PartialSignature] {
+	result := network.NewRoundMessages[*dkls24.PartialSignature]()
 	for i, identity := range identities {
 		result.Put(identity, partialSignatures[i])
 	}

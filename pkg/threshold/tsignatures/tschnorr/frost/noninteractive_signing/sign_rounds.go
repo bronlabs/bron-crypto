@@ -2,7 +2,7 @@ package noninteractive_signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
@@ -37,7 +37,7 @@ func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSign
 	return partialSignature, nil
 }
 
-func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures types.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
+func (nic *Cosigner) Aggregate(message []byte, preSignatureIndex int, partialSignatures network.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
 	aggregator, err := aggregation.NewSignatureAggregator(nic.MyAuthKey, nic.Protocol, nic.Shard.SigningKeyShare.PublicKey, nic.Shard.PublicKeyShares, nic.Quorum, message, nic.aggregationParameter)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise signature aggregator")

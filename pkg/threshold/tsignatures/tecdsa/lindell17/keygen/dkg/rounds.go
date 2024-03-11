@@ -5,12 +5,12 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lpdl"
@@ -19,79 +19,24 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-type Round1Broadcast struct {
-	BigQCommitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round2Broadcast struct {
-	BigQWitness          commitments.Witness
-	BigQPrime            curves.Point
-	BigQPrimeProof       compiler.NIZKPoKProof
-	BigQDoublePrime      curves.Point
-	BigQDoublePrimeProof compiler.NIZKPoKProof
-
-	_ ds.Incomparable
-}
-
-type Round3Broadcast struct {
-	CKeyPrime         *paillier.CipherText
-	CKeyDoublePrime   *paillier.CipherText
-	PaillierPublicKey *paillier.PublicKey
-
-	_ ds.Incomparable
-}
-
-type Round4P2P struct {
-	LpRound1Output              *lp.Round1Output
-	LpdlPrimeRound1Output       *lpdl.Round1Output
-	LpdlDoublePrimeRound1Output *lpdl.Round1Output
-
-	_ ds.Incomparable
-}
-
-type Round5P2P struct {
-	LpRound2Output              *lp.Round2Output
-	LpdlPrimeRound2Output       *lpdl.Round2Output
-	LpdlDoublePrimeRound2Output *lpdl.Round2Output
-
-	_ ds.Incomparable
-}
-
-type Round6P2P struct {
-	LpRound3Output              *lp.Round3Output
-	LpdlPrimeRound3Output       *lpdl.Round3Output
-	LpdlDoublePrimeRound3Output *lpdl.Round3Output
-
-	_ ds.Incomparable
-}
-
-type Round7P2P struct {
-	LpRound4Output              *lp.Round4Output
-	LpdlPrimeRound4Output       *lpdl.Round4Output
-	LpdlDoublePrimeRound4Output *lpdl.Round4Output
-
-	_ ds.Incomparable
-}
-
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
-	if p.round != 1 {
-		return nil, errs.NewRound("%d != 1", p.round)
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, errs.Forward(err)
 	}
 
 	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
-	xPrime, xDoublePrime, err := lindell17.DecomposeInQThirdsDeterministically(p.mySigningKeyShare.Share, p.prng)
+	xPrime, xDoublePrime, err := lindell17.DecomposeInQThirdsDeterministically(p.mySigningKeyShare.Share, p.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
 
 	// 1.ii. calculate Q' and Q''
-	bigQPrime := p.protocol.Curve().ScalarBaseMult(xPrime)
-	bigQDoublePrime := p.protocol.Curve().ScalarBaseMult(xDoublePrime)
+	bigQPrime := p.Protocol().Curve().ScalarBaseMult(xPrime)
+	bigQDoublePrime := p.Protocol().Curve().ScalarBaseMult(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQWitness, err := commit(p.prng, bigQPrime, bigQDoublePrime, p.sessionId, p.myAuthKey.PublicKey())
+	bigQCommitment, bigQWitness, err := commit(p.Prng(), bigQPrime, bigQDoublePrime, p.SessionId(), p.myAuthKey.PublicKey())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
 	}
@@ -112,20 +57,24 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1.iv. broadcast commitments
-	p.round++
+	p.NextRound()
 	return &Round1Broadcast{
 		BigQCommitment: bigQCommitment,
 	}, nil
 }
 
-func (p *Participant) Round2(input types.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
-	if p.round != 2 {
-		return nil, errs.NewRound("%d != 2", p.round)
+func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
+	// Validation
+	if err := p.InRound(2); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
 	}
 
 	// 2. store commitments
 	p.state.theirBigQCommitment = make(map[types.SharingID]commitments.Commitment)
-	for identity := range p.protocol.Participants().Iter() {
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -141,18 +90,18 @@ func (p *Participant) Round2(input types.RoundMessages[*Round1Broadcast]) (outpu
 	}
 
 	// 2.i. calculate proofs of dlog knowledge of Q' and Q'' (Qdl' and Qdl'' respectively)
-	dlogTranscript := p.transcript.Clone()
-	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.sessionId, p.nic, dlogTranscript, p.prng)
+	dlogTranscript := p.Transcript().Clone()
+	bigQPrimeProof, err := dlogProve(p.state.myXPrime, p.state.myBigQPrime, p.state.myBigQDoublePrime, p.SessionId(), p.nic, dlogTranscript, p.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q'")
 	}
-	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.sessionId, p.nic, dlogTranscript, p.prng)
+	bigQDoublePrimeProof, err := dlogProve(p.state.myXDoublePrime, p.state.myBigQDoublePrime, p.state.myBigQPrime, p.SessionId(), p.nic, dlogTranscript, p.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog proof of Q''")
 	}
 
 	// 2.ii. send opening of Qcom revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
-	p.round++
+	p.NextRound()
 	return &Round2Broadcast{
 		BigQWitness:          p.state.myBigQWitness,
 		BigQPrime:            p.state.myBigQPrime,
@@ -162,16 +111,20 @@ func (p *Participant) Round2(input types.RoundMessages[*Round1Broadcast]) (outpu
 	}, nil
 }
 
-func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (output *Round3Broadcast, err error) {
-	if p.round != 3 {
-		return nil, errs.NewRound("%d != 3", p.round)
+func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (output *Round3Broadcast, err error) {
+	// Validation
+	if err := p.InRound(3); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 broadcast messages")
 	}
 
 	p.state.theirBigQPrime = make(map[types.SharingID]curves.Point)
 	p.state.theirBigQDoublePrime = make(map[types.SharingID]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
-	for identity := range p.protocol.Participants().Iter() {
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -185,22 +138,22 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 		}
 
 		// 3.i. open commitments
-		if err := openCommitment(p.state.theirBigQCommitment[sharingId], message.BigQWitness, message.BigQPrime, message.BigQDoublePrime, p.sessionId, identity.PublicKey()); err != nil {
+		if err := openCommitment(p.state.theirBigQCommitment[sharingId], message.BigQWitness, message.BigQPrime, message.BigQDoublePrime, p.SessionId(), identity.PublicKey()); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open (Q', Q'') commitment")
 		}
 
-		dlogTranscript := p.transcript.Clone()
-		if err := dlogVerify(message.BigQPrimeProof, message.BigQPrime, message.BigQDoublePrime, p.sessionId, p.nic, dlogTranscript); err != nil {
+		dlogTranscript := p.Transcript().Clone()
+		if err := dlogVerify(message.BigQPrimeProof, message.BigQPrime, message.BigQDoublePrime, p.SessionId(), p.nic, dlogTranscript); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q'")
 		}
-		if err := dlogVerify(message.BigQDoublePrimeProof, message.BigQDoublePrime, message.BigQPrime, p.sessionId, p.nic, dlogTranscript); err != nil {
+		if err := dlogVerify(message.BigQDoublePrimeProof, message.BigQDoublePrime, message.BigQPrime, p.SessionId(), p.nic, dlogTranscript); err != nil {
 			return nil, errs.WrapFailed(err, "cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQPrime[sharingId] = message.BigQPrime
 		p.state.theirBigQDoublePrime[sharingId] = message.BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		theirBigQ := p.state.theirBigQPrime[sharingId].Mul(p.protocol.Curve().ScalarField().New(3)).Add(message.BigQDoublePrime)
+		theirBigQ := p.state.theirBigQPrime[sharingId].Mul(p.Protocol().Curve().ScalarField().New(3)).Add(message.BigQDoublePrime)
 		partialPublicKey, exists := p.publicKeyShares.Shares.Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant partial publickey (sharing id=%d)", sharingId)
@@ -233,31 +186,31 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 	p.state.lpProvers = make(map[types.SharingID]*lp.Prover)
 	p.state.lpdlPrimeProvers = make(map[types.SharingID]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[types.SharingID]*lpdl.Prover)
-	for identity := range p.protocol.Participants().Iter() {
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		paillierProofsTranscript := p.transcript.Clone()
+		paillierProofsTranscript := p.Transcript().Clone()
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharign id for participant %x", identity)
 		}
-		p.state.lpProvers[sharingId], err = lp.NewProver(base.ComputationalSecurity, p.state.myPaillierSk, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpProvers[sharingId], err = lp.NewProver(base.ComputationalSecurity, p.state.myPaillierSk, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create LP prover")
 		}
-		p.state.lpdlPrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXPrime, p.state.myRPrime, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
-		p.state.lpdlDoublePrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeProvers[sharingId], err = lpdl.NewProver(p.state.myPaillierSk, p.state.myXDoublePrime, p.state.myRDoublePrime, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL prover")
 		}
 	}
 
 	// 3.v. broadcast (pk, ckey', ckey'')
-	p.round++
+	p.NextRound()
 	return &Round3Broadcast{
 		CKeyPrime:         cKeyPrime,
 		CKeyDoublePrime:   cKeyDoublePrime,
@@ -265,9 +218,13 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 	}, nil
 }
 
-func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (output types.RoundMessages[*Round4P2P], err error) {
-	if p.round != 4 {
-		return nil, errs.NewRound("%d != 4", p.round)
+func (p *Participant) Round4(input network.RoundMessages[*Round3Broadcast]) (output network.RoundMessages[*Round4P2P], err error) {
+	// Validation
+	if err := p.InRound(4); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 3 broadcast messages")
 	}
 
 	p.state.theirPaillierPublicKeys = hashmap.NewHashableHashMap[types.IdentityKey, *paillier.PublicKey]()
@@ -276,8 +233,8 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 	p.state.lpdlPrimeVerifiers = make(map[types.SharingID]*lpdl.Verifier)
 	p.state.lpdlDoublePrimeVerifiers = make(map[types.SharingID]*lpdl.Verifier)
 
-	round4Outputs := types.NewRoundMessages[*Round4P2P]()
-	for identity := range p.protocol.Participants().Iter() {
+	round4Outputs := network.NewRoundMessages[*Round4P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -310,16 +267,16 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 		p.state.theirPaillierEncryptedShares.Put(identity, theirEncryptedShare)
 
 		// 4.ii. LP and LPDL continue
-		paillierProofsTranscript := p.transcript.Clone()
-		p.state.lpVerifiers[sharingId], err = lp.NewVerifier(base.ComputationalSecurity, theirPaillierPublicKey, p.sessionId, paillierProofsTranscript, p.prng)
+		paillierProofsTranscript := p.Transcript().Clone()
+		p.state.lpVerifiers[sharingId], err = lp.NewVerifier(base.ComputationalSecurity, theirPaillierPublicKey, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create P verifier")
 		}
-		p.state.lpdlPrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQPrime[sharingId], theirCKeyPrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlPrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQPrime[sharingId], theirCKeyPrime, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
-		p.state.lpdlDoublePrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQDoublePrime[sharingId], theirCKeyDoublePrime, p.sessionId, paillierProofsTranscript, p.prng)
+		p.state.lpdlDoublePrimeVerifiers[sharingId], err = lpdl.NewVerifier(theirPaillierPublicKey, p.state.theirBigQDoublePrime[sharingId], theirCKeyDoublePrime, p.SessionId(), paillierProofsTranscript, p.Prng())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create PDL verifier")
 		}
@@ -340,18 +297,22 @@ func (p *Participant) Round4(input types.RoundMessages[*Round3Broadcast]) (outpu
 		round4Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.round++
+	p.NextRound()
 	return round4Outputs, nil
 }
 
-func (p *Participant) Round5(input types.RoundMessages[*Round4P2P]) (output types.RoundMessages[*Round5P2P], err error) {
-	if p.round != 5 {
-		return nil, errs.NewRound("%d != 5", p.round)
+func (p *Participant) Round5(input network.RoundMessages[*Round4P2P]) (output network.RoundMessages[*Round5P2P], err error) {
+	// Validation
+	if err := p.InRound(5); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 4 p2p messages")
 	}
 
 	// 5. LP and LPDL continue
-	round5Outputs := types.NewRoundMessages[*Round5P2P]()
-	for identity := range p.protocol.Participants().Iter() {
+	round5Outputs := network.NewRoundMessages[*Round5P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -380,18 +341,22 @@ func (p *Participant) Round5(input types.RoundMessages[*Round4P2P]) (output type
 		round5Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.round++
+	p.NextRound()
 	return round5Outputs, nil
 }
 
-func (p *Participant) Round6(input types.RoundMessages[*Round5P2P]) (output types.RoundMessages[*Round6P2P], err error) {
-	if p.round != 6 {
-		return nil, errs.NewRound("%d != 6", p.round)
+func (p *Participant) Round6(input network.RoundMessages[*Round5P2P]) (output network.RoundMessages[*Round6P2P], err error) {
+	// Validation
+	if err := p.InRound(6); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 5 p2p messages")
 	}
 
 	// 6. LP and LPDL continue
-	round6Outputs := types.NewRoundMessages[*Round6P2P]()
-	for identity := range p.protocol.Participants().Iter() {
+	round6Outputs := network.NewRoundMessages[*Round6P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -420,18 +385,19 @@ func (p *Participant) Round6(input types.RoundMessages[*Round5P2P]) (output type
 		round6Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.round++
+	p.NextRound()
 	return round6Outputs, nil
 }
 
-func (p *Participant) Round7(input types.RoundMessages[*Round6P2P]) (output types.RoundMessages[*Round7P2P], err error) {
-	if p.round != 7 {
-		return nil, errs.NewRound("%d != 7", p.round)
+func (p *Participant) Round7(input network.RoundMessages[*Round6P2P]) (output network.RoundMessages[*Round7P2P], err error) {
+	// Validation
+	if err := p.InRound(7); err != nil {
+		return nil, errs.Forward(err)
 	}
 
 	// 7. LP and LPDL continue
-	round7Outputs := types.NewRoundMessages[*Round7P2P]()
-	for identity := range p.protocol.Participants().Iter() {
+	round7Outputs := network.NewRoundMessages[*Round7P2P]()
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -460,16 +426,17 @@ func (p *Participant) Round7(input types.RoundMessages[*Round6P2P]) (output type
 		round7Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.round++
+	p.NextRound()
 	return round7Outputs, nil
 }
 
-func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lindell17.Shard, err error) {
-	if p.round != 8 {
-		return nil, errs.NewRound("%d != 8", p.round)
+func (p *Participant) Round8(input network.RoundMessages[*Round7P2P]) (shard *lindell17.Shard, err error) {
+	// Validation
+	if err := p.InRound(8); err != nil {
+		return nil, errs.Forward(err)
 	}
 
-	for identity := range p.protocol.Participants().Iter() {
+	for identity := range p.Protocol().Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -493,7 +460,7 @@ func (p *Participant) Round8(input types.RoundMessages[*Round7P2P]) (shard *lind
 		}
 	}
 
-	p.round++
+	p.LastRound()
 	// 8. store encrypted x_j aka ckey_j (ckey_j = Enc(x_j) = Enc(3x'_j + x''_j)) and pk_j alongside share
 	return &lindell17.Shard{
 		SigningKeyShare:         p.mySigningKeyShare,

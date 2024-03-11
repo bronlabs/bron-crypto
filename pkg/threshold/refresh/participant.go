@@ -20,14 +20,12 @@ const transcriptLabel = "COPPER_KRYPTON_HJKY_KEY_REFRESH-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
+	*types.BaseParticipant[types.ThresholdProtocol]
+
 	sampler *hjky.Participant
 
-	protocol        types.ThresholdProtocol
 	signingKeyShare *tsignatures.SigningKeyShare
 	publicKeyShares *tsignatures.PartialPublicKeys
-
-	round      int
-	transcript transcripts.Transcript
 
 	_ ds.Incomparable
 }
@@ -57,14 +55,11 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	}
 
 	result := &Participant{
-		sampler: sampler,
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		sampler:         sampler,
 
 		publicKeyShares: publicKeyShares,
 		signingKeyShare: signingKeyShare,
-		protocol:        protocol,
-
-		round:      1,
-		transcript: transcript,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")

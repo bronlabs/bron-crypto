@@ -9,8 +9,8 @@ import (
 )
 
 func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
-	bigR1Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
-	bigR2Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
+	bigR1Sum := c.Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
+	bigR2Sum := c.Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
 	for identity := range c.quorum.Iter() {
 		if identity.Equal(c.IdentityKey()) {
 			continue
@@ -37,7 +37,7 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 		return nil, errs.WrapHashing(err, "couldn't produce delta message")
 	}
 
-	delta, err := c.protocol.CipherSuite().Curve().ScalarField().Hash(deltaMessage)
+	delta, err := c.Protocol().CipherSuite().Curve().ScalarField().Hash(deltaMessage)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash to scalar")
 	}
@@ -47,13 +47,13 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 
 	// 3.ii. compute e = H(R || pk || message)
 	eBytes := c.variant.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)
-	e, err := schnorr.MakeSchnorrCompatibleChallenge(c.protocol.CipherSuite(), eBytes)
+	e, err := schnorr.MakeSchnorrCompatibleChallenge(c.Protocol().CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
 
 	// 3.iii. compute additive share d_i' = lambda_i * share
-	sk, err := c.myShard.SigningKeyShare.ToAdditive(c.IdentityKey(), c.quorum, c.protocol)
+	sk, err := c.myShard.SigningKeyShare.ToAdditive(c.IdentityKey(), c.quorum, c.Protocol())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
@@ -68,7 +68,7 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 
 	return &lindell22.PartialSignature{
 		E: e,
-		R: c.variant.ComputePartialNonceCommitment(bigR, c.protocol.CipherSuite().Curve().ScalarBaseMult(k)),
+		R: c.variant.ComputePartialNonceCommitment(bigR, c.Protocol().CipherSuite().Curve().ScalarBaseMult(k)),
 		S: s,
 	}, nil
 }

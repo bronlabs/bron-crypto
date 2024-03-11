@@ -6,13 +6,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
-	if c.round != 1 {
-		return nil, errs.NewRound("round mismatch %d != 1", c.round)
-	}
-	var err error
-	var sigmaPOP_i *bls.Signature[S]
+func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (sig *boldyreva02.PartialSignature[S], err error) {
 	// step 1.1 and 1.2
+	var sigmaPOP_i *bls.Signature[S]
 	switch c.scheme {
 	case bls.Basic:
 	case bls.MessageAugmentation:
@@ -43,7 +39,7 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
-	c.round++
+
 	return &boldyreva02.PartialSignature[S]{
 		SigmaI:    sigma_i,
 		SigmaPOPI: sigmaPOP_i,

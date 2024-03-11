@@ -14,17 +14,15 @@ import (
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
 type Cosigner struct {
-	prng io.Reader
+	*types.BaseParticipant[types.ThresholdSignatureProtocol]
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 	shard       *frost.Shard
 
-	protocol      types.ThresholdSignatureProtocol
 	sharingConfig types.SharingConfig
 	quorum        ds.Set[types.IdentityKey]
 
-	round int
 	state *State
 
 	_ ds.Incomparable
@@ -39,7 +37,7 @@ func (ic *Cosigner) SharingId() types.SharingID {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	return ic.protocol.Participants().Contains(ic.IdentityKey())
+	return ic.Protocol().Participants().Contains(ic.IdentityKey())
 }
 
 type State struct {
@@ -66,15 +64,13 @@ func NewInteractiveCosigner(authKey types.AuthKey, quorum ds.Set[types.IdentityK
 	}
 
 	cosigner := &Cosigner{
-		myAuthKey:     authKey,
-		protocol:      protocol,
-		shard:         shard,
-		quorum:        quorum,
-		prng:          prng,
-		sharingConfig: sharingConfig,
-		mySharingId:   mySharingId,
-		state:         &State{},
-		round:         1,
+		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, nil, nil),
+		myAuthKey:       authKey,
+		shard:           shard,
+		quorum:          quorum,
+		sharingConfig:   sharingConfig,
+		mySharingId:     mySharingId,
+		state:           &State{},
 	}
 
 	if cosigner.IsSignatureAggregator() {

@@ -1,8 +1,6 @@
 package signing
 
 import (
-	"io"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -11,90 +9,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
 
-type Participant interface {
-	types.ThresholdSignatureParticipant
-	SharingConfig() types.SharingConfig
-	Prng() io.Reader
-	SessionId() []byte
-	Shard() *dkls24.Shard
-}
-
-// Multiplication contains corresponding participant objects for pairwise multiplication subProtocols.
-type Multiplication struct {
-	Alice *mult.Alice
-	Bob   *mult.Bob
-
-	_ ds.Incomparable
-}
-
-type SubProtocols struct {
-	// use to get the secret key mask (zeta_i)
-	ZeroShareSampling *sample.Participant
-	// pairwise multiplication protocol i.e. each party acts as alice and bob against every party
-	Multiplication ds.Map[types.IdentityKey, *Multiplication]
-
-	_ ds.Incomparable
-}
-
-type SignerState struct {
-	Phi_i                          curves.Scalar
-	Sk_i                           curves.Scalar
-	R_i                            curves.Scalar
-	Zeta_i                         curves.Scalar
-	BigR_i                         curves.Point
-	Pk_i                           curves.Point
-	Cu_i                           map[types.SharingID]curves.Scalar
-	Cv_i                           map[types.SharingID]curves.Scalar
-	Du_i                           map[types.SharingID]curves.Scalar
-	Dv_i                           map[types.SharingID]curves.Scalar
-	Psi_i                          map[types.SharingID]curves.Scalar
-	Chi_i                          map[types.SharingID]curves.Scalar
-	InstanceKeyWitness             map[types.SharingID]commitments.Witness
-	ReceivedInstanceKeyCommitments map[types.SharingID]commitments.Commitment
-	ReceivedBigR_i                 ds.Map[types.IdentityKey, curves.Point]
-	Protocols                      *SubProtocols
-
-	_ ds.Incomparable
-}
-
-type Round1Broadcast struct {
-	BigR_i curves.Point
-
-	_ ds.Incomparable
-}
-
-type Round1P2P struct {
-	InstanceKeyCommitment commitments.Commitment
-	MultiplicationOutput  *mult.Round1Output
-
-	_ ds.Incomparable
-}
-
-type Round2P2P struct {
-	Multiplication     *mult.Round2Output
-	GammaU_ij          curves.Point
-	GammaV_ij          curves.Point
-	Psi_ij             curves.Scalar
-	InstanceKeyWitness commitments.Witness
-
-	_ ds.Incomparable
-}
-
-type Round2Broadcast struct {
-	Pk_i curves.Point
-
-	_ ds.Incomparable
-}
-
-func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
-	var err error
-
+func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (r1b *Round1Broadcast, r1p2p network.RoundMessages[*Round1P2P], err error) {
 	// step 1.1: Sample inversion mask Phi_i and instance key R_i
 	state.Phi_i, err = protocol.Curve().ScalarField().Random(p.Prng())
 	if err != nil {
@@ -110,7 +31,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 
 	state.InstanceKeyWitness = make(map[types.SharingID]commitments.Witness)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
-	outputP2P := types.NewRoundMessages[*Round1P2P]()
+	outputP2P := network.NewRoundMessages[*Round1P2P]()
 
 	// step 1.3: For each other cosigner in the quorum...
 	for participant := range quorum.Iter() {
@@ -161,7 +82,7 @@ func DoRound1(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round1Broadcast], inputP2P types.RoundMessages[*Round1P2P]) (*Round2Broadcast, types.RoundMessages[*Round2P2P], error) {
+func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast network.RoundMessages[*Round1Broadcast], inputP2P network.RoundMessages[*Round1P2P]) (*Round2Broadcast, network.RoundMessages[*Round2P2P], error) {
 	// step 2.1: ζ_i <- Zero.Sample()
 	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
 	if err != nil {
@@ -185,7 +106,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]commitments.Commitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
-	outputP2P := types.NewRoundMessages[*Round2P2P]()
+	outputP2P := network.NewRoundMessages[*Round2P2P]()
 	// step 2.4: For each other cosigner in the quorum...
 	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
@@ -245,7 +166,7 @@ func DoRound2(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[typ
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast types.RoundMessages[*Round2Broadcast], inputP2P types.RoundMessages[*Round2P2P]) (err error) {
+func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast network.RoundMessages[*Round2Broadcast], inputP2P network.RoundMessages[*Round2P2P]) (err error) {
 	state.Du_i = make(map[types.SharingID]curves.Scalar)
 	state.Dv_i = make(map[types.SharingID]curves.Scalar)
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
@@ -336,7 +257,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 	return nil
 }
 
-func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
+func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls24.PartialSignature, error) {
 	R := r.ScalarField().Curve().ScalarBaseMult(r)
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
@@ -391,7 +312,7 @@ func DoRound3Epilogue(p Participant, protocol types.ThresholdSignatureProtocol, 
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite types.SignatureProtocol, publicKey curves.Point, partialSignatures types.RoundMessages[*dkls24.PartialSignature], message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite types.SignatureProtocol, publicKey curves.Point, partialSignatures network.RoundMessages[*dkls24.PartialSignature], message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve()
 	w := curve.ScalarField().Zero()
 	u := curve.ScalarField().Zero()

@@ -55,19 +55,16 @@ type State struct {
 }
 
 type Participant struct {
+	*types.BaseParticipant[types.ThresholdProtocol]
+
 	myAuthKey         types.AuthKey
 	mySharingId       types.SharingID
 	mySigningKeyShare *tsignatures.SigningKeyShare
 	publicKeyShares   *tsignatures.PartialPublicKeys
-	protocol          types.ThresholdProtocol
 
 	sharingConfig types.SharingConfig
-	sessionId     []byte
-	transcript    transcripts.Transcript
-	prng          io.Reader
 	nic           compiler.Name
 
-	round int
 	state *State
 
 	_ ds.Incomparable
@@ -100,16 +97,12 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	}
 
 	participant = &Participant{
+		BaseParticipant:   types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
-		protocol:          protocol,
 		sharingConfig:     sharingConfig,
-		sessionId:         sessionId,
-		transcript:        transcript,
-		prng:              prng,
-		round:             1,
 		nic:               niCompiler,
 		state:             &State{},
 	}

@@ -2,42 +2,36 @@ package recovery
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-type Round1Broadcast = hjky.Round1Broadcast
-type Round1P2P = hjky.Round1P2P
-
-type Round2P2P struct {
-	BlindedPartiallyRecoveredShare curves.Scalar
-
-	_ ds.Incomparable
-}
-
-func (p *Participant) Round1() (*Round1Broadcast, types.RoundMessages[*Round1P2P], error) {
-	if p.round != 1 {
-		return nil, nil, errs.NewRound("round mismatch %d != 1", p.round)
+func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
+	// Validation
+	if err := p.InRound(1); err != nil {
+		return nil, nil, errs.Forward(err)
 	}
+
 	// step 1.1
 	round1broadcast, round1p2p, err := p.sampler.Round1()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of zero share sampler")
 	}
-	p.round++
+
+	p.NextRound()
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1broadcast types.RoundMessages[*Round1Broadcast], round1p2p types.RoundMessages[*Round1P2P]) (types.RoundMessages[*Round2P2P], error) {
-	if p.round != 2 {
-		return nil, errs.NewRound("round mismatch %d != 2", p.round)
+func (p *Participant) Round2(round1broadcast network.RoundMessages[*Round1Broadcast], round1p2p network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
+	// Validation, round1broadcast and round1p2p delegated to sampler.Round2
+	if err := p.InRound(2); err != nil {
+		return nil, errs.Forward(err)
 	}
-	output := types.NewRoundMessages[*Round2P2P]()
+
+	output := network.NewRoundMessages[*Round2P2P]()
 
 	// step 2.1
 	sample, _, _, err := p.sampler.Round2(round1broadcast, round1p2p)
@@ -67,12 +61,13 @@ func (p *Participant) Round2(round1broadcast types.RoundMessages[*Round1Broadcas
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert sampled zero share to additive form")
 	}
+
 	if !p.IsRecoverer() {
-		p.round++
+		p.NextRound()
 		return output, nil
 	}
 
-	curve := p.protocol.Curve()
+	curve := p.Protocol().Curve()
 
 	// step 2.3.1
 	lostPartySharingIdScalar := curve.ScalarField().New(uint64(lostPartySharingId))
@@ -95,31 +90,28 @@ func (p *Participant) Round2(round1broadcast types.RoundMessages[*Round1Broadcas
 	s := lx.Mul(p.signingKeyShare.Share)
 	// step 2.3.3
 	sHat := s.Add(p.additiveShareOfZero)
-
-	p.round = -1 // this is to prevent recoverer from running round 3.
-
 	// step 2.3.4
 	output.Put(p.lostPartyIdentityKey, &Round2P2P{
 		BlindedPartiallyRecoveredShare: sHat,
 	})
+
+	p.LastRound()
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (*tsignatures.SigningKeyShare, error) {
-	if p.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", p.round)
+func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (*tsignatures.SigningKeyShare, error) {
+	// Validation
+	if err := p.InRound(3); err != nil {
+		return nil, errs.Forward(err)
+	}
+	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 P2P messages")
 	}
 
 	// step 3.1
 	res := p.additiveShareOfZero // this, added to all blinded share, will all cancel out to zero
 	for _, recoverer := range p.sortedPresentRecoverersList {
-		receivedMessage, exists := round2output.Get(recoverer)
-		if !exists {
-			return nil, errs.NewMissing("did not receive a message from %x", recoverer.String())
-		}
-		if receivedMessage.BlindedPartiallyRecoveredShare == nil {
-			return nil, errs.NewIsNil("blinded partially recovered share of recoverer %x is nil", recoverer.String())
-		}
+		receivedMessage, _ := round2output.Get(recoverer)
 		res = res.Add(receivedMessage.BlindedPartiallyRecoveredShare)
 	}
 	// step 3.2
@@ -127,18 +119,19 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (*tsi
 	if !exists {
 		return nil, errs.NewMissing("could not find lost party partial public key")
 	}
-	if !p.protocol.Curve().ScalarBaseMult(res).Equal(partialPublicKey) {
+	if !p.Protocol().Curve().ScalarBaseMult(res).Equal(partialPublicKey) {
 		return nil, errs.NewTotalAbort(nil, "recovered partial key is incompatible")
 	}
 
 	// step 3.3
-	p.round++
 	signingKeyShare := &tsignatures.SigningKeyShare{
 		Share:     res,
 		PublicKey: p.publicKeyShares.PublicKey,
 	}
-	if err := signingKeyShare.Validate(p.protocol); err != nil {
+	if err := signingKeyShare.Validate(p.Protocol()); err != nil {
 		return nil, errs.WrapValidation(err, "reconstructed signing key share")
 	}
+
+	p.LastRound()
 	return signingKeyShare, nil
 }

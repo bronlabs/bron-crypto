@@ -21,18 +21,19 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-const DkgLabel = "COPPER_DKLS24_DKG-"
+const transcriptLabel = "COPPER_DKLS24_DKG-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
+	*types.BaseParticipant[types.ThresholdProtocol]
+
 	MyAuthKey             types.AuthKey
 	MySharingId           types.SharingID
 	MyPartialPublicKeys   *tsignatures.PartialPublicKeys
 	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   ds.Map[types.IdentityKey, *bbot.Sender]
 	BaseOTReceiverParties ds.Map[types.IdentityKey, *bbot.Receiver]
-	Protocol              types.ThresholdProtocol
 
 	_ ds.Incomparable
 }
@@ -50,7 +51,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", DkgLabel, protocol.Curve().Name(), niCompiler)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
 	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
@@ -88,13 +89,13 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		receivers.Put(participant, receiver)
 	}
 	participant := &Participant{
+		BaseParticipant:       types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		MyAuthKey:             authKey,
 		MySharingId:           mySharingId,
 		MyPartialPublicKeys:   partialPublicKeys,
 		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
-		Protocol:              protocol,
 	}
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct dkls24 dkg participant")

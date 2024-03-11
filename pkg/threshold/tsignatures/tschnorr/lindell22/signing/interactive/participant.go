@@ -38,6 +38,8 @@ type state struct {
 }
 
 type Cosigner[F schnorr.Variant[F]] struct {
+	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+
 	przsParticipant *setup.Participant
 
 	myAuthKey         types.AuthKey
@@ -45,14 +47,9 @@ type Cosigner[F schnorr.Variant[F]] struct {
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
 	variant       schnorr.Variant[F]
-	protocol      types.ThresholdSignatureProtocol
 	quorum        ds.Set[types.IdentityKey]
 	sharingConfig types.SharingConfig
-	sessionId     []byte
-	round         int
-	transcript    transcripts.Transcript
 	nic           compiler.Name
-	prng          io.Reader
 
 	state *state
 
@@ -98,18 +95,14 @@ func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte
 	}
 
 	cosigner := &Cosigner[F]{
+		BaseParticipant:   types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		przsParticipant:   przsParticipant,
 		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
 		mySigningKeyShare: myShard.SigningKeyShare,
 		sharingConfig:     sharingConfig,
-		protocol:          protocol,
-		sessionId:         sessionId,
-		transcript:        transcript,
 		quorum:            quorum,
 		variant:           variant,
-		round:             1,
-		prng:              prng,
 		nic:               niCompiler,
 		state: &state{
 			pid:  pid,

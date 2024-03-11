@@ -27,6 +27,19 @@ type PartialSignature struct {
 	_ ds.Incomparable
 }
 
+func (ps *PartialSignature) Validate(none ...int) error {
+	if ps.Ui == nil {
+		return errs.NewIsNil("Ui")
+	}
+	if ps.Wi == nil {
+		return errs.NewIsNil("Wi")
+	}
+	if ps.Ri == nil {
+		return errs.NewIsNil("Ri")
+	}
+	return nil
+}
+
 type BaseOTConfig struct {
 	AsSender   *ot.SenderRotOutput
 	AsReceiver *ot.ReceiverRotOutput

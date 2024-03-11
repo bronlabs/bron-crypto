@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive"
@@ -27,9 +28,9 @@ func MakePreGenParticipants(identities []types.IdentityKey, sid []byte, protocol
 	return parties, nil
 }
 
-func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (round2BroadcastInputs []types.RoundMessages[*noninteractive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*noninteractive_signing.Round1P2P], err error) {
+func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (round2BroadcastInputs []network.RoundMessages[*noninteractive_signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*noninteractive_signing.Round1P2P], err error) {
 	round1BroadcastOutputs := make([]*noninteractive_signing.Round1Broadcast, len(participants))
-	round1UnicastOutputs := make([]types.RoundMessages[*noninteractive_signing.Round1P2P], len(participants))
+	round1UnicastOutputs := make([]network.RoundMessages[*noninteractive_signing.Round1P2P], len(participants))
 	// round1
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
@@ -38,11 +39,11 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (r
 		}
 	}
 
-	round2BroadcastInputs = make([]types.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
-	round2UnicastInputs = make([]types.RoundMessages[*noninteractive_signing.Round1P2P], len(participants))
+	round2BroadcastInputs = make([]network.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
+	round2UnicastInputs = make([]network.RoundMessages[*noninteractive_signing.Round1P2P], len(participants))
 	for i := range participants {
-		round2BroadcastInputs[i] = types.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
-		round2UnicastInputs[i] = types.NewRoundMessages[*noninteractive_signing.Round1P2P]()
+		round2BroadcastInputs[i] = network.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
+		round2UnicastInputs[i] = network.NewRoundMessages[*noninteractive_signing.Round1P2P]()
 		for j := range participants {
 			if i == j {
 				continue
@@ -56,9 +57,9 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (r
 	return round2BroadcastInputs, round2UnicastInputs, nil
 }
 
-func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2BroadcastInputs []types.RoundMessages[*noninteractive_signing.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*noninteractive_signing.Round1P2P]) (round3BroadcastInputs []types.RoundMessages[*noninteractive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*noninteractive_signing.Round2P2P], err error) {
+func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, round2BroadcastInputs []network.RoundMessages[*noninteractive_signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[*noninteractive_signing.Round1P2P]) (round3BroadcastInputs []network.RoundMessages[*noninteractive_signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[*noninteractive_signing.Round2P2P], err error) {
 	round2BroadcastOutputs := make([]*noninteractive_signing.Round2Broadcast, len(participants))
-	round2UnicastOutputs := make([]types.RoundMessages[*noninteractive_signing.Round2P2P], len(participants))
+	round2UnicastOutputs := make([]network.RoundMessages[*noninteractive_signing.Round2P2P], len(participants))
 	for i, participant := range participants {
 		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
@@ -66,11 +67,11 @@ func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, ro
 		}
 	}
 
-	round3BroadcastInputs = make([]types.RoundMessages[*noninteractive_signing.Round2Broadcast], len(participants))
-	round3UnicastInputs = make([]types.RoundMessages[*noninteractive_signing.Round2P2P], len(participants))
+	round3BroadcastInputs = make([]network.RoundMessages[*noninteractive_signing.Round2Broadcast], len(participants))
+	round3UnicastInputs = make([]network.RoundMessages[*noninteractive_signing.Round2P2P], len(participants))
 	for i := range participants {
-		round3BroadcastInputs[i] = types.NewRoundMessages[*noninteractive_signing.Round2Broadcast]()
-		round3UnicastInputs[i] = types.NewRoundMessages[*noninteractive_signing.Round2P2P]()
+		round3BroadcastInputs[i] = network.NewRoundMessages[*noninteractive_signing.Round2Broadcast]()
+		round3UnicastInputs[i] = network.NewRoundMessages[*noninteractive_signing.Round2P2P]()
 		for j := range participants {
 			if i == j {
 				continue
@@ -84,7 +85,7 @@ func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, ro
 	return round3BroadcastInputs, round3UnicastInputs, nil
 }
 
-func DoPreGenRound3(participants []*noninteractive_signing.PreGenParticipant, round3BroadcastInputs []types.RoundMessages[*noninteractive_signing.Round2Broadcast], round3UnicastInputs []types.RoundMessages[*noninteractive_signing.Round2P2P]) (output []*lindell22.PreProcessingMaterial, err error) {
+func DoPreGenRound3(participants []*noninteractive_signing.PreGenParticipant, round3BroadcastInputs []network.RoundMessages[*noninteractive_signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[*noninteractive_signing.Round2P2P]) (output []*lindell22.PreProcessingMaterial, err error) {
 	batches := make([]*lindell22.PreProcessingMaterial, len(participants))
 	for i, participant := range participants {
 		batches[i], err = participant.Round3(round3BroadcastInputs[i], round3UnicastInputs[i])

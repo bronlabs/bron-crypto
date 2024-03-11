@@ -14,7 +14,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*dkls24.PartialSigna
 	blindedAdditiveShare := myAdditiveShare.Add(c.ppm.PrivateMaterial.Zeta)
 
 	partialSignature, err := signing.DoRound3Epilogue(
-		c,
+		&c.Participant,
 		c.Protocol(),
 		c.ppm.PreSigners,
 		message,
@@ -29,7 +29,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*dkls24.PartialSigna
 		c.ppm.PreSignature,
 	)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
+		return nil, errs.Forward(err)
 	}
 
 	return partialSignature, nil

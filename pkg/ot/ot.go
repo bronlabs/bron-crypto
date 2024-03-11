@@ -6,9 +6,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -24,52 +22,27 @@ const (
 
 var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes
 
-type (
-	ChoiceBits []byte // Choice (x) are the "packed" choice bits.
-
-	MessageElement = [KappaBytes]byte // [κ]bits, κ-bit chunks of the ROT/OT message.
-	Message        = []MessageElement // [L][κ]bits, the messages in ROT/OT.
-	MessagePair    = [2]Message       // [2][L][κ]bits, the 2 sender messages in ROT/OT.
-	ChosenMessage  = Message          // [L][κ]bits, the receiver's chosen message in ROT/OT.
-
-	CorrelatedElement = curves.Scalar       // ℤq, each element of the COT message.
-	CorrelatedMessage = []CorrelatedElement // [L]ℤq, (a, Z_A, z_B) are the L-scalar messages in COT.
-)
-
-func (c ChoiceBits) Select(i int) byte {
-	return bitstring.SelectBit(c, i)
-}
-
-var _ types.MPCParticipant = (*Participant)(nil)
-
 // Participant contains the common members of the sender and receiver.
 type Participant struct {
-	Xi int // ξ, the number of OTs that are run in parallel.
-	L  int // L, the number of elements in each OT message.
+	*types.BaseParticipant[types.MPCProtocol]
 
-	Protocol   types.MPCProtocol
-	SessionId  []byte
-	Transcript transcripts.Transcript
-	Csprng     io.Reader
+	L  int // L, the number of elements in each OT message.
+	Xi int // ξ, the number of OTs that are run in parallel.
 
 	myAuthKey types.AuthKey
 
 	_ ds.Incomparable
 }
 
-func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.myAuthKey
-}
-
 func (p *Participant) OtherParty() types.IdentityKey {
-	parties := p.Protocol.Participants().List()
+	parties := p.Protocol().Participants().List()
 	if !parties[0].Equal(p.IdentityKey()) {
 		return parties[0]
 	}
 	return parties[1]
 }
 
-func NewParticipant(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader) (*Participant, error) {
+func NewParticipant(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader, initialRound int) (*Participant, error) {
 	if err := validateInputs(myAuthKey, protocol, Xi, L, sessionId, csprng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct ot participant")
 	}
@@ -78,19 +51,11 @@ func NewParticipant(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L i
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	participant := &Participant{
-		Protocol:   protocol,
-		Xi:         Xi,
-		L:          L,
-		SessionId:  sessionId,
-		Transcript: transcript,
-		Csprng:     csprng,
-		myAuthKey:  myAuthKey,
-	}
-	if err := types.ValidateMPCProtocol(participant, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct mpc participant")
-	}
-	return participant, nil
+	return &Participant{
+		BaseParticipant: types.NewBaseParticipant(csprng, protocol, initialRound, sessionId, transcript),
+		L:               L,
+		Xi:              Xi,
+	}, nil
 }
 
 func validateInputs(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, csprng io.Reader) error {

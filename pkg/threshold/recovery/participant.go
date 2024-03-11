@@ -22,10 +22,9 @@ const transcriptLabel = "COPPER_KRYPTON_KEY_RECOVERY-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	*types.BaseParticipant[types.ThresholdProtocol]
 
 	sampler                     *hjky.Participant
-	protocol                    types.ThresholdProtocol
 	sortedPresentRecoverersList []types.IdentityKey
 
 	signingKeyShare *tsignatures.SigningKeyShare
@@ -33,8 +32,6 @@ type Participant struct {
 
 	lostPartyIdentityKey types.IdentityKey
 	additiveShareOfZero  curves.Scalar
-
-	round int
 
 	_ ds.Incomparable
 }
@@ -70,14 +67,12 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		prng:                        prng,
+		BaseParticipant:             types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		publicKeyShares:             publicKeyShares,
 		signingKeyShare:             signingKeyShare,
 		lostPartyIdentityKey:        lostPartyIdentityKey,
-		protocol:                    protocol,
-		round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct recoverer")
@@ -152,13 +147,11 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		prng:                        prng,
+		BaseParticipant:             types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		lostPartyIdentityKey:        authKey,
 		publicKeyShares:             publicKeyShares,
-		protocol:                    protocol,
-		round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct lost party")

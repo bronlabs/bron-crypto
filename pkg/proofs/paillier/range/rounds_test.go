@@ -90,7 +90,7 @@ func randomIntInRange(q *saferith.Nat, prng io.Reader, bitLength int) (*saferith
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), bitLength)
 	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
-		return nil, err
+		return nil, errs.Forward(err)
 	}
 	x := new(saferith.Nat).SetBig(xInt, 256)
 	return new(saferith.Nat).Add(l, x, 256), nil
@@ -102,7 +102,7 @@ func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader, bitLength int) (*safe
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), bitLength)
 	xInt, err := crand.Int(prng, l.Big()) // x < q/4
 	if err != nil {
-		return nil, err
+		return nil, errs.Forward(err)
 	}
 	return new(saferith.Nat).SetBig(xInt, 256), nil
 }
@@ -110,7 +110,7 @@ func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader, bitLength int) (*safe
 func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	xInt, err := crand.Int(prng, q.Big())
 	if err != nil {
-		return nil, err
+		return nil, errs.Forward(err)
 	}
 	x := new(saferith.Nat).SetBig(xInt, 256)
 	return new(saferith.Nat).Add(x, q, 256), nil // x >= q

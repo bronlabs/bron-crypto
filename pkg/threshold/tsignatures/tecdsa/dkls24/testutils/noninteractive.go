@@ -11,13 +11,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 	noninteractiveSigning "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing/noninteractive"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
+func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls24.Shard, trans []transcripts.Transcript, prngs []io.Reader) []*noninteractiveSigning.PreGenParticipant {
 	t.Helper()
 
 	parties := make([]*noninteractiveSigning.PreGenParticipant, len(identities))
@@ -48,7 +49,7 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 	var err error
 
 	r1ob := make([]*signing.Round1Broadcast, len(parties))
-	r1ou := make([]types.RoundMessages[*signing.Round1P2P], len(parties))
+	r1ou := make([]network.RoundMessages[*signing.Round1P2P], len(parties))
 	for i := range parties {
 		r1ob[i], r1ou[i], err = parties[i].Round1()
 		require.NoError(t, err)
@@ -56,7 +57,7 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 
 	r2ib, r2iu := testutils.MapO2I(parties, r1ob, r1ou)
 	r2ob := make([]*signing.Round2Broadcast, len(parties))
-	r2ou := make([]types.RoundMessages[*signing.Round2P2P], len(parties))
+	r2ou := make([]network.RoundMessages[*signing.Round2P2P], len(parties))
 	for i := range parties {
 		r2ob[i], r2ou[i], err = parties[i].Round2(r2ib[i], r2iu[i])
 		require.NoError(t, err)

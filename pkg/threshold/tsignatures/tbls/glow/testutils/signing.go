@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
@@ -52,8 +53,8 @@ func ProducePartialSignature(participants []*signing.Cosigner, message []byte) (
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*glow.PartialSignature) types.RoundMessages[*glow.PartialSignature] {
-	result := types.NewRoundMessages[*glow.PartialSignature]()
+func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*glow.PartialSignature) network.RoundMessages[*glow.PartialSignature] {
+	result := network.NewRoundMessages[*glow.PartialSignature]()
 	for i, identity := range identities {
 		result.Put(identity, partialSignatures[i])
 	}

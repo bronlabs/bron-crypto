@@ -25,18 +25,15 @@ const (
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
+	*types.BaseParticipant[types.ThresholdProtocol]
+
 	przsSetupParticipant *setup.Participant
 	nic                  compiler.Name
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
 
-	protocol   types.ThresholdProtocol
 	preSigners ds.Set[types.IdentityKey]
-	sessionId  []byte
-	round      int
-	prng       io.Reader
-	transcript transcripts.Transcript
 
 	state *state
 
@@ -95,16 +92,12 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	}
 
 	participant = &PreGenParticipant{
+		BaseParticipant:      types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		nic:                  nic,
 		przsSetupParticipant: przsParticipant,
 		preSigners:           preSigners,
 		myAuthKey:            myAuthKey,
 		mySharingId:          mySharingId,
-		protocol:             protocol,
-		sessionId:            sessionId,
-		transcript:           transcript,
-		round:                1,
-		prng:                 prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

@@ -76,12 +76,12 @@ func (*Transcript) Type() transcripts.Type {
 // InitialiseProtocol appends the sessionId to the transcript using dst as domain-separation
 // tag and extracts a fresh transcript-bound sessionId `sid`. If the transcript is nil, a new
 // one is created with the supplied `dst` label.
-func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst string) (t transcripts.Transcript, sid []byte, err error) {
+func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst string) (transcripts.Transcript, []byte, error) {
 	if transcript == nil {
 		transcript = NewTranscript(dst, nil)
 	}
 	transcript.AppendMessages(dst, sessionId)
-	sessionId, err = transcript.ExtractBytes(dst, stateSize)
+	sessionId, err := transcript.ExtractBytes(dst, stateSize)
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "couldn't extract sessionId from transcript")
 	}
