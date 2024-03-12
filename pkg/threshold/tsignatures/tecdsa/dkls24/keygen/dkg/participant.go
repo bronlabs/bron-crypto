@@ -14,6 +14,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
@@ -71,12 +72,16 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		if participant.Equal(authKey) {
 			continue
 		}
-		sender, err := bbot.NewSender(ot.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
+		otProtocol, err := types.NewMPCProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not construct protocol config for myself and %s", participant.String())
+		}
+		sender, err := bbot.NewSender(authKey, otProtocol, ot.Kappa, 1, sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
 		senders.Put(participant, sender)
-		receiver, err := bbot.NewReceiver(ot.Kappa, 1, protocol.Curve(), sessionId, transcript.Clone(), prng)
+		receiver, err := bbot.NewReceiver(authKey, otProtocol, ot.Kappa, 1, sessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}

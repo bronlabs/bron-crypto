@@ -10,9 +10,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
-	schnorrSigma "github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -63,8 +62,8 @@ func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput 
 	}
 	bigR := p.protocol.Curve().ScalarBaseMult(k)
 
-	// step 1.2: Run c_i <= commit(R_i || i || sid || S)
-	bigRCommitment, bigRWitness, err := commit(p.prng, bigR, p.state.pid, p.sessionId, p.state.bigS)
+	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
+	bigRCommitment, bigRWitness, err := commitments.Commit(p.sessionId, p.prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), p.state.pid, p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -123,14 +122,13 @@ func (p *Cosigner[F]) Round2(broadcastInput types.RoundMessages[*Round1Broadcast
 
 	// step 2.2: Run z^{b}_i <- PRZS.Round1({z^{a}_ji}_∀j)
 	przsInput := types.NewRoundMessages[*setup.Round1P2P]()
-	for pair := range unicastInput.Iter() {
-		identity := pair.Key
+	for identity := range p.quorum.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		r2 := pair.Value
-		if r2 == nil {
-			return nil, nil, errs.NewIsNil("r2 for identity %s", identity.String())
+		r2, exists := unicastInput.Get(identity)
+		if !exists {
+			return nil, nil, errs.NewMissing("r2 for identity %s", identity.String())
 		}
 		przsInput.Put(identity, r2.Przs)
 	}
@@ -184,8 +182,8 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 			return nil, errs.NewMissing("could not find their bigR commitment (pid=%x)", theirPid)
 		}
 
-		// step 3.2: Open(R_j || j || sid || S)
-		if err := openCommitment(theirBigR, theirPid, p.sessionId, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+		// step 3.2: Open(sid || R_j || j || S)
+		if err := commitments.Open(p.sessionId, theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
@@ -199,9 +197,14 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	}
 	// step 3.5: Run PRZS.Round3({z^{b}_ji}_{∀j})
 	przsInput := types.NewRoundMessages[*setup.Round2P2P]()
-	for pair := range unicastInput.Iter() {
-		identity := pair.Key
-		r3 := pair.Value
+	for identity := range p.quorum.Iter() {
+		if identity.Equal(p.IdentityKey()) {
+			continue
+		}
+		r3, exists := unicastInput.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("r3 for identity %s", identity.String())
+		}
 		przsInput.Put(identity, r3.Przs)
 	}
 	przsSeeds, err := p.przsParticipant.Round3(przsInput)
@@ -245,61 +248,24 @@ func (p *Cosigner[F]) Round3(broadcastInput types.RoundMessages[*Round2Broadcast
 	}, nil
 }
 
-func commit(prng io.Reader, bigR curves.Point, pid, sessionId, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sessionId, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
-	}
-
-	return commitment, witness, nil
-}
-
-func openCommitment(bigR curves.Point, pid, sessionId, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	if err := commitments.Open(sessionId, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), pid, bigS); err != nil {
-		return errs.WrapVerification(err, "couldn't open")
-	}
-	return nil
-}
-
 func dlogProve(k curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
-	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	curve := k.ScalarField().Curve()
-	sigmaProtocol, err := schnorrSigma.NewSigmaProtocol(curve.Generator(), prng)
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	proof, statement, err := dlog.Prove(sessionId, k, curve.Generator(), nic, transcript, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct schnorr sigma protocol")
+		return nil, errs.WrapFailed(err, "cannot create a proof")
 	}
-	niSigma, err := compilerUtils.MakeNonInteractive(nic, sigmaProtocol, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert schnorr sigma protocol into non interactive")
-	}
-	prover, err := niSigma.NewProver(sessionId, transcript)
-	if err != nil {
-		return nil, errs.NewFailed("cannot create dlog prover")
-	}
-	proof, err = prover.Prove(bigR, k)
-	if err != nil {
-		return nil, errs.NewFailed("cannot create a proof")
+	if !bigR.Equal(statement) {
+		return nil, errs.NewFailed("invalid statement")
 	}
 	return proof, nil
 }
 
 func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
-	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	curve := bigR.Curve()
-	sigmaProtocol, err := schnorrSigma.NewSigmaProtocol(curve.Generator(), nil)
-	if err != nil {
-		return errs.WrapFailed(err, "could not construct schnorr sigma protocol")
-	}
-	niSigma, err := compilerUtils.MakeNonInteractive(nic, sigmaProtocol, nil)
-	if err != nil {
-		return errs.WrapFailed(err, "could not convert schnorr sigma protocol into non interactive")
-	}
-	verifier, err := niSigma.NewVerifier(sessionId, transcript)
-	if err != nil {
-		return errs.WrapFailed(err, "could not construct verifier")
-	}
-	if err := verifier.Verify(bigR, proof); err != nil {
-		return errs.WrapVerification(err, "dlog proof failed")
+	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	if err := dlog.Verify(sessionId, proof, bigR, curve.Generator(), nic, transcript); err != nil {
+		return errs.WrapVerification(err, "cannot verify proof")
 	}
 	return nil
 }

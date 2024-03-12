@@ -34,7 +34,7 @@ func cipherSuites(t *testing.T) []types.SignatureProtocol {
 	return cs
 }
 
-var baseOTrunners = []func(batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
+var baseOTrunners = []func(senderKey, receiverKey types.AuthKey, batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
 	vsot_testutils.RunVSOT,
 	bbot_testutils.RunBBOT,
 }
@@ -45,10 +45,13 @@ func TestMultiplicationHappyPath(t *testing.T) {
 		for _, baseOTrunner := range baseOTrunners {
 			boundedCipherSuite := cipherSuite
 			boundedBaseOTrunner := baseOTrunner
+			authKeys, err := ttu.MakeTestAuthKeys(boundedCipherSuite, 2)
+			require.NoError(t, err)
+			senderKey, receiverKey := authKeys[0], authKeys[1]
 			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
@@ -82,11 +85,14 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 		for _, baseOTrunner := range baseOTrunners {
 			boundedCipherSuite := cipherSuite
 			boundedBaseOTrunner := baseOTrunner
+			authKeys, err := ttu.MakeTestAuthKeys(boundedCipherSuite, 2)
+			require.NoError(t, err)
+			senderKey, receiverKey := authKeys[0], authKeys[1]
 			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
 				sid2 := []byte("this is a different unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
@@ -119,10 +125,13 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 		for _, baseOTrunner := range baseOTrunners {
 			boundedCipherSuite := cipherSuite
 			boundedBaseOTrunner := baseOTrunner
+			authKeys, err := ttu.MakeTestAuthKeys(boundedCipherSuite, 2)
+			require.NoError(t, err)
+			senderKey, receiverKey := authKeys[0], authKeys[1]
 			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
 				t.Parallel()
 				sid := []byte("this is a unique session id")
-				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
 				seededPrng, err := chacha.NewChachaPRNG(nil, nil)

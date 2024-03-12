@@ -298,7 +298,7 @@ func (s *Sender) verifyChallenge(
 		isCorrect = isCorrect && checkOk
 	}
 	if !isCorrect {
-		return errs.NewIdentifiableAbort("SoftspokenOTe receiver", "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
+		return errs.NewIdentifiableAbort(s.OtherParty().String(), "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
 	}
 	return nil
 }

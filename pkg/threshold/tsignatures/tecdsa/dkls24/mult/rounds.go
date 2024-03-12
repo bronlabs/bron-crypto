@@ -30,7 +30,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	}
 	for j := 0; j < Xi; j++ {
 		for l := 0; l < LOTe; l++ {
-			bob.Gamma[j][l], err = bob.Curve.Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
+			bob.Gamma[j][l], err = bob.Protocol.Curve().Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bob could not hash to gamma")
 			}
@@ -40,9 +40,9 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	bob.Beta = bitstring.UnpackBits(bob.Beta) // unpack beta for easier access to individual bits
 
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
-	b = bob.Curve.Scalar().ScalarField().Zero()
+	b = bob.Protocol.Curve().Scalar().ScalarField().Zero()
 	for j := 0; j < Xi; j++ {
-		b = bob.Curve.Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
+		b = bob.Protocol.Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
 	}
 
 	return b, r1out, nil
@@ -58,7 +58,7 @@ type Round2Output struct {
 
 func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputShares, r2o *Round2Output, err error) {
 	C := new(OutputShares)
-	scalarField := alice.Curve.Scalar().ScalarField()
+	scalarField := alice.Protocol.Curve().Scalar().ScalarField()
 
 	// step 2.1: Run OTE.Round2(...) --> (α0_j, α1_j) ∈ ℤq^[LOTe]   ∀j∈[ξ]
 	alphaBits, err := alice.sender.Round2(r1out)
@@ -112,7 +112,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (sessionId || ã)
-	theta, err := alice.Curve.HashToScalars(L*Rho, alice.sessionId, aTildeBytes)
+	theta, err := alice.Protocol.Curve().HashToScalars(L*Rho, alice.sessionId, aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
 	}
@@ -148,7 +148,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 }
 
 func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
-	scalarField := bob.Curve.Scalar().ScalarField()
+	scalarField := bob.Protocol.Curve().Scalar().ScalarField()
 	D = new([L]curves.Scalar)
 	for i := 0; i < L; i++ {
 		D[i] = scalarField.Zero()
@@ -164,7 +164,7 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 			aTildeBytes = append(aTildeBytes, r2o.ATilde[j][L+k].Bytes()...)
 		}
 	}
-	theta, err := bob.Curve.HashToScalars(L*Rho, bob.sessionId, aTildeBytes)
+	theta, err := bob.Protocol.Curve().HashToScalars(L*Rho, bob.sessionId, aTildeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}

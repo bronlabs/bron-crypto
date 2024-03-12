@@ -7,13 +7,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
@@ -29,14 +33,23 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		messages := make([]ot.MessagePair, batchSize)
 		prng := rand.New(rand.NewSource(randomSeed))
-		receiver, err := vsot.NewReceiver(int(batchSize), L, curve, sid[:], randomisedFischlin.Name, nil, prng)
+		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		require.NoError(t, err)
+		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
+		require.NoError(t, err)
+		senderKey, receiverKey := authKeys[0], authKeys[1]
+
+		otProtocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
+		require.NoError(t, err)
+
+		receiver, err := vsot.NewReceiver(receiverKey, otProtocol, int(batchSize), L, sid[:], randomisedFischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		sender, err := vsot.NewSender(int(batchSize), L, curve, sid[:], randomisedFischlin.Name, nil, prng)
+		sender, err := vsot.NewSender(senderKey, otProtocol, int(batchSize), L, sid[:], randomisedFischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

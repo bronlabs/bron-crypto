@@ -6,6 +6,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
@@ -102,15 +103,19 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		if participant.Equal(myAuthKey) {
 			continue
 		}
+		otProtocol, err := types.NewMPCProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey)))
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
+		}
 		seedOtResults, exists := myShard.PairwiseBaseOTs.Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
-		alice, err := mult.NewAlice(protocol.Curve(), seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
-		bob, err := mult.NewBob(protocol.Curve(), seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
