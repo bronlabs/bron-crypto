@@ -1,21 +1,21 @@
 # Zero-Knowledge Range Proof
-Zero-Knowledge range proof that $x \in \lbrace 0, ..., \frac{q}{3} \rbrace$ where $c=Enc_{pk}(x; r)$.
+Zero-Knowledge range proof that $x \in \lbrace 0, ..., \frac{q}{3} \rbrace$ lies in the interval $\left[0, q \right)$, where $c=Enc_{pk}(x; r)$.
 See appendix A of [Fast Secure Two-Party ECDSA Signing][Lin17] for details.
-The proof is based on [https://www.iacr.org/archive/eurocrypt2000/1807/18070437-new.pdf][Bou2000]
+The proof is based on [Efficient Proofs that a Committed Number Lies in an Interval][Bou00]
 
 ## Protocol for $L_{P}$
 Input:
 * $t$ - security parameter (cheating prover can succeed with probability $\le 2^{-t}$)
-* $q$ - defines the range $\left[0; \frac{q}{3})$
+* $q$ - defines the range $\left[0; \frac{q}{3}\right)$
 
 $P$ input:
-* $sk$ - Paillier private-key
-* $x$
-* $r$
+* $sk$ - Paillier secret key
+* $x$ - plaintext (witness)
+* $r$ - encryption nonce
 
 $V$ input:
-* $pk$ - Paillier public-key
-* $c$ - Paillier encrypted value of $x$, i.e. $c = Enc_{pk}(x; r)$
+* $pk$ - Paillier public key
+* $c$ - Paillier encrypted value of $x$ with nonce $r$, i.e. $c = Enc_{pk}(x; r)$
 
 Sigma protocol steps:
 1. Commit:
@@ -34,4 +34,4 @@ Sigma protocol steps:
     4. accepts if and only if all the checks pass.
 
 [Lin17]: <https://eprint.iacr.org/2017/552> 
-[Bou2000]: <https://www.iacr.org/archive/eurocrypt2000/1807/18070437-new.pdf>
+[Bou00]: <https://www.iacr.org/archive/eurocrypt2000/1807/18070437-new.pdf>
