@@ -133,14 +133,14 @@ func (s *Sender) Round3(maskedChoices Round2P2P) (challenge Round3P2P, err error
 				if err != nil {
 					return nil, errs.WrapHashing(err, "creating one time pad encryption keys")
 				}
-				copy(s.Output.Messages[i][k][l][:], output)
+				copy(s.Output.Messages[i][k][l][:], output[:ot.KappaBytes])
 
 				// step 3.3: Compute challenge by XORing the hash of the hash of the key. Not a typo ;)
 				digest, err := hashing.Hash(ot.HashFunction, s.Output.Messages[i][k][l][:])
 				if err != nil {
 					return nil, errs.WrapHashing(err, "hashing the key (I)")
 				}
-				digest, err = hashing.Hash(ot.HashFunction, digest)
+				digest, err = hashing.Hash(ot.HashFunction, digest[:ot.KappaBytes])
 				if err != nil {
 					return nil, errs.WrapHashing(err, "hashing the key (II)")
 				}
@@ -172,7 +172,7 @@ func (r *Receiver) Round4(challenge Round3P2P) (Round4P2P, error) {
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing the key (I)")
 			}
-			hashedKey, err = hashing.Hash(ot.HashFunction, hashedKey)
+			hashedKey, err = hashing.Hash(ot.HashFunction, hashedKey[:ot.KappaBytes])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing the key (II)")
 			}
@@ -210,8 +210,8 @@ func (s *Sender) Round5(challengeResponses Round4P2P) (Round5P2P, error) {
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing the key to verify the challenge response")
 			}
-			if subtle.ConstantTimeCompare(hashedKey0, challengeResponses[i][l][:]) != 1 {
-				return nil, errs.NewIdentifiableAbort(s.OtherParty().String(), "receiver's challenge response didn't match H(H(m^0))")
+			if subtle.ConstantTimeCompare(hashedKey0[:ot.KappaBytes], challengeResponses[i][l][:]) != 1 {
+				return nil, errs.NewTotalAbort(s.OtherParty().String(), "receiver's challenge response didn't match H(H(m^0))")
 			}
 		}
 	}
@@ -238,8 +238,8 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 			}
 			choice := int(r.Output.Choices.Select(i))
 			ct.SelectSlice(choice, challengeOpening[:], challengeOpenings[i][0][l][:], challengeOpenings[i][1][l][:])
-			if subtle.ConstantTimeCompare(hashedDecryptionKey, challengeOpening[:]) != 1 {
-				return errs.NewIdentifiableAbort(r.OtherParty().String(), "sender's supposed H(m^omega) doesn't match our own")
+			if subtle.ConstantTimeCompare(hashedDecryptionKey[:ot.KappaBytes], challengeOpening[:]) != 1 {
+				return errs.NewTotalAbort(r.OtherParty().String(), "sender's supposed H(m^omega) doesn't match our own")
 			}
 			// step 6.2: Reconstruct the challenge and verify it
 			hashedKey0, err := hashing.Hash(ot.HashFunction, challengeOpenings[i][0][l][:])
@@ -250,7 +250,7 @@ func (r *Receiver) Round6(challengeOpenings Round5P2P) error {
 			if err != nil {
 				return errs.WrapHashing(err, "hashing the key1 to verify the challenge response")
 			}
-			subtle.XORBytes(reconstructedChallenge[:], hashedKey0, hashedKey1)
+			subtle.XORBytes(reconstructedChallenge[:], hashedKey0[:ot.KappaBytes], hashedKey1[:ot.KappaBytes])
 
 			if subtle.ConstantTimeCompare(reconstructedChallenge[:], r.SenderChallenge[i][l][:]) != 1 {
 				return errs.NewIdentifiableAbort(r.OtherParty().String(), "sender's openings H(m^0) and H(m^1) didn't decommit to its prior message")

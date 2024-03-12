@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/binaryfield/bf128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -14,7 +15,6 @@ import (
 
 type Round1Output struct {
 	U        ExtMessageBatch   // [κ][η']bits
-	Witness  Witness           // [κ][σ]bits
 	Response ChallengeResponse // [σ] + [κ][σ]bits
 
 	_ ds.Incomparable
@@ -72,9 +72,8 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 1.5: Generate the challenge (χ) using Fiat-Shamir heuristic
-	r1Out.Witness, err = commitWitness(r.Transcript, &r1Out.U, nil, r.Csprng)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe (Check.1)")
+	for i := 0; i < ot.Kappa; i++ {
+		r.Transcript.AppendMessages("OTe_expansionMask", r1Out.U[i])
 	}
 	M := eta / Sigma                                          // M = η/σ
 	challengeFiatShamir := generateChallenge(r.Transcript, M) // χ
@@ -110,11 +109,8 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 // Round2 uses the PRG to extend the baseOT results and verifies their consistency.
 func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, err error) {
 	// Sanitise inputs, compute sizes
-	if r1out == nil || len(r1out.U) != ot.Kappa || len(r1out.Witness) != ot.Kappa ||
-		len(r1out.Response.T_val) != ot.Kappa || len(r1out.Response.X_val) != SigmaBytes {
-
-		return nil, errs.NewLength("wrong r1out length (U (%d - %d), Witness (%d - %d), T_val (%d - %d), X_val (%d - %d))",
-			len(r1out.U), ot.Kappa, len(r1out.Witness), ot.Kappa, len(r1out.Response.T_val), ot.Kappa, len(r1out.Response.X_val), SigmaBytes)
+	if r1out == nil {
+		return nil, errs.NewIsNil("r1out")
 	}
 	Eta := s.L * s.Xi                   // η = L*ξ
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
@@ -145,9 +141,8 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
-	_, err = commitWitness(s.Transcript, &r1out.U, r1out.Witness, s.Csprng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "bad commitment for SoftSpoken COTe")
+	for i := 0; i < ot.Kappa; i++ {
+		s.Transcript.AppendMessages("OTe_expansionMask", r1out.U[i])
 	}
 	M := Eta / Sigma
 	challengeFiatShamir := generateChallenge(s.Transcript, M)
@@ -196,41 +191,16 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 }
 
 // -------------------------------------------------------------------------- //
-// ---------------- SIGMA-LIKE PROTOCOL FOR CONSISTENCY CHECK --------------- //
+// --------------------------  CONSISTENCY CHECK ---------------------------- //
 // -------------------------------------------------------------------------- //
-// This section contains the functions for the Sigma-like protocol, used to
-// prove consistency of the extension, with four algorithms:
-// 1. commitWitness: the prover commits a statement (u_i) with the witness (r).
-// 2. ComputeChallenge: the verifier computes the challenge (χ).
-// 3. ComputeResponse: the prover computes the challenge response (ẋ, ṫ^i)
+// This section contains the functions for the fiat-shamir consistency check:
+// 1. generateChallenge: the verifier generates the challenge (χ).
+// 2. computeResponse: the prover computes the challenge response (ẋ, ṫ^i)
 //    using the challenge (χ).
-// 4. VerifyChallenge: the verifier verifies the challenge response (ẋ, ṫ^i)
+// 3. verifyChallenge: the verifier verifies the challenge response (ẋ, ṫ^i)
 //    using the challenge (χ) and the commitment to the statement (u_i).
 //
-// We employ the Fiat-Shamir heuristic, appending u_i to the transcript and
-// generating the challenge (χ) from the transcript.
 
-// commitWitness (*)(Fiat-Shamir) Appends the expansionMask to the transcript.
-func commitWitness(transcript transcripts.Transcript, expansionMask *ExtMessageBatch, r Witness, csrand io.Reader) (Witness, error) {
-	if len(*expansionMask) == 0 {
-		return nil, errs.NewIsNil("expansionMask is nil")
-	}
-	if r == nil {
-		r = make(Witness, ot.Kappa)
-		for i := 0; i < ot.Kappa; i++ {
-			if _, err := io.ReadFull(csrand, r[i][:]); err != nil {
-				return nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe (WitnessCommitment)")
-			}
-		}
-	}
-	for i := 0; i < ot.Kappa; i++ {
-		transcript.AppendMessages("OTe_witnessCommitment", r[i][:])
-		transcript.AppendMessages("OTe_expansionMask", expansionMask[i])
-	}
-	return r, nil
-}
-
-// generateChallenge (*)(Fiat-Shamir) Generates the challenge (χ) using Fiat-Shamir heuristic.
 func generateChallenge(transcript transcripts.Transcript, M int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, M)
 	for i := 0; i < M; i++ {
@@ -244,28 +214,24 @@ func generateChallenge(transcript transcripts.Transcript, M int) (challenge Chal
 func (r *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Challenge, challengeResponse *ChallengeResponse) {
 	M := len(challenge)
 	etaBytes := (M * Sigma) / 8 // M = η/σ -> η = M*σ
-	// 		ẋ = x_{mσ:(m+1)σ} ...
-	copy(challengeResponse.X_val[:], r.xPrime[etaBytes:etaBytes+SigmaBytes])
-	// 		                ... + Σ{k=1}^{m} χ_j • xx_{(k-1)σ:kσ}
+	// ẋ = x_{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • x_{(k-1)σ:kσ}
+	X_val := bf128.NewElementFromBytes(r.xPrime[etaBytes : etaBytes+SigmaBytes])
+	Chi := make([]*bf128.FieldElement, M)
 	for k := 0; k < M; k++ {
-		x_hat_j := r.xPrime[k*SigmaBytes : (k+1)*SigmaBytes]
-		Chi_j := challenge[k][:]
-		for k := 0; k < SigmaBytes; k++ {
-			challengeResponse.X_val[k] ^= (Chi_j[k] & x_hat_j[k])
-		}
+		x_hat_k := bf128.NewElementFromBytes(r.xPrime[k*SigmaBytes : (k+1)*SigmaBytes])
+		Chi[k] = bf128.NewElementFromBytes(challenge[k][:])
+		X_val = X_val.Add(x_hat_k.Mul(Chi[k]))
 	}
-	// 		ṫ^i = ...
+	copy(challengeResponse.X_val[:], X_val.Bytes())
+	// ṫ^i = t^i_{0,{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • t^i_{0,{(k-1)σ:kσ}}
 	for i := 0; i < ot.Kappa; i++ {
-		//         ... t^i_{0,{mσ:(m+1)σ} ...
+		T_val := bf128.NewElementFromBytes(extOptions[0][i][etaBytes : etaBytes+SigmaBytes])
 		copy(challengeResponse.T_val[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
-		//                           ... + Σ{k=1}^{m} χ_j • t^i_{0,{(k-1)σ:kσ}}
 		for k := 0; k < M; k++ {
-			t_hat_j := extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes]
-			Chi_j := challenge[k][:]
-			for k := 0; k < SigmaBytes; k++ {
-				challengeResponse.T_val[i][k] ^= (Chi_j[k] & t_hat_j[k])
-			}
+			t_hat_k := bf128.NewElementFromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
+			T_val = T_val.Add(t_hat_k.Mul(Chi[k]))
 		}
+		copy(challengeResponse.T_val[i][:], T_val.Bytes())
 	}
 }
 
@@ -278,24 +244,20 @@ func (s *Sender) verifyChallenge(
 	// Compute sizes
 	M := len(challenge)                                // M = η/σ
 	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
-	var qi_val, qi_expected [SigmaBytes]byte
 	isCorrect := true
 	for i := 0; i < ot.Kappa; i++ {
-		// q̇^i = q^i_hat_{m+1} ...
-		copy(qi_val[:], extCorrelations[i][etaBytes:etaBytes+SigmaBytes])
-		//                     ... + Σ{k=1}^{m} χ_j • q^i_hat_j
+		// q̇^i = q^i_hat_{m+1} + Σ{k=1}^{m} χ_k • q^i_hat_k
+		qi_val := bf128.NewElementFromBytes(extCorrelations[i][etaBytes : etaBytes+SigmaBytes])
 		for k := 0; k < M; k++ {
-			qi_hat_j := extCorrelations[i][k*SigmaBytes : (k+1)*SigmaBytes]
-			Chi_j := challenge[k][:]
-			for k := 0; k < SigmaBytes; k++ {
-				qi_val[k] ^= (qi_hat_j[k] & Chi_j[k])
-			}
+			qi_hat_k := bf128.NewElementFromBytes(extCorrelations[i][k*SigmaBytes : (k+1)*SigmaBytes])
+			Chi_k := bf128.NewElementFromBytes(challenge[k][:])
+			qi_val = qi_val.Add(qi_hat_k.Mul(Chi_k))
 		}
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
-		subtle.XORBytes(qi_expected[:], challengeResponse.T_val[i][:], challengeResponse.X_val[:])
-		subtle.ConstantTimeCopy(1-int(s.baseOtSeeds.Choices.Select(i)), qi_expected[:], challengeResponse.T_val[i][:])
-		checkOk := subtle.ConstantTimeCompare(qi_expected[:], qi_val[:]) == 1
-		isCorrect = isCorrect && checkOk
+		t_val := bf128.NewElementFromBytes(challengeResponse.T_val[i][:])
+		x_val := bf128.NewElementFromBytes(challengeResponse.X_val[:])
+		qi_expected := bf128.NewField().Select(s.baseOtSeeds.Choices.Select(i) != 0, t_val, t_val.Add(x_val))
+		isCorrect = isCorrect && qi_expected.Equal(qi_val)
 	}
 	if !isCorrect {
 		return errs.NewIdentifiableAbort(s.OtherParty().String(), "q_val != q_expected in SoftspokenOT. OTe consistency check failed")

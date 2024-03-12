@@ -65,11 +65,11 @@ func Test_HappyPath_ROTe(t *testing.T) {
 			require.NoError(t, err)
 
 			// Run OTe
-			senderMesages, receiverChosenMessage, err := testutils.RunSoftspokenOTe(
+			senderMesages, receiverChosenMessage, err := testutils.RunSoftspokenROTe(
 				senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
 			require.NoError(t, err)
 
-			// Check OTe result
+			// Check ROTe result
 			err = ot_testutils.ValidateOT(Xi, L, senderMesages, receiverChoices, receiverChosenMessage)
 			require.NoError(t, err)
 		}

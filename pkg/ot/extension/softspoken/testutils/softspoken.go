@@ -13,7 +13,7 @@ import (
 
 /*.------------------------- Random OT extension ----------------------------.*/
 
-// RunSoftspokenOTe is a utility function encapsulating the entire process of
+// RunSoftspokenROTe is a utility function encapsulating the entire process of
 // running a random OT extension without derandomization.
 // As a black box, this function does:
 //
@@ -21,7 +21,7 @@ import (
 //		        ├--- COTe_{Xi,L}(x)---┤
 //		S:   ---┘                        └---> S: (v_0, v_1)
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
-func RunSoftspokenOTe(
+func RunSoftspokenROTe(
 	senderKey, receiverKey types.AuthKey,
 	Xi int, // number of OTe messages in the batch
 	L int, // number of OTe elements per message

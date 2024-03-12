@@ -67,7 +67,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 		// Run OTe
-		senderMessages, receiverChosenMessage, err := softspoken_testutils.RunSoftspokenOTe(
+		senderMessages, receiverChosenMessage, err := softspoken_testutils.RunSoftspokenROTe(
 			senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
