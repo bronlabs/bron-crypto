@@ -19,52 +19,34 @@ var (
 	CommitmentHashFunction = sha3.New256
 )
 
-func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
-	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
-	}
-	if len(messages) == 0 {
-		return nil, nil, errs.NewArgument("no commit message")
-	}
+func computeCommitments(witness Witness, messages ...[]byte) (commitment Commitment, err error) {
+	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
 
-	msgs := make([][]byte, 0)
-	for i, m := range messages {
-		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
+	commitment = make([]byte, CommitmentHashFunction().Size())
+	for _, message := range messages {
+		commitment, err = hashing.Hash(hmacHash, commitment, message)
+		if err != nil {
+			return nil, errs.WrapHashing(err, "computing commitment hash")
+		}
 	}
-
-	return commitInternal(prng, msgs...)
-}
-
-func OpenWithoutSession(commitment Commitment, witness Witness, messages ...[]byte) error {
-	msgs := make([][]byte, 0)
-	for i, m := range messages {
-		msgs = append(msgs, slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m))
-	}
-
-	return openInternal(commitment, witness, msgs...)
+	return commitment, nil
 }
 
 func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
 	lambda := CommitmentHashFunction().Size()
 	witness := make([]byte, lambda)
 
-	_, err := io.ReadFull(prng, witness)
-	if err != nil {
+	if _, err := io.ReadFull(prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
-
-	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
-	commitment := make([]byte, 0)
-	for _, message := range messages {
-		commitment, err = hashing.Hash(hmacHash, commitment, message)
-		if err != nil {
-			return nil, nil, errs.WrapHashing(err, "computing commitment hash")
-		}
+	commitment, err := computeCommitments(witness, messages...)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
 	return commitment, witness, nil
 }
 
-func openInternal(commitment Commitment, witness Witness, message ...[]byte) error {
+func openInternal(commitment Commitment, witness Witness, messages ...[]byte) error {
 	lambda := CommitmentHashFunction().Size()
 	if lambda != len(commitment) {
 		return errs.NewArgument("size of commitment is wrong given hash function. Need %d whereas we have %d", lambda, len(commitment))
@@ -73,14 +55,9 @@ func openInternal(commitment Commitment, witness Witness, message ...[]byte) err
 		return errs.NewArgument("size of witness is wrong given hash function. Need %d whereas we have %d", lambda, len(witness))
 	}
 
-	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
-	recomputedCommitment := []byte{}
-	for _, m := range message {
-		var err error
-		recomputedCommitment, err = hashing.Hash(hmacHash, recomputedCommitment, m)
-		if err != nil {
-			return errs.WrapHashing(err, "recomputing commitment hash")
-		}
+	recomputedCommitment, err := computeCommitments(witness, messages...)
+	if err != nil {
+		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
 
 	if subtle.ConstantTimeCompare(commitment, recomputedCommitment) != 1 {
@@ -88,4 +65,21 @@ func openInternal(commitment Commitment, witness Witness, message ...[]byte) err
 	}
 
 	return nil
+}
+
+func encode(messages ...[]byte) [][]byte {
+	encoded := make([][]byte, len(messages))
+	for i, m := range messages {
+		encoded[i] = slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m)
+	}
+	return encoded
+}
+
+func encodeWithSessionId(sessionId []byte, messages ...[]byte) [][]byte {
+	encoded := make([][]byte, len(messages)+1)
+	encoded[0] = slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId)
+	for i, m := range encode(messages...) {
+		encoded[i+1] = m
+	}
+	return encoded
 }

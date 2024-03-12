@@ -26,12 +26,12 @@ type (
 
 func (S *Sender) Round1() (mS Round1P2P, err error) {
 	// step 1.1 (KA.R)
-	S.MyEsk, err = S.Curve.ScalarField().Random(S.Csprng)
+	S.MyEsk, err = S.Protocol.Curve().ScalarField().Random(S.Csprng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "generating random scalar a")
 	}
 	// step 1.2 (KA.msg_1)
-	mS = S.Curve.ScalarBaseMult(S.MyEsk)
+	mS = S.Protocol.Curve().ScalarBaseMult(S.MyEsk)
 	// step 1.3 (Setup RO)
 	S.Transcript.AppendPoints("mS", mS)
 	return mS, nil
@@ -64,12 +64,12 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 		R.Output.ChosenMessages[i] = make(ot.ChosenMessage, R.L)
 		for l := 0; l < R.L; l++ {
 			// step 2.2 (KA.R)
-			b_i, err := R.Curve.ScalarField().Random(R.Csprng)
+			b_i, err := R.Protocol.Curve().ScalarField().Random(R.Csprng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar bi")
 			}
 			// step 2.3 (KA.msg_2)
-			mR_i := R.Curve.ScalarBaseMult(b_i)
+			mR_i := R.Protocol.Curve().ScalarBaseMult(b_i)
 			// step 2.4 (KA.key_2)
 			sharedValue, err := dh.DiffieHellman(b_i, mS)
 			if err != nil {
@@ -81,19 +81,19 @@ func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
 			}
 			copy(R.Output.ChosenMessages[i][l][:], r_i_l)
 			// step 2.5 (POPF.Program)
-			sc, err := R.Curve.ScalarField().Random(R.Csprng)
+			sc, err := R.Protocol.Curve().ScalarField().Random(R.Csprng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar sc")
 			}
-			phi[i][1-c_i][l] = R.Curve.ScalarBaseMult(sc).ClearCofactor()
+			phi[i][1-c_i][l] = R.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
 			hashInput := slices.Concat(phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i])
-			sc, err = R.Curve.ScalarField().Hash(hashInput)
+			sc, err = R.Protocol.Curve().ScalarField().Hash(hashInput)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing phi[%d][%d]", i, 1-c_i)
 			}
-			pt := R.Curve.ScalarBaseMult(sc).ClearCofactor()
+			pt := R.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
 			phi[i][c_i][l] = mR_i.Sub(pt)
 		}
 	}
@@ -126,11 +126,11 @@ func (S *Sender) Round3(phi Round2P2P) (err error) {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
 				hashInput := slices.Concat(phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j])
-				sc, err := S.Curve.ScalarField().Hash(hashInput)
+				sc, err := S.Protocol.Curve().ScalarField().Hash(hashInput)
 				if err != nil {
 					return errs.WrapHashing(err, "hashing for phi[%d][%d]", i, j)
 				}
-				P := S.Curve.ScalarBaseMult(sc).ClearCofactor().Add(phi[i][j][l])
+				P := S.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor().Add(phi[i][j][l])
 				// step 3.3 (KA.key_1)
 				sharedValue, err := dh.DiffieHellman(S.MyEsk, P)
 				if err != nil {

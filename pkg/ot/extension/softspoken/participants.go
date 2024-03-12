@@ -3,8 +3,8 @@ package softspoken
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
@@ -34,10 +34,10 @@ type Sender struct {
 
 // NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
-	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
+func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
+	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
@@ -67,10 +67,10 @@ func NewSoftspokenReceiver(baseOtSeeds *ot.SenderRotOutput, sessionId []byte, tr
 
 // NewSoftspokenSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewSoftspokenSender(baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
-	c curves.Curve, csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
+func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
+	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(Xi, lOTe, c, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}

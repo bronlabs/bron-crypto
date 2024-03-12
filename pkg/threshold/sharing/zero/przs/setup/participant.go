@@ -106,9 +106,6 @@ func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol ty
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(sessionId) == 0 {
-		return errs.NewIsZero("sessionId length is zero")
-	}
 	if !curveutils.AllIdentityKeysWithSameCurve(identityKey.PublicKey().Curve(), protocol.Participants().List()...) {
 		return errs.NewCurve("authKey and participants have different curves")
 	}

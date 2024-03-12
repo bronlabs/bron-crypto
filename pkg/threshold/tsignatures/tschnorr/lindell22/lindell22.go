@@ -89,7 +89,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PrivateMaterial == nil {
 		return errs.NewIsNil("private material")
 	}
-	if err := ppm.PrivateMaterial.Validate(protocol, ppm.PreSigners); err != nil {
+	if err := ppm.PrivateMaterial.Validate(ppm.PreSigners); err != nil {
 		return errs.WrapValidation(err, "private material")
 	}
 	if ppm.PreSignature == nil {
@@ -115,7 +115,7 @@ type PrivatePreProcessingMaterial struct {
 	_ ds.Incomparable
 }
 
-func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
+func (pppm *PrivatePreProcessingMaterial) Validate(preSigners ds.Set[types.IdentityKey]) error {
 	if pppm == nil {
 		return errs.NewIsNil("receiver")
 	}
@@ -129,7 +129,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSigna
 		return errs.NewIsNil("seeds")
 	}
 	seeders := hashset.NewHashableHashSet(pppm.Seeds.Keys()...)
-	if !seeders.IsSubSet(protocol.Participants()) {
+	if !seeders.IsSubSet(preSigners) {
 		return errs.NewMembership("we have seeds from people who are not a participant in this protocol")
 	}
 	if seeders.SymmetricDifference(preSigners).Size() != 1 {
@@ -140,7 +140,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(protocol types.ThresholdSigna
 			return errs.NewIsZero("found seed that's all zero")
 		}
 	}
-	if preSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(preSigners.List()[0].PublicKey().Curve(), preSigners.List()...) {
+	if !curveutils.AllIdentityKeysWithSameCurve(preSigners.List()[0].PublicKey().Curve(), preSigners.List()...) {
 		return errs.NewCurve("not all preSigners are on the same curve")
 	}
 	return nil

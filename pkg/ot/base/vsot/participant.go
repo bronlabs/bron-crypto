@@ -6,6 +6,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -36,12 +37,12 @@ type Receiver struct {
 }
 
 // NewSender creates a new sender for the Random OT protocol.
-func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
-	dlog, err := schnorr.NewSigmaProtocol(curve.Generator(), csprng)
+	dlog, err := schnorr.NewSigmaProtocol(protocol.Curve().Generator(), csprng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't instantiate dlog protocol")
 	}
@@ -57,12 +58,12 @@ func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compi
 }
 
 // NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
-func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
-	dlog, err := schnorr.NewSigmaProtocol(curve.Generator(), csprng)
+	dlog, err := schnorr.NewSigmaProtocol(protocol.Curve().Generator(), csprng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't instantiate dlog protocol")
 	}
