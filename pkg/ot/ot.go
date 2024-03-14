@@ -29,8 +29,6 @@ type Participant struct {
 	L  int // L, the number of elements in each OT message.
 	Xi int // ξ, the number of OTs that are run in parallel.
 
-	myAuthKey types.AuthKey
-
 	_ ds.Incomparable
 }
 
