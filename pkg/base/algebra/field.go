@@ -11,7 +11,7 @@ type AbstractFiniteField[S Structure, E Element] interface {
 	MultiplicativeGroupTrait[S, E]
 	// FieldBytes returns the **exact** number of bytes required to represent a FieldElement, required for `SetBytes()`
 	FieldBytes() int
-	// WideFieldBytes returns the **maximum** number of bytes required to map uniformly to a FieldElement, required for `SetBytesWide()`
+	// WideFieldBytes returns the **maximum** number of bytes used to map uniformly to a FieldElement, required for `SetBytesWide()`
 	WideFieldBytes() int
 }
 

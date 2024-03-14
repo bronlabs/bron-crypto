@@ -39,9 +39,7 @@ type (
 
 	/*.------------------------- CONSISTENCY CHECK --------------------------.*/
 
-	Challenge  = [][SigmaBytes]byte // χ_i ∈ [M=η/σ][σ]bits is the random challenge for the consistency check.
-	Witness    = [][SigmaBytes]byte // r ∈ [κ][σ]bits is the witness for the Fiat-Shamir transform.
-	Commitment = [][SigmaBytes]byte // c ∈ [κ][σ]bits is the witness commitment for the Fiat-Shamir transform.
+	Challenge = [][SigmaBytes]byte // χ_i ∈ [M=η/σ][σ]bits is the random challenge for the consistency check.
 
 	// ChallengeResponse (ẋ, ṫ) is the OTe challenge response from the receiver, to be verified by the Sender.
 	ChallengeResponse struct {
