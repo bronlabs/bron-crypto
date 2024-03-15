@@ -45,7 +45,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
 		commitmentToInstanceKey, witness, err := commitments.Commit(
-			p.SessionId(),
+			p.SessionId,
 			p.Prng(),
 			bitstring.ToBytesLE(int(p.SharingId())),
 			bitstring.ToBytesLE(int(sharingId)),
@@ -200,7 +200,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
 		if err := commitments.Open(
-			p.SessionId(),
+			p.SessionId,
 			state.ReceivedInstanceKeyCommitments[sharingId],
 			receivedP2PMessage.InstanceKeyWitness,
 			bitstring.ToBytesLE(int(sharingId)),

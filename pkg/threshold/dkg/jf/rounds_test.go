@@ -371,7 +371,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		participantsBeta, err := testutils.MakeParticipants(uniqueSessionIdBeta, protocolConfigBeta, identities[:nBeta], cn, nil)
 		require.NoError(t, err)
 		// reused
-		participantsBeta[attackerIndex].SetSessionId(uniqueSessionIdAlpha)
+		participantsBeta[attackerIndex].SessionId = uniqueSessionIdAlpha
 		r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta)
 		require.NoError(t, err)
 		r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
@@ -398,7 +398,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		participantsBeta, err := testutils.MakeParticipants(uniqueSessionIdBeta, protocolConfigBeta, identities[:nBeta], cn, nil)
 		require.NoError(t, err)
 		// some garbage
-		participantsBeta[attackerIndex].SetSessionId([]byte("2 + 2 = 5"))
+		participantsBeta[attackerIndex].SessionId = []byte("2 + 2 = 5")
 		r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta)
 		require.NoError(t, err)
 		r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)

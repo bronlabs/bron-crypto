@@ -15,8 +15,8 @@ import (
 
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// Validation
-	if err := bob.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "bob in invalid round")
+	if bob.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but bob expected round %d", 1, bob.Round)
 	}
 
 	// step 1.1: Sample β ∈ [ξ]bits
@@ -47,14 +47,14 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 		b = bob.Protocol().Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
 	}
 
-	bob.NextRound(3)
+	bob.Round = 3
 	return b, r1out, nil
 }
 
 func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputShares, r2o *Round2Output, err error) {
 	// Validation, r1out and a delegated to OTE.Round2
-	if err := alice.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "alice in invalid round")
+	if alice.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but alice expected round %d", 2, alice.Round)
 	}
 	for i, a_i := range a {
 		if a_i == nil {
@@ -117,7 +117,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (sessionId || ã)
-	theta, err := alice.Protocol().Curve().HashToScalars(L*Rho, alice.SessionId(), aTildeBytes)
+	theta, err := alice.Protocol().Curve().HashToScalars(L*Rho, alice.SessionId, aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
 	}
@@ -144,19 +144,19 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.8: μ = H_{ℤ2^{2*λ_c}} (sessionId || μb)
-	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.SessionId(), muBytes)
+	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.SessionId, muBytes)
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "could not hash to Mu")
 	}
 
-	alice.LastRound()
+	alice.Terminate()
 	return C, &Round2Output{ATilde: aTilde, Eta: eta, Mu: mu}, nil
 }
 
 func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	// Validation
-	if err := bob.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "bob in invalid round")
+	if bob.Round != 3 {
+		return nil, errs.NewRound("Running round %d but bob expected round %d", 3, bob.Round)
 	}
 	if err := network.ValidateMessage(r2out); err != nil {
 		return nil, errs.WrapValidation(err, "wrong round 3 input")
@@ -178,7 +178,7 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 			aTildeBytes = append(aTildeBytes, r2out.ATilde[j][L+k].Bytes()...)
 		}
 	}
-	theta, err := bob.Protocol().Curve().HashToScalars(L*Rho, bob.SessionId(), aTildeBytes)
+	theta, err := bob.Protocol().Curve().HashToScalars(L*Rho, bob.SessionId, aTildeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}
@@ -206,7 +206,7 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	}
 
 	// step 3.6: μ' = H_{ℤ2^{2*λ_c}} (sessionId || μb')
-	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.SessionId(), muPrimeBytes)
+	muPrime, err := hashing.Hash(base.RandomOracleHashFunction, bob.SessionId, muPrimeBytes)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "bob could not hash to muPrime")
 	}
@@ -219,6 +219,6 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 		return nil, errs.NewVerification("bob verification failed. muPrime != Mu")
 	}
 
-	bob.LastRound()
+	bob.Terminate()
 	return D, nil
 }

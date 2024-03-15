@@ -17,8 +17,8 @@ const (
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	// step 1.1: a_i0 <-$- Z_q
@@ -38,7 +38,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 	// step 1.3: π_i <- NIZKPoK.Prove(s)  ∀s∈{a_i0, x_i1, x_i2, ..., x_in}
 	proverTranscript := p.Transcript().Clone()
 	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.state.niCompiler.NewProver(p.SessionId(), proverTranscript)
+	prover, err := p.state.niCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
 	}
@@ -72,7 +72,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 	p.state.commitmentsProof = commitmentsProof
 
 	// step 1.5: Broadcast(Bi)
-	p.NextRound()
+	p.Round++
 	return &Round1Broadcast{
 		BlindedCommitments: dealt.BlindedCommitments,
 	}, outboundP2PMessages, nil
@@ -80,8 +80,8 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*Round2Broadcast, error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
@@ -130,7 +130,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 	p.state.secretKeyShare = secretKeyShare
 	p.state.partialPublicKeyShares = partialPublicKeyShares
 	// step 2.3: Broadcast(C_i, π_i)
-	p.NextRound()
+	p.Round++
 	return &Round2Broadcast{
 		Commitments:      p.state.commitments,
 		CommitmentsProof: p.state.commitmentsProof,
@@ -139,8 +139,8 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output, int(p.Protocol().Threshold())); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 2 messages")
@@ -172,7 +172,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast
 		// step 3.1: NIZKPoK.Verify(π_i)
 		verifierTranscript := p.Transcript().Clone()
 		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.state.niCompiler.NewVerifier(p.SessionId(), verifierTranscript)
+		verifier, err := p.state.niCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")
 		}
@@ -224,6 +224,6 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast
 		Shares:                  publicKeySharesMap,
 		FeldmanCommitmentVector: p.state.commitments,
 	}
-	p.LastRound()
+	p.Terminate()
 	return signingKeyShare, publicKeyShares, nil
 }

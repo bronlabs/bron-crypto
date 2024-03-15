@@ -40,7 +40,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
-		require.NoError(t, party.InRound(1))
+		require.Equal(t, 1, party.Round)
 		require.NotNil(t, party.state)
 	}
 	aliceExtractedBytes, _ := alice.Transcript().ExtractBytes("test", 32)

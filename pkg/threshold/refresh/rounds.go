@@ -12,8 +12,8 @@ import (
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	samplerRound1Broadcast, samplerRound1P2P, err := p.sampler.Round1()
@@ -21,7 +21,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 		return nil, nil, errs.WrapFailed(err, "could not finish round 1 of hjky sampler")
 	}
 
-	p.NextRound()
+	p.Round++
 	return &Round1Broadcast{
 		Sampler:                   samplerRound1Broadcast,
 		PreviousFeldmanCommitment: p.publicKeyShares.FeldmanCommitmentVector,
@@ -30,8 +30,8 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
@@ -100,6 +100,6 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 		return nil, nil, errs.WrapValidation(err, "couldn't verify public key shares")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return refreshedSigningKeyShare, publicKeyShares, nil
 }

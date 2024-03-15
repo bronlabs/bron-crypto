@@ -26,40 +26,49 @@ func (*cipherSuite) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }
 
-type protocol struct {
+type BaseProtocol struct {
 	curve        curves.Curve
 	hash         func() hash.Hash
 	participants ds.Set[IdentityKey]
 	threshold    uint
 }
 
-func (p *protocol) Curve() curves.Curve {
+func NewBaseProtocol(curve curves.Curve, hashFunc func() hash.Hash, participants ds.Set[IdentityKey], threshold uint) *BaseProtocol {
+	return &BaseProtocol{
+		curve:        curve,
+		hash:         hashFunc,
+		participants: participants,
+		threshold:    threshold,
+	}
+}
+
+func (p *BaseProtocol) Curve() curves.Curve {
 	return p.curve
 }
 
-func (p *protocol) Hash() func() hash.Hash {
+func (p *BaseProtocol) Hash() func() hash.Hash {
 	return p.hash
 }
 
-func (p *protocol) Participants() ds.Set[IdentityKey] {
+func (p *BaseProtocol) Participants() ds.Set[IdentityKey] {
 	return p.participants
 }
 
-func (p *protocol) Threshold() uint {
+func (p *BaseProtocol) Threshold() uint {
 	return p.threshold
 }
 
-func (p *protocol) TotalParties() uint {
+func (p *BaseProtocol) TotalParties() uint {
 	return uint(p.participants.Size())
 }
 
-func (p *protocol) CipherSuite() SignatureProtocol {
+func (p *BaseProtocol) CipherSuite() SignatureProtocol {
 	return &cipherSuite{
 		curve: p.curve,
 		hash:  p.hash,
 	}
 }
 
-func (*protocol) MarshalJSON() ([]byte, error) {
+func (*BaseProtocol) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }

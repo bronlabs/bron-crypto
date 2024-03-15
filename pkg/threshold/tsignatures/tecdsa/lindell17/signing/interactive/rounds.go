@@ -16,8 +16,8 @@ import (
 
 func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	// Validation
-	if err := pc.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "primary cosigner in invalid round")
+	if pc.Round != 1 {
+		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 1, pc.Round)
 	}
 
 	// step 1.1: k1 <-$ Zq     &    R1 <- k1 * G
@@ -29,7 +29,7 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 
 	// step 1.2: c1 <- Commit(sid || Q || R1)
 	bigR1Commitment, bigR1Witness, err := commitments.Commit(
-		pc.SessionId(),
+		pc.SessionId,
 		pc.Prng(),
 		pc.myAuthKey.PublicKey().ToAffineCompressed(),
 		pc.state.bigR1.ToAffineCompressed(),
@@ -40,7 +40,7 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 
 	pc.state.bigR1Witness = bigR1Witness
 
-	pc.NextRound(3)
+	pc.Round = 3
 	// step 1.3: Send(c1) -> P_2
 	return &Round1OutputP2P{
 		BigR1Commitment: bigR1Commitment,
@@ -49,11 +49,11 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 
 func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2OutputP2P, err error) {
 	// Validation
-	if err := sc.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "secondary cosigner in invalid round")
+	if sc.Round != 2 {
+		return nil, errs.NewRound("Running round %d but secondary cosigner expected round %d", 2, sc.Round)
 	}
 	if err := network.ValidateMessage(r1out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
 	sc.state.bigR1Commitment = r1out.BigR1Commitment
@@ -64,7 +64,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 	}
 	sc.state.bigR2 = sc.Protocol().Curve().ScalarBaseMult(sc.state.k2)
 	// step 2.2: π <- NIPoK.Prove(k2)
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId(), sc.IdentityKey().PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -77,7 +77,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 		return nil, errs.NewFailed("invalid statement, something went terribly wrong")
 	}
 
-	sc.NextRound(4)
+	sc.Round = 4
 	// step 2.3: Send(R2, π) -> P_1
 	return &Round2OutputP2P{
 		BigR2:      sc.state.bigR2,
@@ -87,14 +87,14 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 
 func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2P, err error) {
 	// Validation
-	if err := pc.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "primary cosigner in invalid round")
+	if pc.Round != 3 {
+		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 3, pc.Round)
 	}
 	if err := network.ValidateMessage(r2out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round)
 	}
 
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId(), pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -103,7 +103,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId(), pc.myAuthKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}
@@ -120,7 +120,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 	bigRx := pc.state.bigR.AffineX().Nat()
 	pc.state.r = pc.Protocol().Curve().Scalar().SetNat(bigRx)
 
-	pc.NextRound(5)
+	pc.Round = 5
 	return &Round3OutputP2P{
 		BigR1Witness: pc.state.bigR1Witness,
 		BigR1:        pc.state.bigR1,
@@ -130,19 +130,19 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 
 func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (round4Output *lindell17.PartialSignature, err error) {
 	// Validation
-	if err := sc.InRound(4); err != nil {
-		return nil, errs.WrapValidation(err, "secondary cosigner in invalid round")
+	if sc.Round != 4 {
+		return nil, errs.NewRound("Running round %d but secondary cosigner expected round %d", 4, sc.Round)
 	}
 	if err := network.ValidateMessage(r3out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
-	err = commitments.Open(sc.SessionId(), sc.state.bigR1Commitment, r3out.BigR1Witness, sc.primaryIdentityKey.PublicKey().ToAffineCompressed(), r3out.BigR1.ToAffineCompressed())
+	err = commitments.Open(sc.SessionId, sc.state.bigR1Commitment, r3out.BigR1Witness, sc.primaryIdentityKey.PublicKey().ToAffineCompressed(), r3out.BigR1.ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, sc.primaryIdentityKey.String(), "cannot open R1 commitment")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId(), sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}
@@ -184,7 +184,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
 
-	sc.LastRound()
+	sc.Terminate()
 	return &lindell17.PartialSignature{
 		C3: c3,
 	}, nil
@@ -192,11 +192,11 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 
 func (pc *PrimaryCosigner) Round5(r4out *lindell17.PartialSignature, message []byte) (signature *ecdsa.Signature, err error) {
 	// Validation
-	if err := pc.InRound(5); err != nil {
-		return nil, errs.WrapValidation(err, "primary cosigner in invalid round")
+	if pc.Round != 5 {
+		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 5, pc.Round)
 	}
 	if err := network.ValidateMessage(r4out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round)
 	}
 
 	paillierSecretKey := pc.myShard.PaillierSecretKey
@@ -227,6 +227,6 @@ func (pc *PrimaryCosigner) Round5(r4out *lindell17.PartialSignature, message []b
 	if err := ecdsa.Verify(signature, pc.Protocol().CipherSuite().Hash(), pc.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "could not verify produced signature")
 	}
-	pc.LastRound()
+	pc.Terminate()
 	return signature, nil
 }

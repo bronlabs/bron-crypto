@@ -8,8 +8,8 @@ import (
 
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	p.state = &preGenState{
@@ -41,7 +41,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		}
 	}
 
-	p.NextRound()
+	p.Round++
 	return &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
@@ -50,11 +50,11 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 
 func (p *PreGenParticipant) Round2(round1output network.RoundMessages[*Round1Broadcast]) (PreSignatureBatch, []*PrivateNoncePair, error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
-		return nil, nil, errs.WrapFailed(err, "invalid round %d input", p.Round())
+		return nil, nil, errs.WrapFailed(err, "invalid round %d input", p.Round)
 	}
 
 	round1output.Put(p.IdentityKey(), &Round1Broadcast{
@@ -95,6 +95,6 @@ func (p *PreGenParticipant) Round2(round1output network.RoundMessages[*Round1Bro
 		return nil, nil, errs.WrapValidation(err, "invalid pre signature batch")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return batch, privateNoncePairs, nil
 }

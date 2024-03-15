@@ -19,8 +19,8 @@ const (
 
 func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u network.RoundMessages[*Round1P2P], err error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	// step 1.1: a_i0 <-$- Z_q
@@ -37,7 +37,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	}
 	transcript := hagrid.NewTranscript(DkgLabel, nil)
 	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(p.SharingId())))
-	prover, err := p.State.NiCompiler.NewProver(p.SessionId(), transcript)
+	prover, err := p.State.NiCompiler.NewProver(p.SessionId, transcript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
@@ -68,7 +68,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	p.State.A_i0 = a_i0
 
 	// step 1.5: Broadcast(Ci)
-	p.NextRound()
+	p.Round++
 	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
@@ -77,8 +77,8 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
@@ -121,7 +121,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		transcript := hagrid.NewTranscript(DkgLabel, nil)
 		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytesLE(int(senderSharingId)))
-		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId(), transcript)
+		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, transcript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}
@@ -175,7 +175,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 		return nil, nil, errs.WrapValidation(err, "couldn't verify public key shares")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return &tsignatures.SigningKeyShare{
 		Share:     secretKeyShare,
 		PublicKey: publicKey,

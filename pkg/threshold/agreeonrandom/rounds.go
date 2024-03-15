@@ -9,8 +9,8 @@ import (
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	// step 1.1: sample a random scalar r_i
@@ -28,7 +28,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	p.state.witness = witness
 
 	// step 1.3: broadcast your commitment
-	p.NextRound()
+	p.Round++
 	return &Round1Broadcast{
 		Commitment: commitment,
 	}, nil
@@ -36,8 +36,8 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 
 func (p *Participant) Round2(round1output network.RoundMessages[*Round1Broadcast]) (*Round2Broadcast, error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 1 messages")
@@ -54,7 +54,7 @@ func (p *Participant) Round2(round1output network.RoundMessages[*Round1Broadcast
 	}
 
 	// step 2.1: broadcast your witness and your sample r_i
-	p.NextRound()
+	p.Round++
 	return &Round2Broadcast{
 		Witness: p.state.witness,
 		Ri:      p.state.r_i,
@@ -63,8 +63,8 @@ func (p *Participant) Round2(round1output network.RoundMessages[*Round1Broadcast
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast]) (randomValue []byte, err error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid ound 1 messages")
@@ -96,6 +96,6 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast
 		return nil, errs.WrapFailed(err, "couldn't derive random value")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return randomValue, nil
 }

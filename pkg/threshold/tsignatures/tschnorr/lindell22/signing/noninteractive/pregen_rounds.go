@@ -22,8 +22,8 @@ const (
 
 func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	// 1. choose a random k1 & k2
@@ -41,7 +41,7 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	bigR2 := p.Protocol().Curve().ScalarBaseMult(k2)
 
 	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
-	bigRCommitment, bigRWitness, err := commitments.Commit(p.SessionId(), p.Prng(), []byte(commitmentDomainRLabel), bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed(), p.state.pid, p.state.bigS)
+	bigRCommitment, bigRWitness, err := commitments.Commit(p.SessionId, p.Prng(), []byte(commitmentDomainRLabel), bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed(), p.state.pid, p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -60,15 +60,15 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	p.state.bigR1 = bigR1
 	p.state.bigR2 = bigR2
 	p.state.bigRWitness = bigRWitness
-	p.NextRound()
+	p.Round++
 
 	return broadcast, unicast, nil
 }
 
 func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
 	// Validation, unicastInput is delegated to przs.Round2A
-	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast input")
@@ -84,11 +84,11 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 	}
 
 	// 1. compute proof of dlog knowledge of R1 & R2
-	bigR1Proof, err := dlogProve(p.state.k1, p.state.bigR1, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone(), p.Prng())
+	bigR1Proof, err := dlogProve(p.state.k1, p.state.bigR1, p.SessionId, p.state.bigS, p.nic, p.Transcript().Clone(), p.Prng())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
-	bigR2Proof, err := dlogProve(p.state.k2, p.state.bigR2, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone(), p.Prng())
+	bigR2Proof, err := dlogProve(p.state.k2, p.state.bigR2, p.SessionId, p.state.bigS, p.nic, p.Transcript().Clone(), p.Prng())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
@@ -106,7 +106,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 		BigR2Proof:  bigR2Proof,
 	}
 	p.state.theirBigRCommitment = theirBigRCommitment
-	p.NextRound()
+	p.Round++
 
 	// 2. broadcast proof and opening of R1, R2, revealing R1, R2
 	return broadcast, unicast, nil
@@ -114,8 +114,8 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 
 func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P]) (preProcessingMaterial *lindell22.PreProcessingMaterial, err error) {
 	// Validation, unicastInput is delegated to przs.Round3
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 broadcast input")
@@ -138,16 +138,16 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[*Round2B
 		}
 
 		// 1. verify commitment
-		if err := commitments.Open(p.SessionId(), theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
+		if err := commitments.Open(p.SessionId, theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
 		// 2. verify dlog
-		if err := dlogVerifyProof(inBroadcast.BigR1Proof, theirBigR1, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone()); err != nil {
+		if err := dlogVerifyProof(inBroadcast.BigR1Proof, theirBigR1, p.SessionId, p.state.bigS, p.nic, p.Transcript().Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 		BigR1.Put(identity, theirBigR1)
-		if err := dlogVerifyProof(inBroadcast.BigR2Proof, theirBigR2, p.SessionId(), p.state.bigS, p.nic, p.Transcript().Clone()); err != nil {
+		if err := dlogVerifyProof(inBroadcast.BigR2Proof, theirBigR2, p.SessionId, p.state.bigS, p.nic, p.Transcript().Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 		BigR2.Put(identity, theirBigR2)
@@ -158,7 +158,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[*Round2B
 		return nil, errs.WrapFailed(err, "PRZS round 3 failed")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return &lindell22.PreProcessingMaterial{
 		PreSigners: p.preSigners,
 		PrivateMaterial: &lindell22.PrivatePreProcessingMaterial{

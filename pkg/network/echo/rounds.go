@@ -11,8 +11,8 @@ import (
 
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	result := network.NewRoundMessages[*Round1P2P]()
@@ -21,7 +21,7 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
@@ -33,18 +33,18 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 		}
 	}
 
-	p.NextRound()
+	p.Round++
 	return result, nil
 }
 
 func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if !p.IsInitiator() {
 		if err := network.ValidateMessage(initiatorMessage); err != nil {
-			return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
+			return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round)
 		}
 	}
 
@@ -56,7 +56,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
@@ -76,17 +76,17 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 		}
 	}
 
-	p.NextRound()
+	p.Round++
 	return result, nil
 }
 
 func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]byte, error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.NonInitiatorParticipants(), p.IdentityKey(), p2pMessages); err != nil {
-		return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
+		return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round)
 	}
 
 	var messageToVerify []byte
@@ -104,7 +104,7 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]b
 		// if it is initiator, we need to verify that all messages are the same.
 		// if it is responder, we need to verify that the message is the same as the one we received from the initiator.
 		if !p.IsInitiator() {
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), sender.PublicKey().ToAffineCompressed(), messageToVerify)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
@@ -120,6 +120,6 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]b
 		}
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return messageToVerify, nil
 }

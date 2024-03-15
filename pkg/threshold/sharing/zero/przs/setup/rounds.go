@@ -14,8 +14,8 @@ import (
 
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	output := network.NewRoundMessages[*Round1P2P]()
@@ -34,7 +34,7 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 		}
 		// step 1.2: commit to the seed
 		commitment, witness, err := commitments.Commit(
-			p.SessionId(),
+			p.SessionId,
 			p.Prng(),
 			seedForThisParticipant[:],
 		)
@@ -52,14 +52,14 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 		})
 	}
 
-	p.NextRound()
+	p.Round++
 	return output, nil
 }
 
 func (p *Participant) Round2(round1output network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 1 messages")
@@ -87,14 +87,14 @@ func (p *Participant) Round2(round1output network.RoundMessages[*Round1P2P]) (ne
 		})
 	}
 
-	p.NextRound()
+	p.Round++
 	return output, nil
 }
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (przs.PairWiseSeeds, error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 messages")
@@ -119,7 +119,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (pr
 		if !exists {
 			return nil, errs.NewMissing("do not have a commitment from participant with index %d", participantIndex)
 		}
-		if err := commitments.Open(p.SessionId(), commitment, message.Witness, message.Message); err != nil {
+		if err := commitments.Open(p.SessionId, commitment, message.Witness, message.Message); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds.Get(participant)
@@ -142,6 +142,6 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (pr
 		pairwiseSeeds.Put(participant, finalSeed)
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return pairwiseSeeds, nil
 }

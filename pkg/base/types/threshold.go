@@ -28,7 +28,7 @@ type ThresholdProtocol interface {
 }
 
 func NewThresholdProtocol(curve curves.Curve, participants ds.Set[IdentityKey], threshold uint) (ThresholdProtocol, error) {
-	protocol := &protocol{
+	protocol := &BaseProtocol{
 		curve:        curve,
 		participants: participants,
 		threshold:    threshold,

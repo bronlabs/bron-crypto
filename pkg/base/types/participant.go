@@ -5,26 +5,29 @@ import (
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-const LastRoundNumber = -42 // Special value to indicate that the protocol is done.
+const TerminateRoundNumber = -42 // Special round number to indicate that a protocol is finished.
+
 type BaseParticipant[ProtocolT GenericProtocol] struct {
+	authKey    AuthKey
 	prng       io.Reader
 	protocol   ProtocolT
-	round      int
-	sessionId  []byte
+	Round      int
+	SessionId  []byte
 	transcript transcripts.Transcript
-	authKey    AuthKey
+
+	_ ds.Incomparable
 }
 
-func NewBaseParticipant[ProtocolT GenericProtocol](prng io.Reader, protocol ProtocolT, initialRound int, sessionId []byte, transcript transcripts.Transcript) *BaseParticipant[ProtocolT] {
+func NewBaseParticipant[ProtocolT MPCProtocol](prng io.Reader, protocol ProtocolT, initialRound int, sessionId []byte, transcript transcripts.Transcript) *BaseParticipant[ProtocolT] {
 	return &BaseParticipant[ProtocolT]{
 		prng:       prng,
 		protocol:   protocol,
-		round:      initialRound,
-		sessionId:  sessionId,
+		Round:      initialRound,
+		SessionId:  sessionId,
 		transcript: transcript,
 	}
 }
@@ -49,50 +52,21 @@ func (b *BaseParticipant[ProtocolT]) Protocol() ProtocolT {
 	return b.protocol
 }
 
-func (b *BaseParticipant[_]) SessionId() []byte {
-	return b.sessionId
-}
-func (b *BaseParticipant[_]) SetSessionId(sessionId []byte) {
-	b.sessionId = sessionId
-}
-
 func (b *BaseParticipant[_]) Transcript() transcripts.Transcript {
 	return b.transcript
 }
 
-func (b *BaseParticipant[_]) Round() int {
-	return b.round
-}
-
-func (b *BaseParticipant[_]) InRound(roundNo int) error {
-	if b.round != roundNo {
-		return errs.NewRound("round mismatch %d != %d", b.round, roundNo)
-	}
-	return nil
-}
-
-func (b *BaseParticipant[_]) SetRound(roundNo int) {
-	b.round = roundNo
-}
-
-func (b *BaseParticipant[_]) NextRound(step ...int) {
-	if len(step) > 0 {
-		b.round = step[0]
-	} else {
-		b.round++
-	}
-}
-
-func (b *BaseParticipant[_]) LastRound() {
-	b.round = LastRoundNumber
+func (b *BaseParticipant[_]) Terminate() {
+	b.Round = TerminateRoundNumber
 }
 
 func (b *BaseParticipant[ProtocolT]) Clone() *BaseParticipant[ProtocolT] {
 	return &BaseParticipant[ProtocolT]{
+		authKey:    b.authKey,
 		prng:       b.prng,
 		protocol:   b.protocol,
-		round:      b.round,
-		sessionId:  slices.Clone(b.sessionId),
+		Round:      b.Round,
+		SessionId:  slices.Clone(b.SessionId),
 		transcript: b.transcript.Clone(),
 	}
 }

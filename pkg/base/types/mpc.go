@@ -24,7 +24,7 @@ type MPCProtocol interface {
 }
 
 func NewMPCProtocol(curve curves.Curve, participants ds.Set[IdentityKey]) (MPCProtocol, error) {
-	protocol := &protocol{
+	protocol := &BaseProtocol{
 		curve:        curve,
 		participants: participants,
 	}

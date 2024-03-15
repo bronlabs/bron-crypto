@@ -14,7 +14,7 @@ type SignatureProtocol interface {
 }
 
 func NewSignatureProtocol(curve curves.Curve, hashFunc func() hash.Hash) (SignatureProtocol, error) {
-	protocol := &protocol{
+	protocol := &BaseProtocol{
 		curve: curve,
 		hash:  hashFunc,
 	}

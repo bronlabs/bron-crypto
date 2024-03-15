@@ -9,8 +9,8 @@ import (
 
 func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[*signing.Round1P2P], error) {
 	// Validation
-	if err := ic.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "cosigner in invalid round")
+	if ic.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but cosigner expected round %d", 1, ic.Round)
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound1(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state)
@@ -18,14 +18,14 @@ func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[*s
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	ic.NextRound()
+	ic.Round++
 	return outputBroadcast, outputP2P, nil
 }
 
 func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[*signing.Round1Broadcast], round1outputP2P network.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[*signing.Round2P2P], error) {
 	// Validation, round 1 messages delegated to signing.DoRound2
-	if err := ic.InRound(2); err != nil {
-		return nil, nil, errs.WrapValidation(err, "cosigner in invalid round")
+	if ic.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but cosigner expected round %d", 2, ic.Round)
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound2(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round1outputBroadcast, round1outputP2P)
@@ -33,14 +33,14 @@ func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[*signing.
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	ic.NextRound()
+	ic.Round++
 	return outputBroadcast, outputP2P, nil
 }
 
 func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[*signing.Round2Broadcast], round2outputP2P network.RoundMessages[*signing.Round2P2P], message []byte) (*dkls24.PartialSignature, error) {
 	// Validation, round 2 messages delegated to signing.DoRound3Prologue
-	if err := ic.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "cosigner in invalid round")
+	if ic.Round != 3 {
+		return nil, errs.NewRound("Running round %d but cosigner expected round %d", 3, ic.Round)
 	}
 
 	if err := signing.DoRound3Prologue(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round2outputBroadcast, round2outputP2P); err != nil {
@@ -66,6 +66,6 @@ func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[*signing.
 		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	ic.LastRound()
+	ic.Terminate()
 	return partialSignature, nil
 }

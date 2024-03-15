@@ -11,8 +11,8 @@ import (
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	// step 1.1
@@ -21,14 +21,14 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of zero share sampler")
 	}
 
-	p.NextRound()
+	p.Round++
 	return round1broadcast, round1p2p, nil
 }
 
 func (p *Participant) Round2(round1broadcast network.RoundMessages[*Round1Broadcast], round1p2p network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
 	// Validation, round1broadcast and round1p2p delegated to sampler.Round2
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 
 	output := network.NewRoundMessages[*Round2P2P]()
@@ -63,7 +63,7 @@ func (p *Participant) Round2(round1broadcast network.RoundMessages[*Round1Broadc
 	}
 
 	if !p.IsRecoverer() {
-		p.NextRound()
+		p.Round++
 		return output, nil
 	}
 
@@ -95,14 +95,14 @@ func (p *Participant) Round2(round1broadcast network.RoundMessages[*Round1Broadc
 		BlindedPartiallyRecoveredShare: sHat,
 	})
 
-	p.LastRound()
+	p.Terminate()
 	return output, nil
 }
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (*tsignatures.SigningKeyShare, error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 P2P messages")
@@ -132,6 +132,6 @@ func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (*t
 		return nil, errs.WrapValidation(err, "reconstructed signing key share")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return signingKeyShare, nil
 }

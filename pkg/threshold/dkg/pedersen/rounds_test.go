@@ -104,7 +104,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeParticipants(uniqueSessionId, protocol, identities, nil)
-	participants[0].SetSessionId([]byte("invalid"))
+	participants[0].SessionId = []byte("invalid")
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)

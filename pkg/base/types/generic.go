@@ -15,7 +15,7 @@ type GenericProtocol interface {
 }
 
 func NewGenericProtocol(curve curves.Curve) (GenericProtocol, error) {
-	protocol := &protocol{
+	protocol := &BaseProtocol{
 		curve: curve,
 	}
 	if err := ValidateGenericProtocolConfig(protocol); err != nil {

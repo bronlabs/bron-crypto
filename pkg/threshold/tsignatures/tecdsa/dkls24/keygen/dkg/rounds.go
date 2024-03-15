@@ -14,8 +14,8 @@ import (
 
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if err := p.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
 	zeroSamplingP2P, err := p.ZeroSamplingParty.Round1()
@@ -52,14 +52,14 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 		})
 	}
 
-	p.NextRound()
+	p.Round++
 	return p2pOutput, nil
 }
 
 func (p *Participant) Round2(round1outputP2P network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
-	if err := p.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputP2P); err != nil {
 		return nil, errs.WrapValidation(err, "round 1 output is invalid")
@@ -112,14 +112,14 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[*Round1P2P]) 
 		})
 	}
 
-	p.NextRound()
+	p.Round++
 	return p2pOutput, nil
 }
 
 func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, round2outputP2P network.RoundMessages[*Round2P2P]) (shard *dkls24.Shard, err error) {
 	// Validation
-	if err := p.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2outputP2P); err != nil {
 		return nil, errs.WrapValidation(err, "round 2 output is invalid")
@@ -187,6 +187,6 @@ func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, rou
 		return nil, errs.WrapValidation(err, "resulting shard is invalid")
 	}
 
-	p.LastRound()
+	p.Terminate()
 	return shard, nil
 }

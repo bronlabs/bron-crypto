@@ -18,7 +18,7 @@ func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, particip
 	if err := ValidateSignatureProtocolConfig(signatureProtocol); err != nil {
 		return nil, errs.WrapValidation(err, "signature protocol config")
 	}
-	protocol := &protocol{
+	protocol := &BaseProtocol{
 		curve:        signatureProtocol.Curve(),
 		hash:         signatureProtocol.Hash(),
 		participants: participants,

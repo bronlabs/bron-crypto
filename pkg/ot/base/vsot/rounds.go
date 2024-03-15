@@ -16,8 +16,8 @@ const transcriptLabel = "COPPER_KRYPTON_VSOT-"
 // Round1 computes a secret/public key pair and the dlog proof of the secret key.
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// Validation
-	if err := s.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if s.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, s.Round)
 	}
 
 	// steps 1.1 & 1.2: Sample secret key and compute public key.
@@ -28,7 +28,7 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	s.PublicKey = s.Protocol().Curve().ScalarBaseMult(s.SecretKey)
 
 	// step 1.3: Generate the ZKP proof.
-	prover, err := s.dlog.NewProver(s.SessionId(), s.Transcript().Clone())
+	prover, err := s.dlog.NewProver(s.SessionId, s.Transcript().Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "constructing dlog prover")
 	}
@@ -37,7 +37,7 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 		return nil, errs.WrapFailed(err, "creating zkp proof for secret key in base OT sender round 1")
 	}
 
-	s.NextRound(3)
+	s.Round = 3
 	return &Round1P2P{
 		Proof:     proof,
 		PublicKey: s.PublicKey,
@@ -48,17 +48,17 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 // and then does receiver's "Pad Transfer" phase in OT, i.e., step 3), of Name 7 (page 16) of the paper.
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	// Validation
-	if err := r.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if r.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.Round)
 	}
 	if err := network.ValidateMessage(r1out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
 	}
 
 	r.SenderPublicKey = r1out.PublicKey
 
 	// step 2.1: Verify the dlog proof.
-	dlogVerifier, err := r.dlog.NewVerifier(r.SessionId(), r.Transcript().Clone())
+	dlogVerifier, err := r.dlog.NewVerifier(r.SessionId, r.Transcript().Clone())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct dlog verifier")
 	}
@@ -89,14 +89,14 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out.MaskedChoices[i][l], option1Bytes)
 			// step 2.4: Compute m_b
 			m_b := r.SenderPublicKey.Mul(a)
-			output, err := hashing.HashChain(ot.HashFunction, r.SessionId(), []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
+			output, err := hashing.HashChain(ot.HashFunction, r.SessionId, []byte{byte(i*r.L + l)}, m_b.ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
 			}
 			copy(r.Output.ChosenMessages[i][l][:], output)
 		}
 	}
-	r.NextRound(4)
+	r.Round = 4
 	return r2out, nil
 }
 
@@ -104,12 +104,12 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 // Returns the challenges xi.
 func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 	// Validation
-	if err := s.InRound(3); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if s.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, s.Round)
 	}
 
 	if err := network.ValidateMessage(r2out, s.L, s.Xi); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round)
 	}
 
 	r3out = &Round3P2P{
@@ -134,7 +134,7 @@ func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 			m[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
 
 			for k := 0; k < 2; k++ {
-				output, err := hashing.HashChain(ot.HashFunction, s.SessionId(), []byte{byte(i*s.L + l)}, m[k].ToAffineCompressed())
+				output, err := hashing.HashChain(ot.HashFunction, s.SessionId, []byte{byte(i*s.L + l)}, m[k].ToAffineCompressed())
 				if err != nil {
 					return nil, errs.WrapHashing(err, "creating one time pad encryption keys")
 				}
@@ -155,7 +155,7 @@ func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 		}
 	}
 
-	s.NextRound(5)
+	s.Round = 5
 	return r3out, nil
 }
 
@@ -163,12 +163,12 @@ func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 // this is just the start of Verification. In this round, the receiver outputs "rho'", which the sender will check.
 func (r *Receiver) Round4(r3out *Round3P2P) (*Round4P2P, error) {
 	// Validation
-	if err := r.InRound(4); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if r.Round != 4 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 4, r.Round)
 	}
 
 	if err := network.ValidateMessage(r3out, r.L, r.Xi); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
 	}
 
 	r.SenderChallenge = r3out.Challenge
@@ -195,7 +195,7 @@ func (r *Receiver) Round4(r3out *Round3P2P) (*Round4P2P, error) {
 		}
 	}
 
-	r.NextRound(6)
+	r.Round = 6
 	return r4out, nil
 }
 
@@ -203,12 +203,12 @@ func (r *Receiver) Round4(r3out *Round3P2P) (*Round4P2P, error) {
 // opens his challenges to the receiver. See step 7 of page 16 of the paper.
 func (s *Sender) Round5(r4out *Round4P2P) (*Round5P2P, error) {
 	// Validation
-	if err := s.InRound(5); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if s.Round != 5 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 5, s.Round)
 	}
 
 	if err := network.ValidateMessage(r4out, s.L, s.Xi); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round)
 	}
 
 	r5out := &Round5P2P{
@@ -236,7 +236,7 @@ func (s *Sender) Round5(r4out *Round4P2P) (*Round5P2P, error) {
 		}
 	}
 
-	s.LastRound()
+	s.Terminate()
 	return r5out, nil
 }
 
@@ -244,11 +244,11 @@ func (s *Sender) Round5(r4out *Round4P2P) (*Round5P2P, error) {
 // See step 8 of page 16 of the paper.
 func (r *Receiver) Round6(r5out *Round5P2P) error {
 	// Validation
-	if err := r.InRound(6); err != nil {
-		return errs.WrapValidation(err, "Participant in invalid round")
+	if r.Round != 6 {
+		return errs.NewRound("Running round %d but participant expected round %d", 6, r.Round)
 	}
 	if err := network.ValidateMessage(r5out, r.L, r.Xi); err != nil {
-		return errs.WrapValidation(err, "invalid round %d input", r.Round())
+		return errs.WrapValidation(err, "invalid round %d input", r.Round)
 	}
 
 	var reconstructedChallenge, challengeOpening [ot.KappaBytes]byte
@@ -281,6 +281,6 @@ func (r *Receiver) Round6(r5out *Round5P2P) error {
 		}
 	}
 
-	r.LastRound()
+	r.Terminate()
 	return nil
 }

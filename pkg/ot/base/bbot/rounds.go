@@ -21,8 +21,8 @@ const (
 
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// Validation
-	if err := s.InRound(1); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if s.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, s.Round)
 	}
 
 	// step 1.1 (KA.R)
@@ -35,7 +35,7 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// step 1.3 (Setup RO)
 	s.Transcript().AppendPoints("mS", mS)
 
-	s.NextRound(3)
+	s.Round = 3
 	return &Round1P2P{
 		MS: mS,
 	}, nil
@@ -43,11 +43,11 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	// Validation
-	if err := r.InRound(2); err != nil {
-		return nil, errs.WrapValidation(err, "Participant in invalid round")
+	if r.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.Round)
 	}
 	if err := network.ValidateMessage(r1out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
 	}
 
 	phi := make([][2][]curves.Point, r.Xi)
@@ -104,17 +104,17 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 		}
 	}
 
-	r.LastRound()
+	r.Terminate()
 	return &Round2P2P{Phi: phi}, nil
 }
 
 func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 	// Validation
-	if err := s.InRound(3); err != nil {
-		return errs.WrapValidation(err, "Participant in invalid round")
+	if s.Round != 3 {
+		return errs.NewRound("Running round %d but participant expected round %d", 3, s.Round)
 	}
 	if err := network.ValidateMessage(r2out, s.L, s.Xi); err != nil {
-		return errs.WrapValidation(err, "invalid round %d input", s.Round())
+		return errs.WrapValidation(err, "invalid round %d input", s.Round)
 	}
 
 	// Setup ROs
@@ -155,6 +155,6 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 		}
 	}
 
-	s.LastRound()
+	s.Terminate()
 	return nil
 }
