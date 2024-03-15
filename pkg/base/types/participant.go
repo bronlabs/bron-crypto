@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
+const LastRoundNumber = -42 // Special value to indicate that the protocol is done.
 type BaseParticipant[ProtocolT GenericProtocol] struct {
 	prng       io.Reader
 	protocol   ProtocolT
@@ -83,7 +84,7 @@ func (b *BaseParticipant[_]) NextRound(step ...int) {
 }
 
 func (b *BaseParticipant[_]) LastRound() {
-	b.round = -42 // Special value to indicate that the protocol is done.
+	b.round = LastRoundNumber
 }
 
 func (b *BaseParticipant[ProtocolT]) Clone() *BaseParticipant[ProtocolT] {

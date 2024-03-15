@@ -16,11 +16,11 @@ import (
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// Validation
 	if err := bob.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "bob in invalid round")
 	}
 
 	// step 1.1: Sample β ∈ [ξ]bits
-	bob.Beta = make(ot.ChoiceBits, XiBytes)
+	bob.Beta = make(ot.PackedBits, XiBytes)
 	if _, err := io.ReadFull(bob.Prng(), bob.Beta); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "bob could not sample beta")
 	}
@@ -54,7 +54,12 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputShares, r2o *Round2Output, err error) {
 	// Validation, r1out and a delegated to OTE.Round2
 	if err := alice.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "alice in invalid round")
+	}
+	for i, a_i := range a {
+		if a_i == nil {
+			return nil, nil, errs.NewIsNil("a[%d]", i)
+		}
 	}
 
 	C := new(OutputShares)
@@ -151,10 +156,10 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	// Validation
 	if err := bob.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "bob in invalid round")
 	}
 	if err := network.ValidateMessage(r2out); err != nil {
-		return nil, errs.WrapValidation(err, "wrong round 2 output")
+		return nil, errs.WrapValidation(err, "wrong round 3 input")
 	}
 
 	scalarField := bob.Curve().Scalar().ScalarField()

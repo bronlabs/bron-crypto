@@ -29,9 +29,9 @@ func Test_MeasureConstantTime_encrypt(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < Xi; i++ {
-		require.Equal(t, receiver.ChosenMessages[i], sender.Messages[i][receiver.Choices.Select(i)])
+		require.Equal(t, receiver.ChosenMessages[i], sender.MessagePairs[i][receiver.Choices.Select(i)])
 	}
-	var messages []ot.MessagePair
+	var messages [][2]ot.Message
 	internal.RunMeasurement(500, "vsot_encrypt", func(i int) {
 		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
 		require.NoError(t, err)
@@ -55,10 +55,10 @@ func Test_MeasureConstantTime_decrypt(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < Xi; i++ {
-		require.Equal(t, receiver.ChosenMessages[i], sender.Messages[i][receiver.Choices.Select(i)])
+		require.Equal(t, receiver.ChosenMessages[i], sender.MessagePairs[i][receiver.Choices.Select(i)])
 	}
-	var messages []ot.MessagePair
-	var encrypted []ot.MessagePair
+	var messages [][2]ot.Message
+	var encrypted [][2]ot.Message
 	internal.RunMeasurement(500, "vsot_decrypt", func(i int) {
 		_, messages, err = ot_testutils.GenerateOTinputs(Xi, L)
 		require.NoError(t, err)

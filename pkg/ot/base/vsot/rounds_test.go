@@ -40,7 +40,7 @@ func TestHappyPathVSOT_ROT(t *testing.T) {
 		require.NoError(t, err)
 		sender, receiver, err := testutils.RunVSOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, sender.Messages, receiver.Choices, receiver.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, sender.MessagePairs, receiver.Choices, receiver.ChosenMessages)
 		require.NoError(t, err)
 	}
 }
@@ -59,7 +59,7 @@ func TestHappyPathVSOT_OT(t *testing.T) {
 		require.NoError(t, err)
 		sender, receiver, err := testutils.RunVSOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, sender.Messages, receiver.Choices, receiver.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, sender.MessagePairs, receiver.Choices, receiver.ChosenMessages)
 		require.NoError(t, err)
 		// Generate inputs for (chosen) OT
 		_, senderMessages, err := ot_testutils.GenerateOTinputs(Xi, L)
@@ -92,7 +92,7 @@ func TestHappyPathVSOT_COT(t *testing.T) {
 		require.NoError(t, err)
 		sender, receiver, err := testutils.RunVSOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, sender.Messages, receiver.Choices, receiver.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, sender.MessagePairs, receiver.Choices, receiver.ChosenMessages)
 		require.NoError(t, err)
 
 		// Generate inputs for Correlated OT

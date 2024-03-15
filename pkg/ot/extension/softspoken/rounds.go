@@ -14,10 +14,10 @@ import (
 )
 
 // Round1 uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
-func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage, r1Out *Round1Output, err error) {
+func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Out *Round1Output, err error) {
 	// Validation
 	if err := r.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if len(x) != r.Xi/8 {
 		return nil, nil, errs.NewArgument("choice bits length must be ξ=%d (is %d)", r.Xi, len(x))
@@ -43,13 +43,13 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 	for i := 0; i < ot.Kappa; i++ {
 		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
 		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
-		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][0][0][:], r.SessionId()); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][0][0][:], r.SessionId()); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe")
 		}
 		if _, err = io.ReadFull(r.prg, t[0][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
 		}
-		if err = r.prg.Seed(r.baseOtSeeds.Messages[i][1][0][:], r.SessionId()); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][1][0][:], r.SessionId()); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 		if _, err = io.ReadFull(r.prg, t[1][i]); err != nil {
@@ -85,9 +85,9 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 		return nil, nil, errs.WrapFailed(err, "bad transposing t_0 for SoftSpoken COTe")
 	}
 	// step 1.9: Randomise by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
-	r.Output.ChosenMessages = make([]ot.ChosenMessage, r.Xi)
+	r.Output.ChosenMessages = make([]ot.Message, r.Xi)
 	for j := 0; j < r.Xi; j++ {
-		r.Output.ChosenMessages[j] = make(ot.ChosenMessage, r.L)
+		r.Output.ChosenMessages[j] = make(ot.Message, r.L)
 		for l := 0; l < r.L; l++ {
 			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId(), bitstring.ToBytesLE(j), t_j[j*r.L+l])
 			if err != nil {
@@ -102,13 +102,13 @@ func (r *Receiver) Round1(x ot.ChoiceBits) (oTeReceiverOutput []ot.ChosenMessage
 }
 
 // Round2 uses the PRG to extend the baseOT results and verifies their consistency.
-func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, err error) {
+func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, err error) {
 	// Validation
 	if err := s.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessage(r1out, s.L, s.Xi); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 output")
+		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round())
 	}
 
 	Eta := s.L * s.Xi                   // η = L*ξ
@@ -166,26 +166,26 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput []ot.MessagePair, 
 		// drop last η'-η rows, they are used only for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.baseOtSeeds.Choices)
 	}
-	s.Output.Messages = make([]ot.MessagePair, s.Xi)
+	s.Output.MessagePairs = make([][2]ot.Message, s.Xi)
 	for j := 0; j < s.Xi; j++ {
-		s.Output.Messages[j][0] = make(ot.Message, s.L)
-		s.Output.Messages[j][1] = make(ot.Message, s.L)
+		s.Output.MessagePairs[j][0] = make(ot.Message, s.L)
+		s.Output.MessagePairs[j][1] = make(ot.Message, s.L)
 		for l := 0; l < s.L; l++ {
 			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId(), bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
-			copy(s.Output.Messages[j][0][l][:], digest)
+			copy(s.Output.MessagePairs[j][0][l][:], digest)
 			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId(), bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}
-			copy(s.Output.Messages[j][1][l][:], digest)
+			copy(s.Output.MessagePairs[j][1][l][:], digest)
 		}
 	}
 
 	s.LastRound()
-	return s.Output.Messages, nil
+	return s.Output.MessagePairs, nil
 }
 
 // -------------------------------------------------------------------------- //

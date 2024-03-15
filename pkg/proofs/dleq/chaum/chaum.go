@@ -124,7 +124,7 @@ func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.Chall
 
 	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapSerialisation(err, "cannot map to scalar")
 	}
 
 	z, err := c.g1.Curve().ScalarField().Random(c.prng)

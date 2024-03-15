@@ -30,8 +30,8 @@ func RunSoftspokenROTe(
 	rand io.Reader,
 	baseOtSenderOutput *ot.SenderRotOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *ot.ReceiverRotOutput, // baseOT seeds for OTe sender
-	choices ot.ChoiceBits, // receiver's input, the Choice bits x
-) (oTeSenderOutputs []ot.MessagePair, oTeReceiverOutputs []ot.ChosenMessage, err error) {
+	choices ot.PackedBits, // receiver's input, the Choice bits x
+) (oTeSenderOutputs [][2]ot.Message, oTeReceiverOutputs []ot.Message, err error) {
 	protocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
@@ -78,7 +78,7 @@ func RunSoftspokenCOTe(
 	rand io.Reader,
 	baseOtSenderOutput *ot.SenderRotOutput, // baseOT seeds for OTe receiver
 	baseOtReceiverOutput *ot.ReceiverRotOutput, // baseOT seeds for OTe sender
-	choices ot.ChoiceBits, // receiver's input, the Choice bits x
+	choices ot.PackedBits, // receiver's input, the Choice bits x
 	senderInput []ot.CorrelatedMessage, // sender's input, the InputOpt batches of α
 	L int, // number of OTe elements per message
 	Xi int, // number of OTe messages in the batch

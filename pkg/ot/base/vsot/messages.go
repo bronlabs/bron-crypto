@@ -23,7 +23,7 @@ type (
 		_ ds.Incomparable
 	}
 	Round2P2P struct {
-		MaskedChoices [][]ot.ChoiceBits
+		MaskedChoices [][]ot.PackedBits
 	}
 	Round3P2P struct {
 		Challenge []ot.Message
@@ -32,7 +32,7 @@ type (
 		Responses []ot.Message
 	}
 	Round5P2P struct {
-		Openings []ot.MessagePair
+		Openings [][2]ot.Message
 	}
 )
 

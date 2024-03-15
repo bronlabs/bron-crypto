@@ -29,7 +29,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*dkls24.PartialSigna
 		c.ppm.PreSignature,
 	)
 	if err != nil {
-		return nil, errs.Forward(err)
+		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
 	return partialSignature, nil

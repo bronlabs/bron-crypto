@@ -22,7 +22,7 @@ import (
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
@@ -66,7 +66,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
@@ -114,7 +114,7 @@ func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (out
 func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (output *Round3Broadcast, err error) {
 	// Validation
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 broadcast messages")
@@ -221,7 +221,7 @@ func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (out
 func (p *Participant) Round4(input network.RoundMessages[*Round3Broadcast]) (output network.RoundMessages[*Round4P2P], err error) {
 	// Validation
 	if err := p.InRound(4); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 3 broadcast messages")
@@ -304,7 +304,7 @@ func (p *Participant) Round4(input network.RoundMessages[*Round3Broadcast]) (out
 func (p *Participant) Round5(input network.RoundMessages[*Round4P2P]) (output network.RoundMessages[*Round5P2P], err error) {
 	// Validation
 	if err := p.InRound(5); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 4 p2p messages")
@@ -348,7 +348,7 @@ func (p *Participant) Round5(input network.RoundMessages[*Round4P2P]) (output ne
 func (p *Participant) Round6(input network.RoundMessages[*Round5P2P]) (output network.RoundMessages[*Round6P2P], err error) {
 	// Validation
 	if err := p.InRound(6); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 5 p2p messages")
@@ -392,7 +392,7 @@ func (p *Participant) Round6(input network.RoundMessages[*Round5P2P]) (output ne
 func (p *Participant) Round7(input network.RoundMessages[*Round6P2P]) (output network.RoundMessages[*Round7P2P], err error) {
 	// Validation
 	if err := p.InRound(7); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// 7. LP and LPDL continue
@@ -433,7 +433,7 @@ func (p *Participant) Round7(input network.RoundMessages[*Round6P2P]) (output ne
 func (p *Participant) Round8(input network.RoundMessages[*Round7P2P]) (shard *lindell17.Shard, err error) {
 	// Validation
 	if err := p.InRound(8); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	for identity := range p.Protocol().Participants().Iter() {

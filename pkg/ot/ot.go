@@ -85,27 +85,27 @@ func validateInputs(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L i
 
 // SenderRotOutput are the outputs that the sender will obtain as a result of running a Random OT (ROT) protocol.
 type SenderRotOutput struct {
-	Messages []MessagePair // Messages (s_0, s_1) are the sender's messages.
-	_        ds.Incomparable
+	MessagePairs [][2]Message // Messages (s_0, s_1) are the sender's messages.
+	_            ds.Incomparable
 }
 
 // ReceiverRotOutput are the outputs that the receiver will obtain as a result of running a Random OT (ROT) protocol.
 type ReceiverRotOutput struct {
-	Choices        ChoiceBits      // Choices (x) is the batch of "packed" choice bits of the receiver.
-	ChosenMessages []ChosenMessage // ChosenMessages (r_x) is the batch of messages chosen by receiver.
+	Choices        PackedBits // Choices (x) is the batch of "packed" choice bits of the receiver.
+	ChosenMessages []Message  // ChosenMessages (r_x) is the batch of messages chosen by receiver.
 
 	_ ds.Incomparable
 }
 
 /*.------------------- (standard) OBLIVIOUS TRANSFER (OT) -------------------.*/
 
-type OneTimePadedMaskPair = MessagePair // OneTimePadedMaskPair are the two masks used to turn a ROT into a standard OT.
+type OneTimePadedMaskPair = [2]Message // OneTimePadedMaskPair are the two masks used to turn a ROT into a standard OT.
 
 // Encrypt allows a ROT (Random OT) sender to encrypt messages with one-time pad.
 // It converts the ROT into a standard chosen-message OT, both for base OTs and OT extensions.
-func (sROT *SenderRotOutput) Encrypt(OTmessagePairs []MessagePair) (masks []OneTimePadedMaskPair, err error) {
-	Xi := len(sROT.Messages)
-	L := len(sROT.Messages[0][0])
+func (sROT *SenderRotOutput) Encrypt(OTmessagePairs [][2]Message) (masks []OneTimePadedMaskPair, err error) {
+	Xi := len(sROT.MessagePairs)
+	L := len(sROT.MessagePairs[0][0])
 	if len(OTmessagePairs) != Xi {
 		return nil, errs.NewArgument("number of OT message pairs should be Xi (%d != %d)", len(OTmessagePairs), Xi)
 	}
@@ -118,8 +118,8 @@ func (sROT *SenderRotOutput) Encrypt(OTmessagePairs []MessagePair) (masks []OneT
 		masks[j][0] = make([]MessageElement, L)
 		masks[j][1] = make([]MessageElement, L)
 		for l := 0; l < L; l++ {
-			subtle.XORBytes(masks[j][0][l][:], sROT.Messages[j][0][l][:], OTmessagePairs[j][0][l][:])
-			subtle.XORBytes(masks[j][1][l][:], sROT.Messages[j][1][l][:], OTmessagePairs[j][1][l][:])
+			subtle.XORBytes(masks[j][0][l][:], sROT.MessagePairs[j][0][l][:], OTmessagePairs[j][0][l][:])
+			subtle.XORBytes(masks[j][1][l][:], sROT.MessagePairs[j][1][l][:], OTmessagePairs[j][1][l][:])
 		}
 	}
 	return masks, nil
@@ -127,19 +127,19 @@ func (sROT *SenderRotOutput) Encrypt(OTmessagePairs []MessagePair) (masks []OneT
 
 // Decrypt allows a ROT (Random OT) receiver to decrypt messages with one-time pad.
 // It converts the ROT into a standard chosen-message OT, both for base OTs and OT extensions.
-func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMessages []ChosenMessage, err error) {
+func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMessages []Message, err error) {
 	Xi := len(rROT.ChosenMessages)
 	L := len(rROT.ChosenMessages[0])
 	if len(masks) != Xi {
 		return nil, errs.NewArgument("number of masks should be Xi (%d != %d)", len(masks), Xi)
 	}
-	OTchosenMessages = make([]ChosenMessage, Xi)
+	OTchosenMessages = make([]Message, Xi)
 	var mask MessageElement
 	for j := 0; j < Xi; j++ {
 		if len(masks[j][0]) != L || len(masks[j][1]) != L {
 			return nil, errs.NewArgument("mask[%d] length should be L (%d != %d)", j, len(masks[j][0]), L)
 		}
-		OTchosenMessages[j] = make(ChosenMessage, L)
+		OTchosenMessages[j] = make(Message, L)
 		choice := int(rROT.Choices.Select(j))
 		for l := 0; l < L; l++ {
 			ct.SelectSlice(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
@@ -157,8 +157,8 @@ type CorrelationMask = CorrelatedMessage // Tau (τ) is the correlation mask of 
 // correlation `a*x = z_A + z_B`, converting the ROT into a Correlated OT (COT).
 // It generates the correlation mask `τ` to be sent to the receiver, and z_A.
 func (sROT *SenderRotOutput) CreateCorrelation(a []CorrelatedMessage) (z_A []CorrelatedMessage, tau []CorrelationMask, err error) {
-	Xi := len(sROT.Messages)
-	L := len(sROT.Messages[0][0])
+	Xi := len(sROT.MessagePairs)
+	L := len(sROT.MessagePairs[0][0])
 	if len(a) != Xi {
 		return nil, nil, errs.NewArgument("senderInput size should be same as batch size (%d != %d)", len(a), Xi)
 	}
@@ -174,11 +174,11 @@ func (sROT *SenderRotOutput) CreateCorrelation(a []CorrelatedMessage) (z_A []Cor
 		tau[j] = make(CorrelatedMessage, L)
 		for l := 0; l < L; l++ {
 			// z_A_j = ECS(s_0_j)
-			if z_A[j][l], err = scalarField.Hash(sROT.Messages[j][0][l][:]); err != nil {
+			if z_A[j][l], err = scalarField.Hash(sROT.MessagePairs[j][0][l][:]); err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing s_0_j to scalar for ROT->COT")
 			}
 			// τ_j = ECS(s_1_j) - z_A_j + α_j
-			if tau[j][l], err = scalarField.Hash(sROT.Messages[j][1][l][:]); err != nil {
+			if tau[j][l], err = scalarField.Hash(sROT.MessagePairs[j][1][l][:]); err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing s_1_j to scalar for ROT->COT")
 			}
 			tau[j][l] = tau[j][l].Sub(z_A[j][l]).Add(a[j][l])

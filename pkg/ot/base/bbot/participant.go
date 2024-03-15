@@ -49,7 +49,7 @@ func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int,
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
 
-	choices := make(ot.ChoiceBits, Xi/8)
+	choices := make(ot.PackedBits, Xi/8)
 	if _, err := io.ReadFull(csprng, choices); err != nil {
 		return nil, errs.WrapRandomSample(err, "generating random choice bits")
 	}

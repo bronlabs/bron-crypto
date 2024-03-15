@@ -33,13 +33,13 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	uniqueSessionId := [ot.KappaBytes]byte{}
 	_, err := crand.Read(uniqueSessionId[:])
 	require.NoError(t, err)
-	var choices ot.ChoiceBits
+	var choices ot.PackedBits
 	var receiver *softspoken.Receiver
 	internal.RunMeasurement(500, "softspoken_round1", func(i int) {
 		// BaseOTs
 		baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, baseOtSenderOutput.Messages, baseOtReceiverOutput.Choices, baseOtReceiverOutput.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, baseOtSenderOutput.MessagePairs, baseOtReceiverOutput.Choices, baseOtReceiverOutput.ChosenMessages)
 		require.NoError(t, err)
 
 		// Set OTe inputs
@@ -71,7 +71,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	uniqueSessionId := [ot.KappaBytes]byte{}
 	_, err := crand.Read(uniqueSessionId[:])
 	require.NoError(t, err)
-	var choices ot.ChoiceBits
+	var choices ot.PackedBits
 	var receiver *softspoken.Receiver
 	var round1Output *softspoken.Round1Output
 	var sender *softspoken.Sender
@@ -79,7 +79,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		// BaseOTs
 		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 		require.NoError(t, err)
 
 		// Set OTe inputs

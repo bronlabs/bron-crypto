@@ -27,7 +27,7 @@ const (
 func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// step 1.1: Sample k_i <-$- ℤ_q  &  compute R_i = k_i * G
@@ -72,7 +72,7 @@ func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput 
 func (p *Cosigner[F]) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
 	// Validation, unicastInput is delegated to Przs.Round2
 	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
@@ -129,10 +129,10 @@ func (p *Cosigner[F]) Round2(broadcastInput network.RoundMessages[*Round1Broadca
 func (p *Cosigner[F]) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	// Validation, unicastInput is delegated to Przs.Round3
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 output")
+		return nil, errs.WrapValidation(err, "invalid round %d input", p.Round())
 	}
 
 	bigR := p.state.bigR

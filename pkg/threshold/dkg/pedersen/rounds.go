@@ -20,7 +20,7 @@ const (
 func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u network.RoundMessages[*Round1P2P], err error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// step 1.1: a_i0 <-$- Z_q
@@ -78,7 +78,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")

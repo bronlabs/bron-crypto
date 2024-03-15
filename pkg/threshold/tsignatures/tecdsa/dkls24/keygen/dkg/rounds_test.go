@@ -167,7 +167,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					require.Equal(
 						t,
 						meAsReceiver.ChosenMessages[i],
-						senderCounterParty.Messages[i][meAsReceiver.Choices.Select(i)],
+						senderCounterParty.MessagePairs[i][meAsReceiver.Choices.Select(i)],
 					)
 				}
 				meAsSender := myConfig.AsSender
@@ -176,7 +176,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					require.Equal(
 						t,
 						receiverCounterParty.ChosenMessages[i],
-						meAsSender.Messages[i][receiverCounterParty.Choices.Select(i)],
+						meAsSender.MessagePairs[i][receiverCounterParty.Choices.Select(i)],
 					)
 				}
 			}
@@ -187,11 +187,11 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		t.Parallel()
 
 		// Transfer messages
-		messages := make([]ot.MessagePair, batchSize)
+		messages := make([][2]ot.Message, batchSize)
 		for i := 0; i < batchSize; i++ {
 			m0 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][0]", i)))
 			m1 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][1]", i)))
-			messages[i] = ot.MessagePair{
+			messages[i] = [2]ot.Message{
 				make([]ot.MessageElement, 1),
 				make([]ot.MessageElement, 1),
 			}

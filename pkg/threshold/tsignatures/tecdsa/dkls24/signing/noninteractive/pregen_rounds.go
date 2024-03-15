@@ -10,7 +10,7 @@ import (
 func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMessages[*signing.Round1P2P], error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol(), p.Quorum, p.state)
@@ -25,7 +25,7 @@ func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMes
 func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*signing.Round1Broadcast], round1outputP2P network.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[*signing.Round2P2P], error) {
 	// Validation, round 1 messages delegated to signing.DoRound2
 	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol(), p.Quorum, p.state, round1outputBroadcast, round1outputP2P)
@@ -40,11 +40,11 @@ func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*
 func (p *PreGenParticipant) Round3(round2outputBroadcast network.RoundMessages[*signing.Round2Broadcast], round2outputP2P network.RoundMessages[*signing.Round2P2P]) (*dkls24.PreProcessingMaterial, error) {
 	// Validation, round 2 messages delegated to signing.DoRound3Prologue
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol(), p.Quorum, p.state, round2outputBroadcast, round2outputP2P); err != nil {
-		return nil, errs.Forward(err)
+		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
 	Rs := p.state.ReceivedBigR_i.Clone()

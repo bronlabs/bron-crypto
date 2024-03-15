@@ -12,7 +12,7 @@ import (
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	result := network.NewRoundMessages[*Round1P2P]()
@@ -40,11 +40,11 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if !p.IsInitiator() {
 		if err := network.ValidateMessage(initiatorMessage); err != nil {
-			return nil, errs.Forward(err)
+			return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
 		}
 	}
 
@@ -83,10 +83,10 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]byte, error) {
 	// Validation
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.NonInitiatorParticipants(), p.IdentityKey(), p2pMessages); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
 	}
 
 	var messageToVerify []byte

@@ -35,7 +35,7 @@ type (
 	/*.----------------------------- EXTENSION ------------------------------.*/
 
 	ExtMessageBatch  = [ot.Kappa][]byte // ∈ [κ][η']bits, type for the OT messages, ∈ [κ][η]bits after the consistency check.
-	ExtPackedChoices = ot.ChoiceBits    // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
+	ExtPackedChoices = ot.PackedBits    // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
 
 	/*.------------------------- CONSISTENCY CHECK --------------------------.*/
 

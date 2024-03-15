@@ -16,7 +16,7 @@ import (
 func (ic *Cosigner) Round1() (r1b *Round1Broadcast, err error) {
 	// Validation
 	if err := ic.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 
 	ic.state.d_i, err = ic.Curve().ScalarField().Random(ic.Prng())
@@ -40,10 +40,10 @@ func (ic *Cosigner) Round1() (r1b *Round1Broadcast, err error) {
 func (ic *Cosigner) Round2(round1output network.RoundMessages[*Round1Broadcast], message []byte) (*frost.PartialSignature, error) {
 	// Validation
 	if err := ic.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 	if err := network.ValidateMessages(ic.quorum, ic.IdentityKey(), round1output); err != nil {
-		return nil, errs.WrapFailed(err, "invalid round 1 output")
+		return nil, errs.WrapFailed(err, "invalid round %d input", ic.Round())
 	}
 	if len(message) == 0 {
 		return nil, errs.NewIsNil("message is empty")
@@ -78,7 +78,7 @@ func (ic *Cosigner) Round2(round1output network.RoundMessages[*Round1Broadcast],
 func (ic *Cosigner) Aggregate(message []byte, partialSignatures network.RoundMessages[*frost.PartialSignature]) (*schnorr.Signature, error) {
 	// Validation
 	if err := ic.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 	if err := network.ValidateMessages(ic.quorum, ic.IdentityKey(), partialSignatures); err != nil {
 		return nil, errs.WrapFailed(err, "invalid partial signatures")

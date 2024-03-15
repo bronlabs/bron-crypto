@@ -120,7 +120,7 @@ func (s *protocol) RunSimulator(statement Statement, challengeBytes sigma.Challe
 
 	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapSerialisation(err, "cannot map to scalar")
 	}
 
 	z, err := s.curve.ScalarField().Random(s.prng)

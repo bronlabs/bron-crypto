@@ -10,7 +10,7 @@ import (
 func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[*signing.Round1P2P], error) {
 	// Validation
 	if err := ic.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound1(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state)
@@ -25,7 +25,7 @@ func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[*s
 func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[*signing.Round1Broadcast], round1outputP2P network.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[*signing.Round2P2P], error) {
 	// Validation, round 1 messages delegated to signing.DoRound2
 	if err := ic.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 
 	outputBroadcast, outputP2P, err := signing.DoRound2(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round1outputBroadcast, round1outputP2P)
@@ -40,11 +40,11 @@ func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[*signing.
 func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[*signing.Round2Broadcast], round2outputP2P network.RoundMessages[*signing.Round2P2P], message []byte) (*dkls24.PartialSignature, error) {
 	// Validation, round 2 messages delegated to signing.DoRound3Prologue
 	if err := ic.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "cosigner in invalid round")
 	}
 
 	if err := signing.DoRound3Prologue(&ic.Participant, ic.Protocol(), ic.Quorum, ic.state, round2outputBroadcast, round2outputP2P); err != nil {
-		return nil, errs.Forward(err)
+		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
 	partialSignature, err := signing.DoRound3Epilogue(
@@ -63,7 +63,7 @@ func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[*signing.
 		ic.state.ReceivedBigR_i,
 	)
 	if err != nil {
-		return nil, errs.Forward(err)
+		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
 	ic.LastRound()

@@ -44,12 +44,12 @@ func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 	if baseOtSeeds == nil {
 		return nil, errs.NewIsNil("base OT seeds are nil")
 	}
-	if len(baseOtSeeds.Messages) != ot.Kappa {
+	if len(baseOtSeeds.MessagePairs) != ot.Kappa {
 		return nil, errs.NewLength("base OT seeds length mismatch (should be %d, is: %d)",
-			ot.Kappa, len(baseOtSeeds.Messages))
+			ot.Kappa, len(baseOtSeeds.MessagePairs))
 	}
 	for i := 0; i < ot.Kappa; i++ {
-		if len(baseOtSeeds.Messages[i][0]) == 0 || len(baseOtSeeds.Messages[i][1]) == 0 {
+		if len(baseOtSeeds.MessagePairs[i][0]) == 0 || len(baseOtSeeds.MessagePairs[i][1]) == 0 {
 			return nil, errs.NewLength("base OT seed[%d] message empty", i)
 		}
 	}

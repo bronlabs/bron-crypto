@@ -15,7 +15,7 @@ import (
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	zeroSamplingP2P, err := p.ZeroSamplingParty.Round1()
@@ -59,7 +59,7 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 func (p *Participant) Round2(round1outputP2P network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputP2P); err != nil {
 		return nil, errs.WrapValidation(err, "round 1 output is invalid")
@@ -119,7 +119,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[*Round1P2P]) 
 func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, round2outputP2P network.RoundMessages[*Round2P2P]) (shard *dkls24.Shard, err error) {
 	// Validation
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2outputP2P); err != nil {
 		return nil, errs.WrapValidation(err, "round 2 output is invalid")

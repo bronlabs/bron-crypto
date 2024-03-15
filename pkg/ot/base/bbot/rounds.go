@@ -22,7 +22,7 @@ const (
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// Validation
 	if err := s.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// step 1.1 (KA.R)
@@ -44,14 +44,14 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	// Validation
 	if err := r.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessage(r1out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 output")
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
 	}
 
 	phi := make([][2][]curves.Point, r.Xi)
-	r.Output.ChosenMessages = make([]ot.ChosenMessage, r.Xi)
+	r.Output.ChosenMessages = make([]ot.Message, r.Xi)
 	// Setup ROs
 	r.Transcript().AppendPoints("mS", r1out.MS)
 	var tagRandomOracle [2][]byte
@@ -67,7 +67,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	for i := 0; i < r.Xi; i++ {
 		c_i := r.Output.Choices.Select(i)
 		phi[i] = [2][]curves.Point{make([]curves.Point, r.L), make([]curves.Point, r.L)}
-		r.Output.ChosenMessages[i] = make(ot.ChosenMessage, r.L)
+		r.Output.ChosenMessages[i] = make(ot.Message, r.L)
 		for l := 0; l < r.L; l++ {
 			// step 2.2 (KA.R)
 			b_i, err := r.Protocol().Curve().ScalarField().Random(r.Prng())
@@ -111,10 +111,10 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 	// Validation
 	if err := s.InRound(3); err != nil {
-		return errs.Forward(err)
+		return errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessage(r2out, s.L, s.Xi); err != nil {
-		return errs.WrapValidation(err, "invalid round 2 output")
+		return errs.WrapValidation(err, "invalid round %d input", s.Round())
 	}
 
 	// Setup ROs
@@ -127,10 +127,10 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 	if err != nil {
 		return errs.WrapHashing(err, "extracting tag Ro1")
 	}
-	s.Output.Messages = make([]ot.MessagePair, s.Xi)
+	s.Output.MessagePairs = make([][2]ot.Message, s.Xi)
 	// step 3.1
 	for i := 0; i < s.Xi; i++ {
-		s.Output.Messages[i] = ot.MessagePair{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
+		s.Output.MessagePairs[i] = [2]ot.Message{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
 		for l := 0; l < s.L; l++ {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
@@ -150,7 +150,7 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 				if err != nil {
 					return errs.WrapHashing(err, "computing s_i_j")
 				}
-				copy(s.Output.Messages[i][j][l][:], s_i_l)
+				copy(s.Output.MessagePairs[i][j][l][:], s_i_l)
 			}
 		}
 	}

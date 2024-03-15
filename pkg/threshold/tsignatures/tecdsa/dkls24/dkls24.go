@@ -48,7 +48,7 @@ type BaseOTConfig struct {
 }
 
 func (b *BaseOTConfig) Validate() error {
-	if b.AsSender == nil || len(b.AsSender.Messages) == 0 {
+	if b.AsSender == nil || len(b.AsSender.MessagePairs) == 0 {
 		return errs.NewArgument("invalid base OT as sender")
 	}
 	if b.AsReceiver == nil || len(b.AsReceiver.ChosenMessages) == 0 || len(b.AsReceiver.Choices) == 0 {

@@ -31,7 +31,7 @@ func Fuzz_Test(f *testing.F) {
 	f.Add(uint(256), uint(0), []byte("sid"), []byte("test"), int64(0))
 	f.Fuzz(func(t *testing.T, batchSize uint, curveIndex uint, sid []byte, message []byte, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		messages := make([]ot.MessagePair, batchSize)
+		messages := make([][2]ot.Message, batchSize)
 		prng := rand.New(rand.NewSource(randomSeed))
 		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func Fuzz_Test(f *testing.F) {
 		for i := 0; i < int(batchSize); i++ {
 			m0 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][0]", i)))
 			m1 := sha256.Sum256([]byte(fmt.Sprintf("messages[%d][1]", i)))
-			messages[i] = ot.MessagePair{
+			messages[i] = [2]ot.Message{
 				make([]ot.MessageElement, L),
 				make([]ot.MessageElement, L),
 			}

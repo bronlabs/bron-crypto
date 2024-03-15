@@ -76,7 +76,7 @@ func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int,
 		Output:      &ot.ReceiverRotOutput{},
 		dlog:        nic,
 	}
-	receiver.Output.Choices = make(ot.ChoiceBits, Xi/8)
+	receiver.Output.Choices = make(ot.PackedBits, Xi/8)
 	if _, err := io.ReadFull(crand.Reader, receiver.Output.Choices); err != nil {
 		return nil, errs.WrapRandomSample(err, "choosing random choice bits")
 	}

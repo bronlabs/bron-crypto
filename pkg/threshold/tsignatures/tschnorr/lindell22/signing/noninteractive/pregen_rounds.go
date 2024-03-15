@@ -23,7 +23,7 @@ const (
 func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// 1. choose a random k1 & k2
@@ -68,7 +68,7 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
 	// Validation, unicastInput is delegated to przs.Round2A
 	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast input")
@@ -115,7 +115,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P]) (preProcessingMaterial *lindell22.PreProcessingMaterial, err error) {
 	// Validation, unicastInput is delegated to przs.Round3
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 broadcast input")

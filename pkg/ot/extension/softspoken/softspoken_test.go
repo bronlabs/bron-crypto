@@ -57,7 +57,7 @@ func Test_HappyPath_ROTe(t *testing.T) {
 			// BaseOTs
 			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 			require.NoError(t, err)
-			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 			require.NoError(t, err)
 
 			// Set OTe inputs
@@ -91,7 +91,7 @@ func Test_HappyPath_COTe(t *testing.T) {
 			// BaseOTs
 			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 			require.NoError(t, err)
-			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 			require.NoError(t, err)
 
 			// Set COTe inputs

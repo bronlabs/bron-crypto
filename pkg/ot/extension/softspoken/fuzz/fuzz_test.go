@@ -50,7 +50,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -109,7 +109,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

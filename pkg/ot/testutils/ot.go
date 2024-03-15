@@ -13,20 +13,20 @@ import (
 
 // GenerateCOTinputs generates random inputs for Correlated OTs.
 func GenerateOTinputs(Xi, L int) (
-	receiverChoiceBits ot.ChoiceBits, // receiver's input, the Choice bits x
-	senderMessages []ot.MessagePair, // sender's input in OT, the MessagePair (s_0, s_1)
+	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
+	senderMessages [][2]ot.Message, // sender's input in OT, the MessagePair (s_0, s_1)
 	err error,
 ) {
 	if L < 1 || Xi < 1 || Xi%8 != 0 {
 		return nil, nil, errs.NewLength(" cannot generate random inputs for L=%d, Xi=%d", L, Xi)
 	}
-	receiverChoiceBits = make(ot.ChoiceBits, Xi/8)
+	receiverChoiceBits = make(ot.PackedBits, Xi/8)
 	if _, err := crand.Read(receiverChoiceBits); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "could not generate random choice bits")
 	}
-	senderMessages = make([]ot.MessagePair, Xi)
+	senderMessages = make([][2]ot.Message, Xi)
 	for i := 0; i < Xi; i++ {
-		senderMessages[i] = ot.MessagePair{make(ot.Message, L), make(ot.Message, L)}
+		senderMessages[i] = [2]ot.Message{make(ot.Message, L), make(ot.Message, L)}
 		for l := 0; l < L; l++ {
 			_, err0 := crand.Read(senderMessages[i][0][l][:])
 			_, err1 := crand.Read(senderMessages[i][1][l][:])
@@ -42,9 +42,9 @@ func GenerateOTinputs(Xi, L int) (
 func ValidateOT(
 	Xi int, // number of OTe messages in the batch
 	L int, // number of OTe elements per message
-	senderMessages []ot.MessagePair, // sender's input in OT, the MessagePair (s_0, s_1)
-	receiverChoiceBits ot.ChoiceBits, // receiver's input, the Choice bits x
-	receiverChosenMessages []ot.ChosenMessage, // receiver's output, the ChosenMessage (r_x)
+	senderMessages [][2]ot.Message, // sender's input in OT, the MessagePair (s_0, s_1)
+	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
+	receiverChosenMessages []ot.Message, // receiver's output, the ChosenMessage (r_x)
 ) error {
 	// Check length matching
 	if len(receiverChoiceBits) != Xi/8 || len(receiverChosenMessages) != Xi || len(senderMessages) != Xi {
@@ -67,14 +67,14 @@ func ValidateOT(
 
 // GenerateCOTinputs generates random inputs for Correlated OTs.
 func GenerateCOTinputs(Xi, L int, curve curves.Curve) (
-	receiverChoiceBits ot.ChoiceBits, // receiver's input, the Choice bits x
+	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
 	senderInput []ot.CorrelatedMessage, // sender's input, the MessagePair (α_0, α_1)
 	err error,
 ) {
 	if L < 1 || Xi < 1 || Xi%8 != 0 {
 		return nil, nil, errs.NewLength(" cannot generate random inputs for L=%d, Xi=%d", L, Xi)
 	}
-	receiverChoiceBits = make(ot.ChoiceBits, Xi/8)
+	receiverChoiceBits = make(ot.PackedBits, Xi/8)
 	if _, err := crand.Read(receiverChoiceBits); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "could not generate random choice bits")
 	}
@@ -98,7 +98,7 @@ func GenerateCOTinputs(Xi, L int, curve curves.Curve) (
 func ValidateCOT(
 	Xi int, // number of OTe messages in the batch
 	L int, // number of OTe elements per message
-	receiverChoices ot.ChoiceBits, // (x)
+	receiverChoices ot.PackedBits, // (x)
 	senderInput []ot.CorrelatedMessage, // (a)
 	receiverOutput []ot.CorrelatedMessage, // (z_B)
 	senderOutput []ot.CorrelatedMessage, // (z_A)

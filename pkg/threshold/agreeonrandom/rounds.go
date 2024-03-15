@@ -10,7 +10,7 @@ import (
 func (p *Participant) Round1() (*Round1Broadcast, error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	// step 1.1: sample a random scalar r_i
@@ -37,7 +37,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 func (p *Participant) Round2(round1output network.RoundMessages[*Round1Broadcast]) (*Round2Broadcast, error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 1 messages")
@@ -64,7 +64,7 @@ func (p *Participant) Round2(round1output network.RoundMessages[*Round1Broadcast
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast]) (randomValue []byte, err error) {
 	// Validation
 	if err := p.InRound(3); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid ound 1 messages")

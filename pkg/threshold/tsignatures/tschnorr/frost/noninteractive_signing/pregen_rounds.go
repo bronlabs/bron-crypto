@@ -9,7 +9,7 @@ import (
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	// Validation
 	if err := p.InRound(1); err != nil {
-		return nil, errs.Forward(err)
+		return nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 
 	p.state = &preGenState{
@@ -51,10 +51,10 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 func (p *PreGenParticipant) Round2(round1output network.RoundMessages[*Round1Broadcast]) (PreSignatureBatch, []*PrivateNoncePair, error) {
 	// Validation
 	if err := p.InRound(2); err != nil {
-		return nil, nil, errs.Forward(err)
+		return nil, nil, errs.WrapValidation(err, "Participant in invalid round")
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
-		return nil, nil, errs.WrapFailed(err, "invalid round 1 output")
+		return nil, nil, errs.WrapFailed(err, "invalid round %d input", p.Round())
 	}
 
 	round1output.Put(p.IdentityKey(), &Round1Broadcast{
