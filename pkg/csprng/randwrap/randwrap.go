@@ -2,6 +2,7 @@ package randwrap
 
 import (
 	"encoding/json"
+	uint2 "github.com/copperexchange/krypton-primitives/pkg/base/uint"
 	"io"
 	"reflect"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -40,7 +40,7 @@ type WrappedReader struct {
 	prk []byte
 	// a unique nonce for each sample. Should be less than n + L.
 	// since L'=128, we can use a uint128.
-	tag2 uint128.Uint128
+	tag2 uint2.U128
 }
 
 func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*WrappedReader, error) {
@@ -70,7 +70,7 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 		return nil, errs.WrapRandomSample(err, "could not sample tag2 as a nonce")
 	}
 
-	tag2 := uint128.NewFromBytesBE(tag2Sample[:])
+	tag2 := uint2.NewU128FromBytesBE(tag2Sample[:])
 
 	return &WrappedReader{
 		deviceRandomnessDeterministicWrappingKey: deterministicWrappingKey,
@@ -85,7 +85,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 	for i := 0; i < blockCount; i++ {
 		var block [NBytes]byte
 		var tag2Bytes [NBytes]byte
-		wr.tag2.PutBytesBE(tag2Bytes[:])
+		wr.tag2.FillBytesBE(tag2Bytes[:])
 		expander := hkdf.Expand(base.RandomOracleHashFunction, wr.prk, tag2Bytes[:])
 		if _, err := io.ReadFull(expander, block[:]); err != nil {
 			return -1, errs.WrapRandomSample(err, "couldn't expand for block %d", i)
@@ -93,7 +93,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 		if _, err := shaker.Write(block[:]); err != nil {
 			return -1, errs.WrapFailed(err, "couldn't write block %d to shaker", i)
 		}
-		wr.tag2 = wr.tag2.Add(uint128.One)
+		wr.tag2 = wr.tag2.Add(uint2.OneU128)
 	}
 	n, err = shaker.Read(p)
 	if err != nil {
