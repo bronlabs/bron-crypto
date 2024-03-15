@@ -1,4 +1,4 @@
-package uint
+package uints
 
 import "github.com/cronokirby/saferith"
 

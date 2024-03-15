@@ -1,13 +1,14 @@
-package uint
+package uints
 
 import (
 	crand "crypto/rand"
 	"encoding/binary"
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"testing"
+
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 )
 
 func randUint256(t require.TestingT) U256 {
@@ -97,7 +98,7 @@ func TestArithmeticUint256(t *testing.T) {
 		}
 	}
 
-	checkLeftShiftOp := func(x U256, op string, n uint, fn func(x U256, n uint) U256, fnb func(z, x *big.Int, n uint) *big.Int) {
+	checkLeftShiftOp := func(x U256, op string, n uint, fn func(x U256, n uint) U256, _ func(z, x *big.Int, n uint) *big.Int) {
 		t.Helper()
 		r := fn(x, n)
 		rb := new(saferith.Nat).Lsh(new(saferith.Nat).SetBytes(x.ToBytesBE()), n, 256)
@@ -106,7 +107,7 @@ func TestArithmeticUint256(t *testing.T) {
 		}
 	}
 
-	checkRightShiftOp := func(x U256, op string, n uint, fn func(x U256, n uint) U256, fnb func(z, x *big.Int, n uint) *big.Int) {
+	checkRightShiftOp := func(x U256, op string, n uint, fn func(x U256, n uint) U256, _ func(z, x *big.Int, n uint) *big.Int) {
 		t.Helper()
 		r := fn(x, n)
 		rb := new(saferith.Nat).Rsh(new(saferith.Nat).SetBytes(x.ToBytesBE()), n, 256)

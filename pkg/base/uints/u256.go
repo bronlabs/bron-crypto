@@ -1,11 +1,13 @@
-package uint
+package uints
 
 import (
 	"encoding/binary"
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/cronokirby/saferith"
 	"math/big"
 	"math/bits"
+
+	"github.com/cronokirby/saferith"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 )
 
 type U256 struct {
@@ -124,21 +126,21 @@ func (u U256) Cmp(rhs U256) int {
 	eq := 1
 	geq := 1
 
-	eqAtLimb := ct.ConstantTimeEq(u.Limb0, rhs.Limb0)
+	eqAtLimb := ct.Equal(u.Limb0, rhs.Limb0)
 	eq &= eqAtLimb
-	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.ConstantTimeGt(u.Limb0, rhs.Limb0))
+	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.GreaterThan(u.Limb0, rhs.Limb0))
 
-	eqAtLimb = ct.ConstantTimeEq(u.Limb1, rhs.Limb1)
+	eqAtLimb = ct.Equal(u.Limb1, rhs.Limb1)
 	eq &= eqAtLimb
-	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.ConstantTimeGt(u.Limb1, rhs.Limb1))
+	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.GreaterThan(u.Limb1, rhs.Limb1))
 
-	eqAtLimb = ct.ConstantTimeEq(u.Limb2, rhs.Limb2)
+	eqAtLimb = ct.Equal(u.Limb2, rhs.Limb2)
 	eq &= eqAtLimb
-	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.ConstantTimeGt(u.Limb2, rhs.Limb2))
+	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.GreaterThan(u.Limb2, rhs.Limb2))
 
-	eqAtLimb = ct.ConstantTimeEq(u.Limb3, rhs.Limb3)
+	eqAtLimb = ct.Equal(u.Limb3, rhs.Limb3)
 	eq &= eqAtLimb
-	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.ConstantTimeGt(u.Limb3, rhs.Limb3))
+	geq = (eqAtLimb & geq) | ((1 ^ eqAtLimb) & ct.GreaterThan(u.Limb3, rhs.Limb3))
 
 	if (eq & (1 ^ geq)) == 1 {
 		panic("eq but not geq")
@@ -174,63 +176,65 @@ func (u U256) Xor(rhs U256) U256 {
 	}
 }
 
-func (u U256) Lsh(bits uint) U256 {
-	if bits < (1 * 64) {
+func (u U256) Lsh(shift uint) U256 {
+	switch {
+	case shift < (1 * 64):
 		return U256{
-			Limb0: u.Limb0 << bits,
-			Limb1: (u.Limb1 << bits) | (u.Limb0 >> (64 - bits)),
-			Limb2: (u.Limb2 << bits) | (u.Limb1 >> (64 - bits)),
-			Limb3: (u.Limb3 << bits) | (u.Limb2 >> (64 - bits)),
+			Limb0: u.Limb0 << shift,
+			Limb1: (u.Limb1 << shift) | (u.Limb0 >> (64 - shift)),
+			Limb2: (u.Limb2 << shift) | (u.Limb1 >> (64 - shift)),
+			Limb3: (u.Limb3 << shift) | (u.Limb2 >> (64 - shift)),
 		}
-	} else if bits < (2 * 64) {
+	case shift < (2 * 64):
 		return U256{
 			Limb0: 0,
-			Limb1: u.Limb0 << (bits - 64),
-			Limb2: (u.Limb1 << (bits - 64)) | (u.Limb0 >> ((2 * 64) - bits)),
-			Limb3: (u.Limb2 << (bits - 64)) | (u.Limb1 >> ((2 * 64) - bits)),
+			Limb1: u.Limb0 << (shift - 64),
+			Limb2: (u.Limb1 << (shift - 64)) | (u.Limb0 >> ((2 * 64) - shift)),
+			Limb3: (u.Limb2 << (shift - 64)) | (u.Limb1 >> ((2 * 64) - shift)),
 		}
-	} else if bits < (3 * 64) {
+	case shift < (3 * 64):
 		return U256{
 			Limb0: 0,
 			Limb1: 0,
-			Limb2: u.Limb0 << (bits - (2 * 64)),
-			Limb3: (u.Limb1 << (bits - (2 * 64))) | (u.Limb0 >> ((3 * 64) - bits)),
+			Limb2: u.Limb0 << (shift - (2 * 64)),
+			Limb3: (u.Limb1 << (shift - (2 * 64))) | (u.Limb0 >> ((3 * 64) - shift)),
 		}
-	} else {
+	default:
 		return U256{
 			Limb0: 0,
 			Limb1: 0,
 			Limb2: 0,
-			Limb3: u.Limb0 << (bits - (3 * 64)),
+			Limb3: u.Limb0 << (shift - (3 * 64)),
 		}
 	}
 }
 
-func (u U256) Rsh(bits uint) U256 {
-	if bits <= 64 {
+func (u U256) Rsh(shift uint) U256 {
+	switch {
+	case shift <= 64:
 		return U256{
-			Limb0: (u.Limb0 >> bits) | (u.Limb1 << (64 - bits)),
-			Limb1: (u.Limb1 >> bits) | (u.Limb2 << (64 - bits)),
-			Limb2: (u.Limb2 >> bits) | (u.Limb3 << (64 - bits)),
-			Limb3: u.Limb3 >> bits,
+			Limb0: (u.Limb0 >> shift) | (u.Limb1 << (64 - shift)),
+			Limb1: (u.Limb1 >> shift) | (u.Limb2 << (64 - shift)),
+			Limb2: (u.Limb2 >> shift) | (u.Limb3 << (64 - shift)),
+			Limb3: u.Limb3 >> shift,
 		}
-	} else if bits <= (2 * 64) {
+	case shift <= (2 * 64):
 		return U256{
-			Limb0: (u.Limb1 >> (bits - 64)) | (u.Limb2 << ((2 * 64) - bits)),
-			Limb1: (u.Limb2 >> (bits - 64)) | (u.Limb3 << ((2 * 64) - bits)),
-			Limb2: u.Limb3 >> (bits - 64),
+			Limb0: (u.Limb1 >> (shift - 64)) | (u.Limb2 << ((2 * 64) - shift)),
+			Limb1: (u.Limb2 >> (shift - 64)) | (u.Limb3 << ((2 * 64) - shift)),
+			Limb2: u.Limb3 >> (shift - 64),
 			Limb3: 0,
 		}
-	} else if bits <= (3 * 64) {
+	case shift <= (3 * 64):
 		return U256{
-			Limb0: (u.Limb2 >> (bits - (2 * 64))) | (u.Limb3 << ((3 * 64) - bits)),
-			Limb1: u.Limb3 >> (bits - (2 * 64)),
+			Limb0: (u.Limb2 >> (shift - (2 * 64))) | (u.Limb3 << ((3 * 64) - shift)),
+			Limb1: u.Limb3 >> (shift - (2 * 64)),
 			Limb2: 0,
 			Limb3: 0,
 		}
-	} else {
+	default:
 		return U256{
-			Limb0: u.Limb3 >> (bits - (3 * 64)),
+			Limb0: u.Limb3 >> (shift - (3 * 64)),
 			Limb1: 0,
 			Limb2: 0,
 			Limb3: 0,
@@ -265,12 +269,11 @@ func (u U256) FillBytesLE(buf []byte) {
 
 func (u U256) FillBytesBE(buf []byte) {
 	data := u.ToBytesBE()
-	if len(buf) >= 32 {
+	if len(buf) > 32 {
 		copy(buf[len(buf)-32:], data)
 	} else {
 		copy(buf, data[32-len(buf):])
 	}
-
 }
 
 func (u U256) Nat() *saferith.Nat {
@@ -288,21 +291,4 @@ func ConstantTimeU256Select(choice int, lhs, rhs U256) U256 {
 		Limb2: (vTrue & lhs.Limb2) | (vFalse & rhs.Limb2),
 		Limb3: (vTrue & lhs.Limb3) | (vFalse & rhs.Limb3),
 	}
-}
-
-func ctEq(lhs, rhs uint64) int {
-	v := ^(lhs ^ rhs)
-	v &= v >> 32
-	v &= v >> 16
-	v &= v >> 8
-	v &= v >> 4
-	v &= v >> 2
-	v &= v >> 1
-
-	return int(v)
-}
-
-func ctGt(lhs, rhs uint64) int {
-	diff := lhs - rhs
-	return int(((^lhs & rhs) | (^(lhs ^ rhs) & diff)) >> 63)
 }

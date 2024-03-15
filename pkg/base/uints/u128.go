@@ -1,4 +1,4 @@
-package uint
+package uints
 
 import (
 	"encoding/binary"
@@ -74,8 +74,8 @@ func (u U128) IsZero() bool {
 
 // Equals returns true if u == v.
 func (u U128) Equals(v U128) bool {
-	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
-	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
+	eqLow := ct.Equal(u.Lo, v.Lo)
+	eqHigh := ct.Equal(u.Hi, v.Hi)
 	return (eqLow & eqHigh) == 1
 }
 
@@ -85,10 +85,10 @@ func (u U128) Equals(v U128) bool {
 //	 0 if u == v
 //	+1 if u >  v
 func (u U128) Cmp(v U128) int {
-	ltHigh := ct.ConstantTimeGt(v.Hi, u.Hi)
-	ltLow := ct.ConstantTimeGt(v.Lo, u.Lo)
-	eqHigh := ct.ConstantTimeEq(u.Hi, v.Hi)
-	eqLow := ct.ConstantTimeEq(u.Lo, v.Lo)
+	ltHigh := ct.GreaterThan(v.Hi, u.Hi)
+	ltLow := ct.GreaterThan(v.Lo, u.Lo)
+	eqHigh := ct.Equal(u.Hi, v.Hi)
+	eqLow := ct.Equal(u.Lo, v.Lo)
 	return 1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))
 }
 
@@ -185,7 +185,7 @@ func (u U128) FillBytesLE(buf []byte) {
 
 func (u U128) FillBytesBE(buf []byte) {
 	data := u.ToBytesBE()
-	if len(buf) >= 16 {
+	if len(buf) > 16 {
 		copy(buf[len(buf)-16:], data)
 	} else {
 		copy(buf, data[16-len(buf):])

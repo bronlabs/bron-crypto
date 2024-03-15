@@ -1,8 +1,7 @@
-package uint_test
+package uints_test
 
 import (
 	crand "crypto/rand"
-	uint2 "github.com/copperexchange/krypton-primitives/pkg/base/uint"
 	"io"
 	"testing"
 
@@ -10,18 +9,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 )
 
 func Benchmark_Add(b *testing.B) {
 	// make some samples
 	nSamples := 4096
-	samplesU256 := make([]uint2.U256, nSamples)
+	samplesU256 := make([]uints.U256, nSamples)
 	samplesSaferith := make([]saferith.Nat, nSamples)
 	for i := range samplesU256 {
 		sample := make([]byte, 32)
 		_, err := io.ReadFull(crand.Reader, sample)
 		require.NoError(b, err)
-		samplesU256[i] = uint2.NewU256FromBytesLE(sample)
+		samplesU256[i] = uints.NewU256FromBytesLE(sample)
 		samplesSaferith[i].SetBytes(bitstring.ReverseBytes(sample))
 	}
 
@@ -50,13 +50,13 @@ func Benchmark_Add(b *testing.B) {
 func Benchmark_Sub(b *testing.B) {
 	// make some samples
 	nSamples := 4096
-	samplesU256 := make([]uint2.U256, nSamples)
+	samplesU256 := make([]uints.U256, nSamples)
 	samplesSaferith := make([]saferith.Nat, nSamples)
 	for i := range samplesU256 {
 		sample := make([]byte, 32)
 		_, err := io.ReadFull(crand.Reader, sample)
 		require.NoError(b, err)
-		samplesU256[i] = uint2.NewU256FromBytesLE(sample)
+		samplesU256[i] = uints.NewU256FromBytesLE(sample)
 		samplesSaferith[i].SetBytes(bitstring.ReverseBytes(sample))
 	}
 
@@ -85,13 +85,13 @@ func Benchmark_Sub(b *testing.B) {
 func Benchmark_Mul(b *testing.B) {
 	// make some samples
 	nSamples := 4096
-	samplesU256 := make([]uint2.U256, nSamples)
+	samplesU256 := make([]uints.U256, nSamples)
 	samplesSaferith := make([]saferith.Nat, nSamples)
 	for i := range samplesU256 {
 		sample := make([]byte, 32)
 		_, err := io.ReadFull(crand.Reader, sample)
 		require.NoError(b, err)
-		samplesU256[i] = uint2.NewU256FromBytesLE(sample)
+		samplesU256[i] = uints.NewU256FromBytesLE(sample)
 		samplesSaferith[i].SetBytes(bitstring.ReverseBytes(sample))
 	}
 

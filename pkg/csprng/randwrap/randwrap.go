@@ -2,7 +2,6 @@ package randwrap
 
 import (
 	"encoding/json"
-	uint2 "github.com/copperexchange/krypton-primitives/pkg/base/uint"
 	"io"
 	"reflect"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -40,7 +40,7 @@ type WrappedReader struct {
 	prk []byte
 	// a unique nonce for each sample. Should be less than n + L.
 	// since L'=128, we can use a uint128.
-	tag2 uint2.U128
+	tag2 uints.U128
 }
 
 func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*WrappedReader, error) {
@@ -70,7 +70,7 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 		return nil, errs.WrapRandomSample(err, "could not sample tag2 as a nonce")
 	}
 
-	tag2 := uint2.NewU128FromBytesBE(tag2Sample[:])
+	tag2 := uints.NewU128FromBytesBE(tag2Sample[:])
 
 	return &WrappedReader{
 		deviceRandomnessDeterministicWrappingKey: deterministicWrappingKey,
@@ -93,7 +93,7 @@ func (wr *WrappedReader) Read(p []byte) (n int, err error) {
 		if _, err := shaker.Write(block[:]); err != nil {
 			return -1, errs.WrapFailed(err, "couldn't write block %d to shaker", i)
 		}
-		wr.tag2 = wr.tag2.Add(uint2.OneU128)
+		wr.tag2 = wr.tag2.Add(uints.OneU128)
 	}
 	n, err = shaker.Read(p)
 	if err != nil {

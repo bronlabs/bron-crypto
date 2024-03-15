@@ -4,12 +4,12 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
-	uint2 "github.com/copperexchange/krypton-primitives/pkg/base/uint"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 )
 
 func TestUniqueOutputs(t *testing.T) {
@@ -72,7 +72,7 @@ func TestIncrementNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < incrementCount; i++ {
-		wrWithExpectedTag2.tag2 = wrWithExpectedTag2.tag2.Add(uint2.OneU128)
+		wrWithExpectedTag2.tag2 = wrWithExpectedTag2.tag2.Add(uints.OneU128)
 	}
 
 	require.EqualValues(t, wrWithExpectedTag2.tag2, wr.tag2)

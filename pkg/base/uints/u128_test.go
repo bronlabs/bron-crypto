@@ -1,12 +1,13 @@
-package uint
+package uints
 
 import (
 	crand "crypto/rand"
 	"encoding/binary"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func randUint128(t require.TestingT) U128 {
