@@ -59,7 +59,7 @@ func NewParticipant[T any](myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 }
 
 func NewAlice(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *ot.ReceiverRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
-	participant, gadget, err := NewParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, seededPrng, transcript, 1)
+	participant, gadget, err := NewParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, seededPrng, transcript, 2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
