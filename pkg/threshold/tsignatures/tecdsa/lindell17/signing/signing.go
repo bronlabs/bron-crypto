@@ -74,11 +74,10 @@ func MessageToScalar(cipherSuite types.SignatureProtocol, message []byte) (curve
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
-	mPrimeInt, err := ecdsa.HashToInt(messageHash, cipherSuite.Curve())
+	mPrimeUint := ecdsa.BitsToInt(messageHash, cipherSuite.Curve())
+	mPrime, err := cipherSuite.Curve().Scalar().SetBytes(mPrimeUint.Bytes())
 	if err != nil {
-		return nil, errs.WrapHashing(err, "cannot create int from hash")
+		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
 	}
-	mPrime := cipherSuite.Curve().Scalar().SetNat(mPrimeInt)
-
 	return mPrime, nil
 }

@@ -5,7 +5,11 @@ import (
 	"encoding/binary"
 	"math/big"
 	"testing"
+
+	"github.com/cronokirby/saferith"
 )
+
+var mod2Pow128 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), 128, -1))
 
 func randUint128() Uint128 {
 	randBuf := make([]byte, 16)
@@ -98,6 +102,18 @@ func TestArithmetic(t *testing.T) {
 		_, rem := i.QuoRem(i, new(big.Int).Lsh(big.NewInt(1), 128), new(big.Int))
 		return rem
 	}
+	mod128nat := func(i *saferith.Nat) (r *saferith.Nat) {
+		// wraparound semantics
+		return new(saferith.Nat).Mod(i, mod2Pow128)
+	}
+	checkArithOp := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *saferith.Nat, _ int) *saferith.Nat) {
+		t.Helper()
+		r := fn(x, y)
+		rb := mod128nat(fnb(new(saferith.Nat), x.Nat(), y.Nat(), -1))
+		if r.Nat().Eq(rb) != 1 {
+			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
+		}
+	}
 	checkBinOp := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
 		t.Helper()
 		r := fn(x, y)
@@ -116,13 +132,39 @@ func TestArithmetic(t *testing.T) {
 	}
 	for i := 0; i < 1000; i++ {
 		x, y, z := randUint128(), randUint128(), uint(randUint128().Lo&0xFF)
-		checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
-		checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
-		checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
+		checkArithOp(x, "+", y, Uint128.Add, (*saferith.Nat).Add)
+		checkArithOp(x, "-", y, Uint128.Sub, (*saferith.Nat).Sub)
+		checkArithOp(x, "*", y, Uint128.Mul, (*saferith.Nat).Mul)
 		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
 		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
 		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
 		checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
 		checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
 	}
+}
+
+var result Uint128
+
+var resultNat *saferith.Nat
+
+func BenchmarkUint128Add(b *testing.B) {
+	var r Uint128
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		x, y := randUint128(), randUint128()
+		b.StartTimer()
+		r = x.Add(y)
+	}
+	result = r
+}
+
+func BenchmarkSaferith128NatAdd(b *testing.B) {
+	var r *saferith.Nat
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		x, y := randUint128().Nat(), randUint128().Nat()
+		b.StartTimer()
+		r = x.Add(x, y, 128)
+	}
+	resultNat = r
 }

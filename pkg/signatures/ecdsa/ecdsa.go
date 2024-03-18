@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint256"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -124,13 +125,8 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
-	zInt, err := HashToInt(messageHash, curve)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "cannot get int from hash")
-	}
-	var zIntBytes [32]byte
-	zInt.FillBytes(zIntBytes[:])
-	z, err := curve.Scalar().SetBytes(zIntBytes[:])
+	zInt := BitsToInt(messageHash, curve)
+	z, err := curve.Scalar().SetBytes(zInt.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
@@ -184,16 +180,17 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	return nil
 }
 
-func HashToInt(digest []byte, curve curves.Curve) (*saferith.Nat, error) {
-	orderBytes := len(curve.SubGroupOrder().Bytes())
-	if len(digest) > orderBytes {
-		digest = digest[:orderBytes]
-	}
+// BitsToInt converts a bit string to an octet string following the conversion
+// from RFC 6979, sections 2.3.2 and 2.3.3. It assumes |q| <= 256 bits.
+func BitsToInt(b []byte, curve curves.Curve) uint256.Uint256 {
+	// Cast to 256-bit integer
+	blen := 256
+	bUint := uint256.NewFromBytes(b[:blen/8])
 
-	ret := new(saferith.Nat).SetBytes(digest)
-	excess := (len(digest) - orderBytes) * 8
-	if excess > 0 {
-		ret.Rsh(ret, uint(excess), curve.SubGroupOrder().BitLen())
+	// Limit to exactly |q| bits, padded with zeros
+	qlen := curve.SubGroupOrder().BitLen()
+	if blen > qlen {
+		bUint = bUint.Rsh(uint(blen - qlen))
 	}
-	return ret, nil
+	return bUint
 }

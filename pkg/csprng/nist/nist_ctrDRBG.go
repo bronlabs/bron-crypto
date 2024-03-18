@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint128"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
