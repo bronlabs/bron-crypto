@@ -41,7 +41,7 @@ type AbstractStructuredSet[S Structure, E Element] interface {
 	// Hash maps a byte array to a type E element of structure S.
 	Hash(x []byte) (E, error)
 	// Select returns (in constant time) x0 if choice is false, and x1 if choice is true.
-	Select(choice bool, x0, x1 E) E
+	Select(choice int, x0, x1 E) E
 }
 
 // AbstractStructuredSetElement implements the basic methods shared by elements of all other higher level structures.

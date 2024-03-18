@@ -4,15 +4,15 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints/uint128"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type CtrDRBG struct {
 	aesBlockCipher cipher.Block
-	v              uints.U128
+	v              uint128.U128
 	key            []byte
 	keySize        int
 	reseedCounter  uint64
@@ -22,7 +22,7 @@ type CtrDRBG struct {
 func NewCtrDRBG(keySize int) *CtrDRBG {
 	return &CtrDRBG{
 		aesBlockCipher: nil,
-		v:              uints.NewU128(0, 0),
+		v:              uint128.NewU128(0, 0),
 		key:            make([]byte, keySize),
 		keySize:        keySize,
 		reseedCounter:  0,
@@ -94,7 +94,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	// 2. WHILE (len(temp) < seedLen) DO
 	for i := 0; i < tempBlocks; i++ {
 		// 2.1. V = (V+1) mod 2^blocklen
-		ctrDrbg.v = ctrDrbg.v.Add(uints.OneU128)
+		ctrDrbg.v = ctrDrbg.v.Add(uint128.One)
 		ctrDrbg.v.FillBytesBE(vBytes)
 		// 2.2. output_block = Block_Encrypt(Key, V).
 		// 2.3. temp = temp || output_block.
@@ -114,7 +114,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 		return errs.WrapFailed(err, "Could not set the block cipher key")
 	}
 	// 6. V = rightmost (temp, blocklen).
-	ctrDrbg.v = uints.NewU128FromBytesBE(temp[ctrDrbg.keySize:])
+	ctrDrbg.v = uint128.NewFromBytesBE(temp[ctrDrbg.keySize:])
 	return nil
 }
 
@@ -139,7 +139,7 @@ func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString [
 		return errs.WrapFailed(err, "Could not set the block cipher key")
 	}
 	// 4. V = 0^blocklen.
-	ctrDrbg.v = uints.ZeroU128
+	ctrDrbg.v = uint128.Zero
 	// 5. (Key, V) = CTR_DRBG_Update(seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
 		return errs.WrapFailed(err, "Could not update PRNG internal state")
@@ -202,7 +202,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	// 4. WHILE(len(temp) < requested_number_of_bits) DO
 	for i := 0; i < requestedNumberOfBlocks; i++ {
 		// 4.1. V = (V+1) mod 2^blocklen.
-		ctrDrbg.v = ctrDrbg.v.Add(uints.OneU128)
+		ctrDrbg.v = ctrDrbg.v.Add(uint128.One)
 		ctrDrbg.v.FillBytesBE(vBytes)
 		// 4.2. output_block = Block_Encrypt(Key, V).
 		// 4.3. temp = temp || output_block.

@@ -18,7 +18,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "edwards25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -160,7 +159,7 @@ func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 	return &Point{V: p}
 }
 
-func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (c *Curve) Select(choice int, x0, x1 curves.Point) curves.Point {
 	x0Ed, ok0 := x0.(*Point)
 	x1Ed, ok1 := x1.(*Point)
 	sEd, ok1s := c.Element().(*Point)
@@ -169,10 +168,10 @@ func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	}
 	x0Ed_x, x0Ed_y, x0Ed_z, x0Ed_t := x0Ed.V.ExtendedCoordinates()
 	x1Ed_x, x1Ed_y, x1Ed_z, x1Ed_t := x1Ed.V.ExtendedCoordinates()
-	xEd := new(filippo_field.Element).Select(x1Ed_x, x0Ed_x, utils.BoolTo[int](choice))
-	yEd := new(filippo_field.Element).Select(x1Ed_y, x0Ed_y, utils.BoolTo[int](choice))
-	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, utils.BoolTo[int](choice))
-	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, utils.BoolTo[int](choice))
+	xEd := new(filippo_field.Element).Select(x1Ed_x, x0Ed_x, choice)
+	yEd := new(filippo_field.Element).Select(x1Ed_y, x0Ed_y, choice)
+	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, choice)
+	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, choice)
 	var err error
 	sEd.V, err = sEd.V.SetExtendedCoordinates(xEd, yEd, zEd, tEd)
 	if err != nil {

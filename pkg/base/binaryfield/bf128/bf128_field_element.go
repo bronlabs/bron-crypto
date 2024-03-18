@@ -2,6 +2,7 @@ package bf128
 
 import (
 	"encoding/binary"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 
 	"github.com/cronokirby/saferith"
 
@@ -110,7 +111,7 @@ func (el *FieldElement) Add(rhs *FieldElement) *FieldElement {
 func (el *FieldElement) ApplyAdd(x *FieldElement, n *saferith.Nat) *FieldElement {
 	nBytes := n.Bytes()
 	nIsOdd := nBytes[len(nBytes)-1]&0x01 == 1
-	return NewField().Select(nIsOdd, el, &FieldElement{})
+	return NewField().Select(utils.BoolTo[int](nIsOdd), el, &FieldElement{})
 }
 
 func (*FieldElement) Double() *FieldElement {

@@ -1,4 +1,4 @@
-package uints
+package uint256
 
 import (
 	crand "crypto/rand"
@@ -15,7 +15,7 @@ func randUint256(t require.TestingT) U256 {
 	randBuf := make([]byte, 32)
 	_, err := io.ReadFull(crand.Reader, randBuf)
 	require.NoError(t, err)
-	return NewU256FromBytesLE(randBuf)
+	return NewFromBytesLE(randBuf)
 }
 
 func TestUint256(t *testing.T) {
@@ -32,22 +32,22 @@ func TestUint256(t *testing.T) {
 		}
 
 		// Conversion to/From SaferithNat.
-		if NewU256FromNat(x.Nat()) != x {
+		if NewFromNat(x.Nat()) != x {
 			t.Fatal("ToNat is not the inverse of ToU256 for", x)
 		}
 		// Compare.
-		if !x.Equals(x) {
+		if !x.Equal(x) {
 			t.Fatalf("%v does not equal itself", x.Limb0)
 		}
 
-		if ConstantTimeU256Select(1, x, y) != x {
-			t.Fatalf("ConstantTimeU256Select(true, %v, %v) should equal %v, got %v", x, y, x, ConstantTimeU256Select(1, x, y))
+		if !zn.Select(1, x, y).Equal(x) {
+			t.Fatalf("ConstantTimeU256Select(true, %v, %v) should equal %v, got %v", x, y, x, zn.Select(1, x, y))
 		}
-		if ConstantTimeU256Select(0, x, y) != y {
-			t.Fatalf("ConstantTimeU256Select(false, %v, %v) should equal %v, got %v", x, y, y, ConstantTimeU256Select(0, x, y))
+		if !zn.Select(0, x, y).Equal(y) {
+			t.Fatalf("ConstantTimeU256Select(false, %v, %v) should equal %v, got %v", x, y, y, zn.Select(0, x, y))
 		}
 
-		if x.Cmp(y) != x.Nat().Big().Cmp(y.Nat().Big()) {
+		if int(x.Cmp(y)) != x.Nat().Big().Cmp(y.Nat().Big()) {
 			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Nat().Big().Cmp(y.Nat().Big()), x.Cmp(y))
 		} else if x.Cmp(x) != 0 {
 			t.Fatalf("%v does not equal itself", x)
@@ -127,4 +127,18 @@ func TestArithmeticUint256(t *testing.T) {
 		checkLeftShiftOp(x, "<<", 64*3+1, U256.Lsh, (*big.Int).Lsh)
 		checkRightShiftOp(x, ">>", z, U256.Rsh, (*big.Int).Rsh)
 	}
+}
+
+type Testee struct {
+	data [2]int
+}
+
+func (t Testee) SetBytes(x0, x1 int) {
+	t.data = [2]int{x0, x1}
+}
+
+func Test_Testee(t *testing.T) {
+	var xxx Testee
+	xxx.SetBytes(10, 20)
+	println(xxx.data[0], xxx.data[1])
 }

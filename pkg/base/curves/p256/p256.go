@@ -18,7 +18,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "P256" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -123,16 +122,16 @@ func (Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 	return &Point{V: p}, nil
 }
 
-func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (c *Curve) Select(choice int, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
 	x1p, ok1 := x1.(*Point)
 	p, okp := c.Element().(*Point)
 	if !ok0 || !ok1 || okp {
 		panic("Not a K256 point")
 	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[int](choice))
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[int](choice))
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[int](choice))
+	p.V.X.CMove(x0p.V.X, x1p.V.X, choice)
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, choice)
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, choice)
 	return p
 }
 

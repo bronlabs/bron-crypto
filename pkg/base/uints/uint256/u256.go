@@ -1,13 +1,14 @@
-package uints
+package uint256
 
 import (
 	"encoding/binary"
-	"math/big"
-	"math/bits"
-
-	"github.com/cronokirby/saferith"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
+	"github.com/cronokirby/saferith"
+	"math"
+	"math/bits"
 )
 
 type U256 struct {
@@ -19,19 +20,36 @@ type U256 struct {
 	Limb3 uint64
 }
 
-var _ UintLike[U256] = U256{}
+var _ algebra.AbstractIntegerRingElement[*Zn, U256] = U256{}
+var _ algebra.NatLike[U256] = U256{}
+var _ algebra.BytesLike[U256] = U256{}
 
-func NewU256FromBytesLE(value []byte) U256 {
-	var result U256
-	result.Limb0 = binary.LittleEndian.Uint64(value[(0 * 8):(1 * 8)])
-	result.Limb1 = binary.LittleEndian.Uint64(value[(1 * 8):(2 * 8)])
-	result.Limb2 = binary.LittleEndian.Uint64(value[(2 * 8):(3 * 8)])
-	result.Limb3 = binary.LittleEndian.Uint64(value[(3 * 8):(4 * 8)])
+var _ uints.UintLike[U256] = U256{}
 
-	return result
+var Zero = U256{
+	Limb0: 0,
+	Limb1: 0,
+	Limb2: 0,
+	Limb3: 0,
 }
 
-func NewU256FromBytesBE(value []byte) U256 {
+var One = U256{
+	Limb0: 1,
+	Limb1: 0,
+	Limb2: 0,
+	Limb3: 0,
+}
+
+var Max = U256{
+	Limb0: math.MaxUint64,
+	Limb1: math.MaxUint64,
+	Limb2: math.MaxUint64,
+	Limb3: math.MaxUint64,
+}
+
+var mod = saferith.ModulusFromNat(new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), 256, 257))
+
+func NewFromBytesBE(value []byte) U256 {
 	var result U256
 	result.Limb3 = binary.BigEndian.Uint64(value[(0 * 8):(1 * 8)])
 	result.Limb2 = binary.BigEndian.Uint64(value[(1 * 8):(2 * 8)])
@@ -41,12 +59,25 @@ func NewU256FromBytesBE(value []byte) U256 {
 	return result
 }
 
-func NewU256FromNat(nat *saferith.Nat) U256 {
-	return NewU256FromBytesBE(nat.FillBytes(make([]byte, 32)))
+func NewFromNat(nat *saferith.Nat) U256 {
+	return NewFromBytesBE(nat.FillBytes(make([]byte, 32)))
 }
 
-func NewU256FromBig(bint *big.Int) U256 {
-	return NewU256FromBytesBE(bint.FillBytes(make([]byte, 32)))
+func (u U256) Equal(e U256) bool {
+	return ((u.Limb0 ^ e.Limb0) | (u.Limb1 ^ e.Limb1) | (u.Limb2 ^ e.Limb2) | (u.Limb3 ^ e.Limb3)) == 0
+}
+
+func (u U256) Clone() U256 {
+	return u
+}
+
+func (u U256) HashCode() uint64 {
+	return u.Limb0 ^ u.Limb1 ^ u.Limb2 ^ u.Limb3
+}
+
+func (u U256) MarshalJSON() ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (u U256) Add(rhs U256) U256 {
@@ -60,15 +91,54 @@ func (u U256) Add(rhs U256) U256 {
 	return sum
 }
 
-func (u U256) Sub(rhs U256) U256 {
+func (u U256) ApplyAdd(x U256, n *saferith.Nat) U256 {
+	xx := NewFromNat(n)
+	return u.Add(x.Mul(xx))
+}
+
+func (u U256) Double() U256 {
+	return u.Lsh(1)
+}
+
+func (u U256) Triple() U256 {
+	return u.Double().Add(u)
+}
+
+func (u U256) IsAdditiveIdentity() bool {
+	return u.IsZero()
+}
+
+func (u U256) AdditiveInverse() U256 {
+	return u.Neg()
+}
+
+func (u U256) IsAdditiveInverse(of U256) bool {
+	return u.Add(of).IsZero()
+}
+
+func (u U256) Neg() U256 {
+	return U256{
+		Limb0: ^u.Limb0,
+		Limb1: ^u.Limb1,
+		Limb2: ^u.Limb2,
+		Limb3: ^u.Limb3,
+	}.Add(One)
+}
+
+func (u U256) Sub(x U256) U256 {
 	var diff U256
 	var borrow uint64
-	diff.Limb0, borrow = bits.Sub64(u.Limb0, rhs.Limb0, 0)
-	diff.Limb1, borrow = bits.Sub64(u.Limb1, rhs.Limb1, borrow)
-	diff.Limb2, borrow = bits.Sub64(u.Limb2, rhs.Limb2, borrow)
-	diff.Limb3 = u.Limb3 - rhs.Limb3 - borrow
+	diff.Limb0, borrow = bits.Sub64(u.Limb0, x.Limb0, 0)
+	diff.Limb1, borrow = bits.Sub64(u.Limb1, x.Limb1, borrow)
+	diff.Limb2, borrow = bits.Sub64(u.Limb2, x.Limb2, borrow)
+	diff.Limb3 = u.Limb3 - x.Limb3 - borrow
 
 	return diff
+}
+
+func (u U256) ApplySub(x U256, n *saferith.Nat) U256 {
+	xx := NewFromNat(n)
+	return u.Sub(x.Mul(xx))
 }
 
 func (u U256) Mul(rhs U256) U256 {
@@ -110,19 +180,33 @@ func (u U256) Mul(rhs U256) U256 {
 	return prod
 }
 
-func (u U256) Clone() U256 {
-	return u
+func (u U256) ApplyMul(x U256, n *saferith.Nat) U256 {
+	// fallback to Nat
+	rhs := new(saferith.Nat).Exp(x.Nat(), n, mod)
+	return u.Mul(NewFromNat(rhs))
 }
 
-func (u U256) IsZero() bool {
-	return (u.Limb0 | u.Limb1 | u.Limb2 | u.Limb3) == 0
+func (u U256) Square() U256 {
+	return u.Mul(u)
 }
 
-func (u U256) Equals(rhs U256) bool {
-	return ((u.Limb0 ^ rhs.Limb0) | (u.Limb1 ^ rhs.Limb1) | (u.Limb2 ^ rhs.Limb2) | (u.Limb3 ^ rhs.Limb3)) == 0
+func (u U256) Cube() U256 {
+	return u.Square().Mul(u)
 }
 
-func (u U256) Cmp(rhs U256) int {
+func (u U256) IsMultiplicativeIdentity() bool {
+	return u.Equal(One)
+}
+
+func (u U256) MulAdd(p, q U256) U256 {
+	return u.Mul(p).Add(q)
+}
+
+func (u U256) Sqrt() (U256, error) {
+	panic("not implemented")
+}
+
+func (u U256) Cmp(rhs U256) algebra.Ordering {
 	eq := 1
 	geq := 1
 
@@ -146,34 +230,95 @@ func (u U256) Cmp(rhs U256) int {
 		panic("eq but not geq")
 	}
 
-	return 2*geq - eq - 1
+	return algebra.Ordering(2*geq - eq - 1)
 }
 
-func (u U256) And(rhs U256) U256 {
-	return U256{
-		Limb0: u.Limb0 & rhs.Limb0,
-		Limb1: u.Limb1 & rhs.Limb1,
-		Limb2: u.Limb2 & rhs.Limb2,
-		Limb3: u.Limb3 & rhs.Limb3,
-	}
+func (u U256) Join(rhs U256) U256 {
+	return u.Max(rhs)
 }
 
-func (u U256) Or(rhs U256) U256 {
-	return U256{
-		Limb0: u.Limb0 | rhs.Limb0,
-		Limb1: u.Limb1 | rhs.Limb1,
-		Limb2: u.Limb2 | rhs.Limb2,
-		Limb3: u.Limb3 | rhs.Limb3,
-	}
+func (u U256) Meet(rhs U256) U256 {
+	return u.Min(rhs)
 }
 
-func (u U256) Xor(rhs U256) U256 {
-	return U256{
-		Limb0: u.Limb0 ^ rhs.Limb0,
-		Limb1: u.Limb1 ^ rhs.Limb1,
-		Limb2: u.Limb2 ^ rhs.Limb2,
-		Limb3: u.Limb3 ^ rhs.Limb3,
+func (u U256) IsZero() bool {
+	return u.Equal(Zero)
+}
+
+func (u U256) IsOne() bool {
+	return u.Equal(One)
+}
+
+func (u U256) IsEven() bool {
+	return u.Limb0^1 == 0
+}
+
+func (u U256) IsOdd() bool {
+	return u.Limb0^1 != 0
+}
+
+func (u U256) Increment() {
+	panic("not implemented")
+}
+
+func (u U256) Decrement() {
+	panic("not implemented")
+}
+
+func (u U256) IsTop() bool {
+	return u.Equal(Max)
+}
+
+func (u U256) IsBottom() bool {
+	return u.Equal(Zero)
+}
+
+func (u U256) Min(rhs U256) U256 {
+	g := (u.Cmp(rhs) + 1) / 2
+	return zn.Select(int(g), rhs, u)
+}
+
+func (u U256) Max(rhs U256) U256 {
+	g := (u.Cmp(rhs) + 1) / 2
+	return zn.Select(int(g), u, rhs)
+}
+
+func (u U256) Uint64() uint64 {
+	return u.Limb0
+}
+
+func (u U256) SetNat(v *saferith.Nat) U256 {
+	return NewFromNat(v)
+}
+
+func (u U256) Bytes() []byte {
+	return u.ToBytesLE()
+}
+
+func (u U256) SetBytes(bytes []byte) (U256, error) {
+	if len(bytes) > 32 {
+		return U256{}, errs.NewSerialisation("out of range")
 	}
+
+	var buffer [32]byte
+	copy(buffer[:], bytes)
+	return NewFromBytesLE(buffer[:]), nil
+}
+
+func (u U256) SetBytesWide(bytes []byte) (U256, error) {
+	var buffer [32]byte
+	copy(buffer[:], bytes)
+	return NewFromBytesLE(buffer[:]), nil
+}
+
+func NewFromBytesLE(value []byte) U256 {
+	var result U256
+	result.Limb0 = binary.LittleEndian.Uint64(value[(0 * 8):(1 * 8)])
+	result.Limb1 = binary.LittleEndian.Uint64(value[(1 * 8):(2 * 8)])
+	result.Limb2 = binary.LittleEndian.Uint64(value[(2 * 8):(3 * 8)])
+	result.Limb3 = binary.LittleEndian.Uint64(value[(3 * 8):(4 * 8)])
+
+	return result
 }
 
 func (u U256) Lsh(shift uint) U256 {
@@ -242,6 +387,33 @@ func (u U256) Rsh(shift uint) U256 {
 	}
 }
 
+func (u U256) And(x U256) U256 {
+	return U256{
+		Limb0: u.Limb0 & x.Limb0,
+		Limb1: u.Limb1 & x.Limb1,
+		Limb2: u.Limb2 & x.Limb2,
+		Limb3: u.Limb3 & x.Limb3,
+	}
+}
+
+func (u U256) Or(x U256) U256 {
+	return U256{
+		Limb0: u.Limb0 | x.Limb0,
+		Limb1: u.Limb1 | x.Limb1,
+		Limb2: u.Limb2 | x.Limb2,
+		Limb3: u.Limb3 | x.Limb3,
+	}
+}
+
+func (u U256) Xor(x U256) U256 {
+	return U256{
+		Limb0: u.Limb0 ^ x.Limb0,
+		Limb1: u.Limb1 ^ x.Limb1,
+		Limb2: u.Limb2 ^ x.Limb2,
+		Limb3: u.Limb3 ^ x.Limb3,
+	}
+}
+
 func (u U256) ToBytesLE() []byte {
 	var result [32]byte
 	binary.LittleEndian.PutUint64(result[(8*0):], u.Limb0)
@@ -278,17 +450,4 @@ func (u U256) FillBytesBE(buf []byte) {
 
 func (u U256) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(u.ToBytesBE())
-}
-
-func ConstantTimeU256Select(choice int, lhs, rhs U256) U256 {
-	v := uint64(choice)
-	vFalse := v - 1
-	vTrue := ^vFalse
-
-	return U256{
-		Limb0: (vTrue & lhs.Limb0) | (vFalse & rhs.Limb0),
-		Limb1: (vTrue & lhs.Limb1) | (vFalse & rhs.Limb1),
-		Limb2: (vTrue & lhs.Limb2) | (vFalse & rhs.Limb2),
-		Limb3: (vTrue & lhs.Limb3) | (vFalse & rhs.Limb3),
-	}
 }

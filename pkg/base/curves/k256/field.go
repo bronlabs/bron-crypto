@@ -102,14 +102,14 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
-func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseField) Select(choice int, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
 	x1f, ok1 := x1.(*BaseFieldElement)
 	if !ok0 || !ok1 {
 		panic("Not a k256 field element")
 	}
 	el := new(BaseFieldElement)
-	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, utils.BoolTo[int](choice))
+	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, choice)
 	return el
 }
 

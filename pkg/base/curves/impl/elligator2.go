@@ -72,44 +72,44 @@ func NewElligator2Params(curve curves.Curve, useHardcoded bool) *Elligator2Param
 
 func (el2 *Elligator2Params) MapToCurveElligator2Curve25519(u curves.BaseFieldElement) (xn, xd, y, z curves.BaseFieldElement) {
 	F := u.BaseField()
-	tv1 := u.Square()                  /*  1 */
-	tv1 = F.New(2).Mul(tv1)            /*  2 */
-	xd = tv1.Add(F.One())              /*  3 */
-	x1n := el2.J.Neg()                 /*  4 */
-	tv2 := xd.Square()                 /*  5 */
-	gxd := tv2.Mul(xd)                 /*  6 */
-	gx1 := el2.J.Mul(tv1)              /*  7 */
-	gx1 = gx1.Mul(x1n)                 /*  8 */
-	gx1 = gx1.Add(tv2)                 /*  9 */
-	gx1 = gx1.Mul(x1n)                 /* 10 */
-	tv3 := gxd.Square()                /* 11 */
-	tv2 = tv3.Square()                 /* 12 */
-	tv3 = tv3.Mul(gxd)                 /* 13 */
-	tv3 = tv3.Mul(gx1)                 /* 14 */
-	tv2 = tv2.Mul(tv3)                 /* 15 */
-	y11 := tv2.Exp(el2.c4)             /* 16 */
-	y11 = y11.Mul(tv3)                 /* 17 */
-	y12 := y11.Mul(el2.c3)             /* 18 */
-	tv2 = y11.Square()                 /* 19 */
-	tv2 = tv2.Mul(gxd)                 /* 20 */
-	e1 := tv2.Equal(gx1)               /* 21 */
-	y1 := F.Select(e1, y12, y11)       /* 22 */
-	x2n := x1n.Mul(tv1)                /* 23 */
-	y21 := y11.Mul(u)                  /* 24 */
-	y21 = y21.Mul(el2.c2)              /* 25 */
-	y22 := y21.Mul(el2.c3)             /* 26 */
-	gx2 := gx1.Mul(tv1)                /* 27 */
-	tv2 = y21.Square()                 /* 28 */
-	tv2 = tv2.Mul(gxd)                 /* 29 */
-	e2 := tv2.Equal(gx2)               /* 30 */
-	y2 := F.Select(e2, y22, y21)       /* 31 */
-	tv2 = y1.Square()                  /* 32 */
-	tv2 = tv2.Mul(gxd)                 /* 33 */
-	e3 := tv2.Equal(gx1)               /* 34 */
-	xn = F.Select(e3, x2n, x1n)        /* 35 */
-	y = F.Select(e3, y2, y1)           /* 36 */
-	e4 := y.IsOdd()                    /* 37 */
-	y = F.Select(e3 != e4, y, y.Neg()) /* 38 */
+	tv1 := u.Square()                                     /*  1 */
+	tv1 = F.New(2).Mul(tv1)                               /*  2 */
+	xd = tv1.Add(F.One())                                 /*  3 */
+	x1n := el2.J.Neg()                                    /*  4 */
+	tv2 := xd.Square()                                    /*  5 */
+	gxd := tv2.Mul(xd)                                    /*  6 */
+	gx1 := el2.J.Mul(tv1)                                 /*  7 */
+	gx1 = gx1.Mul(x1n)                                    /*  8 */
+	gx1 = gx1.Add(tv2)                                    /*  9 */
+	gx1 = gx1.Mul(x1n)                                    /* 10 */
+	tv3 := gxd.Square()                                   /* 11 */
+	tv2 = tv3.Square()                                    /* 12 */
+	tv3 = tv3.Mul(gxd)                                    /* 13 */
+	tv3 = tv3.Mul(gx1)                                    /* 14 */
+	tv2 = tv2.Mul(tv3)                                    /* 15 */
+	y11 := tv2.Exp(el2.c4)                                /* 16 */
+	y11 = y11.Mul(tv3)                                    /* 17 */
+	y12 := y11.Mul(el2.c3)                                /* 18 */
+	tv2 = y11.Square()                                    /* 19 */
+	tv2 = tv2.Mul(gxd)                                    /* 20 */
+	e1 := tv2.Equal(gx1)                                  /* 21 */
+	y1 := F.Select(utils.BoolTo[int](e1), y12, y11)       /* 22 */
+	x2n := x1n.Mul(tv1)                                   /* 23 */
+	y21 := y11.Mul(u)                                     /* 24 */
+	y21 = y21.Mul(el2.c2)                                 /* 25 */
+	y22 := y21.Mul(el2.c3)                                /* 26 */
+	gx2 := gx1.Mul(tv1)                                   /* 27 */
+	tv2 = y21.Square()                                    /* 28 */
+	tv2 = tv2.Mul(gxd)                                    /* 29 */
+	e2 := tv2.Equal(gx2)                                  /* 30 */
+	y2 := F.Select(utils.BoolTo[int](e2), y22, y21)       /* 31 */
+	tv2 = y1.Square()                                     /* 32 */
+	tv2 = tv2.Mul(gxd)                                    /* 33 */
+	e3 := tv2.Equal(gx1)                                  /* 34 */
+	xn = F.Select(utils.BoolTo[int](e3), x2n, x1n)        /* 35 */
+	y = F.Select(utils.BoolTo[int](e3), y2, y1)           /* 36 */
+	e4 := y.IsOdd()                                       /* 37 */
+	y = F.Select(utils.BoolTo[int](e3 != e4), y, y.Neg()) /* 38 */
 	return xn, xd, y, F.One()
 }
 
@@ -123,9 +123,9 @@ func (el2 *Elligator2Params) MapToCurveElligator2edwards25519(u curves.BaseField
 	yd = xMn.Add(xMd)                                           /*  6 */
 	tv1 := xd.Mul(yd)                                           /*  7 */
 	e := tv1.IsZero()                                           /*  8 */
-	xn = F.Select(e, xn, F.Zero())                              /*  9 */
-	xd = F.Select(e, xd, F.One())                               /* 10 */
-	yn = F.Select(e, yn, F.One())                               /* 11 */
-	yd = F.Select(e, yd, F.One())                               /* 12 */
+	xn = F.Select(utils.BoolTo[int](e), xn, F.Zero())           /*  9 */
+	xd = F.Select(utils.BoolTo[int](e), xd, F.One())            /* 10 */
+	yn = F.Select(utils.BoolTo[int](e), yn, F.One())            /* 11 */
+	yd = F.Select(utils.BoolTo[int](e), yd, F.One())            /* 12 */
 	return xn, xd, yn, yd                                       /* 13 */
 }

@@ -100,14 +100,14 @@ func (*BaseFieldG1) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
-func (*BaseFieldG1) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG1) Select(choice int, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0p, ok0 := x0.(*BaseFieldElementG1)
 	x1p, ok1 := x1.(*BaseFieldElementG1)
 	if !ok0 || !ok1 {
 		panic("Not a BLS12381 G1 field element")
 	}
 	return &BaseFieldElementG1{
-		V: new(bimpl.Fp).CMove(x0p.V, x1p.V, utils.BoolTo[int](choice)),
+		V: new(bimpl.Fp).CMove(x0p.V, x1p.V, choice),
 	}
 }
 

@@ -96,8 +96,8 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
-func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
-	if choice {
+func (*ScalarField) Select(choice int, x0, x1 curves.Scalar) curves.Scalar {
+	if choice != 0 {
 		return x1
 	}
 	return x0
