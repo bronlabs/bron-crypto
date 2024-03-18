@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
@@ -34,8 +36,14 @@ func Fuzz_Test_OTe(f *testing.F) {
 		Xi = Xi % 256
 		L = L % 3
 
+		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		require.NoError(t, err)
+		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
+		require.NoError(t, err)
+		senderKey, receiverKey := authKeys[0], authKeys[1]
+
 		// BaseOTs
-		baseOtSend, baseOtRec, err := bbot_testutils.RunBBOT(Xi, L, curve, uniqueSessionId[:], prng)
+		baseOtSend, baseOtRec, err := bbot_testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -59,8 +67,8 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 		// Run OTe
-		senderMessages, receiverChosenMessage, err := softspoken_testutils.RunSoftspokenOTe(
-			Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
+		senderMessages, receiverChosenMessage, err := softspoken_testutils.RunSoftspokenROTe(
+			senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -87,8 +95,14 @@ func Fuzz_Test_COTe(f *testing.F) {
 			t.Skip()
 		}
 
+		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		require.NoError(t, err)
+		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
+		require.NoError(t, err)
+		senderKey, receiverKey := authKeys[0], authKeys[1]
+
 		// BaseOTs
-		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(ot.Kappa, 1, curve, uniqueSessionId[:], prng)
+		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -114,7 +128,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 
 		// Run COTe
 		senderOutputs, receiverOutputs, err := softspoken_testutils.RunSoftspokenCOTe(
-			curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices, senderInputs, L, Xi)
+			senderKey, receiverKey, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices, senderInputs, L, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

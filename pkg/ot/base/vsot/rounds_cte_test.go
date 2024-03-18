@@ -18,13 +18,14 @@ func Test_MeasureConstantTime_encrypt(t *testing.T) {
 	if os.Getenv("EXEC_TIME_TEST") == "" {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
+	senderKey, receiverKey := getKeys(t)
 
 	Xi := 256
 	L := 4
 	sid := [32]byte{}
 	_, err := crand.Read(sid[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(Xi, L, k256.NewCurve(), sid[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(senderKey, receiverKey, Xi, L, k256.NewCurve(), sid[:], crand.Reader)
 	require.NoError(t, err)
 
 	for i := 0; i < Xi; i++ {
@@ -43,13 +44,14 @@ func Test_MeasureConstantTime_decrypt(t *testing.T) {
 	if os.Getenv("EXEC_TIME_TEST") == "" {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
+	senderKey, receiverKey := getKeys(t)
 
 	Xi := 256
 	L := 4
 	sid := [32]byte{}
 	_, err := crand.Read(sid[:])
 	require.NoError(t, err)
-	sender, receiver, err := testutils.RunVSOT(Xi, L, k256.NewCurve(), sid[:], crand.Reader)
+	sender, receiver, err := testutils.RunVSOT(senderKey, receiverKey, Xi, L, k256.NewCurve(), sid[:], crand.Reader)
 	require.NoError(t, err)
 
 	for i := 0; i < Xi; i++ {

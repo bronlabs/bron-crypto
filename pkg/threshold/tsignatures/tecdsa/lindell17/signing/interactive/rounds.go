@@ -113,7 +113,7 @@ func (primaryCosigner *PrimaryCosigner) Round3(round2Output *Round2OutputP2P) (r
 	}
 	primaryCosigner.transcript.AppendMessages("bigR2Proof", bigR2ProofSessionId)
 	if err := dlog.Verify(bigR2ProofSessionId, round2Output.BigR2Proof, round2Output.BigR2, primaryCosigner.protocol.Curve().Generator(), primaryCosigner.nic, primaryCosigner.transcript.Clone()); err != nil {
-		return nil, errs.WrapTotalAbort(err, "secondary", "cannot verify R2 dlog proof")
+		return nil, errs.WrapIdentifiableAbort(err, primaryCosigner.secondaryIdentityKey.String(), "cannot verify R2 dlog proof")
 	}
 
 	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, primaryCosigner.sessionId, primaryCosigner.myAuthKey.PublicKey().ToAffineCompressed())
@@ -148,7 +148,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 
 	err = commitments.Open(secondaryCosigner.sessionId, secondaryCosigner.state.bigR1Commitment, round3Output.BigR1Witness, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed(), round3Output.BigR1.ToAffineCompressed())
 	if err != nil {
-		return nil, errs.WrapTotalAbort(err, "primary", "cannot open R1 commitment")
+		return nil, errs.WrapIdentifiableAbort(err, secondaryCosigner.primaryIdentityKey.String(), "cannot open R1 commitment")
 	}
 
 	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, secondaryCosigner.sessionId, secondaryCosigner.primaryIdentityKey.PublicKey().ToAffineCompressed())
@@ -157,7 +157,7 @@ func (secondaryCosigner *SecondaryCosigner) Round4(round3Output *Round3OutputP2P
 	}
 	secondaryCosigner.transcript.AppendMessages("bigR1Proof", bigR1ProofSessionId)
 	if err := dlog.Verify(bigR1ProofSessionId, round3Output.BigR1Proof, round3Output.BigR1, secondaryCosigner.protocol.Curve().Generator(), secondaryCosigner.nic, secondaryCosigner.transcript.Clone()); err != nil {
-		return nil, errs.WrapTotalAbort(err, "primary", "cannot verify R1 dlog proof")
+		return nil, errs.WrapIdentifiableAbort(err, secondaryCosigner.primaryIdentityKey.String(), "cannot verify R1 dlog proof")
 	}
 
 	bigR := round3Output.BigR1.Mul(secondaryCosigner.state.k2)
@@ -211,7 +211,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *lindell17.PartialSi
 	}
 	sPrimeInt, err := decryptor.Decrypt(round4Output.C3)
 	if err != nil {
-		return nil, errs.WrapTotalAbort(err, "secondary", "cannot decrypt c3")
+		return nil, errs.WrapIdentifiableAbort(err, primaryCosigner.secondaryIdentityKey.String(), "cannot decrypt c3")
 	}
 	sPrime := primaryCosigner.protocol.Curve().Scalar().SetNat(sPrimeInt)
 	k1Inv := primaryCosigner.state.k1.MultiplicativeInverse()
@@ -230,7 +230,7 @@ func (primaryCosigner *PrimaryCosigner) Round5(round4Output *lindell17.PartialSi
 	}
 	signature.Normalise()
 	if err := ecdsa.Verify(signature, primaryCosigner.protocol.CipherSuite().Hash(), primaryCosigner.myShard.SigningKeyShare.PublicKey, message); err != nil {
-		return nil, errs.WrapTotalAbort(err, "secondary", "could not verify produced signature")
+		return nil, errs.WrapIdentifiableAbort(err, primaryCosigner.secondaryIdentityKey.String(), "could not verify produced signature")
 	}
 	primaryCosigner.round += 2
 	return signature, nil

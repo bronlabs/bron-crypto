@@ -286,7 +286,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 			bitstring.ToBytesLE(int(p.SharingId())),
 			receivedBigR_i.ToAffineCompressed(),
 		); err != nil {
-			return errs.WrapTotalAbort(err, sharingId, "message could not be opened")
+			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")
 		}
 
 		// step 3.3: Run ({d^u_ij, d^v_ij}) <- RVOLE.Round3(μ_ij) as Bob
@@ -296,7 +296,7 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 		}
 		d_ij, err := multInstance.Bob.Round3(receivedP2PMessage.Multiplication)
 		if err != nil {
-			return errs.WrapTotalAbort(err, sharingId, "bob round 3")
+			return errs.WrapIdentifiableAbort(err, participant.String(), "bob round 3")
 		}
 		du_ij := d_ij[0]
 		dv_ij := d_ij[1]
@@ -310,14 +310,14 @@ func DoRound3Prologue(p Participant, protocol types.ThresholdProtocol, quorum ds
 		lhs1 := R_j.Mul(Chi_ij).Sub(GammaU_ji)
 		rhs1 := protocol.Curve().ScalarBaseMult(du_ij)
 		if !lhs1.Equal(rhs1) {
-			return errs.NewTotalAbort(sharingId, "failed first check")
+			return errs.NewIdentifiableAbort(participant.String(), "failed first check")
 		}
 
 		// step 3.5: Check   b_ij · Pk_j - Γ^v_ij = d^v_ij · G
 		lhs2 := pk_j.Mul(Chi_ij).Sub(GammaV_ji)
 		rhs2 := protocol.Curve().ScalarBaseMult(dv_ij)
 		if !lhs2.Equal(rhs2) {
-			return errs.NewTotalAbort(sharingId, "failed second check")
+			return errs.NewIdentifiableAbort(participant.String(), "failed second check")
 		}
 
 		refreshedPublicKey = refreshedPublicKey.Add(pk_j)

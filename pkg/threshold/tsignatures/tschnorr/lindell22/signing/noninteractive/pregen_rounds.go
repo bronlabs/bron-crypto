@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	commitmentDomainRLabel               = "Lindell2022PreGenR-"
-	transcriptDLogSLabel                 = "Lindell2022PreGenDLogS-"
-	transcriptDLogPreSignatureIndexLabel = "Lindell2022PreGenDLogPreSignatureIndex-"
+	commitmentDomainRLabel = "Lindell2022PreGenR-"
+	transcriptDLogSLabel   = "Lindell2022PreGenDLogS-"
 )
 
 type Round1Broadcast struct {
@@ -62,7 +61,7 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	bigR2 := p.protocol.Curve().ScalarBaseMult(k2)
 
 	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
-	bigRCommitment, bigRWitness, err := commit(p.prng, bigR1, bigR2, p.state.pid, p.sessionId, p.state.bigS)
+	bigRCommitment, bigRWitness, err := commitments.Commit(p.sessionId, p.prng, []byte(commitmentDomainRLabel), bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed(), p.state.pid, p.state.bigS)
 	if err != nil {
 		return nil, nil, errs.NewFailed("cannot commit to R")
 	}
@@ -160,7 +159,7 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 		}
 
 		// 1. verify commitment
-		if err := openCommitment(theirBigR1, theirBigR2, theirPid, p.sessionId, p.state.bigS, theirBigRCommitment, theirBigRWitness); err != nil {
+		if err := commitments.Open(p.sessionId, theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 
@@ -177,7 +176,7 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 
 	seeds, err := p.przsSetupParticipant.Round3(unicastInput)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "PRZS round 1 failed")
+		return nil, errs.WrapFailed(err, "PRZS round 3 failed")
 	}
 	return &lindell22.PreProcessingMaterial{
 		PreSigners: p.preSigners,
@@ -191,23 +190,6 @@ func (p *PreGenParticipant) Round3(broadcastInput types.RoundMessages[*Round2Bro
 			BigR2: BigR2,
 		},
 	}, nil
-}
-
-func commit(prng io.Reader, bigR, bigR2 curves.Point, pid, sessionId, bigS []byte) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	commitment, witness, err = commitments.Commit(sessionId, prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot commit to R")
-	}
-
-	return commitment, witness, nil
-}
-
-func openCommitment(bigR, bigR2 curves.Point, pid, sessionId, bigS []byte, commitment commitments.Commitment, witness commitments.Witness) (err error) {
-	if err := commitments.Open(sessionId, commitment, witness, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), bigR2.ToAffineCompressed(), pid, bigS); err != nil {
-		return errs.WrapVerification(err, "cannot open commitment")
-	}
-
-	return nil
 }
 
 func dlogProve(x curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
@@ -227,7 +209,7 @@ func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, 
 	curve := bigR.Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
 	if err := dlog.Verify(sessionId, proof, bigR, curve.Generator(), nic, transcript); err != nil {
-		return errs.WrapVerification(err, "cannot verify commitment")
+		return errs.WrapVerification(err, "cannot verify proof")
 	}
 	return nil
 }

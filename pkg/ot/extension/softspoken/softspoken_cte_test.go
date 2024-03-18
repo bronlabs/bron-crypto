@@ -9,6 +9,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
@@ -19,6 +21,8 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	if os.Getenv("EXEC_TIME_TEST") == "" {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
+
+	senderKey, receiverKey := getKeys(t)
 
 	// Fixed parameters
 	L := 2
@@ -33,7 +37,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	var receiver *softspoken.Receiver
 	internal.RunMeasurement(500, "softspoken_round1", func(i int) {
 		// BaseOTs
-		baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+		baseOtSenderOutput, baseOtReceiverOutput, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		err = ot_testutils.ValidateOT(Xi, L, baseOtSenderOutput.Messages, baseOtReceiverOutput.Choices, baseOtReceiverOutput.ChosenMessages)
 		require.NoError(t, err)
@@ -43,7 +47,9 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		require.NoError(t, err)
 
 		// Setup OTe
-		receiver, err = softspoken.NewSoftspokenReceiver(baseOtSenderOutput, uniqueSessionId[:], nil, curve, crand.Reader, nil, L, Xi)
+		otProtocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
+		require.NoError(t, err)
+		receiver, err = softspoken.NewSoftspokenReceiver(receiverKey, otProtocol, baseOtSenderOutput, uniqueSessionId[:], nil, crand.Reader, nil, L, Xi)
 		require.NoError(t, err)
 	}, func() {
 		receiver.Round1(choices)
@@ -55,6 +61,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
+	senderKey, receiverKey := getKeys(t)
 	// Fixed parameters
 	Xi := 256
 	L := 2
@@ -70,7 +77,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var sender *softspoken.Sender
 	internal.RunMeasurement(500, "softspoken_round2", func(i int) {
 		// BaseOTs
-		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
 		err = ot_testutils.ValidateOT(Xi, L, baseOtSend.Messages, baseOtRec.Choices, baseOtRec.ChosenMessages)
 		require.NoError(t, err)
@@ -80,9 +87,11 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		require.NoError(t, err)
 
 		// Setup OTe
-		sender, err = softspoken.NewSoftspokenSender(baseOtRec, uniqueSessionId[:], nil, curve, crand.Reader, nil, L, Xi)
+		otProtocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
 		require.NoError(t, err)
-		receiver, err = softspoken.NewSoftspokenReceiver(baseOtSend, uniqueSessionId[:], nil, curve, crand.Reader, nil, L, Xi)
+		sender, err = softspoken.NewSoftspokenSender(senderKey, otProtocol, baseOtRec, uniqueSessionId[:], nil, crand.Reader, nil, L, Xi)
+		require.NoError(t, err)
+		receiver, err = softspoken.NewSoftspokenReceiver(receiverKey, otProtocol, baseOtSend, uniqueSessionId[:], nil, crand.Reader, nil, L, Xi)
 		require.NoError(t, err)
 
 		_, round1Output, err = receiver.Round1(choices)

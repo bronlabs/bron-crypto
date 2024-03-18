@@ -3,6 +3,7 @@ package chacha
 import (
 	"golang.org/x/crypto/chacha20"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
@@ -57,8 +58,9 @@ func (c *PRNG) Reseed(seed, salt []byte) (err error) {
 		c.chacha = nil
 		c.seeded = false
 		return nil
-	case seedLen < ChachaPRNGSecurityStrength/8:
-		return errs.NewArgument("invalid chacha seed length (%d, should be >=%d)", len(seed), ChachaPRNGSecurityStrength/8)
+	case seedLen < ChachaPRNGSecurityStrength:
+		seed = bitstring.PadToRight(seed, ChachaPRNGSecurityStrength-len(seed))
+		fallthrough
 	default:
 		switch saltLen := len(salt); {
 		case saltLen == 0:

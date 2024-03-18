@@ -11,14 +11,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
 	// Kappa (κ) is the security parameter of the OT protocols.
-	Kappa      = base.CollisionResistance
-	KappaBytes = base.CollisionResistanceBytes
+	Kappa      = base.ComputationalSecurity
+	KappaBytes = base.ComputationalSecurityBytes
 )
 
 var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes
@@ -39,39 +40,60 @@ func (c ChoiceBits) Select(i int) byte {
 	return bitstring.SelectBit(c, i)
 }
 
+var _ types.MPCParticipant = (*Participant)(nil)
+
 // Participant contains the common members of the sender and receiver.
 type Participant struct {
 	Xi int // ξ, the number of OTs that are run in parallel.
 	L  int // L, the number of elements in each OT message.
 
-	Curve      curves.Curve
+	Protocol   types.MPCProtocol
 	SessionId  []byte
 	Transcript transcripts.Transcript
 	Csprng     io.Reader
 
+	myAuthKey types.AuthKey
+
 	_ ds.Incomparable
 }
 
-func NewParticipant(Xi, L int, curve curves.Curve, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader) (*Participant, error) {
-	if err := validateInputs(Xi, L, sessionId, csprng); err != nil {
+func (p *Participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
+}
+
+func (p *Participant) OtherParty() types.IdentityKey {
+	parties := p.Protocol.Participants().List()
+	if !parties[0].Equal(p.IdentityKey()) {
+		return parties[0]
+	}
+	return parties[1]
+}
+
+func NewParticipant(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader) (*Participant, error) {
+	if err := validateInputs(myAuthKey, protocol, Xi, L, sessionId, csprng); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct ot participant")
 	}
-	dst := fmt.Sprintf("%s_%d_%d_%s", label, Xi, L, curve.Name())
+	dst := fmt.Sprintf("%s_%d_%d_%s", label, Xi, L, protocol.Curve().Name())
 	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	return &Participant{
-		Curve:      curve,
+	participant := &Participant{
+		Protocol:   protocol,
 		Xi:         Xi,
 		L:          L,
 		SessionId:  sessionId,
 		Transcript: transcript,
 		Csprng:     csprng,
-	}, nil
+		myAuthKey:  myAuthKey,
+	}
+	if err := types.ValidateMPCProtocol(participant, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct mpc participant")
+	}
+	return participant, nil
 }
 
-func validateInputs(Xi, L int, sessionId []byte, csprng io.Reader) error {
+func validateInputs(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, csprng io.Reader) error {
 	if Xi&0x07 != 0 || Xi < 1 { // `Enforce batchSize % 8 != 0`
 		return errs.NewValue("batch size should be a positive multiple of 8")
 	}
@@ -83,6 +105,15 @@ func validateInputs(Xi, L int, sessionId []byte, csprng io.Reader) error {
 	}
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("unique session id is empty")
+	}
+	if err := types.ValidateAuthKey(myAuthKey); err != nil {
+		return errs.WrapValidation(err, "my auth key")
+	}
+	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "mpc protocol config")
+	}
+	if protocol.Participants().Size() != 2 {
+		return errs.NewSize("#participants (=%d) != 2", protocol.Participants().Size())
 	}
 	return nil
 }

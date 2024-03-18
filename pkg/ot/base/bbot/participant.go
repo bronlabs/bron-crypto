@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
@@ -30,8 +31,8 @@ type Receiver struct {
 }
 
 // NewSender constructs a Random OT sender.
-func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -42,8 +43,8 @@ func NewSender(Xi, L int, curve curves.Curve, sessionId []byte, transcript trans
 }
 
 // NewReceiver constructs a Random OT receiver.
-func NewReceiver(Xi, L int, curve curves.Curve, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(Xi, L, curve, sessionId, transcriptLabel, transcript, csprng)
+func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}

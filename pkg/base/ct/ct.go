@@ -27,9 +27,9 @@ func LessThanOrEqual(x, y uint64) int {
 	return 1 - GreaterThan(y, x)
 }
 
-// Select returns x if v == 1 and y if v == 0. Its behaviour is undefined if v takes any other value.
-func Select(v, x, y uint64) uint64 {
-	return ^(v-1)&x | (v-1)&y
+// Select returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
+func Select(choice, x0, x1 uint64) uint64 {
+	return (choice-1)&x0 | ^(choice-1)&x1
 }
 
 // IsAllZero returns 1 if all values of x are zero and returns 0 otherwise. Based on the subtle package.
