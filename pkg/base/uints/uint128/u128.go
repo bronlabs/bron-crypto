@@ -130,7 +130,7 @@ func (u U128) Square() U128 {
 }
 
 func (u U128) Cube() U128 {
-	return u.Double().Mul(u)
+	return u.Square().Mul(u)
 }
 
 func (u U128) IsMultiplicativeIdentity() bool {
