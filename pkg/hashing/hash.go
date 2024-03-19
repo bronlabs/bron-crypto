@@ -2,6 +2,7 @@ package hashing
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"hash"
 	"io"
 
@@ -66,4 +67,16 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 		bitstring.ByteSubLE(f)
 	}
 	return okm, nil
+}
+
+// Hmac iteratively writes all the inputs to an hmac (defined by the hash function and the key) and returns the result.
+func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
+	Hmac := hmac.New(h, key)
+	for _, x := range xs {
+		if _, err := Hmac.Write(x); err != nil {
+			return nil, errs.WrapFailed(err, "could not write to H")
+		}
+	}
+	digest := Hmac.Sum(nil)
+	return digest, nil
 }

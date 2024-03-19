@@ -108,7 +108,7 @@ func (u Uint128) Xor(v Uint128) Uint128 {
 // Max.Add(From64(1)) == Zero.
 func (u Uint128) Add(v Uint128) Uint128 {
 	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
-	hi, _ := bits.Add64(u.Hi, v.Hi, carry)
+	hi := u.Hi + v.Hi + carry
 	return Uint128{lo, hi}
 }
 
