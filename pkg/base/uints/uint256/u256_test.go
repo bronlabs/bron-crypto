@@ -40,11 +40,11 @@ func TestUint256(t *testing.T) {
 			t.Fatalf("%v does not equal itself", x.Limb0)
 		}
 
-		if !zn.Select(1, x, y).Equal(y) {
-			t.Fatalf("ConstantTimeU256Select(true, %v, %v) should equal %v, got %v", x, y, x, zn.Select(1, x, y))
+		if !set.Select(1, x, y).Equal(y) {
+			t.Fatalf("ConstantTimeU256Select(true, %v, %v) should equal %v, got %v", x, y, x, set.Select(1, x, y))
 		}
-		if !zn.Select(0, x, y).Equal(x) {
-			t.Fatalf("ConstantTimeU256Select(false, %v, %v) should equal %v, got %v", x, y, y, zn.Select(0, x, y))
+		if !set.Select(0, x, y).Equal(x) {
+			t.Fatalf("ConstantTimeU256Select(false, %v, %v) should equal %v, got %v", x, y, y, set.Select(0, x, y))
 		}
 
 		if int(x.Cmp(y)) != x.Nat().Big().Cmp(y.Nat().Big()) {

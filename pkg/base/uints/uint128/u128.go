@@ -20,11 +20,7 @@ type U128 struct {
 	Lo, Hi uint64
 }
 
-var _ algebra.AbstractIntegerRingElement[*Zn, U128] = U128{}
-var _ algebra.NatLike[U128] = U128{}
-var _ algebra.BytesLike[U128] = U128{}
-
-var _ uints.UintLike[U128] = U128{}
+var _ uints.Uint[*Set, U128] = U128{}
 
 var (
 	Zero = New(0, 0)
@@ -190,12 +186,12 @@ func (u U128) IsBottom() bool {
 
 func (u U128) Min(rhs U128) U128 {
 	g := (u.Cmp(rhs) + 1) / 2
-	return zn.Select(int(g), u, rhs)
+	return set.Select(int(g), u, rhs)
 }
 
 func (u U128) Max(rhs U128) U128 {
 	g := (u.Cmp(rhs) + 1) / 2
-	return zn.Select(int(g), rhs, u)
+	return set.Select(int(g), rhs, u)
 }
 
 // Clone returns a copy the U128 value (lo, hi).

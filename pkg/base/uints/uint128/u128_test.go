@@ -23,7 +23,7 @@ func randUint128(t require.TestingT) uint128.U128 {
 func TestUint128(t *testing.T) {
 	t.Parallel()
 
-	zn := uint128.NewZn()
+	zn := uint128.NewSet()
 
 	// test non-arithmetic methods.
 	for i := 0; i < 1000; i++ {
@@ -130,7 +130,7 @@ func TestArithmeticUint128(t *testing.T) {
 }
 
 func Test_Marshal(t *testing.T) {
-	u, err := uint128.NewZn().Random(crand.Reader)
+	u, err := uint128.NewSet().Random(crand.Reader)
 	require.NoError(t, err)
 
 	j, err := json.Marshal(u)

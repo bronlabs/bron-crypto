@@ -1,6 +1,7 @@
 package uint128
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -11,33 +12,33 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type Zn struct{}
+type Set struct{}
 
-var zn *Zn
+var set *Set
 
-var _ algebra.AbstractZn[*Zn, U128] = zn
+var _ uints.Set[*Set, U128] = set
 
-func NewZn() *Zn {
-	return zn
+func NewSet() *Set {
+	return set
 }
 
-func (*Zn) Name() string {
+func (*Set) Name() string {
 	return "ZnU128"
 }
 
-func (*Zn) Element() U128 {
+func (*Set) Element() U128 {
 	return Zero
 }
 
-func (*Zn) Order() *saferith.Modulus {
+func (*Set) Order() *saferith.Modulus {
 	panic("not implemented")
 }
 
-func (*Zn) Operators() []algebra.Operator {
+func (*Set) Operators() []algebra.Operator {
 	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
 }
 
-func (*Zn) OperateOver(operator algebra.Operator, xs ...U128) (U128, error) {
+func (*Set) OperateOver(operator algebra.Operator, xs ...U128) (U128, error) {
 	//nolint:exhaustive // no need to check irrelevant kinds.
 	switch operator {
 	case algebra.Addition:
@@ -57,7 +58,7 @@ func (*Zn) OperateOver(operator algebra.Operator, xs ...U128) (U128, error) {
 	}
 }
 
-func (*Zn) Random(prng io.Reader) (U128, error) {
+func (*Set) Random(prng io.Reader) (U128, error) {
 	var buffer [16]byte
 	_, err := io.ReadFull(prng, buffer[:])
 	if err != nil {
@@ -67,12 +68,12 @@ func (*Zn) Random(prng io.Reader) (U128, error) {
 	return NewFromBytesLE(buffer[:]), nil
 }
 
-func (*Zn) Hash(x []byte) (U128, error) {
+func (*Set) Hash(x []byte) (U128, error) {
 	digest := sha3.Sum256(x)
 	return NewFromBytesLE(digest[:16]), nil
 }
 
-func (*Zn) Select(choice int, x0, x1 U128) U128 {
+func (*Set) Select(choice int, x0, x1 U128) U128 {
 	v := uint64(choice)
 	r := U128{
 		Lo: ct.Select(v, x0.Lo, x1.Lo),
@@ -81,7 +82,7 @@ func (*Zn) Select(choice int, x0, x1 U128) U128 {
 	return r
 }
 
-func (*Zn) Add(x U128, ys ...U128) U128 {
+func (*Set) Add(x U128, ys ...U128) U128 {
 	r := x
 	for _, y := range ys {
 		r = r.Add(y)
@@ -89,11 +90,11 @@ func (*Zn) Add(x U128, ys ...U128) U128 {
 	return r
 }
 
-func (*Zn) AdditiveIdentity() U128 {
+func (*Set) AdditiveIdentity() U128 {
 	return Zero
 }
 
-func (*Zn) Sub(x U128, ys ...U128) U128 {
+func (*Set) Sub(x U128, ys ...U128) U128 {
 	r := x
 	for _, y := range ys {
 		r = r.Sub(y)
@@ -101,7 +102,7 @@ func (*Zn) Sub(x U128, ys ...U128) U128 {
 	return r
 }
 
-func (*Zn) Multiply(x U128, ys ...U128) U128 {
+func (*Set) Multiply(x U128, ys ...U128) U128 {
 	r := x
 	for _, y := range ys {
 		r = r.Mul(y)
@@ -109,50 +110,50 @@ func (*Zn) Multiply(x U128, ys ...U128) U128 {
 	return r
 }
 
-func (*Zn) MultiplicativeIdentity() U128 {
+func (*Set) MultiplicativeIdentity() U128 {
 	return One
 }
 
-func (*Zn) QuadraticResidue(p U128) (U128, error) {
+func (*Set) QuadraticResidue(p U128) (U128, error) {
 	panic("not implemented")
 }
 
-func (*Zn) Characteristic() *saferith.Nat {
+func (*Set) Characteristic() *saferith.Nat {
 	panic("not implemented")
 }
 
-func (*Zn) Join(x, y U128) U128 {
+func (*Set) Join(x, y U128) U128 {
 	return x.Join(y)
 }
 
-func (*Zn) Meet(x, y U128) U128 {
+func (*Set) Meet(x, y U128) U128 {
 	return x.Meet(y)
 }
 
-func (*Zn) New(v uint64) U128 {
+func (*Set) New(v uint64) U128 {
 	return U128{
 		Lo: v,
 		Hi: 0,
 	}
 }
 
-func (*Zn) Zero() U128 {
+func (*Set) Zero() U128 {
 	return Zero
 }
 
-func (*Zn) One() U128 {
+func (*Set) One() U128 {
 	return One
 }
 
-func (*Zn) Top() U128 {
+func (*Set) Top() U128 {
 	return Max
 }
 
-func (*Zn) Bottom() U128 {
+func (*Set) Bottom() U128 {
 	return Zero
 }
 
-func (*Zn) Max(x U128, ys ...U128) U128 {
+func (*Set) Max(x U128, ys ...U128) U128 {
 	r := x
 	for _, y := range ys {
 		r = r.Max(y)
@@ -160,7 +161,7 @@ func (*Zn) Max(x U128, ys ...U128) U128 {
 	return r
 }
 
-func (*Zn) Min(x U128, ys ...U128) U128 {
+func (*Set) Min(x U128, ys ...U128) U128 {
 	r := x
 	for _, y := range ys {
 		r = r.Min(y)

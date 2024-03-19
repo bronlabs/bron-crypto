@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"math"
 	"math/bits"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 )
 
 type U256 struct {
@@ -24,10 +24,7 @@ type U256 struct {
 	Limb3 uint64
 }
 
-var _ algebra.AbstractIntegerRingElement[*Zn, U256] = U256{}
-var _ algebra.NatLike[U256] = U256{}
-var _ algebra.BytesLike[U256] = U256{}
-var _ uints.UintLike[U256] = U256{}
+var _ uints.Uint[*Set, U256] = U256{}
 
 var Zero = U256{
 	Limb0: 0,
@@ -298,12 +295,12 @@ func (u U256) IsBottom() bool {
 
 func (u U256) Min(rhs U256) U256 {
 	g := (u.Cmp(rhs) + 1) / 2
-	return zn.Select(int(g), u, rhs)
+	return set.Select(int(g), u, rhs)
 }
 
 func (u U256) Max(rhs U256) U256 {
 	g := (u.Cmp(rhs) + 1) / 2
-	return zn.Select(int(g), rhs, u)
+	return set.Select(int(g), rhs, u)
 }
 
 func (u U256) Uint64() uint64 {

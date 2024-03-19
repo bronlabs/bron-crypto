@@ -1,6 +1,7 @@
 package uint256
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -11,34 +12,34 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type Zn struct{}
+type Set struct{}
 
-var zn = &Zn{}
+var set = &Set{}
 
-var _ algebra.AbstractZn[*Zn, U256] = zn
+var _ uints.Set[*Set, U256] = set
 
-func NewZn() *Zn {
-	return zn
+func NewSet() *Set {
+	return set
 }
 
-func (*Zn) Name() string {
+func (*Set) Name() string {
 	return "ZnU256"
 }
 
-func (*Zn) Element() U256 {
+func (*Set) Element() U256 {
 	return Zero
 }
 
-func (*Zn) Order() *saferith.Modulus {
+func (*Set) Order() *saferith.Modulus {
 	// TODO implement me
 	panic("not implemented")
 }
 
-func (*Zn) Operators() []algebra.Operator {
+func (*Set) Operators() []algebra.Operator {
 	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
 }
 
-func (*Zn) OperateOver(operator algebra.Operator, xs ...U256) (U256, error) {
+func (*Set) OperateOver(operator algebra.Operator, xs ...U256) (U256, error) {
 	//nolint:exhaustive // no need to check irrelevant kinds.
 	switch operator {
 	case algebra.Addition:
@@ -58,7 +59,7 @@ func (*Zn) OperateOver(operator algebra.Operator, xs ...U256) (U256, error) {
 	}
 }
 
-func (*Zn) Random(prng io.Reader) (U256, error) {
+func (*Set) Random(prng io.Reader) (U256, error) {
 	var buffer [32]byte
 	_, err := io.ReadFull(prng, buffer[:])
 	if err != nil {
@@ -68,12 +69,12 @@ func (*Zn) Random(prng io.Reader) (U256, error) {
 	return NewFromBytesLE(buffer[:]), nil
 }
 
-func (*Zn) Hash(x []byte) (U256, error) {
+func (*Set) Hash(x []byte) (U256, error) {
 	digest := sha3.Sum256(x)
 	return NewFromBytesLE(digest[:]), nil
 }
 
-func (*Zn) Select(choice int, x0, x1 U256) U256 {
+func (*Set) Select(choice int, x0, x1 U256) U256 {
 	v := uint64(choice)
 	r := U256{
 		Limb0: ct.Select(v, x0.Limb0, x1.Limb0),
@@ -84,7 +85,7 @@ func (*Zn) Select(choice int, x0, x1 U256) U256 {
 	return r
 }
 
-func (*Zn) Add(x U256, ys ...U256) U256 {
+func (*Set) Add(x U256, ys ...U256) U256 {
 	r := x
 	for _, y := range ys {
 		r = r.Add(y)
@@ -92,11 +93,11 @@ func (*Zn) Add(x U256, ys ...U256) U256 {
 	return r
 }
 
-func (*Zn) AdditiveIdentity() U256 {
+func (*Set) AdditiveIdentity() U256 {
 	return Zero
 }
 
-func (*Zn) Sub(x U256, ys ...U256) U256 {
+func (*Set) Sub(x U256, ys ...U256) U256 {
 	r := x
 	for _, y := range ys {
 		r = r.Sub(y)
@@ -104,7 +105,7 @@ func (*Zn) Sub(x U256, ys ...U256) U256 {
 	return r
 }
 
-func (*Zn) Multiply(x U256, ys ...U256) U256 {
+func (*Set) Multiply(x U256, ys ...U256) U256 {
 	r := x
 	for _, y := range ys {
 		r = r.Mul(y)
@@ -112,27 +113,27 @@ func (*Zn) Multiply(x U256, ys ...U256) U256 {
 	return r
 }
 
-func (*Zn) MultiplicativeIdentity() U256 {
+func (*Set) MultiplicativeIdentity() U256 {
 	return One
 }
 
-func (*Zn) QuadraticResidue(p U256) (U256, error) {
+func (*Set) QuadraticResidue(p U256) (U256, error) {
 	panic("not implement me")
 }
 
-func (*Zn) Characteristic() *saferith.Nat {
+func (*Set) Characteristic() *saferith.Nat {
 	panic("not implement me")
 }
 
-func (*Zn) Join(x, y U256) U256 {
+func (*Set) Join(x, y U256) U256 {
 	return x.Join(y)
 }
 
-func (*Zn) Meet(x, y U256) U256 {
+func (*Set) Meet(x, y U256) U256 {
 	return x.Meet(y)
 }
 
-func (*Zn) New(v uint64) U256 {
+func (*Set) New(v uint64) U256 {
 	return U256{
 		Limb0: v,
 		Limb1: 0,
@@ -141,23 +142,23 @@ func (*Zn) New(v uint64) U256 {
 	}
 }
 
-func (*Zn) Zero() U256 {
+func (*Set) Zero() U256 {
 	return Zero
 }
 
-func (*Zn) One() U256 {
+func (*Set) One() U256 {
 	return One
 }
 
-func (*Zn) Top() U256 {
+func (*Set) Top() U256 {
 	return Max
 }
 
-func (*Zn) Bottom() U256 {
+func (*Set) Bottom() U256 {
 	return Zero
 }
 
-func (*Zn) Max(x U256, ys ...U256) U256 {
+func (*Set) Max(x U256, ys ...U256) U256 {
 	r := x
 	for _, y := range ys {
 		r = r.Max(y)
@@ -165,7 +166,7 @@ func (*Zn) Max(x U256, ys ...U256) U256 {
 	return r
 }
 
-func (*Zn) Min(x U256, ys ...U256) U256 {
+func (*Set) Min(x U256, ys ...U256) U256 {
 	r := x
 	for _, y := range ys {
 		r = r.Min(y)
