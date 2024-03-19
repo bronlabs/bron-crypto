@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints/uint256"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -182,10 +182,10 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 // BitsToInt converts a bit string to an octet string following the conversion
 // from RFC 6979, sections 2.3.2 and 2.3.3. It assumes |q| <= 256 bits.
-func BitsToInt(b []byte, curve curves.Curve) uint256.Uint256 {
+func BitsToInt(b []byte, curve curves.Curve) uint256.U256 {
 	// Cast to 256-bit integer
 	blen := 256
-	bUint := uint256.NewFromBytes(b[:blen/8])
+	bUint := uint256.NewFromBytesBE(b[:blen/8])
 
 	// Limit to exactly |q| bits, padded with zeros
 	qlen := curve.SubGroupOrder().BitLen()

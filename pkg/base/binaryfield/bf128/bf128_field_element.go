@@ -109,7 +109,7 @@ func (el *FieldElement) Add(rhs *FieldElement) *FieldElement {
 
 func (el *FieldElement) ApplyAdd(x *FieldElement, n *saferith.Nat) *FieldElement {
 	nBytes := n.Bytes()
-	nIsOdd := nBytes[len(nBytes)-1]&0x01 == 1
+	nIsOdd := int(nBytes[len(nBytes)-1] & 0x01)
 	return NewField().Select(nIsOdd, el, &FieldElement{})
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
@@ -42,7 +43,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
 	b = bob.Protocol.Curve().Scalar().ScalarField().Zero()
 	for j := 0; j < Xi; j++ {
-		b = bob.Protocol.Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
+		b = bob.Protocol.Curve().Scalar().ScalarField().Select(utils.BoolTo[int](bob.Beta[j] != 0), b, b.Add(bob.gadget[j]))
 	}
 
 	return b, r1out, nil
@@ -175,15 +176,15 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]
-			ddot_j[i] = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][i], bob.Gamma[j][i].Add(r2o.ATilde[j][i]))
+			ddot_j[i] = scalarField.Select(utils.BoolTo[int](bob.Beta[j] != 0), bob.Gamma[j][i], bob.Gamma[j][i].Add(r2o.ATilde[j][i]))
 			// step 3.3: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
 			D[i] = D[i].Add(bob.gadget[j].Mul(ddot_j[i]))
 		}
 		for k := 0; k < Rho; k++ {
 			// step 3.4: ḓ_{j,k} = γ_{j,𝓁+k} + β_j * ã_{j,l+k}   ∀k∈[ρ] ∀j∈[ξ]
-			dhat_j_k = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2o.ATilde[j][L+k]))
+			dhat_j_k = scalarField.Select(utils.BoolTo[int](bob.Beta[j] != 0), bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2o.ATilde[j][L+k]))
 			// step 3.5: μb'_{j,k} = ḓ_{j,k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * ḋ_{j,i} - β_j * η_k  ∀k∈[ρ] ∀j∈[ξ]
-			muBoldPrime_j_k = scalarField.Select(bob.Beta[j] != 0, dhat_j_k, dhat_j_k.Sub(r2o.Eta[k]))
+			muBoldPrime_j_k = scalarField.Select(utils.BoolTo[int](bob.Beta[j] != 0), dhat_j_k, dhat_j_k.Sub(r2o.Eta[k]))
 			for i := 0; i < L; i++ {
 				muBoldPrime_j_k = muBoldPrime_j_k.Add(theta[i*Rho+k].Mul(ddot_j[i]))
 			}

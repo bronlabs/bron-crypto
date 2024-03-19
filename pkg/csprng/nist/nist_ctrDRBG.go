@@ -6,13 +6,13 @@ import (
 	"encoding/binary"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint128"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type CtrDRBG struct {
 	aesBlockCipher cipher.Block
-	v              uint128.Uint128
+	v              uint128.U128
 	key            []byte
 	keySize        int
 	reseedCounter  uint64
@@ -95,7 +95,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	for i := 0; i < tempBlocks; i++ {
 		// 2.1. V = (V+1) mod 2^blocklen
 		ctrDrbg.v = ctrDrbg.v.Add(uint128.One)
-		ctrDrbg.v.PutBytesBE(vBytes)
+		ctrDrbg.v.FillBytesBE(vBytes)
 		// 2.2. output_block = Block_Encrypt(Key, V).
 		// 2.3. temp = temp || output_block.
 		tempBlock := temp[i*aes.BlockSize : (i+1)*aes.BlockSize]
@@ -203,7 +203,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	for i := 0; i < requestedNumberOfBlocks; i++ {
 		// 4.1. V = (V+1) mod 2^blocklen.
 		ctrDrbg.v = ctrDrbg.v.Add(uint128.One)
-		ctrDrbg.v.PutBytesBE(vBytes)
+		ctrDrbg.v.FillBytesBE(vBytes)
 		// 4.2. output_block = Block_Encrypt(Key, V).
 		// 4.3. temp = temp || output_block.
 		outputBlock := temp[i*aes.BlockSize : (i+1)*aes.BlockSize]

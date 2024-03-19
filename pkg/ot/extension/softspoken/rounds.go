@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -256,7 +257,7 @@ func (s *Sender) verifyChallenge(
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		t_val := bf128.NewElementFromBytes(challengeResponse.T_val[i][:])
 		x_val := bf128.NewElementFromBytes(challengeResponse.X_val[:])
-		qi_expected := bf128.NewField().Select(s.baseOtSeeds.Choices.Select(i) != 0, t_val, t_val.Add(x_val))
+		qi_expected := bf128.NewField().Select(utils.BoolTo[int](s.baseOtSeeds.Choices.Select(i) != 0), t_val, t_val.Add(x_val))
 		isCorrect = isCorrect && qi_expected.Equal(qi_val)
 	}
 	if !isCorrect {

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint128"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints/uint128"
 )
 
 func TestUniqueOutputs(t *testing.T) {
@@ -22,7 +22,7 @@ func TestUniqueOutputs(t *testing.T) {
 		for _, trialCount := range []int{10} {
 			boundedN := n
 			boundedTrialCount := trialCount
-			t.Run(fmt.Sprintf("checkign uniqueness of %d samples of size [%d]byte", boundedTrialCount, boundedN), func(t *testing.T) {
+			t.Run(fmt.Sprintf("checking uniqueness of %d samples of size [%d]byte", boundedTrialCount, boundedN), func(t *testing.T) {
 				t.Parallel()
 
 				wr, err := NewWrappedReader(crand.Reader, wrappingKey)

@@ -88,7 +88,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }
 
-func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseField) Select(choice int, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	xFp, ok1 := x0.(*BaseFieldElement)
 	yFp, ok2 := x1.(*BaseFieldElement)
 	if !ok1 || !ok2 {
@@ -96,7 +96,7 @@ func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.Bas
 	}
 	sFp := new(BaseFieldElement)
 	copy(sFp.V[:], xFp.V[:])
-	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), xFp.V[:], yFp.V[:])
+	subtle.ConstantTimeCopy(choice, xFp.V[:], yFp.V[:])
 	return sFp
 }
 

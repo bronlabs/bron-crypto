@@ -103,14 +103,14 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
-func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
+func (*ScalarField) Select(choice int, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
 	x1s, ok1 := x1.(*Scalar)
 	if !ok0 || !ok1 {
 		panic("Not a Edwards25519 scalar")
 	}
 	sBytes := x0s.Bytes()
-	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), sBytes, x1s.V.Bytes())
+	subtle.ConstantTimeCopy(choice, sBytes, x1s.V.Bytes())
 	s, err := filippo.NewScalar().SetCanonicalBytes(sBytes)
 	if err != nil {
 		panic(err)

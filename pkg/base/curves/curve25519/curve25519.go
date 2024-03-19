@@ -16,7 +16,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "curve25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -136,7 +135,7 @@ func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 }
 
 // Select returns x0 if choice is false, and x1 if choice is true.
-func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (*Curve) Select(choice int, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
 	x1p, ok1 := x1.(*Point)
 	if !ok0 || !ok1 {
@@ -144,7 +143,7 @@ func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	}
 	el := new(Point)
 	copy(el.V[:], x0p.V[:])
-	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), el.V[:], x1p.V[:])
+	subtle.ConstantTimeCopy(choice, el.V[:], x1p.V[:])
 	return el
 }
 

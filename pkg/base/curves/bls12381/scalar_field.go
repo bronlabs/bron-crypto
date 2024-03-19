@@ -112,14 +112,14 @@ func (sf *ScalarField[_]) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
-func (sf *ScalarField[_]) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
+func (sf *ScalarField[_]) Select(choice int, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
 	x1s, ok1 := x1.(*Scalar)
 	s, oks := sf.Element().(*Scalar)
 	if !ok0 || !ok1 || oks {
 		panic("Not a BLS12381 scalar")
 	}
-	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice))
+	s.V.CMove(x0s.V, x1s.V, choice)
 	return s
 }
 

@@ -16,7 +16,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const NameG2 = "BLS12381G2" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -129,14 +128,14 @@ func (*G2) HashWithDst(input, dst []byte) (curves.Point, error) {
 	return &PointG2{V: pt}, nil
 }
 
-func (*G2) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (*G2) Select(choice int, x0, x1 curves.Point) curves.Point {
 	x0pt, ok0 := x0.(*PointG2)
 	x1pt, ok1 := x1.(*PointG2)
 	if !ok0 || !ok1 {
 		panic("Not a BLS12381 G1 point")
 	}
 	sPt := new(PointG2)
-	sPt.V.CMove(x0pt.V, x1pt.V, utils.BoolTo[int](choice))
+	sPt.V.CMove(x0pt.V, x1pt.V, choice)
 	return sPt
 }
 

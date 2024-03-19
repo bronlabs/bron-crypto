@@ -12,6 +12,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -250,7 +251,7 @@ func (rROT *ReceiverRotOutput) ApplyCorrelation(tau []CorrelationMask) (z_B []Co
 			bit := rROT.Choices.Select(j) != 0
 			// z_B_j = τ_j - ECS(r_x_j)  if x_j == 1
 			//       =     - ECS(r_x_j)  if x_j == 0
-			z_B[j][l] = scalarField.Select(bit, r_x, tau[j][l].Add(r_x))
+			z_B[j][l] = scalarField.Select(utils.BoolTo[int](bit), r_x, tau[j][l].Add(r_x))
 		}
 	}
 	return z_B, nil

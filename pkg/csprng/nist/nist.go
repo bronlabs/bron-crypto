@@ -155,35 +155,37 @@ func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
 	// 5. If prediction_resistance_request is set... --> implicit.
 	// 6. Clear the reseed_required_flag.
 	var reseedRequired bool
-dataGeneration:
-	// 8. (status, pseudorandom_bits, new_working_state) = Generate_algorithm(
-	// working_state, requested_number_of_bits, additional_input).
-	switch err := prg.ctrDrbg.Generate(buffer, additionalInput); {
-	case errs.IsRandomSample(err) && prg.entropySource != nil:
-		// 9. If status indicates that a reseed is required, then
-		// 9.1. Set the reseed_required_flag.
-		// 9.2. If the prediction_resistance_flag... --> implicit.
-		// 9.3. Go to step 7.
-		reseedRequired = true
-	case err != nil:
-		return errs.WrapRandomSample(err, "cannot generate random data")
-	default: // no errors
-		reseedRequired = false
-	}
-	// 7. If reseed_required_flag is set, then reseed.
-	if reseedRequired {
-		// 7.1. status = Reseed_function(state_handle, ..., additional_input).
-		if err := prg.Reseed(nil, additionalInput); err != nil {
-			// 7.2. IF (status != SUCCESS), then return (status, Nil).
-			return errs.WrapRandomSample(err, "cannot reseed")
+
+	for {
+		// 8. (status, pseudorandom_bits, new_working_state) = Generate_algorithm(
+		// working_state, requested_number_of_bits, additional_input).
+		switch err := prg.ctrDrbg.Generate(buffer, additionalInput); {
+		case errs.IsRandomSample(err) && prg.entropySource != nil:
+			// 9. If status indicates that a reseed is required, then
+			// 9.1. Set the reseed_required_flag.
+			// 9.2. If the prediction_resistance_flag... --> implicit.
+			// 9.3. Go to step 7.
+			reseedRequired = true
+		case err != nil:
+			return errs.WrapRandomSample(err, "cannot generate random data")
+		default: // no errors
+			reseedRequired = false
 		}
-		// 7.3 Using state_handle... --> implicit.
-		// 7.4. additional_input = Nil.
-		additionalInput = nil
-		// 7.5. Clear the reseed_required_flag --> implicit.
-		goto dataGeneration
+		// 7. If reseed_required_flag is set, then reseed.
+		if reseedRequired {
+			// 7.1. status = Reseed_function(state_handle, ..., additional_input).
+			if err := prg.Reseed(nil, additionalInput); err != nil {
+				// 7.2. IF (status != SUCCESS), then return (status, Nil).
+				return errs.WrapRandomSample(err, "cannot reseed")
+			}
+			// 7.3 Using state_handle... --> implicit.
+			// 7.4. additional_input = Nil.
+			additionalInput = nil
+			// 7.5. Clear the reseed_required_flag --> implicit.
+			continue
+		}
+		return nil
 	}
-	return nil
 }
 
 // Read will sample `len(buffer)` random bytes and store them in `buffer`.

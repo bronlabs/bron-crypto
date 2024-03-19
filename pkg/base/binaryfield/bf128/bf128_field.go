@@ -10,7 +10,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -87,11 +86,11 @@ func (*Field) Hash(x []byte) (*FieldElement, error) {
 	return el, nil
 }
 
-func (*Field) Select(choice bool, x0, x1 *FieldElement) *FieldElement {
+func (*Field) Select(choice int, x0, x1 *FieldElement) *FieldElement {
 	return &FieldElement{
 		V: [fieldLimbs]uint64{
-			ct.Select(utils.BoolTo[uint64](choice), x0.V[0], x1.V[0]),
-			ct.Select(utils.BoolTo[uint64](choice), x0.V[1], x1.V[1]),
+			ct.Select(uint64(choice), x0.V[0], x1.V[0]),
+			ct.Select(uint64(choice), x0.V[1], x1.V[1]),
 		},
 	}
 }

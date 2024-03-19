@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints/uint256"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 )
@@ -22,9 +22,9 @@ func NewSigner(suite types.SignatureProtocol, privateKey curves.Scalar) (*Signer
 	if privateKey == nil {
 		return nil, errs.NewIsNil("private key is nil")
 	}
-	if suite.Curve().BaseField().FieldBytes() > uint256.RingBytes {
+	if suite.Curve().BaseField().FieldBytes() > 32 {
 		return nil, errs.NewArgument("curve base field is too large (%dB > %dB)",
-			suite.Curve().BaseField().FieldBytes(), uint256.RingBytes)
+			suite.Curve().BaseField().FieldBytes(), 32)
 	}
 	return &Signer{suite, privateKey}, nil
 }
@@ -32,7 +32,7 @@ func NewSigner(suite types.SignatureProtocol, privateKey curves.Scalar) (*Signer
 // Sign signs a message using the provided private key, generating a deterministic
 // nonce `k` as per RFC 6979 (https://tools.ietf.org/html/rfc6979).
 func (s *Signer) Sign(message []byte) (*ecdsa.Signature, error) {
-	qUint := uint256.NewFromBytes(s.suite.Curve().SubGroupOrder().Bytes())
+	qUint := uint256.NewFromNat(s.suite.Curve().SubGroupOrder().Nat())
 	// step 1: hashing the message
 	hBytes, err := hashing.Hash(s.suite.Hash(), message)
 	if err != nil {
@@ -67,53 +67,57 @@ func (s *Signer) Sign(message []byte) (*ecdsa.Signature, error) {
 		return nil, errs.WrapHashing(err, "could not produce HMAC for V")
 	}
 	// step 2.h
-	var k uint256.Uint256
-iterate_k:
-	var T []byte
+	var k uint256.U256
+
 	for {
-		// step 2.h.2
-		if V, err = hashing.Hmac(K, s.suite.Hash(), V); err != nil {
-			return nil, errs.WrapHashing(err, "could not produce HMAC for V")
+		var T []byte
+		for {
+			// step 2.h.2
+			if V, err = hashing.Hmac(K, s.suite.Hash(), V); err != nil {
+				return nil, errs.WrapHashing(err, "could not produce HMAC for V")
+			}
+			T = append(T, V...)
+			// step 2.h.3
+			k = ecdsa.BitsToInt(T, s.suite.Curve())
+			if k.Cmp(qUint) < 0 {
+				break
+			}
+			K, err = hashing.Hmac(K, s.suite.Hash(), V, []byte{0x00})
+			if err != nil {
+				return nil, errs.WrapHashing(err, "could not produce HMAC for K")
+			}
+			V, err = hashing.Hmac(K, s.suite.Hash(), V)
+			if err != nil {
+				return nil, errs.WrapHashing(err, "could not produce HMAC for V")
+			}
 		}
-		T = append(T, V...)
-		// step 2.h.3
-		k = ecdsa.BitsToInt(T, s.suite.Curve())
-		if k.Cmp(qUint) < 0 {
-			break
-		}
-		K, err = hashing.Hmac(K, s.suite.Hash(), V, []byte{0x00})
+
+		// step 3: calculate R
+		kScalar, err := s.suite.Curve().Scalar().SetBytes(k.Bytes())
 		if err != nil {
-			return nil, errs.WrapHashing(err, "could not produce HMAC for K")
+			return nil, errs.WrapSerialisation(err, "could not convert k to scalar")
 		}
-		V, err = hashing.Hmac(K, s.suite.Hash(), V)
+		R := s.suite.Curve().ScalarBaseMult(kScalar)
+		r, err := s.suite.Curve().Scalar().SetBytesWide(R.AffineX().Bytes())
 		if err != nil {
-			return nil, errs.WrapHashing(err, "could not produce HMAC for V")
+			return nil, errs.WrapSerialisation(err, "could not convert R.X to scalar")
 		}
+		if r.IsZero() {
+			continue
+		}
+
+		// step 4: calculate  s = (h+x*r)/k mod q
+		hScalar, err := s.suite.Curve().Scalar().SetBytes(hBytes)
+		if err != nil {
+			return nil, errs.WrapSerialisation(err, "could not convert h to scalar")
+		}
+		S := hScalar.Add(s.privateKey.Mul(r)).Div(kScalar)
+		v, err := ecdsa.CalculateRecoveryId(R)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not calculate recovery id")
+		}
+		return &ecdsa.Signature{V: &v, R: r, S: S}, nil
 	}
-	// step 3: calculate R
-	kScalar, err := s.suite.Curve().Scalar().SetBytes(k.Bytes())
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert k to scalar")
-	}
-	R := s.suite.Curve().ScalarBaseMult(kScalar)
-	r, err := s.suite.Curve().Scalar().SetBytesWide(R.AffineX().Bytes())
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert R.X to scalar")
-	}
-	if r.IsZero() {
-		goto iterate_k
-	}
-	// step 4: calculate  s = (h+x*r)/k mod q
-	hScalar, err := s.suite.Curve().Scalar().SetBytes(hBytes)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert h to scalar")
-	}
-	S := hScalar.Add(s.privateKey.Mul(r)).Div(kScalar)
-	v, err := ecdsa.CalculateRecoveryId(R)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not calculate recovery id")
-	}
-	return &ecdsa.Signature{V: &v, R: r, S: S}, nil
 }
 
 // int2octets converts an integer to an octet string following the conversion
