@@ -1,7 +1,6 @@
 package uint128
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -10,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/uints"
 )
 
 type Set struct{}
@@ -31,7 +31,7 @@ func (*Set) Element() U128 {
 }
 
 func (*Set) Order() *saferith.Modulus {
-	panic("not implemented")
+	return mod
 }
 
 func (*Set) Operators() []algebra.Operator {
