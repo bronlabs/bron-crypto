@@ -63,8 +63,8 @@ func (g *GtMember) Operate(rhs curves.GtMember) curves.GtMember {
 	return g.Mul(rhs)
 }
 
-func (g *GtMember) OperateIteratively(x curves.GtMember, n *saferith.Nat) curves.GtMember {
-	return g.ApplyMul(x, n)
+func (g *GtMember) OperateIteratively(n *saferith.Nat) curves.GtMember {
+	return g.Gt().Identity().ApplyMul(g, n)
 }
 
 func (g *GtMember) Order() *saferith.Modulus {

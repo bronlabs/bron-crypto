@@ -52,8 +52,8 @@ func (p *PointG2) Operate(rhs curves.Point) curves.Point {
 	return p.Add(rhs)
 }
 
-func (p *PointG2) OperateIteratively(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.ApplyAdd(q, n)
+func (p *PointG2) OperateIteratively(n *saferith.Nat) curves.Point {
+	return p.Mul(NewG2().Scalar().SetNat(n))
 }
 
 func (p *PointG2) Order() *saferith.Modulus {
