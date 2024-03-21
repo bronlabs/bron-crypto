@@ -5,15 +5,12 @@ import (
 	"encoding"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
-	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
-type PublicKey vanillaSchnorr.PublicKey
+type PublicKey schnorr.PublicKey
 
-type Signature = schnorr.Signature[schnorr.ZilliqaVariant]
+type Signature = schnorr.Signature[ZilliqaVariant]
 
 var _ encoding.BinaryMarshaler = (*PublicKey)(nil)
 
@@ -24,44 +21,13 @@ var (
 )
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
-	if publicKey == nil || signature == nil || len(message) == 0 {
-		return errs.NewIsNil("argument is empty")
-	}
+	v := zilliqaVariant.NewVerifierBuilder().
+		WithPublicKey((*schnorr.PublicKey)(publicKey)).
+		WithMessage(message).
+		Build()
 
-	if publicKey.A == nil || publicKey.A.Curve().Name() != curveName {
-		return errs.NewFailed("incompatible public key")
-	}
-
-	if signature.E == nil || signature.E.ScalarField().Curve().Name() != curveName || signature.S == nil || signature.S.ScalarField().Curve().Name() != curveName {
-		return errs.NewFailed("incompatible signature")
-	}
-
-	if signature.E.IsZero() || signature.S.IsZero() {
-		return errs.NewVerification("invalid E or S value, cannot be zero")
-	}
-
-	l := publicKey.A.Mul(signature.E)
-	r := curve.ScalarBaseMult(signature.S)
-	q := r.Add(l)
-
-	if signature.R != nil && !signature.R.Equal(q) {
-		return errs.NewFailed("incompatible signature")
-	}
-
-	protocol, err := types.NewSignatureProtocol(curve, hashFunc)
-	if err != nil {
-		return errs.WrapFailed(err, "cannot create protocol")
-	}
-	eCheck, err := vanillaSchnorr.MakeSchnorrCompatibleChallenge(protocol, q.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
-	if err != nil {
-		return errs.WrapFailed(err, "cannot compute challenge")
-	}
-
-	if !signature.E.Equal(eCheck) {
-		return errs.NewVerification("invalid signature")
-	}
-
-	return nil
+	//nolint:wrapcheck // forward errors
+	return v.Verify(signature)
 }
 
 func (pk *PublicKey) MarshalBinary() (data []byte, err error) {

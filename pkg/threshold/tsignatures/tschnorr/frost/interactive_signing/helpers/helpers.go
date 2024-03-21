@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 )
@@ -33,7 +33,7 @@ func ProducePartialSignature(
 	if !exists {
 		return nil, errs.NewMissing("could not find my r_j")
 	}
-	c, err := schnorr.MakeSchnorrCompatibleChallenge(protocolConfig.CipherSuite(),
+	c, err := schnorr.MakeGenericSchnorrChallenge(protocolConfig.CipherSuite(),
 		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
 	)
 	if err != nil {

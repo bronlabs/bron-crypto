@@ -1,24 +1,14 @@
 package lindell22
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
-
-type PartialSignature struct {
-	E curves.Scalar
-	R curves.Point
-	S curves.Scalar
-
-	_ ds.Incomparable
-}
 
 var _ tsignatures.Shard = (*Shard)(nil)
 
@@ -98,9 +88,6 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if err := ppm.PreSignature.Validate(protocol, ppm.PreSigners); err != nil {
 		return errs.WrapValidation(err, "presignature")
 	}
-	if !hashset.NewHashableHashSet(ppm.PreSignature.BigR1.Keys()...).Equal(hashset.NewHashableHashSet(ppm.PrivateMaterial.Seeds.Keys()...)) {
-		return errs.NewMembership("seed holders and presignature contributors are not the same set")
-	}
 	if ppm.PreSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(ppm.PreSigners.List()[0].PublicKey().Curve(), ppm.PreSigners.List()...) {
 		return errs.NewCurve("not all preSigners are on the same curve")
 	}
@@ -108,9 +95,8 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 }
 
 type PrivatePreProcessingMaterial struct {
-	K1    curves.Scalar
-	K2    curves.Scalar
-	Seeds przs.PairWiseSeeds
+	K1 curves.Scalar
+	K2 curves.Scalar
 
 	_ ds.Incomparable
 }
@@ -125,24 +111,10 @@ func (pppm *PrivatePreProcessingMaterial) Validate(preSigners ds.Set[types.Ident
 	if pppm.K2 == nil {
 		return errs.NewIsNil("k2")
 	}
-	if pppm.Seeds == nil {
-		return errs.NewIsNil("seeds")
-	}
-	seeders := hashset.NewHashableHashSet(pppm.Seeds.Keys()...)
-	if !seeders.IsSubSet(preSigners) {
-		return errs.NewMembership("we have seeds from people who are not a participant in this protocol")
-	}
-	if seeders.SymmetricDifference(preSigners).Size() != 1 {
-		return errs.NewMembership("seed holders should contain all presigners except myself")
-	}
-	for pair := range pppm.Seeds.Iter() {
-		if ct.IsAllZero(pair.Value[:]) == 1 {
-			return errs.NewIsZero("found seed that's all zero")
-		}
-	}
 	if !curveutils.AllIdentityKeysWithSameCurve(preSigners.List()[0].PublicKey().Curve(), preSigners.List()...) {
 		return errs.NewCurve("not all preSigners are on the same curve")
 	}
+
 	return nil
 }
 

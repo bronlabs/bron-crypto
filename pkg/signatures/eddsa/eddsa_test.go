@@ -13,6 +13,7 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 // passing of this test by the standard library's ed25519 implementation means that
@@ -90,12 +91,12 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			s, err := suite.Curve().Scalar().SetBytes(sBytes)
 			require.NoError(t, err)
 
-			signature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, R, s)
+			signature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, R, s)
 			publicKey := &eddsa.PublicKey{
 				A: A,
 			}
 
-			err = eddsa.Verify(suite, publicKey, message, signature)
+			err = eddsa.Verify(publicKey, message, signature)
 			require.Error(t, err)
 			require.True(t, errs.IsVerification(err))
 		})

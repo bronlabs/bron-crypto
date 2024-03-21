@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
@@ -80,6 +81,44 @@ type PartialPublicKeys struct {
 	FeldmanCommitmentVector []curves.Point
 
 	_ ds.Incomparable
+}
+
+func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol, signers []types.IdentityKey) (ds.Map[types.IdentityKey, curves.Point], error) {
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	signersSharingIds := make([]uint, len(signers))
+	for i, signer := range signers {
+		sharingId, exists := sharingConfig.Reverse().Get(signer)
+		if !exists {
+			return nil, errs.NewFailed("invalid identity")
+		}
+		signersSharingIds[i] = uint(sharingId)
+	}
+
+	publicShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for _, signer := range signers {
+		publicKeyShare, exists := p.Shares.Get(signer)
+		if !exists {
+			return nil, errs.NewFailed("invalid identity")
+		}
+
+		mySharingId, exists := sharingConfig.Reverse().Get(signer)
+		if !exists {
+			return nil, errs.NewFailed("invalid identity")
+		}
+
+		lagrangeCoefficient, err := (&shamir.Share{
+			Id:    uint(mySharingId),
+			Value: publicKeyShare.Curve().ScalarField().One(),
+		}).ToAdditive(signersSharingIds)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "invalid identity")
+		}
+
+		partialPublicKey := publicKeyShare.Mul(lagrangeCoefficient)
+		publicShares.Put(signer, partialPublicKey)
+	}
+
+	return publicShares, nil
 }
 
 func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {

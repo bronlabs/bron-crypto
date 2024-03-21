@@ -88,7 +88,7 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 		return errs.NewSerialisation("cannot deserialize signature")
 	}
 
-	schnorrSignature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, r, s)
+	schnorrSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, r, s)
 	schnorrPublicKey := &vanillaSchnorr.PublicKey{
 		A: k.publicKey.A,
 	}

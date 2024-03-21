@@ -22,6 +22,8 @@ import (
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -67,7 +69,7 @@ func Test_SanityCheck(t *testing.T) {
 	require.True(t, ok)
 
 	// verify krypton
-	kryptonSignature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
+	kryptonSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
 	kryptonPublicKey := &vanillaSchnorr.PublicKey{
 		A: publicKey,
 	}
@@ -79,7 +81,7 @@ func Test_SanityCheck(t *testing.T) {
 func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewEdDsaCompatibleVariant()
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	prng := crand.Reader
@@ -99,9 +101,14 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
-	aliceShard, exists := shards.Get(identities[0])
-	require.True(t, exists)
-	publicKey := aliceShard.SigningKeyShare.PublicKey
+
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iter := range shards.Iter() {
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+	alicePublicKeyShares, _ := publicKeyShares.Get(identities[0])
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
@@ -112,18 +119,23 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(variant, partialSignatures...)
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: publicKey}, message, signature)
+	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, message, signature)
 	require.NoError(t, err)
 }
 
 func Test_HappyPathThresholdBIP340(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewTaprootVariant()
+	variant := bip340.NewTaprootVariant()
 	hashFunc := hashing_bip340.NewBip340HashChallenge
 	curve := k256.NewCurve()
 	prng := crand.Reader
@@ -146,6 +158,12 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iter := range shards.Iter() {
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
@@ -156,7 +174,12 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(variant, partialSignatures...)
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -167,7 +190,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewZilliqaVariant()
+	variant := zilliqa.NewZilliqaVariant()
 	hashFunc := sha256.New
 	curve := k256.NewCurve()
 	prng := crand.Reader
@@ -187,6 +210,14 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
+
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iter := range shards.Iter() {
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
@@ -200,7 +231,12 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(variant, partialSignatures...)
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -211,7 +247,7 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 func Test_HappyPathWithDkg(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewEdDsaCompatibleVariant()
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello World!")
@@ -238,6 +274,13 @@ func Test_HappyPathWithDkg(t *testing.T) {
 		shards.Put(id, shard)
 	}
 
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iter := range shards.Iter() {
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
 	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, variant)
@@ -247,11 +290,16 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(variant, partialSignatures...)
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	publicKey := &vanillaSchnorr.PublicKey{A: signingKeyShares[0].PublicKey}
+	signature, err := signing.Aggregate(variant, thresholdSignatureProtocol, message, publicKeyShares, (*schnorr.PublicKey)(publicKey), partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	publicKey := signingKeyShares[0].PublicKey
-	err = vanillaSchnorr.Verify(signatureProtocol, &vanillaSchnorr.PublicKey{A: publicKey}, message, signature)
+	err = vanillaSchnorr.Verify(signatureProtocol, publicKey, message, signature)
 	require.NoError(t, err)
 }

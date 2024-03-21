@@ -303,7 +303,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		signatureBob, err := bob.Sign(message2, nil, crand.Reader)
 		require.NoError(t, err)
 
-		err = bip340.VerifyBatch([]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey}, []*schnorr.Signature[schnorr.TaprootVariant]{signatureAlice, signatureBob}, [][]byte{
+		err = bip340.VerifyBatch([]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey}, []*schnorr.Signature[bip340.TaprootVariant]{signatureAlice, signatureBob}, [][]byte{
 			message1,
 			message2,
 		}, crand.Reader)
@@ -352,7 +352,7 @@ func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
 	return sk, nil
 }
 
-func unmarshalSignature(input []byte) (*schnorr.Signature[schnorr.TaprootVariant], error) {
+func unmarshalSignature(input []byte) (*schnorr.Signature[bip340.TaprootVariant], error) {
 	if len(input) != 64 {
 		return nil, errs.NewSerialisation("invalid length")
 	}
@@ -366,7 +366,7 @@ func unmarshalSignature(input []byte) (*schnorr.Signature[schnorr.TaprootVariant
 		return nil, errs.NewSerialisation("invalid signature")
 	}
 
-	signature := schnorr.NewSignature(schnorr.NewTaprootVariant(), nil, r, s)
+	signature := schnorr.NewSignature(bip340.NewTaprootVariant(), nil, r, s)
 	return signature, nil
 }
 

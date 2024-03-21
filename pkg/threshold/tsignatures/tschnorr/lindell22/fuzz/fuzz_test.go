@@ -15,11 +15,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
@@ -61,11 +64,17 @@ func FuzzInteractiveSigning(f *testing.F) {
 func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SignatureProtocol) {
 	t.Helper()
 
-	variant := schnorr.NewEdDsaCompatibleVariant()
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
 	protocol, _ := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	shard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := shard.SigningKeyShare.PublicKey
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iter := range shards.Iter() {
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
@@ -83,7 +92,12 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 	require.NotNil(t, partialSignatures)
 
-	signature, err := signing.Aggregate(variant, partialSignatures...)
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 

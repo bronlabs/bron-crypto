@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -25,8 +24,7 @@ const (
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	przsSetupParticipant *setup.Participant
-	nic                  compiler.Name
+	nic compiler.Name
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
@@ -84,27 +82,16 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	przsProtocol, err := types.NewMPCProtocol(protocol.Curve(), preSigners)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create MPC protocol")
-	}
-
-	przsParticipant, err := setup.NewParticipant(sessionId, myAuthKey, przsProtocol, transcript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create PRZS setup participant")
-	}
-
 	participant = &PreGenParticipant{
-		nic:                  nic,
-		przsSetupParticipant: przsParticipant,
-		preSigners:           preSigners,
-		myAuthKey:            myAuthKey,
-		mySharingId:          mySharingId,
-		protocol:             protocol,
-		sessionId:            sessionId,
-		transcript:           transcript,
-		round:                1,
-		prng:                 prng,
+		nic:         nic,
+		preSigners:  preSigners,
+		myAuthKey:   myAuthKey,
+		mySharingId: mySharingId,
+		protocol:    protocol,
+		sessionId:   sessionId,
+		transcript:  transcript,
+		round:       1,
+		prng:        prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

@@ -4,13 +4,14 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
-func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *frost.PartialSignature]) (*schnorr.Signature, error) {
+func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *frost.PartialSignature]) (*vanillaSchnorr.Signature, error) {
 	R, R_js, _, err := helpers.ComputeR(a.Protocol, a.SharingConfig, a.Quorum, a.parameters.D_alpha, a.parameters.E_alpha, a.Message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute R")
@@ -35,7 +36,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 	}
-	c, err := schnorr.MakeSchnorrCompatibleChallenge(a.Protocol.CipherSuite(),
+	c, err := schnorr.MakeGenericSchnorrChallenge(a.Protocol.CipherSuite(),
 		R.ToAffineCompressed(), a.PublicKey.ToAffineCompressed(), a.Message,
 	)
 	if err != nil {
@@ -81,9 +82,9 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		s = s.Add(partialSignature.Zi)
 	}
 
-	sigma := &schnorr.Signature{R: R, S: s}
+	sigma := &vanillaSchnorr.Signature{R: R, S: s}
 
-	if err := schnorr.Verify(a.Protocol.CipherSuite(), &schnorr.PublicKey{A: a.PublicKey}, a.Message, sigma); err != nil {
+	if err := vanillaSchnorr.Verify(a.Protocol.CipherSuite(), &vanillaSchnorr.PublicKey{A: a.PublicKey}, a.Message, sigma); err != nil {
 		return nil, errs.WrapVerification(err, "could not verify frost signature")
 	}
 	return sigma, nil

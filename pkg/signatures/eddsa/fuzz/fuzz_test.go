@@ -12,10 +12,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 var allCurves = []curves.Curve{edwards25519.NewCurve()}
@@ -26,8 +26,6 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, msg []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		suite, err := ttu.MakeSignatureProtocol(curve, h)
-		require.NoError(t, err)
 
 		messageHash, err := hashing.Hash(h, msg)
 		require.NoError(t, err)
@@ -40,8 +38,8 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 		s, err := curve.Scalar().SetBytes(bitstring.ReverseBytes(signed[32:]))
 		require.NoError(t, err)
-		signature := schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, R, s)
-		err = eddsa.Verify(suite, &eddsa.PublicKey{A: publicKey}, messageHash, signature)
+		signature := schnorr.NewSignature(vanilla.NewEdDsaCompatibleVariant(), nil, R, s)
+		err = eddsa.Verify(&eddsa.PublicKey{A: publicKey}, messageHash, signature)
 		require.NoError(t, err)
 	})
 }

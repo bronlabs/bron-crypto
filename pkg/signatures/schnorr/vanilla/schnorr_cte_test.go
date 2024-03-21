@@ -1,4 +1,4 @@
-package schnorr_test
+package vanilla_test
 
 import (
 	crand "crypto/rand"

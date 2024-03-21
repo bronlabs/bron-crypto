@@ -1,50 +1,40 @@
 package eddsa
 
 import (
-	"crypto/sha512"
+	"crypto/ed25519"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
-type Signature = schnorr.Signature[schnorr.EdDsaCompatibleVariant]
+type Signature = schnorr.Signature[vanillaSchnorr.EdDsaCompatibleVariant]
 
-type PublicKey vanillaSchnorr.PublicKey
+type PublicKey schnorr.PublicKey
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()
 	return serializedPublicKey, nil
 }
-func MakeEdDSACompatibleChallenge(xs ...[]byte) (curves.Scalar, error) {
-	for _, x := range xs {
-		if x == nil {
-			return nil, errs.NewIsNil("an input is nil")
-		}
-	}
-	digest, err := hashing.Hash(sha512.New, xs...)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "could not compute fiat shamir hash")
-	}
-	challenge, err := edwards25519.NewCurve().Scalar().SetBytesWide(bitstring.ReverseBytes(digest))
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not compute fiat shamir challenge")
-	}
-	return challenge, nil
-}
 
-func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
-	if !vanillaSchnorr.IsEd25519Compliant(suite) {
-		return errs.NewVerification("unsupported cipher suite")
+func Verify(publicKey *PublicKey, message []byte, signature *Signature) error {
+	// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptible
+	// to a key substitution attack (specifically, it won't be bound to a public key (SBS) and a signature cannot be bound to a unique message in presence of malicious keys (MBS)).
+	// Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
+	if publicKey.A.IsSmallOrder() {
+		return errs.NewVerification("public key is small order")
 	}
 
-	if err := vanillaSchnorr.Verify(suite, &vanillaSchnorr.PublicKey{A: publicKey.A}, message, signature); err != nil {
-		return errs.WrapVerification(err, "invalid signature")
+	serializedSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
+	serializedPublicKey, err := publicKey.MarshalBinary()
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not serialise signature to binary")
 	}
+	if ok := ed25519.Verify(serializedPublicKey, message, serializedSignature); !ok {
+		return errs.NewVerification("could not verify schnorr signature using ed25519 verifier")
+	}
+
 	return nil
 }

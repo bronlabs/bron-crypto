@@ -3,7 +3,7 @@ package eddsa_test
 import (
 	nativeEddsa "crypto/ed25519"
 	crand "crypto/rand"
-	"crypto/sha256"
+	"crypto/sha512"
 	"os"
 	"testing"
 
@@ -12,10 +12,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/internal"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_MeasureConstantTime_eddsa(t *testing.T) {
@@ -25,9 +25,7 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello")
-	hashFunc := sha256.New
-	suite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
-	require.NoError(t, err)
+	hashFunc := sha512.New
 
 	messageHash, err := hashing.Hash(hashFunc, message)
 	require.NoError(t, err)
@@ -43,8 +41,8 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 		require.NoError(t, err)
 		s, err := curve.Scalar().SetBytes(sig[32:])
 		require.NoError(t, err)
-		signature = schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), nil, R, s)
+		signature = schnorr.NewSignature(vanilla.NewEdDsaCompatibleVariant(), nil, R, s)
 	}, func() {
-		eddsa.Verify(suite, &eddsa.PublicKey{A: publicKey}, messageHash, signature)
+		eddsa.Verify(&eddsa.PublicKey{A: publicKey}, messageHash, signature)
 	})
 }

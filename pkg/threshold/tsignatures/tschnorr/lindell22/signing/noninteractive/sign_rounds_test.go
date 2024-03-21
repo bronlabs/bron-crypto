@@ -15,14 +15,17 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	hashingBip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive"
@@ -38,7 +41,7 @@ var configs = []struct{ nParticipants, nPreSigners, nThreshold int }{
 func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewEdDsaCompatibleVariant()
+	variant := vanilla.NewEdDsaCompatibleVariant()
 	curve := edwards25519.NewCurve()
 	hashFunc := sha512.New
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -68,6 +71,12 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
+			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+			for iter := range shards.Iter() {
+				identity := iter.Key
+				shard := iter.Value
+				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			}
 
 			N := make([]int, n)
 			for i := range n {
@@ -101,19 +110,21 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 						cosignersIdentities[i] = preSignersIdentities[c]
 					}
 
-					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
-					for i, c := range cosignerCombination {
+					partialSignatures := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+					for _, c := range cosignerCombination {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
 						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
-						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						psig, err := cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
+
+						partialSignatures.Put(preSignersIdentities[c], psig)
 					}
 
-					signature, err := signing.Aggregate(variant, partialSignatures...)
+					signature, err := signing.Aggregate(variant, protocolConfig, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignatures)
 					require.NoError(t, err)
 
 					valid := nativeEddsa.Verify(
@@ -131,7 +142,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewTaprootVariant()
+	variant := bip340.NewTaprootVariant()
 	curve := k256.NewCurve()
 	hashFunc := hashingBip340.NewBip340HashChallenge
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -161,6 +172,12 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
+			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+			for iter := range shards.Iter() {
+				identity := iter.Key
+				shard := iter.Value
+				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			}
 
 			N := make([]int, n)
 			for i := range n {
@@ -194,19 +211,21 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 						cosignersIdentities[i] = preSignersIdentities[c]
 					}
 
-					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
-					for i, c := range cosignerCombination {
+					partialSignatures := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+					for _, c := range cosignerCombination {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
 						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
-						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						psig, err := cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
+
+						partialSignatures.Put(preSignersIdentities[c], psig)
 					}
 
-					signature, err := signing.Aggregate(variant, partialSignatures...)
+					signature, err := signing.Aggregate(variant, protocolConfig, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignatures)
 					require.NoError(t, err)
 
 					err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
@@ -220,7 +239,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 	t.Parallel()
 
-	variant := schnorr.NewZilliqaVariant()
+	variant := zilliqa.NewZilliqaVariant()
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
@@ -250,6 +269,12 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
+			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+			for iter := range shards.Iter() {
+				identity := iter.Key
+				shard := iter.Value
+				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			}
 
 			N := make([]int, n)
 			for i := range n {
@@ -283,19 +308,21 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 						cosignersIdentities[i] = preSignersIdentities[c]
 					}
 
-					partialSignatures := make([]*lindell22.PartialSignature, len(cosignersIdentities))
-					for i, c := range cosignerCombination {
+					partialSignatures := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+					for _, c := range cosignerCombination {
 						shard, exists := shards.Get(preSignersIdentities[c])
 						require.True(t, exists)
 
 						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
 						require.NoError(t, err)
 
-						partialSignatures[i], err = cosigner.ProducePartialSignature(message)
+						psig, err := cosigner.ProducePartialSignature(message)
 						require.NoError(t, err)
+
+						partialSignatures.Put(preSignersIdentities[c], psig)
 					}
 
-					signature, err := signing.Aggregate(variant, partialSignatures...)
+					signature, err := signing.Aggregate(variant, protocolConfig, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignatures)
 					require.NoError(t, err)
 
 					err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)

@@ -4,11 +4,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 )
 
-func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature *lindell22.PartialSignature, err error) {
+func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature *tschnorr.PartialSignature, err error) {
 	bigR1Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
 	bigR2Sum := c.protocol.CipherSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
 	for identity := range c.quorum.Iter() {
@@ -47,7 +47,7 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 
 	// 3.ii. compute e = H(R || pk || message)
 	eBytes := c.variant.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)
-	e, err := schnorr.MakeSchnorrCompatibleChallenge(c.protocol.CipherSuite(), eBytes)
+	e, err := schnorr.MakeGenericSchnorrChallenge(c.protocol.CipherSuite(), eBytes)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}
@@ -58,17 +58,12 @@ func (c *Cosigner[F]) ProducePartialSignature(message []byte) (partialSignature 
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
 
-	zeroS, err := c.przsSampleParticipant.Sample()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot sample zero share")
-	}
-
 	// 3.iv. compute s = k + d * e
-	s := c.variant.ComputePartialResponse(bigR, c.myShard.PublicKey(), k, sk, e).Add(zeroS)
+	s := c.variant.ComputeResponse(bigR, c.myShard.PublicKey(), k, sk, e)
 
-	return &lindell22.PartialSignature{
+	return &tschnorr.PartialSignature{
 		E: e,
-		R: c.variant.ComputePartialNonceCommitment(bigR, c.protocol.CipherSuite().Curve().ScalarBaseMult(k)),
+		R: c.variant.ComputeNonceCommitment(bigR, c.protocol.CipherSuite().Curve().ScalarBaseMult(k)),
 		S: s,
 	}, nil
 }
