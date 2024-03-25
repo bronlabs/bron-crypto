@@ -34,12 +34,12 @@ func (c *CipherText) Validate(pk *PublicKey) error {
 func KeyGenWithPrimeGenerator(bits int, prng io.Reader, primeGen func(bits int, prng io.Reader) (p, q *saferith.Nat, err error)) (*PublicKey, *SecretKey, error) {
 	p, q, err := primeGen(bits, prng)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "keygen failed")
 	}
 
 	sk, err := NewSecretKey(p, q)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapFailed(err, "keygen failed")
 	}
 
 	return &sk.PublicKey, sk, nil
