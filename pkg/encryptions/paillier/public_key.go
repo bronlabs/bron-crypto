@@ -10,6 +10,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type PublicKeyPrecomputed struct {
@@ -65,7 +66,7 @@ func (pk *PublicKey) AddPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapFailed(err, "invalid lhs")
 	}
-	if rhs == nil || !isLess(rhs, pk.N) {
+	if rhs == nil || !utils.IsLess(rhs, pk.N) {
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
@@ -99,7 +100,7 @@ func (pk *PublicKey) SubPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapFailed(err, "invalid lhs")
 	}
-	if rhs == nil || !isLess(rhs, pk.N) {
+	if rhs == nil || !utils.IsLess(rhs, pk.N) {
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
@@ -118,7 +119,7 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapFailed(err, "invalid lhs")
 	}
-	if rhs == nil || !isLess(rhs, pk.N) {
+	if rhs == nil || !utils.IsLess(rhs, pk.N) {
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
@@ -130,11 +131,11 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 }
 
 func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat) (*CipherText, error) {
-	if plainText == nil || !isLess(plainText, pk.N) {
+	if plainText == nil || !utils.IsLess(plainText, pk.N) {
 		return nil, errs.NewFailed("invalid plainText")
 	}
 	n := pk.GetPrecomputed().NModulus
-	if nonce == nil || nonce.EqZero() == 1 || !isLess(nonce, pk.N) || nonce.IsUnit(n) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(n) != 1 {
 		return nil, errs.NewFailed("invalid nonce")
 	}
 
@@ -152,7 +153,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")
 	}
-	if plainText == nil || !isLess(plainText, pk.N) {
+	if plainText == nil || !utils.IsLess(plainText, pk.N) {
 		return nil, nil, errs.NewFailed("invalid plainText")
 	}
 
@@ -222,9 +223,4 @@ func (pk *PublicKey) precompute() {
 		NModulus:  nMod,
 		NNModulus: nnMod,
 	}
-}
-
-func isLess(l, r *saferith.Nat) bool {
-	_, _, less := l.Cmp(r)
-	return less == 1
 }

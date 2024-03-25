@@ -11,6 +11,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 type CrtParams struct {
@@ -75,10 +76,10 @@ func NewSecretKey(p, q *saferith.Nat) (*SecretKey, error) {
 
 func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat) (*CipherText, error) {
 	nMod := sk.PublicKey.GetPrecomputed().NModulus
-	if plainText == nil || !isLess(plainText, sk.N) {
+	if plainText == nil || !utils.IsLess(plainText, sk.N) {
 		return nil, errs.NewFailed("invalid plainText")
 	}
-	if nonce == nil || nonce.EqZero() == 1 || !isLess(nonce, sk.N) || nonce.IsUnit(nMod) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, sk.N) || nonce.IsUnit(nMod) != 1 {
 		return nil, errs.NewFailed("invalid nonce")
 	}
 
@@ -98,7 +99,7 @@ func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")
 	}
-	if plainText == nil || !isLess(plainText, sk.N) {
+	if plainText == nil || !utils.IsLess(plainText, sk.N) {
 		return nil, nil, errs.NewFailed("invalid plainText")
 	}
 
@@ -127,7 +128,7 @@ func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(&sk.PublicKey); err != nil {
 		return nil, errs.WrapFailed(err, "invalid lhs")
 	}
-	if rhs == nil || !isLess(rhs, sk.N) {
+	if rhs == nil || !utils.IsLess(rhs, sk.N) {
 		return nil, errs.NewFailed("invalid rhs")
 	}
 

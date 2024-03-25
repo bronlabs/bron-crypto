@@ -18,21 +18,6 @@ func NewDecryptor(secretKey *SecretKey) (*Decryptor, error) {
 	return &Decryptor{sk: secretKey}, nil
 }
 
-func (d *Decryptor) DecryptSlow(cipherText *CipherText) (*PlainText, error) {
-	if err := cipherText.Validate(&d.sk.PublicKey); err != nil {
-		return nil, errs.WrapFailed(err, "invalid cipher text")
-	}
-	nnMod := d.sk.PublicKey.GetPrecomputed().NNModulus
-	nMod := d.sk.PublicKey.GetPrecomputed().NModulus
-	mu := d.sk.GetPrecomputed().Mu
-
-	cToLambda := new(saferith.Nat).Exp(cipherText.C, d.sk.Phi, nnMod)
-	l := d.sk.L(cToLambda)
-	m := new(saferith.Nat).ModMul(l, mu, nMod)
-
-	return m, nil
-}
-
 func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 	if err := cipherText.Validate(&d.sk.PublicKey); err != nil {
 		return nil, errs.WrapFailed(err, "invalid cipher text")
@@ -54,8 +39,8 @@ func (d *Decryptor) Validate() error {
 	if d == nil {
 		return errs.NewIsNil("decryptor")
 	}
-	if d.sk == nil {
-		return errs.NewIsNil("secretKey")
+	if err := d.sk.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid sk")
 	}
 
 	return nil

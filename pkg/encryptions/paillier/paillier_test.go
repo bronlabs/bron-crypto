@@ -786,14 +786,8 @@ func Test_MulScalarCrt(t *testing.T) {
 		rhs := rand.Uint32()
 		lhsCipherText, _, err := secretKey.PublicKey.Encrypt(new(saferith.Nat).SetUint64(uint64(lhs)), prng)
 		require.NoError(t, err)
-		lhsTimesRhsCipherText, err := secretKey.PublicKey.MulPlaintext(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
-		require.NoError(t, err)
 		lhsTimesRhsCipherTextCrt, err := secretKey.MulPlaintext(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
 		require.NoError(t, err)
-
-		decrypted, err := decryptor.DecryptSlow(lhsTimesRhsCipherText)
-		require.NoError(t, err)
-		require.Equal(t, uint64(lhs)*uint64(rhs), decrypted.Uint64())
 
 		decryptedCrt, err := decryptor.Decrypt(lhsTimesRhsCipherTextCrt)
 		require.NoError(t, err)
@@ -911,13 +905,6 @@ func Benchmark_DecryptCrt(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
-	b.Run("Decrypt", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			decrypted, err := decryptor.DecryptSlow(messageEncrypted)
-			require.NoError(b, err)
-			require.True(b, decrypted.Eq(message) == 1)
-		}
-	})
 	b.Run("Decrypt CRT", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			decrypted, err := decryptor.Decrypt(messageEncrypted)
