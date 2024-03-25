@@ -9,12 +9,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
 )
 
+var natOne = new(saferith.Nat).SetUint64(1).Resize(1)
+
+type PlainText = saferith.Nat
+
 type CipherText struct {
 	C *saferith.Nat
 }
 
 func (c *CipherText) Validate(pk *PublicKey) error {
-	n2 := pk.GetPrecomputed().N2Modulus
+	n2 := pk.GetPrecomputed().NNModulus
 	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(n2) != 1 {
 		return errs.NewValidation("invalid cipher text")
 	}

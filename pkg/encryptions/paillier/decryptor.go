@@ -18,18 +18,34 @@ func NewDecryptor(secretKey *SecretKey) (*Decryptor, error) {
 	return &Decryptor{sk: secretKey}, nil
 }
 
-func (d *Decryptor) Decrypt(cipherText *CipherText) (*saferith.Nat, error) {
-	n2 := d.sk.PublicKey.GetPrecomputed().N2Modulus
+func (d *Decryptor) DecryptSlow(cipherText *CipherText) (*PlainText, error) {
+	if err := cipherText.Validate(&d.sk.PublicKey); err != nil {
+		return nil, errs.WrapFailed(err, "invalid cipher text")
+	}
+	nnMod := d.sk.PublicKey.GetPrecomputed().NNModulus
+	nMod := d.sk.PublicKey.GetPrecomputed().NModulus
+	mu := d.sk.GetPrecomputed().Mu
+
+	cToLambda := new(saferith.Nat).Exp(cipherText.C, d.sk.Phi, nnMod)
+	l := d.sk.L(cToLambda)
+	m := new(saferith.Nat).ModMul(l, mu, nMod)
+
+	return m, nil
+}
+
+func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 	if err := cipherText.Validate(&d.sk.PublicKey); err != nil {
 		return nil, errs.WrapFailed(err, "invalid cipher text")
 	}
 
-	n := d.sk.PublicKey.GetPrecomputed().NModulus
 	mu := d.sk.GetPrecomputed().Mu
+	nMod := d.sk.PublicKey.GetPrecomputed().NModulus
+	nnMod := d.sk.PublicKey.GetPrecomputed().NNModulus
+	crt := &d.sk.GetPrecomputed().CrtNN
 
-	cToLambda := new(saferith.Nat).Exp(cipherText.C, d.sk.Phi, n2)
-	l := d.sk.l(cToLambda)
-	m := new(saferith.Nat).ModMul(l, mu, n)
+	cToLambda := expCrt(crt, cipherText.C, d.sk.Phi, nnMod)
+	l := d.sk.L(cToLambda)
+	m := new(saferith.Nat).ModMul(l, mu, nMod)
 
 	return m, nil
 }

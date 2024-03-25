@@ -3,6 +3,7 @@ package paillier_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
+	"math/rand/v2"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -596,10 +598,13 @@ func TestEncryptSucceeds(t *testing.T) {
 
 // Tests the restrictions on input values for paillier.Decrypt
 func TestDecryptErrorConditions(t *testing.T) {
-	pk, err := paillier.NewPublicKey(n)
-	require.NoError(t, err)
 	// A fake secret key, but good enough to test parameter validation
-	sk := &paillier.SecretKey{PublicKey: *pk, Phi: nPlusOne}
+	sk := &paillier.SecretKey{
+		PublicKey: paillier.PublicKey{
+			N: n,
+		},
+		Phi: nPlusOne,
+	}
 
 	tests := []struct {
 		c               *saferith.Nat
@@ -638,7 +643,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 		PublicKey: paillier.PublicKey{N: nat("100")},
 		Phi:       nil,
 	}
-	_, err = paillier.NewDecryptor(sk)
+	_, err := paillier.NewDecryptor(sk)
 	require.Error(t, err)
 }
 
@@ -704,6 +709,304 @@ func TestNewSecretKeyErrorConditions(t *testing.T) {
 			require.True(t, errs.IsIsNil(err))
 		})
 	}
+}
+
+func Test_Precomputed(t *testing.T) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(t, secretKey)
+	require.NoError(t, err)
+	if b, _, _ := p.Cmp(q); b == 1 {
+		p, q = q, p
+	}
+
+	pMinusOne := new(saferith.Nat).Sub(p, one, -1)
+	qMinusOne := new(saferith.Nat).Sub(q, one, -1)
+	pq := new(saferith.Nat).Mul(p, q, -1)
+	phi := new(saferith.Nat).Mul(pMinusOne, qMinusOne, -1)
+	nn := new(saferith.Nat).Mul(pq, pq, -1)
+
+	// validate key
+	require.True(t, pq.Eq(secretKey.N) == 1, "N is valid")
+	require.True(t, pq.Eq(secretKey.PublicKey.N) == 1, "N is valid")
+	require.True(t, pq.Eq(secretKey.PublicKey.GetPrecomputed().NModulus.Nat()) == 1, "precomputed N is valid")
+	require.True(t, nn.Eq(secretKey.PublicKey.GetPrecomputed().NNModulus.Nat()) == 1, "precomputed NN is valid")
+	require.True(t, phi.Eq(secretKey.Phi) == 1, "phi is valid")
+	require.True(t, p.Eq(secretKey.GetPrecomputed().P) == 1, "precomputed P is valid")
+	require.True(t, q.Eq(secretKey.GetPrecomputed().Q) == 1, "precomputed Q is valid")
+	require.True(t, new(saferith.Nat).ModMul(phi, secretKey.GetPrecomputed().Mu, saferith.ModulusFromNat(pq)).Eq(one) == 1, "precomputed Mu is valid")
+
+	// validate n-CRT
+	require.True(t, p.Eq(secretKey.GetPrecomputed().CrtN.M1.Nat()) == 1, "precomputed N-CRT-P is valid")
+	require.True(t, pMinusOne.Eq(secretKey.GetPrecomputed().CrtN.PhiM1.Nat()) == 1, "precomputed CRT-PhiP is valid")
+	require.True(t, q.Eq(secretKey.GetPrecomputed().CrtN.M2.Nat()) == 1, "precomputed N-CRT-Q is valid")
+	require.True(t, qMinusOne.Eq(secretKey.GetPrecomputed().CrtN.PhiM2.Nat()) == 1, "precomputed N-CRT-PhiQ is valid")
+	require.True(t, new(saferith.Nat).ModMul(p, secretKey.GetPrecomputed().CrtN.M1InvM2, saferith.ModulusFromNat(q)).Eq(one) == 1, "precomputed N-CRT-PInvQ is valid")
+
+	pp := new(saferith.Nat).Mul(p, p, -1)
+	ppMinusP := new(saferith.Nat).Sub(pp, p, -1)
+	qq := new(saferith.Nat).Mul(q, q, -1)
+	qqMinusQ := new(saferith.Nat).Sub(qq, q, -1)
+
+	// validate nn-CRT
+	require.True(t, pp.Eq(secretKey.GetPrecomputed().CrtNN.M1.Nat()) == 1, "precomputed NN-CRT-PP is valid")
+	require.True(t, ppMinusP.Eq(secretKey.GetPrecomputed().CrtNN.PhiM1.Nat()) == 1, "precomputed NN-CRT-PhiPP is valid")
+	require.True(t, pp.Eq(secretKey.GetPrecomputed().CrtNN.M1.Nat()) == 1, "precomputed NN-CRT-QQ is valid")
+	require.True(t, qqMinusQ.Eq(secretKey.GetPrecomputed().CrtNN.PhiM2.Nat()) == 1, "precomputed NN-PhiQQ is valid")
+	require.True(t, new(saferith.Nat).ModMul(pp, secretKey.GetPrecomputed().CrtNN.M1InvM2, saferith.ModulusFromNat(qq)).Eq(one) == 1, "precomputed PPInvQQ is valid")
+}
+
+func Test_MulScalarCrt(t *testing.T) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(t, secretKey)
+	require.NoError(t, err)
+
+	decryptor, err := paillier.NewDecryptor(secretKey)
+	require.NoError(t, err)
+
+	for i := 0; i < 64; i++ {
+		lhs := rand.Uint32()
+		rhs := rand.Uint32()
+		lhsCipherText, _, err := secretKey.PublicKey.Encrypt(new(saferith.Nat).SetUint64(uint64(lhs)), prng)
+		require.NoError(t, err)
+		lhsTimesRhsCipherText, err := secretKey.PublicKey.MulPlaintext(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
+		require.NoError(t, err)
+		lhsTimesRhsCipherTextCrt, err := secretKey.MulPlaintext(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
+		require.NoError(t, err)
+
+		decrypted, err := decryptor.DecryptSlow(lhsTimesRhsCipherText)
+		require.NoError(t, err)
+		require.Equal(t, uint64(lhs)*uint64(rhs), decrypted.Uint64())
+
+		decryptedCrt, err := decryptor.Decrypt(lhsTimesRhsCipherTextCrt)
+		require.NoError(t, err)
+		require.Equal(t, uint64(lhs)*uint64(rhs), decryptedCrt.Uint64())
+	}
+}
+
+func Test_EncryptCrt(t *testing.T) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(t, secretKey)
+	require.NoError(t, err)
+
+	for i := 0; i < 64; i++ {
+		plainTextBig, err := crand.Int(prng, secretKey.N.Big())
+		require.NoError(t, err)
+
+		plainText := new(saferith.Nat).SetBig(plainTextBig, secretKey.N.AnnouncedLen())
+		messageEncrypted, nonce, err := secretKey.PublicKey.Encrypt(plainText, prng)
+		require.NoError(t, err)
+
+		messageEncryptedCrt, err := secretKey.EncryptWithNonce(plainText, nonce)
+		require.NoError(t, err)
+
+		require.True(t, messageEncrypted.C.Eq(messageEncryptedCrt.C) == 1)
+	}
+}
+
+func Test_JsonSerialisationRoundTrip(t *testing.T) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(t, secretKey)
+	require.NoError(t, err)
+
+	serialisedPublicKey, err := json.Marshal(&secretKey.PublicKey)
+	require.NoError(t, err)
+	var deserialisedPublicKey paillier.PublicKey
+	err = json.Unmarshal(serialisedPublicKey, &deserialisedPublicKey)
+	require.NoError(t, err)
+
+	serialisedSecretKey, err := json.Marshal(secretKey)
+	require.NoError(t, err)
+	var deserialisedSecretKey paillier.SecretKey
+	err = json.Unmarshal(serialisedSecretKey, &deserialisedSecretKey)
+	require.NoError(t, err)
+
+	// check public key
+	require.True(t, deserialisedPublicKey.N.Eq(secretKey.PublicKey.N) == 1)
+	precomputedPublic := deserialisedPublicKey.GetPrecomputed()
+	require.True(t, precomputedPublic.NModulus.Nat().Eq(secretKey.PublicKey.GetPrecomputed().NModulus.Nat()) == 1)
+	require.True(t, precomputedPublic.NNModulus.Nat().Eq(secretKey.PublicKey.GetPrecomputed().NNModulus.Nat()) == 1)
+
+	// check secret key
+	require.True(t, deserialisedSecretKey.N.Eq(secretKey.N) == 1)
+	require.True(t, deserialisedSecretKey.Phi.Eq(secretKey.Phi) == 1)
+	precomputedSecret := deserialisedSecretKey.GetPrecomputed()
+	require.True(t, precomputedSecret.P.Eq(secretKey.GetPrecomputed().P) == 1)
+	require.True(t, precomputedSecret.Q.Eq(secretKey.GetPrecomputed().Q) == 1)
+	require.True(t, precomputedSecret.Mu.Eq(secretKey.GetPrecomputed().Mu) == 1)
+	crtN := precomputedSecret.CrtN
+	require.True(t, crtN.M1.Nat().Eq(secretKey.GetPrecomputed().CrtN.M1.Nat()) == 1)
+	require.True(t, crtN.M2.Nat().Eq(secretKey.GetPrecomputed().CrtN.M2.Nat()) == 1)
+	require.True(t, crtN.PhiM1.Nat().Eq(secretKey.GetPrecomputed().CrtN.PhiM1.Nat()) == 1)
+	require.True(t, crtN.PhiM2.Nat().Eq(secretKey.GetPrecomputed().CrtN.PhiM2.Nat()) == 1)
+	require.True(t, crtN.M1InvM2.Eq(secretKey.GetPrecomputed().CrtN.M1InvM2) == 1)
+	crtNN := precomputedSecret.CrtNN
+	require.True(t, crtNN.M1.Nat().Eq(secretKey.GetPrecomputed().CrtNN.M1.Nat()) == 1)
+	require.True(t, crtNN.M2.Nat().Eq(secretKey.GetPrecomputed().CrtNN.M2.Nat()) == 1)
+	require.True(t, crtNN.PhiM1.Nat().Eq(secretKey.GetPrecomputed().CrtNN.PhiM1.Nat()) == 1)
+	require.True(t, crtNN.PhiM2.Nat().Eq(secretKey.GetPrecomputed().CrtNN.PhiM2.Nat()) == 1)
+	require.True(t, crtNN.M1InvM2.Eq(secretKey.GetPrecomputed().CrtNN.M1InvM2) == 1)
+}
+
+func Benchmark_DecryptCrt(b *testing.B) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	if bigger, _, _ := p.Cmp(q); bigger == 1 {
+		p, q = q, p
+	}
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(b, secretKey)
+	require.NoError(b, err)
+
+	messageBig, err := crand.Int(prng, secretKey.N.Big())
+	require.NoError(b, err)
+	message := new(saferith.Nat).SetBig(messageBig, secretKey.N.AnnouncedLen())
+	messageEncrypted, _, err := secretKey.Encrypt(message, prng)
+	require.NoError(b, err)
+
+	decryptor, err := paillier.NewDecryptor(secretKey)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	b.Run("Decrypt", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			decrypted, err := decryptor.DecryptSlow(messageEncrypted)
+			require.NoError(b, err)
+			require.True(b, decrypted.Eq(message) == 1)
+		}
+	})
+	b.Run("Decrypt CRT", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			decrypted, err := decryptor.Decrypt(messageEncrypted)
+			require.NoError(b, err)
+			require.True(b, decrypted.Eq(message) == 1)
+		}
+	})
+}
+
+func Benchmark_MulPlainTextCrt(b *testing.B) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	if bigger, _, _ := p.Cmp(q); bigger == 1 {
+		p, q = q, p
+	}
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(b, secretKey)
+	require.NoError(b, err)
+
+	messageBig, err := crand.Int(prng, secretKey.N.Big())
+	require.NoError(b, err)
+	message := new(saferith.Nat).SetBig(messageBig, secretKey.N.AnnouncedLen())
+	messageEncrypted, _, err := secretKey.Encrypt(message, prng)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	b.Run("MulPlainText", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			scalarBig, err := crand.Int(prng, secretKey.N.Big())
+			require.NoError(b, err)
+			scalar := new(saferith.Nat).SetBig(scalarBig, secretKey.N.AnnouncedLen())
+			_, err = secretKey.PublicKey.MulPlaintext(messageEncrypted, scalar)
+			require.NoError(b, err)
+		}
+	})
+	b.Run("MulPlainText CRT", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			scalarBig, err := crand.Int(prng, secretKey.N.Big())
+			require.NoError(b, err)
+			scalar := new(saferith.Nat).SetBig(scalarBig, secretKey.N.AnnouncedLen())
+			_, err = secretKey.MulPlaintext(messageEncrypted, scalar)
+			require.NoError(b, err)
+		}
+	})
+}
+
+func Benchmark_EncryptCrt(b *testing.B) {
+	prng := crand.Reader
+	pBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	p := new(saferith.Nat).SetBig(pBig, 256)
+
+	qBig, err := crand.Prime(prng, 256)
+	require.NoError(b, err)
+	q := new(saferith.Nat).SetBig(qBig, 256)
+
+	secretKey, err := paillier.NewSecretKey(p, q)
+	require.NotNil(b, secretKey)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	b.Run("Encrypt", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			plainTextBig, err := crand.Int(prng, secretKey.N.Big())
+			require.NoError(b, err)
+
+			plainText := new(saferith.Nat).SetBig(plainTextBig, secretKey.N.AnnouncedLen())
+			_, _, err = secretKey.PublicKey.Encrypt(plainText, prng)
+			require.NoError(b, err)
+		}
+	})
+	b.Run("Encrypt CRT", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			plainTextBig, err := crand.Int(prng, secretKey.N.Big())
+			require.NoError(b, err)
+
+			plainText := new(saferith.Nat).SetBig(plainTextBig, secretKey.N.AnnouncedLen())
+			_, _, err = secretKey.Encrypt(plainText, prng)
+			require.NoError(b, err)
+		}
+	})
 }
 
 func nat(nat string) *saferith.Nat {

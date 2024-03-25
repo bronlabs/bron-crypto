@@ -68,6 +68,9 @@ func GenerateSafePrimePair(bits uint) (p, q *saferith.Nat, err error) {
 }
 
 func GeneratePrimePair(bits int, prng io.Reader) (p, q *saferith.Nat, err error) {
+	if bits < 3 {
+		return nil, nil, errs.NewFailed("bits < 3")
+	}
 	rsaPrivateKey, err := rsa.GenerateKey(prng, 2*bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
