@@ -138,7 +138,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 		// P calculates a y', the Nth root of x
 		// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
 		m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N, saferith.ModulusFromNat(prover.paillierSecretKey.Phi))
-		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i].C, m, prover.paillierSecretKey.PublicKey.GetPrecomputed().NModulus)
+		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i].C, m, prover.paillierSecretKey.GetNModulus())
 	}
 
 	// P returns a y'

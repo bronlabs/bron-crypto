@@ -191,14 +191,14 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 				zetOne[i] = &ZetOne{
 					J:        1,
 					XPlusWj:  xPlusW1,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.PublicKey.GetPrecomputed().NModulus),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.GetNModulus()),
 				}
 			case prover.inSecondThird(xPlusW2):
 				// 4.ii. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					J:        2,
 					XPlusWj:  xPlusW2,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.PublicKey.GetPrecomputed().NModulus),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.GetNModulus()),
 				}
 			default:
 				return nil, errs.NewFailed("something went wrong")

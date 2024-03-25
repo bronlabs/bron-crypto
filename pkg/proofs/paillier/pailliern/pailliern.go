@@ -58,7 +58,7 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, p.sessionId)
 
-	rhos, err := extractRhos(transcript, witness.PublicKey.GetPrecomputed().NModulus)
+	rhos, err := extractRhos(transcript, witness.GetNModulus())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create a proof")
 	}
@@ -67,7 +67,7 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	nInv := new(saferith.Nat).ModInverse(witness.N, phi)
 	sigmas := make([]*saferith.Nat, M)
 	for i, rho := range rhos {
-		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.PublicKey.GetPrecomputed().NModulus)
+		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.GetNModulus())
 	}
 
 	proof = &Proof{
@@ -92,7 +92,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, sessionId)
 
-	rhos, err := extractRhos(transcript, statement.GetPrecomputed().NModulus)
+	rhos, err := extractRhos(transcript, statement.GetNModulus())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot verify a proof")
 	}
@@ -106,7 +106,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 
 	for i, sigma := range proof.Sigmas {
-		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N, statement.GetPrecomputed().NModulus)
+		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N, statement.GetNModulus())
 		if _, eq, _ := rhoCheck.Cmp(rhos[i]); eq != 1 {
 			return errs.NewVerification("verification failed")
 		}

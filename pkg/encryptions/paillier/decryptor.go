@@ -23,10 +23,10 @@ func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 		return nil, errs.WrapFailed(err, "invalid cipher text")
 	}
 
-	mu := d.sk.GetPrecomputed().Mu
-	nMod := d.sk.PublicKey.GetPrecomputed().NModulus
-	nnMod := d.sk.PublicKey.GetPrecomputed().NNModulus
-	crt := &d.sk.GetPrecomputed().CrtNN
+	mu := d.sk.GetMu()
+	nMod := d.sk.GetNModulus()
+	nnMod := d.sk.GetNNModulus()
+	crt := d.sk.GetCrtNNParams()
 
 	cToLambda := expCrt(crt, cipherText.C, d.sk.Phi, nnMod)
 	l := d.sk.L(cToLambda)

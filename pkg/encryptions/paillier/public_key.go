@@ -14,8 +14,8 @@ import (
 )
 
 type PublicKeyPrecomputed struct {
-	NModulus  *saferith.Modulus
-	NNModulus *saferith.Modulus
+	nModulus  *saferith.Modulus
+	nnModulus *saferith.Modulus
 }
 
 type PublicKey struct {
@@ -41,10 +41,14 @@ func NewPublicKey(n *saferith.Nat) (*PublicKey, error) {
 	return pk, nil
 }
 
-func (pk *PublicKey) GetPrecomputed() *PublicKeyPrecomputed {
+func (pk *PublicKey) GetNModulus() *saferith.Modulus {
 	pk.precomputedOnce.Do(func() { pk.precompute() })
+	return pk.precomputed.nModulus
+}
 
-	return pk.precomputed
+func (pk *PublicKey) GetNNModulus() *saferith.Modulus {
+	pk.precomputedOnce.Do(func() { pk.precompute() })
+	return pk.precomputed.nnModulus
 }
 
 func (pk *PublicKey) Add(lhs, rhs *CipherText) (*CipherText, error) {
@@ -55,10 +59,10 @@ func (pk *PublicKey) Add(lhs, rhs *CipherText) (*CipherText, error) {
 		return nil, errs.WrapFailed(err, "invalid rhs")
 	}
 
-	n2 := pk.GetPrecomputed().NNModulus
+	nnMod := pk.GetNNModulus()
 
 	return &CipherText{
-		C: new(saferith.Nat).ModMul(lhs.C, rhs.C, n2),
+		C: new(saferith.Nat).ModMul(lhs.C, rhs.C, nnMod),
 	}, nil
 }
 
@@ -70,7 +74,7 @@ func (pk *PublicKey) AddPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
-	nnModulus := pk.GetPrecomputed().NNModulus
+	nnModulus := pk.GetNNModulus()
 	rhsC := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhs, nnModulus), natOne, nnModulus)
 	result := new(saferith.Nat).ModMul(lhs.C, rhsC, nnModulus)
 
@@ -87,9 +91,9 @@ func (pk *PublicKey) Sub(lhs, rhs *CipherText) (*CipherText, error) {
 		return nil, errs.WrapFailed(err, "invalid rhs")
 	}
 
-	n2 := pk.GetPrecomputed().NNModulus
-	rhsInv := new(saferith.Nat).ModInverse(rhs.C, n2)
-	result := new(saferith.Nat).ModMul(lhs.C, rhsInv, n2)
+	nnMod := pk.GetNNModulus()
+	rhsInv := new(saferith.Nat).ModInverse(rhs.C, nnMod)
+	result := new(saferith.Nat).ModMul(lhs.C, rhsInv, nnMod)
 
 	return &CipherText{
 		C: result,
@@ -104,11 +108,11 @@ func (pk *PublicKey) SubPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
-	nnModulus := pk.GetPrecomputed().NNModulus
-	n := pk.GetPrecomputed().NModulus
-	rhsNeg := new(saferith.Nat).ModNeg(rhs, n)
-	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnModulus), natOne, nnModulus)
-	result := new(saferith.Nat).ModMul(lhs.C, rhsCInv, nnModulus)
+	nnMod := pk.GetNNModulus()
+	nMod := pk.GetNModulus()
+	rhsNeg := new(saferith.Nat).ModNeg(rhs, nMod)
+	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnMod), natOne, nnMod)
+	result := new(saferith.Nat).ModMul(lhs.C, rhsCInv, nnMod)
 
 	return &CipherText{
 		C: result,
@@ -123,8 +127,8 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
-	n2 := pk.GetPrecomputed().NNModulus
-	result := new(saferith.Nat).Exp(lhs.C, rhs, n2)
+	nnMod := pk.GetNNModulus()
+	result := new(saferith.Nat).Exp(lhs.C, rhs, nnMod)
 	return &CipherText{
 		C: result,
 	}, nil
@@ -134,15 +138,15 @@ func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	if plainText == nil || !utils.IsLess(plainText, pk.N) {
 		return nil, errs.NewFailed("invalid plainText")
 	}
-	n := pk.GetPrecomputed().NModulus
-	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(n) != 1 {
+	nMod := pk.GetNModulus()
+	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(nMod) != 1 {
 		return nil, errs.NewFailed("invalid nonce")
 	}
 
-	nnModulus := pk.GetPrecomputed().NNModulus
-	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnModulus), natOne, nnModulus)
-	rToN := new(saferith.Nat).Exp(nonce, pk.N, nnModulus)
-	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnModulus)
+	nnMod := pk.GetNNModulus()
+	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), natOne, nnMod)
+	rToN := new(saferith.Nat).Exp(nonce, pk.N, nnMod)
+	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
 	return &CipherText{
 		C: cipherText,
@@ -157,7 +161,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 		return nil, nil, errs.NewFailed("invalid plainText")
 	}
 
-	n := pk.GetPrecomputed().NModulus
+	nMod := pk.GetNModulus()
 	var nonce *saferith.Nat
 	for {
 		nonceBig, err := crand.Int(prng, pk.N.Big())
@@ -165,7 +169,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 			return nil, nil, errs.NewRandomSample("cannot sample nonce")
 		}
 		nonce = new(saferith.Nat).SetBig(nonceBig, pk.N.AnnouncedLen())
-		if nonce.EqZero() != 1 && nonce.IsUnit(n) == 1 {
+		if nonce.EqZero() != 1 && nonce.IsUnit(nMod) == 1 {
 			break
 		}
 	}
@@ -220,7 +224,7 @@ func (pk *PublicKey) precompute() {
 	nn := new(saferith.Nat).Mul(pk.N, pk.N, -1)
 	nnMod := saferith.ModulusFromNat(nn)
 	pk.precomputed = &PublicKeyPrecomputed{
-		NModulus:  nMod,
-		NNModulus: nnMod,
+		nModulus:  nMod,
+		nnModulus: nnMod,
 	}
 }

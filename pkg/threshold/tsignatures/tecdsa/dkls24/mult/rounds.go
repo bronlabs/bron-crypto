@@ -141,7 +141,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	// step 2.8: μ = H_{ℤ2^{2*λ_c}} (sessionId || μb)
 	mu, err := hashing.Hash(base.RandomOracleHashFunction, alice.sessionId, muBytes)
 	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "could not hash to Mu")
+		return nil, nil, errs.WrapHashing(err, "could not hash to mu")
 	}
 
 	return C, &Round2Output{ATilde: aTilde, Eta: eta, Mu: mu}, nil
@@ -199,10 +199,10 @@ func (bob *Bob) Round3(r2o *Round2Output) (D *[L]curves.Scalar, err error) {
 
 	// step 3.7: Check if μ' == μ, ABORT if not
 	if len(muPrime) != len(r2o.Mu) {
-		return nil, errs.NewLength("len(muPrime) != len(Mu)  (%d != %d)", len(muPrime), len(r2o.Mu))
+		return nil, errs.NewLength("len(muPrime) != len(mu)  (%d != %d)", len(muPrime), len(r2o.Mu))
 	}
 	if subtle.ConstantTimeCompare(muPrime, r2o.Mu) != 1 {
-		return nil, errs.NewVerification("bob verification failed. muPrime != Mu")
+		return nil, errs.NewVerification("bob verification failed. muPrime != mu")
 	}
 
 	return D, nil

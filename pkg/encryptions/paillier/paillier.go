@@ -18,12 +18,12 @@ type CipherText struct {
 }
 
 func (c *CipherText) Validate(pk *PublicKey) error {
-	n2 := pk.GetPrecomputed().NNModulus
-	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(n2) != 1 {
+	nnMod := pk.GetNNModulus()
+	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(nnMod) != 1 {
 		return errs.NewValidation("invalid cipher text")
 	}
 
-	_, _, less := c.C.Cmp(n2.Nat())
+	_, _, less := c.C.Cmp(nnMod.Nat())
 	if less != 1 {
 		return errs.NewValidation("invalid cipher text")
 	}
