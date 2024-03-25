@@ -2,6 +2,7 @@ package nthroot
 
 import (
 	crand "crypto/rand"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -66,22 +67,22 @@ func (p *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 	}
 
 	s := new(saferith.Nat).SetBig(r, p.nSquared.BitLen())
-	a := new(saferith.Nat).Exp(s, p.n, p.nSquared)
+	a := bignum.FastExp(s, p.n, p.nSquared.Nat())
 	return a, s, nil
 }
 
 func (p *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challenge sigma.ChallengeBytes) (Response, error) {
 	e := p.mapBytesToChallenge(challenge)
-	vToE := new(saferith.Nat).Exp(witness, e, p.nSquared)
+	vToE := bignum.FastExp(witness, e, p.nSquared.Nat())
 	z := new(saferith.Nat).ModMul(state, vToE, p.nSquared)
 	return z, nil
 }
 
 func (p *protocol) Verify(statement Statement, commitment Commitment, challenge sigma.ChallengeBytes, response Response) error {
 	e := p.mapBytesToChallenge(challenge)
-	uToE := new(saferith.Nat).Exp(statement, e, p.nSquared)
+	uToE := bignum.FastExp(statement, e, p.nSquared.Nat())
 	zRhs := new(saferith.Nat).ModMul(commitment, uToE, p.nSquared)
-	zLhs := new(saferith.Nat).Exp(response, p.n, p.nSquared)
+	zLhs := bignum.FastExp(response, p.n, p.nSquared.Nat())
 
 	if _, eq, _ := zLhs.Cmp(zRhs); eq == 1 {
 		return nil
@@ -98,15 +99,15 @@ func (p *protocol) RunSimulator(statement Statement, challenge sigma.ChallengeBy
 	}
 	z := new(saferith.Nat).SetBig(zInt, p.nSquared.BitLen())
 
-	zToN := new(saferith.Nat).Exp(z, p.n, p.nSquared)
-	uToE := new(saferith.Nat).Exp(statement, e, p.nSquared)
+	zToN := bignum.FastExp(z, p.n, p.nSquared.Nat())
+	uToE := bignum.FastExp(statement, e, p.nSquared.Nat())
 	uToEInv := new(saferith.Nat).ModInverse(uToE, p.nSquared)
 	a := new(saferith.Nat).ModMul(zToN, uToEInv, p.nSquared)
 	return a, z, nil
 }
 
 func (p *protocol) ValidateStatement(statement Statement, witness Witness) error {
-	lhs := new(saferith.Nat).Exp(witness, p.n, p.nSquared)
+	lhs := bignum.FastExp(witness, p.n, p.nSquared.Nat())
 	if _, eq, _ := lhs.Cmp(statement); eq == 1 {
 		return nil
 	}

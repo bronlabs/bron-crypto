@@ -119,19 +119,30 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	}
 
 	// 2.v. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
-	prover.state.r1 = make([]*saferith.Nat, prover.t)
-	prover.state.r2 = make([]*saferith.Nat, prover.t)
-	c1 := make([]*paillier.CipherText, prover.t)
-	c2 := make([]*paillier.CipherText, prover.t)
-	for i := 0; i < prover.t; i++ {
-		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot encrypt")
-		}
-		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot encrypt")
-		}
+	//prover.state.r1 = make([]*saferith.Nat, prover.t)
+	//prover.state.r2 = make([]*saferith.Nat, prover.t)
+	//c1 := make([]*paillier.CipherText, prover.t)
+	//c2 := make([]*paillier.CipherText, prover.t)
+	//for i := 0; i < prover.t; i++ {
+	//	c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.prng)
+	//	if err != nil {
+	//		return nil, errs.WrapFailed(err, "cannot encrypt")
+	//	}
+	//	c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.prng)
+	//	if err != nil {
+	//		return nil, errs.WrapFailed(err, "cannot encrypt")
+	//	}
+	//}
+
+	var c1 []*paillier.CipherText
+	var c2 []*paillier.CipherText
+	c1, prover.state.r1, err = prover.sk.EncryptMany(prover.state.w1)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot encrypt")
+	}
+	c2, prover.state.r2, err = prover.sk.EncryptMany(prover.state.w2)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot encrypt")
 	}
 
 	// 2.vi. send c1i, c2i to V
@@ -219,25 +230,44 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.NewRound("%d != 5", verifier.round)
 	}
 
-	// 5. Parse zi
+	var ws []*saferith.Nat
+	var rs []*saferith.Nat
 	for i := 0; i < verifier.t; i++ {
 		if verifier.state.e.Bit(i) == 0 {
 			// 5.i. if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
 			// and one of w1i, w2i is in l-2l range while other is in 0-l range
 			z := input.ZetZero[i]
-			c1, err := verifier.pk.EncryptWithNonce(z.W1, z.R1)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
+			ws = append(ws, z.W1, z.W2)
+			rs = append(rs, z.R1, z.R2)
+		} else {
+			// 5.ii if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
+			// where zi = (j, wi, ri)
+			z := input.ZetOne[i]
+			ws = append(ws, z.XPlusWj)
+			rs = append(rs, z.RTimesRj)
+		}
+	}
 
+	cs, err := verifier.pk.EncryptManyWithNonce(ws, rs)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot encrypt")
+	}
+
+	// 5. Parse zi
+	iter := 0
+	for i := 0; i < verifier.t; i++ {
+		if verifier.state.e.Bit(i) == 0 {
+			// 5.i. if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
+			// and one of w1i, w2i is in l-2l range while other is in 0-l range
+			z := input.ZetZero[i]
+			c1 := cs[iter]
+			iter++
 			if c1.C.Eq(verifier.state.c1[i].C) == 0 {
 				return errs.NewVerification("verification failed")
 			}
-			c2, err := verifier.pk.EncryptWithNonce(z.W2, z.R2)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
 
+			c2 := cs[iter]
+			iter++
 			if c2.C.Eq(verifier.state.c2[i].C) == 0 {
 				return errs.NewVerification("verification failed")
 			}
@@ -251,11 +281,9 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 			// where zi = (j, wi, ri)
 			z := input.ZetOne[i]
 			wi := z.XPlusWj
-			ri := z.RTimesRj
-			cCheck, err := verifier.pk.EncryptWithNonce(wi, ri)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
+			cCheck := cs[iter]
+			iter++
+
 			var c *paillier.CipherText
 			if z.J == 1 {
 				c, err = verifier.pk.Add(verifier.c, verifier.state.c1[i])
@@ -269,7 +297,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 				}
 			}
 
-			if cCheck.C.Eq(c.C) == 0 || !verifier.inSecondThird(wi) {
+			if cCheck.C.Eq(c.C) != 1 || !verifier.inSecondThird(wi) {
 				return errs.NewVerification("verification failed")
 			}
 		}
