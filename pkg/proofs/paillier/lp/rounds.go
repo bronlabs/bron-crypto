@@ -1,6 +1,7 @@
 package lp
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"github.com/cronokirby/saferith"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -138,7 +139,8 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 		// P calculates a y', the Nth root of x
 		// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
 		m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N.Nat(), saferith.ModulusFromNat(prover.paillierSecretKey.Lambda))
-		yPrime[i] = new(saferith.Nat).Exp(prover.state.x[i].C, m, prover.paillierSecretKey.N)
+		//c2 := new(saferith.Nat).Mod(prover.state.x[i].C, prover.paillierSecretKey.N)
+		yPrime[i] = bignum.FastExp(prover.state.x[i].C, m, prover.paillierSecretKey.N.Nat())
 	}
 
 	// P returns a y'

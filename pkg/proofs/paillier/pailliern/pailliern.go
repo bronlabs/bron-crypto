@@ -2,6 +2,7 @@ package pailliern
 
 import (
 	"fmt"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -67,7 +68,7 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	nInv := new(saferith.Nat).ModInverse(witness.N.Nat(), phi)
 	sigmas := make([]*saferith.Nat, M)
 	for i, rho := range rhos {
-		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.N)
+		sigmas[i] = bignum.FastExp(rho, nInv, witness.N.Nat())
 	}
 
 	proof = &Proof{
@@ -106,7 +107,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 
 	for i, sigma := range proof.Sigmas {
-		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N.Nat(), statement.N)
+		rhoCheck := bignum.FastExp(sigma, statement.N.Nat(), statement.N.Nat())
 		if _, eq, _ := rhoCheck.Cmp(rhos[i]); eq != 1 {
 			return errs.NewVerification("verification failed")
 		}

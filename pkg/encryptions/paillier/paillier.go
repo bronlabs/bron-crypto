@@ -16,6 +16,7 @@ package paillier
 
 import (
 	crand "crypto/rand"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -98,7 +99,7 @@ func NewSecretKey(p, q *saferith.Nat) (*SecretKey, error) {
 
 	// (N+1)^λ(N) mod N²
 	t := new(saferith.Nat).Add(n, one, n.AnnouncedLen())
-	t = new(saferith.Nat).Exp(t, lambda, publicKey.N2)
+	t = bignum.FastExp(t, lambda, publicKey.N2.Nat())
 
 	// L((N+1)^λ(N) mod N²)
 	u, err := publicKey.L(t)
@@ -257,7 +258,7 @@ func (publicKey *PublicKey) SubPlain(lhsCipherText *CipherText, rhsPlain *saferi
 	one := new(saferith.Nat).SetUint64(1)
 	y := new(saferith.Nat).ModNeg(rhsPlain, publicKey.N)
 	g := new(saferith.Nat).Add(publicKey.N.Nat(), one, publicKey.N.BitLen())
-	rhs := new(saferith.Nat).Exp(g, y, publicKey.N2)
+	rhs := bignum.FastExp(g, y, publicKey.N2.Nat())
 	c := new(saferith.Nat).ModMul(lhsCipherText.C, rhs, publicKey.N2)
 	return &CipherText{C: c}, nil
 }
@@ -277,7 +278,7 @@ func (publicKey *PublicKey) Mul(factor *saferith.Nat, cipherText *CipherText) (*
 		return nil, errs.WrapArgument(err, "lhs")
 	}
 
-	c := new(saferith.Nat).Exp(cipherText.C, factor, publicKey.N2)
+	c := bignum.FastExp(cipherText.C, factor, publicKey.N2.Nat())
 	return &CipherText{C: c}, nil
 }
 
@@ -311,6 +312,34 @@ func (publicKey *PublicKey) Encrypt(message *saferith.Nat) (*CipherText, *saferi
 	return cipherText, r, nil
 }
 
+func (publicKey *PublicKey) EncryptMany(messages []*saferith.Nat) ([]*CipherText, []*saferith.Nat, error) {
+	if publicKey.N == nil || publicKey.N2 == nil {
+		return nil, nil, errs.NewIsNil("N is nil")
+	}
+
+	nonces := make([]*saferith.Nat, len(messages))
+	for i := range messages {
+		for {
+			nonceCandidateBig, err := crand.Int(crand.Reader, publicKey.N.Big())
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "cannot generate nonce")
+			}
+			nonceCandidate := new(saferith.Nat).SetBig(nonceCandidateBig, publicKey.N.BitLen())
+			if nonceCandidate.IsUnit(publicKey.N) != 1 || nonceCandidate.EqZero() == 1 {
+				continue
+			}
+			nonces[i] = nonceCandidate
+			break
+		}
+	}
+
+	cipherTexts, err := publicKey.EncryptManyWithNonce(messages, nonces)
+	if err != nil {
+		return nil, nil, errs.NewFailed("encryption failed")
+	}
+	return cipherTexts, nonces, nil
+}
+
 // EncryptWithNonce produces a ciphertext on input a message and nonce.
 func (publicKey *PublicKey) EncryptWithNonce(message, r *saferith.Nat) (*CipherText, error) {
 	if message == nil || r == nil {
@@ -335,12 +364,54 @@ func (publicKey *PublicKey) EncryptWithNonce(message, r *saferith.Nat) (*CipherT
 	// Compute the ciphertext components: alpha, beta
 	// alpha = (N+1)^m (mod N²)
 	g := new(saferith.Nat).Add(publicKey.N.Nat(), one, publicKey.N.BitLen()+1)
-	alpha := new(saferith.Nat).Exp(g, message, publicKey.N2)
-	beta := new(saferith.Nat).Exp(r, publicKey.N.Nat(), publicKey.N2) // beta = r^N (mod N²)
+	alpha := bignum.FastExp(g, message, publicKey.N2.Nat())
+	beta := bignum.FastExp(r, publicKey.N.Nat(), publicKey.N2.Nat()) // beta = r^N (mod N²)
 
 	// ciphertext = alpha*beta = (N+1)^m * r^N  (mod N²)
 	c := new(saferith.Nat).ModMul(alpha, beta, publicKey.N2)
 	return &CipherText{C: c}, nil
+}
+
+func (publicKey *PublicKey) EncryptManyWithNonce(messages, rs []*saferith.Nat) ([]*CipherText, error) {
+	if len(messages) != len(rs) {
+		return nil, errs.NewIsNil("message or nonce mismatch")
+	}
+
+	// Ensure message ∈ Z_N
+	for _, message := range messages {
+		if _, _, ok := message.CmpMod(publicKey.N); ok == 0 {
+			return nil, errs.NewArgument("invalid message")
+		}
+	}
+
+	// Ensure r ∈ Z^*_N: we use the method proved in docs/[EL20]
+	// ensure r ∈ Z^_N-{0}
+	for _, r := range rs {
+		if _, _, ok := r.CmpMod(publicKey.N); ok == 0 {
+			return nil, errs.NewArgument("invalid nonce")
+		}
+		if r.IsUnit(publicKey.N) != 1 {
+			return nil, errs.NewArgument("invalid nonce")
+		}
+		if r.EqZero() != 0 {
+			return nil, errs.NewIsZero("nonce is zero")
+		}
+	}
+
+	one := new(saferith.Nat).SetUint64(1)
+	g := new(saferith.Nat).Add(publicKey.N.Nat(), one, publicKey.N.BitLen()+1)
+
+	// Compute the ciphertext components: alpha, beta
+	// alpha = (N+1)^m (mod N²)
+	alphas := bignum.FastFixedBaseMultiExp(g, messages, publicKey.N2.Nat())
+	betas := bignum.FastFixedExponentMultiExp(rs, publicKey.N.Nat(), publicKey.N2.Nat())
+
+	cs := make([]*CipherText, len(messages))
+	for i := range messages {
+		cs[i] = &CipherText{C: new(saferith.Nat).ModMul(alphas[i], betas[i], publicKey.N2)}
+	}
+
+	return cs, nil
 }
 
 // Decrypt is the reverse operation of Encrypt.
@@ -357,7 +428,7 @@ func (decryptor *Decryptor) Decrypt(cipherText *CipherText) (*saferith.Nat, erro
 
 	// Compute the msg in components
 	// alpha ≡ cipherText^{λ(N)} mod N²
-	alpha := new(saferith.Nat).Exp(cipherText.C, decryptor.secretKey.Lambda, decryptor.secretKey.N2)
+	alpha := bignum.FastExp(cipherText.C, decryptor.secretKey.Lambda, decryptor.secretKey.N2.Nat())
 
 	// l = L(alpha, N)
 	ell, err := decryptor.secretKey.L(alpha)

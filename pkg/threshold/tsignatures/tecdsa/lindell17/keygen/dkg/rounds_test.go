@@ -3,6 +3,7 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"os"
 	"testing"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -24,7 +24,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-var cn = randomisedFischlin.Name
+var cn = fiatshamir.Name
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
