@@ -124,11 +124,11 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	c1 := make([]*paillier.CipherText, prover.t)
 	c2 := make([]*paillier.CipherText, prover.t)
 	for i := 0; i < prover.t; i++ {
-		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i])
+		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot encrypt")
 		}
-		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i])
+		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot encrypt")
 		}
@@ -191,14 +191,14 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 				zetOne[i] = &ZetOne{
 					J:        1,
 					XPlusWj:  xPlusW1,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.N),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.GetNModulus()),
 				}
 			case prover.inSecondThird(xPlusW2):
 				// 4.ii. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					J:        2,
 					XPlusWj:  xPlusW2,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.N),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.GetNModulus()),
 				}
 			default:
 				return nil, errs.NewFailed("something went wrong")

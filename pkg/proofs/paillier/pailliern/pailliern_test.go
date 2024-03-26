@@ -96,9 +96,9 @@ func Test_InvalidStatement(t *testing.T) {
 		// try to forge paillier keys by introducing square of prime
 		sk := &paillier.SecretKey{
 			PublicKey: paillier.PublicKey{
-				N: saferith.ModulusFromNat(n),
+				N: n,
 			},
-			Totient: totient,
+			Phi: totient,
 		}
 
 		prover, err := pailliern.NewProver([]byte(sid), proverTranscript)

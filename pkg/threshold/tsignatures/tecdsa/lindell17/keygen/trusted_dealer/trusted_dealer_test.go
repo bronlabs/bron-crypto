@@ -97,7 +97,7 @@ func Test_HappyPath(t *testing.T) {
 			myPaillierPrivateKey := myShard.PaillierSecretKey
 			for pair := range shards.Iter() {
 				theirShard := pair.Value
-				if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 && myShard.PaillierSecretKey.N2.Nat().Eq(theirShard.PaillierSecretKey.N2.Nat()) == 0 {
+				if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
 					theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
 					require.True(t, exists)
 					decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)

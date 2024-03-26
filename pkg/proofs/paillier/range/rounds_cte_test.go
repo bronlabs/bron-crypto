@@ -22,13 +22,13 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 
 	prng := crand.Reader
 	primesBitLength := 128
-	pk, _, err := paillier.NewKeys(uint(primesBitLength))
+	pk, _, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
 	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
-	xEncrypted, _, err := pk.Encrypt(x)
+	xEncrypted, _, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 	appLabel := "Range"
 	var verifier *paillierrange.Verifier
@@ -49,13 +49,13 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 
 	prng := crand.Reader
 	primesBitLength := 128
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
 	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
-	xEncrypted, r, err := pk.Encrypt(x)
+	xEncrypted, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 	appLabel := "Range"
 	var verifier *paillierrange.Verifier
@@ -83,13 +83,13 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 
 	prng := crand.Reader
 	primesBitLength := 128
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
 	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
-	xEncrypted, r, err := pk.Encrypt(x)
+	xEncrypted, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 	appLabel := "Range"
 	var verifier *paillierrange.Verifier
@@ -120,13 +120,13 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 
 	prng := crand.Reader
 	primesBitLength := 128
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
 	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
-	xEncrypted, r, err := pk.Encrypt(x)
+	xEncrypted, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 	appLabel := "Range"
 	var verifier *paillierrange.Verifier
@@ -161,13 +161,13 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 
 	prng := crand.Reader
 	primesBitLength := 128
-	pk, sk, err := paillier.NewKeys(uint(primesBitLength))
+	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetUint64(3_000_000)
 	sid := []byte("sessionId")
 	x, err := randomIntInRange(q, prng, primesBitLength)
 	require.NoError(t, err)
-	xEncrypted, r, err := pk.Encrypt(x)
+	xEncrypted, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 	appLabel := "Range"
 	var verifier *paillierrange.Verifier

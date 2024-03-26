@@ -211,17 +211,17 @@ func (p *Participant) Round3(input types.RoundMessages[*Round2Broadcast]) (outpu
 	}
 
 	// 3.iii. generate a Paillier key pair
-	p.state.myPaillierPk, p.state.myPaillierSk, err = paillier.NewKeys(lp.PaillierBitSize)
+	p.state.myPaillierPk, p.state.myPaillierSk, err = paillier.KeyGen(lp.PaillierBitSize, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}
-	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.Nat())
+	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.Nat(), p.prng)
 
 	// 3.iv. calculate ckey' = Enc(x'; r') and ckey'' = Enc(x''; r'')
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
 	}
-	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(p.state.myXDoublePrime.Nat())
+	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(p.state.myXDoublePrime.Nat(), p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x''")
 	}

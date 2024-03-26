@@ -58,16 +58,16 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, p.sessionId)
 
-	rhos, err := extractRhos(transcript, witness.N)
+	rhos, err := extractRhos(transcript, witness.GetNModulus())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create a proof")
 	}
 
-	phi := saferith.ModulusFromNat(witness.Totient)
-	nInv := new(saferith.Nat).ModInverse(witness.N.Nat(), phi)
+	phi := saferith.ModulusFromNat(witness.Phi)
+	nInv := new(saferith.Nat).ModInverse(witness.N, phi)
 	sigmas := make([]*saferith.Nat, M)
 	for i, rho := range rhos {
-		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.N)
+		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.GetNModulus())
 	}
 
 	proof = &Proof{
@@ -92,12 +92,12 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, sessionId)
 
-	rhos, err := extractRhos(transcript, statement.N)
+	rhos, err := extractRhos(transcript, statement.GetNModulus())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot verify a proof")
 	}
 
-	if statement.N.Nat().Coprime(P) != 1 {
+	if statement.N.Coprime(P) != 1 {
 		return errs.NewVerification("verification failed")
 	}
 
@@ -106,7 +106,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 
 	for i, sigma := range proof.Sigmas {
-		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N.Nat(), statement.N)
+		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N, statement.GetNModulus())
 		if _, eq, _ := rhoCheck.Cmp(rhos[i]); eq != 1 {
 			return errs.NewVerification("verification failed")
 		}

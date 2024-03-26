@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -24,11 +25,11 @@ func Fuzz_Test_encryptDecrypt(f *testing.F) {
 		hexMessage := strings.ToUpper(hex.EncodeToString(message))
 		mappedMessage, err := new(saferith.Nat).SetHex(hexMessage)
 		require.NoError(t, err)
-		pub, sec, err := paillier.NewKeys(256)
+		pub, sec, err := paillier.KeyGen(256, crand.Reader)
 		require.NoError(t, err)
 
 		// Ignoring the random value that was generated internally by `Encrypt`.
-		cipher, _, err := pub.Encrypt(mappedMessage)
+		cipher, _, err := pub.Encrypt(mappedMessage, crand.Reader)
 		require.NoError(t, err)
 
 		// Now decrypt using the secret key.
@@ -42,7 +43,7 @@ func Fuzz_Test_encryptDecrypt(f *testing.F) {
 func Fuzz_Test_homomorphicAddition(f *testing.F) {
 	f.Add(uint64(123), uint64(234))
 	f.Fuzz(func(t *testing.T, m1 uint64, m2 uint64) {
-		pub, sec, err := paillier.NewKeys(256)
+		pub, sec, err := paillier.KeyGen(256, crand.Reader)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -52,9 +53,9 @@ func Fuzz_Test_homomorphicAddition(f *testing.F) {
 		msg1 := new(saferith.Nat).SetBig(new(big.Int).SetUint64(m1), new(big.Int).SetUint64(m1).BitLen())
 		msg2 := new(saferith.Nat).SetBig(new(big.Int).SetUint64(m2), new(big.Int).SetUint64(m2).BitLen())
 
-		cipher1, _, err := pub.Encrypt(msg1)
+		cipher1, _, err := pub.Encrypt(msg1, crand.Reader)
 		require.NoError(t, err)
-		cipher2, _, err := pub.Encrypt(msg2)
+		cipher2, _, err := pub.Encrypt(msg2, crand.Reader)
 		require.NoError(t, err)
 
 		fmt.Println("Adding their encrypted versions together.")
@@ -70,16 +71,16 @@ func Fuzz_Test_homomorphicAddition(f *testing.F) {
 func Fuzz_Test_homomorphicMul(f *testing.F) {
 	f.Add(uint64(123), uint64(234))
 	f.Fuzz(func(t *testing.T, m1 uint64, m2 uint64) {
-		pub, sec, err := paillier.NewKeys(256)
+		pub, sec, err := paillier.KeyGen(256, crand.Reader)
 		require.NoError(t, err)
 		msg1 := new(saferith.Nat).SetBig(new(big.Int).SetUint64(m1), new(big.Int).SetUint64(m1).BitLen())
 		msg2 := new(saferith.Nat).SetBig(new(big.Int).SetUint64(m2), new(big.Int).SetUint64(m2).BitLen())
 
-		cipher2, _, err := pub.Encrypt(msg2)
+		cipher2, _, err := pub.Encrypt(msg2, crand.Reader)
 		require.NoError(t, err)
 
 		fmt.Println("Adding their encrypted versions together.")
-		cipher3, err := pub.Mul(msg1, cipher2)
+		cipher3, err := pub.MulPlaintext(cipher2, msg1)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

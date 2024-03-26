@@ -50,3 +50,8 @@ func NatSetBit(value *saferith.Nat, bit int) (*saferith.Nat, error) {
 	}
 	return new(saferith.Nat).SetBig(new(big.Int).SetBit(value.Big(), bit, 1), value.AnnouncedLen()), nil
 }
+
+func IsLess(l, r *saferith.Nat) bool {
+	_, _, less := l.Cmp(r)
+	return less == 1
+}

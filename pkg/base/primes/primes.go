@@ -3,6 +3,8 @@ package primes
 import (
 	crand "crypto/rand"
 	"crypto/rsa"
+	"fmt"
+	"io"
 	"math"
 	"math/big"
 
@@ -66,8 +68,11 @@ func GenerateSafePrimePair(bits uint) (p, q *saferith.Nat, err error) {
 	return p, q, nil
 }
 
-func GeneratePrimePair(bits uint) (p, q *saferith.Nat, err error) {
-	rsaPrivateKey, err := rsa.GenerateKey(crand.Reader, 2*int(bits))
+func GeneratePrimePair(bits int, prng io.Reader) (p, q *saferith.Nat, err error) {
+	if bits < 3 {
+		return nil, nil, errs.NewValue("bits < 3")
+	}
+	rsaPrivateKey, err := rsa.GenerateKey(prng, 2*bits)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot generate keys pair")
 	}
@@ -75,11 +80,11 @@ func GeneratePrimePair(bits uint) (p, q *saferith.Nat, err error) {
 	pBig := rsaPrivateKey.Primes[0]
 	qBig := rsaPrivateKey.Primes[1]
 	// double check
-	if pBig.BitLen() < int(bits) || qBig.BitLen() < int(bits) {
-		return nil, nil, errs.WrapFailed(err, "p,q have invalid length")
+	if pBig.BitLen() != bits || qBig.BitLen() != bits {
+		return nil, nil, errs.WrapFailed(err, fmt.Sprintf("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits))
 	}
 
-	p = new(saferith.Nat).SetBig(pBig, int(bits))
-	q = new(saferith.Nat).SetBig(qBig, int(bits))
+	p = new(saferith.Nat).SetBig(pBig, bits)
+	q = new(saferith.Nat).SetBig(qBig, bits)
 	return p, q, nil
 }

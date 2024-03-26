@@ -73,7 +73,7 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierPublicKey.N.Nat(), prng)
+	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierPublicKey.N, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}
@@ -99,7 +99,7 @@ func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessio
 	if paillierPublicKey == nil {
 		return errs.NewIsNil("invalid paillier public key")
 	}
-	if paillierPublicKey.N.BitLen() < PaillierBitSize {
+	if paillierPublicKey.N.TrueLen() < PaillierBitSize {
 		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if k < 1 {
@@ -122,7 +122,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierSecretKey.N.Nat(), prng)
+	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierSecretKey.N, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}
