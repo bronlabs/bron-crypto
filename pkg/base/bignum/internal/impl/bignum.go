@@ -87,6 +87,30 @@ func (bn *BoringBigNum) Exp(a, p, m *BoringBigNum, montCtx BoringMontCtx, bnCtx 
 	return bn
 }
 
+func (bn *BoringBigNum) ModMul(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
+	ret := C.BN_mod_mul(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
+	if ret != 1 {
+		panic("BN_mod_mul")
+	}
+	return bn
+}
+
+func (bn *BoringBigNum) ModSub(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
+	ret := C.BN_mod_sub_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
+	if ret != 1 {
+		panic("BN_mod_sub_quick")
+	}
+	return bn
+}
+
+func (bn *BoringBigNum) ModAdd(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
+	ret := C.BN_mod_add_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
+	if ret != 1 {
+		panic("BN_mod_add_quick")
+	}
+	return bn
+}
+
 func (bn *BoringBigNum) Mod(x, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
 	r := C.BN_nnmod(&bn.nativeBigNum, &x.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if r != 1 {

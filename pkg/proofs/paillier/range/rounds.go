@@ -136,11 +136,11 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 
 	var c1 []*paillier.CipherText
 	var c2 []*paillier.CipherText
-	c1, prover.state.r1, err = prover.sk.EncryptMany(prover.state.w1)
+	c1, prover.state.r1, err = prover.sk.EncryptMany(prover.state.w1, prover.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt")
 	}
-	c2, prover.state.r2, err = prover.sk.EncryptMany(prover.state.w2)
+	c2, prover.state.r2, err = prover.sk.EncryptMany(prover.state.w2, prover.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt")
 	}

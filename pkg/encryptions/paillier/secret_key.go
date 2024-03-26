@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"io"
 	"math/big"
 	"sync"
@@ -14,42 +15,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
-type CrtParams struct {
-	m1      *saferith.Modulus
-	phiM1   *saferith.Modulus
-	m2      *saferith.Modulus
-	phiM2   *saferith.Modulus
-	m1InvM2 *saferith.Nat
-}
-
-func (p *CrtParams) GetM1() *saferith.Modulus {
-	return p.m1
-}
-
-func (p *CrtParams) GetPhiM1() *saferith.Modulus {
-	return p.phiM1
-}
-
-func (p *CrtParams) GetM2() *saferith.Modulus {
-	return p.m2
-}
-
-func (p *CrtParams) GetPhiM2() *saferith.Modulus {
-	return p.phiM2
-}
-
-func (p *CrtParams) GetM1InvM2() *saferith.Nat {
-	return p.m1InvM2
-}
-
 type SecretKeyPrecomputed struct {
 	p  *saferith.Nat
 	q  *saferith.Nat
 	mu *saferith.Nat
 
 	// CRT parameters
-	crtN  CrtParams
-	crtNN CrtParams
+	crtN  bignum.CrtParams
+	crtNN bignum.CrtParams
 }
 
 type SecretKey struct {
@@ -106,7 +79,7 @@ func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	nnMod := sk.GetNNModulus()
 	crt := sk.GetCrtNNParams()
 
-	rToN := expCrt(crt, nonce, sk.N, nnMod)
+	rToN := bignum.FastExpCrt(crt, nonce, sk.N, nnMod)
 	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), natOne, nnMod)
 	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
@@ -154,7 +127,7 @@ func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 
 	nnMod := sk.GetNNModulus()
 	crt := sk.GetCrtNNParams()
-	result := expCrt(crt, lhs.C, rhs, nnMod)
+	result := bignum.FastExpCrt(crt, lhs.C, rhs, nnMod)
 
 	return &CipherText{
 		C: result,
@@ -212,12 +185,12 @@ func (sk *SecretKey) GetMu() *saferith.Nat {
 	return sk.precomputed.mu
 }
 
-func (sk *SecretKey) GetCrtNParams() *CrtParams {
+func (sk *SecretKey) GetCrtNParams() *bignum.CrtParams {
 	sk.precomputedOnce.Do(func() { sk.precompute() })
 	return &sk.precomputed.crtN
 }
 
-func (sk *SecretKey) GetCrtNNParams() *CrtParams {
+func (sk *SecretKey) GetCrtNNParams() *bignum.CrtParams {
 	sk.precomputedOnce.Do(func() { sk.precompute() })
 	return &sk.precomputed.crtNN
 }
@@ -278,30 +251,30 @@ func (sk *SecretKey) precompute() {
 		p:  p,
 		q:  q,
 		mu: nPhiInv,
-		crtN: CrtParams{
-			m1:      saferith.ModulusFromNat(p),
-			phiM1:   pMinusOne,
-			m2:      qMod,
-			phiM2:   qMinusOne,
-			m1InvM2: pInvQ,
-		},
-		crtNN: CrtParams{
-			m1:      saferith.ModulusFromNat(pp),
-			phiM1:   ppPhi,
-			m2:      qqMod,
-			phiM2:   qqPhi,
-			m1InvM2: ppInvQQ,
-		},
+		crtN: bignum.NewCrtParams(
+			saferith.ModulusFromNat(p),
+			pMinusOne,
+			qMod,
+			qMinusOne,
+			pInvQ,
+		),
+		crtNN: bignum.NewCrtParams(
+			saferith.ModulusFromNat(pp),
+			ppPhi,
+			qqMod,
+			qqPhi,
+			ppInvQQ,
+		),
 	}
 }
 
-func expCrt(crtParams *CrtParams, base, exponent *saferith.Nat, modulus *saferith.Modulus) *saferith.Nat {
-	eModPhiM1 := new(saferith.Nat).Mod(exponent, crtParams.phiM1)
-	eModPhiM2 := new(saferith.Nat).Mod(exponent, crtParams.phiM2)
-	r1 := new(saferith.Nat).Exp(base, eModPhiM1, crtParams.m1)
-	r2 := new(saferith.Nat).Exp(base, eModPhiM2, crtParams.m2)
-	t1 := new(saferith.Nat).ModSub(r2, r1, crtParams.m2)
-	t2 := new(saferith.Nat).ModMul(t1, crtParams.m1InvM2, crtParams.m2)
-	t3 := new(saferith.Nat).ModMul(t2, crtParams.m1.Nat(), modulus)
+func expCrt(crtParams *bignum.CrtParams, base, exponent *saferith.Nat, modulus *saferith.Modulus) *saferith.Nat {
+	eModPhiM1 := new(saferith.Nat).Mod(exponent, crtParams.GetPhiM1())
+	eModPhiM2 := new(saferith.Nat).Mod(exponent, crtParams.GetPhiM2())
+	r1 := new(saferith.Nat).Exp(base, eModPhiM1, crtParams.GetM1())
+	r2 := new(saferith.Nat).Exp(base, eModPhiM2, crtParams.GetM2())
+	t1 := new(saferith.Nat).ModSub(r2, r1, crtParams.GetM2())
+	t2 := new(saferith.Nat).ModMul(t1, crtParams.GetM1InvM2(), crtParams.GetM2())
+	t3 := new(saferith.Nat).ModMul(t2, crtParams.GetM1().Nat(), modulus)
 	return new(saferith.Nat).ModAdd(t3, r1, modulus)
 }

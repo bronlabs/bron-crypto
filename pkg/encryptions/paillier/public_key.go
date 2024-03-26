@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"io"
 	"sync"
 
@@ -128,7 +129,7 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	}
 
 	nnMod := pk.GetNNModulus()
-	result := new(saferith.Nat).Exp(lhs.C, rhs, nnMod)
+	result := bignum.FastExp(lhs.C, rhs, nnMod.Nat())
 	return &CipherText{
 		C: result,
 	}, nil
@@ -145,12 +146,45 @@ func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 
 	nnMod := pk.GetNNModulus()
 	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), natOne, nnMod)
-	rToN := new(saferith.Nat).Exp(nonce, pk.N, nnMod)
+	rToN := bignum.FastExp(nonce, pk.N, nnMod.Nat())
 	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
 	return &CipherText{
 		C: cipherText,
 	}, nil
+}
+
+func (pk *PublicKey) EncryptManyWithNonce(plainTexts []*PlainText, rs []*saferith.Nat) ([]*CipherText, error) {
+	if len(plainTexts) != len(rs) {
+		return nil, errs.NewIsNil("message or nonce mismatch")
+	}
+
+	for _, plainText := range plainTexts {
+		if plainText == nil || !utils.IsLess(plainText, pk.N) {
+			return nil, errs.NewFailed("invalid plainText")
+		}
+	}
+
+	nMod := pk.GetNModulus()
+	for _, r := range rs {
+		if r == nil || r.EqZero() == 1 || !utils.IsLess(r, pk.N) || r.IsUnit(nMod) != 1 {
+			return nil, errs.NewFailed("invalid nonce")
+		}
+	}
+
+	nnMod := pk.GetNNModulus()
+	gToMs := make([]*saferith.Nat, len(plainTexts))
+	for i, plainText := range plainTexts {
+		gToMs[i] = new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), natOne, nnMod)
+	}
+	rToNs := bignum.FastFixedExponentMultiExp(rs, pk.N, pk.GetNNModulus().Nat())
+
+	cs := make([]*CipherText, len(plainTexts))
+	for i := range plainTexts {
+		cs[i] = &CipherText{C: new(saferith.Nat).ModMul(gToMs[i], rToNs[i], pk.GetNNModulus())}
+	}
+
+	return cs, nil
 }
 
 func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText, *saferith.Nat, error) {
@@ -180,6 +214,34 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	}
 
 	return cipherText, nonce, nil
+}
+
+func (pk *PublicKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*CipherText, []*saferith.Nat, error) {
+	if prng == nil {
+		return nil, nil, errs.NewIsNil("prng")
+	}
+
+	nonces := make([]*saferith.Nat, len(plainTexts))
+	for i := range plainTexts {
+		for {
+			nonceCandidateBig, err := crand.Int(prng, pk.N.Big())
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "cannot generate nonce")
+			}
+			nonceCandidate := new(saferith.Nat).SetBig(nonceCandidateBig, pk.N.AnnouncedLen())
+			if nonceCandidate.IsUnit(pk.GetNModulus()) != 1 || nonceCandidate.EqZero() == 1 {
+				continue
+			}
+			nonces[i] = nonceCandidate
+			break
+		}
+	}
+
+	cipherTexts, err := pk.EncryptManyWithNonce(plainTexts, nonces)
+	if err != nil {
+		return nil, nil, errs.NewFailed("encryption failed")
+	}
+	return cipherTexts, nonces, nil
 }
 
 func (pk *PublicKey) MarshalJSON() ([]byte, error) {

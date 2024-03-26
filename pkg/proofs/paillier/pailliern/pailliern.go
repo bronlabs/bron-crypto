@@ -68,7 +68,7 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	nInv := new(saferith.Nat).ModInverse(witness.N, phi)
 	sigmas := make([]*saferith.Nat, M)
 	for i, rho := range rhos {
-		sigmas[i] = bignum.FastExp(rho, nInv, witness.N.Nat())
+		sigmas[i] = bignum.FastExpCrt(witness.GetCrtNParams(), rho, nInv, witness.GetNModulus())
 	}
 
 	proof = &Proof{
@@ -107,7 +107,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 
 	for i, sigma := range proof.Sigmas {
-		rhoCheck := bignum.FastExp(sigma, statement.N.Nat(), statement.N.Nat())
+		rhoCheck := bignum.FastExp(sigma, statement.N, statement.N)
 		if _, eq, _ := rhoCheck.Cmp(rhos[i]); eq != 1 {
 			return errs.NewVerification("verification failed")
 		}

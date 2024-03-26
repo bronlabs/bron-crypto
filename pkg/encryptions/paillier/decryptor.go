@@ -1,6 +1,7 @@
 package paillier
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/bignum"
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -28,7 +29,7 @@ func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 	nnMod := d.sk.GetNNModulus()
 	crt := d.sk.GetCrtNNParams()
 
-	cToLambda := expCrt(crt, cipherText.C, d.sk.Phi, nnMod)
+	cToLambda := bignum.FastExpCrt(crt, cipherText.C, d.sk.Phi, nnMod)
 	l := d.sk.L(cToLambda)
 	m := new(saferith.Nat).ModMul(l, mu, nMod)
 
