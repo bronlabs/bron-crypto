@@ -79,13 +79,46 @@ func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	nnMod := sk.GetNNModulus()
 	crt := sk.GetCrtNNParams()
 
-	rToN := bignum.FastExpCrt(crt, nonce, sk.N, nnMod)
 	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), natOne, nnMod)
+	rToN := bignum.FastExpCrt(crt, nonce, sk.N, nnMod)
 	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
 	return &CipherText{
 		C: cipherText,
 	}, nil
+}
+
+func (sk *SecretKey) EncryptManyWithNonce(plainTexts []*PlainText, rs []*saferith.Nat) ([]*CipherText, error) {
+	if len(plainTexts) != len(rs) {
+		return nil, errs.NewIsNil("message or nonce mismatch")
+	}
+
+	for _, plainText := range plainTexts {
+		if plainText == nil || !utils.IsLess(plainText, sk.N) {
+			return nil, errs.NewFailed("invalid plainText")
+		}
+	}
+
+	nMod := sk.GetNModulus()
+	for _, r := range rs {
+		if r == nil || r.EqZero() == 1 || !utils.IsLess(r, sk.N) || r.IsUnit(nMod) != 1 {
+			return nil, errs.NewFailed("invalid nonce")
+		}
+	}
+
+	nnMod := sk.GetNNModulus()
+	gToMs := make([]*saferith.Nat, len(plainTexts))
+	for i, plainText := range plainTexts {
+		gToMs[i] = new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), natOne, nnMod)
+	}
+	rToNs := bignum.FastFixedExponentMultiExpCrt(sk.GetCrtNNParams(), rs, sk.N, sk.GetNNModulus().Nat())
+
+	cs := make([]*CipherText, len(plainTexts))
+	for i := range plainTexts {
+		cs[i] = &CipherText{C: new(saferith.Nat).ModMul(gToMs[i], rToNs[i], sk.GetNNModulus())}
+	}
+
+	return cs, nil
 }
 
 func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText, *saferith.Nat, error) {
@@ -115,6 +148,34 @@ func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	}
 
 	return cipherText, nonce, nil
+}
+
+func (sk *SecretKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*CipherText, []*saferith.Nat, error) {
+	if prng == nil {
+		return nil, nil, errs.NewIsNil("prng")
+	}
+
+	nonces := make([]*saferith.Nat, len(plainTexts))
+	for i := range plainTexts {
+		for {
+			nonceCandidateBig, err := crand.Int(prng, sk.N.Big())
+			if err != nil {
+				return nil, nil, errs.WrapFailed(err, "cannot generate nonce")
+			}
+			nonceCandidate := new(saferith.Nat).SetBig(nonceCandidateBig, sk.N.AnnouncedLen())
+			if nonceCandidate.IsUnit(sk.GetNModulus()) != 1 || nonceCandidate.EqZero() == 1 {
+				continue
+			}
+			nonces[i] = nonceCandidate
+			break
+		}
+	}
+
+	cipherTexts, err := sk.EncryptManyWithNonce(plainTexts, nonces)
+	if err != nil {
+		return nil, nil, errs.NewFailed("encryption failed")
+	}
+	return cipherTexts, nonces, nil
 }
 
 func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText, error) {

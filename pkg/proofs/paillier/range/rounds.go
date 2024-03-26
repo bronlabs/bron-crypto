@@ -118,22 +118,6 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 		}
 	}
 
-	// 2.v. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
-	//prover.state.r1 = make([]*saferith.Nat, prover.t)
-	//prover.state.r2 = make([]*saferith.Nat, prover.t)
-	//c1 := make([]*paillier.CipherText, prover.t)
-	//c2 := make([]*paillier.CipherText, prover.t)
-	//for i := 0; i < prover.t; i++ {
-	//	c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.prng)
-	//	if err != nil {
-	//		return nil, errs.WrapFailed(err, "cannot encrypt")
-	//	}
-	//	c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.prng)
-	//	if err != nil {
-	//		return nil, errs.WrapFailed(err, "cannot encrypt")
-	//	}
-	//}
-
 	var c1 []*paillier.CipherText
 	var c2 []*paillier.CipherText
 	c1, prover.state.r1, err = prover.sk.EncryptMany(prover.state.w1, prover.prng)

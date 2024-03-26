@@ -16,7 +16,7 @@ type BoringBigNumCtx struct {
 func NewBigNumCtx() BoringBigNumCtx {
 	bnCtx := C.BN_CTX_new()
 	if bnCtx == nil {
-		panic("new")
+		panic("BN_CTX_new")
 	}
 	return BoringBigNumCtx{bnCtx}
 }
@@ -34,7 +34,7 @@ type BoringMontCtx struct {
 func NewMontCtx(m *BoringBigNum, ctx BoringBigNumCtx) BoringMontCtx {
 	montyCtx := C.BN_MONT_CTX_new_consttime(&m.nativeBigNum, ctx.nativeBnCtx)
 	if montyCtx == nil {
-		panic("new_consttime")
+		panic("BN_MONT_CTX_new_consttime")
 	}
 	return BoringMontCtx{montyCtx}
 }
@@ -72,7 +72,7 @@ func (bn *BoringBigNum) Bytes() []byte {
 func (bn *BoringBigNum) GenPrime(bits int, safe int) *BoringBigNum {
 	r := C.BN_generate_prime_ex(&bn.nativeBigNum, C.int(bits), C.int(safe), nil, nil, nil)
 	if r != 1 {
-		panic("generate_prime_ex")
+		panic("BN_generate_prime_ex")
 	}
 
 	return bn
@@ -81,7 +81,7 @@ func (bn *BoringBigNum) GenPrime(bits int, safe int) *BoringBigNum {
 func (bn *BoringBigNum) Exp(a, p, m *BoringBigNum, montCtx BoringMontCtx, bnCtx BoringBigNumCtx) *BoringBigNum {
 	ret := C.BN_mod_exp_mont_consttime(&bn.nativeBigNum, &a.nativeBigNum, &p.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx, montCtx.nativeMontCtx)
 	if ret != 1 {
-		panic("mod_exp_mont_consttime")
+		panic("BN_mod_exp_mont_consttime")
 	}
 
 	return bn
@@ -95,7 +95,7 @@ func (bn *BoringBigNum) ModMul(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *Bo
 	return bn
 }
 
-func (bn *BoringBigNum) ModSub(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
+func (bn *BoringBigNum) ModSub(l, r, m *BoringBigNum) *BoringBigNum {
 	ret := C.BN_mod_sub_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
 		panic("BN_mod_sub_quick")
@@ -103,7 +103,7 @@ func (bn *BoringBigNum) ModSub(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *Bo
 	return bn
 }
 
-func (bn *BoringBigNum) ModAdd(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
+func (bn *BoringBigNum) ModAdd(l, r, m *BoringBigNum) *BoringBigNum {
 	ret := C.BN_mod_add_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
 		panic("BN_mod_add_quick")
@@ -114,7 +114,7 @@ func (bn *BoringBigNum) ModAdd(l, r, m *BoringBigNum, bnCtx BoringBigNumCtx) *Bo
 func (bn *BoringBigNum) Mod(x, m *BoringBigNum, bnCtx BoringBigNumCtx) *BoringBigNum {
 	r := C.BN_nnmod(&bn.nativeBigNum, &x.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if r != 1 {
-		panic("nnmod")
+		panic("BN_nnmod")
 	}
 
 	return bn
@@ -130,7 +130,7 @@ func (bn *BoringBigNum) SetBytes(data []byte) *BoringBigNum {
 	rawData := (*C.uint8_t)(unsafe.Pointer(&data[0]))
 	r := C.BN_bin2bn(rawData, C.size_t(len(data)), &bn.nativeBigNum)
 	if r == nil {
-		panic("bin2bn")
+		panic("BN_bin2bn")
 	}
 
 	return bn
