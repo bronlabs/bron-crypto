@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/testutils"
 )
 
@@ -59,7 +59,7 @@ func Fuzz_Test(f *testing.F) {
 		allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 		require.NoError(t, err)
 
-		seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+		seededPrng, err := fkechacha20.NewPrng(nil, nil)
 		require.NoError(t, err)
 		sampleParticipants, err := testutils.MakeSampleParticipants(protocol, identities, allPairwiseSeeds, seededPrng, nil)
 		if err != nil {

@@ -1,27 +1,24 @@
-package chacha
+package fkechacha20
 
 import (
-	"golang.org/x/crypto/chacha20"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/chacha20"
 )
 
 const ChachaPRNGSecurityStrength = chacha20.KeySize // 256 bits
 
-/*.-------------------------- Chacha20 as PRNG ------------------------------.*/
-
-// PRNG uses `chacha20` stream cipher as a PRNG.
-type PRNG struct {
-	chacha *chacha20.Cipher
+// Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.
+type Prng struct {
+	chacha *chacha20.FastKeyErasureCipher
 	seeded bool
 }
 
-// NewChachaPRNG generates a NewChachaPRNG form a seed of 256 bits of length
-// and an optional salt (e.g., the sessionID).
-func NewChachaPRNG(seed, salt []byte) (csprng.CSPRNG, error) {
-	chachaPrng := new(PRNG)
+// NewPrng generates a Fast-erasure PRNG using Chacha20 from a
+// seed of 256 bits of length and an optional salt.
+func NewPrng(seed, salt []byte) (csprng.CSPRNG, error) {
+	chachaPrng := new(Prng)
 	if err := chachaPrng.Reseed(seed, salt); err != nil {
 		return nil, errs.WrapFailed(err, "Could not create ChachaPRNG")
 	}
@@ -29,22 +26,22 @@ func NewChachaPRNG(seed, salt []byte) (csprng.CSPRNG, error) {
 }
 
 // New returns a new ChachaPRNG with the provided seed and salt.
-func (*PRNG) New(seed, salt []byte) (csprng.CSPRNG, error) {
-	return NewChachaPRNG(seed, salt)
+func (*Prng) New(seed, salt []byte) (csprng.CSPRNG, error) {
+	return NewPrng(seed, salt)
 }
 
 // Generate fills the buffer with pseudo-random bytes. This PRNG does not use
 // the `salt` parameter other than in the instantiation.
-func (c *PRNG) Generate(buffer, salt []byte) error {
+func (c *Prng) Generate(buffer, salt []byte) error {
 	if !c.seeded {
 		return errs.NewRandomSample("ChachaPRNG not seeded")
 	}
-	c.chacha.XORKeyStream(buffer, make([]byte, len(buffer)))
+	c.chacha.XORKeyStream(buffer, buffer)
 	return nil
 }
 
 // Read fills the buffer with pseudo-random bytes.
-func (c *PRNG) Read(buffer []byte) (n int, err error) {
+func (c *Prng) Read(buffer []byte) (n int, err error) {
 	if err = c.Generate(buffer, nil); err != nil {
 		return 0, errs.WrapFailed(err, "Could not Generate bytes on ChachaPRNG")
 	}
@@ -52,7 +49,7 @@ func (c *PRNG) Read(buffer []byte) (n int, err error) {
 }
 
 // Reseed refreshes the PRNG with the provided seed material. For ChachaPRNG, it is equivalent to `ResetState`.
-func (c *PRNG) Reseed(seed, salt []byte) (err error) {
+func (c *Prng) Reseed(seed, salt []byte) (err error) {
 	switch seedLen := len(seed); {
 	case seedLen == 0:
 		c.chacha = nil
@@ -72,9 +69,9 @@ func (c *PRNG) Reseed(seed, salt []byte) (err error) {
 		default:
 			salt = salt[:chacha20.NonceSizeX]
 		}
-		c.chacha, err = chacha20.NewUnauthenticatedCipher(seed, salt)
+		c.chacha, err = chacha20.NewFastErasureCipher(seed, salt)
 		if err != nil {
-			return errs.WrapFailed(err, "Could not create Chacha stream cipher")
+			return errs.WrapFailed(err, "Could not create ChachaPRNG")
 		}
 		c.seeded = true
 		return nil
@@ -82,7 +79,7 @@ func (c *PRNG) Reseed(seed, salt []byte) (err error) {
 }
 
 // Seed re-initialises the prng.
-func (c *PRNG) Seed(seed, salt []byte) error {
+func (c *Prng) Seed(seed, salt []byte) error {
 	err := c.Reseed(seed, salt)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not re-initialise ChachaPRNG")
@@ -90,6 +87,6 @@ func (c *PRNG) Seed(seed, salt []byte) error {
 	return nil
 }
 
-func (*PRNG) SecurityStrength() int {
+func (*Prng) SecurityStrength() int {
 	return ChachaPRNGSecurityStrength
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
@@ -54,7 +54,7 @@ func TestMultiplicationHappyPath(t *testing.T) {
 				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
-				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				seededPrng, err := fkechacha20.NewPrng(nil, nil)
 				require.NoError(t, err)
 
 				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
@@ -95,7 +95,7 @@ func Test_MultiplicationFailForDifferentSID(t *testing.T) {
 				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
-				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				seededPrng, err := fkechacha20.NewPrng(nil, nil)
 				require.NoError(t, err)
 
 				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid2)
@@ -134,7 +134,7 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
 				require.NoError(t, err)
 
-				seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+				seededPrng, err := fkechacha20.NewPrng(nil, nil)
 				require.NoError(t, err)
 
 				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)

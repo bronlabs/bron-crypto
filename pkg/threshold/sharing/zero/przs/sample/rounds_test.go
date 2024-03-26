@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
@@ -109,7 +109,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	require.NoError(t, err)
 	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
 	require.NoError(t, err)
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 	N := make([]int, n)
 	for i := range n {
@@ -142,7 +142,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 	N := make([]int, n)
 	for i := range n {
@@ -221,7 +221,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
-	prng, err := chacha.NewChachaPRNG(nil, nil)
+	prng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 	aliceParticipant, err := sample.NewParticipant(uniqueSessionId, aliceIdentity.(types.AuthKey), aliceSeed, protocol, hashset.NewHashableHashSet(aliceIdentity, bobIdentity, charlieIdentity), prng)
 	require.NoError(t, err)

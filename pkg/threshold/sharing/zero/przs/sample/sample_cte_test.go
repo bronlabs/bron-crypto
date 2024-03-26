@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -110,7 +110,7 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 		for j := range allIdentities {
 			seeds[j] = allPairwiseSeeds[j]
 		}
-		seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+		seededPrng, err := fkechacha20.NewPrng(nil, nil)
 		require.NoError(t, err)
 		participants, err = testutils.MakeSampleParticipants(protocol, allIdentities, seeds, seededPrng, nil)
 		require.NoError(t, err)

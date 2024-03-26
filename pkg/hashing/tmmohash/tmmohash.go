@@ -7,12 +7,14 @@ import (
 	"crypto/aes"
 	"crypto/subtle"
 	"hash"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash/keyedblock"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/cipher"
+	keyedaes "github.com/copperexchange/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
 )
 
 const (
@@ -46,12 +48,12 @@ B) Pad the last input block with zeros if it doesn't fit the AES block.
 See the README.md for the full algorithm description.
 */
 type TmmoHash struct {
-	keySize          int                   // key size (in bytes) for the internal block cipher.
-	outputBlocks     int                   // Fixed digest size in # AES blocks
-	counter          int                   // Hash-wide counter to use as index in TMMO
-	keyedBlockCipher keyedblock.KeyedBlock // Hold the underlying block cipher π (AES)
-	iv               []byte                // Initialization Vector. Stored to be able to `.Reset()`
-	digest           []byte                // Hash output
+	keySize          int               // key size (in bytes) for the internal block cipher.
+	outputBlocks     int               // Fixed digest size in # AES blocks
+	counter          int               // Hash-wide counter to use as index in TMMO
+	keyedBlockCipher cipher.KeyedBlock // Hold the underlying block cipher π (AES)
+	iv               []byte            // Initialization Vector. Stored to be able to `.Reset()`
+	digest           []byte            // Hash output
 
 	// Auxiliary variables. Allocated once and used on every `Write`, thus this
 	// implementation is not thread-safe (only one thread per ExtendedTMMO).
@@ -89,7 +91,7 @@ func NewTmmoHash(keySize, outputSize int, iv []byte) (hash.Hash, error) {
 	}
 	tempKey := make([]byte, keySize)
 	copy(tempKey, internalHashIv[:keySize])
-	blockCipher, err := keyedblock.NewKeyedCipher(tempKey)
+	blockCipher, err := keyedaes.NewKeyedCipher(tempKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create block cipher")
 	}
@@ -135,7 +137,10 @@ func (h *TmmoHash) Write(input []byte) (n int, err error) {
 			subtle.XORBytes(h.tempKey[aes.BlockSize:], h.tempKey[aes.BlockSize:], h.tempKey[:aes.BlockSize])
 			// 	key[0] = TMMO^π(x,i)
 			copy(h.tempKey[:aes.BlockSize], outputBlock)
-			h.keyedBlockCipher.SetKey(h.tempKey)
+			err := h.keyedBlockCipher.SetKey(h.tempKey)
+			if err != nil {
+				return (i + 1) * aes.BlockSize, errs.NewFailed("could not re-key aes")
+			}
 		}
 	}
 	return len(h.digest), nil
@@ -156,7 +161,7 @@ func (*TmmoHash) BlockSize() int {
 func (h *TmmoHash) Reset() {
 	h.counter = 0
 	copy(h.tempKey, h.iv[:h.keySize])
-	blockCipher, err := keyedblock.NewKeyedCipher(h.tempKey)
+	blockCipher, err := keyedaes.NewKeyedCipher(h.tempKey)
 	if err != nil {
 		panic("failed to create block cipher") // panic because Reset doesn't return error
 	}
@@ -205,16 +210,15 @@ func NewTmmoPrng(keySize, bufferSize int, seed, salt []byte) (csprng.CSPRNG, err
 
 // Clone creates a copy of the current hash.
 func (h *TmmoHash) Clone() csprng.CSPRNG {
-	iv := append(make([]byte, 0, len(h.iv)), h.iv...)
 	return &TmmoHash{
 		keySize:           h.keySize,
 		outputBlocks:      h.outputBlocks,
 		counter:           h.counter,
-		keyedBlockCipher:  h.keyedBlockCipher.Clone(iv),
-		iv:                append(make([]byte, 0, len(h.iv)), h.iv...),
-		digest:            append(make([]byte, 0, len(h.digest)), h.digest...),
-		permutedOnceBlock: append(make([]byte, 0, aes.BlockSize), h.permutedOnceBlock...),
-		tempKey:           append(make([]byte, 0, h.keySize), h.tempKey...),
+		keyedBlockCipher:  h.keyedBlockCipher.Clone(),
+		iv:                slices.Clone(h.iv),
+		digest:            slices.Clone(h.digest),
+		permutedOnceBlock: slices.Clone(h.permutedOnceBlock),
+		tempKey:           slices.Clone(h.tempKey),
 		prngBytePointer:   h.prngBytePointer,
 	}
 }

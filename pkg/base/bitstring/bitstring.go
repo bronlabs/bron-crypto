@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"golang.org/x/exp/constraints"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -150,4 +152,11 @@ func TruncateWithEllipsis(text string, maxLen int) string {
 		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-maxLen)
 	}
 	return text
+}
+
+// Memclr clears a byte slice. Compiles to `memclr` (https://github.com/golang/go/issues/5373).
+func Memclr[T constraints.Integer](dst []T) {
+	for i := range dst {
+		dst[i] = 0
+	}
 }

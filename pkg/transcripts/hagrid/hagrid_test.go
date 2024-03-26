@@ -16,7 +16,7 @@ func TestSimpleTranscript(t *testing.T) {
 
 	cBytes, _ := mt.ExtractBytes("challenge", 32)
 	cHex := hex.EncodeToString(cBytes)
-	expectedHex := "36e5c27c9fb496cb398e3cd11e41cf54973cb17c854dacfc7f1c62d207e27e7b"
+	expectedHex := "24d665903e0d0cc2a28aa921f87953c4a6c1eae6ff4d3837c0a4a12eacccd14a"
 
 	if cHex != expectedHex {
 		t.Errorf("\nGot : %s\nWant: %s", cHex, expectedHex)
@@ -54,7 +54,7 @@ func TestComplexTranscript(t *testing.T) {
 		tr.AppendMessages("challengedata", chlBytes)
 	}
 
-	expectedChlHex := "4b9293b6ceb652ec9e9cf33429add29a537781a59918d2820135770238b466b6"
+	expectedChlHex := "d09210cf6cf966acb4a75b556a09dd8ab8cebefdbfb5755903014cadef003152"
 	chlHex := hex.EncodeToString(chlBytes)
 
 	if chlHex != expectedChlHex {

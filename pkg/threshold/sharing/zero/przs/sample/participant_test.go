@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
@@ -44,7 +44,7 @@ func Test_CanInitialize(t *testing.T) {
 
 	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
-	prng, err := chacha.NewChachaPRNG(nil, nil)
+	prng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 
 	presentParties := protocol.Participants()

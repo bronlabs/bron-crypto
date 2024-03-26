@@ -15,7 +15,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
@@ -46,11 +46,11 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 	var err error
 	seedablePrng, ok := prng.(csprng.CSPRNG)
 	if !ok {
-		var seed [chacha.ChachaPRNGSecurityStrength]byte
+		var seed [fkechacha20.ChachaPRNGSecurityStrength]byte
 		if _, err := io.ReadFull(prng, seed[:]); err != nil {
 			panic(err)
 		}
-		seedablePrng, err = chacha.NewChachaPRNG(seed[:], salt)
+		seedablePrng, err = fkechacha20.NewPrng(seed[:], salt)
 		if err != nil {
 			panic(err)
 		}

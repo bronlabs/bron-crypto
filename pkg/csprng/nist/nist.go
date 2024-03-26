@@ -17,10 +17,10 @@ const (
 	)
 	// Parameters defined at Table 3 of section 10.2.1 in SP800-90A Rev. 1.
 	//------------- Parameter ---------//---- Value ---//--- Name/s in SP800-90A ---//.
-	reseedInterval          = 1 << 48  // 2^48 times   //  `reseed_interval`
-	maxNumberOfBytesDF      = 512 >> 3 // 512 bits     //  `max_number_of_bits`
-	maxNumberOfBytesRequest = 1 << 16  // 2^19 bit     //  `max_number_of_bits_per_request`
-	maxLength               = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
+	reseedInterval                = 1 << 48  // 2^48 times   //  `reseed_interval`
+	maxNumberOfBytesDF            = 512 >> 3 // 512 bits     //  `max_number_of_bits`
+	maxNumberOfBytesRequest       = 1 << 16  // 2^19 bit     //  `max_number_of_bits_per_request`
+	maxLength               int64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
 	// .                                               //   `max_personalization_string_length`.
 )
 
@@ -70,7 +70,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 		}
 	case entropyInputLen < securityStrength:
 		return nil, errs.NewLength("entropyInput too small")
-	case entropyInputLen > maxLength:
+	case int64(entropyInputLen) > maxLength:
 		return nil, errs.NewLength("entropyInput too large")
 	}
 	// 8. Obtain a nonce if not provided.
@@ -120,7 +120,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 		}
 	case entropyInputLen < prg.SecurityStrength():
 		return errs.NewLength("entropyInput too small")
-	case entropyInputLen > maxLength:
+	case int64(entropyInputLen) > maxLength:
 		return errs.NewLength("entropyInput too large")
 	}
 	// 6. new_working_state = Reseed_algorithm(working_state, entropy_input,
@@ -216,7 +216,7 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen < prg.SecurityStrength():
 		return errs.NewLength("entropyInput too small")
-	case entropyInputLen > maxLength:
+	case int64(entropyInputLen) > maxLength:
 		return errs.NewLength("entropyInput too large")
 	}
 	switch nonceLen := len(nonce); {

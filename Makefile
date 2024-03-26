@@ -71,10 +71,10 @@ test:
 test-long: ## Runs all tests, including long-running tests
 	${GO} test ${TEST_CLAUSE} -timeout 120m ./...
 
-.PHONY: check-aes
-check-aes:
-	chmod +x ${SCRIPTS_DIR}/check_aes.sh
-	${SCRIPTS_DIR}/check_aes.sh
+.PHONY: sync-thirdparty
+sync-thirdparty:
+	chmod +x ${SCRIPTS_DIR}/sync_thirdparty.sh
+	${SCRIPTS_DIR}/sync_thirdparty.sh
 
 .PHONY: deflake
 deflake: ## Runs short tests many times to detect flakes

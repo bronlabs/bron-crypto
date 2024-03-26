@@ -18,7 +18,7 @@ func TestFqSetUint64(t *testing.T) {
 	act := new(Fq).SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
-	require.Equal(t, int(act[0]), 0x4c46eb2100000001)
+	require.Equal(t, int64(act[0]), int64(0x4c46eb2100000001))
 }
 
 func TestFqAdd(t *testing.T) {

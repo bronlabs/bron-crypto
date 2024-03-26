@@ -19,7 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
 )
@@ -93,7 +93,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 
 	N := make([]int, n)
@@ -137,7 +137,7 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 
 	identities := make([]types.IdentityKey, threshold)
@@ -210,7 +210,7 @@ func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Has
 	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 
 	// Set a divergent SID for the first participant. Since we run it for all

@@ -978,6 +978,13 @@ issues:
       linters:
         staticcheck
 
+    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and 
+    # unused constants (poly).
+    - path: thirdparty/
+      linters:
+        - dupl
+        - unused
+
     # a lot of false positives for cselect
     - path: curves/
       text: "nilness: nil dereference in field selection"

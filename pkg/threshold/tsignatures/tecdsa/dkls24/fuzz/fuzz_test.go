@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/chacha"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	dklstu "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -67,7 +67,7 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []types.Identi
 	protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 	signerIdentities := identities[:threshold]
-	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
 	err = testutils.RunInteractiveSign(protocolConfig, signerIdentities, shards, message, seededPrng, nil)
 	require.NoError(t, err)
