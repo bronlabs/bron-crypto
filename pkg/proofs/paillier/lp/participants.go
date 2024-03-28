@@ -9,7 +9,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -25,16 +25,16 @@ type Participant struct {
 	round           int
 	sessionId       []byte
 	transcript      transcripts.Transcript
-	nthRootProtocol sigma.Protocol[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response]
+	nthRootProtocol sigma.Protocol[nthroots.Statement, nthroots.Witness, nthroots.Commitment, nthroots.State, nthroots.Response]
 	prng            io.Reader
 
 	_ ds.Incomparable
 }
 
 type VerifierState struct {
-	rootProvers []*sigma.Prover[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response]
-	x           []*paillier.CipherText
-	y           []*saferith.Nat
+	nthRootProver *sigma.Prover[nthroots.Statement, nthroots.Witness, nthroots.Commitment, nthroots.State, nthroots.Response]
+	x             []*paillier.CipherText
+	y             []*saferith.Nat
 
 	_ ds.Incomparable
 }
@@ -48,8 +48,8 @@ type Verifier struct {
 }
 
 type ProverState struct {
-	rootVerifiers []*sigma.Verifier[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response]
-	x             []*paillier.CipherText
+	rootVerifier *sigma.Verifier[nthroots.Statement, nthroots.Witness, nthroots.Commitment, nthroots.State, nthroots.Response]
+	x            []*paillier.CipherText
 
 	_ ds.Incomparable
 }
@@ -73,7 +73,7 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierPublicKey.N, prng)
+	nthRootSigmaProtocol, err := nthroots.NewSigmaProtocol(paillierPublicKey.GetNModulus(), paillierPublicKey.GetNNModulus(), k, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}
@@ -122,7 +122,7 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nthRootSigmaProtocol, err := nthroot.NewSigmaProtocol(paillierSecretKey.N, prng)
+	nthRootSigmaProtocol, err := nthroots.NewSigmaProtocol(paillierSecretKey.GetNModulus(), paillierSecretKey.GetNNModulus(), k, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}

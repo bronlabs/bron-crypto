@@ -26,11 +26,10 @@ func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 	mu := d.sk.GetMu()
 	nMod := d.sk.GetNModulus()
 	nnMod := d.sk.GetNNModulus()
-	crt := d.sk.GetCrtNNParams()
 
-	cToLambda := expCrt(crt, cipherText.C, d.sk.Phi, nnMod)
+	cToLambda := nnMod.Exp(cipherText.C, d.sk.Phi)
 	l := d.sk.L(cToLambda)
-	m := new(saferith.Nat).ModMul(l, mu, nMod)
+	m := new(saferith.Nat).ModMul(l, mu, nMod.Modulus())
 
 	return m, nil
 }

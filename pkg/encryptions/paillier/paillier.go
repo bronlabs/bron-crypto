@@ -19,7 +19,7 @@ type CipherText struct {
 
 func (c *CipherText) Validate(pk *PublicKey) error {
 	nnMod := pk.GetNNModulus()
-	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(nnMod) != 1 {
+	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(nnMod.Modulus()) != 1 {
 		return errs.NewValidation("invalid cipher text")
 	}
 

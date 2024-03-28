@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/copperexchange/krypton-primitives/pkg/base/saferith_ex"
 	"io"
 	"sync"
 
@@ -14,8 +15,8 @@ import (
 )
 
 type PublicKeyPrecomputed struct {
-	nModulus  *saferith.Modulus
-	nnModulus *saferith.Modulus
+	nMod  saferith_ex.Modulus
+	nnMod saferith_ex.Modulus
 }
 
 type PublicKey struct {
@@ -41,14 +42,14 @@ func NewPublicKey(n *saferith.Nat) (*PublicKey, error) {
 	return pk, nil
 }
 
-func (pk *PublicKey) GetNModulus() *saferith.Modulus {
+func (pk *PublicKey) GetNModulus() saferith_ex.Modulus {
 	pk.precomputedOnce.Do(func() { pk.precompute() })
-	return pk.precomputed.nModulus
+	return pk.precomputed.nMod
 }
 
-func (pk *PublicKey) GetNNModulus() *saferith.Modulus {
+func (pk *PublicKey) GetNNModulus() saferith_ex.Modulus {
 	pk.precomputedOnce.Do(func() { pk.precompute() })
-	return pk.precomputed.nnModulus
+	return pk.precomputed.nnMod
 }
 
 func (pk *PublicKey) Add(lhs, rhs *CipherText) (*CipherText, error) {
@@ -62,7 +63,7 @@ func (pk *PublicKey) Add(lhs, rhs *CipherText) (*CipherText, error) {
 	nnMod := pk.GetNNModulus()
 
 	return &CipherText{
-		C: new(saferith.Nat).ModMul(lhs.C, rhs.C, nnMod),
+		C: new(saferith.Nat).ModMul(lhs.C, rhs.C, nnMod.Modulus()),
 	}, nil
 }
 
@@ -75,8 +76,8 @@ func (pk *PublicKey) AddPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	}
 
 	nnModulus := pk.GetNNModulus()
-	rhsC := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhs, nnModulus), natOne, nnModulus)
-	result := new(saferith.Nat).ModMul(lhs.C, rhsC, nnModulus)
+	rhsC := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhs, nnModulus.Modulus()), natOne, nnModulus.Modulus())
+	result := new(saferith.Nat).ModMul(lhs.C, rhsC, nnModulus.Modulus())
 
 	return &CipherText{
 		C: result,
@@ -92,8 +93,8 @@ func (pk *PublicKey) Sub(lhs, rhs *CipherText) (*CipherText, error) {
 	}
 
 	nnMod := pk.GetNNModulus()
-	rhsInv := new(saferith.Nat).ModInverse(rhs.C, nnMod)
-	result := new(saferith.Nat).ModMul(lhs.C, rhsInv, nnMod)
+	rhsInv := new(saferith.Nat).ModInverse(rhs.C, nnMod.Modulus())
+	result := new(saferith.Nat).ModMul(lhs.C, rhsInv, nnMod.Modulus())
 
 	return &CipherText{
 		C: result,
@@ -110,9 +111,9 @@ func (pk *PublicKey) SubPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 
 	nnMod := pk.GetNNModulus()
 	nMod := pk.GetNModulus()
-	rhsNeg := new(saferith.Nat).ModNeg(rhs, nMod)
-	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnMod), natOne, nnMod)
-	result := new(saferith.Nat).ModMul(lhs.C, rhsCInv, nnMod)
+	rhsNeg := new(saferith.Nat).ModNeg(rhs, nMod.Modulus())
+	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnMod.Modulus()), natOne, nnMod.Modulus())
+	result := new(saferith.Nat).ModMul(lhs.C, rhsCInv, nnMod.Modulus())
 
 	return &CipherText{
 		C: result,
@@ -128,7 +129,7 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	}
 
 	nnMod := pk.GetNNModulus()
-	result := new(saferith.Nat).Exp(lhs.C, rhs, nnMod)
+	result := nnMod.Exp(lhs.C, rhs)
 	return &CipherText{
 		C: result,
 	}, nil
@@ -139,18 +140,50 @@ func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 		return nil, errs.NewValidation("invalid plainText")
 	}
 	nMod := pk.GetNModulus()
-	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(nMod) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(nMod.Modulus()) != 1 {
 		return nil, errs.NewValidation("invalid nonce")
 	}
 
 	nnMod := pk.GetNNModulus()
-	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), natOne, nnMod)
-	rToN := new(saferith.Nat).Exp(nonce, pk.N, nnMod)
-	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
+	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod.Modulus()), natOne, nnMod.Modulus())
+	rToN := nnMod.Exp(nonce, pk.N)
+	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod.Modulus())
 
 	return &CipherText{
 		C: cipherText,
 	}, nil
+}
+
+func (pk *PublicKey) EncryptManyWithNonce(plainTexts []*PlainText, nonces []*saferith.Nat) ([]*CipherText, error) {
+	if plainTexts == nil {
+		return nil, errs.NewValidation("invalid plainText")
+	}
+	for _, p := range plainTexts {
+		if !utils.IsLess(p, pk.N) {
+			return nil, errs.NewValidation("invalid plainText")
+		}
+	}
+
+	nMod := pk.GetNModulus()
+	if nonces == nil || len(nonces) != len(plainTexts) {
+		return nil, errs.NewValidation("invalid nonce")
+	}
+	for _, r := range nonces {
+		if r.EqZero() == 1 || !utils.IsLess(r, pk.N) || r.IsUnit(nMod.Modulus()) != 1 {
+			return nil, errs.NewValidation("invalid nonce")
+		}
+	}
+
+	nnMod := pk.GetNNModulus()
+	rToN := nnMod.MultiBaseExp(nonces, pk.N)
+
+	cipherTexts := make([]*CipherText, len(plainTexts))
+	for i, p := range plainTexts {
+		gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(p, pk.N, nnMod.Modulus()), natOne, nnMod.Modulus())
+		cipherTexts[i] = &CipherText{C: new(saferith.Nat).ModMul(gToM, rToN[i], nnMod.Modulus())}
+	}
+
+	return cipherTexts, nil
 }
 
 func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText, *saferith.Nat, error) {
@@ -169,7 +202,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 			return nil, nil, errs.NewRandomSample("cannot sample nonce")
 		}
 		nonce = new(saferith.Nat).SetBig(nonceBig, pk.N.AnnouncedLen())
-		if nonce.EqZero() != 1 && nonce.IsUnit(nMod) == 1 {
+		if nonce.EqZero() != 1 && nonce.IsUnit(nMod.Modulus()) == 1 {
 			break
 		}
 	}
@@ -180,6 +213,42 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	}
 
 	return cipherText, nonce, nil
+}
+
+func (pk *PublicKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*CipherText, []*saferith.Nat, error) {
+	if prng == nil {
+		return nil, nil, errs.NewIsNil("prng")
+	}
+	if plainTexts == nil {
+		return nil, nil, errs.NewValidation("invalid plainText")
+	}
+	for _, p := range plainTexts {
+		if !utils.IsLess(p, pk.N) {
+			return nil, nil, errs.NewValidation("invalid plainText")
+		}
+	}
+
+	nMod := pk.GetNModulus()
+	nonces := make([]*saferith.Nat, len(plainTexts))
+	for i := 0; i < len(plainTexts); i++ {
+		for {
+			nonceBig, err := crand.Int(prng, pk.N.Big())
+			if err != nil {
+				return nil, nil, errs.NewRandomSample("cannot sample nonce")
+			}
+			nonces[i] = new(saferith.Nat).SetBig(nonceBig, pk.N.AnnouncedLen())
+			if nonces[i].EqZero() != 1 && nonces[i].IsUnit(nMod.Modulus()) == 1 {
+				break
+			}
+		}
+	}
+
+	cipherTexts, err := pk.EncryptManyWithNonce(plainTexts, nonces)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot encrypt")
+	}
+
+	return cipherTexts, nonces, nil
 }
 
 func (pk *PublicKey) MarshalJSON() ([]byte, error) {
@@ -220,11 +289,19 @@ func (pk *PublicKey) Validate() error {
 }
 
 func (pk *PublicKey) precompute() {
-	nMod := saferith.ModulusFromNat(pk.N)
 	nn := new(saferith.Nat).Mul(pk.N, pk.N, -1)
-	nnMod := saferith.ModulusFromNat(nn)
+
+	nMod, err := saferith_ex.NewOddModulus(pk.N)
+	if err != nil {
+		panic(err)
+	}
+	nnMod, err := saferith_ex.NewOddModulus(nn)
+	if err != nil {
+		panic(err)
+	}
+
 	pk.precomputed = &PublicKeyPrecomputed{
-		nModulus:  nMod,
-		nnModulus: nnMod,
+		nMod:  nMod,
+		nnMod: nnMod,
 	}
 }

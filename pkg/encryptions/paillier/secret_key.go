@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/copperexchange/krypton-primitives/pkg/base/saferith_ex"
 	"io"
 	"math/big"
 	"sync"
@@ -14,42 +15,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
-type CrtParams struct {
-	m1      *saferith.Modulus
-	phiM1   *saferith.Modulus
-	m2      *saferith.Modulus
-	phiM2   *saferith.Modulus
-	m1InvM2 *saferith.Nat
-}
-
-func (p *CrtParams) GetM1() *saferith.Modulus {
-	return p.m1
-}
-
-func (p *CrtParams) GetPhiM1() *saferith.Modulus {
-	return p.phiM1
-}
-
-func (p *CrtParams) GetM2() *saferith.Modulus {
-	return p.m2
-}
-
-func (p *CrtParams) GetPhiM2() *saferith.Modulus {
-	return p.phiM2
-}
-
-func (p *CrtParams) GetM1InvM2() *saferith.Nat {
-	return p.m1InvM2
-}
-
 type SecretKeyPrecomputed struct {
 	p  *saferith.Nat
 	q  *saferith.Nat
 	mu *saferith.Nat
 
-	// CRT parameters
-	crtN  CrtParams
-	crtNN CrtParams
+	modNEx  saferith_ex.Modulus
+	modNNEx saferith_ex.Modulus
 }
 
 type SecretKey struct {
@@ -99,20 +71,51 @@ func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	if plainText == nil || !utils.IsLess(plainText, sk.N) {
 		return nil, errs.NewValidation("invalid plainText")
 	}
-	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, sk.N) || nonce.IsUnit(nMod) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, sk.N) || nonce.IsUnit(nMod.Modulus()) != 1 {
 		return nil, errs.NewValidation("invalid nonce")
 	}
 
 	nnMod := sk.GetNNModulus()
-	crt := sk.GetCrtNNParams()
 
-	rToN := expCrt(crt, nonce, sk.N, nnMod)
-	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), natOne, nnMod)
-	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
+	rToN := nnMod.Exp(nonce, sk.N)
+	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod.Modulus()), natOne, nnMod.Modulus())
+	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod.Modulus())
 
 	return &CipherText{
 		C: cipherText,
 	}, nil
+}
+
+func (sk *SecretKey) EncryptManyWithNonce(plainTexts []*PlainText, nonces []*saferith.Nat) ([]*CipherText, error) {
+	if plainTexts == nil {
+		return nil, errs.NewValidation("invalid plainText")
+	}
+	for _, p := range plainTexts {
+		if !utils.IsLess(p, sk.N) {
+			return nil, errs.NewValidation("invalid plainText")
+		}
+	}
+
+	nMod := sk.GetNModulus()
+	if nonces == nil || len(nonces) != len(plainTexts) {
+		return nil, errs.NewValidation("invalid nonce")
+	}
+	for _, r := range nonces {
+		if r.EqZero() == 1 || !utils.IsLess(r, sk.N) || r.IsUnit(nMod.Modulus()) != 1 {
+			return nil, errs.NewValidation("invalid nonce")
+		}
+	}
+
+	nnMod := sk.GetNNModulus()
+	rToN := nnMod.MultiBaseExp(nonces, sk.N)
+
+	cipherTexts := make([]*CipherText, len(plainTexts))
+	for i, p := range plainTexts {
+		gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(p, sk.N, nnMod.Modulus()), natOne, nnMod.Modulus())
+		cipherTexts[i] = &CipherText{C: new(saferith.Nat).ModMul(gToM, rToN[i], nnMod.Modulus())}
+	}
+
+	return cipherTexts, nil
 }
 
 func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText, *saferith.Nat, error) {
@@ -131,7 +134,7 @@ func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 			return nil, nil, errs.NewRandomSample("cannot sample nonce")
 		}
 		nonce = new(saferith.Nat).SetBig(nonceBig, sk.N.AnnouncedLen())
-		if nonce.EqZero() != 1 && nonce.IsUnit(nMod) == 1 {
+		if nonce.EqZero() != 1 && nonce.IsUnit(nMod.Modulus()) == 1 {
 			break
 		}
 	}
@@ -144,6 +147,42 @@ func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	return cipherText, nonce, nil
 }
 
+func (sk *SecretKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*CipherText, []*saferith.Nat, error) {
+	if prng == nil {
+		return nil, nil, errs.NewIsNil("prng")
+	}
+	if plainTexts == nil {
+		return nil, nil, errs.NewValidation("invalid plainText")
+	}
+	for _, p := range plainTexts {
+		if !utils.IsLess(p, sk.N) {
+			return nil, nil, errs.NewValidation("invalid plainText")
+		}
+	}
+
+	nMod := sk.GetNModulus()
+	nonces := make([]*saferith.Nat, len(plainTexts))
+	for i := 0; i < len(plainTexts); i++ {
+		for {
+			nonceBig, err := crand.Int(prng, sk.N.Big())
+			if err != nil {
+				return nil, nil, errs.NewRandomSample("cannot sample nonce")
+			}
+			nonces[i] = new(saferith.Nat).SetBig(nonceBig, sk.N.AnnouncedLen())
+			if nonces[i].EqZero() != 1 && nonces[i].IsUnit(nMod.Modulus()) == 1 {
+				break
+			}
+		}
+	}
+
+	cipherTexts, err := sk.EncryptManyWithNonce(plainTexts, nonces)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot encrypt")
+	}
+
+	return cipherTexts, nonces, nil
+}
+
 func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText, error) {
 	if err := lhs.Validate(&sk.PublicKey); err != nil {
 		return nil, errs.WrapValidation(err, "invalid lhs")
@@ -153,8 +192,7 @@ func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	}
 
 	nnMod := sk.GetNNModulus()
-	crt := sk.GetCrtNNParams()
-	result := expCrt(crt, lhs.C, rhs, nnMod)
+	result := nnMod.Exp(lhs.C, rhs)
 
 	return &CipherText{
 		C: result,
@@ -212,14 +250,14 @@ func (sk *SecretKey) GetMu() *saferith.Nat {
 	return sk.precomputed.mu
 }
 
-func (sk *SecretKey) GetCrtNParams() *CrtParams {
+func (sk *SecretKey) GetNModulus() saferith_ex.Modulus {
 	sk.precomputedOnce.Do(func() { sk.precompute() })
-	return &sk.precomputed.crtN
+	return sk.precomputed.modNEx
 }
 
-func (sk *SecretKey) GetCrtNNParams() *CrtParams {
+func (sk *SecretKey) GetNNModulus() saferith_ex.Modulus {
 	sk.precomputedOnce.Do(func() { sk.precompute() })
-	return &sk.precomputed.crtNN
+	return sk.precomputed.modNNEx
 }
 
 func (sk *SecretKey) Validate() error {
@@ -243,10 +281,11 @@ func (sk *SecretKey) Validate() error {
 }
 
 func (sk *SecretKey) L(x *saferith.Nat) *saferith.Nat {
+	nnMod := sk.GetNNModulus()
 	nMod := sk.GetNModulus()
 
-	xMinusOne := new(saferith.Nat).Sub(x, natOne, sk.GetNNModulus().BitLen())
-	l := new(saferith.Nat).Div(xMinusOne, nMod, nMod.BitLen())
+	xMinusOne := new(saferith.Nat).Sub(x, natOne, nnMod.Modulus().BitLen())
+	l := new(saferith.Nat).Div(xMinusOne, nMod.Modulus(), nMod.Modulus().BitLen())
 	return l
 }
 
@@ -261,47 +300,25 @@ func (sk *SecretKey) precompute() {
 	sqrtDelta := new(saferith.Nat).SetBig(sqrtDeltaBig, sqrtDeltaBig.BitLen())
 	p := new(saferith.Nat).Rsh(new(saferith.Nat).Sub(minusB, sqrtDelta, -1), 1, -1)
 	q := new(saferith.Nat).Rsh(new(saferith.Nat).Add(minusB, sqrtDelta, -1), 1, -1)
-	qMod := saferith.ModulusFromNat(q)
 	pMinusOne := saferith.ModulusFromNat(new(saferith.Nat).Sub(p, natOne, -1))
 	qMinusOne := saferith.ModulusFromNat(new(saferith.Nat).Sub(q, natOne, -1))
 	nPhi := new(saferith.Nat).Mul(pMinusOne.Nat(), qMinusOne.Nat(), -1)
-	nPhiInv := new(saferith.Nat).ModInverse(nPhi, sk.GetNModulus())
-	pInvQ := new(saferith.Nat).ModInverse(p, qMod)
-	pp := new(saferith.Nat).Mul(p, p, -1)
-	qq := new(saferith.Nat).Mul(q, q, -1)
-	qqMod := saferith.ModulusFromNat(qq)
-	ppPhi := saferith.ModulusFromNat(new(saferith.Nat).Sub(pp, p, -1))
-	qqPhi := saferith.ModulusFromNat(new(saferith.Nat).Sub(qq, q, -1))
-	ppInvQQ := new(saferith.Nat).ModInverse(pp, qqMod)
+	nPhiInv := new(saferith.Nat).ModInverse(nPhi, sk.PublicKey.GetNModulus().Modulus())
+
+	modNEx, err := saferith_ex.NewTwoPrimePowersModulus(p, 1, q, 1)
+	if err != nil {
+		panic(err)
+	}
+	modNNEx, err := saferith_ex.NewTwoPrimePowersModulus(p, 2, q, 2)
+	if err != nil {
+		panic(err)
+	}
 
 	sk.precomputed = &SecretKeyPrecomputed{
-		p:  p,
-		q:  q,
-		mu: nPhiInv,
-		crtN: CrtParams{
-			m1:      saferith.ModulusFromNat(p),
-			phiM1:   pMinusOne,
-			m2:      qMod,
-			phiM2:   qMinusOne,
-			m1InvM2: pInvQ,
-		},
-		crtNN: CrtParams{
-			m1:      saferith.ModulusFromNat(pp),
-			phiM1:   ppPhi,
-			m2:      qqMod,
-			phiM2:   qqPhi,
-			m1InvM2: ppInvQQ,
-		},
+		p:       p,
+		q:       q,
+		mu:      nPhiInv,
+		modNEx:  modNEx,
+		modNNEx: modNNEx,
 	}
-}
-
-func expCrt(crtParams *CrtParams, base, exponent *saferith.Nat, modulus *saferith.Modulus) *saferith.Nat {
-	eModPhiM1 := new(saferith.Nat).Mod(exponent, crtParams.phiM1)
-	eModPhiM2 := new(saferith.Nat).Mod(exponent, crtParams.phiM2)
-	r1 := new(saferith.Nat).Exp(base, eModPhiM1, crtParams.m1)
-	r2 := new(saferith.Nat).Exp(base, eModPhiM2, crtParams.m2)
-	t1 := new(saferith.Nat).ModSub(r2, r1, crtParams.m2)
-	t2 := new(saferith.Nat).ModMul(t1, crtParams.m1InvM2, crtParams.m2)
-	t3 := new(saferith.Nat).ModMul(t2, crtParams.m1.Nat(), modulus)
-	return new(saferith.Nat).ModAdd(t3, r1, modulus)
 }
