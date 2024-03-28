@@ -61,7 +61,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threhsold protocol config is invalid")
 	}
 	if prng == nil {

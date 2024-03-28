@@ -1,7 +1,8 @@
 package sigma
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 const (
@@ -26,6 +27,8 @@ type (
 )
 
 type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interface {
+	types.Protocol
+
 	Name() Name
 	ComputeProverCommitment(statement X, witness W) (A, S, error)
 	ComputeProverResponse(statement X, witness W, commitment A, state S, challenge ChallengeBytes) (Z, error)
@@ -49,14 +52,20 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {
-	sessionId  []byte
-	transcript transcripts.Transcript
+	types.Participant[Protocol[X, W, A, S, Z]]
 
-	sigmaProtocol  Protocol[X, W, A, S, Z]
 	statement      X
 	commitment     A
 	challengeBytes []byte
 	response       Z
+}
 
-	round uint
+func (p participant[_, _, _, _, _]) Validate() error {
+	if len(p.SessionId()) == 0 {
+		return errs.NewIsNil("sessionId is empty")
+	}
+	if p.Protocol() == nil {
+		return errs.NewIsNil("protocol or is nil")
+	}
+	return nil
 }

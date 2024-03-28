@@ -29,7 +29,7 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
 		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 		require.NoError(t, err)
 
 		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
@@ -37,7 +37,7 @@ func Fuzz_Test(f *testing.F) {
 		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
-		protocol, err := ttu.MakeMPCProtocol(curve, identities)
+		protocol, err := ttu.MakeProtocol(curve, identities)
 		require.NoError(t, err)
 
 		participants, err := testutils.MakeSetupParticipants(curve, identities, prng)

@@ -8,9 +8,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
 
-var _ network.MessageLike = (*Round1Broadcast)(nil)
-var _ network.MessageLike = (*Round1P2P)(nil)
-var _ network.MessageLike = (*Round2Broadcast)(nil)
+var _ network.Message = (*Round1Broadcast)(nil)
+var _ network.Message = (*Round1P2P)(nil)
+var _ network.Message = (*Round2Broadcast)(nil)
 
 type Round1Broadcast struct {
 	BlindedCommitments []curves.Point

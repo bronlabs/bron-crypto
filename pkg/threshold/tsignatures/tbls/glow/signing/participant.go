@@ -96,7 +96,7 @@ func validateInputs(sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[typ
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if protocol.Curve().Name() != new(glow.KeySubGroup).Name() {

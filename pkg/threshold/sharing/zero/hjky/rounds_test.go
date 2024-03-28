@@ -26,7 +26,7 @@ import (
 func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err = ttu.MakeTestIdentities(cipherSuite, n)

@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 )
 
@@ -21,8 +20,8 @@ const (
 
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// Validation
-	if s.Round != 1 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, s.Round)
+	if s.Round() != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, s.Round())
 	}
 
 	// step 1.1 (KA.R)
@@ -35,7 +34,7 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 	// step 1.3 (Setup RO)
 	s.Transcript().AppendPoints("mS", mS)
 
-	s.Round = 3
+	s.NextRound(3)
 	return &Round1P2P{
 		MS: mS,
 	}, nil
@@ -43,15 +42,15 @@ func (s *Sender) Round1() (r1out *Round1P2P, err error) {
 
 func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	// Validation
-	if r.Round != 2 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.Round)
+	if r.Round() != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.Round())
 	}
-	if err := network.ValidateMessage(r1out); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
+	if err := r1out.Validate(r.Protocol()); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
 	}
 
-	phi := make([][2][]curves.Point, r.Xi)
-	r.Output.ChosenMessages = make([]ot.Message, r.Xi)
+	phi := make([][2][]curves.Point, r.Protocol().Xi())
+	r.Output.ChosenMessages = make([]ot.Message, r.Protocol().Xi())
 	// Setup ROs
 	r.Transcript().AppendPoints("mS", r1out.MS)
 	var tagRandomOracle [2][]byte
@@ -64,11 +63,14 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 		return nil, errs.WrapHashing(err, "extracting tag Ro1")
 	}
 	// step 2.1
-	for i := 0; i < r.Xi; i++ {
+	for i := range r.Protocol().Xi() {
 		c_i := r.Output.Choices.Select(i)
-		phi[i] = [2][]curves.Point{make([]curves.Point, r.L), make([]curves.Point, r.L)}
-		r.Output.ChosenMessages[i] = make(ot.Message, r.L)
-		for l := 0; l < r.L; l++ {
+		phi[i] = [2][]curves.Point{
+			make([]curves.Point, r.Protocol().L()),
+			make([]curves.Point, r.Protocol().L()),
+		}
+		r.Output.ChosenMessages[i] = make(ot.Message, r.Protocol().L())
+		for l := range r.Protocol().L() {
 			// step 2.2 (KA.R)
 			b_i, err := r.Protocol().Curve().ScalarField().Random(r.Prng())
 			if err != nil {
@@ -81,7 +83,9 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			if err != nil {
 				return nil, errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 			}
-			r_i_l, err := hashing.Hash(ot.HashFunction, sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytesLE(i*r.L+l), []byte{c_i})
+			idx := i*r.Protocol().L() + l
+			r_i_l, err := hashing.Hash(ot.HashFunction,
+				sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytesLE(idx), []byte{c_i})
 			if err != nil {
 				return nil, errs.WrapHashing(err, "computing r_i_j")
 			}
@@ -110,11 +114,11 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 
 func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 	// Validation
-	if s.Round != 3 {
-		return errs.NewRound("Running round %d but participant expected round %d", 3, s.Round)
+	if s.Round() != 3 {
+		return errs.NewRound("Running round %d but participant expected round %d", 3, s.Round())
 	}
-	if err := network.ValidateMessage(r2out, s.L, s.Xi); err != nil {
-		return errs.WrapValidation(err, "invalid round %d input", s.Round)
+	if err := r2out.Validate(s.Protocol()); err != nil {
+		return errs.WrapValidation(err, "invalid round %d input", s.Round())
 	}
 
 	// Setup ROs
@@ -127,11 +131,14 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 	if err != nil {
 		return errs.WrapHashing(err, "extracting tag Ro1")
 	}
-	s.Output.MessagePairs = make([][2]ot.Message, s.Xi)
+	s.Output.MessagePairs = make([][2]ot.Message, s.Protocol().Xi())
 	// step 3.1
-	for i := 0; i < s.Xi; i++ {
-		s.Output.MessagePairs[i] = [2]ot.Message{make([]ot.MessageElement, s.L), make([]ot.MessageElement, s.L)}
-		for l := 0; l < s.L; l++ {
+	for i := range s.Protocol().Xi() {
+		s.Output.MessagePairs[i] = [2]ot.Message{
+			make([]ot.MessageElement, s.Protocol().L()),
+			make([]ot.MessageElement, s.Protocol().L()),
+		}
+		for l := range s.Protocol().L() {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
 				hashInput := slices.Concat(r2out.Phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j])
@@ -146,7 +153,9 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 					return errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 				}
 				sharedValueBytes := sharedValue.Bytes()
-				s_i_l, err := hashing.Hash(ot.HashFunction, sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytesLE(i*s.L+l), []byte{j})
+				idx := i*s.Protocol().L() + l
+				s_i_l, err := hashing.Hash(ot.HashFunction,
+					sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytesLE(idx), []byte{j})
 				if err != nil {
 					return errs.WrapHashing(err, "computing s_i_j")
 				}

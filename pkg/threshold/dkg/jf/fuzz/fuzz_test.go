@@ -34,7 +34,7 @@ func FuzzJf(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
 		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite, _ := ttu.MakeSignatureProtocol(curve, h)
+		cipherSuite, _ := ttu.MakeSigningSuite(curve, h)
 		aliceIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
 		bobIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
 		charlieIdentity, _ := testutils.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))

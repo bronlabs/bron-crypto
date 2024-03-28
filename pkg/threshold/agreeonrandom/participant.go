@@ -18,7 +18,7 @@ const transcriptLabel = "COPPER_KRYPTON_AGREE_ON_RANDOM-"
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.MPCProtocol]
+	types.Participant[types.Protocol]
 
 	myAuthKey     types.AuthKey
 	IdentitySpace types.IdentitySpace
@@ -40,7 +40,7 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(authKey types.AuthKey, protocol types.Protocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if err := validateInputs(authKey, protocol, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
@@ -51,9 +51,9 @@ func NewParticipant(authKey types.AuthKey, protocol types.MPCProtocol, transcrip
 
 	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	participant := &Participant{
-		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, nil, transcript),
-		myAuthKey:       authKey,
-		IdentitySpace:   identitySpace,
+		Participant:   types.NewBaseParticipant(prng, protocol, 1, nil, transcript),
+		myAuthKey:     authKey,
+		IdentitySpace: identitySpace,
 		state: &State{
 			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
 		},
@@ -66,11 +66,11 @@ func NewParticipant(authKey types.AuthKey, protocol types.MPCProtocol, transcrip
 	return participant, nil
 }
 
-func validateInputs(authKey types.AuthKey, protocol types.MPCProtocol, prng io.Reader) error {
+func validateInputs(authKey types.AuthKey, protocol types.Protocol, prng io.Reader) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, " mpc protocol")
 	}
 	if prng == nil {

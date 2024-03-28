@@ -1,7 +1,6 @@
 package vsot
 
 import (
-	crand "crypto/rand"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -11,7 +10,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 // Sender stores state for the "sender" role in OT.
@@ -37,16 +35,16 @@ type Receiver struct {
 }
 
 // NewSender creates a new sender for the Random OT protocol.
-func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 1)
+func NewSender(baseParticipant types.Participant[ot.Protocol], niCompiler compiler.Name) (*Sender, error) {
+	participant, err := ot.NewParticipant(baseParticipant, transcriptLabel, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
-	dlog, err := schnorr.NewSigmaProtocol(protocol.Curve().Generator(), csprng)
+	dlog, err := schnorr.NewSigmaProtocol(baseParticipant.Protocol().Curve().Generator(), baseParticipant.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't instantiate dlog protocol")
 	}
-	nic, err := compilerUtils.MakeNonInteractive(niCompiler, dlog, csprng)
+	nic, err := compilerUtils.MakeNonInteractive(niCompiler, dlog, baseParticipant.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make a non-interactive dlog proof system")
 	}
@@ -57,28 +55,27 @@ func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, s
 	}, nil
 }
 
-// NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
-func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 2)
+// NewReceiver constructs a Random OT receiver.
+func NewReceiver(baseParticipant types.Participant[ot.Protocol], niCompiler compiler.Name) (*Receiver, error) {
+	participant, err := ot.NewParticipant(baseParticipant, transcriptLabel, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
-	dlog, err := schnorr.NewSigmaProtocol(protocol.Curve().Generator(), csprng)
+	choices := make(ot.PackedBits, participant.Protocol().Xi()/8)
+	if _, err := io.ReadFull(participant.Prng(), choices); err != nil {
+		return nil, errs.WrapRandomSample(err, "generating random choice bits")
+	}
+	dlog, err := schnorr.NewSigmaProtocol(participant.Protocol().Curve().Generator(), participant.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't instantiate dlog protocol")
 	}
-	nic, err := compilerUtils.MakeNonInteractive(niCompiler, dlog, csprng)
+	nic, err := compilerUtils.MakeNonInteractive(niCompiler, dlog, participant.Prng())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make a non-interactive dlog proof system")
 	}
-	receiver := &Receiver{
+	return &Receiver{
 		Participant: *participant,
 		Output:      &ot.ReceiverRotOutput{},
 		dlog:        nic,
-	}
-	receiver.Output.Choices = make(ot.PackedBits, Xi/8)
-	if _, err := io.ReadFull(crand.Reader, receiver.Output.Choices); err != nil {
-		return nil, errs.WrapRandomSample(err, "choosing random choice bits")
-	}
-	return receiver, nil
+	}, nil
 }

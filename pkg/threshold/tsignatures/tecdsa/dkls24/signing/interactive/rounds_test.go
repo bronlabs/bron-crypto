@@ -81,7 +81,7 @@ func Test_UnHappyPath(t *testing.T) {
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -126,7 +126,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -198,7 +198,7 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)

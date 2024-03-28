@@ -16,7 +16,7 @@ import (
 
 func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	// Validation
-	if pc.Round != 1 {
+	if pc.Round() != 1 {
 		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 1, pc.Round)
 	}
 
@@ -40,7 +40,7 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 
 	pc.state.bigR1Witness = bigR1Witness
 
-	pc.Round = 3
+	pc.NextRound(3)
 	// step 1.3: Send(c1) -> P_2
 	return &Round1OutputP2P{
 		BigR1Commitment: bigR1Commitment,
@@ -49,7 +49,7 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 
 func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2OutputP2P, err error) {
 	// Validation
-	if sc.Round != 2 {
+	if sc.Round() != 2 {
 		return nil, errs.NewRound("Running round %d but secondary cosigner expected round %d", 2, sc.Round)
 	}
 	if err := network.ValidateMessage(r1out); err != nil {
@@ -77,7 +77,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 		return nil, errs.NewFailed("invalid statement, something went terribly wrong")
 	}
 
-	sc.Round = 4
+	sc.NextRound(4)
 	// step 2.3: Send(R2, π) -> P_1
 	return &Round2OutputP2P{
 		BigR2:      sc.state.bigR2,
@@ -87,7 +87,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 
 func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2P, err error) {
 	// Validation
-	if pc.Round != 3 {
+	if pc.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 3, pc.Round)
 	}
 	if err := network.ValidateMessage(r2out); err != nil {
@@ -120,7 +120,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 	bigRx := pc.state.bigR.AffineX().Nat()
 	pc.state.r = pc.Protocol().Curve().Scalar().SetNat(bigRx)
 
-	pc.Round = 5
+	pc.NextRound(5)
 	return &Round3OutputP2P{
 		BigR1Witness: pc.state.bigR1Witness,
 		BigR1:        pc.state.bigR1,
@@ -130,7 +130,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 
 func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (round4Output *lindell17.PartialSignature, err error) {
 	// Validation
-	if sc.Round != 4 {
+	if sc.Round() != 4 {
 		return nil, errs.NewRound("Running round %d but secondary cosigner expected round %d", 4, sc.Round)
 	}
 	if err := network.ValidateMessage(r3out); err != nil {
@@ -192,7 +192,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 
 func (pc *PrimaryCosigner) Round5(r4out *lindell17.PartialSignature, message []byte) (signature *ecdsa.Signature, err error) {
 	// Validation
-	if pc.Round != 5 {
+	if pc.Round() != 5 {
 		return nil, errs.NewRound("Running round %d but primary cosigner expected round %d", 5, pc.Round)
 	}
 	if err := network.ValidateMessage(r4out); err != nil {

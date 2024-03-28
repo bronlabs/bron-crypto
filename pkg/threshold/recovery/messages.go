@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
 
-var _ network.MessageLike = (*Round2P2P)(nil)
+var _ network.Message = (*Round2P2P)(nil)
 
 type Round1Broadcast = hjky.Round1Broadcast
 type Round1P2P = hjky.Round1P2P

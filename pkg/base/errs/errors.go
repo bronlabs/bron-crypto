@@ -187,7 +187,3 @@ func IsKnownError(err error) bool {
 	}
 	return false
 }
-
-func Forward(err error) error {
-	return err
-}

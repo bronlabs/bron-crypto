@@ -11,7 +11,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
@@ -66,7 +65,7 @@ func SigningRoundTrip(threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(bls12381.NewG1(), hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make ciphersuite")
 	}
@@ -122,7 +121,7 @@ func SigningWithDkg(threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(bls12381.NewG1(), hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make ciphersuite")
 	}

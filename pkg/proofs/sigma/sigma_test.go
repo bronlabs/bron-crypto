@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
@@ -50,6 +51,7 @@ func Test_HappyPathSchnorr(t *testing.T) {
 			proverTranscript := transcript.Clone()
 			verifierTranscript := transcript.Clone()
 
+			baseParticipant := ttu.NewParticipant(protocol, statement, witness)
 			prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, statement, witness)
 			require.NoError(t, err)
 			verifier, err := sigma.NewVerifier(sessionId, verifierTranscript, protocol, statement, prng)

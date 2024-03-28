@@ -26,7 +26,7 @@ const (
 
 func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -64,14 +64,14 @@ func (p *Cosigner[F]) Round1() (broadcastOutput *Round1Broadcast, unicastOutput 
 	p.state.k = k
 	p.state.bigR = bigR
 	p.state.bigRWitness = bigRWitness
-	p.Round++
+	p.NextRound()
 
 	return broadcast, unicast, nil
 }
 
 func (p *Cosigner[F]) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
 	// Validation, unicastInput is delegated to Przs.Round2
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {
@@ -122,13 +122,13 @@ func (p *Cosigner[F]) Round2(broadcastInput network.RoundMessages[*Round1Broadca
 		unicast.Put(id, r2)
 	}
 
-	p.Round++
+	p.NextRound()
 	return broadcast, unicast, nil
 }
 
 func (p *Cosigner[F]) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P], message []byte) (partialSignature *lindell22.PartialSignature, err error) {
 	// Validation, unicastInput is delegated to Przs.Round3
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.quorum, p.IdentityKey(), broadcastInput); err != nil {

@@ -27,7 +27,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignatu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't produce proof")
 	}
-	c.round++
+	c.NextRound()
 	// step 1.3
 	return &glow.PartialSignature{
 		SigmaI:    sigma_i,

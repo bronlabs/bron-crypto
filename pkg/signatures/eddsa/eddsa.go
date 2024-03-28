@@ -38,7 +38,7 @@ func MakeEdDSACompatibleChallenge(xs ...[]byte) (curves.Scalar, error) {
 	return challenge, nil
 }
 
-func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
+func Verify(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
 	if !vanillaSchnorr.IsEd25519Compliant(suite) {
 		return errs.NewVerification("unsupported cipher suite")
 	}

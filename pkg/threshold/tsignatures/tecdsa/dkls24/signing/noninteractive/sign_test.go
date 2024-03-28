@@ -18,7 +18,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -49,7 +48,7 @@ func Test_HappyPath(t *testing.T) {
 				for i := range n {
 					N[i] = i
 				}
-				cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+				cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 				require.NoError(t, err)
 				t.Run(fmt.Sprintf("NonInteractive sign happy path with curve=%s and hash=%s and t=%d and n=%d", curve.Name(), hashName[strings.LastIndex(hashName, "/")+1:], threshold, n), func(t *testing.T) {
 					t.Parallel()

@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
@@ -16,24 +15,24 @@ import (
 // Round1 uses the PRG to extend the baseOT seeds, then proves consistency of the extension.
 func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Out *Round1Output, err error) {
 	// Validation
-	if r.Round != 1 {
-		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, r.Round)
+	if r.Round() != 1 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, r.Round())
 	}
-	if len(x) != r.Xi/8 {
-		return nil, nil, errs.NewArgument("choice bits length must be ξ=%d (is %d)", r.Xi, len(x))
+	if err := x.Validate(r.Protocol()); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round %d input", r.Round())
 	}
 
 	r1Out = &Round1Output{}
 
 	r.Output.Choices = x
-	eta := r.L * r.Xi // η = L*ξ
+	eta := r.Protocol().L() * r.Protocol().Xi() // η = L*ξ
 	etaBytes := eta >> 3
 	etaPrimeBytes := etaBytes + SigmaBytes // η'= η + σ
 
 	// EXTENSION
 	// step 1.1 & 1.2: Generate x' as a concatenation of L copies of x and σ random bits
 	r.xPrime = make([]byte, etaPrimeBytes)
-	copy(r.xPrime[:etaBytes], bitstring.RepeatBits(x, r.L)) // x' = {x0 || x0 || ... }_L || {x1 || x1 || ... }_L || ...
+	copy(r.xPrime[:etaBytes], bitstring.RepeatBits(x, r.Protocol().L())) // x' = {x0 || x0 || ... }_L || {x1 || x1 || ... }_L || ...
 	if _, err = io.ReadFull(r.Prng(), r.xPrime[etaBytes:]); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "sampling random bits for Softspoken OTe")
 	}
@@ -43,13 +42,13 @@ func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Ou
 	for i := 0; i < ot.Kappa; i++ {
 		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
 		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
-		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][0][0][:], r.SessionId); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][0][0][:], r.SessionId()); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG seeding for SoftSpoken OTe")
 		}
 		if _, err = io.ReadFull(r.prg, t[0][i]); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
 		}
-		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][1][0][:], r.SessionId); err != nil {
+		if err = r.prg.Seed(r.baseOtSeeds.MessagePairs[i][1][0][:], r.SessionId()); err != nil {
 			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
 		}
 		if _, err = io.ReadFull(r.prg, t[1][i]); err != nil {
@@ -85,11 +84,11 @@ func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Ou
 		return nil, nil, errs.WrapFailed(err, "bad transposing t_0 for SoftSpoken COTe")
 	}
 	// step 1.9: Randomise by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
-	r.Output.ChosenMessages = make([]ot.Message, r.Xi)
-	for j := 0; j < r.Xi; j++ {
-		r.Output.ChosenMessages[j] = make(ot.Message, r.L)
-		for l := 0; l < r.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId, bitstring.ToBytesLE(j), t_j[j*r.L+l])
+	r.Output.ChosenMessages = make([]ot.Message, r.Protocol().Xi())
+	for j := 0; j < r.Protocol().Xi(); j++ {
+		r.Output.ChosenMessages[j] = make(ot.Message, r.Protocol().L())
+		for l := 0; l < r.Protocol().L(); l++ {
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId(), bitstring.ToBytesLE(j), t_j[j*r.Protocol().L()+l])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing t_j for SoftSpoken COTe")
 			}
@@ -104,22 +103,22 @@ func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Ou
 // Round2 uses the PRG to extend the baseOT results and verifies their consistency.
 func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, err error) {
 	// Validation
-	if s.Round != 2 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, s.Round)
+	if s.Round() != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, s.Round())
 	}
-	if err := network.ValidateMessage(r1out, s.L, s.Xi); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round)
+	if err := r1out.Validate(s.Protocol()); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round %d input", s.Round())
 	}
 
-	Eta := s.L * s.Xi                   // η = L*ξ
-	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
+	Eta := s.Protocol().L() * s.Protocol().Xi() // η = L*ξ
+	EtaPrimeBytes := Eta/8 + SigmaBytes         // η'= η + σ
 
 	// EXTENSION
 	// step 2.1: Extend the baseOT seeds
 	t_b := ExtMessageBatch{}
 	for i := 0; i < ot.Kappa; i++ {
 		t_b[i] = make([]byte, EtaPrimeBytes)
-		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.SessionId); err != nil {
+		if err = s.prg.Seed(s.baseOtSeeds.ChosenMessages[i][0][:], s.SessionId()); err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG reset for SoftSpoken OTe")
 		}
 		if _, err = io.ReadFull(s.prg, t_b[i]); err != nil {
@@ -166,17 +165,17 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, e
 		// drop last η'-η rows, they are used only for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.baseOtSeeds.Choices)
 	}
-	s.Output.MessagePairs = make([][2]ot.Message, s.Xi)
-	for j := 0; j < s.Xi; j++ {
-		s.Output.MessagePairs[j][0] = make(ot.Message, s.L)
-		s.Output.MessagePairs[j][1] = make(ot.Message, s.L)
-		for l := 0; l < s.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytesLE(j), qjTransposed[j*s.L+l])
+	s.Output.MessagePairs = make([][2]ot.Message, s.Protocol().Xi())
+	for j := 0; j < s.Protocol().Xi(); j++ {
+		s.Output.MessagePairs[j][0] = make(ot.Message, s.Protocol().L())
+		s.Output.MessagePairs[j][1] = make(ot.Message, s.Protocol().L())
+		for l := 0; l < s.Protocol().L(); l++ {
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId(), bitstring.ToBytesLE(j), qjTransposed[j*s.Protocol().L()+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
 			copy(s.Output.MessagePairs[j][0][l][:], digest)
-			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.L+l])
+			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId(), bitstring.ToBytesLE(j), qjTransposedPlusDelta[j*s.Protocol().L()+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}

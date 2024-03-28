@@ -14,7 +14,7 @@ import (
 
 func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -52,13 +52,13 @@ func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
 		})
 	}
 
-	p.Round++
+	p.NextRound()
 	return output, nil
 }
 
 func (p *Participant) Round2(round1output network.RoundMessages[*Round1P2P]) (network.RoundMessages[*Round2P2P], error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {
@@ -87,13 +87,13 @@ func (p *Participant) Round2(round1output network.RoundMessages[*Round1P2P]) (ne
 		})
 	}
 
-	p.Round++
+	p.NextRound()
 	return output, nil
 }
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2P2P]) (przs.PairWiseSeeds, error) {
 	// Validation
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output); err != nil {

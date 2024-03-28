@@ -1,14 +1,11 @@
 package softspoken
 
 import (
-	"io"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 const transcriptLabel = "COPPER_KRYPTON_SOFTSPOKEN_OTe-"
@@ -34,12 +31,10 @@ type Sender struct {
 
 // NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
-	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
-) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 1)
+func NewSoftspokenReceiver(baseParticipant types.Participant[ot.Protocol], baseOtSeeds *ot.SenderRotOutput, prg csprng.CSPRNG) (R *Receiver, err error) {
+	participant, err := ot.NewParticipant(baseParticipant, transcriptLabel, 1)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
+		return nil, errs.WrapArgument(err, "invalid Softspoken participant input arguments")
 	}
 	if baseOtSeeds == nil {
 		return nil, errs.NewIsNil("base OT seeds are nil")
@@ -49,11 +44,11 @@ func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 			ot.Kappa, len(baseOtSeeds.MessagePairs))
 	}
 	for i := 0; i < ot.Kappa; i++ {
-		if len(baseOtSeeds.MessagePairs[i][0]) == 0 || len(baseOtSeeds.MessagePairs[i][1]) == 0 {
+		if len(baseOtSeeds.MessagePairs[i][0]) != participant.Protocol().L() || len(baseOtSeeds.MessagePairs[i][1]) != participant.Protocol().L() {
 			return nil, errs.NewLength("base OT seed[%d] message empty", i)
 		}
 	}
-	prg, err = initialisePrg(prg, sessionId)
+	prg, err = initialisePrg(prg, participant.SessionId())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not initialise receiver prg")
 	}
@@ -67,34 +62,23 @@ func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 
 // NewSoftspokenSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
-	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
-) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 2)
+func NewSoftspokenSender(baseParticipant types.Participant[ot.Protocol], baseOtSeeds *ot.ReceiverRotOutput, prg csprng.CSPRNG) (s *Sender, err error) {
+	participant, err := ot.NewParticipant(baseParticipant, transcriptLabel, 2)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
+		return nil, errs.WrapArgument(err, "invalid softspoken participant input arguments")
 	}
-	if baseOtSeeds == nil {
-		return nil, errs.NewIsNil("base OT seeds are nil")
+	if err := baseOtSeeds.Validate(participant.Protocol()); err != nil {
+		return nil, errs.WrapValidation(err, "invalid base OT seeds")
 	}
-	if len(baseOtSeeds.ChosenMessages) != ot.Kappa || len(baseOtSeeds.Choices) != ot.KappaBytes {
-		return nil, errs.NewLength("base OT seeds length mismatch (should be %d,%d; is: %d,%d)",
-			ot.Kappa, ot.KappaBytes, len(baseOtSeeds.ChosenMessages), len(baseOtSeeds.Choices))
-	}
-	for i := 0; i < ot.Kappa; i++ {
-		if len(baseOtSeeds.ChosenMessages[i]) == 0 {
-			return nil, errs.NewLength("base OT seed[%d] chosen message empty", i)
-		}
-	}
-	prg, err = initialisePrg(prg, sessionId)
+	prg, err = initialisePrg(prg, participant.SessionId())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not initialise sender prg")
 	}
 	return &Sender{
+		Participant: *participant,
 		baseOtSeeds: baseOtSeeds,
 		Output:      &ot.SenderRotOutput{},
 		prg:         prg,
-		Participant: *participant,
 	}, nil
 }
 
@@ -104,12 +88,12 @@ func initialisePrg(prg csprng.CSPRNG, sessionId []byte) (csprng.CSPRNG, error) {
 		etaPrimeBytes := ((2 + 2) * (ot.KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
 		prg, err = tmmohash.NewTmmoPrng(ot.KappaBytes, etaPrimeBytes, nil, sessionId)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "Could not initialise prg")
+			return nil, errs.WrapFailed(err, "Could not initialise default prg")
 		}
 	} else {
 		prg, err = prg.New(nil, nil)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "Could not initialise prg")
+			return nil, errs.WrapFailed(err, "Could not initialise custom prg")
 		}
 	}
 	return prg, nil

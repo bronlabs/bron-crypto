@@ -10,10 +10,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
 
-var _ network.MessageLike = (*Round1OutputP2P)(nil)
-var _ network.MessageLike = (*Round2OutputP2P)(nil)
-var _ network.MessageLike = (*Round3OutputP2P)(nil)
-var _ network.MessageLike = (*Round4OutputP2P)(nil)
+var _ network.Message = (*Round1OutputP2P)(nil)
+var _ network.Message = (*Round2OutputP2P)(nil)
+var _ network.Message = (*Round3OutputP2P)(nil)
+var _ network.Message = (*Round4OutputP2P)(nil)
 
 type Round1OutputP2P struct {
 	BigR1Commitment commitments.Commitment

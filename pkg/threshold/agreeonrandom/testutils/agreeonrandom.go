@@ -8,14 +8,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 )
 
 func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))
 	set := hashset.NewHashableHashSet(identities...)
-	protocol, err := ttu.MakeMPCProtocol(curve, identities)
+	protocol, err := ttu.MakeProtocol(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make mpc protocol")
 	}

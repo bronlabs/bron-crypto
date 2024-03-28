@@ -26,7 +26,7 @@ const transcriptLabel = "COPPER_DKLS24_DKG-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	MyAuthKey             types.AuthKey
 	MySharingId           types.SharingID
@@ -89,7 +89,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		receivers.Put(participant, receiver)
 	}
 	participant := &Participant{
-		BaseParticipant:       types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:           types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		MyAuthKey:             authKey,
 		MySharingId:           mySharingId,
 		MyPartialPublicKeys:   partialPublicKeys,
@@ -107,7 +107,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

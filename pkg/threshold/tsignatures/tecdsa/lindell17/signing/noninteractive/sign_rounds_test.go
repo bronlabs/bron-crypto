@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/noninteractive"
+	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/noninteractive"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/noninteractive/testutils"
 )
 
@@ -39,7 +39,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			t.Parallel()
 
 			hash := sha256.New
-			cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+			cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 			require.NoError(t, err)
 
 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)

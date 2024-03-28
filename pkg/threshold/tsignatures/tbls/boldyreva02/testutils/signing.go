@@ -11,7 +11,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
@@ -68,7 +67,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make cipher suite")
 	}
@@ -126,7 +125,7 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	signatureProtocol, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	signatureProtocol, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make cipher suite")
 	}

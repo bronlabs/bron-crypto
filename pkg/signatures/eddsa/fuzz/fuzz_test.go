@@ -26,7 +26,7 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, msg []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		suite, err := ttu.MakeSignatureProtocol(curve, h)
+		suite, err := ttu.MakeSigningSuite(curve, h)
 		require.NoError(t, err)
 
 		messageHash, err := hashing.Hash(h, msg)

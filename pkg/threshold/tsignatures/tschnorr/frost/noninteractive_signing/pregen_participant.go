@@ -13,7 +13,7 @@ var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 var _ types.WithAuthKey = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	Tau         int
 	MyAuthKey   types.AuthKey
@@ -56,11 +56,11 @@ func NewPreGenParticipant(authKey types.AuthKey, protocol types.ThresholdProtoco
 	}
 
 	participant := &PreGenParticipant{
-		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, nil, nil),
-		Tau:             tau,
-		MyAuthKey:       authKey,
-		mySharingId:     mySharingId,
-		state:           &preGenState{},
+		Participant: types.NewBaseParticipant(prng, protocol, 1, nil, nil),
+		Tau:         tau,
+		MyAuthKey:   authKey,
+		mySharingId: mySharingId,
+		state:       &preGenState{},
 	}
 
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
@@ -73,7 +73,7 @@ func validateInputs(authKey types.AuthKey, protocol types.ThresholdProtocol, tau
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol")
 	}
 	if tau <= 0 {

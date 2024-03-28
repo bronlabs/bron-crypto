@@ -47,7 +47,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 	})
 }
 
-func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, n int) []types.IdentityKey {
+func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SigningSuite, n int) []types.IdentityKey {
 	t.Helper()
 	var secretValue []byte
 	fz.Fuzz(&secretValue)
@@ -62,7 +62,7 @@ func fuzzIdentityKeys(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.Signature
 	return identities
 }
 
-func doInteractiveSigning(t *testing.T, threshold int, identities []types.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite types.SignatureProtocol) {
+func doInteractiveSigning(t *testing.T, threshold int, identities []types.IdentityKey, shards []*dkls24.Shard, message []byte, cipherSuite types.SigningSuite) {
 	t.Helper()
 	protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func doInteractiveSigning(t *testing.T, threshold int, identities []types.Identi
 	require.NoError(t, err)
 }
 
-func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, threshold int, identities []types.IdentityKey) []*dkls24.Shard {
+func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SigningSuite, threshold int, identities []types.IdentityKey) []*dkls24.Shard {
 	t.Helper()
 	var sid []byte
 	fz.Fuzz(&sid)
@@ -93,7 +93,7 @@ func doDkg(t *testing.T, fz *fuzz.Fuzzer, cipherSuite types.SignatureProtocol, t
 	return shards
 }
 
-func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.SignatureProtocol) {
+func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.SigningSuite) {
 	t.Helper()
 
 	// setup random variables according to the data seed
@@ -118,7 +118,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.Sig
 	fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "randomSeed: ", randomSeed, "message: ", message)
 	curve := allCurves[curveIndex%len(allCurves)]
 	h := allHashes[hashIndex%len(allHashes)]
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	return fz, n, threshold, message, cipherSuite
 }

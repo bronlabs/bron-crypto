@@ -30,7 +30,7 @@ import (
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -92,7 +92,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -121,7 +121,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -199,7 +199,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	prng := rand.New(rand.NewSource(0xcafebabe))
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -266,7 +266,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	alice := 0
@@ -294,7 +294,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	identitiesCount := nAlpha

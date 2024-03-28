@@ -27,7 +27,7 @@ type AttestedCommitmentToNoncePair struct {
 }
 
 func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtocol) error {
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapArgument(err, "protocol config is invalid")
 	}
 	if ac == nil {
@@ -65,7 +65,7 @@ func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtoc
 type PreSignature []*AttestedCommitmentToNoncePair
 
 func (ps *PreSignature) Validate(protocol types.ThresholdProtocol) error {
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapArgument(err, "protocol config config is invalid")
 	}
 	if ps == nil {
@@ -114,7 +114,7 @@ func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 	if psb == nil {
 		return errs.NewIsNil("presignature is nil")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "could not validate protocol config")
 	}
 	if len(*psb) == 0 {
@@ -146,7 +146,7 @@ func (psb *PreSignatureBatch) Validate(protocol types.ThresholdProtocol) error {
 
 // We require that attested commitments within a presignature are sorted by the sharing id of the attestor.
 func sortPreSignatureInPlace(protocol types.ThresholdProtocol, attestedCommitments []*AttestedCommitmentToNoncePair) error {
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapArgument(err, "protocol config is invalid")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())

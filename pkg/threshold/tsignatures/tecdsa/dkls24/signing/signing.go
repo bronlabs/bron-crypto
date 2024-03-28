@@ -9,7 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
@@ -312,7 +311,7 @@ func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite types.SignatureProtocol, publicKey curves.Point, partialSignatures network.RoundMessages[*dkls24.PartialSignature], message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point, partialSignatures network.RoundMessages[*dkls24.PartialSignature], message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve()
 	w := curve.ScalarField().Zero()
 	u := curve.ScalarField().Zero()

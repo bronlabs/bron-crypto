@@ -12,7 +12,7 @@ import (
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -21,7 +21,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 		return nil, nil, errs.WrapFailed(err, "could not finish round 1 of hjky sampler")
 	}
 
-	p.Round++
+	p.NextRound()
 	return &Round1Broadcast{
 		Sampler:                   samplerRound1Broadcast,
 		PreviousFeldmanCommitment: p.publicKeyShares.FeldmanCommitmentVector,
@@ -30,7 +30,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {

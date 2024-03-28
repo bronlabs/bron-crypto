@@ -49,7 +49,7 @@ func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSee
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
+func doSample(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, nil)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func doSample(t *testing.T, protocol types.MPCProtocol, identities []types.Ident
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
+func doSampleInvalidSid(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	wrongUniqueSessionId := []byte("This is an invalid sid")
 	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, wrongUniqueSessionId)
@@ -100,14 +100,14 @@ func doSampleInvalidSid(t *testing.T, protocol types.MPCProtocol, identities []t
 func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 	seededPrng, err := chacha.NewChachaPRNG(nil, nil)
 	require.NoError(t, err)
@@ -133,11 +133,11 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -204,7 +204,7 @@ func Test_InvalidParticipants(t *testing.T) {
 func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, _ := ttu.MakeTestIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]
@@ -218,7 +218,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
 	prng, err := chacha.NewChachaPRNG(nil, nil)

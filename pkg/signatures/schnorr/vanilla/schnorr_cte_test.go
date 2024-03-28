@@ -21,7 +21,7 @@ func Test_MeasureConstantTime_signing(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	h := sha512.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var signer *schnorr.Signer
 	var sk *schnorr.PrivateKey
@@ -44,7 +44,7 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	h := sha512.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var signer *schnorr.Signer
 	var pk *schnorr.PublicKey

@@ -95,7 +95,7 @@ func validateInputs(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {

@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -19,7 +18,7 @@ func MakeSetupParticipants(curve curves.Curve, identities []types.IdentityKey, p
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run agree on random")
 	}
-	protocol, err := testutils.MakeMPCProtocol(curve, identities)
+	protocol, err := testutils.MakeProtocol(curve, identities)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "mpc")
 	}

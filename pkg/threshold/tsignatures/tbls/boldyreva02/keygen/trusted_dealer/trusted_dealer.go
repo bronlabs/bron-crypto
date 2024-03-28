@@ -17,7 +17,7 @@ import (
 )
 
 func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *boldyreva02.Shard[K]], error) {
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
 

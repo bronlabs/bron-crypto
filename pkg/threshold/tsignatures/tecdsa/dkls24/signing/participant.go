@@ -13,7 +13,7 @@ import (
 var _ types.ThresholdSignatureParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+	types.Participant[types.ThresholdSignatureProtocol]
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
@@ -23,18 +23,18 @@ type Participant struct {
 }
 
 func NewParticipant(
-	baseParticipant *types.BaseParticipant[types.ThresholdSignatureProtocol],
+	baseParticipant types.Participant[types.ThresholdSignatureProtocol],
 	myAuthKey types.AuthKey,
 	mySharingId types.SharingID,
 	shard *dkls24.Shard,
 	sharingConfig types.SharingConfig,
 ) *Participant {
 	return &Participant{
-		BaseParticipant: baseParticipant,
-		myAuthKey:       myAuthKey,
-		mySharingId:     mySharingId,
-		shard:           shard,
-		sharingConfig:   sharingConfig,
+		Participant:   baseParticipant,
+		myAuthKey:     myAuthKey,
+		mySharingId:   mySharingId,
+		shard:         shard,
+		sharingConfig: sharingConfig,
 	}
 }
 

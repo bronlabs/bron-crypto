@@ -38,7 +38,7 @@ type state struct {
 }
 
 type Cosigner[F schnorr.Variant[F]] struct {
-	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+	types.Participant[types.ThresholdSignatureProtocol]
 
 	przsParticipant *setup.Participant
 
@@ -95,7 +95,7 @@ func NewCosigner[F schnorr.Variant[F]](myAuthKey types.AuthKey, sessionId []byte
 	}
 
 	cosigner := &Cosigner[F]{
-		BaseParticipant:   types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:       types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		przsParticipant:   przsParticipant,
 		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
@@ -123,7 +123,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if err := shard.Validate(protocol); err != nil {

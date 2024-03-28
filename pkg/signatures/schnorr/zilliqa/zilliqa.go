@@ -48,7 +48,7 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 		return errs.NewFailed("incompatible signature")
 	}
 
-	protocol, err := types.NewSignatureProtocol(curve, hashFunc)
+	protocol, err := types.NewSigningSuite(curve, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create protocol")
 	}

@@ -50,7 +50,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 }
 
 func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, Shard]) error {
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if shards == nil {

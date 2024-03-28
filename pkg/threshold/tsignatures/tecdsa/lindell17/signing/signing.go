@@ -69,7 +69,7 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 	return c3, nil
 }
 
-func MessageToScalar(cipherSuite types.SignatureProtocol, message []byte) (curves.Scalar, error) {
+func MessageToScalar(cipherSuite types.SigningSuite, message []byte) (curves.Scalar, error) {
 	messageHash, err := hashing.Hash(cipherSuite.Hash(), message)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash message")

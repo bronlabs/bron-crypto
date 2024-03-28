@@ -22,7 +22,7 @@ var _ types.MPCParticipant = (*Alice)(nil)
 var _ types.MPCParticipant = (*Bob)(nil)
 
 type Alice struct {
-	*types.BaseParticipant[types.MPCProtocol]
+	types.Participant[types.Protocol]
 
 	sender *softspoken.Sender
 	gadget *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
@@ -30,7 +30,7 @@ type Alice struct {
 	_ ds.Incomparable
 }
 type Bob struct {
-	*types.BaseParticipant[types.MPCProtocol]
+	types.Participant[types.Protocol]
 
 	receiver *softspoken.Receiver
 	gadget   *[Xi]curves.Scalar // g ∈ [ξ]ℤq is the gadget vector
@@ -41,7 +41,7 @@ type Bob struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant[T any](myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *T, sessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript, roundNo int) (participant *types.BaseParticipant[types.MPCProtocol], gadget *[Xi]curves.Scalar, err error) {
+func NewParticipant[T any](myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *T, sessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript, roundNo int) (participant types.Participant[types.Protocol], gadget *[Xi]curves.Scalar, err error) {
 	if err := validateParticipantInputs(myAuthKey, protocol, seedOtResults, sessionId, csrand); err != nil {
 		return nil, nil, errs.WrapFailed(err, "invalid inputs")
 	}
@@ -58,7 +58,7 @@ func NewParticipant[T any](myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 	return types.NewBaseParticipant(csrand, protocol, roundNo, sessionId, transcript), gadget, nil
 }
 
-func NewAlice(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *ot.ReceiverRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
+func NewAlice(myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *ot.ReceiverRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
 	participant, gadget, err := NewParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, seededPrng, transcript, 2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
@@ -68,13 +68,13 @@ func NewAlice(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
 	return &Alice{
-		BaseParticipant: participant,
-		sender:          sender,
-		gadget:          gadget,
+		Participant: participant,
+		sender:      sender,
+		gadget:      gadget,
 	}, nil
 }
 
-func NewBob(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *ot.SenderRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
+func NewBob(myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *ot.SenderRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
 	participant, gadget, err := NewParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, seededPrng, transcript, 1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
@@ -84,13 +84,13 @@ func NewBob(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
 	return &Bob{
-		BaseParticipant: participant,
-		receiver:        receiver,
-		gadget:          gadget,
+		Participant: participant,
+		receiver:    receiver,
+		gadget:      gadget,
 	}, nil
 }
 
-func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol types.MPCProtocol, seedOtResults *T, sessionId []byte, truePrng io.Reader) error {
+func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol types.Protocol, seedOtResults *T, sessionId []byte, truePrng io.Reader) error {
 	if truePrng == nil {
 		return errs.NewArgument("prng is nil")
 	}
@@ -103,7 +103,7 @@ func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol 
 	if err := types.ValidateIdentityKey(myIdentityKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "mpc protocol config")
 	}
 	return nil

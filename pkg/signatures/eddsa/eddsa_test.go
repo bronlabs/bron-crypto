@@ -21,7 +21,7 @@ import (
 // test vector 10 fails, because the std implementation does not compress the public key before hashing
 func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 	t.Parallel()
-	suite, err := ttu.MakeSignatureProtocol(edwards25519.NewCurve(), sha512.New)
+	suite, err := ttu.MakeSigningSuite(edwards25519.NewCurve(), sha512.New)
 	require.NoError(t, err)
 
 	// From Page 8 of https://eprint.iacr.org/2020/1244.pdf

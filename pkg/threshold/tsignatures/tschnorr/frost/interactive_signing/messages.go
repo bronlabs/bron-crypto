@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
-var _ network.MessageLike = (*Round1Broadcast)(nil)
+var _ network.Message = (*Round1Broadcast)(nil)
 
 type Round1Broadcast struct {
 	Di curves.Point

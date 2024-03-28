@@ -29,21 +29,21 @@ func Fuzz_Test_OTe(f *testing.F) {
 	f.Add(uint(0), 3, 2, int64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, Xi, L int, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		uniqueSessionId := [ot.KappaBytes]byte{}
+		sessionId := [ot.KappaBytes]byte{}
 		prng := rand.New(rand.NewSource(randomSeed))
-		_, err := crand.Read(uniqueSessionId[:])
+		_, err := crand.Read(sessionId[:])
 		require.NoError(t, err)
 		Xi = Xi % 256
 		L = L % 3
 
-		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
 		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 		require.NoError(t, err)
 		senderKey, receiverKey := authKeys[0], authKeys[1]
 
 		// BaseOTs
-		baseOtSend, baseOtRec, err := bbot_testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], prng)
+		baseOtSend, baseOtRec, err := bbot_testutils.BBOT(senderKey, receiverKey, curve, sessionId[:], prng, Xi, L)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -58,17 +58,9 @@ func Fuzz_Test_OTe(f *testing.F) {
 			t.Skip()
 		}
 
-		// Set OTe inputs
-		receiverChoices, _, err := ot_testutils.GenerateOTinputs(Xi, L)
-		if err != nil && !errs.IsKnownError(err) {
-			require.NoError(t, err)
-		}
-		if err != nil {
-			t.Skip()
-		}
 		// Run OTe
-		senderMessages, receiverChosenMessage, err := softspoken_testutils.RunSoftspokenROTe(
-			senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
+		senderMessages, receiverChoices, receiverChosenMessage, err := softspoken_testutils.SoftspokenROTe(
+			senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, baseOtSend, baseOtRec, nil, Xi, L)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -85,9 +77,9 @@ func Fuzz_Test_COTe(f *testing.F) {
 	f.Add(uint(0), 4, 256, int64(1))
 	f.Fuzz(func(t *testing.T, curveIndex uint, L, Xi int, randomSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
-		uniqueSessionId := [ot.KappaBytes]byte{}
+		sessionId := [ot.KappaBytes]byte{}
 		prng := rand.New(rand.NewSource(randomSeed))
-		_, err := crand.Read(uniqueSessionId[:])
+		_, err := crand.Read(sessionId[:])
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -95,14 +87,14 @@ func Fuzz_Test_COTe(f *testing.F) {
 			t.Skip()
 		}
 
-		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
 		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 		require.NoError(t, err)
 		senderKey, receiverKey := authKeys[0], authKeys[1]
 
 		// BaseOTs
-		baseOtSend, baseOtRec, err := vsot_testutils.RunVSOT(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], prng)
+		baseOtSend, baseOtRec, err := vsot_testutils.VSOT(senderKey, receiverKey, curve, sessionId[:], prng, ot.Kappa, 1)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -117,18 +109,9 @@ func Fuzz_Test_COTe(f *testing.F) {
 			t.Skip()
 		}
 
-		// Set COTe inputs
-		receiverChoices, senderInputs, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
-		if err != nil && !errs.IsKnownError(err) {
-			require.NoError(t, err)
-		}
-		if err != nil {
-			t.Skip()
-		}
-
 		// Run COTe
-		senderOutputs, receiverOutputs, err := softspoken_testutils.RunSoftspokenCOTe(
-			senderKey, receiverKey, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices, senderInputs, L, Xi)
+		x, a, z_A, z_B, err := softspoken_testutils.SoftspokenCOTe(
+			senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, baseOtSend, baseOtRec, nil, L, Xi)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -137,7 +120,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Check COTe result
-		err = ot_testutils.ValidateCOT(Xi, L, receiverChoices, senderInputs, receiverOutputs, senderOutputs)
+		err = ot_testutils.ValidateCOT(Xi, L, x, a, z_A, z_B)
 		require.NoError(t, err)
 	})
 }

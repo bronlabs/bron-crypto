@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 )
 
-func MakeSampleParticipants(protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG, wrongFirstUniqueSessionId []byte) (participants []*sample.Participant, err error) {
+func MakeSampleParticipants(protocol types.Protocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG, wrongFirstUniqueSessionId []byte) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
 	random := crand.Reader

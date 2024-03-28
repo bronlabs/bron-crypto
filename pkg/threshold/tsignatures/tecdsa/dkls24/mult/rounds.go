@@ -15,7 +15,7 @@ import (
 
 func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// Validation
-	if bob.Round != 1 {
+	if bob.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but bob expected round %d", 1, bob.Round)
 	}
 
@@ -47,13 +47,13 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 		b = bob.Protocol().Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
 	}
 
-	bob.Round = 3
+	bob.NextRound(3)
 	return b, r1out, nil
 }
 
 func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputShares, r2o *Round2Output, err error) {
 	// Validation, r1out and a delegated to OTE.Round2
-	if alice.Round != 2 {
+	if alice.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but alice expected round %d", 2, alice.Round)
 	}
 	for i, a_i := range a {
@@ -155,7 +155,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 
 func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	// Validation
-	if bob.Round != 3 {
+	if bob.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but bob expected round %d", 3, bob.Round)
 	}
 	if err := network.ValidateMessage(r2out); err != nil {

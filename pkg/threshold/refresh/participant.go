@@ -20,7 +20,7 @@ const transcriptLabel = "COPPER_KRYPTON_HJKY_KEY_REFRESH-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	sampler *hjky.Participant
 
@@ -55,8 +55,8 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	}
 
 	result := &Participant{
-		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
-		sampler:         sampler,
+		Participant: types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		sampler:     sampler,
 
 		publicKeyShares: publicKeyShares,
 		signingKeyShare: signingKeyShare,
@@ -74,7 +74,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
 	}
 	if err := signingKeyShare.Validate(protocol); err != nil {

@@ -22,7 +22,7 @@ type Participant struct {
 	myAuthKey types.AuthKey
 	sessionId []byte
 
-	Protocol            types.MPCProtocol
+	Protocol            types.Protocol
 	IdentitySpace       types.IdentitySpace
 	PresentParticipants ds.Set[types.IdentityKey]
 
@@ -36,7 +36,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.Protocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) (*Participant, error) {
 	if err := validateInputs(sessionId, authKey, seeds, protocol, presentParticipants, seededPrngFactory); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
@@ -59,14 +59,14 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, seeds przs.PairWise
 	return participant, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.MPCProtocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, seeds przs.PairWiseSeeds, protocol types.Protocol, presentParticipants ds.Set[types.IdentityKey], seededPrngFactory csprng.CSPRNG) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsZero("sessionId length is zero")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "mpc protocol")
 	}
 	if presentParticipants.Size() < 2 {

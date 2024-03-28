@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 )
 
-var _ network.MessageLike = (*Round1Output)(nil)
+var _ network.Message[ot.Protocol] = (*Round1Output)(nil)
 
 type Round1Output struct {
 	U        ExtMessageBatch   // [κ][η']bits
@@ -16,9 +16,8 @@ type Round1Output struct {
 	_ ds.Incomparable
 }
 
-func (r *Round1Output) Validate(L_Xi ...int) error {
-	L, Xi := L_Xi[0], L_Xi[1]
-	Eta := L * Xi                       // η = L*ξ
+func (r *Round1Output) Validate(protocol ot.Protocol) error {
+	Eta := protocol.L() * protocol.Xi() // η = L*ξ
 	EtaPrimeBytes := Eta/8 + SigmaBytes // η'= η + σ
 	for i := range ot.Kappa {
 		if len(r.U[i]) != EtaPrimeBytes {

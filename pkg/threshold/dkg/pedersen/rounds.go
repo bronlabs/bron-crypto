@@ -19,7 +19,7 @@ const (
 
 func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u network.RoundMessages[*Round1P2P], err error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -68,7 +68,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	p.State.A_i0 = a_i0
 
 	// step 1.5: Broadcast(Ci)
-	p.Round++
+	p.NextRound()
 	return &Round1Broadcast{
 		Ci:        commitments,
 		DlogProof: proof,
@@ -77,7 +77,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {

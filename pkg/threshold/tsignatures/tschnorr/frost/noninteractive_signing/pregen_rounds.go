@@ -8,7 +8,7 @@ import (
 
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -41,7 +41,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		}
 	}
 
-	p.Round++
+	p.NextRound()
 	return &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
@@ -50,7 +50,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 
 func (p *PreGenParticipant) Round2(round1output network.RoundMessages[*Round1Broadcast]) (PreSignatureBatch, []*PrivateNoncePair, error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1output); err != nil {

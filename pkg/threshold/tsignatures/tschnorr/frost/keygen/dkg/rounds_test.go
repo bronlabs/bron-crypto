@@ -26,7 +26,7 @@ import (
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -72,7 +72,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -84,7 +84,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
-	participants[0].BaseParticipant = types.NewBaseParticipant(crand.Reader, protocol, 1, []byte("invalid"), nil)
+	participants[0].Participant = types.NewBaseParticipant(crand.Reader, protocol, 1, []byte("invalid"), nil)
 	require.NoError(t, err)
 
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)

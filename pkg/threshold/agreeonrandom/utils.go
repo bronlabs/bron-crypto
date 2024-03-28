@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
 func (p *Participant) sortRandomnessContributions(allIdentityKeysToRi network.RoundMessages[*Round2Broadcast]) ([][]byte, error) {

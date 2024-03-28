@@ -19,7 +19,7 @@ var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2]
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)
 
 type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+	types.Participant[types.ThresholdSignatureProtocol]
 
 	signer *bls.Signer[K, S]
 
@@ -65,13 +65,13 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	}
 
 	participant := &Cosigner[K, S]{
-		BaseParticipant: types.NewBaseParticipant(nil, protocol, -1, sessionId, transcript),
-		signer:          signer,
-		myAuthKey:       authKey,
-		sharingConfig:   sharingConfig,
-		mySharingId:     mySharingId,
-		myShard:         myShard,
-		scheme:          scheme,
+		Participant:   types.NewBaseParticipant(nil, protocol, -1, sessionId, transcript),
+		signer:        signer,
+		myAuthKey:     authKey,
+		sharingConfig: sharingConfig,
+		mySharingId:   mySharingId,
+		myShard:       myShard,
+		scheme:        scheme,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {
@@ -91,7 +91,7 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if protocol.Curve().Name() != bls12381.GetSourceSubGroup[K]().Name() {

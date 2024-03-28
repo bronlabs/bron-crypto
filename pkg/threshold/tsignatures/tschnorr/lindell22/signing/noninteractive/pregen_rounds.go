@@ -22,7 +22,7 @@ const (
 
 func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastOutput network.RoundMessages[*Round1P2P], err error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -60,14 +60,14 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, unicastO
 	p.state.bigR1 = bigR1
 	p.state.bigR2 = bigR2
 	p.state.bigRWitness = bigRWitness
-	p.Round++
+	p.NextRound()
 
 	return broadcast, unicast, nil
 }
 
 func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1Broadcast], unicastInput network.RoundMessages[*Round1P2P]) (broadcastOutput *Round2Broadcast, unicastOutput network.RoundMessages[*Round2P2P], err error) {
 	// Validation, unicastInput is delegated to przs.Round2A
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
@@ -106,7 +106,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 		BigR2Proof:  bigR2Proof,
 	}
 	p.state.theirBigRCommitment = theirBigRCommitment
-	p.Round++
+	p.NextRound()
 
 	// 2. broadcast proof and opening of R1, R2, revealing R1, R2
 	return broadcast, unicast, nil
@@ -114,7 +114,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[*Round1B
 
 func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[*Round2Broadcast], unicastInput network.RoundMessages[*Round2P2P]) (preProcessingMaterial *lindell22.PreProcessingMaterial, err error) {
 	// Validation, unicastInput is delegated to przs.Round3
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.preSigners, p.IdentityKey(), broadcastInput); err != nil {

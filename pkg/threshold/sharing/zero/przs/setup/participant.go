@@ -20,7 +20,7 @@ const transcriptLabel = "COPPER_KRYPTON_PRZS_ZERO_SETUP-"
 var _ types.MPCParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.MPCProtocol]
+	types.Participant[types.Protocol]
 
 	myAuthKey          types.AuthKey
 	SortedParticipants []types.IdentityKey
@@ -51,7 +51,7 @@ type committedSeedContribution struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Protocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	err := validateInputs(sessionId, authKey, protocol, prng)
 	if err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
@@ -70,7 +70,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 		return nil, errs.NewArgument("prng is nil")
 	}
 	result := &Participant{
-		BaseParticipant:    types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:        types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		myAuthKey:          authKey,
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
@@ -85,11 +85,11 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 	return result, nil
 }
 
-func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol types.MPCProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol types.Protocol, prng io.Reader) error {
 	if err := types.ValidateIdentityKey(identityKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if len(sessionId) == 0 {

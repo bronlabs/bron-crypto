@@ -30,7 +30,7 @@ const (
 )
 
 func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *lindell17.Shard], error) {
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
 

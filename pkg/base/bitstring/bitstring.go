@@ -48,6 +48,7 @@ func PadToRight(inBytes []byte, padLen int) []byte {
 // TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
 // groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
 // were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+// TODO: Optimize using assembly.
 func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)

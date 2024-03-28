@@ -4,12 +4,36 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
+	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
+
+func MakeSoftspokenParticipants(
+	senderKey, receiverKey types.AuthKey,
+	curve curves.Curve, prng io.Reader, sessionId []byte, transcript transcripts.Transcript,
+	baseOtSenderSeeds *ot.SenderRotOutput, baseOtReceiverSeeds *ot.ReceiverRotOutput, prg csprng.CSPRNG, Xi, L int,
+) (*softspoken.Sender, *softspoken.Receiver, error) {
+	// Create base OT participants
+	baseSender, baseReceiver, err := ot_testutils.MakeOtParticipants(senderKey, receiverKey, curve, prng, sessionId, transcript, Xi, L)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not create base OT participants")
+	}
+	// Create softspoken participants
+	sender, err := softspoken.NewSoftspokenSender(baseSender, baseOtReceiverSeeds, prg)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
+	}
+	receiver, err := softspoken.NewSoftspokenReceiver(baseReceiver, baseOtSenderSeeds, prg)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
+	}
+	return sender, receiver, nil
+}
 
 /*.------------------------- Random OT extension ----------------------------.*/
 
@@ -21,31 +45,8 @@ import (
 //		        ├--- COTe_{Xi,L}(x)---┤
 //		S:   ---┘                        └---> S: (v_0, v_1)
 //	 s.t. v_x = v_1 • (x) + v_0 • (1-x)
-func RunSoftspokenROTe(
-	senderKey, receiverKey types.AuthKey,
-	Xi int, // number of OTe messages in the batch
-	L int, // number of OTe elements per message
-	curve curves.Curve,
-	sid []byte,
-	rand io.Reader,
-	baseOtSenderOutput *ot.SenderRotOutput, // baseOT seeds for OTe receiver
-	baseOtReceiverOutput *ot.ReceiverRotOutput, // baseOT seeds for OTe sender
-	choices ot.PackedBits, // receiver's input, the Choice bits x
+func RunSoftspokenROTe(sender *softspoken.Sender, receiver *softspoken.Receiver, choices ot.PackedBits,
 ) (oTeSenderOutputs [][2]ot.Message, oTeReceiverOutputs []ot.Message, err error) {
-	protocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
-	}
-	// Setup OTe
-	sender, err := softspoken.NewSoftspokenSender(senderKey, protocol, baseOtReceiverOutput, sid, nil, rand, nil, L, Xi)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
-	}
-	receiver, err := softspoken.NewSoftspokenReceiver(receiverKey, protocol, baseOtSenderOutput, sid, nil, rand, nil, L, Xi)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
-	}
-
 	// Run OTe
 	oTeReceiverOutput, r1out, err := receiver.Round1(choices)
 	if err != nil {
@@ -72,31 +73,10 @@ func RunSoftspokenROTe(
 // If useForcedReuse: use a single OTe batch for all the inputOpt batches.
 // NOTE: it should only be used by setting L=1 in "participants.go".
 func RunSoftspokenCOTe(
-	senderKey, receiverKey types.AuthKey,
-	curve curves.Curve,
-	sid []byte,
-	rand io.Reader,
-	baseOtSenderOutput *ot.SenderRotOutput, // baseOT seeds for OTe receiver
-	baseOtReceiverOutput *ot.ReceiverRotOutput, // baseOT seeds for OTe sender
+	sender *softspoken.Sender, receiver *softspoken.Receiver,
 	choices ot.PackedBits, // receiver's input, the Choice bits x
 	senderInput []ot.CorrelatedMessage, // sender's input, the InputOpt batches of α
-	L int, // number of OTe elements per message
-	Xi int, // number of OTe messages in the batch
 ) (senderOutput, receiverOutput []ot.CorrelatedMessage, err error) {
-	protocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
-	}
-	// Setup COTe
-	sender, err := softspoken.NewSoftspokenSender(senderKey, protocol, baseOtReceiverOutput, sid, nil, rand, nil, L, Xi)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create softspoken sender")
-	}
-	receiver, err := softspoken.NewSoftspokenReceiver(receiverKey, protocol, baseOtSenderOutput, sid, nil, rand, nil, L, Xi)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create softspoken receiver")
-	}
-
 	// Run COTe
 	_, round1Output, err := receiver.Round1(choices)
 	if err != nil {
@@ -115,4 +95,43 @@ func RunSoftspokenCOTe(
 		return nil, nil, errs.WrapFailed(err, "could not run softspoken receiver round 3")
 	}
 	return z_A, z_B, nil
+}
+
+/*.--------------------------------------------------------------------------.*/
+
+func SoftspokenROTe(senderKey, receiverKey types.AuthKey,
+	curve curves.Curve, prng io.Reader, sessionId []byte, transcript transcripts.Transcript,
+	baseOtSenderSeeds *ot.SenderRotOutput, baseOtReceiverSeeds *ot.ReceiverRotOutput, prg csprng.CSPRNG, Xi, L int,
+) (oTeSenderOutputs [][2]ot.Message, oTeReceiverChoices ot.PackedBits, oTeReceiverOutputs []ot.Message, err error) {
+	sender, receiver, err := MakeSoftspokenParticipants(senderKey, receiverKey, curve, prng, sessionId, transcript, baseOtSenderSeeds, baseOtReceiverSeeds, prg, Xi, L)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// Generate inputs for ROT
+	oTeReceiverChoices, _, err = ot_testutils.GenerateOTinputs(Xi, L)
+
+	// Run ROT
+	oTeSenderOutputs, oTeReceiverOutputs, err = RunSoftspokenROTe(sender, receiver, oTeReceiverChoices)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return oTeSenderOutputs, oTeReceiverChoices, oTeReceiverOutputs, nil
+}
+
+func SoftspokenCOTe(senderKey, receiverKey types.AuthKey, curve curves.Curve, prng io.Reader, sessionId []byte, transcript transcripts.Transcript, baseOtSenderSeeds *ot.SenderRotOutput, baseOtReceiverSeeds *ot.ReceiverRotOutput, prg csprng.CSPRNG, Xi, L int) (x ot.PackedBits, a, z_A, z_B []ot.CorrelatedMessage, err error) {
+	sender, receiver, err := MakeSoftspokenParticipants(senderKey, receiverKey, curve, prng, sessionId, transcript, baseOtSenderSeeds, baseOtReceiverSeeds, prg, Xi, L)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	// Generate inputs for COT
+	x, a, err = ot_testutils.GenerateCOTinputs(Xi, L, curve)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	// Run COT
+	z_A, z_B, err = RunSoftspokenCOTe(sender, receiver, x, a)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return x, a, z_A, z_B, nil
 }

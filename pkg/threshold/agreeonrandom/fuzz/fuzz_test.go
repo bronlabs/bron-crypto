@@ -30,7 +30,7 @@ func Fuzz_Test_rounds(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, randSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randSeed))
 		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
@@ -46,7 +46,7 @@ func Fuzz_Test_rounds(f *testing.F) {
 		}
 		var participants []*agreeonrandom.Participant
 		set := hashset.NewHashableHashSet(allIdentities...)
-		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
 		for identity := range set.Iter() {
 			participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
@@ -88,14 +88,14 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, randSeed int64) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		h := allHashes[int(hashIndex)%len(allHashes)]
-		cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+		cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 		require.NoError(t, err)
 		prng := rand.New(rand.NewSource(randSeed))
 		aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(aliceSecret))
 		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
 		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		allIdentities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
 		_, err = agreeonrandom.NewParticipant(allIdentities[0].(types.AuthKey), protocol, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {

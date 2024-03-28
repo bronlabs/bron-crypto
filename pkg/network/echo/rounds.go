@@ -5,58 +5,56 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	t "github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
-func (p *Participant) Round1() (network.RoundMessages[*Round1P2P], error) {
+func (p *Participant) Round1() (r1out network.RoundMessages[t.Protocol, *Round1P2P], err error) {
 	// Validation
-	if p.Round != 1 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
+	if p.Round() != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round())
 	}
 
-	result := network.NewRoundMessages[*Round1P2P]()
 	if p.IsInitiator() {
+		r1out = network.NewRoundMessages[t.Protocol, *Round1P2P]()
 		for participant := range p.Protocol().Participants().Iter() {
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
 			// step 1.1 and 1.2
-			result.Put(participant, &Round1P2P{
+			r1out.Put(participant, &Round1P2P{
 				InitiatorSignature: p.AuthKey().Sign(authMessage),
 				Message:            p.state.messageToBroadcast,
 			})
 		}
 	}
 
-	p.Round++
-	return result, nil
+	p.NextRound(2)
+	return r1out, nil
 }
 
-func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages[*Round2P2P], error) {
+func (p *Participant) Round2(initiatorMessage *Round1P2P) (r2out network.RoundMessages[t.Protocol, *Round2P2P], err error) {
 	// Validation
-	if p.Round != 2 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
+	if p.Round() != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round())
 	}
 	if !p.IsInitiator() {
-		if err := network.ValidateMessage(initiatorMessage); err != nil {
-			return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round)
+		if err := initiatorMessage.Validate(p.Protocol()); err != nil {
+			return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
 		}
-	}
 
-	result := network.NewRoundMessages[*Round2P2P]()
-
-	// step 2.1 if initiator
-	if !p.IsInitiator() {
+		// step 2.1 if receiver
+		r2out = network.NewRoundMessages[t.Protocol, *Round2P2P]()
 		for participant := range p.Protocol().Participants().Iter() {
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
@@ -66,7 +64,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 				return nil, errs.NewIdentifiableAbort(p.initiator.String(), "failed to verify signature")
 			}
 			// step 2.4
-			result.Put(participant, &Round2P2P{
+			r2out.Put(participant, &Round2P2P{
 				InitiatorSignature: initiatorMessage.InitiatorSignature,
 				Message:            initiatorMessage.Message,
 			})
@@ -76,17 +74,17 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 		}
 	}
 
-	p.Round++
-	return result, nil
+	p.NextRound(3)
+	return r2out, nil
 }
 
-func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]byte, error) {
+func (p *Participant) Round3(p2pMessages network.RoundMessages[t.Protocol, *Round2P2P]) ([]byte, error) {
 	// Validation
-	if p.Round != 3 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
+	if p.Round() != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round())
 	}
-	if err := network.ValidateMessages(p.NonInitiatorParticipants(), p.IdentityKey(), p2pMessages); err != nil {
-		return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round)
+	if err := network.ValidateMessages(p, p.NonInitiatorParticipants(), p2pMessages); err != nil {
+		return nil, errs.WrapValidation(err, "Invalid round %d input messages", p.Round())
 	}
 
 	var messageToVerify []byte
@@ -104,7 +102,7 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[*Round2P2P]) ([]b
 		// if it is initiator, we need to verify that all messages are the same.
 		// if it is responder, we need to verify that the message is the same as the one we received from the initiator.
 		if !p.IsInitiator() {
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
+			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId(), sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}

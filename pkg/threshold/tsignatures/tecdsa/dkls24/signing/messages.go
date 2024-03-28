@@ -9,10 +9,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult"
 )
 
-var _ network.MessageLike = (*Round1Broadcast)(nil)
-var _ network.MessageLike = (*Round1P2P)(nil)
-var _ network.MessageLike = (*Round2Broadcast)(nil)
-var _ network.MessageLike = (*Round2P2P)(nil)
+var _ network.Message = (*Round1Broadcast)(nil)
+var _ network.Message = (*Round1P2P)(nil)
+var _ network.Message = (*Round2Broadcast)(nil)
+var _ network.Message = (*Round2P2P)(nil)
 
 type Round1Broadcast struct {
 	BigR_i curves.Point

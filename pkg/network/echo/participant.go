@@ -1,42 +1,19 @@
 package echo
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ types.MPCParticipant = (*Participant)(nil)
-var _ types.WithAuthKey = (*Participant)(nil)
-
 type Participant struct {
-	*types.BaseParticipant[types.MPCProtocol]
+	types.Participant[types.Protocol]
 
-	myAuthKey types.AuthKey
 	initiator types.IdentityKey
 
 	state *State
 
 	_ ds.Incomparable
-}
-
-func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.myAuthKey
-}
-
-func (p *Participant) AuthKey() types.AuthKey {
-	return p.myAuthKey
-}
-
-func (p *Participant) IsInitiator() bool {
-	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
-}
-
-func (p *Participant) NonInitiatorParticipants() ds.Set[types.IdentityKey] {
-	receivers := p.Protocol().Participants().Clone()
-	receivers.Remove(p.initiator)
-	return receivers
 }
 
 type State struct {
@@ -46,64 +23,69 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, message []byte) (*Participant, error) {
-	if err := validateInputs(sessionId, authKey, protocol, authKey); err != nil {
-		return nil, errs.WrapArgument(err, "couldn't construct initiator")
-	}
-	result := &Participant{
-		myAuthKey: authKey,
-		initiator: authKey,
+func (p *Participant) IsInitiator() bool {
+	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
+}
+
+func (p *Participant) SetMessageToBroadcast(message []byte) {
+	p.state.messageToBroadcast = message
+}
+
+func (p *Participant) NonInitiatorParticipants() ds.Set[types.IdentityKey] {
+	receivers := p.Protocol().Participants().Clone()
+	receivers.Remove(p.initiator)
+	return receivers
+}
+
+func NewInitiator(baseParticipant types.Participant[types.Protocol], message []byte) (*Participant, error) {
+	initiator := &Participant{
+		Participant: baseParticipant,
+		initiator:   baseParticipant.AuthKey(),
 		state: &State{
 			messageToBroadcast: message,
 		},
-		BaseParticipant: types.NewBaseParticipant(nil, protocol, 1, sessionId, nil),
 	}
-	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct the participant")
+	if err := initiator.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the initiator")
 	}
-	return result, nil
+	initiator.NextRound(1)
+	return initiator, nil
 }
 
-func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) (*Participant, error) {
-	if err := validateInputs(sessionId, authKey, protocol, initiator); err != nil {
-		return nil, errs.WrapArgument(err, "couldn't construct responder")
+func NewResponder(baseParticipant types.Participant[types.Protocol], initiator types.IdentityKey) (*Participant, error) {
+	responder := &Participant{
+		Participant: baseParticipant,
+		initiator:   initiator,
+		state:       &State{},
 	}
-	result := &Participant{
-		myAuthKey:       authKey,
-		initiator:       initiator,
-		state:           &State{},
-		BaseParticipant: types.NewBaseParticipant(nil, protocol, 1, sessionId, nil),
+	if err := responder.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct the responder")
 	}
-	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct the participant")
-	}
-	return result, nil
+	responder.NextRound(1) // Responder starts at round 1, but does nothing until round 2.
+	return responder, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) error {
-	if err := types.ValidateAuthKey(authKey); err != nil {
+func (p *Participant) Validate() error {
+	if p.Participant == nil {
+		return errs.NewIsNil("base participant")
+	}
+	if err := p.Participant.Validate(); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "protocol config is invalid")
-	}
-	if err := types.ValidateIdentityKey(initiator); err != nil {
-		return errs.WrapValidation(err, "initator identity key")
-	}
-	if !protocol.Participants().Contains(initiator) {
-		return errs.NewMissing("initator is not one of the participants")
-	}
-	if protocol.Participants().Size() <= 2 {
-		return errs.NewSize("total participants (%d) <= 2", protocol.Participants().Size())
-	}
-	if len(sessionId) == 0 {
+	if len(p.SessionId()) == 0 {
 		return errs.NewIsZero("sessionId length is zero")
 	}
-	if !curveutils.AllOfSameCurve(initiator.PublicKey().Curve(), initiator.PublicKey(), authKey.PublicKey(), authKey.PrivateKey()) {
-		return errs.NewCurve("authKey and initiator have different curves")
+	if err := types.ValidateProtocol(p.Protocol()); err != nil {
+		return errs.WrapValidation(err, "protocol is invalid")
 	}
-	if !curveutils.AllIdentityKeysWithSameCurve(initiator.PublicKey().Curve(), protocol.Participants().List()...) {
-		return errs.NewCurve("not all participants have the same curve")
+	if err := types.ValidateIdentityKey(p.initiator); err != nil {
+		return errs.WrapValidation(err, "initator identity key")
+	}
+	if !p.Protocol().Participants().Contains(p.initiator) {
+		return errs.NewMissing("initator is not one of the participants")
+	}
+	if p.Protocol().Participants().Size() <= 2 {
+		return errs.NewSize("total participants (%d) <= 2", p.Protocol().Participants().Size())
 	}
 	return nil
 }

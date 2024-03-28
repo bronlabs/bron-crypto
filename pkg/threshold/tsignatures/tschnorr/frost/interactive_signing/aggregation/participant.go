@@ -78,7 +78,7 @@ func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProt
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol")
 	}
 	if publicKey == nil {

@@ -14,7 +14,7 @@ import (
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
 type Cosigner struct {
-	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+	types.Participant[types.ThresholdSignatureProtocol]
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
@@ -64,13 +64,13 @@ func NewInteractiveCosigner(authKey types.AuthKey, quorum ds.Set[types.IdentityK
 	}
 
 	cosigner := &Cosigner{
-		BaseParticipant: types.NewBaseParticipant(prng, protocol, 1, nil, nil),
-		myAuthKey:       authKey,
-		shard:           shard,
-		quorum:          quorum,
-		sharingConfig:   sharingConfig,
-		mySharingId:     mySharingId,
-		state:           &State{},
+		Participant:   types.NewBaseParticipant(prng, protocol, 1, nil, nil),
+		myAuthKey:     authKey,
+		shard:         shard,
+		quorum:        quorum,
+		sharingConfig: sharingConfig,
+		mySharingId:   mySharingId,
+		state:         &State{},
 	}
 
 	if cosigner.IsSignatureAggregator() {
@@ -88,7 +88,7 @@ func validateInputs(authKey types.AuthKey, quorum ds.Set[types.IdentityKey], sha
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "my auth key")
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := shard.Validate(protocol); err != nil {

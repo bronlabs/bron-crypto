@@ -38,7 +38,7 @@ func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 }
 
 type Signer struct {
-	suite      types.SignatureProtocol
+	suite      types.SigningSuite
 	privateKey *PrivateKey
 }
 
@@ -76,8 +76,8 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 	return pk, sk, nil
 }
 
-func NewSigner(suite types.SignatureProtocol, privateKey *PrivateKey) (*Signer, error) {
-	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+func NewSigner(suite types.SigningSuite, privateKey *PrivateKey) (*Signer, error) {
+	if err := types.ValidateSigningSuite(suite); err != nil {
 		return nil, errs.WrapArgument(err, "invalid cipher suite")
 	}
 	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve().Name() ||
@@ -110,8 +110,8 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 	return schnorr.NewSignature(schnorr.NewEdDsaCompatibleVariant(), e, R, s), nil
 }
 
-func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
-	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+func Verify(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
+	if err := types.ValidateSigningSuite(suite); err != nil {
 		return errs.WrapArgument(err, "invalid cipher suite")
 	}
 	if publicKey == nil || publicKey.A.IsIdentity() || publicKey.A.Curve().Name() != suite.Curve().Name() {
@@ -135,11 +135,11 @@ func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte,
 	return verifySchnorr(suite, publicKey, message, signature)
 }
 
-func IsEd25519Compliant(suite types.SignatureProtocol) bool {
+func IsEd25519Compliant(suite types.SigningSuite) bool {
 	return (suite.Curve().Name() == edwards25519.Name) && (reflect.ValueOf(suite.Hash()).Pointer() == reflect.ValueOf(sha512.New).Pointer())
 }
 
-func verifySchnorr(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
+func verifySchnorr(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
 	e, err := MakeSchnorrCompatibleChallenge(suite, signature.R.ToAffineCompressed(), publicKey.A.ToAffineCompressed(), message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
@@ -172,7 +172,7 @@ func verifyNativeEd25519(publicKey *PublicKey, message []byte, signature *Signat
 	return nil
 }
 
-func MakeSchnorrCompatibleChallenge(suite types.SignatureProtocol, xs ...[]byte) (curves.Scalar, error) {
+func MakeSchnorrCompatibleChallenge(suite types.SigningSuite, xs ...[]byte) (curves.Scalar, error) {
 	for _, x := range xs {
 		if x == nil {
 			return nil, errs.NewIsNil("an input is nil")

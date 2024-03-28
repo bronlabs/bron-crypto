@@ -77,7 +77,7 @@ func NewCosigner(protocol types.ThresholdSignatureProtocol, myAuthKey types.Auth
 }
 
 func validateCosignerInputs(protocol types.ThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, ppm *lindell17.PreProcessingMaterial, initiator, aggregator types.IdentityKey, prng io.Reader) error {
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {

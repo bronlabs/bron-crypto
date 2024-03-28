@@ -16,7 +16,7 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 	if secret == nil || prng == nil {
 		return nil, nil, errs.NewValidation("secret or prng is nil")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return nil, nil, errs.WrapValidation(err, "could not validate protocol config")
 	}
 	if protocol.Curve().Name() != secret.ScalarField().Curve().Name() {

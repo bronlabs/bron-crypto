@@ -18,7 +18,7 @@ func Test_MeasureConstantTime(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 	curve := k256.NewCurve()
-	cipherSuite, _ := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	cipherSuite, _ := ttu.MakeSigningSuite(curve, sha3.New256)
 	allIdentities, _ := ttu.MakeTestIdentities(cipherSuite, 3)
 
 	internal.RunMeasurement(500, "agreeonrandom", func(i int) {

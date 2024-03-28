@@ -22,7 +22,7 @@ const transcriptLabel = "COPPER_KRYPTON_KEY_RECOVERY-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	sampler                     *hjky.Participant
 	sortedPresentRecoverersList []types.IdentityKey
@@ -67,7 +67,7 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		BaseParticipant:             types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:                 types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		publicKeyShares:             publicKeyShares,
@@ -90,7 +90,7 @@ func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyI
 	if err := types.ValidateIdentityKey(lostPartyIdentityKey); err != nil {
 		return errs.WrapValidation(err, "lost party identity Key")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
 	}
 	if err := signingKeyShare.Validate(protocol); err != nil {
@@ -147,7 +147,7 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		BaseParticipant:             types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:                 types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		lostPartyIdentityKey:        authKey,
@@ -166,7 +166,7 @@ func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol t
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
 	}
 	if err := publicKeyShares.Validate(protocol); err != nil {

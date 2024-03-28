@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
 
-var _ network.MessageLike = (*Round1Broadcast)(nil)
+var _ network.Message = (*Round1Broadcast)(nil)
 
 type Round1Broadcast struct {
 	Sampler                   *hjky.Round1Broadcast

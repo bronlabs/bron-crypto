@@ -10,7 +10,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
@@ -21,25 +20,18 @@ var curveInstances = []curves.Curve{
 	p256.NewCurve(),
 }
 
-func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
-	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
-	require.NoError(t, err)
-	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
-	require.NoError(t, err)
-	return authKeys[0], authKeys[1]
-}
-
 func TestHappyPathBBOT_ROT(t *testing.T) {
 	t.Parallel()
 	Xi := 128
 	L := 4
-	senderKey, receiverKey := getKeys(t)
+	senderKey, receiverKey := ot_testutils.MakeOtIdentitites(k256.NewCurve())
 	for _, curve := range curveInstances {
-		uniqueSessionId := [32]byte{}
-		_, err := crand.Read(uniqueSessionId[:])
+		sessionId := [32]byte{}
+		_, err := crand.Read(sessionId[:])
 		require.NoError(t, err)
-		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
+		sender, receiver, err := testutils.MakeBBOTParticipants(senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, Xi, L)
+		require.NoError(t, err)
+		senderOutput, receiverOutput, err := testutils.RunBBOT(sender, receiver)
 		require.NoError(t, err)
 		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
@@ -50,12 +42,14 @@ func TestHappyPathBBOT_OT(t *testing.T) {
 	t.Parallel()
 	Xi := 256
 	L := 3
-	senderKey, receiverKey := getKeys(t)
+	senderKey, receiverKey := ot_testutils.MakeOtIdentitites(k256.NewCurve())
 	for _, curve := range curveInstances {
-		uniqueSessionId := [32]byte{}
-		_, err := crand.Read(uniqueSessionId[:])
+		sessionId := [32]byte{}
+		_, err := crand.Read(sessionId[:])
 		require.NoError(t, err)
-		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
+		sender, receiver, err := testutils.MakeBBOTParticipants(senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, Xi, L)
+		require.NoError(t, err)
+		senderOutput, receiverOutput, err := testutils.RunBBOT(sender, receiver)
 		require.NoError(t, err)
 		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
@@ -80,13 +74,14 @@ func TestHappyPathBBOT_COT(t *testing.T) {
 	t.Parallel()
 	Xi := 256
 	L := 3
-	senderKey, receiverKey := getKeys(t)
-
+	senderKey, receiverKey := ot_testutils.MakeOtIdentitites(k256.NewCurve())
 	for _, curve := range curveInstances {
-		uniqueSessionId := [32]byte{}
-		_, err := crand.Read(uniqueSessionId[:])
+		sessionId := [32]byte{}
+		_, err := crand.Read(sessionId[:])
 		require.NoError(t, err)
-		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
+		sender, receiver, err := testutils.MakeBBOTParticipants(senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, Xi, L)
+		require.NoError(t, err)
+		senderOutput, receiverOutput, err := testutils.RunBBOT(sender, receiver)
 		require.NoError(t, err)
 		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
@@ -111,16 +106,21 @@ func TestHappyPathBBOT_COT(t *testing.T) {
 func BenchmarkBBOT(b *testing.B) {
 	Xi := 128
 	L := 4
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(b, err)
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(b, err)
 	senderKey, receiverKey := authKeys[0], authKeys[1]
-	uniqueSessionId := [32]byte{}
-	_, err = crand.Read(uniqueSessionId[:])
+	sessionId := [32]byte{}
+	_, err = crand.Read(sessionId[:])
 	require.NoError(b, err)
+	b.ResetTimer()
 	for _, curve := range curveInstances {
-		_, _, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
+		b.StopTimer()
+		sender, receiver, err := testutils.MakeBBOTParticipants(senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, Xi, L)
+		require.NoError(b, err)
+		b.StartTimer()
+		_, _, err = testutils.RunBBOT(sender, receiver)
 		require.NoError(b, err)
 	}
 }

@@ -21,7 +21,7 @@ import (
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -57,7 +57,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1.iv. broadcast commitments
-	p.Round++
+	p.NextRound()
 	return &Round1Broadcast{
 		BigQCommitment: bigQCommitment,
 	}, nil
@@ -65,7 +65,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 
 func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (output *Round2Broadcast, err error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
@@ -101,7 +101,7 @@ func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (out
 	}
 
 	// 2.ii. send opening of Qcom revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
-	p.Round++
+	p.NextRound()
 	return &Round2Broadcast{
 		BigQWitness:          p.state.myBigQWitness,
 		BigQPrime:            p.state.myBigQPrime,
@@ -113,7 +113,7 @@ func (p *Participant) Round2(input network.RoundMessages[*Round1Broadcast]) (out
 
 func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (output *Round3Broadcast, err error) {
 	// Validation
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
@@ -210,7 +210,7 @@ func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (out
 	}
 
 	// 3.v. broadcast (pk, ckey', ckey'')
-	p.Round++
+	p.NextRound()
 	return &Round3Broadcast{
 		CKeyPrime:         cKeyPrime,
 		CKeyDoublePrime:   cKeyDoublePrime,
@@ -220,7 +220,7 @@ func (p *Participant) Round3(input network.RoundMessages[*Round2Broadcast]) (out
 
 func (p *Participant) Round4(input network.RoundMessages[*Round3Broadcast]) (output network.RoundMessages[*Round4P2P], err error) {
 	// Validation
-	if p.Round != 4 {
+	if p.Round() != 4 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 4, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
@@ -297,13 +297,13 @@ func (p *Participant) Round4(input network.RoundMessages[*Round3Broadcast]) (out
 		round4Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.Round++
+	p.NextRound()
 	return round4Outputs, nil
 }
 
 func (p *Participant) Round5(input network.RoundMessages[*Round4P2P]) (output network.RoundMessages[*Round5P2P], err error) {
 	// Validation
-	if p.Round != 5 {
+	if p.Round() != 5 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 5, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
@@ -341,13 +341,13 @@ func (p *Participant) Round5(input network.RoundMessages[*Round4P2P]) (output ne
 		round5Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.Round++
+	p.NextRound()
 	return round5Outputs, nil
 }
 
 func (p *Participant) Round6(input network.RoundMessages[*Round5P2P]) (output network.RoundMessages[*Round6P2P], err error) {
 	// Validation
-	if p.Round != 6 {
+	if p.Round() != 6 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 6, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), input); err != nil {
@@ -385,13 +385,13 @@ func (p *Participant) Round6(input network.RoundMessages[*Round5P2P]) (output ne
 		round6Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.Round++
+	p.NextRound()
 	return round6Outputs, nil
 }
 
 func (p *Participant) Round7(input network.RoundMessages[*Round6P2P]) (output network.RoundMessages[*Round7P2P], err error) {
 	// Validation
-	if p.Round != 7 {
+	if p.Round() != 7 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 7, p.Round)
 	}
 
@@ -426,13 +426,13 @@ func (p *Participant) Round7(input network.RoundMessages[*Round6P2P]) (output ne
 		round7Outputs.Put(identity, outgoingMessage)
 	}
 
-	p.Round++
+	p.NextRound()
 	return round7Outputs, nil
 }
 
 func (p *Participant) Round8(input network.RoundMessages[*Round7P2P]) (shard *lindell17.Shard, err error) {
 	// Validation
-	if p.Round != 8 {
+	if p.Round() != 8 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 8, p.Round)
 	}
 

@@ -45,7 +45,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 }
 
 func validateInputs(protocol types.ThresholdProtocol, authKey types.AuthKey, prng io.Reader) error {
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

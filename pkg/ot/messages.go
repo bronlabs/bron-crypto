@@ -3,6 +3,7 @@ package ot
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type (
@@ -14,6 +15,13 @@ type (
 	CorrelatedElement = curves.Scalar       // ℤq, each element of the COT message.
 	CorrelatedMessage = []CorrelatedElement // [L]ℤq, (a, Z_A, z_B) are the L-scalar messages in COT.
 )
+
+func (c PackedBits) Validate(protocol Protocol) error {
+	if len(c) != protocol.Xi()/8 {
+		return errs.NewLength("choices length should be XiBytes (%d != %d)", len(c), protocol.Xi()/8)
+	}
+	return nil
+}
 
 func (c PackedBits) Select(i int) byte {
 	return bitstring.SelectBit(c, i)

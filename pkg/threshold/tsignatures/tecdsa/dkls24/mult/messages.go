@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
-var _ network.MessageLike = (*Round2Output)(nil)
+var _ network.Message = (*Round2Output)(nil)
 
 type Round1Output = softspoken.Round1Output
 

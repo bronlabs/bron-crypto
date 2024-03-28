@@ -25,7 +25,7 @@ const (
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	przsSetupParticipant *setup.Participant
 	nic                  compiler.Name
@@ -92,7 +92,7 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	}
 
 	participant = &PreGenParticipant{
-		BaseParticipant:      types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:          types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		nic:                  nic,
 		przsSetupParticipant: przsParticipant,
 		preSigners:           preSigners,
@@ -118,7 +118,7 @@ func validatePreGenInputs(authKey types.AuthKey, sessionId []byte, protocol type
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if preSigners == nil {

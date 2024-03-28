@@ -47,7 +47,7 @@ func validateInputsSign(sessionId []byte, authKey types.AuthKey, protocol types.
 	if err := validateInputs(sessionId, authKey, protocol, shard, ppm.PreSigners); err != nil {
 		return err
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
 	if err := ppm.Validate(authKey, protocol); err != nil {

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -14,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	csprng_testutils "github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
@@ -28,45 +27,34 @@ var curveInstances = []curves.Curve{
 	pallas.NewCurve(),
 }
 
-func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
-	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
-	require.NoError(t, err)
-	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
-	require.NoError(t, err)
-	return authKeys[0], authKeys[1]
-}
-
-var baseOTrunners = []func(senderKey, receiverKey types.AuthKey, batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
-	vsot_testutils.RunVSOT,
-	bbot_testutils.RunBBOT,
+var baseOTrunners = []func(senderKey, receiverKey types.AuthKey, curve curves.Curve, sessionId []byte, rng io.Reader, Xi, L int) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
+	bbot_testutils.BBOT,
+	vsot_testutils.VSOT,
 }
 
 func Test_HappyPath_ROTe(t *testing.T) {
 	t.Parallel()
-	senderKey, receiverKey := getKeys(t)
+	senderKey, receiverKey := ot_testutils.MakeOtIdentitites(k256.NewCurve())
+
 	for _, curve := range curveInstances {
 		for _, baseOTrunner := range baseOTrunners {
 			// Generic setup
 			L := 4
 			Xi := 4 * base.ComputationalSecurity
-			uniqueSessionId := [ot.KappaBytes]byte{}
-			_, err := crand.Read(uniqueSessionId[:])
+			prng := csprng_testutils.TestRng()
+			sessionId := [ot.KappaBytes]byte{}
+			_, err := crand.Read(sessionId[:])
 			require.NoError(t, err)
 
 			// BaseOTs
-			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, curve, sessionId[:], prng, ot.Kappa, 1)
 			require.NoError(t, err)
 			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 			require.NoError(t, err)
 
-			// Set OTe inputs
-			receiverChoices, _, err := ot_testutils.GenerateCOTinputs(Xi, L, nil)
-			require.NoError(t, err)
-
-			// Run OTe
-			senderMesages, receiverChosenMessage, err := testutils.RunSoftspokenROTe(
-				senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, receiverChoices)
+			// Run ROTe
+			senderMesages, receiverChoices, receiverChosenMessage, err := testutils.SoftspokenROTe(
+				senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, baseOtSend, baseOtRec, nil, Xi, L)
 			require.NoError(t, err)
 
 			// Check ROTe result
@@ -78,33 +66,30 @@ func Test_HappyPath_ROTe(t *testing.T) {
 
 func Test_HappyPath_COTe(t *testing.T) {
 	t.Parallel()
-	senderKey, receiverKey := getKeys(t)
+	senderKey, receiverKey := ot_testutils.MakeOtIdentitites(k256.NewCurve())
+
 	for _, curve := range curveInstances {
 		for _, baseOTrunner := range baseOTrunners {
 			// Generic setup
 			L := 4
 			Xi := 4 * base.ComputationalSecurity
-			uniqueSessionId := [ot.KappaBytes]byte{}
-			_, err := crand.Read(uniqueSessionId[:])
+			sessionId := [ot.KappaBytes]byte{}
+			prng := csprng_testutils.TestRng()
+			_, err := crand.Read(sessionId[:])
 			require.NoError(t, err)
 
 			// BaseOTs
-			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, ot.Kappa, 1, curve, uniqueSessionId[:], crand.Reader)
+			baseOtSend, baseOtRec, err := baseOTrunner(senderKey, receiverKey, curve, sessionId[:], prng, ot.Kappa, 1)
 			require.NoError(t, err)
 			err = ot_testutils.ValidateOT(ot.Kappa, 1, baseOtSend.MessagePairs, baseOtRec.Choices, baseOtRec.ChosenMessages)
 			require.NoError(t, err)
-
-			// Set COTe inputs
-			choices, cOTeSenderInput, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
-			require.NoError(t, err)
-
 			// Run COTe
-			cOTeSenderOutput, cOTeReceiverOutput, err := testutils.RunSoftspokenCOTe(
-				senderKey, receiverKey, curve, uniqueSessionId[:], crand.Reader, baseOtSend, baseOtRec, choices, cOTeSenderInput, L, Xi)
+			x, a, z_A, z_B, err := testutils.SoftspokenCOTe(
+				senderKey, receiverKey, curve, crand.Reader, sessionId[:], nil, baseOtSend, baseOtRec, nil, Xi, L)
 			require.NoError(t, err)
 
 			// Check COTe result
-			err = ot_testutils.ValidateCOT(Xi, L, choices, cOTeSenderInput, cOTeSenderOutput, cOTeReceiverOutput)
+			err = ot_testutils.ValidateCOT(Xi, L, x, a, z_A, z_B)
 			require.NoError(t, err)
 		}
 	}

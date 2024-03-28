@@ -17,7 +17,7 @@ const (
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -72,7 +72,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 	p.state.commitmentsProof = commitmentsProof
 
 	// step 1.5: Broadcast(Bi)
-	p.Round++
+	p.NextRound()
 	return &Round1Broadcast{
 		BlindedCommitments: dealt.BlindedCommitments,
 	}, outboundP2PMessages, nil
@@ -80,7 +80,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P
 
 func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1Broadcast], round1outputP2P network.RoundMessages[*Round1P2P]) (*Round2Broadcast, error) {
 	// Validation
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round1outputBroadcast, int(p.Protocol().Threshold())); err != nil {
@@ -130,7 +130,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 	p.state.secretKeyShare = secretKeyShare
 	p.state.partialPublicKeyShares = partialPublicKeyShares
 	// step 2.3: Broadcast(C_i, π_i)
-	p.Round++
+	p.NextRound()
 	return &Round2Broadcast{
 		Commitments:      p.state.commitments,
 		CommitmentsProof: p.state.commitmentsProof,
@@ -139,7 +139,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[*Round1
 
 func (p *Participant) Round3(round2output network.RoundMessages[*Round2Broadcast]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol().Participants(), p.IdentityKey(), round2output, int(p.Protocol().Threshold())); err != nil {

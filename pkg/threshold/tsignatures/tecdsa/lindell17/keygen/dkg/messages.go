@@ -12,13 +12,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
 
-var _ network.MessageLike = (*Round1Broadcast)(nil)
-var _ network.MessageLike = (*Round2Broadcast)(nil)
-var _ network.MessageLike = (*Round3Broadcast)(nil)
-var _ network.MessageLike = (*Round4P2P)(nil)
-var _ network.MessageLike = (*Round5P2P)(nil)
-var _ network.MessageLike = (*Round6P2P)(nil)
-var _ network.MessageLike = (*Round7P2P)(nil)
+var _ network.Message = (*Round1Broadcast)(nil)
+var _ network.Message = (*Round2Broadcast)(nil)
+var _ network.Message = (*Round3Broadcast)(nil)
+var _ network.Message = (*Round4P2P)(nil)
+var _ network.Message = (*Round5P2P)(nil)
+var _ network.Message = (*Round6P2P)(nil)
+var _ network.Message = (*Round7P2P)(nil)
 
 type Round1Broadcast struct {
 	BigQCommitment commitments.Commitment

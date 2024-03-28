@@ -7,7 +7,10 @@ import (
 	"io"
 	"slices"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 )
 
@@ -178,7 +181,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 	return z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
+func (p protocol[X0, X1, _, _, A0, A1, _, _, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
 	if statement == nil || commitment == nil || response == nil {
 		return errs.NewIsNil("statement/commitment/response is nil")
 	}
@@ -205,7 +208,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
+func (p protocol[X0, X1, _, _, A0, A1, _, _, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
 	if statement == nil {
 		return nil, nil, errs.NewIsNil("statement")
 	}
@@ -236,11 +239,11 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement
 	return a, z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) GetChallengeBytesLength() int {
 	return p.challengeBytesLength
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
+func (p protocol[X0, X1, W0, W1, _, _, _, _, _, _]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
 	err0 := p.sigma0.ValidateStatement(statement.X0, witness.W0)
 	err1 := p.sigma1.ValidateStatement(statement.X1, witness.W1)
 
@@ -251,18 +254,30 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
+func (p protocol[X0, X1, _, _, _, _, _, _, _, _]) SerializeStatement(statement *Statement[X0, X1]) []byte {
 	return slices.Concat(p.sigma0.SerializeStatement(statement.X0), p.sigma1.SerializeStatement(statement.X1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(commitment *Commitment[A0, A1]) []byte {
+func (p protocol[_, _, _, _, A0, A1, _, _, _, _]) SerializeCommitment(commitment *Commitment[A0, A1]) []byte {
 	return slices.Concat(p.sigma0.SerializeCommitment(commitment.A0), p.sigma1.SerializeCommitment(commitment.A1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
+func (p protocol[_, _, _, _, _, _, _, _, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
 	return slices.Concat(p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) Name() sigma.Name {
 	return sigma.Name(fmt.Sprintf("(%s)_OR_(%s)", p.sigma0.Name(), p.sigma1.Name()))
+}
+
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) Curve() curves.Curve {
+	return p.sigma0.Curve()
+}
+
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) Participants() datastructures.Set[types.IdentityKey] {
+	panic("not implemented")
+}
+
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) MarshalJSON() ([]byte, error) {
+	panic("not implemented")
 }

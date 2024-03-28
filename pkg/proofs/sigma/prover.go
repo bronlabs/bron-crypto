@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
 type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
@@ -15,68 +14,59 @@ type Prover[X Statement, W Witness, A Commitment, S State, Z Response] struct {
 	state   S
 }
 
-func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessionId []byte, transcript transcripts.Transcript, sigmaProtocol Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewArgument("sessionId is empty")
-	}
-	if sigmaProtocol == nil {
-		return nil, errs.NewArgument("protocol, statement or witness is nil")
-	}
-
-	dst := fmt.Sprintf("%s-%s", transcriptLabel, sigmaProtocol.Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-	}
-	transcript.AppendMessages(statementLabel, sigmaProtocol.SerializeStatement(statement))
-
-	return &Prover[X, W, A, S, Z]{
+func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](baseParticipant types.Participant[Protocol[X, W, A, S, Z]], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
+	prover := &Prover[X, W, A, S, Z]{
 		participant: participant[X, W, A, S, Z]{
-			sessionId:     sessionId,
-			transcript:    transcript,
-			sigmaProtocol: sigmaProtocol,
-			statement:     statement,
-			round:         1,
+			Participant: baseParticipant,
+			statement:   statement,
 		},
 		witness: witness,
-	}, nil
+	}
+	if err := prover.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "couldn't validate %s prover", prover.Protocol().Name())
+	}
+	dst := fmt.Sprintf("%s-%s", transcriptLabel, prover.Protocol().Name())
+	if err := prover.Initialise(1, dst); err != nil {
+		return nil, errs.WrapFailed(err, "couldn't initialise prover")
+	}
+	prover.Transcript().AppendMessages(statementLabel, prover.Protocol().SerializeStatement(statement))
+	return prover, nil
 }
 
 func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 	var zero A
 
-	if p.round != 1 {
-		return zero, errs.NewRound("r != 1 (%d)", p.round)
+	if p.Round() != 1 {
+		return zero, errs.NewRound("r != 1 (%d)", p.Round())
 	}
 
-	commitment, state, err := p.sigmaProtocol.ComputeProverCommitment(p.statement, p.witness)
+	commitment, state, err := p.Protocol().ComputeProverCommitment(p.statement, p.witness)
 	if err != nil {
 		return zero, errs.WrapFailed(err, "cannot create commitment")
 	}
 
-	p.transcript.AppendMessages(commitmentLabel, p.sigmaProtocol.SerializeCommitment(commitment))
+	p.Transcript().AppendMessages(commitmentLabel, p.Protocol().SerializeCommitment(commitment))
 	p.commitment = commitment
 	p.state = state
-	p.round += 2 // prover doesn't send anything in round 2 (skip to round 3)
+	p.NextRound(3) // prover doesn't send anything in round 2 (skip to round 3)
 	return commitment, nil
 }
 
 func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	var zero Z
-	p.transcript.AppendMessages(challengeLabel, challengeBytes)
-
-	if p.round != 3 {
-		return zero, errs.NewRound("r != 3 (%d)", p.round)
+	p.Transcript().AppendMessages(challengeLabel, challengeBytes)
+	if p.Round() != 3 {
+		return zero, errs.NewRound("r != 3 (%d)", p.Round())
 	}
 
-	response, err := p.sigmaProtocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)
+	response, err := p.Protocol().ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, challengeBytes)
 	if err != nil {
 		return zero, errs.WrapFailed(err, "cannot generate response")
 	}
-	p.transcript.AppendMessages(responseLabel, p.sigmaProtocol.SerializeResponse(response))
+	p.Transcript().AppendMessages(responseLabel, p.Protocol().SerializeResponse(response))
 
 	p.challengeBytes = challengeBytes
 	p.response = response
-	p.round += 2
+	p.Terminate()
 	return response, nil
 }

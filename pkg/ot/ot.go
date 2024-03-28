@@ -3,15 +3,12 @@ package ot
 import (
 	"crypto/subtle"
 	"fmt"
-	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -22,12 +19,18 @@ const (
 
 var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes
 
+// Protocol defines the common interface for all OT protocols.
+type Protocol interface {
+	types.Protocol
+	// Xi (ξ), the number of OTs that are run in parallel.
+	Xi() int
+	// L, the number of elements (bitstrings/scalars) in each OT message.
+	L() int
+}
+
 // Participant contains the common members of the sender and receiver.
 type Participant struct {
-	*types.BaseParticipant[types.MPCProtocol]
-
-	L  int // L, the number of elements in each OT message.
-	Xi int // ξ, the number of OTs that are run in parallel.
+	types.Participant[Protocol]
 
 	_ ds.Incomparable
 }
@@ -40,43 +43,41 @@ func (p *Participant) OtherParty() types.IdentityKey {
 	return parties[1]
 }
 
-func NewParticipant(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, label string, transcript transcripts.Transcript, csprng io.Reader, initialRound int) (*Participant, error) {
-	if err := validateInputs(myAuthKey, protocol, Xi, L, sessionId, csprng); err != nil {
-		return nil, errs.WrapArgument(err, "couldn't construct ot participant")
+func NewParticipant(baseParticipant types.Participant[Protocol], label string, initialRound int) (*Participant, error) {
+	otParticipant := &Participant{
+		Participant: baseParticipant,
 	}
-	dst := fmt.Sprintf("%s_%d_%d_%s", label, Xi, L, protocol.Curve().Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+	if err := otParticipant.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "could not construct OT participantr")
 	}
-	return &Participant{
-		BaseParticipant: types.NewBaseParticipant(csprng, protocol, initialRound, sessionId, transcript),
-		L:               L,
-		Xi:              Xi,
-	}, nil
+	dst := fmt.Sprintf("%s_%d_%d_%s", label, otParticipant.Protocol().Xi(),
+		otParticipant.Protocol().L(), otParticipant.Protocol().Curve().Name())
+	otParticipant.Initialise(initialRound, dst)
+	return otParticipant, nil
 }
 
-func validateInputs(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, csprng io.Reader) error {
-	if Xi&0x07 != 0 || Xi < 1 { // `Enforce batchSize % 8 != 0`
-		return errs.NewValue("batch size should be a positive multiple of 8")
+func (p *Participant) Validate() error {
+	if p.Protocol().Xi()&0x07 != 0 || p.Protocol().Xi() < 1 { // `Enforce batchSize % 8 != 0`
+		return errs.NewValue("batch size (Xi) should be a positive multiple of 8")
 	}
-	if L < 1 {
-		return errs.NewValue("message length should be positive")
+	if p.Protocol().L() < 1 {
+		return errs.NewValue("OT message length (L) should be positive")
 	}
-	if csprng == nil {
+	if p.Prng() == nil {
 		return errs.NewIsNil("prng is nil")
 	}
-	if len(sessionId) == 0 {
+	if len(p.SessionId()) == 0 {
 		return errs.NewIsNil("unique session id is empty")
 	}
-	if err := types.ValidateAuthKey(myAuthKey); err != nil {
+	p.Participant.Validate()
+	if err := types.ValidateAuthKey(p.AuthKey()); err != nil {
 		return errs.WrapValidation(err, "my auth key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocol(p.Protocol()); err != nil {
 		return errs.WrapValidation(err, "mpc protocol config")
 	}
-	if protocol.Participants().Size() != 2 {
-		return errs.NewSize("#participants (=%d) != 2", protocol.Participants().Size())
+	if numParticipants := p.Protocol().Participants().Size(); numParticipants != 2 {
+		return errs.NewSize("#participants (=%d) != 2", numParticipants)
 	}
 	return nil
 }
@@ -89,12 +90,40 @@ type SenderRotOutput struct {
 	_            ds.Incomparable
 }
 
+func (sOut *SenderRotOutput) Validate(protocol Protocol) error {
+	if len(sOut.MessagePairs) != protocol.Xi() {
+		return errs.NewLength("number of message pairs should be Xi (%d != %d)", len(sOut.MessagePairs), protocol.Xi())
+	}
+	for j := 0; j < protocol.Xi(); j++ {
+		if len(sOut.MessagePairs[j][0]) != protocol.L() || len(sOut.MessagePairs[j][1]) != protocol.L() {
+			return errs.NewLength("message[%d] length should be L (%d != %d || %d != %d)",
+				j, len(sOut.MessagePairs[j][0]), protocol.L(), len(sOut.MessagePairs[j][1]), protocol.L())
+		}
+	}
+	return nil
+}
+
 // ReceiverRotOutput are the outputs that the receiver will obtain as a result of running a Random OT (ROT) protocol.
 type ReceiverRotOutput struct {
 	Choices        PackedBits // Choices (x) is the batch of "packed" choice bits of the receiver.
 	ChosenMessages []Message  // ChosenMessages (r_x) is the batch of messages chosen by receiver.
 
 	_ ds.Incomparable
+}
+
+func (rOut *ReceiverRotOutput) Validate(protocol Protocol) error {
+	if len(rOut.ChosenMessages) != protocol.Xi() {
+		return errs.NewLength("number of chosen messages should be Xi (%d != %d)", len(rOut.ChosenMessages), protocol.Xi())
+	}
+	for j := 0; j < protocol.Xi(); j++ {
+		if len(rOut.ChosenMessages[j]) != protocol.L() {
+			return errs.NewLength("chosen message[%d] length should be L (%d != %d)", j, len(rOut.ChosenMessages[j]), protocol.L())
+		}
+	}
+	if len(rOut.Choices) != protocol.Xi()/8 {
+		return errs.NewLength("choices length should be XiBytes (%d != %d)", len(rOut.Choices), protocol.Xi()/8)
+	}
+	return nil
 }
 
 /*.------------------- (standard) OBLIVIOUS TRANSFER (OT) -------------------.*/

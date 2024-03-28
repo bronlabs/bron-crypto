@@ -34,7 +34,7 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	p.state.bigR = bigR
 	p.state.bigRWitness = bigRWitness
 
-	p.round++
+	p.NextRound()
 	return &Round1Broadcast{
 		BigRCommitment: bigRCommitment,
 	}, nil
@@ -68,7 +68,7 @@ func (p *PreGenParticipant) Round2(input network.RoundMessages[*Round1Broadcast]
 
 	p.state.theirBigRCommitments = theirBigRCommitments
 
-	p.round++
+	p.NextRound()
 	return &Round2Broadcast{
 		BigR:        p.state.bigR,
 		BigRProof:   bigRProof,
@@ -107,7 +107,7 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[*Round2Broadcast]
 		bigRs.Put(identity, in.BigR.Mul(p.state.k))
 	}
 
-	p.round++
+	p.NextRound()
 	return &lindell17.PreProcessingMaterial{
 		PrivateMaterial: &lindell17.PrivatePreProcessingMaterial{
 			K: p.state.k,

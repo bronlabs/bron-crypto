@@ -26,7 +26,7 @@ func Test_MeasureConstantTime_eddsa(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	message := []byte("Hello")
 	hashFunc := sha256.New
-	suite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	suite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	messageHash, err := hashing.Hash(hashFunc, message)

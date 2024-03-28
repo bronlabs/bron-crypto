@@ -9,7 +9,7 @@ import (
 
 func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMessages[*signing.Round1P2P], error) {
 	// Validation
-	if p.Round != 1 {
+	if p.Round() != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
@@ -18,13 +18,13 @@ func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMes
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	p.Round++
+	p.NextRound()
 	return outputBroadcast, outputP2P, nil
 }
 
 func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*signing.Round1Broadcast], round1outputP2P network.RoundMessages[*signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[*signing.Round2P2P], error) {
 	// Validation, round 1 messages delegated to signing.DoRound2
-	if p.Round != 2 {
+	if p.Round() != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 
@@ -33,13 +33,13 @@ func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[*
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
-	p.Round++
+	p.NextRound()
 	return outputBroadcast, outputP2P, nil
 }
 
 func (p *PreGenParticipant) Round3(round2outputBroadcast network.RoundMessages[*signing.Round2Broadcast], round2outputP2P network.RoundMessages[*signing.Round2P2P]) (*dkls24.PreProcessingMaterial, error) {
 	// Validation, round 2 messages delegated to signing.DoRound3Prologue
-	if p.Round != 3 {
+	if p.Round() != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 

@@ -5,7 +5,6 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[*Round1P2P], error) {

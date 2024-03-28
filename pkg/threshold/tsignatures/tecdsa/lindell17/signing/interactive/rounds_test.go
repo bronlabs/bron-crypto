@@ -32,7 +32,7 @@ func Test_HappyPath(t *testing.T) {
 
 	curve := k256.NewCurve()
 	hash := sha256.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 
 	curve := k256.NewCurve()
 	hash := sha256.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)
@@ -127,7 +127,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 		curve := c
 		t.Run(fmt.Sprintf("curve: %s", curve.Name()), func(t *testing.T) {
 			t.Parallel()
-			cipherSuite, err := testutils.MakeSignatureProtocol(curve, sha256.New)
+			cipherSuite, err := testutils.MakeSigningSuite(curve, sha256.New)
 			require.NoError(t, err)
 
 			identities, err := testutils.MakeTestIdentities(cipherSuite, 3)

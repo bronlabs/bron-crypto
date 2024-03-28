@@ -20,7 +20,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	h := sha256.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	th := 2
 	n := 3

@@ -26,7 +26,7 @@ var (
 )
 
 type Cosigner struct {
-	*types.BaseParticipant[types.ThresholdSignatureProtocol]
+	types.Participant[types.ThresholdSignatureProtocol]
 
 	myAuthKey   types.AuthKey
 	mySharingId types.SharingID
@@ -104,11 +104,11 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, hisIdentityKey types
 		return nil, 0, errs.NewMissing("could not find the other party sharign id")
 	}
 	return &Cosigner{
-		BaseParticipant: types.NewBaseParticipant(prng, protocol, roundNo, sessionId, transcript),
-		myAuthKey:       myAuthKey,
-		mySharingId:     mySharingId,
-		myShard:         myShard,
-		nic:             niCompiler,
+		Participant: types.NewBaseParticipant(prng, protocol, roundNo, sessionId, transcript),
+		myAuthKey:   myAuthKey,
+		mySharingId: mySharingId,
+		myShard:     myShard,
+		nic:         niCompiler,
 	}, hisSharingId, nil
 }
 
@@ -150,7 +150,7 @@ func validateInputs(sessionId []byte, myAuthKey types.AuthKey, other types.Ident
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdSignatureProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold signature protocol config")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {

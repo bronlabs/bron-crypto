@@ -107,7 +107,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if len(sessionId) == 0 {
 		return errs.NewLength("invalid session id: %s", sessionId)
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold signature protocol config")
 	}
 	if err := types.ValidateAuthKey(authKey); err != nil {

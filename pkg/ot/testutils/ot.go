@@ -3,15 +3,49 @@ package testutils
 import (
 	"bytes"
 	crand "crypto/rand"
+	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"golang.org/x/crypto/sha3"
 )
 
-/*.-------------------- RANDOM OBLIVIOUS TRANSFER (ROT) ---------------------.*/
+func MakeOtIdentitites(curve curves.Curve) (senderAuthKey, receiverAuthKey types.AuthKey) {
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha3.New256)
+	if err != nil {
+		panic(err)
+	}
+	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
+	if err != nil {
+		panic(err)
+	}
+	return authKeys[0], authKeys[1]
+}
 
-// GenerateCOTinputs generates random inputs for Correlated OTs.
+func MakeOtParticipants(senderAuthKey, receiverAuthKey types.AuthKey, curve curves.Curve, prng io.Reader, sessionId []byte, transcript transcripts.Transcript, Xi, L int) (sender, receiver types.Participant[ot.Protocol], err error) {
+	// Create protocol
+	protocol, err := ttu.NewProtocol(curve, senderAuthKey, receiverAuthKey)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "constructing protocol in make OT participants")
+	}
+	otProtocol := NewProtocol(protocol, Xi, L)
+	// Create ot participants
+	baseSender, err := ttu.NewParticipant(senderAuthKey, prng, otProtocol, 0, sessionId, transcript)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "constructing base OT sender in make BBOT participants")
+	}
+	baseReceiver, err := ttu.NewParticipant(receiverAuthKey, prng, otProtocol, 0, sessionId, transcript)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "constructing base OT receiver in make BBOT participants")
+	}
+	return baseSender, baseReceiver, nil
+}
+
+// GenerateOTinputs generates random inputs for Correlated OTs.
 func GenerateOTinputs(Xi, L int) (
 	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
 	senderMessages [][2]ot.Message, // sender's input in OT, the MessagePair (s_0, s_1)
@@ -43,13 +77,13 @@ func ValidateOT(
 	Xi int, // number of OTe messages in the batch
 	L int, // number of OTe elements per message
 	senderMessages [][2]ot.Message, // sender's input in OT, the MessagePair (s_0, s_1)
-	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
+	receiverChoices ot.PackedBits, // receiver's input, the Choice bits x
 	receiverChosenMessages []ot.Message, // receiver's output, the ChosenMessage (r_x)
 ) error {
 	// Check length matching
-	if len(receiverChoiceBits) != Xi/8 || len(receiverChosenMessages) != Xi || len(senderMessages) != Xi {
+	if len(receiverChoices) != Xi/8 || len(receiverChosenMessages) != Xi || len(senderMessages) != Xi {
 		return errs.NewLength("ROT output length mismatch (should be %d, is: %d)",
-			ot.KappaBytes, len(receiverChoiceBits))
+			ot.KappaBytes, len(receiverChoices))
 	}
 	// Check baseOT results
 	for i := 0; i < Xi; i++ {
@@ -57,7 +91,7 @@ func ValidateOT(
 			return errs.NewLength("ROT output message length mismatch (should be %d, is: %d, %d, %d)",
 				L, len(receiverChosenMessages[i]), len(senderMessages[i][0]), len(senderMessages[i][1]))
 		}
-		choice := receiverChoiceBits.Select(i)
+		choice := receiverChoices.Select(i)
 		if !bytes.Equal(receiverChosenMessages[i][0][:], senderMessages[i][choice][0][:]) {
 			return errs.NewVerification("ROT output mismatch for index %d", i)
 		}

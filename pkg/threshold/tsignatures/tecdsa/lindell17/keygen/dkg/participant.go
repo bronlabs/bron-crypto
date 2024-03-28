@@ -55,7 +55,7 @@ type State struct {
 }
 
 type Participant struct {
-	*types.BaseParticipant[types.ThresholdProtocol]
+	types.Participant[types.ThresholdProtocol]
 
 	myAuthKey         types.AuthKey
 	mySharingId       types.SharingID
@@ -97,7 +97,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	}
 
 	participant = &Participant{
-		BaseParticipant:   types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
+		Participant:       types.NewBaseParticipant(prng, protocol, 1, sessionId, transcript),
 		myAuthKey:         myAuthKey,
 		mySharingId:       mySharingId,
 		mySigningKeyShare: mySigningKeyShare,
@@ -116,7 +116,7 @@ func validateInputs(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	if len(sessionId) == 0 {
 		return errs.NewArgument("invalid session id: %s", sessionId)
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+	if err := types.ValidateThresholdProtocol(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateAuthKey(myAuthKey); err != nil {
