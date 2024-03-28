@@ -50,11 +50,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
+	verifier.state.a, err = utils.RandomNatRange(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
+	verifier.state.b, err = utils.RandomNatRange(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}

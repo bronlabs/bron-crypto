@@ -1,4 +1,5 @@
-include scripts/Makefile
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(SELF_DIR)/scripts/Makefile
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
@@ -16,9 +17,16 @@ codegen:
 	${GO} generate ./...
 	golangci-lint run --fix ./pkg/base/errs
 
+# might not work on windows
+boringssl/build/crypto/libcrypto.a: boringssl/include/openssl/bn.h
+	cmake boringssl -DCMAKE_BUILD_TYPE=Release -DOPENSSL_SMALL=1 -GNinja -B boringssl/build
+	ninja -C boringssl/build -j7 crypto
+
+.PHONY: build-boring
+build-boring: boringssl/build/crypto/libcrypto.a
+
 .PHONY: build
-build:
-	$(MAKE) codegen
+build: build-boring codegen
 	${GO} build ./...
 
 .PHONY: bench
