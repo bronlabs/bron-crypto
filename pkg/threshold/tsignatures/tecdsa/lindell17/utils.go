@@ -110,7 +110,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 	orderTimesHighPlusSeventeen := new(saferith.Nat).Add(orderTimesHigh, new(saferith.Nat).SetUint64(17), -1)
 	h := new(saferith.Nat).Div(orderTimesHighPlusSeventeen, saferith.ModulusFromUint64(18), order.AnnouncedLen())
 
-	x, err := utils.RandomNat(prng, l, h)
+	x, err := utils.RandomNatRange(prng, l, h)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get random number")
 	}

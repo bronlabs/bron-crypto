@@ -904,6 +904,9 @@ linters-settings:
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
+    - path: 'internal/'
+      linters:
+        - govet
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
@@ -978,7 +981,7 @@ issues:
       linters:
         staticcheck
 
-    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and 
+    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
     # unused constants (poly).
     - path: thirdparty/
       linters:

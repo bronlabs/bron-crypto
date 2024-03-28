@@ -32,7 +32,7 @@ func NatFromBytes(x []byte, m *saferith.Modulus) *saferith.Nat {
 	)
 }
 
-func RandomNat(prng io.Reader, lowInclusive, highExclusive *saferith.Nat) (*saferith.Nat, error) {
+func RandomNatRange(prng io.Reader, lowInclusive, highExclusive *saferith.Nat) (*saferith.Nat, error) {
 	max := new(saferith.Nat).Sub(highExclusive, lowInclusive, highExclusive.AnnouncedLen())
 	if max.Big().Cmp(big.NewInt(0)) == 0 {
 		return nil, errs.NewArgument("max must be greater than zero")
@@ -42,6 +42,16 @@ func RandomNat(prng io.Reader, lowInclusive, highExclusive *saferith.Nat) (*safe
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
 	return new(saferith.Nat).Add(lowInclusive, new(saferith.Nat).SetBig(randInt, highExclusive.AnnouncedLen()), highExclusive.AnnouncedLen()), nil
+}
+
+func RandomNatSize(prng io.Reader, bitSize int) (*saferith.Nat, error) {
+	bound := new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), uint(bitSize), bitSize+1)
+	resultBig, err := crand.Int(prng, bound.Big())
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "cannot sample big.Int")
+	}
+
+	return new(saferith.Nat).SetBig(resultBig, bitSize), nil
 }
 
 func NatSetBit(value *saferith.Nat, bit int) (*saferith.Nat, error) {
