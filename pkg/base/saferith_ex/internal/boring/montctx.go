@@ -16,6 +16,7 @@ type BigNumMontCtx struct {
 
 func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) *BigNumMontCtx {
 	m.copyChecker.check()
+	bigNumCtx.copyChecker.check()
 
 	//nolint:gocritic // false positive
 	nativeCtx := C.BN_MONT_CTX_new_consttime(&m.nativeBigNum, bigNumCtx.nativeBnCtx)
@@ -33,5 +34,7 @@ func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) *BigNumMontCtx {
 	})
 
 	ctx.copyChecker.check()
+	runtime.KeepAlive(m)
+	runtime.KeepAlive(bigNumCtx)
 	return ctx
 }
