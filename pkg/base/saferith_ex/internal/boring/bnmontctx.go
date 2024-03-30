@@ -14,14 +14,14 @@ type BigNumMontCtx struct {
 	copyChecker copyChecker
 }
 
-func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) *BigNumMontCtx {
+func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) (*BigNumMontCtx, error) {
 	m.copyChecker.check()
 	bigNumCtx.copyChecker.check()
 
 	//nolint:gocritic // false positive
 	nativeCtx := C.BN_MONT_CTX_new_consttime(&m.nativeBigNum, bigNumCtx.nativeBnCtx)
 	if nativeCtx == nil {
-		panic("BN_MONT_CTX_new_consttime")
+		return nil, lastError()
 	}
 	ctx := &BigNumMontCtx{
 		nativeBnMontCtx: nativeCtx,
@@ -36,5 +36,5 @@ func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) *BigNumMontCtx {
 	ctx.copyChecker.check()
 	runtime.KeepAlive(m)
 	runtime.KeepAlive(bigNumCtx)
-	return ctx
+	return ctx, nil
 }

@@ -30,11 +30,11 @@ func (m *genericModulus) Nat() *saferith.Nat {
 	return m.modulus.Nat()
 }
 
-func (m *genericModulus) Exp(base, exponent *saferith.Nat) *saferith.Nat {
-	return new(saferith.Nat).Exp(base, exponent, m.modulus)
+func (m *genericModulus) Exp(base, exponent *saferith.Nat) (*saferith.Nat, error) {
+	return new(saferith.Nat).Exp(base, exponent, m.modulus), nil
 }
 
-func (m *genericModulus) MultiBaseExp(bases []*saferith.Nat, exponent *saferith.Nat) []*saferith.Nat {
+func (m *genericModulus) MultiBaseExp(bases []*saferith.Nat, exponent *saferith.Nat) ([]*saferith.Nat, error) {
 	results := make([]*saferith.Nat, len(bases))
 
 	var wg sync.WaitGroup
@@ -49,10 +49,10 @@ func (m *genericModulus) MultiBaseExp(bases []*saferith.Nat, exponent *saferith.
 	}
 	wg.Wait()
 
-	return results
+	return results, nil
 }
 
-func (m *genericModulus) MultiExponentExp(base *saferith.Nat, exponents []*saferith.Nat) []*saferith.Nat {
+func (m *genericModulus) MultiExponentExp(base *saferith.Nat, exponents []*saferith.Nat) ([]*saferith.Nat, error) {
 	results := make([]*saferith.Nat, len(exponents))
 
 	var wg sync.WaitGroup
@@ -67,5 +67,5 @@ func (m *genericModulus) MultiExponentExp(base *saferith.Nat, exponents []*safer
 	}
 	wg.Wait()
 
-	return results
+	return results, nil
 }

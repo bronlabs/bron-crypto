@@ -10,7 +10,9 @@ import (
 )
 
 func Test_SafePrimePairGen(t *testing.T) {
-	p, q := saferith_ex.GenSafePrimePair(1024)
+	p, q, err := saferith_ex.GenSafePrimePair(1024)
+	require.NoError(t, err)
+
 	pHalf := new(saferith.Nat).Rsh(p, 1, -1)
 	qHalf := new(saferith.Nat).Rsh(q, 1, -1)
 

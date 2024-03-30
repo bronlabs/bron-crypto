@@ -35,12 +35,15 @@ func Test_OddModulus(t *testing.T) {
 		modulus, err := saferith_ex.NewOddModulus(m)
 		require.NoError(t, err)
 
-		result0 := modulus.Exp(base, exponent)
-		result1 := modulus.MultiBaseExp([]*saferith.Nat{base}, exponent)[0]
-		result2 := modulus.MultiExponentExp(base, []*saferith.Nat{exponent})[0]
+		result0, err := modulus.Exp(base, exponent)
+		require.NoError(t, err)
+		result1, err := modulus.MultiBaseExp([]*saferith.Nat{base}, exponent)
+		require.NoError(t, err)
+		result2, err := modulus.MultiExponentExp(base, []*saferith.Nat{exponent})
+		require.NoError(t, err)
 
 		require.True(t, result0.Eq(expected) == 1)
-		require.True(t, result1.Eq(expected) == 1)
-		require.True(t, result2.Eq(expected) == 1)
+		require.True(t, result1[0].Eq(expected) == 1)
+		require.True(t, result2[0].Eq(expected) == 1)
 	}
 }

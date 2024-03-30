@@ -1,9 +1,8 @@
 package saferith_ex
 
 import (
-	"sync"
-
 	"github.com/cronokirby/saferith"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/saferith_ex/internal/boring"
@@ -23,9 +22,16 @@ func NewOddModulus(modulus *saferith.Nat) (Modulus, error) {
 		return nil, errs.NewArgument("modulus is not odd")
 	}
 
-	m := boring.NewBigNum().SetBytes(modulus.Bytes())
+	m, err := boring.NewBigNum().SetBytes(modulus.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create modulus")
+	}
+
 	bnCtx := boring.NewBigNumCtx()
-	montCtx := boring.NewBigNumMontCtx(m, bnCtx)
+	montCtx, err := boring.NewBigNumMontCtx(m, bnCtx)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create modulus")
+	}
 
 	return &oddModulus{
 		boringModulus: m,
@@ -42,77 +48,133 @@ func (m *oddModulus) Nat() *saferith.Nat {
 	return m.modulus.Nat()
 }
 
-func (m *oddModulus) Exp(base, exponent *saferith.Nat) *saferith.Nat {
+func (m *oddModulus) Exp(base, exponent *saferith.Nat) (*saferith.Nat, error) {
 	bnCtx := boring.NewBigNumCtx()
 
-	b := boring.NewBigNum().SetBytes(base.Bytes())
-	bModM := boring.NewBigNum().Mod(b, m.boringModulus, bnCtx)
-	e := boring.NewBigNum().SetBytes(exponent.Bytes())
-	r := boring.NewBigNum().Exp(bModM, e, m.boringModulus, m.montCtx, bnCtx)
+	b, err := boring.NewBigNum().SetBytes(base.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
 
-	return new(saferith.Nat).SetBytes(r.Bytes())
+	bModM, err := boring.NewBigNum().Mod(b, m.boringModulus, bnCtx)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
+	e, err := boring.NewBigNum().SetBytes(exponent.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
+	r, err := boring.NewBigNum().Exp(bModM, e, m.boringModulus, m.montCtx, bnCtx)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
+	rBytes, err := r.Bytes()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
+	return new(saferith.Nat).SetBytes(rBytes), nil
 }
 
-func (m *oddModulus) MultiBaseExp(bases []*saferith.Nat, exponent *saferith.Nat) []*saferith.Nat {
+func (m *oddModulus) MultiBaseExp(bases []*saferith.Nat, exponent *saferith.Nat) ([]*saferith.Nat, error) {
 	bnCtx := boring.NewBigNumCtx()
 
 	bb := make([]*boring.BigNum, len(bases))
 	for i := range bases {
-		bi := boring.NewBigNum().SetBytes(bases[i].Bytes())
-		bb[i] = boring.NewBigNum().Mod(bi, m.boringModulus, bnCtx)
+		bi, err := boring.NewBigNum().SetBytes(bases[i].Bytes())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create BigNum")
+		}
+		bb[i], err = boring.NewBigNum().Mod(bi, m.boringModulus, bnCtx)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create BigNum")
+		}
 	}
 
-	ee := boring.NewBigNum().SetBytes(exponent.Bytes())
+	ee, err := boring.NewBigNum().SetBytes(exponent.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
 	rr := make([]*boring.BigNum, len(bb))
 
-	var wg sync.WaitGroup
-	jobFunc := func(i int) {
+	jobFunc := func(i int) error {
+		var err error
 		localCtx := boring.NewBigNumCtx()
-		rr[i] = boring.NewBigNum().Exp(bb[i], ee, m.boringModulus, m.montCtx, localCtx)
-		wg.Done()
+		rr[i], err = boring.NewBigNum().Exp(bb[i], ee, m.boringModulus, m.montCtx, localCtx)
+		return err //nolint:wrapcheck // deliberate forward
 	}
 
+	var eg errgroup.Group
 	for i := range bb {
-		wg.Add(1)
-		go jobFunc(i)
+		eg.Go(func() error { err := jobFunc(i); return err })
 	}
-	wg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "error computing exp")
+	}
 
 	r := make([]*saferith.Nat, len(rr))
 	for i := range rr {
-		r[i] = new(saferith.Nat).SetBytes(rr[i].Bytes())
+		rriBytes, err := rr[i].Bytes()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create BigNum")
+		}
+
+		r[i] = new(saferith.Nat).SetBytes(rriBytes)
 	}
-	return r
+
+	return r, nil
 }
 
-func (m *oddModulus) MultiExponentExp(base *saferith.Nat, exponents []*saferith.Nat) []*saferith.Nat {
+func (m *oddModulus) MultiExponentExp(base *saferith.Nat, exponents []*saferith.Nat) ([]*saferith.Nat, error) {
 	bnCtx := boring.NewBigNumCtx()
 
-	bb := boring.NewBigNum().SetBytes(base.Bytes())
-	bm := boring.NewBigNum().Mod(bb, m.boringModulus, bnCtx)
+	bb, err := boring.NewBigNum().SetBytes(base.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
+	bm, err := boring.NewBigNum().Mod(bb, m.boringModulus, bnCtx)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create BigNum")
+	}
+
 	ee := make([]*boring.BigNum, len(exponents))
 	for i := range exponents {
-		ee[i] = boring.NewBigNum().SetBytes(exponents[i].Bytes())
+		ee[i], err = boring.NewBigNum().SetBytes(exponents[i].Bytes())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create BigNum")
+		}
 	}
 
 	rr := make([]*boring.BigNum, len(ee))
 
-	var wg sync.WaitGroup
-	jobFunc := func(i int) {
+	jobFunc := func(i int) error {
 		localCtx := boring.NewBigNumCtx()
-		rr[i] = boring.NewBigNum().Exp(bm, ee[i], m.boringModulus, m.montCtx, localCtx)
-		wg.Done()
+		rr[i], err = boring.NewBigNum().Exp(bm, ee[i], m.boringModulus, m.montCtx, localCtx)
+		return err //nolint:wrapcheck // deliberate forward
 	}
 
+	var eg errgroup.Group
 	for i := range ee {
-		wg.Add(1)
-		go jobFunc(i)
+		eg.Go(func() error { err := jobFunc(i); return err })
 	}
-	wg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute exp")
+	}
 
 	r := make([]*saferith.Nat, len(rr))
 	for i := range rr {
-		r[i] = new(saferith.Nat).SetBytes(rr[i].Bytes())
+		rriBytes, err := rr[i].Bytes()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create BigNum")
+		}
+		r[i] = new(saferith.Nat).SetBytes(rriBytes)
 	}
-	return r
+
+	return r, nil
 }

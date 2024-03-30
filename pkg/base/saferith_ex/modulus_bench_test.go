@@ -41,37 +41,37 @@ func Benchmark_ModExp(b *testing.B) {
 	b.Run("generic exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for j := 0; j < k; j++ {
-				_ = genericModulus.Exp(bases[j], exp)
+				_, _ = genericModulus.Exp(bases[j], exp)
 			}
 		}
 	})
 	b.Run("generic multi-base exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = genericModulus.MultiBaseExp(bases, exp)
+			_, _ = genericModulus.MultiBaseExp(bases, exp)
 		}
 	})
 	b.Run("odd exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for j := 0; j < k; j++ {
-				_ = oddModulus.Exp(bases[j], exp)
+				_, _ = oddModulus.Exp(bases[j], exp)
 			}
 		}
 	})
 	b.Run("odd multi-base exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = oddModulus.MultiBaseExp(bases, exp)
+			_, _ = oddModulus.MultiBaseExp(bases, exp)
 		}
 	})
 	b.Run("primes exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for j := 0; j < k; j++ {
-				_ = primesModulus.Exp(bases[j], exp)
+				_, _ = primesModulus.Exp(bases[j], exp)
 			}
 		}
 	})
 	b.Run("primes multi-base exp", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = primesModulus.MultiBaseExp(bases, exp)
+			_, _ = primesModulus.MultiBaseExp(bases, exp)
 		}
 	})
 }

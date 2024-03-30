@@ -5,15 +5,19 @@ import (
 	"testing"
 
 	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/saferith_ex/internal/boring"
 )
 
 func Test_Sanity(t *testing.T) {
 	xNat := new(saferith.Nat).SetUint64(11)
-	xNum := boring.NewBigNum().SetBytes(xNat.Bytes())
+	xNum, err := boring.NewBigNum().SetBytes(xNat.Bytes())
+	require.NoError(t, err)
+
 	bnCtx := boring.NewBigNumCtx()
-	_ = boring.NewBigNumMontCtx(xNum, bnCtx)
+	_, err = boring.NewBigNumMontCtx(xNum, bnCtx)
+	require.NoError(t, err)
 
 	runtime.GC()
 }
