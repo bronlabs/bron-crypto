@@ -1,7 +1,6 @@
 package boring
 
 // #cgo CFLAGS: -I "${SRCDIR}/../../../../../boringssl/include"
-// #cgo LDFLAGS: -L"${SRCDIR}/../../../../../boringssl/build/crypto" -lcrypto
 // #include <openssl/bn.h>
 import (
 	"C" //nolint:gocritic // false positive
