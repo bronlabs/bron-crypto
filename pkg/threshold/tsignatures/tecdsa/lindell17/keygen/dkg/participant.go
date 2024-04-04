@@ -110,7 +110,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 		myAuthKey:         myAuthKey,
 		Prng:              prng,
 		Protocol:          protocol,
-		Round:             0,
+		Round:             1,
 		SessionId:         boundSessionId,
 		Transcript:        transcript,
 		mySharingId:       mySharingId,

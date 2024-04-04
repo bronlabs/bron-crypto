@@ -1,4 +1,4 @@
-package agreeonrandom
+package setup_test
 
 import (
 	crand "crypto/rand"
@@ -10,8 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
 func Test_CanInitialize(t *testing.T) {
@@ -24,26 +23,19 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	var sharedSeed rprzs.Seed
-	hashed, err := hashing.HashChain(sha3.New256, []byte("pepsi > coke"))
-	require.NoError(t, err)
-	copy(sharedSeed[:], hashed)
-
 	protocol, err := testutils.MakeProtocol(curve, identities)
 	require.NoError(t, err)
 
-	alice, err := NewParticipant(aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
+	alice, err := setup.NewParticipant([]byte("test"), aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(bobIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
+	bob, err := setup.NewParticipant([]byte("test"), bobIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
-	for _, party := range []*Participant{alice, bob} {
+	for _, party := range []*setup.Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, 1, party.Round)
-		require.NotNil(t, party.state)
+		require.Equal(t, party.IdentitySpace.Size(), 2)
+		require.Len(t, party.SortedParticipants, 2)
 	}
-	aliceExtractedBytes, _ := alice.Transcript.ExtractBytes("test", 32)
-	bobExtractedBytes, _ := bob.Transcript.ExtractBytes("test", 32)
-	require.Equal(t, aliceExtractedBytes, bobExtractedBytes)
+	require.NotEqualValues(t, alice.IdentityKey(), bob.IdentityKey())
 }

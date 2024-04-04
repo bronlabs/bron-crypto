@@ -7,7 +7,6 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
@@ -70,8 +69,8 @@ func (r3out *Round3Output) Validate(t int) error {
 	if r3out.E == nil {
 		return errs.NewIsNil("E")
 	}
-	if eByteLen := utils.CeilDiv(r3out.E.BitLen(), 8); eByteLen < t/8 {
-		return errs.NewArgument("E byte length (%d) < t (%d)", r3out.E.BitLen(), t)
+	if r3out.E.Cmp(big.NewInt(0)) != 1 {
+		return errs.NewArgument("E (%s) not positive", r3out.E.String())
 	}
 	if err := r3out.EsidWitness.Validate(); err != nil {
 		return errs.WrapValidation(err, "invalid Esid witness")

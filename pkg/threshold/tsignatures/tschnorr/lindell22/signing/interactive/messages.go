@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1Broadcast)(nil)

@@ -5,7 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
@@ -98,7 +98,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 
 	// step 3.3: hash to derive the random value
 	p.Transcript.AppendMessages("sid contribution", sortRandomnessContributions...)
-	if randomValue, err = p.Transcript.ExtractBytes("session id", przs.LambdaBytes); err != nil {
+	if randomValue, err = p.Transcript.ExtractBytes("session id", rprzs.LambdaBytes); err != nil {
 		return nil, errs.WrapFailed(err, "couldn't derive random value")
 	}
 

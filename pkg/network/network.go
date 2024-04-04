@@ -7,20 +7,20 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	t "github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-type Message[ProtocolT t.Protocol] interface {
+type Message[ProtocolT types.Protocol] interface {
 	Validate(protocol ProtocolT) error
 }
 
-type RoundMessages[ProtocolT t.Protocol, MessageT Message[ProtocolT]] ds.Map[t.IdentityKey, MessageT]
+type RoundMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]] ds.Map[types.IdentityKey, MessageT]
 
-func NewRoundMessages[ProtocolT t.Protocol, MessageT Message[ProtocolT]]() RoundMessages[ProtocolT, MessageT] {
-	return hashmap.NewHashableHashMap[t.IdentityKey, MessageT]()
+func NewRoundMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]]() RoundMessages[ProtocolT, MessageT] {
+	return hashmap.NewHashableHashMap[types.IdentityKey, MessageT]()
 }
 
-func ValidateMessages[ProtocolT t.Protocol, MessageT Message[ProtocolT]](protocol ProtocolT, senders ds.Set[t.IdentityKey], receiver t.IdentityKey, messages RoundMessages[ProtocolT, MessageT]) error {
+func ValidateMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]](protocol ProtocolT, senders ds.Set[types.IdentityKey], receiver types.IdentityKey, messages RoundMessages[ProtocolT, MessageT]) error {
 	var receiverString string
 	for sender := range senders.Iter() {
 		if receiver != nil && sender.Equal(receiver) {
@@ -45,8 +45,8 @@ func ValidateMessages[ProtocolT t.Protocol, MessageT Message[ProtocolT]](protoco
 	return nil
 }
 
-func SortMessages[ProtocolT t.Protocol, MessageT Message[ProtocolT]](protocol ProtocolT, messages RoundMessages[ProtocolT, MessageT]) ([]MessageT, error) {
-	identitySpace := t.NewIdentitySpace(protocol.Participants())
+func SortMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]](protocol ProtocolT, messages RoundMessages[ProtocolT, MessageT]) ([]MessageT, error) {
+	identitySpace := types.NewIdentitySpace(protocol.Participants())
 	sortedIdentityIndices := identitySpace.Keys()
 	sort.Slice(sortedIdentityIndices, func(i, j int) bool { return sortedIdentityIndices[i] < sortedIdentityIndices[j] })
 	sortedMessages := make([]MessageT, 0, messages.Size())
