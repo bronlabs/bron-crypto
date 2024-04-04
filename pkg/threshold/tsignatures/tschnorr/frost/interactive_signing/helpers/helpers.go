@@ -33,7 +33,7 @@ func ProducePartialSignature(
 	if !exists {
 		return nil, errs.NewMissing("could not find my r_j")
 	}
-	c, err := schnorr.MakeGenericSchnorrChallenge(protocolConfig.CipherSuite(),
+	c, err := schnorr.MakeGenericSchnorrChallenge(protocolConfig.SigningSuite(),
 		R.ToAffineCompressed(), signingKeyShare.PublicKey.ToAffineCompressed(), message,
 	)
 	if err != nil {
@@ -97,7 +97,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 		if err != nil {
 			return nil, nil, nil, errs.WrapHashing(err, "couldn't produce rj message")
 		}
-		r_j, err := protocolConfig.CipherSuite().Curve().ScalarField().Hash(rjMessage)
+		r_j, err := protocolConfig.SigningSuite().Curve().ScalarField().Hash(rjMessage)
 		if err != nil {
 			return nil, nil, nil, errs.WrapHashing(err, "could not hash to r_j")
 		}

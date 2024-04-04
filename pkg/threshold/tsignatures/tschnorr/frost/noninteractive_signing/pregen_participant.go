@@ -7,30 +7,36 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
-var _ types.WithAuthKey = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	prng io.Reader
+	// Base Participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	Tau         int
-	MyAuthKey   types.AuthKey
-	Protocol    types.ThresholdProtocol
+	// Threshold Participant
 	mySharingId types.SharingID
-	round       int
-	state       *preGenState
+
+	Tau int
+
+	state *preGenState
 
 	_ ds.Incomparable
 }
 
 func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
-	return p.MyAuthKey
+	return p.myAuthKey
 }
 
 func (p *PreGenParticipant) AuthKey() types.AuthKey {
-	return p.MyAuthKey
+	return p.myAuthKey
 }
 
 func (p *PreGenParticipant) SharingId() types.SharingID {
@@ -57,12 +63,12 @@ func NewPreGenParticipant(authKey types.AuthKey, protocol types.ThresholdProtoco
 	}
 
 	participant := &PreGenParticipant{
-		prng:        prng,
-		Tau:         tau,
-		MyAuthKey:   authKey,
+		myAuthKey:   authKey,
+		Prng:        prng,
 		Protocol:    protocol,
+		Round:       1,
 		mySharingId: mySharingId,
-		round:       1,
+		Tau:         tau,
 		state:       &preGenState{},
 	}
 

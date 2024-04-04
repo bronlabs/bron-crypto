@@ -5,7 +5,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -18,20 +17,21 @@ import (
 
 const transcriptLabel = "COPPER_KRYPTON_PRZS_ZERO_SETUP-"
 
-var _ types.MPCParticipant = (*Participant)(nil)
+var _ types.Participant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.Protocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	SessionId          []byte
-	Curve              curves.Curve
-	myAuthKey          types.AuthKey
 	SortedParticipants []types.IdentityKey
-
-	IdentitySpace types.IdentitySpace
+	IdentitySpace      types.IdentitySpace
 
 	state *State
-	round int
 
 	_ ds.Incomparable
 }
@@ -43,7 +43,6 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 type State struct {
 	receivedSeeds ds.Map[types.IdentityKey, commitments.Commitment]
 	sentSeeds     ds.Map[types.IdentityKey, *committedSeedContribution]
-	transcript    transcripts.Transcript
 
 	_ ds.Incomparable
 }
@@ -56,7 +55,7 @@ type committedSeedContribution struct {
 	_ ds.Incomparable
 }
 
-func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Protocol, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	err := validateInputs(sessionId, authKey, protocol, prng)
 	if err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
@@ -66,7 +65,10 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 	sort.Sort(sortedParticipants)
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -75,29 +77,30 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.MPCP
 		return nil, errs.NewArgument("prng is nil")
 	}
 	result := &Participant{
-		prng:               prng,
 		myAuthKey:          authKey,
+		Prng:               prng,
+		Protocol:           protocol,
+		SessionId:          boundSessionId,
+		Round:              1,
+		Transcript:         transcript,
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
-		SessionId:          sessionId,
 		state: &State{
-			transcript:    transcript,
 			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
 			sentSeeds:     hashmap.NewHashableHashMap[types.IdentityKey, *committedSeedContribution](),
 		},
-		round: 1,
 	}
-	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+	if err := types.ValidateProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")
 	}
 	return result, nil
 }
 
-func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol types.MPCProtocol, prng io.Reader) error {
+func validateInputs(sessionId []byte, identityKey types.IdentityKey, protocol types.Protocol, prng io.Reader) error {
 	if err := types.ValidateIdentityKey(identityKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if len(sessionId) == 0 {

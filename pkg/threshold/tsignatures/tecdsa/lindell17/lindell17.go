@@ -34,6 +34,13 @@ type PartialSignature struct {
 	_ ds.Incomparable
 }
 
+func (ps *PartialSignature) Validate(protocol types.ThresholdProtocol) error {
+	if ps.C3 == nil {
+		return errs.NewIsNil("c3")
+	}
+	return nil
+}
+
 type PreProcessingMaterial tsignatures.PreProcessingMaterial[*PrivatePreProcessingMaterial, *PreSignature]
 
 type PrivatePreProcessingMaterial struct {

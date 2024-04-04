@@ -62,7 +62,10 @@ func NewPreGenParticipant(sessionId []byte, transcript transcripts.Transcript, m
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -78,7 +81,7 @@ func NewPreGenParticipant(sessionId []byte, transcript transcripts.Transcript, m
 		protocol:    protocol,
 		prng:        prng,
 		mySharingId: mySharingId,
-		sessionId:   sessionId,
+		sessionId:   boundSessionId,
 		transcript:  transcript,
 		preSigners:  preSigners,
 		nic:         nic,

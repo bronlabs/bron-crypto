@@ -20,57 +20,18 @@ import (
 
 const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS24-"
 
-var _ signing.Participant = (*Cosigner)(nil)
-
 type Cosigner struct {
-	prng io.Reader
+	*signing.Participant
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	shard       *dkls24.Shard
+	Quorum ds.Set[types.IdentityKey]
 
-	sessionId     []byte
-	protocol      types.ThresholdSignatureProtocol
-	sharingConfig types.SharingConfig
-	Quorum        ds.Set[types.IdentityKey]
-
-	transcript transcripts.Transcript
-	state      *signing.SignerState
-	round      int
+	state *signing.SignerState
 
 	_ ds.Incomparable
 }
 
-func (ic *Cosigner) Shard() *dkls24.Shard {
-	return ic.shard
-}
-
-func (ic *Cosigner) Protocol() types.ThresholdSignatureProtocol {
-	return ic.protocol
-}
-
-func (ic *Cosigner) SharingConfig() types.SharingConfig {
-	return ic.sharingConfig
-}
-
-func (ic *Cosigner) Prng() io.Reader {
-	return ic.prng
-}
-
-func (ic *Cosigner) SessionId() []byte {
-	return ic.sessionId
-}
-
-func (ic *Cosigner) IdentityKey() types.IdentityKey {
-	return ic.myAuthKey
-}
-
-func (ic *Cosigner) SharingId() types.SharingID {
-	return ic.mySharingId
-}
-
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	return ic.Protocol().Participants().Contains(ic.IdentityKey())
+	return ic.Protocol.Participants().Contains(ic.IdentityKey())
 }
 
 // NewCosigner constructs the interactive DKLs24 cosigner.
@@ -80,7 +41,10 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -92,7 +56,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 	}
 
 	// step 0.2: zero share sampling setup
-	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, authKey, shard.PairwiseSeeds, protocol, quorum, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(boundSessionId, authKey, shard.PairwiseSeeds, protocol, quorum, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -106,17 +70,17 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
-		otProtocol, err := types.NewMPCProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
 		}
 		// step 0.3: RVOLE setup as Alice, with P_k as Bob
-		alice, err := mult.NewAlice(authKey, otProtocol, seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(authKey, otProtocol, seedOtResults.AsReceiver, boundSessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
 		// step 0.4: RVOLE setup as Bob, with P_k as Alice
-		bob, err := mult.NewBob(authKey, otProtocol, seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(authKey, otProtocol, seedOtResults.AsSender, boundSessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
@@ -125,30 +89,20 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 			Bob:   bob,
 		})
 	}
-
+	signingParticipant := signing.NewParticipant(authKey, prng, protocol, boundSessionId, transcript, mySharingId, sharingConfig, shard)
 	cosigner := &Cosigner{
-		myAuthKey:  authKey,
-		protocol:   protocol,
-		shard:      shard,
-		sessionId:  sessionId,
-		Quorum:     quorum,
-		prng:       prng,
-		transcript: transcript,
+		Participant: signingParticipant,
+		Quorum:      quorum,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
 				Multiplication:    multipliers,
 			},
 		},
-		mySharingId:   mySharingId,
-		sharingConfig: sharingConfig,
-		round:         1,
 	}
-
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls24 cosigner")
 	}
-
 	return cosigner, nil
 }
 

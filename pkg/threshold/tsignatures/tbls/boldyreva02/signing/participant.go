@@ -19,20 +19,21 @@ var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2]
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)
 
 type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
-	signer   *bls.Signer[K, S]
-	protocol types.ThresholdSignatureProtocol
+	// Base participant
+	myAuthKey  types.AuthKey
+	Protocol   types.ThresholdSignatureProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	myAuthKey     types.AuthKey
+	// Threshold participant
 	mySharingId   types.SharingID
-	myShard       *boldyreva02.Shard[K]
 	sharingConfig types.SharingConfig
-	scheme        bls.RogueKeyPrevention
 
-	sessionId  []byte
-	transcript transcripts.Transcript
-	round      int
+	signer *bls.Signer[K, S]
 
-	_ ds.Incomparable
+	myShard *boldyreva02.Shard[K]
+	scheme  bls.RogueKeyPrevention
 }
 
 func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {
@@ -49,7 +50,10 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 	}
 
 	dst := fmt.Sprintf("%s-%s-%d", transcriptLabel, protocol.Curve().Name(), scheme)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -71,15 +75,15 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 
 	participant := &Cosigner[K, S]{
 		signer:        signer,
-		protocol:      protocol,
+		Protocol:      protocol,
 		myAuthKey:     authKey,
-		sessionId:     sessionId,
+		SessionId:     boundSessionId,
 		sharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 		myShard:       myShard,
-		transcript:    transcript,
+		Transcript:    transcript,
 		scheme:        scheme,
-		round:         1,
+		Round:         1,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {

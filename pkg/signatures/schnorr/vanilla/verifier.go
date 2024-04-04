@@ -8,7 +8,7 @@ import (
 )
 
 type verifierBuilder struct {
-	suite              types.SignatureProtocol
+	suite              types.SigningSuite
 	publicKey          *schnorr.PublicKey
 	message            []byte
 	nonceCommitment    curves.Point
@@ -16,7 +16,7 @@ type verifierBuilder struct {
 }
 
 type verifier struct {
-	suite              types.SignatureProtocol
+	suite              types.SigningSuite
 	publicKey          *schnorr.PublicKey
 	message            []byte
 	nonceCommitment    curves.Point
@@ -26,7 +26,7 @@ type verifier struct {
 var _ schnorr.VerifierBuilder[EdDsaCompatibleVariant] = (*verifierBuilder)(nil)
 var _ schnorr.Verifier[EdDsaCompatibleVariant] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSignatureProtocol(suite types.SignatureProtocol) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithSignatureProtocol(suite types.SigningSuite) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
 	v.suite = suite
 	return v
 }
@@ -62,7 +62,7 @@ func (v *verifierBuilder) Build() schnorr.Verifier[EdDsaCompatibleVariant] {
 }
 
 func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) error {
-	if err := types.ValidateSignatureProtocolConfig(v.suite); err != nil {
+	if err := types.ValidateSigningSuite(v.suite); err != nil {
 		return errs.WrapArgument(err, "invalid cipher suite")
 	}
 	if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.IsIdentity() || v.publicKey.A.Curve().Name() != v.suite.Curve().Name() {

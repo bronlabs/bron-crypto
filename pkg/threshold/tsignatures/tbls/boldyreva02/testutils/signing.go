@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
@@ -52,8 +53,8 @@ func ProducePartialSignature[K bls.KeySubGroup, S bls.SignatureSubGroup](partici
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures[S bls.SignatureSubGroup](identities []types.IdentityKey, partialSignatures []*boldyreva02.PartialSignature[S]) types.RoundMessages[*boldyreva02.PartialSignature[S]] {
-	result := types.NewRoundMessages[*boldyreva02.PartialSignature[S]]()
+func MapPartialSignatures[S bls.SignatureSubGroup](identities []types.IdentityKey, partialSignatures []*boldyreva02.PartialSignature[S]) network.RoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]] {
+	result := network.NewRoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]]()
 	for i, identity := range identities {
 		result.Put(identity, partialSignatures[i])
 	}
@@ -174,9 +175,6 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 	sharingConfig := types.DeriveSharingConfig(thresholdSignatureProtocol.Participants())
 	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
 	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
-	if err != nil {
-		return errs.WrapFailed(err, "Could not aggregate partial signatures")
-	}
 	if err != nil {
 		return errs.WrapFailed(err, "Could not aggregate partial signatures")
 	}

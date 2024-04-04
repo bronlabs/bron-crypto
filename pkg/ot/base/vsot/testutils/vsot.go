@@ -13,7 +13,7 @@ import (
 )
 
 func RunVSOT(senderAuthKey, receiverAuthKey types.AuthKey, batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, prng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error) {
-	protocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderAuthKey.(types.IdentityKey), receiverAuthKey.(types.IdentityKey)))
+	protocol, err := types.NewProtocol(curve, hashset.NewHashableHashSet(senderAuthKey.(types.IdentityKey), receiverAuthKey.(types.IdentityKey)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
 	}

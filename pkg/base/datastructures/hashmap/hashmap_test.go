@@ -7,6 +7,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 )
 
 type data struct {
@@ -311,4 +312,45 @@ func Test_HashableHashMap_Iter(t *testing.T) {
 	}
 
 	require.Equal(t, count, hashMap.Size())
+}
+
+func Test_HashableHashMap_Filter(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+	hashMap.Put(&data{value: 4}, 4)
+	hashMap.Put(&data{value: 5}, 5)
+
+	// filter out even values
+	filtered := hashMap.Filter(func(key *data) bool {
+		return key.value%2 == 0
+	})
+
+	require.Equal(t, 2, filtered.Size())
+	require.Contains(t, filtered.Keys(), &data{value: 2})
+	require.Contains(t, filtered.Keys(), &data{value: 4})
+	require.NotContains(t, filtered.Keys(), &data{value: 1})
+	require.NotContains(t, filtered.Keys(), &data{value: 3})
+	require.NotContains(t, filtered.Keys(), &data{value: 5})
+}
+
+func Test_HashableHashMap_Sieve(t *testing.T) {
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+	hashMap.Put(&data{value: 4}, 4)
+	hashMap.Put(&data{value: 5}, 5)
+
+	// sieve in even values
+	set := hashset.NewHashableHashSet(&data{value: 2}, &data{value: 4})
+	sieved := hashMap.Sieve(set)
+
+	require.Equal(t, 2, sieved.Size())
+	require.Contains(t, sieved.Keys(), &data{value: 2})
+	require.Contains(t, sieved.Keys(), &data{value: 4})
+	require.NotContains(t, sieved.Keys(), &data{value: 1})
+	require.NotContains(t, sieved.Keys(), &data{value: 3})
+	require.NotContains(t, sieved.Keys(), &data{value: 5})
 }

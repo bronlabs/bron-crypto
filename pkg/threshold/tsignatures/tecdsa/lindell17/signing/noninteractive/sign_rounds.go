@@ -39,7 +39,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
 	q := p.protocol.Curve().SubGroupOrder()
-	mPrime, err := signing.MessageToScalar(p.protocol.CipherSuite(), message)
+	mPrime, err := signing.MessageToScalar(p.protocol.SigningSuite(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
 	}
@@ -89,7 +89,7 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 		return nil, errs.WrapFailed(err, "could not compute recovery id")
 	}
 	sigma.V = &v
-	if err := ecdsa.Verify(sigma, p.protocol.CipherSuite().Hash(), p.myShard.SigningKeyShare.PublicKey, message); err != nil {
+	if err := ecdsa.Verify(sigma, p.protocol.SigningSuite().Hash(), p.myShard.SigningKeyShare.PublicKey, message); err != nil {
 		return nil, errs.WrapVerification(err, "could not verify produced signature")
 	}
 	return sigma, nil

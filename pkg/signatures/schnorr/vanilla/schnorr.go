@@ -21,7 +21,7 @@ func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 }
 
 type Signer struct {
-	suite      types.SignatureProtocol
+	suite      types.SigningSuite
 	privateKey *PrivateKey
 }
 
@@ -59,8 +59,8 @@ func KeyGen(curve curves.Curve, prng io.Reader) (*PublicKey, *PrivateKey, error)
 	return pk, sk, nil
 }
 
-func NewSigner(suite types.SignatureProtocol, privateKey *PrivateKey) (*Signer, error) {
-	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+func NewSigner(suite types.SigningSuite, privateKey *PrivateKey) (*Signer, error) {
+	if err := types.ValidateSigningSuite(suite); err != nil {
 		return nil, errs.WrapArgument(err, "invalid cipher suite")
 	}
 	if privateKey == nil || privateKey.S == nil || privateKey.S.ScalarField().Name() != suite.Curve().Name() ||
@@ -94,7 +94,7 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 	return schnorr.NewSignature(edDsaCompatibleVariant, e, edDsaCompatibleVariant.ComputeNonceCommitment(R, R), s), nil
 }
 
-func Verify(suite types.SignatureProtocol, publicKey *PublicKey, message []byte, signature *Signature) error {
+func Verify(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
 	v := edDsaCompatibleVariant.NewVerifierBuilder().
 		WithSignatureProtocol(suite).
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).

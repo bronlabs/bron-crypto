@@ -23,10 +23,6 @@ type IdentityKey interface {
 	json.Marshaler
 }
 
-type WithIdentityKey interface {
-	IdentityKey() IdentityKey
-}
-
 func ValidateIdentityKey(k IdentityKey) error {
 	if k == nil {
 		return errs.NewIsNil("input is nil")
@@ -44,10 +40,6 @@ type AuthKey interface {
 	IdentityKey
 	Sign(message []byte) []byte
 	PrivateKey() curves.Scalar
-}
-
-type WithAuthKey interface {
-	AuthKey() AuthKey
 }
 
 func ValidateAuthKey(k AuthKey) error {

@@ -14,16 +14,22 @@ import (
 )
 
 type Cosigner[V schnorr.Variant[V]] struct {
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	myShard     *lindell22.Shard
-	ppm         *lindell22.PreProcessingMaterial
-	quorum      ds.Set[types.IdentityKey]
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdSignatureProtocol
+	Round      int
+	Transcript transcripts.Transcript
 
-	variant       schnorr.Variant[V]
+	// Threshold participant
+	mySharingId   types.SharingID
 	sharingConfig types.SharingConfig
-	protocol      types.ThresholdSignatureProtocol
-	prng          io.Reader
+
+	myShard *lindell22.Shard
+	ppm     *lindell22.PreProcessingMaterial
+	quorum  ds.Set[types.IdentityKey]
+
+	variant schnorr.Variant[V]
 
 	_ ds.Incomparable
 }
@@ -51,18 +57,20 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, myShard *lindell
 
 	cosigner = &Cosigner[V]{
 		myAuthKey:     myAuthKey,
+		Prng:          prng,
+		Protocol:      protocol,
+		Round:         1,
+		Transcript:    transcript,
+		mySharingId:   mySharingId,
+		sharingConfig: sharingConfig,
 		myShard:       myShard,
 		quorum:        quorum,
 		variant:       variant,
-		protocol:      protocol,
-		prng:          prng,
-		mySharingId:   mySharingId,
-		sharingConfig: sharingConfig,
 		ppm:           ppm,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct cnoninteractive cosigner")
+		return nil, errs.WrapValidation(err, "could not construct non-interactive cosigner")
 	}
 
 	return cosigner, nil

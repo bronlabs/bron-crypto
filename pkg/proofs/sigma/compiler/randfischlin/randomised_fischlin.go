@@ -66,13 +66,16 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, c.prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
 	return &prover[X, W, A, S, Z]{
-		sessionId:     sessionId,
+		sessionId:     boundSessionId,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
@@ -85,13 +88,16 @@ func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, c.prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
 	return &verifier[X, W, A, S, Z]{
-		sessionId:     sessionId,
+		sessionId:     boundSessionId,
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 	}, nil

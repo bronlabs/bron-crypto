@@ -7,15 +7,15 @@ import (
 )
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (*dkls24.PartialSignature, error) {
-	myAdditiveShare, err := c.Shard().SigningKeyShare.ToAdditive(c.IdentityKey(), c.ppm.PreSigners, c.Protocol())
+	myAdditiveShare, err := c.Shard().SigningKeyShare.ToAdditive(c.IdentityKey(), c.ppm.PreSigners, c.Protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert my shamir share to additive share")
 	}
 	blindedAdditiveShare := myAdditiveShare.Add(c.ppm.PrivateMaterial.Zeta)
 
 	partialSignature, err := signing.DoRound3Epilogue(
-		c,
-		c.Protocol(),
+		c.Participant,
+		c.Protocol,
 		c.ppm.PreSigners,
 		message,
 		c.ppm.PrivateMaterial.R,

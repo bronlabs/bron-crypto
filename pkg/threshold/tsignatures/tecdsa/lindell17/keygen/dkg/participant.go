@@ -55,19 +55,23 @@ type State struct {
 }
 
 type Participant struct {
-	myAuthKey         types.AuthKey
-	mySharingId       types.SharingID
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
+
+	// Threshold participant
+	mySharingId   types.SharingID
+	sharingConfig types.SharingConfig
+
 	mySigningKeyShare *tsignatures.SigningKeyShare
 	publicKeyShares   *tsignatures.PartialPublicKeys
-	protocol          types.ThresholdProtocol
 
-	sharingConfig types.SharingConfig
-	sessionId     []byte
-	transcript    transcripts.Transcript
-	prng          io.Reader
-	nic           compiler.Name
+	nic compiler.Name
 
-	round int
 	state *State
 
 	_ ds.Incomparable
@@ -88,7 +92,10 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -101,15 +108,15 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, mySigningKeyShare
 
 	participant = &Participant{
 		myAuthKey:         myAuthKey,
+		Prng:              prng,
+		Protocol:          protocol,
+		Round:             0,
+		SessionId:         boundSessionId,
+		Transcript:        transcript,
 		mySharingId:       mySharingId,
+		sharingConfig:     sharingConfig,
 		mySigningKeyShare: mySigningKeyShare,
 		publicKeyShares:   publicKeyShares,
-		protocol:          protocol,
-		sharingConfig:     sharingConfig,
-		sessionId:         sessionId,
-		transcript:        transcript,
-		prng:              prng,
-		round:             1,
 		nic:               niCompiler,
 		state:             &State{},
 	}

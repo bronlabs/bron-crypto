@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
@@ -61,9 +62,9 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var uniqueSessionId []byte
 	var participants []*pedersen.Participant
 	var r1OutsB []*pedersen.Round1Broadcast
-	var r1OutsU []types.RoundMessages[*pedersen.Round1P2P]
-	var r2InsB []types.RoundMessages[*pedersen.Round1Broadcast]
-	var r2InsU []types.RoundMessages[*pedersen.Round1P2P]
+	var r1OutsU []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]
+	var r2InsB []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1Broadcast]
+	var r2InsU []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]
 
 	internal.RunMeasurement(500, "pedersen_round2", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)

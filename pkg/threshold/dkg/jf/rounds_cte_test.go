@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
@@ -62,7 +63,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	var uniqueSessionId []byte
 	var participants []*jf.Participant
 	var r1OutsB []*jf.Round1Broadcast
-	var r1OutsU []types.RoundMessages[*jf.Round1P2P]
+	var r1OutsU []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]
 
 	internal.RunMeasurement(500, "jf_round2", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)
@@ -95,11 +96,11 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var uniqueSessionId []byte
 	var participants []*jf.Participant
 	var r1OutsB []*jf.Round1Broadcast
-	var r1OutsU []types.RoundMessages[*jf.Round1P2P]
-	var r2InsB []types.RoundMessages[*jf.Round1Broadcast]
-	var r2InsU []types.RoundMessages[*jf.Round1P2P]
+	var r1OutsU []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]
+	var r2InsB []network.RoundMessages[types.ThresholdProtocol, *jf.Round1Broadcast]
+	var r2InsU []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]
 	var r2Outs []*jf.Round2Broadcast
-	var r3Ins []types.RoundMessages[*jf.Round2Broadcast]
+	var r3Ins []network.RoundMessages[types.ThresholdProtocol, *jf.Round2Broadcast]
 
 	internal.RunMeasurement(500, "jf_round3", func(i int) {
 		identities, err = ttu.MakeTestIdentities(cipherSuite, 3)

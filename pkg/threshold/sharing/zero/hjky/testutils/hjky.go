@@ -5,9 +5,11 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
@@ -41,9 +43,9 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*hjky.Round1P2P], err error) {
+func DoRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*hjky.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*hjky.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -54,9 +56,9 @@ func DoDkgRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hj
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []types.RoundMessages[*hjky.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []types.RoundMessages[curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	samples = make([]hjky.Sample, len(participants))
-	publicKeySharesMaps = make([]types.RoundMessages[curves.Point], len(participants))
+	publicKeySharesMaps = make([]ds.Map[types.IdentityKey, curves.Point], len(participants))
 	feldmanCommitmentVectors = make([][]curves.Point, len(participants))
 	for i := range participants {
 		samples[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -68,13 +70,13 @@ func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []types
 	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
-func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []types.RoundMessages[curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, nil)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	r1OutsB, r1OutsU, err := DoDkgRound1(participants)
+	r1OutsB, r1OutsU, err := DoRound1(participants)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

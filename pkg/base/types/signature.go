@@ -7,34 +7,23 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type SignatureProtocol interface {
-	GenericProtocol
+type SigningSuite interface {
 	Curve() curves.Curve
 	Hash() func() hash.Hash
 }
 
-func NewSignatureProtocol(curve curves.Curve, hashFunc func() hash.Hash) (SignatureProtocol, error) {
+func NewSigningSuite(curve curves.Curve, hashFunc func() hash.Hash) (SigningSuite, error) {
 	protocol := &protocol{
 		curve: curve,
 		hash:  hashFunc,
 	}
-	if err := ValidateSignatureProtocolConfig(protocol); err != nil {
-		return nil, errs.WrapValidation(err, "protocol config")
+	if err := ValidateSigningSuite(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "signing suite")
 	}
 	return protocol, nil
 }
 
-func ValidateSignatureProtocolConfig(f SignatureProtocol) error {
-	if err := ValidateGenericProtocolConfig(f); err != nil {
-		return errs.WrapValidation(err, "input for protocol is not a generic protocol")
-	}
-	if err := validateExtrasSignatureProtocolConfig(f); err != nil {
-		return errs.WrapValidation(err, "signature protocol")
-	}
-	return nil
-}
-
-func validateExtrasSignatureProtocolConfig(f SignatureProtocol) error {
+func ValidateSigningSuite(f SigningSuite) error {
 	if c := f.Curve(); c == nil {
 		return errs.NewIsNil("curve")
 	}

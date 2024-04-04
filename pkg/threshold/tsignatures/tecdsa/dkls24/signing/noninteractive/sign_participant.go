@@ -1,8 +1,6 @@
 package noninteractive
 
 import (
-	"io"
-
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -10,53 +8,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 )
 
-var _ signing.Participant = (*Cosigner)(nil)
-
 type Cosigner struct {
-	myAuthKey     types.AuthKey
-	mySharingId   types.SharingID
-	myShard       *dkls24.Shard
-	protocol      types.ThresholdSignatureProtocol
-	sharingConfig types.SharingConfig
-	ppm           *dkls24.PreProcessingMaterial
+	*signing.Participant
+
+	ppm *dkls24.PreProcessingMaterial
 
 	_ ds.Incomparable
-}
-
-func (c *Cosigner) Shard() *dkls24.Shard {
-	return c.myShard
-}
-
-func (c *Cosigner) Protocol() types.ThresholdSignatureProtocol {
-	return c.protocol
-}
-
-func (c *Cosigner) SharingConfig() types.SharingConfig {
-	return c.sharingConfig
-}
-
-func (*Cosigner) Prng() io.Reader {
-	return nil
-}
-
-func (*Cosigner) SessionId() []byte {
-	return nil
-}
-
-func (c *Cosigner) IdentityKey() types.IdentityKey {
-	return c.myAuthKey
-}
-
-func (c *Cosigner) AuthKey() types.AuthKey {
-	return c.myAuthKey
-}
-
-func (c *Cosigner) SharingId() types.SharingID {
-	return c.mySharingId
-}
-
-func (c *Cosigner) IsSignatureAggregator() bool {
-	return c.Protocol().Participants().Contains(c.IdentityKey())
 }
 
 func NewCosigner(myAuthKey types.AuthKey, myShard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, ppm *dkls24.PreProcessingMaterial) (cosigner *Cosigner, err error) {
@@ -68,14 +25,10 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls24.Shard, protocol types.
 	if !exists {
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
-
+	signingParticipant := signing.NewParticipant(myAuthKey, nil, protocol, nil, nil, mySharingId, sharingConfig, myShard)
 	participant := &Cosigner{
-		myAuthKey:     myAuthKey,
-		mySharingId:   mySharingId,
-		myShard:       myShard,
-		protocol:      protocol,
-		sharingConfig: sharingConfig,
-		ppm:           ppm,
+		Participant: signingParticipant,
+		ppm:         ppm,
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {

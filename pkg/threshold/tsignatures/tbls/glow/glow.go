@@ -3,6 +3,8 @@ package glow
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
@@ -29,4 +31,17 @@ type PartialSignature struct {
 	SessionId []byte // Required for the DLEQ verification if the aggregator is not a cosigner
 
 	_ ds.Incomparable
+}
+
+func (ps *PartialSignature) Validate(protocol types.ThresholdProtocol) error {
+	if ps.SigmaI == nil {
+		return errs.NewIsNil("sigma_i")
+	}
+	if ps.SigmaI.Value.IsIdentity() {
+		return errs.NewIsIdentity("sigma_i is identity")
+	}
+	if ps.DleqProof == nil {
+		return errs.NewIsNil("dleq proof")
+	}
+	return nil
 }

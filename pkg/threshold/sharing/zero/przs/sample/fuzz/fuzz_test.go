@@ -37,7 +37,7 @@ func Fuzz_Test(f *testing.F) {
 		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
 
-		protocol, err := ttu.MakeMPCProtocol(curve, identities)
+		protocol, err := ttu.MakeProtocol(curve, identities)
 		require.NoError(t, err)
 
 		participants, err := testutils.MakeSetupParticipants(curve, identities, prng)

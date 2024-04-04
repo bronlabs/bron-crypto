@@ -31,8 +31,8 @@ type Receiver struct {
 }
 
 // NewSender constructs a Random OT sender.
-func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
+func NewSender(myAuthKey types.AuthKey, protocol types.Protocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -43,13 +43,19 @@ func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, s
 }
 
 // NewReceiver constructs a Random OT receiver.
-func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
+func NewReceiver(myAuthKey types.AuthKey, protocol types.Protocol, Xi, L int, sessionId []byte, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
+
+	choices := make(ot.PackedBits, Xi/8)
+	if _, err := io.ReadFull(csprng, choices); err != nil {
+		return nil, errs.WrapRandomSample(err, "generating random choice bits")
+	}
+
 	return &Receiver{
-		Output:      &ot.ReceiverRotOutput{},
+		Output:      &ot.ReceiverRotOutput{Choices: choices},
 		Participant: *participant,
 	}, nil
 }

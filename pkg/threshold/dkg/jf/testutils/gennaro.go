@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
@@ -39,9 +40,9 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*jf.Round1P2P], err error) {
+func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*jf.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*jf.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -52,7 +53,7 @@ func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.R
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []types.RoundMessages[*jf.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*jf.Round1P2P]) (round2Outputs []*jf.Round2Broadcast, err error) {
+func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]) (round2Outputs []*jf.Round2Broadcast, err error) {
 	round2Outputs = make([]*jf.Round2Broadcast, len(participants))
 	for i := range participants {
 		round2Outputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -63,7 +64,7 @@ func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []types.R
 	return round2Outputs, nil
 }
 
-func DoDkgRound3(participants []*jf.Participant, round3Inputs []types.RoundMessages[*jf.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func DoDkgRound3(participants []*jf.Participant, round3Inputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
 	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {

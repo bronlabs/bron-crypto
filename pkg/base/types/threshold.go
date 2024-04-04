@@ -10,7 +10,7 @@ type SharingID uint
 type SharingConfig AbstractIdentitySpace[SharingID]
 
 type ThresholdParticipant interface {
-	MPCParticipant
+	Participant
 	SharingId() SharingID
 }
 
@@ -22,7 +22,7 @@ func validateThresholdParticipant(p ThresholdParticipant) error {
 }
 
 type ThresholdProtocol interface {
-	MPCProtocol
+	Protocol
 	Threshold() uint
 	TotalParties() uint
 }
@@ -43,8 +43,8 @@ func ValidateThresholdProtocolConfig(f ThresholdProtocol) error {
 	if f == nil {
 		return errs.NewIsNil("protocol config")
 	}
-	if err := ValidateMPCProtocolConfig(f); err != nil {
-		return errs.WrapValidation(err, "input for protocol is not an mpc protocol")
+	if err := ValidateProtocolConfig(f); err != nil {
+		return errs.WrapValidation(err, "input for protocol is not a protocol")
 	}
 	if err := validateExtrasThresholdProtocolConfig(f); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
@@ -68,8 +68,8 @@ func validateExtrasThresholdProtocolConfig(f ThresholdProtocol) error {
 }
 
 func ValidateThresholdProtocol(p ThresholdParticipant, f ThresholdProtocol) error {
-	if err := ValidateMPCProtocol(p, f); err != nil {
-		return errs.WrapValidation(err, "mpc protocol")
+	if err := ValidateProtocol(p, f); err != nil {
+		return errs.WrapValidation(err, "protocol")
 	}
 	if err := validateThresholdParticipant(p); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")

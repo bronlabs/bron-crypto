@@ -89,7 +89,10 @@ func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *p
 
 	curve := bigQ.Curve()
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -109,7 +112,7 @@ func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *p
 			pk:         publicKey,
 			bigQ:       bigQ,
 			round:      1,
-			sessionId:  sessionId,
+			sessionId:  boundSessionId,
 			transcript: transcript,
 			prng:       prng,
 		},
@@ -158,7 +161,10 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 
 	curve := x.ScalarField().Curve()
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise participant transcript/sessionId")
 	}
@@ -175,7 +181,7 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 			pk:         &secretKey.PublicKey,
 			bigQ:       curve.ScalarBaseMult(x),
 			round:      2,
-			sessionId:  sessionId,
+			sessionId:  boundSessionId,
 			transcript: transcript,
 			prng:       prng,
 		},

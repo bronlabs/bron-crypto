@@ -3,6 +3,7 @@ package commitments
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -10,6 +11,20 @@ type (
 	Commitment []byte
 	Witness    []byte
 )
+
+func (c Commitment) Validate() error {
+	if len(c) != base.CollisionResistanceBytes {
+		return errs.NewArgument("commitment length (%d) != %d", len(c), base.CollisionResistanceBytes)
+	}
+	return nil
+}
+
+func (w Witness) Validate() error {
+	if len(w) != base.CollisionResistanceBytes {
+		return errs.NewArgument("witness length (%d) != %d", len(w), base.CollisionResistanceBytes)
+	}
+	return nil
+}
 
 func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
 	if prng == nil {

@@ -25,6 +25,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
@@ -164,7 +165,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 			signature, err := participant.Aggregate([]byte(message), mappedPartialSignatures)
 			producedSignatures = append(producedSignatures, signature)
 			require.NoError(t, err)
-			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
+			err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
@@ -217,7 +218,7 @@ func doNonInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.Signi
 			s := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
+			err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, []byte(message), signature)
 			require.NoError(t, err)
 		}
 	}
@@ -237,9 +238,9 @@ func doGeneratePreSignatures(t *testing.T, protocol types.ThresholdProtocol, ide
 		round1Outputs[i], err = participant.Round1()
 		require.NoError(t, err)
 	}
-	round2Inputs := make([]types.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
+	round2Inputs := make([]network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast], len(participants))
 	for i := range participants {
-		round2Inputs[i] = types.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
+		round2Inputs[i] = network.NewRoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]()
 		for j := range participants {
 			if j != i {
 				round2Inputs[i].Put(participants[j].IdentityKey(), round1Outputs[j])

@@ -27,6 +27,34 @@ type PartialSignature struct {
 	_ ds.Incomparable
 }
 
+func (ps *PartialSignature) Validate(protocol types.ThresholdSignatureProtocol) error {
+	if ps.Ui == nil {
+		return errs.NewIsNil("Ui")
+	}
+	if ps.Wi == nil {
+		return errs.NewIsNil("Wi")
+	}
+	if ps.Ri == nil {
+		return errs.NewIsNil("Ri")
+	}
+	if !curveutils.AllScalarsOfSameCurve(protocol.Curve(), ps.Ui, ps.Wi) {
+		return errs.NewCurve("Ui and Wi have different curves")
+	}
+	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), ps.Ri) {
+		return errs.NewCurve("Ri has different curve")
+	}
+	if ps.Ui.IsZero() {
+		return errs.NewIsZero("Ui is zero")
+	}
+	if ps.Wi.IsZero() {
+		return errs.NewIsZero("Wi is zero")
+	}
+	if ps.Ri.IsIdentity() {
+		return errs.NewIsZero("Ri is identity")
+	}
+	return nil
+}
+
 type BaseOTConfig struct {
 	AsSender   *ot.SenderRotOutput
 	AsReceiver *ot.ReceiverRotOutput
@@ -35,7 +63,7 @@ type BaseOTConfig struct {
 }
 
 func (b *BaseOTConfig) Validate() error {
-	if b.AsSender == nil || len(b.AsSender.Messages) == 0 {
+	if b.AsSender == nil || len(b.AsSender.MessagePairs) == 0 {
 		return errs.NewArgument("invalid base OT as sender")
 	}
 	if b.AsReceiver == nil || len(b.AsReceiver.ChosenMessages) == 0 || len(b.AsReceiver.Choices) == 0 {

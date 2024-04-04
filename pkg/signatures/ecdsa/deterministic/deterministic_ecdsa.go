@@ -11,12 +11,12 @@ import (
 )
 
 type Signer struct {
-	suite      types.SignatureProtocol
+	suite      types.SigningSuite
 	privateKey curves.Scalar
 }
 
-func NewSigner(suite types.SignatureProtocol, privateKey curves.Scalar) (*Signer, error) {
-	if err := types.ValidateSignatureProtocolConfig(suite); err != nil {
+func NewSigner(suite types.SigningSuite, privateKey curves.Scalar) (*Signer, error) {
+	if err := types.ValidateSigningSuite(suite); err != nil {
 		return nil, errs.WrapArgument(err, "invalid cipher suite")
 	}
 	if privateKey == nil {

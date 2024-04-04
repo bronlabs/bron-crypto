@@ -46,7 +46,7 @@ func Fuzz_Test_rounds(f *testing.F) {
 		}
 		var participants []*agreeonrandom.Participant
 		set := hashset.NewHashableHashSet(allIdentities...)
-		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
 		for identity := range set.Iter() {
 			participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
@@ -95,7 +95,7 @@ func Fuzz_Test_NewParticipant(f *testing.F) {
 		bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(bobSecret))
 		charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, curve.ScalarField().New(charlieSecret))
 		allIdentities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
-		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
 		_, err = agreeonrandom.NewParticipant(allIdentities[0].(types.AuthKey), protocol, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {

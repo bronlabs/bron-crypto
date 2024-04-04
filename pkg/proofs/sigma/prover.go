@@ -24,7 +24,10 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, sigmaProtocol.Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	_, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}

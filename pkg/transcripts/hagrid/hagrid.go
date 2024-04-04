@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"golang.org/x/crypto/chacha20"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -66,26 +65,18 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 
 // Clone returns a copy of the transcript.
 func (t *Transcript) Clone() transcripts.Transcript {
-	return &Transcript{state: t.state}
+	seededPrngCopy, err := t.prng.New(nil, nil)
+	if err != nil {
+		panic(err)
+	}
+	return &Transcript{
+		state: t.state,
+		prng:  seededPrngCopy,
+	}
 }
 
 func (*Transcript) Type() transcripts.Type {
 	return transcriptType
-}
-
-// InitialiseProtocol appends the sessionId to the transcript using dst as domain-separation
-// tag and extracts a fresh transcript-bound sessionId `sid`. If the transcript is nil, a new
-// one is created with the supplied `dst` label.
-func InitialiseProtocol(transcript transcripts.Transcript, sessionId []byte, dst string) (t transcripts.Transcript, sid []byte, err error) {
-	if transcript == nil {
-		transcript = NewTranscript(dst, nil)
-	}
-	transcript.AppendMessages(dst, sessionId)
-	sessionId, err = transcript.ExtractBytes(dst, stateSize)
-	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "couldn't extract sessionId from transcript")
-	}
-	return transcript, sessionId, nil
 }
 
 // AppendMessages adds the message to the transcript with the supplied label.
@@ -126,25 +117,29 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 	if err := t.ratchet([]byte(label)); err != nil {
 		return nil, errs.WrapFailed(err, "cannot update state")
 	}
-
 	out = make([]byte, outLen)
-	if t.prng != nil {
-		if err := t.prng.Seed(t.state[:], t.salt); err != nil {
-			return nil, errs.WrapFailed(err, "failed to seed transcript prng")
-		}
-		if _, err := io.ReadFull(t.prng, out); err != nil {
-			return nil, errs.WrapRandomSample(err, "failed to read from transcript prng")
-		}
-	} else {
-		shake := sha3.NewShake256()
-		if _, err := shake.Write(t.state[:]); err != nil {
-			return nil, errs.WrapFailed(err, "failed to write transcript state in shake")
-		}
-		if _, err := io.ReadFull(shake, out); err != nil {
-			return nil, errs.WrapRandomSample(err, "failed to read from shake")
-		}
+	if t.prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	if err := t.prng.Seed(t.state[:], t.salt); err != nil {
+		return nil, errs.WrapFailed(err, "failed to seed transcript prng")
+	}
+	if _, err := io.ReadFull(t.prng, out); err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to read from transcript prng")
 	}
 	return out, nil
+}
+
+// Bind appends the sessionId to the transcript using dst as domain-separation
+// tag and extracts a fresh transcript-bound sessionId `sid`. If the transcript is nil, a new
+// one is created with the supplied `dst` label.
+func (t *Transcript) Bind(sessionId []byte, dst string) (boundSessionId []byte, err error) {
+	t.AppendMessages(dst, sessionId)
+	boundSessionId, err = t.ExtractBytes(dst, stateSize)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't extract boundSessionId from transcript")
+	}
+	return boundSessionId, nil
 }
 
 // ratchet hashes the previous transcript state with the supplied message.

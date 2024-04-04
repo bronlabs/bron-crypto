@@ -34,22 +34,22 @@ type Sender struct {
 
 // NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
-func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
+func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.Protocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}
 	if baseOtSeeds == nil {
 		return nil, errs.NewIsNil("base OT seeds are nil")
 	}
-	if len(baseOtSeeds.Messages) != ot.Kappa {
+	if len(baseOtSeeds.MessagePairs) != ot.Kappa {
 		return nil, errs.NewLength("base OT seeds length mismatch (should be %d, is: %d)",
-			ot.Kappa, len(baseOtSeeds.Messages))
+			ot.Kappa, len(baseOtSeeds.MessagePairs))
 	}
 	for i := 0; i < ot.Kappa; i++ {
-		if len(baseOtSeeds.Messages[i][0]) == 0 || len(baseOtSeeds.Messages[i][1]) == 0 {
+		if len(baseOtSeeds.MessagePairs[i][0]) == 0 || len(baseOtSeeds.MessagePairs[i][1]) == 0 {
 			return nil, errs.NewLength("base OT seed[%d] message empty", i)
 		}
 	}
@@ -67,10 +67,10 @@ func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, 
 
 // NewSoftspokenSender creates a `Sender` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the receiver role in κ baseOTs.
-func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
+func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.Protocol, baseOtSeeds *ot.ReceiverRotOutput, sessionId []byte, transcript transcripts.Transcript,
 	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (s *Sender, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}

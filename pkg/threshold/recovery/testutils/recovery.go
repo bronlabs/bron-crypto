@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/recovery"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -46,9 +47,9 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 	return participants, nil
 }
 
-func DoRecoveryRound1(participants []*recovery.Participant) (round1BroadcastOutputs []*recovery.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*recovery.Round1P2P], err error) {
+func DoRecoveryRound1(participants []*recovery.Participant) (round1BroadcastOutputs []*recovery.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*recovery.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*recovery.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
 		if err != nil {
@@ -59,8 +60,8 @@ func DoRecoveryRound1(participants []*recovery.Participant) (round1BroadcastOutp
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, round2BroadcastInputs []types.RoundMessages[*recovery.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*recovery.Round1P2P]) (round2p2p []types.RoundMessages[*recovery.Round2P2P], err error) {
-	round2p2p = make([]types.RoundMessages[*recovery.Round2P2P], len(participants))
+func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P]) (round2p2p []network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], err error) {
+	round2p2p = make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], len(participants))
 	lastRecorded := 0
 	for i, participant := range participants {
 		round2p2p[lastRecorded], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -72,7 +73,7 @@ func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, 
 	return round2p2p, nil
 }
 
-func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, round3UnicastInputs types.RoundMessages[*recovery.Round2P2P]) (signingKeyShare *tsignatures.SigningKeyShare, err error) {
+func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, round3UnicastInputs network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P]) (signingKeyShare *tsignatures.SigningKeyShare, err error) {
 	signingKeyShare, err = participants[lostPartyIndex].Round3(round3UnicastInputs)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run Recovery round 3")

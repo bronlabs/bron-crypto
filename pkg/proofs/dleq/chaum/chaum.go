@@ -20,6 +20,25 @@ type Statement struct {
 	_ ds.Incomparable
 }
 
+func (s *Statement) Validate() error {
+	if s == nil {
+		return errs.NewIsNil("statement")
+	}
+	if s.X1 == nil {
+		return errs.NewIsNil("X1")
+	}
+	if s.X2 == nil {
+		return errs.NewIsNil("X2")
+	}
+	if s.X1.IsIdentity() {
+		return errs.NewArgument("X1 is identity")
+	}
+	if s.X2.IsIdentity() {
+		return errs.NewArgument("X2 is identity")
+	}
+	return nil
+}
+
 var _ sigma.Statement = (*Statement)(nil)
 
 type Witness curves.Scalar
@@ -29,6 +48,25 @@ var _ sigma.Witness = Witness(nil)
 type Commitment struct {
 	A1 curves.Point
 	A2 curves.Point
+}
+
+func (c *Commitment) Validate() error {
+	if c == nil {
+		return errs.NewIsNil("commitment")
+	}
+	if c.A1 == nil {
+		return errs.NewIsNil("A1")
+	}
+	if c.A2 == nil {
+		return errs.NewIsNil("A2")
+	}
+	if c.A1.IsIdentity() {
+		return errs.NewArgument("A1 is identity")
+	}
+	if c.A2.IsIdentity() {
+		return errs.NewArgument("A2 is identity")
+	}
+	return nil
 }
 
 var _ sigma.Commitment = (*Commitment)(nil)
@@ -93,11 +131,14 @@ func (c *protocol) ComputeProverResponse(_ *Statement, witness Witness, _ *Commi
 }
 
 func (c *protocol) Verify(statement *Statement, commitment *Commitment, challengeBytes sigma.ChallengeBytes, response Response) error {
-	if statement == nil || statement.X1 == nil || statement.X2 == nil || commitment == nil || response == nil {
-		return errs.NewIsNil("passed nil")
+	if err := statement.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid statement")
+	}
+	if err := commitment.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid commitment")
 	}
 	if len(challengeBytes) != c.GetChallengeBytesLength() {
-		return errs.NewArgument("invalid challenge bytes length")
+		return errs.NewLength("invalid challenge bytes length")
 	}
 	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
@@ -115,7 +156,7 @@ func (c *protocol) Verify(statement *Statement, commitment *Commitment, challeng
 }
 
 func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.ChallengeBytes) (*Commitment, Response, error) {
-	if statement == nil {
+	if err := statement.Validate(); err != nil {
 		return nil, nil, errs.NewArgument("statement")
 	}
 	if len(challengeBytes) == 0 {
@@ -124,7 +165,7 @@ func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.Chall
 
 	e, err := c.mapChallengeBytesToChallenge(challengeBytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapSerialisation(err, "cannot map to scalar")
 	}
 
 	z, err := c.g1.Curve().ScalarField().Random(c.prng)
@@ -150,12 +191,12 @@ func (c *protocol) GetChallengeBytesLength() int {
 	}
 	return biggerSubGroup.ScalarField().WideFieldBytes()
 }
-func (c *protocol) ValidateStatement(statement *Statement, witness Witness) error {
-	if statement == nil || witness == nil ||
+func (c *protocol) ValidateStatement(statement *Statement, witness Witness) (err error) {
+	if err = statement.Validate(); err != nil || witness == nil ||
 		!c.g1.Mul(witness).Equal(statement.X1) ||
 		!c.g2.Mul(witness).Equal(statement.X2) {
 
-		return errs.NewArgument("invalid statement")
+		return errs.WrapArgument(err, "invalid statement")
 	}
 
 	return nil

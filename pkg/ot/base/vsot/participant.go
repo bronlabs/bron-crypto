@@ -37,8 +37,8 @@ type Receiver struct {
 }
 
 // NewSender creates a new sender for the Random OT protocol.
-func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
+func NewSender(myAuthKey types.AuthKey, protocol types.Protocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Sender, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing sender")
 	}
@@ -58,8 +58,8 @@ func NewSender(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, s
 }
 
 // NewReceiver is a Random OT receiver. Therefore, the choice bits are sampled randomly.
-func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng)
+func NewReceiver(myAuthKey types.AuthKey, protocol types.Protocol, Xi, L int, sessionId []byte, niCompiler compiler.Name, transcript transcripts.Transcript, csprng io.Reader) (*Receiver, error) {
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, L, sessionId, transcriptLabel, transcript, csprng, 2)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "constructing receiver")
 	}
@@ -76,7 +76,7 @@ func NewReceiver(myAuthKey types.AuthKey, protocol types.MPCProtocol, Xi, L int,
 		Output:      &ot.ReceiverRotOutput{},
 		dlog:        nic,
 	}
-	receiver.Output.Choices = make(ot.ChoiceBits, Xi/8)
+	receiver.Output.Choices = make(ot.PackedBits, Xi/8)
 	if _, err := io.ReadFull(crand.Reader, receiver.Output.Choices); err != nil {
 		return nil, errs.WrapRandomSample(err, "choosing random choice bits")
 	}

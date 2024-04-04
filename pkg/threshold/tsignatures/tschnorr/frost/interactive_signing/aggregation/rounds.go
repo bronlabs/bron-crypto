@@ -17,7 +17,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		return nil, errs.WrapFailed(err, "could not compute R")
 	}
 
-	dealer, err := shamir.NewDealer(a.Protocol.Threshold(), a.Protocol.TotalParties(), a.Protocol.CipherSuite().Curve())
+	dealer, err := shamir.NewDealer(a.Protocol.Threshold(), a.Protocol.TotalParties(), a.Protocol.SigningSuite().Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise shamir config")
 	}
@@ -36,7 +36,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute lagrange coefficients")
 	}
-	c, err := schnorr.MakeGenericSchnorrChallenge(a.Protocol.CipherSuite(),
+	c, err := schnorr.MakeGenericSchnorrChallenge(a.Protocol.SigningSuite(),
 		R.ToAffineCompressed(), a.PublicKey.ToAffineCompressed(), a.Message,
 	)
 	if err != nil {
@@ -67,7 +67,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 			return nil, errs.NewMissing("could not find R_j for j=%d", j)
 		}
 
-		z_jG := a.Protocol.CipherSuite().Curve().ScalarBaseMult(partialSignature.Zi)
+		z_jG := a.Protocol.SigningSuite().Curve().ScalarBaseMult(partialSignature.Zi)
 		cLambda_jY_j := Y_j.Mul(c.Mul(lambda_j))
 		rhs := R_j.Add(cLambda_jY_j)
 
@@ -76,7 +76,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		}
 	}
 
-	s := a.Protocol.CipherSuite().Curve().ScalarField().Zero()
+	s := a.Protocol.SigningSuite().Curve().ScalarField().Zero()
 	for pair := range partialSignatures.Iter() {
 		partialSignature := pair.Value
 		s = s.Add(partialSignature.Zi)
@@ -84,7 +84,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 
 	sigma := &vanillaSchnorr.Signature{R: R, S: s}
 
-	if err := vanillaSchnorr.Verify(a.Protocol.CipherSuite(), &vanillaSchnorr.PublicKey{A: a.PublicKey}, a.Message, sigma); err != nil {
+	if err := vanillaSchnorr.Verify(a.Protocol.SigningSuite(), &vanillaSchnorr.PublicKey{A: a.PublicKey}, a.Message, sigma); err != nil {
 		return nil, errs.WrapVerification(err, "could not verify frost signature")
 	}
 	return sigma, nil

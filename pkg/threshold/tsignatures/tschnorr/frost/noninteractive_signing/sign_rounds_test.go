@@ -100,7 +100,7 @@ func doNonInteractiveSign(protocol types.ThresholdSignatureProtocol, identities 
 			s := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
 			signatureHashSet[base64.StdEncoding.EncodeToString(s)] = true
 
-			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
+			err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
 			if err != nil {
 				return err
 			}

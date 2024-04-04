@@ -41,7 +41,7 @@ func TestHappyPathBBOT_ROT(t *testing.T) {
 		require.NoError(t, err)
 		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, senderOutput.Messages, receiverOutput.Choices, receiverOutput.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
 	}
 }
@@ -57,7 +57,7 @@ func TestHappyPathBBOT_OT(t *testing.T) {
 		require.NoError(t, err)
 		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, senderOutput.Messages, receiverOutput.Choices, receiverOutput.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
 
 		// Generate inputs for (chosen) OT
@@ -88,7 +88,7 @@ func TestHappyPathBBOT_COT(t *testing.T) {
 		require.NoError(t, err)
 		senderOutput, receiverOutput, err := testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], crand.Reader)
 		require.NoError(t, err)
-		err = ot_testutils.ValidateOT(Xi, L, senderOutput.Messages, receiverOutput.Choices, receiverOutput.ChosenMessages)
+		err = ot_testutils.ValidateOT(Xi, L, senderOutput.MessagePairs, receiverOutput.Choices, receiverOutput.ChosenMessages)
 		require.NoError(t, err)
 
 		// Generate inputs for Correlated OT

@@ -23,9 +23,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/mult/testutils"
 )
 
-func cipherSuites(t *testing.T) []types.SignatureProtocol {
+func cipherSuites(t *testing.T) []types.SigningSuite {
 	t.Helper()
-	cs := make([]types.SignatureProtocol, 2)
+	cs := make([]types.SigningSuite, 2)
 	var err error
 	cs[0], err = ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)

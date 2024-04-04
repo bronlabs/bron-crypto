@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -39,9 +40,9 @@ func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, id
 	return participants, nil
 }
 
-func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []types.RoundMessages[*pedersen.Round1P2P], err error) {
+func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*pedersen.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]types.RoundMessages[*pedersen.Round1P2P], len(participants))
+	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], len(participants))
 	for i, participant := range participants {
 		var a_i0 curves.Scalar
 		if a_i0s == nil {
@@ -58,7 +59,7 @@ func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (r
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []types.RoundMessages[*pedersen.Round1Broadcast], round2UnicastInputs []types.RoundMessages[*pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
 	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
 	for i := range participants {

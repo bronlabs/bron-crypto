@@ -49,7 +49,7 @@ func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSee
 	return allPairwiseSeeds, nil
 }
 
-func doSample(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
+func doSample(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, nil)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func doSample(t *testing.T, protocol types.MPCProtocol, identities []types.Ident
 	}
 }
 
-func doSampleInvalidSid(t *testing.T, protocol types.MPCProtocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
+func doSampleInvalidSid(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []przs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	wrongUniqueSessionId := []byte("This is an invalid sid")
 	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, wrongUniqueSessionId)
@@ -107,7 +107,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
 	allPairwiseSeeds, err := doSetup(curve, allIdentities)
@@ -218,7 +218,7 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
-	protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
 	prng, err := fkechacha20.NewPrng(nil, nil)

@@ -150,7 +150,7 @@ func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 2048)
 	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "cannot sample integer")
 	}
 	x := new(saferith.Nat).SetBig(xInt, 2048)
 	return new(saferith.Nat).Add(l, x, 2048), nil
@@ -160,7 +160,7 @@ func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), 2048)
 	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "cannot sample integer")
 	}
 	x := new(saferith.Nat).SetBig(xInt, 2048)
 	return x, nil
@@ -169,7 +169,7 @@ func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error
 func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	xInt, err := crand.Int(prng, q.Big())
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "cannot sample integer")
 	}
 	x := new(saferith.Nat).SetBig(xInt, 2048)
 	return new(saferith.Nat).Add(q, x, 2048), nil

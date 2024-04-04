@@ -36,20 +36,24 @@ type state struct {
 	_ ds.Incomparable
 }
 
-type Cosigner[V schnorr.Variant[V]] struct {
-	myAuthKey         types.AuthKey
-	mySharingId       types.SharingID
+type Cosigner[F schnorr.Variant[F]] struct {
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdSignatureProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
+
+	// Threshold participant
+	mySharingId   types.SharingID
+	sharingConfig types.SharingConfig
+
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
-	variant       schnorr.Variant[V]
-	protocol      types.ThresholdSignatureProtocol
-	quorum        ds.Set[types.IdentityKey]
-	sharingConfig types.SharingConfig
-	sessionId     []byte
-	round         int
-	transcript    transcripts.Transcript
-	nic           compiler.Name
-	prng          io.Reader
+	variant schnorr.Variant[F]
+	quorum  ds.Set[types.IdentityKey]
+	nic     compiler.Name
 
 	state *state
 
@@ -70,7 +74,10 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, sessionId []byte
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -85,16 +92,16 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, sessionId []byte
 
 	cosigner := &Cosigner[V]{
 		myAuthKey:         myAuthKey,
+		Prng:              prng,
+		Protocol:          protocol,
+		Round:             1,
+		SessionId:         boundSessionId,
+		Transcript:        transcript,
 		mySharingId:       mySharingId,
-		mySigningKeyShare: myShard.SigningKeyShare,
 		sharingConfig:     sharingConfig,
-		protocol:          protocol,
-		sessionId:         sessionId,
-		transcript:        transcript,
+		mySigningKeyShare: myShard.SigningKeyShare,
 		quorum:            quorum,
 		variant:           variant,
-		round:             1,
-		prng:              prng,
 		nic:               niCompiler,
 		state: &state{
 			pid:  pid,

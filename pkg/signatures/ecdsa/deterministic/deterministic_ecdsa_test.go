@@ -29,7 +29,7 @@ func Test_DeterministicECDSA_RFC6979(t *testing.T) {
 		i := i
 		t.Run(fmt.Sprintf("Message:\"%s\" HashSize:%dB", testCases[i].Message, testCases[i].HashFunc().Size()), func(t *testing.T) {
 			t.Parallel()
-			protocol, err := types.NewSignatureProtocol(curve, testCases[i].HashFunc)
+			protocol, err := types.NewSigningSuite(curve, testCases[i].HashFunc)
 			require.NoError(t, err)
 			signer, err := deterministic.NewSigner(protocol, privateKey)
 			require.NoError(t, err)

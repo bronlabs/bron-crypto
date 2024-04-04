@@ -29,7 +29,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 
-	protocol, err := testutils.MakeMPCProtocol(curve, identities)
+	protocol, err := testutils.MakeProtocol(curve, identities)
 	require.NoError(t, err)
 
 	alice, err := NewParticipant(aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
@@ -40,10 +40,10 @@ func Test_CanInitialize(t *testing.T) {
 	require.NotNil(t, bob)
 	for _, party := range []*Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.round, 1)
+		require.Equal(t, 1, party.Round)
 		require.NotNil(t, party.state)
 	}
-	aliceExtractedBytes, _ := alice.state.transcript.ExtractBytes("test", 32)
-	bobExtractedBytes, _ := bob.state.transcript.ExtractBytes("test", 32)
+	aliceExtractedBytes, _ := alice.Transcript.ExtractBytes("test", 32)
+	bobExtractedBytes, _ := bob.Transcript.ExtractBytes("test", 32)
 	require.Equal(t, aliceExtractedBytes, bobExtractedBytes)
 }

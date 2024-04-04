@@ -18,6 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls24/testutils"
@@ -81,14 +82,14 @@ func Test_HappyPath(t *testing.T) {
 						cosigners := testutils.MakeNonInteractiveCosigners(t, protocol, selectedIdentities, selectedShards, selectedPpm)
 						message := []byte("Hello World!")
 
-						partialSignatures := types.NewRoundMessages[*dkls24.PartialSignature]()
+						partialSignatures := network.NewRoundMessages[types.ThresholdSignatureProtocol, *dkls24.PartialSignature]()
 						for _, cosigner := range cosigners {
 							msg, err := cosigner.ProducePartialSignature(message)
 							require.NoError(t, err)
 							partialSignatures.Put(cosigner.IdentityKey(), msg)
 						}
 
-						signature, err := signing.Aggregate(protocol.CipherSuite(), selectedShards[0].SigningKeyShare.PublicKey, partialSignatures, message)
+						signature, err := signing.Aggregate(protocol.SigningSuite(), selectedShards[0].SigningKeyShare.PublicKey, partialSignatures, message)
 						require.NoError(t, err)
 						require.NotNil(t, signature)
 					}

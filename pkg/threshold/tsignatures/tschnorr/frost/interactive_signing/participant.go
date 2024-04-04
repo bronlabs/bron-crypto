@@ -9,22 +9,27 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 
 type Cosigner struct {
-	prng io.Reader
+	// Base Participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdSignatureProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	shard       *frost.Shard
-
-	protocol      types.ThresholdSignatureProtocol
+	// Threshold Participant
+	mySharingId   types.SharingID
 	sharingConfig types.SharingConfig
-	quorum        ds.Set[types.IdentityKey]
 
-	round int
+	shard  *frost.Shard
+	quorum ds.Set[types.IdentityKey]
+
 	state *State
 
 	_ ds.Incomparable
@@ -39,7 +44,7 @@ func (ic *Cosigner) SharingId() types.SharingID {
 }
 
 func (ic *Cosigner) IsSignatureAggregator() bool {
-	return ic.protocol.Participants().Contains(ic.IdentityKey())
+	return ic.Protocol.Participants().Contains(ic.IdentityKey())
 }
 
 type State struct {
@@ -67,14 +72,16 @@ func NewInteractiveCosigner(authKey types.AuthKey, quorum ds.Set[types.IdentityK
 
 	cosigner := &Cosigner{
 		myAuthKey:     authKey,
-		protocol:      protocol,
+		Prng:          prng,
+		Protocol:      protocol,
+		Round:         1,
+		SessionId:     nil,
+		Transcript:    nil,
 		shard:         shard,
 		quorum:        quorum,
-		prng:          prng,
 		sharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 		state:         &State{},
-		round:         1,
 	}
 
 	if cosigner.IsSignatureAggregator() {

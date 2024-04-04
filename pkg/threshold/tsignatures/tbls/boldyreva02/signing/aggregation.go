@@ -3,38 +3,40 @@ package signing
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.SharingConfig, partialPublicKeys *boldyreva02.PartialPublicKeys[K], partialSignatures types.RoundMessages[*boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
+func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.SharingConfig, partialPublicKeys *boldyreva02.PartialPublicKeys[K], partialSignatures network.RoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]], message []byte, scheme bls.RogueKeyPrevention) (*bls.Signature[S], *bls.ProofOfPossession[S], error) {
+	// Validation
 	if bls.SameSubGroup[K, S]() {
 		return nil, nil, errs.NewType("key and signature subgroups can't be the same")
 	}
-	keySubGroup := bls12381.GetSourceSubGroup[K]()
-	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
-
-	sharingIds := make([]uint, partialSignatures.Size())
-	i := 0
-	for pair := range partialSignatures.Iter() {
-		sharingId, exists := sharingConfig.Reverse().Get(pair.Key)
-		if !exists {
-			return nil, nil, errs.NewMembership("participant %s is not in protocol config", pair.Key.String())
-		}
-		sharingIds[i] = uint(sharingId)
-		i++
+	if err := partialPublicKeys.ValidateWithSharingConfig(sharingConfig); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid partial public keys")
+	}
+	quorum := hashset.NewHashableHashSet(partialSignatures.Keys()...)
+	if err := network.ValidateMessages(nil, quorum, nil, partialSignatures); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid partial signatures")
 	}
 
-	lambdas, err := shamir.LagrangeCoefficients(keySubGroup, sharingIds)
+	sharingIds, err := getSharingIds(quorum, sharingConfig)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "couldn't get sharing ids")
+	}
+	lambdas, err := shamir.LagrangeCoefficients(bls12381.GetSourceSubGroup[K](), sharingIds)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
 
-	sigma := signatureSubGroup.Identity()
-	sigmaPOP := signatureSubGroup.Identity()
+	sigma := bls12381.GetSourceSubGroup[S]().Identity()
+	sigmaPOP := bls12381.GetSourceSubGroup[S]().Identity()
 
 	// step 2.1
 	for pair := range partialSignatures.Iter() {
@@ -43,16 +45,6 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of participant %s", identityKey.String())
-		}
-		var internalMessage []byte
-		if psig == nil {
-			return nil, nil, errs.NewMissing("missing partial signature for %s", identityKey.String())
-		}
-		if psig.POP == nil {
-			return nil, nil, errs.NewMissing("missing pop for %s", identityKey.String())
-		}
-		if psig.SigmaI == nil {
-			return nil, nil, errs.NewMissing("missing signature for %s", identityKey.String())
 		}
 		publicKeyShare, exists := partialPublicKeys.Shares.Get(identityKey)
 		if !exists {
@@ -66,6 +58,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 			Y: Y,
 		}
 		// step 2.1.1 and 2.1.2
+		var internalMessage []byte
 		switch scheme {
 		case bls.Basic:
 			internalMessage = message
@@ -128,4 +121,16 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 			Value: sigmaPairable,
 		}, nil, nil
 	}
+}
+
+func getSharingIds(quorum ds.Set[types.IdentityKey], sharingConfig types.SharingConfig) ([]uint, error) {
+	sharingIds := make([]uint, quorum.Size())
+	for i, signer := range quorum.List() {
+		sharingId, exists := sharingConfig.Reverse().Get(signer)
+		if !exists {
+			return nil, errs.NewMembership("participant %s is not in protocol config", signer.String())
+		}
+		sharingIds[i] = uint(sharingId)
+	}
+	return sharingIds, nil
 }

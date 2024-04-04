@@ -5,13 +5,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 )
 
-func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol, partialSignatures types.RoundMessages[*glow.PartialSignature], message []byte) (*bls.Signature[bls12381.G2], error) {
+func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol, partialSignatures network.RoundMessages[types.ThresholdProtocol, *glow.PartialSignature], message []byte) (*bls.Signature[bls12381.G2], error) {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	if err := validateAggregatorInputs(publicKeyShares, protocol); err != nil {
@@ -93,7 +94,7 @@ func validateAggregatorInputs(publicKeyShares *glow.PublicKeyShares, protocol ty
 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config")
 	}
-	if protocol.CipherSuite().Curve().Name() != new(glow.KeySubGroup).Name() {
+	if protocol.SigningSuite().Curve().Name() != new(glow.KeySubGroup).Name() {
 		return errs.NewArgument("protocol config curve mismatch with the declared subgroup")
 	}
 	if err := publicKeyShares.Validate(protocol); err != nil {

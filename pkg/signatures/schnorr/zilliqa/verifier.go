@@ -24,7 +24,7 @@ type verifier struct {
 var _ schnorr.VerifierBuilder[ZilliqaVariant] = (*verifierBuilder)(nil)
 var _ schnorr.Verifier[ZilliqaVariant] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSignatureProtocol(_ types.SignatureProtocol) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithSignatureProtocol(_ types.SigningSuite) schnorr.VerifierBuilder[ZilliqaVariant] {
 	return v
 }
 
@@ -82,7 +82,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant]) error {
 		return errs.NewFailed("incompatible signature")
 	}
 
-	protocol, err := types.NewSignatureProtocol(curve, hashFunc)
+	protocol, err := types.NewSigningSuite(curve, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create protocol")
 	}

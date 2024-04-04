@@ -20,14 +20,14 @@ const transcriptLabel = "COPPER_KRYPTON_HJKY_KEY_REFRESH-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
+	Protocol   types.ThresholdProtocol
+	Round      int
+	Transcript transcripts.Transcript
+
 	sampler *hjky.Participant
 
-	protocol        types.ThresholdProtocol
 	signingKeyShare *tsignatures.SigningKeyShare
 	publicKeyShares *tsignatures.PartialPublicKeys
-
-	round      int
-	transcript transcripts.Transcript
 
 	_ ds.Incomparable
 }
@@ -46,12 +46,15 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct hjky zero share sampling participant")
 	}
@@ -61,10 +64,10 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 
 		publicKeyShares: publicKeyShares,
 		signingKeyShare: signingKeyShare,
-		protocol:        protocol,
+		Protocol:        protocol,
 
-		round:      1,
-		transcript: transcript,
+		Round:      1,
+		Transcript: transcript,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")

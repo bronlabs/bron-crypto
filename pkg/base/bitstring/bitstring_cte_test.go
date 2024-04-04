@@ -19,7 +19,7 @@ func Test_MeasureConstantTime_SelectBit(t *testing.T) {
 		vector[i/8] = 0x01 << (i & 0x07)
 		tI = i
 	}, func() {
-		bitstring.SelectBit(vector, tI)
+		bitstring.PackedBits(vector).Select(tI)
 	})
 }
 

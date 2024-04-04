@@ -36,6 +36,22 @@ func (m *HashableHashMap[K, V]) Get(key K) (value V, exists bool) {
 	return nilValue, false
 }
 
+func (m *HashableHashMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
+	return m.Filter(keys.Contains)
+}
+
+func (m *HashableHashMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
+	result := NewHashableHashMap[K, V]()
+	for _, entries := range m.inner {
+		for _, e := range entries {
+			if predicate(e.Key) {
+				result.Put(e.Key, e.Value)
+			}
+		}
+	}
+	return result
+}
+
 func (m *HashableHashMap[K, V]) ContainsKey(key K) bool {
 	for _, e := range m.inner[key.HashCode()] {
 		if key.Equal(e.Key) {

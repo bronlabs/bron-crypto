@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -47,7 +48,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
 	var participants []*setup.Participant
-	var r2InsU []types.RoundMessages[*setup.Round1P2P]
+	var r2InsU []network.RoundMessages[types.Protocol, *setup.Round1P2P]
 	internal.RunMeasurement(500, "sample_round2", func(i int) {
 		allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
@@ -70,8 +71,8 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
 	require.NoError(t, err)
 	var participants []*setup.Participant
-	var r2InsU []types.RoundMessages[*setup.Round1P2P]
-	var r3InsU []types.RoundMessages[*setup.Round2P2P]
+	var r2InsU []network.RoundMessages[types.Protocol, *setup.Round1P2P]
+	var r3InsU []network.RoundMessages[types.Protocol, *setup.Round2P2P]
 	internal.RunMeasurement(500, "sample_round3", func(i int) {
 		allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
@@ -102,7 +103,7 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 	internal.RunMeasurement(500, "sample_dosample", func(i int) {
 		allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 3)
 		require.NoError(t, err)
-		protocol, err := ttu.MakeMPCProtocol(curve, allIdentities)
+		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
 		allPairwiseSeeds, err := doSetup(curve, allIdentities)
 		require.NoError(t, err)

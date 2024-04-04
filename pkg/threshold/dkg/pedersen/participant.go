@@ -22,24 +22,25 @@ const transcriptLabel = "COPPER_KRYPTON_PEDERSEN_DKG-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	myIdentityKey types.AuthKey
+	// Threshold participant
 	mySharingId   types.SharingID
-	SessionId     []byte
-
-	Protocol      types.ThresholdProtocol
 	SharingConfig types.SharingConfig
 
-	Transcript transcripts.Transcript
-	round      int
-	State      *State
+	State *State
 
 	_ ds.Incomparable
 }
 
 func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.myIdentityKey
+	return p.myAuthKey
 }
 
 func (p *Participant) SharingId() types.SharingID {
@@ -62,7 +63,10 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), nonInteractiveCompilerName)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -77,16 +81,16 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 	}
 
 	result := &Participant{
-		myIdentityKey: myAuthKey,
-		SessionId:     sessionId,
+		myAuthKey:     myAuthKey,
+		Prng:          prng,
+		Protocol:      protocol,
+		Round:         1,
+		SessionId:     boundSessionId,
+		Transcript:    transcript,
+		SharingConfig: types.DeriveSharingConfig(protocol.Participants()),
 		State: &State{
 			NiCompiler: niCompiler,
 		},
-		prng:          prng,
-		SharingConfig: types.DeriveSharingConfig(protocol.Participants()),
-		Protocol:      protocol,
-		Transcript:    transcript,
-		round:         1,
 	}
 	mySharingId, exists := result.SharingConfig.Reverse().Get(myAuthKey)
 	if !exists {

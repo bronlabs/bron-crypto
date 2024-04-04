@@ -15,7 +15,7 @@ func Fuzz_Test_SelectBit(f *testing.F) {
 		if int(i) >= binary.Size(vector)*8 {
 			t.Skip(i, vector)
 		}
-		bitstring.SelectBit(vector, int(i))
+		bitstring.PackedBits(vector).Select(int(i))
 	})
 }
 
@@ -44,11 +44,11 @@ func Fuzz_Test_Transpose(f *testing.F) {
 				// Check that the bit at position i in the jth row of the input matrix.
 				// is equal to the bit at position j in the ith row of the transposed matrix.
 				// using bitstring.SelectBit (careful! it takes a byte array as input)
-				output1 := bitstring.SelectBit(inputMatrix[i], j)
+				output1 := bitstring.PackedBits(inputMatrix[i]).Select(j)
 				if err != nil {
 					t.Skip()
 				}
-				output2 := bitstring.SelectBit(transposedMatrix[j][:], i)
+				output2 := bitstring.PackedBits(transposedMatrix[j][:]).Select(i)
 				if err != nil {
 					t.Skip()
 				}

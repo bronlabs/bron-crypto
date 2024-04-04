@@ -21,12 +21,14 @@ const (
 )
 
 type Participant struct {
-	k               int // security parameter - cheating prover can succeed with probability < 2^(-k)
-	round           int
-	sessionId       []byte
-	transcript      transcripts.Transcript
+	// Base participant
 	nthRootProtocol sigma.Protocol[nthroot.Statement, nthroot.Witness, nthroot.Commitment, nthroot.State, nthroot.Response]
-	prng            io.Reader
+	Prng            io.Reader
+	Round           int
+	SessionId       []byte
+	Transcript      transcripts.Transcript
+
+	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
 
 	_ ds.Incomparable
 }
@@ -68,7 +70,10 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 	}
 
 	dst := fmt.Sprintf("%s-%d", transcriptLabel, k)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -81,11 +86,11 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 	return &Verifier{
 		Participant: Participant{
 			k:               k,
-			round:           1,
-			sessionId:       sessionId,
-			transcript:      transcript,
+			Round:           1,
+			SessionId:       boundSessionId,
+			Transcript:      transcript,
 			nthRootProtocol: nthRootSigmaProtocol,
-			prng:            prng,
+			Prng:            prng,
 		},
 		paillierPublicKey: paillierPublicKey,
 		state:             &VerifierState{},
@@ -117,7 +122,10 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 	}
 
 	dst := fmt.Sprintf("%s-%d", transcriptLabel, k)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -130,11 +138,11 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 	return &Prover{
 		Participant: Participant{
 			k:               k,
-			round:           2,
-			sessionId:       sessionId,
-			transcript:      transcript,
+			Round:           2,
+			SessionId:       boundSessionId,
+			Transcript:      transcript,
 			nthRootProtocol: nthRootSigmaProtocol,
-			prng:            prng,
+			Prng:            prng,
 		},
 		paillierSecretKey: paillierSecretKey,
 		state:             &ProverState{},

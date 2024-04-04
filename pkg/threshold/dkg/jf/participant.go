@@ -31,18 +31,20 @@ const (
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	// Base participant
+	myAuthKey  types.AuthKey
+	Protocol   types.ThresholdProtocol
+	Prng       io.Reader
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-
-	Protocol      types.ThresholdProtocol
-	SessionId     []byte
+	// Threshold participant
+	mySharingId   types.SharingID
 	SharingConfig types.SharingConfig
 
 	H curves.Point
 
-	round int
 	state *State
 
 	_ ds.Incomparable
@@ -60,7 +62,6 @@ type State struct {
 	myPartialSecretShare   *pedersen.Share
 	commitments            []curves.Point
 	commitmentsProof       compiler.NIZKPoKProof
-	transcript             transcripts.Transcript
 	secretKeyShare         curves.Scalar
 	partialPublicKeyShares map[types.SharingID]curves.Point
 	niCompiler             compiler.NICompiler[batch_schnorr.Statement, batch_schnorr.Witness]
@@ -75,7 +76,10 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompilerName)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -104,18 +108,18 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 
 	result := &Participant{
-		myAuthKey: authKey,
+		myAuthKey:   authKey,
+		mySharingId: mySharingId,
+		Prng:        prng,
+		Protocol:    protocol,
+		Round:       1,
+		SessionId:   boundSessionId,
+		Transcript:  transcript,
 		state: &State{
 			niCompiler: niCompiler,
-			transcript: transcript,
 		},
-		prng:          prng,
-		Protocol:      protocol,
 		H:             H,
-		round:         1,
-		SessionId:     sessionId,
 		SharingConfig: sharingConfig,
-		mySharingId:   mySharingId,
 	}
 
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {

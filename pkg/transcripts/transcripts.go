@@ -18,6 +18,7 @@ type Transcript interface {
 	ExtractBytes(label string, outLen uint) ([]byte, error)
 	Clone() Transcript
 	Type() Type
+	Bind(sessionId []byte, dst string) (boundSid []byte, err error)
 }
 
 type Type string

@@ -29,7 +29,7 @@ import (
 )
 
 type TestAuthKey struct {
-	suite      types.SignatureProtocol
+	suite      types.SigningSuite
 	privateKey *vanillaSchnorr.PrivateKey
 	publicKey  *vanillaSchnorr.PublicKey
 
@@ -209,8 +209,8 @@ func (h *HexBytesArray) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func MakeTestIdentities(cipherSuite types.SignatureProtocol, n int) (identities []types.IdentityKey, err error) {
-	if err := types.ValidateSignatureProtocolConfig(cipherSuite); err != nil {
+func MakeTestIdentities(cipherSuite types.SigningSuite, n int) (identities []types.IdentityKey, err error) {
+	if err := types.ValidateSigningSuite(cipherSuite); err != nil {
 		return nil, errs.WrapValidation(err, "invalid cipher suite")
 	}
 	if n <= 0 {
@@ -231,7 +231,7 @@ func MakeTestIdentities(cipherSuite types.SignatureProtocol, n int) (identities 
 	return sortedIdentities, nil
 }
 
-func MakeTestIdentity(cipherSuite types.SignatureProtocol, secret curves.Scalar) (types.IdentityKey, error) {
+func MakeTestIdentity(cipherSuite types.SigningSuite, secret curves.Scalar) (types.IdentityKey, error) {
 	var sk *vanillaSchnorr.PrivateKey
 	var pk *vanillaSchnorr.PublicKey
 	var err error
@@ -251,7 +251,7 @@ func MakeTestIdentity(cipherSuite types.SignatureProtocol, secret curves.Scalar)
 	}, nil
 }
 
-func MakeTestAuthKeys(cipherSuite types.SignatureProtocol, n int) (authKeys []types.AuthKey, err error) {
+func MakeTestAuthKeys(cipherSuite types.SigningSuite, n int) (authKeys []types.AuthKey, err error) {
 	var ok bool
 	result := make([]types.AuthKey, n)
 	out, err := MakeTestIdentities(cipherSuite, n)
@@ -267,7 +267,7 @@ func MakeTestAuthKeys(cipherSuite types.SignatureProtocol, n int) (authKeys []ty
 	return result, nil
 }
 
-func MakeTestAuthKey(cipherSuite types.SignatureProtocol, secret curves.Scalar) (types.AuthKey, error) {
+func MakeTestAuthKey(cipherSuite types.SigningSuite, secret curves.Scalar) (types.AuthKey, error) {
 	result, err := MakeTestIdentity(cipherSuite, secret)
 	if err != nil {
 		return nil, err
@@ -329,7 +329,7 @@ func MakeDeterministicTestAuthKey(privateKey ed25519.PrivateKey, publicKey ed255
 	return authKey, nil
 }
 
-var _ types.SignatureProtocol = (*CipherSuite)(nil)
+var _ types.SigningSuite = (*CipherSuite)(nil)
 
 type CipherSuite struct {
 	curve curves.Curve
@@ -356,6 +356,7 @@ type Protocol struct {
 	curve                curves.Curve
 	hash                 func() hash.Hash
 	participants         ds.Set[types.IdentityKey]
+	flags                ds.Set[types.ValidationFlag]
 	threshold            uint
 	totalParties         uint
 	signatureAggregators ds.Set[types.IdentityKey]
@@ -390,7 +391,7 @@ func (p *Protocol) PreSignatureComposer() types.IdentityKey {
 	return p.presignatureComposer
 }
 
-func (p *Protocol) CipherSuite() types.SignatureProtocol {
+func (p *Protocol) SigningSuite() types.SigningSuite {
 	return &CipherSuite{
 		curve: p.curve,
 		hash:  p.hash,
@@ -401,23 +402,22 @@ func (*Protocol) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }
 
-func MakeGenericProtocol(curve curves.Curve) (types.GenericProtocol, error) {
-	generic := &Protocol{curve: curve}
-	if err := types.ValidateGenericProtocolConfig(generic); err != nil {
-		return nil, errs.WrapValidation(err, "generic")
+func (p *Protocol) Flags() ds.Set[types.ValidationFlag] {
+	if p.flags == nil {
+		p.flags = hashset.NewComparableHashSet[types.ValidationFlag]()
 	}
-	return generic, nil
+	return p.flags
 }
 
-func MakeMPCProtocol(curve curves.Curve, identities []types.IdentityKey) (types.MPCProtocol, error) {
-	mpc := &Protocol{
+func MakeProtocol(curve curves.Curve, identities []types.IdentityKey) (types.Protocol, error) {
+	protocol := &Protocol{
 		curve:        curve,
 		participants: hashset.NewHashableHashSet(identities...),
 	}
-	if err := types.ValidateMPCProtocolConfig(mpc); err != nil {
-		return nil, errs.WrapValidation(err, "mpc")
+	if err := types.ValidateProtocolConfig(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "protocol")
 	}
-	return mpc, nil
+	return protocol, nil
 }
 
 func MakeThresholdProtocol(curve curves.Curve, identities []types.IdentityKey, t int) (types.ThresholdProtocol, error) {
@@ -434,18 +434,18 @@ func MakeThresholdProtocol(curve curves.Curve, identities []types.IdentityKey, t
 	return threshold, nil
 }
 
-func MakeSignatureProtocol(curve curves.Curve, h func() hash.Hash) (types.SignatureProtocol, error) {
+func MakeSignatureProtocol(curve curves.Curve, h func() hash.Hash) (types.SigningSuite, error) {
 	sig := &Protocol{
 		curve: curve,
 		hash:  h,
 	}
-	if err := types.ValidateSignatureProtocolConfig(sig); err != nil {
+	if err := types.ValidateSigningSuite(sig); err != nil {
 		return nil, errs.WrapValidation(err, "sig")
 	}
 	return sig, nil
 }
 
-func MakeThresholdSignatureProtocol(cipherSuite types.SignatureProtocol, identities []types.IdentityKey, t int, signatureAggregators []types.IdentityKey) (types.ThresholdSignatureProtocol, error) {
+func MakeThresholdSignatureProtocol(cipherSuite types.SigningSuite, identities []types.IdentityKey, t int, signatureAggregators []types.IdentityKey) (types.ThresholdSignatureProtocol, error) {
 	participants := hashset.NewHashableHashSet(identities...)
 	tsig := &Protocol{
 		curve:                cipherSuite.Curve(),

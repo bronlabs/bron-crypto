@@ -9,20 +9,21 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
 var (
-	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id.
+	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id. Size must be CollisionResistanceBytes.
 	CommitmentHashFunction = sha3.New256
 )
 
 func computeCommitments(witness Witness, messages ...[]byte) (commitment Commitment, err error) {
 	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
 
-	commitment = make([]byte, CommitmentHashFunction().Size())
+	commitment = make([]byte, base.CollisionResistanceBytes)
 	for _, message := range messages {
 		commitment, err = hashing.Hash(hmacHash, commitment, message)
 		if err != nil {
@@ -33,9 +34,7 @@ func computeCommitments(witness Witness, messages ...[]byte) (commitment Commitm
 }
 
 func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
-	lambda := CommitmentHashFunction().Size()
-	witness := make([]byte, lambda)
-
+	witness := make([]byte, base.CollisionResistanceBytes)
 	if _, err := io.ReadFull(prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
@@ -47,12 +46,11 @@ func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, er
 }
 
 func openInternal(commitment Commitment, witness Witness, messages ...[]byte) error {
-	lambda := CommitmentHashFunction().Size()
-	if lambda != len(commitment) {
-		return errs.NewArgument("size of commitment is wrong given hash function. Need %d whereas we have %d", lambda, len(commitment))
+	if err := commitment.Validate(); err != nil {
+		return errs.WrapValidation(err, "commitment is invalid")
 	}
-	if lambda != len(witness) {
-		return errs.NewArgument("size of witness is wrong given hash function. Need %d whereas we have %d", lambda, len(witness))
+	if err := witness.Validate(); err != nil {
+		return errs.WrapValidation(err, "witness is invalid")
 	}
 
 	recomputedCommitment, err := computeCommitments(witness, messages...)

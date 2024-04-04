@@ -20,8 +20,6 @@ var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	PedersenParty *pedersen.Participant
-	round         int
-	transcript    transcripts.Transcript
 
 	_ ds.Incomparable
 }
@@ -40,20 +38,24 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	pedersenParty, err := pedersen.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
+	// Allow the free coefficient to be identity in the validation of pedersen/messages.go
+	protocol.Flags().Add(pedersen.FreeCoefficientCanBeIdentity)
+
+	pedersenParty, err := pedersen.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct pedersen party")
 	}
 
 	result := &Participant{
 		PedersenParty: pedersenParty,
-		round:         1,
-		transcript:    transcript,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")

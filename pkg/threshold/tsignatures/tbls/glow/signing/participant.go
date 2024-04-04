@@ -49,7 +49,10 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[types.
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -73,7 +76,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[types.
 		signer:        signer,
 		protocol:      protocol,
 		myAuthKey:     myAuthKey,
-		sessionId:     sessionId,
+		sessionId:     boundSessionId,
 		sharingConfig: sharingConfig,
 		mySharingId:   mySharingId,
 		transcript:    transcript,

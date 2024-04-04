@@ -21,24 +21,32 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-const DkgLabel = "COPPER_DKLS24_DKG-"
+const transcriptLabel = "COPPER_DKLS24_DKG-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	MyAuthKey             types.AuthKey
-	MySharingId           types.SharingID
-	MyPartialPublicKeys   *tsignatures.PartialPublicKeys
+	// Base participant
+	myAuthKey  types.AuthKey
+	Protocol   types.ThresholdProtocol
+	Prng       io.Reader
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
+
+	// Threshold participant
+	MySharingId         types.SharingID
+	MyPartialPublicKeys *tsignatures.PartialPublicKeys
+
 	ZeroSamplingParty     *zeroSetup.Participant
 	BaseOTSenderParties   ds.Map[types.IdentityKey, *bbot.Sender]
 	BaseOTReceiverParties ds.Map[types.IdentityKey, *bbot.Receiver]
-	Protocol              types.ThresholdProtocol
 
 	_ ds.Incomparable
 }
 
 func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.MyAuthKey
+	return p.myAuthKey
 }
 
 func (p *Participant) SharingId() types.SharingID {
@@ -50,8 +58,11 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", DkgLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -62,7 +73,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	zeroSamplingParty, err := zeroSetup.NewParticipant(sessionId, authKey, protocol, transcript, prng)
+	zeroSamplingParty, err := zeroSetup.NewParticipant(boundSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
 	}
@@ -72,29 +83,33 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		if participant.Equal(authKey) {
 			continue
 		}
-		otProtocol, err := types.NewMPCProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct protocol config for myself and %s", participant.String())
 		}
-		sender, err := bbot.NewSender(authKey, otProtocol, ot.Kappa, 1, sessionId, transcript.Clone(), prng)
+		sender, err := bbot.NewSender(authKey, otProtocol, ot.Kappa, 1, boundSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot sender object")
 		}
 		senders.Put(participant, sender)
-		receiver, err := bbot.NewReceiver(authKey, otProtocol, ot.Kappa, 1, sessionId, transcript.Clone(), prng)
+		receiver, err := bbot.NewReceiver(authKey, otProtocol, ot.Kappa, 1, boundSessionId, transcript.Clone(), prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct base ot receiver object")
 		}
 		receivers.Put(participant, receiver)
 	}
 	participant := &Participant{
-		MyAuthKey:             authKey,
+		myAuthKey:             authKey,
+		Protocol:              protocol,
+		Prng:                  prng,
+		Round:                 1,
+		SessionId:             boundSessionId,
+		Transcript:            transcript,
 		MySharingId:           mySharingId,
 		MyPartialPublicKeys:   partialPublicKeys,
 		ZeroSamplingParty:     zeroSamplingParty,
 		BaseOTSenderParties:   senders,
 		BaseOTReceiverParties: receivers,
-		Protocol:              protocol,
 	}
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct dkls24 dkg participant")

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
@@ -42,7 +43,7 @@ func MakeParticipants[V schnorr.Variant[V]](sid []byte, protocol types.Threshold
 	return participants, nil
 }
 
-func DoRound1[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V]) (round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast], err error) {
+func DoRound1[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V]) (round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast], err error) {
 	round1BroadcastOutputs := make([]*interactive_signing.Round1Broadcast, len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], err = participant.Round1()
@@ -54,7 +55,7 @@ func DoRound1[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner
 	return testutils.MapBroadcastO2I(participants, round1BroadcastOutputs), nil
 }
 
-func DoRound2[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round2BroadcastInputs []types.RoundMessages[*interactive_signing.Round1Broadcast]) (round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], err error) {
+func DoRound2[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast]) (round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], err error) {
 	round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
 	for i, participant := range participants {
 		round2BroadcastOutputs[i], err = participant.Round2(round2BroadcastInputs[i])
@@ -66,7 +67,7 @@ func DoRound2[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner
 	return testutils.MapBroadcastO2I(participants, round2BroadcastOutputs), nil
 }
 
-func DoRound3[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round3BroadcastInputs []types.RoundMessages[*interactive_signing.Round2Broadcast], message []byte) (partialSignatures []*tschnorr.PartialSignature, err error) {
+func DoRound3[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], message []byte) (partialSignatures []*tschnorr.PartialSignature, err error) {
 	partialSignatures = make([]*tschnorr.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3BroadcastInputs[i], message)

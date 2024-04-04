@@ -20,67 +20,28 @@ import (
 
 const transcriptLabel = "COPPER_KRYPTON_PREGEN_DKLS24-"
 
-var _ signing.Participant = (*PreGenParticipant)(nil)
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold piece of the protocol is important.
 
 type PreGenParticipant struct {
-	prng io.Reader
+	signing.Participant
 
-	myAuthKey   types.AuthKey
-	mySharingId types.SharingID
-	shard       *dkls24.Shard
+	Quorum ds.Set[types.IdentityKey]
 
-	sessionId     []byte
-	protocol      types.ThresholdProtocol
-	sharingConfig types.SharingConfig
-	PreSigners    ds.Set[types.IdentityKey]
-
-	transcript transcripts.Transcript
-	state      *signing.SignerState
-	round      int
+	state *signing.SignerState
 
 	_ ds.Incomparable
 }
 
-func (p *PreGenParticipant) Shard() *dkls24.Shard {
-	return p.shard
-}
-
-func (p *PreGenParticipant) Protocol() types.ThresholdProtocol {
-	return p.protocol
-}
-
-func (p *PreGenParticipant) SharingConfig() types.SharingConfig {
-	return p.sharingConfig
-}
-
-func (p *PreGenParticipant) Prng() io.Reader {
-	return p.prng
-}
-
-func (p *PreGenParticipant) SessionId() []byte {
-	return p.sessionId
-}
-
-func (p *PreGenParticipant) IdentityKey() types.IdentityKey {
-	return p.myAuthKey
-}
-
-func (p *PreGenParticipant) SharingId() types.SharingID {
-	return p.mySharingId
-}
-
-func (p *PreGenParticipant) IsSignatureAggregator() bool {
-	return p.Protocol().Participants().Contains(p.IdentityKey())
-}
-
-func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.Set[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
+func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners ds.Set[types.IdentityKey], myShard *dkls24.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader, seededPrng csprng.CSPRNG) (participant *PreGenParticipant, err error) {
 	if err := validateInputs(sessionId, myAuthKey, protocol, myShard, preSigners); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -92,7 +53,7 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 	}
 
 	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(sessionId, myAuthKey, myShard.PairwiseSeeds, protocol, preSigners, seededPrng)
+	zeroShareSamplingParty, err := sample.NewParticipant(boundSessionId, myAuthKey, myShard.PairwiseSeeds, protocol, preSigners, seededPrng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
 	}
@@ -103,7 +64,7 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		if participant.Equal(myAuthKey) {
 			continue
 		}
-		otProtocol, err := types.NewMPCProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey)))
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey)))
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
 		}
@@ -111,11 +72,11 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
-		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, sessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, boundSessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
-		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, sessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, boundSessionId, prng, seededPrng, transcript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
@@ -125,23 +86,16 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		})
 	}
 
+	signingParticipant := signing.NewParticipant(myAuthKey, prng, protocol, boundSessionId, transcript, mySharingId, sharingConfig, myShard)
 	participant = &PreGenParticipant{
-		myAuthKey:  myAuthKey,
-		protocol:   protocol,
-		shard:      myShard,
-		sessionId:  sessionId,
-		prng:       prng,
-		transcript: transcript,
+		Participant: *signingParticipant,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,
 				Multiplication:    multipliers,
 			},
 		},
-		mySharingId:   mySharingId,
-		sharingConfig: sharingConfig,
-		PreSigners:    preSigners,
-		round:         1,
+		Quorum: preSigners,
 	}
 
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {

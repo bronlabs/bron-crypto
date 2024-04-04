@@ -22,10 +22,12 @@ const transcriptLabel = "COPPER_KRYPTON_KEY_RECOVERY-"
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
-	prng io.Reader
+	// Base participant
+	Prng     io.Reader
+	Protocol types.ThresholdProtocol
+	Round    int
 
 	sampler                     *hjky.Participant
-	protocol                    types.ThresholdProtocol
 	sortedPresentRecoverersList []types.IdentityKey
 
 	signingKeyShare *tsignatures.SigningKeyShare
@@ -33,8 +35,6 @@ type Participant struct {
 
 	lostPartyIdentityKey types.IdentityKey
 	additiveShareOfZero  curves.Scalar
-
-	round int
 
 	_ ds.Incomparable
 }
@@ -57,12 +57,15 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -70,14 +73,14 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		prng:                        prng,
+		Prng:                        prng,
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		publicKeyShares:             publicKeyShares,
 		signingKeyShare:             signingKeyShare,
 		lostPartyIdentityKey:        lostPartyIdentityKey,
-		protocol:                    protocol,
-		round:                       1,
+		Protocol:                    protocol,
+		Round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct recoverer")
@@ -139,12 +142,15 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 		return nil, errs.WrapArgument(err, "could not validate inputs")
 	}
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(sessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -152,13 +158,13 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
 	result := &Participant{
-		prng:                        prng,
+		Prng:                        prng,
 		sampler:                     sampler,
 		sortedPresentRecoverersList: presentRecoverersList,
 		lostPartyIdentityKey:        authKey,
 		publicKeyShares:             publicKeyShares,
-		protocol:                    protocol,
-		round:                       1,
+		Protocol:                    protocol,
+		Round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct lost party")

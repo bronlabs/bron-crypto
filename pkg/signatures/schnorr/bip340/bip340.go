@@ -18,7 +18,7 @@ const (
 	auxSizeBytes = 32
 )
 
-var suite, _ = types.NewSignatureProtocol(k256.NewCurve(), bip340.NewBip340HashChallenge)
+var suite, _ = types.NewSigningSuite(k256.NewCurve(), bip340.NewBip340HashChallenge)
 
 type PublicKey schnorr.PublicKey
 

@@ -19,13 +19,16 @@ const (
 )
 
 type Participant struct {
-	t         int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
-	q         *saferith.Nat
-	l         *saferith.Nat
-	capLen    int
-	round     int
-	sessionId []byte
-	prng      io.Reader
+	// Base Participant
+	Prng       io.Reader
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
+
+	t      int // security parameter (i.e. a cheating prover can succeed with probability less then 2^(-t))
+	q      *saferith.Nat
+	l      *saferith.Nat
+	capLen int
 
 	_ ds.Incomparable
 }
@@ -73,8 +76,10 @@ func NewProver(t int, q *saferith.Nat, sk *paillier.SecretKey, x, r *saferith.Na
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
-
-	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(transcriptLabel, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, transcriptLabel)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -89,13 +94,13 @@ func NewProver(t int, q *saferith.Nat, sk *paillier.SecretKey, x, r *saferith.Na
 
 	return &Prover{
 		Participant: Participant{
+			Prng:      prng,
+			Round:     2,
+			SessionId: boundSessionId,
 			t:         t,
 			q:         q,
 			l:         l,
 			capLen:    capLen,
-			round:     2,
-			sessionId: sessionId,
-			prng:      prng,
 		},
 		x:     xMinusQThird,
 		r:     r,
@@ -132,7 +137,10 @@ func NewVerifier(t int, q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *pai
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
-	_, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, transcriptLabel)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(transcriptLabel, prng)
+	}
+	sessionId, err = transcript.Bind(sessionId, transcriptLabel)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -153,9 +161,9 @@ func NewVerifier(t int, q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *pai
 			t:         t,
 			q:         q,
 			l:         l,
-			round:     1,
-			sessionId: sessionId,
-			prng:      prng,
+			Round:     1,
+			SessionId: sessionId,
+			Prng:      prng,
 		},
 		c:     cMinusQThirdEncrypted,
 		pk:    pk,

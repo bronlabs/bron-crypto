@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	noninteractive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/noninteractive"
@@ -36,10 +37,10 @@ func MakePreGenParticipants(identities []types.IdentityKey, sid []byte, protocol
 	return parties, nil
 }
 
-func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (output []types.RoundMessages[*noninteractive_signing.Round1Broadcast], err error) {
-	result := make([]types.RoundMessages[*noninteractive_signing.Round1Broadcast], len(participants))
+func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast], err error) {
+	result := make([]network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast], len(participants))
 	for i := range participants {
-		result[i] = types.NewRoundMessages[*noninteractive_signing.Round1Broadcast]()
+		result[i] = network.NewRoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]()
 	}
 
 	for i, party := range participants {
@@ -57,10 +58,10 @@ func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (o
 	return result, nil
 }
 
-func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, input []types.RoundMessages[*noninteractive_signing.Round1Broadcast]) (output []types.RoundMessages[*noninteractive_signing.Round2Broadcast], err error) {
-	result := make([]types.RoundMessages[*noninteractive_signing.Round2Broadcast], len(participants))
+func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast], err error) {
+	result := make([]network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast], len(participants))
 	for i := range participants {
-		result[i] = types.NewRoundMessages[*noninteractive_signing.Round2Broadcast]()
+		result[i] = network.NewRoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]()
 	}
 
 	for i, party := range participants {
@@ -78,7 +79,7 @@ func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, in
 	return result, nil
 }
 
-func DoPreGenRound3(participants []*noninteractive_signing.PreGenParticipant, input []types.RoundMessages[*noninteractive_signing.Round2Broadcast]) (output []*lindell17.PreProcessingMaterial, err error) {
+func DoPreGenRound3(participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]) (output []*lindell17.PreProcessingMaterial, err error) {
 	result := make([]*lindell17.PreProcessingMaterial, len(participants))
 
 	for i := range participants {

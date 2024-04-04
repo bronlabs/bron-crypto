@@ -8,15 +8,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 )
 
 func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))
 	set := hashset.NewHashableHashSet(identities...)
-	protocol, err := ttu.MakeMPCProtocol(curve, identities)
+	protocol, err := ttu.MakeProtocol(curve, identities)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't make mpc protocol")
+		return nil, errs.WrapFailed(err, "couldn't make protocol")
 	}
 	for identity := range set.Iter() {
 		participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
@@ -72,7 +73,7 @@ func DoRound1(participants []*agreeonrandom.Participant) (round1Outputs []*agree
 	return round1Outputs, nil
 }
 
-func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []types.RoundMessages[*agreeonrandom.Round1Broadcast]) (round2Outputs []*agreeonrandom.Round2Broadcast, err error) {
+func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []network.RoundMessages[types.Protocol, *agreeonrandom.Round1Broadcast]) (round2Outputs []*agreeonrandom.Round2Broadcast, err error) {
 	round2Outputs = make([]*agreeonrandom.Round2Broadcast, len(participants))
 	for i, participant := range participants {
 		round2Outputs[i], err = participant.Round2(round2Inputs[i])
@@ -83,7 +84,7 @@ func DoRound2(participants []*agreeonrandom.Participant, round2Inputs []types.Ro
 	return round2Outputs, nil
 }
 
-func DoRound3(participants []*agreeonrandom.Participant, round2Inputs []types.RoundMessages[*agreeonrandom.Round2Broadcast]) (results [][]byte, err error) {
+func DoRound3(participants []*agreeonrandom.Participant, round2Inputs []network.RoundMessages[types.Protocol, *agreeonrandom.Round2Broadcast]) (results [][]byte, err error) {
 	results = make([][]byte, len(participants))
 	for i, participant := range participants {
 		results[i], err = participant.Round3(round2Inputs[i])

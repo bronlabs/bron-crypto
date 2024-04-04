@@ -20,6 +20,20 @@ func (m ComparableHashMap[K, V]) Get(key K) (value V, exists bool) {
 	return v, exists
 }
 
+func (m ComparableHashMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
+	return m.Filter(keys.Contains)
+}
+
+func (m ComparableHashMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
+	result := make(ComparableHashMap[K, V])
+	for k, v := range m {
+		if predicate(k) {
+			result[k] = v
+		}
+	}
+	return result
+}
+
 func (m ComparableHashMap[K, V]) ContainsKey(key K) bool {
 	_, exists := m.Get(key)
 	return exists

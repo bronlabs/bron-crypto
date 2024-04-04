@@ -1,7 +1,6 @@
 package bbot
 
 import (
-	"io"
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
@@ -19,131 +18,142 @@ const (
 	TagLength    = ot.KappaBytes
 )
 
-type (
-	Round1P2P = curves.Point        // mS
-	Round2P2P = [][2][]curves.Point // phi ∈ [ξ][2][L]Point
-)
+func (s *Sender) Round1() (r1out *Round1P2P, err error) {
+	// Validation
+	if s.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, s.Round)
+	}
 
-func (S *Sender) Round1() (mS Round1P2P, err error) {
 	// step 1.1 (KA.R)
-	S.MyEsk, err = S.Protocol.Curve().ScalarField().Random(S.Csprng)
+	s.MyEsk, err = s.Protocol.Curve().ScalarField().Random(s.Prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "generating random scalar a")
 	}
 	// step 1.2 (KA.msg_1)
-	mS = S.Protocol.Curve().ScalarBaseMult(S.MyEsk)
+	mS := s.Protocol.Curve().ScalarBaseMult(s.MyEsk)
 	// step 1.3 (Setup RO)
-	S.Transcript.AppendPoints("mS", mS)
-	return mS, nil
+	s.Transcript.AppendPoints("mS", mS)
+
+	s.Round = 3
+	return &Round1P2P{
+		MS: mS,
+	}, nil
 }
 
-func (R *Receiver) Round2(mS Round1P2P) (r2out Round2P2P, err error) {
-	if len(R.Output.Choices) == 0 {
-		R.Output.Choices = make(ot.ChoiceBits, R.Xi/8)
-		if _, err := io.ReadFull(R.Csprng, R.Output.Choices); err != nil {
-			return nil, errs.WrapRandomSample(err, "generating random choice bits")
-		}
+func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
+	// Validation
+	if r.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.Round)
 	}
-	phi := make([][2][]curves.Point, R.Xi)
-	R.Output.ChosenMessages = make([]ot.ChosenMessage, R.Xi)
+	if err := r1out.Validate(r.Protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
+	}
+
+	phi := make([][2][]curves.Point, r.Protocol.Xi)
+	r.Output.ChosenMessages = make([]ot.Message, r.Protocol.Xi)
 	// Setup ROs
-	R.Transcript.AppendPoints("mS", mS)
+	r.Transcript.AppendPoints("mS", r1out.MS)
 	var tagRandomOracle [2][]byte
-	tagRandomOracle[0], err = R.Transcript.ExtractBytes(Ro0Label, TagLength)
+	tagRandomOracle[0], err = r.Transcript.ExtractBytes(Ro0Label, TagLength)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "extracting tag Ro0")
 	}
-	tagRandomOracle[1], err = R.Transcript.ExtractBytes(Ro1Label, TagLength)
+	tagRandomOracle[1], err = r.Transcript.ExtractBytes(Ro1Label, TagLength)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "extracting tag Ro1")
 	}
 	// step 2.1
-	for i := 0; i < R.Xi; i++ {
-		c_i := bitstring.SelectBit(R.Output.Choices, i)
-		phi[i] = [2][]curves.Point{make([]curves.Point, R.L), make([]curves.Point, R.L)}
-		R.Output.ChosenMessages[i] = make(ot.ChosenMessage, R.L)
-		for l := 0; l < R.L; l++ {
+	for i := 0; i < r.Protocol.Xi; i++ {
+		c_i := r.Output.Choices.Select(i)
+		phi[i] = [2][]curves.Point{make([]curves.Point, r.Protocol.L), make([]curves.Point, r.Protocol.L)}
+		r.Output.ChosenMessages[i] = make(ot.Message, r.Protocol.L)
+		for l := 0; l < r.Protocol.L; l++ {
 			// step 2.2 (KA.R)
-			b_i, err := R.Protocol.Curve().ScalarField().Random(R.Csprng)
+			b_i, err := r.Protocol.Curve().ScalarField().Random(r.Prng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar bi")
 			}
 			// step 2.3 (KA.msg_2)
-			mR_i := R.Protocol.Curve().ScalarBaseMult(b_i)
+			mR_i := r.Protocol.Curve().ScalarBaseMult(b_i)
 			// step 2.4 (KA.key_2)
-			sharedValue, err := dh.DiffieHellman(b_i, mS)
+			sharedValue, err := dh.DiffieHellman(b_i, r1out.MS)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 			}
-			r_i_l, err := hashing.Hash(ot.HashFunction, sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytesLE(i*R.L+l), []byte{c_i})
+			r_i_l, err := hashing.Hash(ot.HashFunction, sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytesLE(i*r.Protocol.L+l), []byte{c_i})
 			if err != nil {
 				return nil, errs.WrapHashing(err, "computing r_i_j")
 			}
-			copy(R.Output.ChosenMessages[i][l][:], r_i_l)
+			copy(r.Output.ChosenMessages[i][l][:], r_i_l)
 			// step 2.5 (POPF.Program)
-			sc, err := R.Protocol.Curve().ScalarField().Random(R.Csprng)
+			sc, err := r.Protocol.Curve().ScalarField().Random(r.Prng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar sc")
 			}
-			phi[i][1-c_i][l] = R.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
+			phi[i][1-c_i][l] = r.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
 			hashInput := slices.Concat(phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i])
-			sc, err = R.Protocol.Curve().ScalarField().Hash(hashInput)
+			sc, err = r.Protocol.Curve().ScalarField().Hash(hashInput)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing phi[%d][%d]", i, 1-c_i)
 			}
-			pt := R.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
+			pt := r.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
 			phi[i][c_i][l] = mR_i.Sub(pt)
 		}
 	}
-	return phi, nil
+
+	r.Round++
+	return &Round2P2P{Phi: phi}, nil
 }
 
-func (S *Sender) Round3(phi Round2P2P) (err error) {
-	if len(phi) != S.Xi {
-		return errs.NewArgument("phi length should be Xi (%d != %d)", len(phi), S.Xi)
+func (s *Sender) Round3(r2out *Round2P2P) (err error) {
+	// Validation
+	if s.Round != 3 {
+		return errs.NewRound("Running round %d but participant expected round %d", 3, s.Round)
 	}
+	if err := r2out.Validate(s.Protocol); err != nil {
+		return errs.WrapValidation(err, "invalid round %d input", s.Round)
+	}
+
 	// Setup ROs
 	tagRandomOracle := make([][]byte, 2)
-	tagRandomOracle[0], err = S.Transcript.ExtractBytes(Ro0Label, TagLength)
+	tagRandomOracle[0], err = s.Transcript.ExtractBytes(Ro0Label, TagLength)
 	if err != nil {
 		return errs.WrapHashing(err, "extracting tag Ro0")
 	}
-	tagRandomOracle[1], err = S.Transcript.ExtractBytes(Ro1Label, TagLength)
+	tagRandomOracle[1], err = s.Transcript.ExtractBytes(Ro1Label, TagLength)
 	if err != nil {
 		return errs.WrapHashing(err, "extracting tag Ro1")
 	}
-	S.Output.Messages = make([]ot.MessagePair, S.Xi)
+	s.Output.MessagePairs = make([][2]ot.Message, s.Protocol.Xi)
 	// step 3.1
-	for i := 0; i < S.Xi; i++ {
-		if len(phi[i][0]) != S.L || len(phi[i][1]) != S.L {
-			return errs.NewArgument("phi[%d] length should be L (%d != %d || %d != %d)",
-				i, len(phi[i][0]), S.L, len(phi[i][1]), S.L)
-		}
-		S.Output.Messages[i] = ot.MessagePair{make([]ot.MessageElement, S.L), make([]ot.MessageElement, S.L)}
-		for l := 0; l < S.L; l++ {
+	for i := 0; i < s.Protocol.Xi; i++ {
+		s.Output.MessagePairs[i] = [2]ot.Message{make([]ot.MessageElement, s.Protocol.L), make([]ot.MessageElement, s.Protocol.L)}
+		for l := 0; l < s.Protocol.L; l++ {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
-				hashInput := slices.Concat(phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j])
-				sc, err := S.Protocol.Curve().ScalarField().Hash(hashInput)
+				hashInput := slices.Concat(r2out.Phi[i][1-j][l].ToAffineCompressed(), tagRandomOracle[j])
+				sc, err := s.Protocol.Curve().ScalarField().Hash(hashInput)
 				if err != nil {
 					return errs.WrapHashing(err, "hashing for phi[%d][%d]", i, j)
 				}
-				P := S.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor().Add(phi[i][j][l])
+				P := s.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor().Add(r2out.Phi[i][j][l])
 				// step 3.3 (KA.key_1)
-				sharedValue, err := dh.DiffieHellman(S.MyEsk, P)
+				sharedValue, err := dh.DiffieHellman(s.MyEsk, P)
 				if err != nil {
 					return errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 				}
 				sharedValueBytes := sharedValue.Bytes()
-				s_i_l, err := hashing.Hash(ot.HashFunction, sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytesLE(i*S.L+l), []byte{j})
+				s_i_l, err := hashing.Hash(ot.HashFunction, sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytesLE(i*s.Protocol.L+l), []byte{j})
 				if err != nil {
 					return errs.WrapHashing(err, "computing s_i_j")
 				}
-				copy(S.Output.Messages[i][j][l][:], s_i_l)
+				copy(s.Output.MessagePairs[i][j][l][:], s_i_l)
 			}
 		}
 	}
+
+	s.Round++
 	return nil
 }

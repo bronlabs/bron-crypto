@@ -95,7 +95,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 	var verifier *paillierrange.Verifier
 	var prover *paillierrange.Prover
 	var r1 *paillierrange.Round1Output
-	var r2 *paillierrange.ProverRound2Output
+	var r2 *paillierrange.Round2Output
 
 	internal.RunMeasurement(500, "paillierrange_round3", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
@@ -132,8 +132,8 @@ func Test_MeasureConstantTime_round4(t *testing.T) {
 	var verifier *paillierrange.Verifier
 	var prover *paillierrange.Prover
 	var r1 *paillierrange.Round1Output
-	var r2 *paillierrange.ProverRound2Output
-	var r3 *paillierrange.VerifierRound3Output
+	var r2 *paillierrange.Round2Output
+	var r3 *paillierrange.Round3Output
 
 	internal.RunMeasurement(500, "paillierrange_round4", func(i int) {
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
@@ -173,8 +173,8 @@ func Test_MeasureConstantTime_round5(t *testing.T) {
 	var verifier *paillierrange.Verifier
 	var prover *paillierrange.Prover
 	var r1 *paillierrange.Round1Output
-	var r2 *paillierrange.ProverRound2Output
-	var r3 *paillierrange.VerifierRound3Output
+	var r2 *paillierrange.Round2Output
+	var r3 *paillierrange.Round3Output
 	var r4 *paillierrange.Round4Output
 
 	internal.RunMeasurement(500, "paillierrange_round5", func(i int) {

@@ -46,7 +46,10 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
-	transcript, _, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	_, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -63,7 +66,10 @@ func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, c.sigmaProtocol.Name())
-	transcript, _, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, nil)
+	}
+	_, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}

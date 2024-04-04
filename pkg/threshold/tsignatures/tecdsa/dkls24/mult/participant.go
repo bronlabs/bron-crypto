@@ -18,108 +18,108 @@ import (
 
 const transcriptLabel = "COPPER_DKLS_MULTIPLY-"
 
-var _ types.MPCParticipant = (*Alice)(nil)
-var _ types.MPCParticipant = (*Bob)(nil)
+var _ types.Participant = (*Alice)(nil)
+var _ types.Participant = (*Bob)(nil)
 
 type participant struct {
-	csrand     io.Reader
-	Protocol   types.MPCProtocol
-	transcript transcripts.Transcript
-	sessionId  []byte
-	gadget     *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
 	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.Protocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
 	_ ds.Incomparable
 }
 
-type Alice struct {
-	participant
-	sender *softspoken.Sender
+func (p *participant) IdentityKey() types.IdentityKey {
+	return p.myAuthKey
 }
 
-func (a *Alice) IdentityKey() types.IdentityKey {
-	return a.myAuthKey
+type Alice struct {
+	*participant // Base Participant
+
+	sender *softspoken.Sender
+	gadget *[Xi]curves.Scalar // (g) ∈ [ξ]ℤq is the gadget vector
+
+	_ ds.Incomparable
 }
 
 type Bob struct {
-	participant
+	*participant // Base Participant
+
 	receiver *softspoken.Receiver
-	Beta     []byte                  // β ∈ [ξ]bits is a vector of random bits used as receiver choices in OTe
-	Gamma    [Xi][LOTe]curves.Scalar // γ ∈ [ξ]ℤq is the receiver output of OTe (chosen messages)
+	gadget   *[Xi]curves.Scalar // g ∈ [ξ]ℤq is the gadget vector
+
+	Beta  ot.PackedBits           // β ∈ [ξ]bits is a vector of random bits used as receiver choices in OTe
+	Gamma [Xi][LOTe]curves.Scalar // γ ∈ [ξ]ℤq is the receiver output of OTe (chosen messages)
+
+	_ ds.Incomparable
 }
 
-func (b *Bob) IdentityKey() types.IdentityKey {
-	return b.myAuthKey
-}
-
-func newParticipant[T any](myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *T, sessionId []byte, csrand io.Reader, transcript transcripts.Transcript) (*participant, error) {
+func newParticipant[T any](myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *T, sessionId []byte, csrand io.Reader, transcript transcripts.Transcript, initialRound int) (*participant, error) {
 	if err := validateParticipantInputs[T](myAuthKey, protocol, seedOtResults, sessionId, csrand); err != nil {
 		return nil, errs.WrapFailed(err, "invalid inputs")
 	}
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, protocol.Curve().Name())
-	transcript, sessionId, err := hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, csrand)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
-	gadget, err := generateGadgetVector(protocol.Curve(), transcript)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create gadget vector")
-	}
 	return &participant{
-		Protocol:   protocol,
-		transcript: transcript,
-		sessionId:  sessionId,
-		gadget:     gadget,
-		csrand:     csrand,
 		myAuthKey:  myAuthKey,
+		Prng:       csrand,
+		Protocol:   protocol,
+		Round:      initialRound,
+		SessionId:  boundSessionId,
+		Transcript: transcript,
 	}, nil
 }
 
-func NewAlice(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *ot.ReceiverRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
-	participant, err := newParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, transcript)
+func NewAlice(myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *ot.ReceiverRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Alice, error) {
+	participant, err := newParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, transcript, 2)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct basic participant")
+		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-
 	sender, err := softspoken.NewSoftspokenSender(myAuthKey, protocol, seedOtResults, sessionId, transcript, csrand, seededPrng, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
-
-	alice := &Alice{
-		participant: *participant,
+	gadget, err := generateGadgetVector(protocol.Curve(), sender.Transcript)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create gadget vector")
+	}
+	return &Alice{
+		participant: participant,
 		sender:      sender,
-	}
-
-	if err := types.ValidateMPCProtocol(alice, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct mpc participant")
-	}
-
-	return alice, nil
+		gadget:      gadget,
+	}, nil
 }
 
-func NewBob(myAuthKey types.AuthKey, protocol types.MPCProtocol, seedOtResults *ot.SenderRotOutput, sessionId []byte, csrand io.Reader, prgFn csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
-	participant, err := newParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, transcript)
+func NewBob(myAuthKey types.AuthKey, protocol types.Protocol, seedOtResults *ot.SenderRotOutput, sessionId []byte, csrand io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Bob, error) {
+	participant, err := newParticipant(myAuthKey, protocol, seedOtResults, sessionId, csrand, transcript, 1)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct basic participant")
+		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-	receiver, err := softspoken.NewSoftspokenReceiver(myAuthKey, protocol, seedOtResults, sessionId, transcript, csrand, prgFn, LOTe, Xi)
+	receiver, err := softspoken.NewSoftspokenReceiver(myAuthKey, protocol, seedOtResults, sessionId, transcript, csrand, seededPrng, LOTe, Xi)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
-	bob := &Bob{
-		participant: *participant,
+	gadget, err := generateGadgetVector(protocol.Curve(), receiver.Transcript)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create gadget vector")
+	}
+	return &Bob{
+		participant: participant,
 		receiver:    receiver,
-	}
-
-	if err := types.ValidateMPCProtocol(bob, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct mpc participant")
-	}
-
-	return bob, nil
+		gadget:      gadget,
+	}, nil
 }
 
-func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol types.MPCProtocol, seedOtResults *T, sessionId []byte, truePrng io.Reader) error {
+func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol types.Protocol, seedOtResults *T, sessionId []byte, truePrng io.Reader) error {
 	if truePrng == nil {
 		return errs.NewArgument("prng is nil")
 	}
@@ -132,8 +132,8 @@ func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol 
 	if err := types.ValidateIdentityKey(myIdentityKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "mpc protocol config")
+	if err := types.ValidateProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "protocol config")
 	}
 	return nil
 }

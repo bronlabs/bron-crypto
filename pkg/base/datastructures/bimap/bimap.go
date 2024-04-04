@@ -42,6 +42,14 @@ func (m *BiMap[K, V]) Get(l K) (V, bool) {
 	return m.internalMap.Get(l)
 }
 
+func (m *BiMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
+	return m.internalMap.Sieve(keys)
+}
+
+func (m *BiMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
+	return m.internalMap.Filter(predicate)
+}
+
 func (m *BiMap[K, V]) Put(l K, r V) {
 	_, _ = m.TryPut(l, r)
 }

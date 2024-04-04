@@ -7,30 +7,12 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
-type cipherSuite struct {
-	curve curves.Curve
-	hash  func() hash.Hash
-
-	_ ds.Incomparable
-}
-
-func (cs *cipherSuite) Curve() curves.Curve {
-	return cs.curve
-}
-
-func (cs *cipherSuite) Hash() func() hash.Hash {
-	return cs.hash
-}
-
-func (*cipherSuite) MarshalJSON() ([]byte, error) {
-	panic("not implemented")
-}
-
 type protocol struct {
 	curve        curves.Curve
 	hash         func() hash.Hash
 	participants ds.Set[IdentityKey]
 	threshold    uint
+	flags        ds.Set[ValidationFlag]
 }
 
 func (p *protocol) Curve() curves.Curve {
@@ -53,13 +35,14 @@ func (p *protocol) TotalParties() uint {
 	return uint(p.participants.Size())
 }
 
-func (p *protocol) CipherSuite() SignatureProtocol {
-	return &cipherSuite{
-		curve: p.curve,
-		hash:  p.hash,
-	}
+func (p *protocol) SigningSuite() SigningSuite {
+	return p
 }
 
 func (*protocol) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
+}
+
+func (p *protocol) Flags() ds.Set[ValidationFlag] {
+	return p.flags
 }

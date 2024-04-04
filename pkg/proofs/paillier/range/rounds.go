@@ -7,72 +7,28 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
-type Round1Output struct {
-	EsidCommitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type ProverRound2Output struct {
-	C1 []*paillier.CipherText
-	C2 []*paillier.CipherText
-
-	_ ds.Incomparable
-}
-
-type VerifierRound3Output struct {
-	E           *big.Int
-	EsidWitness commitments.Witness
-
-	_ ds.Incomparable
-}
-
-type ZetZero struct {
-	W1 *saferith.Nat
-	R1 *saferith.Nat
-	W2 *saferith.Nat
-	R2 *saferith.Nat
-
-	_ ds.Incomparable
-}
-
-type ZetOne struct {
-	J        int
-	XPlusWj  *saferith.Nat
-	RTimesRj *saferith.Nat
-
-	_ ds.Incomparable
-}
-
-type Round4Output struct {
-	ZetZero []*ZetZero
-	ZetOne  []*ZetOne
-
-	_ ds.Incomparable
-}
-
-func (verifier *Verifier) Round1() (output *Round1Output, err error) {
-	if verifier.round != 1 {
-		return nil, errs.NewRound("%d != 1", verifier.round)
+func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
+	// Validation
+	if verifier.Round != 1 {
+		return nil, errs.NewRound("%d != 1", verifier.Round)
 	}
 
 	// 1.iii. chooses a random e (t bit length)
 	// this values is used to iterate over bits - more convenient to keep as big.Int
-	verifier.state.e, err = crand.Int(verifier.prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
+	verifier.state.e, err = crand.Int(verifier.Prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
 	esidCommitment, esidWitness, err := commitments.Commit(
-		verifier.sessionId,
-		verifier.prng,
+		verifier.SessionId,
+		verifier.Prng,
 		verifier.state.e.Bytes(),
 	)
 	if err != nil {
@@ -80,23 +36,27 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}
 	verifier.state.esidWitness = esidWitness
 
-	verifier.round += 2
+	verifier.Round += 2
 	return &Round1Output{
 		EsidCommitment: esidCommitment,
 	}, nil
 }
 
-func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, err error) {
-	if prover.round != 2 {
-		return nil, errs.NewRound("%d != 2", prover.round)
+func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err error) {
+	// Validation
+	if prover.Round != 2 {
+		return nil, errs.NewRound("%d != 2", prover.Round)
+	}
+	if err := r1out.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 input")
 	}
 
-	prover.state.esidCommitment = input.EsidCommitment
+	prover.state.esidCommitment = r1out.EsidCommitment
 	prover.state.w1 = make([]*saferith.Nat, prover.t)
 	prover.state.w2 = make([]*saferith.Nat, prover.t)
 	for i := 0; i < prover.t; i++ {
 		flip := make([]byte, 1)
-		_, err = io.ReadFull(prover.prng, flip)
+		_, err = io.ReadFull(prover.Prng, flip)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "cannot create random")
 		}
@@ -124,47 +84,55 @@ func (prover *Prover) Round2(input *Round1Output) (output *ProverRound2Output, e
 	c1 := make([]*paillier.CipherText, prover.t)
 	c2 := make([]*paillier.CipherText, prover.t)
 	for i := 0; i < prover.t; i++ {
-		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.prng)
+		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.Prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot encrypt")
 		}
-		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.prng)
+		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.Prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot encrypt")
 		}
 	}
 
 	// 2.vi. send c1i, c2i to V
-	prover.round += 2
-	return &ProverRound2Output{
+	prover.Round += 2
+	return &Round2Output{
 		C1: c1,
 		C2: c2,
 	}, nil
 }
 
-func (verifier *Verifier) Round3(input *ProverRound2Output) (output *VerifierRound3Output, err error) {
-	if verifier.round != 3 {
-		return nil, errs.NewRound("%d != 3", verifier.round)
+func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err error) {
+	// Validation
+	if verifier.Round != 3 {
+		return nil, errs.NewRound("%d != 3", verifier.Round)
+	}
+	if err := r2out.Validate(verifier.t); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 3 input")
 	}
 
-	verifier.state.c1 = input.C1
-	verifier.state.c2 = input.C2
+	verifier.state.c1 = r2out.C1
+	verifier.state.c2 = r2out.C2
 
-	verifier.round += 2
+	verifier.Round += 2
 
 	// 3. decommit (e, sessionId), reveal (e, sessionId) to P
-	return &VerifierRound3Output{
+	return &Round3Output{
 		E:           verifier.state.e,
 		EsidWitness: verifier.state.esidWitness,
 	}, nil
 }
 
-func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output, err error) {
-	if prover.round != 4 {
-		return nil, errs.NewRound("%d != 4", prover.round)
+func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err error) {
+	// Validation
+	if prover.Round != 4 {
+		return nil, errs.NewRound("%d != 4", prover.Round)
+	}
+	if err := r3out.Validate(prover.t); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	err = commitments.Open(prover.sessionId, prover.state.esidCommitment, input.EsidWitness, input.E.Bytes())
+	err = commitments.Open(prover.SessionId, prover.state.esidCommitment, r3out.EsidWitness, r3out.E.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
@@ -173,7 +141,7 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 	zetZero := make([]*ZetZero, prover.t)
 	zetOne := make([]*ZetOne, prover.t)
 	for i := 0; i < prover.t; i++ {
-		if input.E.Bit(i) == 0 {
+		if r3out.E.Bit(i) == 0 {
 			// 4.i. if ei == 0 set zi = (w1i, r1i, w2i, r2i)
 			zetZero[i] = &ZetZero{
 				W1: prover.state.w1[i],
@@ -207,16 +175,20 @@ func (prover *Prover) Round4(input *VerifierRound3Output) (output *Round4Output,
 	}
 
 	// 4.iii. send zi to V
-	prover.round += 2
+	prover.Round += 2
 	return &Round4Output{
 		ZetZero: zetZero,
 		ZetOne:  zetOne,
 	}, nil
 }
 
-func (verifier *Verifier) Round5(input *Round4Output) (err error) {
-	if verifier.round != 5 {
-		return errs.NewRound("%d != 5", verifier.round)
+func (verifier *Verifier) Round5(r4out *Round4Output) (err error) {
+	// Validation
+	if verifier.Round != 5 {
+		return errs.NewRound("%d != 5", verifier.Round)
+	}
+	if err := r4out.Validate(verifier.t); err != nil {
+		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
 	// 5. Parse zi
@@ -224,7 +196,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		if verifier.state.e.Bit(i) == 0 {
 			// 5.i. if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
 			// and one of w1i, w2i is in l-2l range while other is in 0-l range
-			z := input.ZetZero[i]
+			z := r4out.ZetZero[i]
 			c1, err := verifier.pk.EncryptWithNonce(z.W1, z.R1)
 			if err != nil {
 				return errs.WrapFailed(err, "cannot encrypt")
@@ -249,7 +221,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		} else {
 			// 5.ii if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
 			// where zi = (j, wi, ri)
-			z := input.ZetOne[i]
+			z := r4out.ZetOne[i]
 			wi := z.XPlusWj
 			ri := z.RTimesRj
 			cCheck, err := verifier.pk.EncryptWithNonce(wi, ri)
@@ -275,7 +247,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		}
 	}
 
-	verifier.round += 2
+	verifier.Round += 2
 	return nil
 }
 
@@ -293,7 +265,7 @@ func (p *Participant) inSecondThird(v *saferith.Nat) bool {
 }
 
 func (p *Participant) randomIntInFirstThird() (*saferith.Nat, error) {
-	nInt, err := crand.Int(p.prng, p.l.Big())
+	nInt, err := crand.Int(p.Prng, p.l.Big())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "reading crand int failed")
 	}

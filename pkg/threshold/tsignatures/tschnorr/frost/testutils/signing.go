@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
@@ -55,7 +56,7 @@ func DoInteractiveSignRound1(participants []*signing_helpers.Cosigner) (round1Ou
 	return round1Outputs, nil
 }
 
-func DoInteractiveSignRound2(participants []*signing_helpers.Cosigner, round2Inputs []types.RoundMessages[*signing_helpers.Round1Broadcast], message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+func DoInteractiveSignRound2(participants []*signing_helpers.Cosigner, round2Inputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing_helpers.Round1Broadcast], message []byte) (partialSignatures []*frost.PartialSignature, err error) {
 	partialSignatures = make([]*frost.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round2(round2Inputs[i], message)

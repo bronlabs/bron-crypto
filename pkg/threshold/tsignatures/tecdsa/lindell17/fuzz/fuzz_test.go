@@ -58,7 +58,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 // 	})
 // }
 
-func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.SignatureProtocol) {
+func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.SigningSuite) {
 	t.Helper()
 
 	// setup random variables according to the data seed
@@ -141,7 +141,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.Signatur
 // 	}
 // }
 
-func doDkg(t *testing.T, cipherSuite types.SignatureProtocol, n int) ([]types.IdentityKey, ds.Map[types.IdentityKey, *lindell17.Shard]) {
+func doDkg(t *testing.T, cipherSuite types.SigningSuite, n int) ([]types.IdentityKey, ds.Map[types.IdentityKey, *lindell17.Shard]) {
 	t.Helper()
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -155,7 +155,7 @@ func doDkg(t *testing.T, cipherSuite types.SignatureProtocol, n int) ([]types.Id
 	return identities, shards
 }
 
-func doInteractiveSigning(t *testing.T, cipherSuite types.SignatureProtocol, fz *fuzz.Fuzzer, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell17.Shard], message []byte) {
+func doInteractiveSigning(t *testing.T, cipherSuite types.SigningSuite, fz *fuzz.Fuzzer, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell17.Shard], message []byte) {
 	t.Helper()
 
 	var sessionId []byte

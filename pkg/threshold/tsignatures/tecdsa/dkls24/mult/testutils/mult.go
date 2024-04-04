@@ -25,7 +25,7 @@ func MakeMult2Participants(t *testing.T, curve curves.Curve, baseOtReceiverOutpu
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(t, err)
 
-	otProtocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(authKeys[0].(types.IdentityKey), authKeys[1].(types.IdentityKey)))
+	otProtocol, err := types.NewProtocol(curve, hashset.NewHashableHashSet(authKeys[0].(types.IdentityKey), authKeys[1].(types.IdentityKey)))
 	require.NoError(t, err)
 
 	alice, err = mult.NewAlice(authKeys[0], otProtocol, baseOtReceiverOutput, aliceSid, aliceTprng, seededPrng, nil)

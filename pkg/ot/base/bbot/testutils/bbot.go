@@ -13,7 +13,7 @@ import (
 
 // RunBBOT runs the full batched base OT protocol.
 func RunBBOT(senderAuthKey, receiverAuthKey types.AuthKey, Xi, L int, curve curves.Curve, uniqueSessionId []byte, prng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error) {
-	protocol, err := types.NewMPCProtocol(curve, hashset.NewHashableHashSet(senderAuthKey.(types.IdentityKey), receiverAuthKey.(types.IdentityKey)))
+	protocol, err := types.NewProtocol(curve, hashset.NewHashableHashSet(senderAuthKey.(types.IdentityKey), receiverAuthKey.(types.IdentityKey)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
 	}

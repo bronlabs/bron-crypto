@@ -61,7 +61,7 @@ func FuzzInteractiveSigning(f *testing.F) {
 // 	})
 // }
 
-func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SignatureProtocol) {
+func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SigningSuite) {
 	t.Helper()
 
 	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
@@ -135,7 +135,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 // 	require.NoError(t, err)
 // }
 
-func doDkg(t *testing.T, cipherSuite types.SignatureProtocol, n, threshold int) ([]types.IdentityKey, ds.Map[types.IdentityKey, *lindell22.Shard]) {
+func doDkg(t *testing.T, cipherSuite types.SigningSuite, n, threshold int) ([]types.IdentityKey, ds.Map[types.IdentityKey, *lindell22.Shard]) {
 	t.Helper()
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func doDkg(t *testing.T, cipherSuite types.SignatureProtocol, n, threshold int) 
 	return identities, shards
 }
 
-func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.SignatureProtocol) {
+func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.SigningSuite) {
 	t.Helper()
 
 	// setup random variables according to the data seed

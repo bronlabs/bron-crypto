@@ -321,13 +321,17 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	require.NoError(t, err)
 	r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta)
 	require.NoError(t, err)
-	r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
 
 	// smuggle previous execution result - replay of the dlog proof
-	r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
+	r1OutsBBeta[attackerIndex] = r1OutsBAlpha[attackerIndex]
+	r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
 	_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	if tBeta == tAlpha {
+		require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+	} else {
+		require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
+	}
 }
 
 func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
@@ -376,7 +380,11 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		if tBeta == tAlpha {
+			require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+		} else {
+			require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
+		}
 	})
 
 	t.Run("Alice uses some garbage as sid", func(t *testing.T) {
@@ -399,7 +407,11 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
 		_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		if tBeta == tAlpha {
+			require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+		} else {
+			require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
+		}
 	})
 }
 

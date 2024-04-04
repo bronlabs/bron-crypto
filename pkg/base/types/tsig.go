@@ -11,11 +11,11 @@ type ThresholdSignatureParticipant interface {
 
 type ThresholdSignatureProtocol interface {
 	ThresholdProtocol
-	CipherSuite() SignatureProtocol
+	SigningSuite() SigningSuite
 }
 
-func NewThresholdSignatureProtocol(signatureProtocol SignatureProtocol, participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol, error) {
-	if err := ValidateSignatureProtocolConfig(signatureProtocol); err != nil {
+func NewThresholdSignatureProtocol(signatureProtocol SigningSuite, participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol, error) {
+	if err := ValidateSigningSuite(signatureProtocol); err != nil {
 		return nil, errs.WrapValidation(err, "signature protocol config")
 	}
 	protocol := &protocol{
@@ -37,7 +37,7 @@ func ValidateThresholdSignatureProtocolConfig(f ThresholdSignatureProtocol) erro
 	if err := ValidateThresholdProtocolConfig(f); err != nil {
 		return errs.WrapValidation(err, "threshold protocol config")
 	}
-	if err := ValidateSignatureProtocolConfig(f.CipherSuite()); err != nil {
+	if err := ValidateSigningSuite(f.SigningSuite()); err != nil {
 		return errs.WrapValidation(err, "signature protocol config")
 	}
 	return nil
@@ -47,7 +47,7 @@ func ValidateThresholdSignatureProtocol(p ThresholdSignatureParticipant, f Thres
 	if err := ValidateThresholdProtocol(p, f); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
 	}
-	if err := validateExtrasSignatureProtocolConfig(f.CipherSuite()); err != nil {
+	if err := ValidateSigningSuite(f.SigningSuite()); err != nil {
 		return errs.WrapValidation(err, "tsig protocol config")
 	}
 	return nil

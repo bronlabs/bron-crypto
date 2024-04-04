@@ -24,17 +24,20 @@ const (
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 
 type PreGenParticipant struct {
-	nic compiler.Name
+	// Base participant
+	myAuthKey  types.AuthKey
+	Prng       io.Reader
+	Protocol   types.ThresholdProtocol
+	Round      int
+	SessionId  []byte
+	Transcript transcripts.Transcript
 
-	myAuthKey   types.AuthKey
+	// Threshold participant
 	mySharingId types.SharingID
 
-	protocol   types.ThresholdProtocol
+	nic compiler.Name
+
 	preSigners ds.Set[types.IdentityKey]
-	sessionId  []byte
-	round      int
-	prng       io.Reader
-	transcript transcripts.Transcript
 
 	state *state
 
@@ -68,7 +71,10 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), nic)
-	transcript, sessionId, err = hagrid.InitialiseProtocol(transcript, sessionId, dst)
+	if transcript == nil {
+		transcript = hagrid.NewTranscript(dst, prng)
+	}
+	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
@@ -83,15 +89,15 @@ func NewPreGenParticipant(myAuthKey types.AuthKey, sessionId []byte, protocol ty
 	}
 
 	participant = &PreGenParticipant{
+		myAuthKey:   myAuthKey,
+		Prng:        prng,
+		Protocol:    protocol,
+		Round:       1,
+		SessionId:   boundSessionId,
+		Transcript:  transcript,
+		mySharingId: mySharingId,
 		nic:         nic,
 		preSigners:  preSigners,
-		myAuthKey:   myAuthKey,
-		mySharingId: mySharingId,
-		protocol:    protocol,
-		sessionId:   sessionId,
-		transcript:  transcript,
-		round:       1,
-		prng:        prng,
 		state: &state{
 			pid:  pid,
 			bigS: bigS,

@@ -21,7 +21,7 @@ import (
 func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []types.IdentityKey) []byte {
 	t.Helper()
 	var participants []*agreeonrandom.Participant
-	protocol, err := ttu.MakeMPCProtocol(curve, identities)
+	protocol, err := ttu.MakeProtocol(curve, identities)
 	require.NoError(t, err)
 	for _, identity := range identities {
 		var participant *agreeonrandom.Participant

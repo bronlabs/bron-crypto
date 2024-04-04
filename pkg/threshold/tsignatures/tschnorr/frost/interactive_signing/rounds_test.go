@@ -90,7 +90,7 @@ func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []t
 			if err != nil {
 				return err
 			}
-			err = schnorr.Verify(protocol.CipherSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
+			err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
 			if err != nil {
 				return err
 			}

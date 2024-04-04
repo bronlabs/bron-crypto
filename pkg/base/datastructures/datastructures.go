@@ -18,6 +18,8 @@ type KeyValuePair[K any, V any] struct {
 
 type Map[K any, V any] interface {
 	Get(key K) (value V, exists bool)
+	Sieve(keys Set[K]) Map[K, V]
+	Filter(predicate func(key K) bool) Map[K, V]
 	ContainsKey(key K) bool
 	Put(key K, value V)
 	TryPut(key K, newValue V) (replaced bool, oldValue V)

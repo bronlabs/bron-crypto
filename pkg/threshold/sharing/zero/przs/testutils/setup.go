@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs/setup"
@@ -18,9 +19,9 @@ func MakeSetupParticipants(curve curves.Curve, identities []types.IdentityKey, p
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run agree on random")
 	}
-	protocol, err := testutils.MakeMPCProtocol(curve, identities)
+	protocol, err := testutils.MakeProtocol(curve, identities)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "mpc")
+		return nil, errs.WrapFailed(err, "protocol could not be constructed")
 	}
 	for i, identity := range identities {
 		participants[i], err = setup.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, nil, prng)
@@ -31,8 +32,8 @@ func MakeSetupParticipants(curve curves.Curve, identities []types.IdentityKey, p
 	return participants, nil
 }
 
-func DoSetupRound1(participants []*setup.Participant) (round2Outputs []types.RoundMessages[*setup.Round1P2P], err error) {
-	round2Outputs = make([]types.RoundMessages[*setup.Round1P2P], len(participants))
+func DoSetupRound1(participants []*setup.Participant) (round2Outputs []network.RoundMessages[types.Protocol, *setup.Round1P2P], err error) {
+	round2Outputs = make([]network.RoundMessages[types.Protocol, *setup.Round1P2P], len(participants))
 	for i, participant := range participants {
 		round2Outputs[i], err = participant.Round1()
 		if err != nil {
@@ -42,8 +43,8 @@ func DoSetupRound1(participants []*setup.Participant) (round2Outputs []types.Rou
 	return round2Outputs, nil
 }
 
-func DoSetupRound2(participants []*setup.Participant, round3Inputs []types.RoundMessages[*setup.Round1P2P]) (round3Outputs []types.RoundMessages[*setup.Round2P2P], err error) {
-	round3Outputs = make([]types.RoundMessages[*setup.Round2P2P], len(participants))
+func DoSetupRound2(participants []*setup.Participant, round3Inputs []network.RoundMessages[types.Protocol, *setup.Round1P2P]) (round3Outputs []network.RoundMessages[types.Protocol, *setup.Round2P2P], err error) {
+	round3Outputs = make([]network.RoundMessages[types.Protocol, *setup.Round2P2P], len(participants))
 	for i, participant := range participants {
 		round3Outputs[i], err = participant.Round2(round3Inputs[i])
 		if err != nil {
@@ -53,7 +54,7 @@ func DoSetupRound2(participants []*setup.Participant, round3Inputs []types.Round
 	return round3Outputs, nil
 }
 
-func DoSetupRound3(participants []*setup.Participant, round4Inputs []types.RoundMessages[*setup.Round2P2P]) (allPairwiseSeeds []przs.PairWiseSeeds, err error) {
+func DoSetupRound3(participants []*setup.Participant, round4Inputs []network.RoundMessages[types.Protocol, *setup.Round2P2P]) (allPairwiseSeeds []przs.PairWiseSeeds, err error) {
 	allPairwiseSeeds = make([]przs.PairWiseSeeds, len(participants))
 	for i, participant := range participants {
 		allPairwiseSeeds[i], err = participant.Round3(round4Inputs[i])

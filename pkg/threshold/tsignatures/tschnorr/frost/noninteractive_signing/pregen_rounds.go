@@ -2,33 +2,28 @@ package noninteractive_signing
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
-type Round1Broadcast struct {
-	Tau         int
-	Commitments []*AttestedCommitmentToNoncePair
-
-	_ ds.Incomparable
-}
-
 func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
-	if p.round != 1 {
-		return nil, errs.NewRound("rounds mismatch %d != 1", p.round)
+	// Validation
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
+
 	p.state = &preGenState{
 		ds:          make([]curves.Scalar, p.Tau),
 		es:          make([]curves.Scalar, p.Tau),
 		Commitments: make([]*AttestedCommitmentToNoncePair, p.Tau),
 	}
 	for j := 0; j < p.Tau; j++ {
-		dj, err := p.Protocol.Curve().ScalarField().Random(p.prng)
+		dj, err := p.Protocol.Curve().ScalarField().Random(p.Prng)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not generate random dj")
 		}
-		ej, err := p.Protocol.Curve().ScalarField().Random(p.prng)
+		ej, err := p.Protocol.Curve().ScalarField().Random(p.Prng)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not generate random ej")
 		}
@@ -36,7 +31,7 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Ej := p.Protocol.Curve().ScalarBaseMult(ej)
 		message := Dj.ToAffineCompressed()
 		message = append(message, Ej.ToAffineCompressed()...)
-		attestation := p.MyAuthKey.Sign(message)
+		attestation := p.myAuthKey.Sign(message)
 
 		p.state.ds[j] = dj
 		p.state.es[j] = ej
@@ -46,20 +41,23 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 			Attestation: attestation,
 		}
 	}
-	p.round++
+
+	p.Round++
 	return &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(round1output types.RoundMessages[*Round1Broadcast]) (PreSignatureBatch, []*PrivateNoncePair, error) {
-	if p.round != 2 {
-		return nil, nil, errs.NewRound("rounds mismatch %d != 1", p.round)
+func (p *PreGenParticipant) Round2(round1output network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast]) (PreSignatureBatch, []*PrivateNoncePair, error) {
+	// Validation
+	if p.Round != 2 {
+		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
-	if _, exists := round1output.Get(p.IdentityKey()); exists {
-		return nil, nil, errs.NewFailed("message found whose sender is me")
+	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1output); err != nil {
+		return nil, nil, errs.WrapFailed(err, "invalid round %d input", p.Round)
 	}
+
 	round1output.Put(p.IdentityKey(), &Round1Broadcast{
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
@@ -77,10 +75,7 @@ func (p *PreGenParticipant) Round2(round1output types.RoundMessages[*Round1Broad
 		for participant := range p.Protocol.Participants().Iter() {
 			j++
 			senderSharingId := j + 1
-			message, exists := round1output.Get(participant)
-			if !exists {
-				return nil, nil, errs.NewMissing("did not receive any message from sharing id %d", senderSharingId)
-			}
+			message, _ := round1output.Get(participant)
 			participantAttestedCommitmentAtThisIndex := message.Commitments[i]
 			participantAttestedCommitmentAtThisIndex.Attestor = participant
 			if err := participantAttestedCommitmentAtThisIndex.Validate(p.Protocol); err != nil {
@@ -100,6 +95,7 @@ func (p *PreGenParticipant) Round2(round1output types.RoundMessages[*Round1Broad
 	if err := batch.Validate(p.Protocol); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid pre signature batch")
 	}
-	p.round++
+
+	p.Round++
 	return batch, privateNoncePairs, nil
 }

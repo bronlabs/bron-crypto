@@ -23,7 +23,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
-	protocol, err := testutils.MakeMPCProtocol(curve, identities)
+	protocol, err := testutils.MakeProtocol(curve, identities)
 	require.NoError(t, err)
 
 	alice, err := setup.NewParticipant([]byte("test"), aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)

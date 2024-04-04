@@ -32,7 +32,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 	}
 
 	eBytes := variant.ComputeChallengeBytes(r, publicKey.A, message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(protocol.CipherSuite(), eBytes)
+	e, err := schnorr.MakeGenericSchnorrChallenge(protocol.SigningSuite(), eBytes)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "cannot compute challenge")
 	}
@@ -71,7 +71,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			S:       partialSig.S,
 		}
 		verifier := variant.NewVerifierBuilder().
-			WithSignatureProtocol(protocol.CipherSuite()).
+			WithSignatureProtocol(protocol.SigningSuite()).
 			WithPublicKey(&schnorr.PublicKey{A: publicShareAdditive}).
 			WithMessage(message).
 			WithChallengeCommitment(r).
@@ -89,7 +89,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 	}
 
 	verifier := variant.NewVerifierBuilder().
-		WithSignatureProtocol(protocol.CipherSuite()).
+		WithSignatureProtocol(protocol.SigningSuite()).
 		WithPublicKey(publicKey).
 		WithMessage(message).
 		Build()

@@ -113,36 +113,43 @@ type PartialPublicKeys[K bls.KeySubGroup] struct {
 }
 
 func (p *PartialPublicKeys[K]) Validate(protocol types.ThresholdProtocol) error {
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	if err := p.ValidateWithSharingConfig(sharingConfig); err != nil {
+		return errs.WrapValidation(err, "invalid partial public keys")
+	}
+	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.PublicKey.Y) {
+		return errs.NewCurve("public key")
+	}
+	if len(p.FeldmanCommitmentVector) != int(protocol.Threshold()) {
+		return errs.NewLength("feldman commitment vector length is invalid")
+	}
+	partialPublicKeyHolders := hashset.NewHashableHashSet(p.Shares.Keys()...)
+	if !partialPublicKeyHolders.Equal(protocol.Participants()) {
+		return errs.NewMembership("shares map is not equal to the participant set")
+	}
+	return nil
+}
+
+func (p *PartialPublicKeys[K]) ValidateWithSharingConfig(sharingConfig types.SharingConfig) error {
 	if p == nil {
 		return errs.NewIsNil("receiver of this method is nil")
 	}
 	if p.PublicKey == nil {
 		return errs.NewIsNil("public key")
 	}
-	if len(p.FeldmanCommitmentVector) != int(protocol.Threshold()) {
-		return errs.NewLength("feldman commitment vector length is invalid")
-	}
 	if p.Shares == nil {
 		return errs.NewIsNil("shares map")
 	}
-	partialPublicKeyHolders := hashset.NewHashableHashSet(p.Shares.Keys()...)
-	if !partialPublicKeyHolders.Equal(protocol.Participants()) {
-		return errs.NewMembership("shares map is not equal to the participant set")
-	}
-	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.PublicKey.Y) {
-		return errs.NewCurve("public key")
-	}
-	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.Shares.Values()...) {
+	if !curveutils.AllPointsOfSameCurve(p.PublicKey.Y.Curve(), p.Shares.Values()...) {
 		return errs.NewCurve("shares map")
 	}
-	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.FeldmanCommitmentVector...) {
+	if !curveutils.AllPointsOfSameCurve(p.PublicKey.Y.Curve(), p.FeldmanCommitmentVector...) {
 		return errs.NewCurve("feldman commitment vector")
 	}
 
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	sharingIds := make([]curves.Scalar, protocol.TotalParties())
-	partialPublicKeys := make([]curves.Point, protocol.TotalParties())
-	for i := 0; i < int(protocol.TotalParties()); i++ {
+	sharingIds := make([]curves.Scalar, sharingConfig.Size())
+	partialPublicKeys := make([]curves.Point, sharingConfig.Size())
+	for i := 0; i < sharingConfig.Size(); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Y.Curve().ScalarField().New(uint64(sharingId))
 		identityKey, exists := sharingConfig.Get(sharingId)
@@ -172,4 +179,25 @@ type PartialSignature[S bls.SignatureSubGroup] struct {
 	POP       *bls.ProofOfPossession[S]
 
 	_ ds.Incomparable
+}
+
+func (p *PartialSignature[S]) Validate(protocol types.ThresholdProtocol) error {
+	if p == nil {
+		return errs.NewIsNil("partial signature is nil")
+	}
+	if p.SigmaI == nil {
+		return errs.NewIsNil("sigma i")
+	}
+	if p.POP == nil {
+		return errs.NewIsNil("pop")
+	}
+	if !curveutils.AllOfSameCurve(bls12381.GetSourceSubGroup[S](), p.SigmaI.Value, p.POP.Value) {
+		return errs.NewCurve("curve mismatch")
+	}
+	if p.SigmaPOPI != nil {
+		if !curveutils.AllOfSameCurve(bls12381.GetSourceSubGroup[S](), p.SigmaPOPI.Value) {
+			return errs.NewCurve("curve mismatch")
+		}
+	}
+	return nil
 }

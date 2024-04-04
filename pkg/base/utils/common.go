@@ -39,3 +39,15 @@ func DecodeString(s string) []byte {
 	}
 	return b
 }
+
+// Iter yields a generic iterator for slices.
+func Iter[T any](s []T) <-chan T {
+	ch := make(chan T, 1)
+	go func() {
+		defer close(ch)
+		for _, v := range s {
+			ch <- v
+		}
+	}()
+	return ch
+}

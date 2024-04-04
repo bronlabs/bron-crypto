@@ -6,19 +6,20 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
-func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.PartialSignature[S], error) {
-	if c.round != 1 {
-		return nil, errs.NewRound("round mismatch %d != 1", c.round)
+func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (sig *boldyreva02.PartialSignature[S], err error) {
+	// Validation
+	if c.Round != 1 {
+		return nil, errs.NewRound("Running round %d but cosigner expected round %d", 1, c.Round)
 	}
-	var err error
-	var sigmaPOP_i *bls.Signature[S]
+	if len(message) == 0 {
+		return nil, errs.NewIsNil("message cannot be nil")
+	}
+
 	// step 1.1 and 1.2
+	var sigmaPOP_i *bls.Signature[S]
 	switch c.scheme {
 	case bls.Basic:
 	case bls.MessageAugmentation:
-		if len(message) == 0 {
-			return nil, errs.NewIsNil("message cannot be nil")
-		}
 		message, err = bls.AugmentMessage[K](message, c.myShard.PublicKeyShares.PublicKey)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not augment message")
@@ -43,7 +44,8 @@ func (c *Cosigner[K, S]) ProducePartialSignature(message []byte) (*boldyreva02.P
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
-	c.round++
+
+	c.Round++
 	return &boldyreva02.PartialSignature[S]{
 		SigmaI:    sigma_i,
 		SigmaPOPI: sigmaPOP_i,

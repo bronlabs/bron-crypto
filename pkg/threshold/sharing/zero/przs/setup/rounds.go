@@ -3,36 +3,22 @@ package setup
 import (
 	"io"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/przs"
 )
 
-// size should match zero.LambdaBytes.
-
-type Round1P2P struct {
-	Commitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round2P2P struct {
-	Message []byte
-	Witness commitments.Witness
-
-	_ ds.Incomparable
-}
-
-func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
-	if p.round != 1 {
-		return nil, errs.NewRound("round mismatch %d != 1", p.round)
+func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P], error) {
+	// Validation
+	if p.Round != 1 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
-	output := types.NewRoundMessages[*Round1P2P]()
+	output := network.NewRoundMessages[types.Protocol, *Round1P2P]()
 	for _, participant := range p.SortedParticipants {
 		if participant.Equal(p.IdentityKey()) {
 			continue
@@ -43,13 +29,13 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 		}
 		// step 1.1: produce a random seed for this participant
 		seedForThisParticipant := przs.Seed{}
-		if _, err := io.ReadFull(p.prng, seedForThisParticipant[:]); err != nil {
+		if _, err := io.ReadFull(p.Prng, seedForThisParticipant[:]); err != nil {
 			return nil, errs.WrapRandomSample(err, "could not produce random bytes for party with index %d", participantIndex)
 		}
 		// step 1.2: commit to the seed
 		commitment, witness, err := commitments.Commit(
 			p.SessionId,
-			p.prng,
+			p.Prng,
 			seedForThisParticipant[:],
 		)
 		if err != nil {
@@ -65,15 +51,21 @@ func (p *Participant) Round1() (types.RoundMessages[*Round1P2P], error) {
 			Commitment: commitment,
 		})
 	}
-	p.round++
+
+	p.Round++
 	return output, nil
 }
 
-func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (types.RoundMessages[*Round2P2P], error) {
-	if p.round != 2 {
-		return nil, errs.NewRound("round mismatch %d != 2", p.round)
+func (p *Participant) Round2(round1output network.RoundMessages[types.Protocol, *Round1P2P]) (network.RoundMessages[types.Protocol, *Round2P2P], error) {
+	// Validation
+	if p.Round != 2 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
-	output := types.NewRoundMessages[*Round2P2P]()
+	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1output); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 1 messages")
+	}
+
+	output := network.NewRoundMessages[types.Protocol, *Round2P2P]()
 	for _, participant := range p.SortedParticipants {
 		if participant.Equal(p.IdentityKey()) {
 			continue
@@ -82,13 +74,7 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (type
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.String())
 		}
-		message, exists := round1output.Get(participant)
-		if !exists {
-			return nil, errs.NewMissing("no message was received from participant with index %d", participantIndex)
-		}
-		if message.Commitment == nil {
-			return nil, errs.NewMissing("participant with index %d sent empty commitment", participantIndex)
-		}
+		message, _ := round1output.Get(participant)
 		p.state.receivedSeeds.Put(participant, message.Commitment)
 		contributed, exists := p.state.sentSeeds.Get(participant)
 		if !exists {
@@ -100,14 +86,20 @@ func (p *Participant) Round2(round1output types.RoundMessages[*Round1P2P]) (type
 			Witness: contributed.witness,
 		})
 	}
-	p.round++
+
+	p.Round++
 	return output, nil
 }
 
-func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs.PairWiseSeeds, error) {
-	if p.round != 3 {
-		return nil, errs.NewRound("round mismatch %d != 3", p.round)
+func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, *Round2P2P]) (przs.PairWiseSeeds, error) {
+	// Validation
+	if p.Round != 3 {
+		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
+	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 messages")
+	}
+
 	myIndex, exists := p.IdentitySpace.Reverse().Get(p.IdentityKey())
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my identity index")
@@ -122,19 +114,10 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		if !exists {
 			return nil, errs.NewMissing("couldn't find participant %x in the identity space", participant.String())
 		}
-		message, exists := round2output.Get(participant)
-		if !exists {
-			return nil, errs.NewMissing("no message was received from participant with index %d", participantIndex)
-		}
+		message, _ := round2output.Get(participant)
 		commitment, exists := p.state.receivedSeeds.Get(participant)
 		if !exists {
 			return nil, errs.NewMissing("do not have a commitment from participant with index %d", participantIndex)
-		}
-		if message.Message == nil {
-			return nil, errs.NewMissing("participant with index %d sent empty message", participantIndex)
-		}
-		if message.Witness == nil {
-			return nil, errs.NewMissing("participant with index %d sent empty witness", participantIndex)
 		}
 		if err := commitments.Open(p.SessionId, commitment, message.Witness, message.Message); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
@@ -158,6 +141,7 @@ func (p *Participant) Round3(round2output types.RoundMessages[*Round2P2P]) (przs
 		copy(finalSeed[:], finalSeedBytes)
 		pairwiseSeeds.Put(participant, finalSeed)
 	}
-	p.round++
+
+	p.Round++
 	return pairwiseSeeds, nil
 }

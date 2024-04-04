@@ -3,48 +3,14 @@ package lpdl
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 )
 
-type Round1Output struct {
-	RangeVerifierOutput    *paillierrange.Round1Output
-	CPrime                 *paillier.CipherText
-	CDoublePrimeCommitment commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round2Output struct {
-	RangeProverOutput *paillierrange.ProverRound2Output
-	CHat              commitments.Commitment
-
-	_ ds.Incomparable
-}
-
-type Round3Output struct {
-	RangeVerifierOutput *paillierrange.VerifierRound3Output
-	A                   *saferith.Nat
-	B                   *saferith.Nat
-	CDoublePrimeWitness commitments.Witness
-
-	_ ds.Incomparable
-}
-
-type Round4Output struct {
-	RangeProverOutput *paillierrange.Round4Output
-	BigQHat           curves.Point
-	BigQHatWitness    commitments.Witness
-
-	_ ds.Incomparable
-}
-
-func (verifier *Verifier) Round1() (output *Round1Output, err error) {
+func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
+	// Validation
 	if verifier.round != 1 {
 		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
@@ -105,19 +71,23 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}, nil
 }
 
-func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
+func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err error) {
+	// Validation; RangeVerifierOutput deferred to `rangeProver.Round2`, CPrime deferred to `decryptor.Decrypt`
 	if prover.round != 2 {
 		return nil, errs.NewRound("%d != 2", prover.round)
 	}
+	if err := r1out.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 input")
+	}
 
-	prover.state.cDoublePrimeCommitment = input.CDoublePrimeCommitment
+	prover.state.cDoublePrimeCommitment = r1out.CDoublePrimeCommitment
 
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
 	decrytor, err := paillier.NewDecryptor(prover.sk)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create decryptor")
 	}
-	prover.state.alpha, err = decrytor.Decrypt(input.CPrime)
+	prover.state.alpha, err = decrytor.Decrypt(r1out.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
@@ -132,7 +102,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.bigQHatWitness = bigQHatWitness
 
 	// 4.i. In parallel to the above, run L_P protocol
-	rangeProverOutput, err := prover.rangeProver.Round2(input.RangeVerifierOutput)
+	rangeProverOutput, err := prover.rangeProver.Round2(r1out.RangeVerifierOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "range prover round 2")
 	}
@@ -144,15 +114,19 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	}, nil
 }
 
-func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
+func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err error) {
+	// Validation; RangeProverOutput deferred to `rangeVerifier.Round3`
 	if verifier.round != 3 {
 		return nil, errs.NewRound("%d != 3", verifier.round)
 	}
+	if err := r2out.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 3 input")
+	}
 
-	verifier.state.cHat = input.CHat
+	verifier.state.cHat = r2out.CHat
 
 	// 4.i. In parallel to the above, run L_P protocol
-	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(input.RangeProverOutput)
+	rangeVerifierOutput, err := verifier.rangeVerifier.Round3(r2out.RangeProverOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "range verifier round 3")
 	}
@@ -167,23 +141,27 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 	}, nil
 }
 
-func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
+func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err error) {
+	// Validation; RangeVerifierOutput deferred to `rangeProver.Round4`
 	if prover.round != 4 {
 		return nil, errs.NewRound("%d != 4", prover.round)
 	}
+	if err := r3out.Validate(); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 4 input")
+	}
 
-	if err := commitments.Open(prover.sessionId, prover.state.cDoublePrimeCommitment, input.CDoublePrimeWitness, input.A.Bytes(), input.B.Bytes()); err != nil {
+	if err := commitments.Open(prover.sessionId, prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeWitness, r3out.A.Bytes(), r3out.B.Bytes()); err != nil {
 		return nil, errs.WrapFailed(err, "cannot decommit a and b")
 	}
 
 	// 4. check that alpha == ax + b (over integers), if not aborts
-	ax := new(saferith.Nat).Mul(input.A, prover.x.Nat(), -1)
-	axPlusB := new(saferith.Nat).Add(ax, input.B, prover.state.q2.BitLen()+1)
+	ax := new(saferith.Nat).Mul(r3out.A, prover.x.Nat(), -1)
+	axPlusB := new(saferith.Nat).Add(ax, r3out.B, prover.state.q2.BitLen()+1)
 	if prover.state.alpha.Eq(axPlusB) == 0 {
 		return nil, errs.NewIdentifiableAbort("verifier", "verifier is misbehaving")
 	}
 
-	rangeProverOutput, err := prover.rangeProver.Round4(input.RangeVerifierOutput)
+	rangeProverOutput, err := prover.rangeProver.Round4(r3out.RangeVerifierOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "range prover round 4")
 	}
@@ -198,8 +176,12 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 }
 
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
+	// Validation; RangeProverOutput deferred to `rangeVerifier.Round5`
 	if verifier.round != 5 {
 		return errs.NewRound("%d != 5", verifier.round)
+	}
+	if err := input.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
 	if err := commitments.Open(verifier.sessionId, verifier.state.cHat, input.BigQHatWitness, input.BigQHat.ToAffineCompressed()); err != nil {

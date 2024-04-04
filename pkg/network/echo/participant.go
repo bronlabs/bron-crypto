@@ -7,17 +7,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-var _ types.MPCParticipant = (*Participant)(nil)
-var _ types.WithAuthKey = (*Participant)(nil)
+var _ types.Participant = (*Participant)(nil)
 
 type Participant struct {
 	myAuthKey types.AuthKey
-	sessionId []byte
-
-	Protocol types.MPCProtocol
+	Protocol  types.Protocol
+	Round     int
+	SessionId []byte
 
 	initiator types.IdentityKey
-	round     int
 	state     *State
 
 	_ ds.Incomparable
@@ -35,6 +33,12 @@ func (p *Participant) IsInitiator() bool {
 	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
 }
 
+func (p *Participant) NonInitiatorParticipants() ds.Set[types.IdentityKey] {
+	receivers := p.Protocol.Participants().Clone()
+	receivers.Remove(p.initiator)
+	return receivers
+}
+
 type State struct {
 	messageToBroadcast       []byte
 	receivedBroadcastMessage []byte
@@ -42,49 +46,49 @@ type State struct {
 	_ ds.Incomparable
 }
 
-func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, message []byte) (*Participant, error) {
+func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.Protocol, message []byte) (*Participant, error) {
 	if err := validateInputs(sessionId, authKey, protocol, authKey); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct initiator")
 	}
 	result := &Participant{
 		myAuthKey: authKey,
 		Protocol:  protocol,
+		Round:     1,
+		SessionId: sessionId,
 		initiator: authKey,
-		sessionId: sessionId,
 		state: &State{
 			messageToBroadcast: message,
 		},
-		round: 1,
 	}
-	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+	if err := types.ValidateProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")
 	}
 	return result, nil
 }
 
-func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) (*Participant, error) {
+func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.Protocol, initiator types.IdentityKey) (*Participant, error) {
 	if err := validateInputs(sessionId, authKey, protocol, initiator); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct responder")
 	}
 	result := &Participant{
 		myAuthKey: authKey,
 		initiator: initiator,
-		sessionId: sessionId,
+		SessionId: sessionId,
 		state:     &State{},
 		Protocol:  protocol,
-		round:     1,
+		Round:     1,
 	}
-	if err := types.ValidateMPCProtocol(result, protocol); err != nil {
+	if err := types.ValidateProtocol(result, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct the participant")
 	}
 	return result, nil
 }
 
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.MPCProtocol, initiator types.IdentityKey) error {
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Protocol, initiator types.IdentityKey) error {
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	if err := types.ValidateMPCProtocolConfig(protocol); err != nil {
+	if err := types.ValidateProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateIdentityKey(initiator); err != nil {
