@@ -25,6 +25,7 @@ type Protocol interface {
 	Curve() curves.Curve // Most supported protocols are algebraic.
 	Participants() ds.Set[IdentityKey]
 	Flags() ds.Set[ValidationFlag]
+	Clone() Protocol
 	json.Marshaler
 }
 

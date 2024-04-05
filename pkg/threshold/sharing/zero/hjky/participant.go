@@ -33,6 +33,8 @@ func (p *Participant) SharingId() types.SharingID {
 }
 
 func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	protocol, _ = protocol.Clone().(types.ThresholdProtocol)
+
 	if err := validateInputs(sessionId, authKey, protocol, prng); err != nil {
 		return nil, errs.WrapArgument(err, "at least one argument is invalid")
 	}

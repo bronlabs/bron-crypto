@@ -19,6 +19,24 @@ func (p *protocol) Curve() curves.Curve {
 	return p.curve
 }
 
+func (p *protocol) Clone() Protocol {
+	var clonedFlags ds.Set[ValidationFlag]
+	if p.flags != nil {
+		clonedFlags = p.flags.Clone()
+	}
+	var clonedParticipants ds.Set[IdentityKey]
+	if p.participants != nil {
+		clonedParticipants = p.participants.Clone()
+	}
+	return &protocol{
+		curve:        p.curve,
+		hash:         p.hash,
+		participants: clonedParticipants,
+		threshold:    p.threshold,
+		flags:        clonedFlags,
+	}
+}
+
 func (p *protocol) Hash() func() hash.Hash {
 	return p.hash
 }

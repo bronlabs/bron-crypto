@@ -363,6 +363,31 @@ type Protocol struct {
 	presignatureComposer types.IdentityKey
 }
 
+func (p *Protocol) Clone() types.Protocol {
+	var clonedSignatureAggregators ds.Set[types.IdentityKey]
+	if p.signatureAggregators != nil {
+		clonedSignatureAggregators = p.signatureAggregators.Clone()
+	}
+	var clonedFlags ds.Set[types.ValidationFlag]
+	if p.flags != nil {
+		clonedFlags = p.flags.Clone()
+	}
+	var clonedParticipants ds.Set[types.IdentityKey]
+	if p.participants != nil {
+		clonedParticipants = p.participants.Clone()
+	}
+	return &Protocol{
+		curve:                p.curve,
+		hash:                 p.hash,
+		participants:         clonedParticipants,
+		flags:                clonedFlags,
+		threshold:            p.threshold,
+		totalParties:         p.totalParties,
+		signatureAggregators: clonedSignatureAggregators,
+		presignatureComposer: p.presignatureComposer,
+	}
+}
+
 func (p *Protocol) Curve() curves.Curve {
 	return p.curve
 }

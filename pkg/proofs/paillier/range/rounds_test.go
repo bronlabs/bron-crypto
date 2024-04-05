@@ -49,7 +49,7 @@ func Test_OutOfRange(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
-	primesBitLength := 64
+	primesBitLength := 128
 	nIter := 100
 	pk, sk, err := paillier.KeyGen(primesBitLength, prng)
 	require.NoError(t, err)
